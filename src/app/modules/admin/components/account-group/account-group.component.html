@@ -1,0 +1,103 @@
+<br><ng-http-loader></ng-http-loader>
+<div class="content-wrapper">
+    <section class="content">
+       <div class="container-fluid">
+          <div class="row">
+             <div class="col-md-12">
+                <div class="card card-primary">
+                   <div class="card-header">
+                      <h3 class="card-title">{{form_title}}</h3>
+                   </div>
+                   <form [formGroup]="accountGroupForm" (ngSubmit)="saveAccountGroup()">
+                      <div class="card-body row">
+                         <div class="col-md-3">
+                            <div class="form-group">
+                               <label for="name">Name</label>
+                               <input type="text" class="form-control" id="name" placeholder="Enter Name" formControlName="name">
+                               <span style="color:red" *ngIf="nameValidator && nameValidator.invalid && nameValidator.touched">This field is not valid</span>
+                            </div>
+                         </div>
+                         <div class="col-md-3">
+                            <div class="form-group">
+                               <label for="email">Primary</label>
+                               <select class="form-control" id="primary" formControlName="primary">
+                                 <option value="">Select Primary</option>
+                                 <option value="Yes">Yes</option>
+                                 <option value="No">No</option>
+                               </select>
+                               <span style="color:red" *ngIf="primaryValidator && primaryValidator.invalid && primaryValidator.touched">This field is not valid</span>
+                            </div>
+                         </div>
+                         <div class="col-md-3">
+                            <div class="form-group">
+                               <label for="mobile">Heading</label>
+                               <select class="form-control" id="heading" formControlName="heading">
+                                 <option value="">Select Heading</option>
+                                                   <option value="1">Profit/Loss Adjusted</option>
+                                                      <option value="2">Capital Account</option>
+                                                      <option value="3">Current Liabilities</option>
+                                                      <option value="4">Loan (Liability)</option>
+                                                      <option value="5">Current Assets</option>
+                                                      <option value="6">Revenue Accounts (Left Side)</option>
+                                                      <option value="7">Revenue Accounts (Right Side)</option>
+                               </select>
+                               
+                            </div>
+                         </div>
+                         <div class="col-md-3">
+                            <div class="form-group">
+                               <label for="GSTIN">B/S Profile</label>
+                               <select class="form-control"  id="profile" formControlName="profile">
+                                 <option value="">Select Parent</option>
+                                                   <option value="1">Liabilities</option>
+                                                      <option value="2">Assets</option>
+                               </select>
+                               
+                            </div>
+                         </div>
+                         
+                      </div>
+                      <div class="card-footer">
+                         <input type="hidden" formControlName="edit_id">
+                         <button type="submit" class="btn btn-primary" [disabled]="accountGroupForm.invalid">Submit</button>
+                      </div>
+                   </form>
+                </div>
+             </div>
+             <div class="col-md-12">
+                <div class="card card-primary">
+                   <div class="card-header">
+                      <h3 class="card-title">View Account Group</h3>
+                   </div>
+                   <table mat-table [dataSource]="account_group_list" class="mat-elevation-z8">
+                     <ng-container matColumnDef="name">
+                        <th mat-header-cell *matHeaderCellDef> Name </th>
+                        <td mat-cell *matCellDef="let element"> {{element.name}} </td>
+                     </ng-container>                    
+                     <ng-container matColumnDef="primary">
+                        <th mat-header-cell *matHeaderCellDef> Primary </th>
+                        <td mat-cell *matCellDef="let element"> {{element.primary_status}} </td>
+                     </ng-container>
+                     <ng-container matColumnDef="heading">
+                        <th mat-header-cell *matHeaderCellDef> Heading </th>
+                        <td mat-cell *matCellDef="let element"> {{element.heading}} </td>
+                     </ng-container>
+                     <ng-container matColumnDef="profile">
+                        <th mat-header-cell *matHeaderCellDef> GSTIN </th>
+                        <td mat-cell *matCellDef="let element"> {{element.profile}} </td>
+                     </ng-container>
+                    
+                     <ng-container matColumnDef="action">
+                        <th mat-header-cell *matHeaderCellDef> Action </th>
+                        <td mat-cell *matCellDef="let element"><button mat-button class="btn btn-info" (click)="editAccountGroup(element)">Edit</button></td>
+                     </ng-container>
+                     <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                     <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+                  </table>
+                </div>
+             </div>
+          </div>
+       </div>
+    </section>
+ </div>
+ 

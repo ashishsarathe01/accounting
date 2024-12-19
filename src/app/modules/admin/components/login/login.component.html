@@ -1,0 +1,45 @@
+<ng-http-loader></ng-http-loader>
+<div *ngIf="isLoggednIn() == true">
+  <app-dashboard></app-dashboard>
+</div>
+<body class="login-page" style="min-height: 496.802px;" *ngIf="isLoggednIn() == false ">
+   <div class="login-box">
+      <div class="login-logo">
+         <a href="#"><b>Meri Accounting</b></a>
+      </div>
+      <div class="card">
+         <div class="card-body login-card-body">
+            <p class="login-box-msg">Sign in to start your session</p>
+            <form [formGroup]="loginForm" (ngSubmit)="login()" method="post">
+               <div class="input-group mb-3">
+                  <input type="text" class="form-control" placeholder="Mobile" id="username" formControlName="username">
+                  <div class="input-group-append">
+                     <div class="input-group-text">
+                        <span class="fas fa-envelope"></span>
+                     </div>
+                  </div>
+                  <span style="color:red" *ngIf="emailValidator && emailValidator.invalid && emailValidator.touched">This field is not valid</span>
+               </div>
+               <div class="input-group mb-3">
+                  <input type="password" class="form-control" placeholder="Password" formControlName="password">
+                  <div class="input-group-append">
+                     <div class="input-group-text">
+                        <span class="fas fa-lock"></span>
+                     </div>
+                  </div>
+                  <span style="color:red" *ngIf="passwordValidator && passwordValidator.invalid && passwordValidator.touched">This field is not valid</span>
+               </div>
+               <div class="row">
+                  <div class="col-8"></div>
+                  <div class="col-4">
+                     <button type="submit" class="btn btn-primary btn-block" [disabled]="loginForm.invalid">Sign In</button>
+                  </div>
+               </div>
+            </form>
+         </div>
+      </div>
+   </div>
+<script src="../../plugins/jquery/jquery.min.js"></script>
+<script src="../../plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="../../dist/js/adminlte.min.js"></script>
+</body>

@@ -1,0 +1,84 @@
+<br><ng-http-loader></ng-http-loader>
+<div class="content-wrapper">
+    <section class="content">
+       <div class="container-fluid">
+          <div class="row">
+             <div class="col-md-12">
+                <div class="card card-primary">
+                   <div class="card-header">
+                      <h3 class="card-title">{{form_title}}</h3>
+                   </div>
+                   <form [formGroup]="accountForm" (ngSubmit)="saveAccount()">
+                      <div class="card-body row">
+                         <div class="col-md-3">
+                            <div class="form-group">
+                               <label for="name">Name</label>
+                               <input type="text" class="form-control" id="name" placeholder="Enter Name" formControlName="name">
+                               <span style="color:red" *ngIf="nameValidator && nameValidator.invalid && nameValidator.touched">This field is not valid</span>
+                            </div>
+                         </div>
+                         <div class="col-md-3">
+                            <div class="form-group">
+                               <label for="under_group">Group</label>
+                               <select class="form-control" id="under_group" formControlName="under_group">
+                                    <option value="">Select Group</option>
+                                    <option value="{{g['id']}}" *ngFor="let g of account_group_list">{{g['name']}}</option>
+                               </select>
+                               
+                               <span style="color:red" *ngIf="underGroupValidator && underGroupValidator.invalid && underGroupValidator.touched">This field is not valid</span>
+                            </div>
+                         </div>
+                         
+                         <div class="col-md-3">
+                            <div class="form-group">
+                               <label for="opening_balance">Opening Balance</label>
+                               <input type="text" class="form-control" id="opening_balance" placeholder="Enter Opening Balance" formControlName="opening_balance">
+                               
+                            </div>
+                         </div>
+                         <div class="col-md-3">
+                            <div class="form-group">
+                               <label for="balance_type">Balance Type</label>
+                               <select class="form-control" formControlName="balance_type" id="balance_type">
+                                <option value="">Select</option>
+                                <option value="DEBIT">DEBIT</option>
+                                <option value="CREDIT">CREDIT</option>
+                               </select>                               
+                            </div>
+                         </div>
+                      </div>
+                      <div class="card-footer">
+                         <input type="hidden" formControlName="edit_id">
+                         <button type="submit" class="btn btn-primary" [disabled]="accountForm.invalid">Submit</button>
+                      </div>
+                   </form>
+                </div>
+             </div>
+             <div class="col-md-12">
+                <div class="card card-primary">
+                   <div class="card-header">
+                      <h3 class="card-title">View Customer</h3>
+                   </div>
+                   <table mat-table [dataSource]="account_list" class="mat-elevation-z8">
+                    <ng-container matColumnDef="name">
+                       <th mat-header-cell *matHeaderCellDef> Name </th>
+                       <td mat-cell *matCellDef="let element"> {{element.name}} </td>
+                    </ng-container>                    
+                    <ng-container matColumnDef="under_group">
+                       <th mat-header-cell *matHeaderCellDef> Under Group </th>
+                       <td mat-cell *matCellDef="let element"> {{element.under_group}} </td>
+                    </ng-container>                    
+                    <ng-container matColumnDef="action">
+                       <th mat-header-cell *matHeaderCellDef> Action </th>
+                       <td mat-cell *matCellDef="let element"><button mat-button class="btn btn-info" (click)="editAccountDetail(element)">Edit</button></td>
+                    </ng-container>
+                    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+                 </table>
+                </div>
+             </div>
+          </div>
+       </div>
+    </section>
+ </div>
+ 

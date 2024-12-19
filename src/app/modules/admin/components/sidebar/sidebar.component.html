@@ -1,0 +1,164 @@
+<aside class="main-sidebar sidebar-dark-primary elevation-4">
+    <a routerLink="admin" class="brand-link">
+       <img src="assets/dist/img/AdminLTELogo.png" alt="AdminLTE Logo" class="brand-image img-circle elevation-3" style="opacity: .8">
+       <span class="brand-text font-weight-light">Meri Accounting</span>
+    </a>
+    <div class="sidebar">
+       <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+          <div class="image">
+             <img src="assets/dist/img/user2-160x160.jpg" class="img-circle elevation-2" alt="User Image">
+          </div>
+          <div class="info">
+             <a routerLink="/admin" class="d-block">Alexander Pierce</a>
+          </div>
+       </div>
+       <nav class="mt-2">
+          <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+             <li class="nav-item menu-open">
+                <a routerLink="/admin" class="nav-link active" (click)="toggleSideBar()">
+                   <i class="nav-icon fas fa-tachometer-alt"></i>
+                   <p>Dashboard</p>
+                </a>
+             </li>
+             <li class="nav-item">
+                <a routerLink="employee" class="nav-link" (click)="toggleSideBar()">
+                   <i class="nav-icon fas fa-th"></i>
+                   <p>Employee</p>
+                </a>
+             </li>
+             <li class="nav-item">
+                <a routerLink="merchant" class="nav-link" (click)="toggleSideBar()">
+                   <i class="nav-icon fas fa-th"></i>
+                   <p>Merchant</p>
+                </a>
+             </li>
+             <li class="nav-item">
+               <a href="javascript:void(0)" class="nav-link">
+                  <i class="nav-icon fas fa-copy"></i>
+                  <p>Administration<i class="fas fa-angle-left right"></i></p>
+               </a>
+               <ul class="nav nav-treeview">
+                  
+                  
+                  <li class="nav-item">
+                     <a routerLink="tax-category" class="nav-link" (click)="toggleSideBar()">
+                        <i class="far fa-circle nav-icon"></i>
+                        <p>Tax Category</p>
+                     </a>
+                  </li>
+                  <li class="nav-item">
+                    <a routerLink="unit" class="nav-link" (click)="toggleSideBar()">
+                       <i class="far fa-circle nav-icon"></i>
+                       <p>Unit</p>
+                    </a>
+                 </li>
+                 <li class="nav-item">
+                   <a routerLink="account-heading" class="nav-link" (click)="toggleSideBar()">
+                      <i class="far fa-circle nav-icon"></i>
+                      <p>Account Heading</p>
+                   </a>
+                </li>
+                <li class="nav-item">
+                   <a routerLink="account-group" class="nav-link" (click)="toggleSideBar()">
+                      <i class="far fa-circle nav-icon"></i>
+                      <p>Account Group</p>
+                   </a>
+                </li>
+                <li class="nav-item">
+                   <a routerLink="item-group" class="nav-link" (click)="toggleSideBar()">
+                      <i class="far fa-circle nav-icon"></i>
+                      <p>Item Group</p>
+                   </a>
+                </li>
+                 <li class="nav-item">
+                  <a routerLink="item" class="nav-link" (click)="toggleSideBar()">
+                     <i class="far fa-circle nav-icon"></i>
+                     <p>Item</p>
+                  </a>
+               </li>
+               
+               
+               
+               <li class="nav-item">
+                  <a routerLink="account" class="nav-link" (click)="toggleSideBar()">
+                     <i class="far fa-circle nav-icon"></i>
+                     <p>Account</p>
+                  </a>
+               </li>
+               <li class="nav-item">
+                <a routerLink="state" class="nav-link" (click)="toggleSideBar()">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>State Code</p>
+                </a>
+               </li>
+               </ul>
+            </li>
+             <li class="nav-item">
+                <a href="javascript:void(0)" class="nav-link">
+                   <i class="nav-icon fas fa-copy"></i>
+                   <p>Display<i class="fas fa-angle-left right"></i></p>
+                </a>
+                <ul class="nav nav-treeview">
+                   <li class="nav-item">
+                    <a routerLink="admin/manage-category" class="nav-link" (click)="toggleSideBar()">
+                      <i class="far fa-circle nav-icon"></i>
+                      <p>Balance Sheet</p>
+                    </a>
+                   </li>
+                   <li class="nav-item">
+                      <a routerLink="admin/manage-sub-category" class="nav-link" (click)="toggleSideBar()">
+                         <i class="far fa-circle nav-icon"></i>
+                         <p>Profit&Loss A/C</p>
+                      </a>
+                   </li>
+                   <li class="nav-item">
+                     <a routerLink="admin/manage-sub-category" class="nav-link" (click)="toggleSideBar()">
+                        <i class="far fa-circle nav-icon"></i>
+                        <p>Account Ledger</p>
+                     </a>
+                  </li>
+                </ul>
+             </li>
+             <li class="nav-item">
+               <a href="javascript:void(0)" class="nav-link">
+                  <i class="nav-icon fas fa-copy"></i>
+                  <p>Transaction<i class="fas fa-angle-left right"></i></p>
+               </a>
+               <ul class="nav nav-treeview">
+                  <li class="nav-item">
+                   <a routerLink="manage-category" class="nav-link" (click)="toggleSideBar()">
+                     <i class="far fa-circle nav-icon"></i>
+                     <p>Journal</p>
+                   </a>
+                  </li>
+                  <li class="nav-item">
+                     <a routerLink="manage-sub-category" class="nav-link" (click)="toggleSideBar()">
+                        <i class="far fa-circle nav-icon"></i>
+                        <p>Receipt</p>
+                     </a>
+                  </li>
+                  <li class="nav-item">
+                    <a routerLink="manage-sub-category" class="nav-link" (click)="toggleSideBar()">
+                       <i class="far fa-circle nav-icon"></i>
+                       <p>Payment</p>
+                    </a>
+                 </li>
+                 <li class="nav-item">
+                  <a routerLink="manage-sub-category" class="nav-link" (click)="toggleSideBar()">
+                     <i class="far fa-circle nav-icon"></i>
+                     <p>Sale</p>
+                  </a>
+               </li>
+               <li class="nav-item">
+                  <a routerLink="manage-sub-category" class="nav-link" (click)="toggleSideBar()">
+                     <i class="far fa-circle nav-icon"></i>
+                     <p>Purchase</p>
+                  </a>
+               </li>
+               </ul>
+            </li>
+          </ul>
+       </nav>
+    </div>
+ </aside>
+ 

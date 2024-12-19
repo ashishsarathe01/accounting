@@ -1,0 +1,119 @@
+<br><ng-http-loader></ng-http-loader>
+<div class="content-wrapper">
+    <section class="content">
+       <div class="container-fluid">
+          <div class="row">
+             <div class="col-md-12">
+                <div class="card card-primary">
+                   <div class="card-header">
+                      <h3 class="card-title">Add Payment</h3>
+                   </div>
+                   <form  [formGroup]="paymentForm" (ngSubmit)="savePayment()">
+                      <div class="card-body row">
+                         <div class="col-md-2">
+                            <div class="form-group">
+                               <label for="name">Date</label>
+                               <input type="date" class="form-control" formControlName="date" placeholder="Enter Name" [value]="{current_date}">
+                            </div>
+                         </div>
+                         <table class="table table-bordered">
+                           <thead>
+                              <th style="width: 9%;">Debit/Credit</th>
+                              <th>Account</th>
+                              <th>Debit</th>
+                              <th>Credit</th>
+                              <th>Mode</th>
+                              <th>Narration</th>
+                              <th></th>
+                           </thead>
+                           <tbody>
+                              
+                                 <tr>
+                                    <td>
+                                       <select class="form-control"  formControlName="type1">
+                                          <option value="">Type</option>
+                                          <option value="CREDIT" selected>Credit</option>
+                                          <option value="DEBIT">Debit</option>
+                                       </select>
+                                    </td>
+                                    <td>
+                                       <select class="form-control" formControlName="account1" id="account1">
+                                          <option value="">Select Account</option>
+                                          <option value="{{ac['id']}}" *ngFor="let ac of account_list">{{ac['name']}}</option>
+                                       </select>
+                                    </td>
+                                    <td><input type="text" class="form-control" placeholder="Debit Amount" formControlName="debit1"></td>
+                                    <td><input type="text" class="form-control" placeholder="Credit Amount" formControlName="credit1"></td>
+                                    <td><select class="form-control" formControlName="mode1"><option value="">Mode</option><option value="Cash">Cash</option><option value="IMPS/NEFT/RTGS">IMPS/NEFT/RTGS</option></select></td>
+                                    <td><input type="text" class="form-control" placeholder="Enter Narration" formControlName="remark1"></td>
+                                 </tr>   
+                                 <tr>
+                                    <td>
+                                       <select class="form-control" formControlName="type2">
+                                          <option value="">Type</option>
+                                          <option value="CREDIT" >Credit</option>
+                                          <option value="DEBIT" selected>Debit</option>
+                                       </select>
+                                    </td>
+                                    <td>
+                                       <select class="form-control" formControlName="account2">
+                                          <option value="">Select Account</option>
+                                          <option value="{{ac['id']}}" *ngFor="let ac of bank_list">{{ac['name']}}</option>
+                                       </select>
+                                    </td>
+                                    <td><input type="text" class="form-control" placeholder="Debit Amount" formControlName="debit2"></td>
+                                    <td><input type="text" class="form-control" placeholder="Credit Amount" formControlName="credit2"></td>
+                                    <td><select class="form-control" formControlName="mode2"><option value="">Mode</option><option value="Cash">Cash</option><option value="IMPS/NEFT/RTGS">IMPS/NEFT/RTGS</option></select></td>
+                                    <td><input type="text" class="form-control" placeholder="Enter Narration" formControlName="remark2"></td>
+                                 </tr> 
+                              
+                              <tr>
+                                 <th></th>
+                                 <th>Total</th>
+                                 <th id="total_debit">0</th>
+                                 <th id="total_credit">0</th>
+                                 <th></th>
+                              </tr>             
+                           </tbody>
+                        </table>
+                         
+                      </div>
+                      <div class="card-footer">
+                         <input type="hidden" >
+                         <button type="submit" class="btn btn-primary" >Submit</button>
+                      </div>
+                   </form>
+                </div>
+             </div>
+             <div class="col-md-12">
+                <div class="card card-primary">
+                   <div class="card-header">
+                      <h3 class="card-title">View Customer</h3>
+                   </div>
+                   <!-- <table mat-table [dataSource]="bank_list" class="mat-elevation-z8">
+                    <ng-container matColumnDef="name">
+                       <th mat-header-cell *matHeaderCellDef> Name </th>
+                       <td mat-cell *matCellDef="let element"> {{element.name}} </td>
+                    </ng-container>                    
+                    <ng-container matColumnDef="account_number">
+                       <th mat-header-cell *matHeaderCellDef> Account Number </th>
+                       <td mat-cell *matCellDef="let element"> {{element.account_number}} </td>
+                    </ng-container>
+                    <ng-container matColumnDef="ifsc_code">
+                       <th mat-header-cell *matHeaderCellDef> Ifsc Code </th>
+                       <td mat-cell *matCellDef="let element"> {{element.ifsc_code}} </td>
+                    </ng-container>
+                    <ng-container matColumnDef="action">
+                       <th mat-header-cell *matHeaderCellDef> Action </th>
+                       <td mat-cell *matCellDef="let element"><button mat-button class="btn btn-info" (click)="editBankDetail(element)">Edit</button></td>
+                    </ng-container>
+                    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+                 </table> -->
+                </div>
+             </div>
+          </div>
+       </div>
+    </section>
+ </div>
+ 

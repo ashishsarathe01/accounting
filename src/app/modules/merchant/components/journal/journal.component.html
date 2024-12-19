@@ -1,0 +1,74 @@
+<br><ng-http-loader></ng-http-loader>
+<div class="content-wrapper">
+    <section class="content">
+       <div class="container-fluid">
+          <div class="row">
+            <div class="col-md-12">
+                <div class="card card-primary">
+                   <div class="card-header">
+                      <h3 class="card-title">Add Journal</h3>
+                   </div>
+                </div>
+            </div>
+
+
+            <form [formGroup]="companyForm" (ngSubmit)="saveJournal()">
+                <div class="card-body row">
+                    <div class="col-md-2">
+                        <div class="form-group">
+                           <label for="name">Date</label>
+                           <input type="date" class="form-control" formControlName="date" placeholder="Enter Name">
+                        </div>
+                     </div>
+                     <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                            <th style="width: 9%;">Debit/Credit</th>
+                           <th>Account</th>
+                           <!-- <th>Debit</th>
+                           <th>Credit</th>
+                           <th>Mode</th>
+                           <th>Narration</th>
+                           <th></th> -->
+                        </tr>
+                           
+                        </thead>
+                        <tbody formArrayName="admins">
+                            <tr  *ngFor="let adminForm of admins.controls; let index = index">
+                               
+                                    <!-- <div [formGroupName]="index"> -->
+                                        
+                            <th style="width: 9%;"><input id="name" type="text" formControlName="name" /></th>
+                           <th><input id="email" type="text" formControlName="email" /></th>
+                           <!-- <th>Debit</th>
+                           <th>Credit</th>
+                           <th>Mode</th>
+                           <th>Narration</th>
+                           <th></th> -->
+                                        <!-- </tr>
+                                        <input id="name" type="text" formControlName="name" />
+                                        <input id="email" type="text" formControlName="email" />                 -->
+                                <!-- </div> -->
+                            </tr>    
+                            
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- <ng-container formArrayName="admins">
+                    <ng-container *ngFor="let adminForm of admins.controls; let index = index">
+                        <div [formGroupName]="index">
+                            <input id="name" type="text" formControlName="name" />
+                            <input id="email" type="text" formControlName="email" />                
+                        </div>
+                    </ng-container>
+                </ng-container> -->
+                <button type="button" (click)="addNewAdmin()">Add</button>
+                <button type="submit" class="btn btn-primary" >Submit</button>
+            </form>
+            
+          </div>
+       </div>
+    </section>
+ </div>
+ 

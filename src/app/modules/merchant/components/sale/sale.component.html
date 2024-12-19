@@ -1,0 +1,171 @@
+<br><ng-http-loader></ng-http-loader>
+<div class="content-wrapper">
+    <section class="content">
+       <div class="container-fluid">
+          <div class="row">
+             <div class="col-md-12">
+                <div class="card card-primary">
+                   <div class="card-header">
+                      <h3 class="card-title"></h3>
+                   </div>
+                   <form [formGroup]="orderForm" (ngSubmit)="savePayment()">
+                      <div class="card-body row">
+                         <div class="col-md-2">
+                            <div class="form-group">
+                               <label for="date">Date</label>
+                               <input type="date" class="form-control" id="date" formControlName="date">
+                               
+                            </div>
+                            
+                         </div>
+                         <div class="col-md-3">
+                            <div class="form-group">
+                               <label for="party">Party</label>
+                               <select class="form-control" id="party" formControlName="party" (change)="selectParty($event.target)">
+                                    <option value="">Select Party</option>
+                                    <option *ngFor="let party of party_list" [attr.data_gst]="party['gst']" value="{{party['id']}}">{{party['name']}}</option>
+                               </select>
+                            </div>
+                         </div>
+                         
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>Item</th>
+                                    <th>Qty</th>
+                                    <th>Unit</th>
+                                    <th>Price (Rs.)</th>
+                                    <th>Amount (Rs.)</th>
+                                </tr>
+                            </thead>
+                            <tbody >
+                                <tr formArrayName="names" *ngFor="let name of names.controls; index as idx" >
+                                    <td>{{idx+1}} <button class="btn btn-danger btn-xs" (click)="removeUser(idx)" *ngIf="idx!=0">Remove</button></td>
+                                    <td>
+                                        <mat-form-field>
+                                            <input type="text" placeholder="Select Item" matInput  [formControlName]="idx"
+                                                 [matAutocomplete]="auto" (keyup)="getItemList($event.target)" >
+                                               <mat-autocomplete #auto="matAutocomplete"  [displayWith]="displayFn">
+                                                <!-- //(optionSelected)="selectItem($event)" -->
+                                                 <mat-option *ngFor="let item of item_list;" [value]="item" (onSelectionChange)="selectItem(item,idx)">
+                                                   {{item['name']}}
+                                                </mat-option>
+                                            </mat-autocomplete>
+                                         </mat-form-field>
+                                    </td>
+                                    <td><input type="text" id="quantity_{{idx}}" (keyup)="setItemQuantity($event.target,idx)" class="quantity qty_{{idx}}" ></td>
+                                    <td id="unit_{{idx}}"></td>
+                                    <td id="price_{{idx}}"></td>
+                                    <td id="total_{{idx}}" class="amount"></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="6"><button type="button" (click)="addNameField()" class="btn btn-success btn-xs" [ngClass] = "'pad'" style="float:right">Add More</button></td>
+                                    
+                                </tr>
+                                <tr>
+                                    <td colspan="3"><input type="checkbox" (click)="applyTax($event)" id="applyTax" formControlName="apply_tax" value="1"> Apply Tax <span id="total_qunatity" style="float:right"></span></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td><span id="total_amount" style="float:right"></span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <table class="table table-bordered">
+                                <tr>
+                                    <td>
+                                        Tax Rate Taxable Amt. CGST SGST
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-8">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>S.No</th>
+                                        <th>Bill Sundry</th>
+                                        <th>@</th>
+                                        <td></td>
+                                        <th>Amount (Rs.)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>1</td>
+                                        <td>Freight</td>
+                                        <td></td>
+                                        <td></td>
+                                        <td><input type="text" id="freight" (keyup)="calculateTotalAmount()" formControlName="freight"></td>
+                                    </tr>
+                                    <tr style="display: none;" id="cgst_div">
+                                        <td>2</td>
+                                        <td>CGST</td>
+                                        <td>6.00</td>
+                                        <td>%</td>
+                                        <td id="cgst_amount"></td>
+                                    </tr>
+                                    <tr style="display: none;" id="sgst_div">
+                                        <td>3</td>
+                                        <td>SGST</td>
+                                        <td>6.00</td>
+                                        <td>%</td>
+                                        <td id="sgst_amount"></td>
+                                    </tr>
+                                    <tr style="display: none;" id="igst_div">
+                                        <td>4</td>
+                                        <td>IGST</td>
+                                        <td></td>
+                                        <td></td>
+                                        <td id="igst_amount"></td>
+                                    </tr>
+                                    
+                                </tbody>
+                            </table>
+                        </div> 
+                        <div class="col-md-12">
+                            <p style="float:right" id="grand_total"></p>
+                        </div>                       
+                      </div>
+                      <div class="card-footer">
+                         
+                         <button type="submit" class="btn btn-primary" [disabled]="orderForm.invalid">Submit</button>
+                      </div>
+                   </form>
+                </div>
+             </div>
+             <!-- <div class="col-md-12">
+                <div class="card card-primary">
+                   <div class="card-header">
+                      <h3 class="card-title">View Customer</h3>
+                   </div>
+                   <table mat-table [dataSource]="account_list" class="mat-elevation-z8">
+                    <ng-container matColumnDef="name">
+                       <th mat-header-cell *matHeaderCellDef> Name </th>
+                       <td mat-cell *matCellDef="let element"> {{element.name}} </td>
+                    </ng-container>                    
+                    <ng-container matColumnDef="under_group">
+                       <th mat-header-cell *matHeaderCellDef> Under Group </th>
+                       <td mat-cell *matCellDef="let element"> {{element.under_group}} </td>
+                    </ng-container>                    
+                    <ng-container matColumnDef="action">
+                       <th mat-header-cell *matHeaderCellDef> Action </th>
+                       <td mat-cell *matCellDef="let element"><button mat-button class="btn btn-info" (click)="editAccountDetail(element)">Edit</button></td>
+                    </ng-container>
+                    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+                 </table>
+                </div>
+             </div> -->
+          </div>
+       </div>
+    </section>
+ </div>
+ 

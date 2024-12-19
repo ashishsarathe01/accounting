@@ -1,0 +1,24 @@
+.card {
+    box-shadow: $card-shadow;
+    border-radius: $border-radius-8;
+    border: 0;
+
+    &.login-card {
+        width: 40%;
+
+        @media only screen and (max-width: $lg-brekpoint) {
+            width: 60%;
+        }
+        @media only screen and (max-width: $md-brekpoint) {
+            width: 90%;
+        }
+    }
+
+    &.creat-card {
+        width: 80%;
+
+        @media only screen and (max-width: $md-brekpoint) {
+            width: 90%;
+        }
+    }
+}
