@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class ItemParameter extends Model
 {
-    use HasFactory;
-    protected $table = "item_paremeter";
+   use HasFactory;
+   protected $table = "item_paremeter";
+   public function parameters(){
+       return $this->hasMany('App\Models\ItemParameterList', 'parent_id','id');
+   }
 }
