@@ -111,7 +111,7 @@ class AccountLedgerController extends Controller
       //$ledger = $collection->sortByAsc('date');
       $opening = 0;
       if(isset($request->from_date) && !empty($request->from_date)){
-         $open_ledger = DB::select(DB::raw("SELECT SUM(debit) as debit,SUM(credit) as credit FROM account_ledger WHERE account_id='".$party_id."' and STR_TO_DATE(txn_date, '%Y-%m-%d')<STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and status=1 and delete_status='0'"));
+         $open_ledger = DB::select(DB::raw("SELECT SUM(debit) as debit,SUM(credit) as credit FROM account_ledger WHERE account_id='".$party_id."' and STR_TO_DATE(txn_date, '%Y-%m-%d')<STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and status=1 and delete_status='0' and company_id='".Session::get('user_company_id')."'"));
          if(count($open_ledger)>0){
             if($open_ledger[0]->debit=="" && $open_ledger[0]->credit==""){
                $open_ledger = AccountLedger::where('account_id',$party_id)

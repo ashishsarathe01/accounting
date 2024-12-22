@@ -32,7 +32,7 @@
                      <select class="form-select w-min-120 ms-xxl-2" aria-label="Default select example" id="financial_year" name="financial_year" required>
                         <option value="{{Session::get('default_fy')}}">{{Session::get('default_fy')}}</option>
                      </select>
-                     <div class="calender-administrator my-2 my-xxl-0 ms-xxl-2 w-min-150">
+                     <div class="calender-administrator my-2 my-xxl-0 ms-xxl-2 w-min-150" style="display:none;">
                         <input type="date" id="from_date" name="from_date" class="form-control calender-bg-icon calender-placeholder" placeholder="From date" required value="{{$from_date}}" min="{{Session::get('from_date')}}" max="{{Session::get('to_date')}}">
                      </div>
                      <div class="calender-administrator w-min-150 ms-xxl-2">

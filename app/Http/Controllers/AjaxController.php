@@ -547,6 +547,16 @@ class AjaxController extends Controller
       $input = $request->all();
       $financial_year = Session::get('default_fy');
       $y = explode("-",$financial_year);
+      $fdate = date('Y-m-d',strtotime($input['from_date']));
+      $tdate = date('Y-m-d',strtotime($input['to_date']));
+      $y =  explode("-",$financial_year);
+      $open_date = $y[0]."-04-01";
+      $open_date = date('Y-m-d',strtotime($open_date));
+      
+
+
+
+      
       $from_date = $input['from_date'];
       $to_date = $input['to_date'];
       if(date('m')<=3){
@@ -585,7 +595,6 @@ class AjaxController extends Controller
                   ->sum('in_weight');
       $closing_price = $closing_amount/$closing_quantity;
       $closing_price = round($closing_price,2);
-      
       
       //Get Purchase/Purchase
       $item_account = ItemLedger::where('status', '1')  

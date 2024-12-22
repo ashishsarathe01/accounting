@@ -73,11 +73,11 @@ class ItemLedgerController extends Controller
          $y =  explode("-",$financial_year);
          $open_date = $y[0]."-04-01";
          $open_date = date('Y-m-d',strtotime($open_date));
-         $item = DB::select(DB::raw("SELECT item_id,SUM(total_price) as total_price,SUM(in_weight) as in_weight,SUM(out_weight) as out_weight,manage_items.name,units.name as uname FROM item_ledger inner join manage_items on item_ledger.item_id=manage_items.id inner join units on manage_items.u_name=units.id WHERE item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$request->to_date."', '%Y-%m-%d') and item_ledger.status='1' and g_name!='' and item_ledger.delete_status='0' GROUP BY item_id order by manage_items.name"));
+         $item = DB::select(DB::raw("SELECT item_id,SUM(total_price) as total_price,SUM(in_weight) as in_weight,SUM(out_weight) as out_weight,manage_items.name,units.name as uname FROM item_ledger inner join manage_items on item_ledger.item_id=manage_items.id inner join units on manage_items.u_name=units.id WHERE item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$request->to_date."', '%Y-%m-%d') and item_ledger.status='1' and g_name!='' and item_ledger.delete_status='0' GROUP BY item_id order by manage_items.name"));
 
          $item_in_data = DB::select(DB::raw("SELECT SUM(total_price) as total_price,SUM(in_weight) as in_weight,item_id FROM item_ledger WHERE item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$request->to_date."', '%Y-%m-%d') and status='1' and delete_status='0' and in_weight!='' GROUP BY item_id"));
 
-         return view('itemledger')->with('item_list', $item_list)->with('items', $item)->with('item_id', $item_id)->with('opening', $opening)->with('item_in_data', $item_in_data);
+         return view('itemledger')->with('item_list', $item_list)->with('items', $item)->with('item_id', $item_id)->with('opening', $opening)->with('item_in_data', $item_in_data)->with('fdate', $open_date)->with('tdate',$tdate);
       }
 
       if(isset($request->from_date) && !empty($request->from_date) && isset($request->to_date) && !empty($request->to_date)){         
@@ -135,40 +135,18 @@ class ItemLedgerController extends Controller
          }
       }
       $opening = 0;
-      if(isset($request->from_date) && !empty($request->from_date)){         
-         $open_ledger = DB::select(DB::raw("SELECT SUM(in_weight) as debit,SUM(out_weight) as credit FROM item_ledger WHERE item_id='".$item_id."' and STR_TO_DATE(txn_date, '%Y-%m-%d')<STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and status=1 and delete_status='0'"));
+      if(isset($request->from_date) && !empty($request->from_date)){
+         $financial_year = Session::get('default_fy');
+         $y =  explode("-",$financial_year);
+         $open_date = $y[0]."-04-01";
+         $open_date = date('Y-m-d',strtotime($open_date));  
+         if($request->from_date!=$open_date){
+            $open_ledger = DB::select(DB::raw("SELECT SUM(in_weight) as debit,SUM(out_weight) as credit FROM item_ledger WHERE item_id='".$item_id."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and status=1 and delete_status='0'"));
+         }else{
+            $open_ledger = DB::select(DB::raw("SELECT SUM(in_weight) as debit,SUM(out_weight) as credit FROM item_ledger WHERE item_id='".$item_id."' and STR_TO_DATE(txn_date, '%Y-%m-%d')=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and status=1 and delete_status='0' and source='-1'"));
+         }
          if(count($open_ledger)>0){
-            if($open_ledger[0]->debit=="" && $open_ledger[0]->credit==""){
-               $open_ledger = ItemLedger::where('item_id',$item_id)
-                                       ->where('company_id',Session::get('user_company_id'))
-                                       ->where('source','-1')
-                                       ->first();
-               if($open_ledger){
-                  if($open_ledger->out_weight!=""){
-                     $opening = -$open_ledger->out_weight;
-                  }else if($open_ledger->in_weight!=""){
-                     $opening = $open_ledger->in_weight;
-                  }
-               }
-            }else{
-               $balance = $open_ledger[0]->debit - $open_ledger[0]->credit;
-               $basic_open_ledger = ItemLedger::where('item_id',$item_id)
-                                       ->where('company_id',Session::get('user_company_id'))
-                                       ->where('source','-1')
-                                       ->first();
-               if($basic_open_ledger){
-                  if($basic_open_ledger->out_weight!=""){
-                     $balance = $balance - $basic_open_ledger->out_weight;
-                  }else if($basic_open_ledger->in_weight!=""){
-                     $balance = $balance + $basic_open_ledger->in_weight;
-                  }
-               }
-               if($balance<0){
-                  $opening = $balance;
-               }else{
-                  $opening = $balance;
-               }
-            }            
+               $opening = $open_ledger[0]->debit - $open_ledger[0]->credit;
          }
       }else{
          $open_ledger = ItemLedger::where('item_id',$item_id)
@@ -250,14 +228,11 @@ class ItemLedgerController extends Controller
          }else{
             $opening_weight = 0 - $out_weight;
             $opening_amount = 0;
-         }
-         
+         }         
          $item_data = DB::select(DB::raw("SELECT sum(in_weight) as in_weight,sum(out_weight) as out_weight,SUM(total_price) as total_price,txn_date FROM item_ledger WHERE item_id='".$item_id."' and source!=-1 and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$request->to_date."', '%Y-%m-%d') and status='1' and delete_status='0'  GROUP BY txn_date order by STR_TO_DATE(txn_date, '%Y-%m-%d') "));
          
          $item_in_data = DB::select(DB::raw("SELECT SUM(total_price) as total_price,txn_date FROM item_ledger WHERE item_id='".$item_id."' and source!=-1 and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$request->to_date."', '%Y-%m-%d') and status='1' and delete_status='0' and in_weight!='' GROUP BY txn_date order by STR_TO_DATE(txn_date, '%Y-%m-%d')"));
-         
       }
-
       return view('item_ledger_average')->with('item_list', $item_list)->with('opening', 0)->with('fdate', $fdate)->with('tdate',$tdate)->with('item_id', $item_id)->with('item_data', $item_data)->with('opening_amount', $opening_amount)->with('opening_weight', $opening_weight)->with('item_in_data', $item_in_data);
    }
 }

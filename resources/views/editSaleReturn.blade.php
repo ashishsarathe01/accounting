@@ -360,9 +360,9 @@
                                  </td>
                                  <td class="w-min-50 ">
                                     <span name="tax_amt[]" class="tax_amount" id="tax_amt_igst">@if(isset($return['IGST'])){{$return['IGST'][0]['rate']}} %@endif</span>
-                                    <input type="hidden" name="tax_rate[]" value="@if(isset($return['IGST'])){{$return['IGST'][0]['rate']}}@endif" id="tax_rate_tr_igst"></td>
+                                    <input type="hidden" name="tax_rate[]" value="@if(isset($return['IGST'])){{$return['IGST'][0]['rate']}} @endif" id="tax_rate_tr_igst"></td>
                                  <td class="w-min-50 ">
-                                    <input class="bill_amt w-100 form-control" type="text" name="bill_sundry_amount[]" id="bill_sundry_amount_igst" data-id="igst" <?php if(isset($return['IGST'])){?> value="<?php echo $return['IGST'][0]['amount'];?>" @endif style="text-align: right;"></td>
+                                    <input class="bill_amt w-100 form-control" type="text" name="bill_sundry_amount[]" id="bill_sundry_amount_igst" data-id="igst" <?php if(isset($return['IGST'])){?> value="<?php echo $return['IGST'][0]['amount'];?>" <?php } ?> style="text-align: right;"></td>
                                  <td></td>
                               </tr>
                               <?php 

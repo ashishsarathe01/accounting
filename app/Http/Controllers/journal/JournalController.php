@@ -11,6 +11,7 @@ use App\Models\AccountLedger;
 use App\Models\Companies;
 use App\Models\GstBranch;
 use App\Models\AccountGroups;
+use App\Models\BillSundrys;
 use DB;
 use Carbon\Carbon;
 use Session;
@@ -48,6 +49,7 @@ class JournalController extends Controller
             ->where('journal_details.company_id', $com_id)
             ->where('journals.delete','0')
             ->whereRaw("STR_TO_DATE(journals.date,'%Y-%m-%d')>=STR_TO_DATE('".date('Y-m-d',strtotime($from_date))."','%Y-%m-%d') and STR_TO_DATE(journals.date,'%Y-%m-%d')<=STR_TO_DATE('".date('Y-m-d',strtotime($to_date))."','%Y-%m-%d')")
+            ->orderBy('journal_details.journal_id', 'asc')
             ->orderBy('journals.date', 'asc')
             ->get();
       return view('journal/journal')->with('journal', $journal)->with('month_arr', $month_arr)->with("from_date",$from_date)->with("to_date",$to_date);
@@ -198,45 +200,65 @@ class JournalController extends Controller
                $ledger->save();
             }
             if(!empty($request->input('igst'))){
+               $sundry = BillSundrys::select('purchase_amt_account')
+                                       ->where('nature_of_sundry','IGST')
+                                       ->where('company_id',Session::get('user_company_id'))
+                                       ->first();
+               $account_name = "";
+               if($sundry){
+                  $account_name = $sundry->purchase_amt_account;
+               }
                $joundetail = new JournalDetails;
                $joundetail->journal_id = $journal->id;
                $joundetail->company_id = Session::get('user_company_id');
                $joundetail->type = "Debit";
-               $joundetail->account_name = 5;
+               $joundetail->account_name = $account_name;
                $joundetail->debit = $request->input('igst');
                $joundetail->status = '1';
                $joundetail->save();
                //Ledger Entry
                $ledger = new AccountLedger();
-               $ledger->account_id = 5;
+               $ledger->account_id = $account_name;
                $ledger->debit = $request->input('igst');                       
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
                $ledger->financial_year = Session::get('default_fy');
                $ledger->entry_type = 7;
-               $ledger->map_account_id = 5;
+               $ledger->map_account_id = $account_name;
                $ledger->entry_type_id = $journal->id;
                $ledger->created_by = Session::get('user_id');
                $ledger->created_at = date('d-m-Y H:i:s');
                $ledger->save();
             }else{
+               $cgst_account_name = "";
+               if($cgst_sundry){
+                  $cgst_account_name = $cgst_sundry->purchase_amt_account;
+               }
+               $sgst_sundry = BillSundrys::select('purchase_amt_account')
+                           ->where('nature_of_sundry','SGST')
+                           ->where('company_id',Session::get('user_company_id'))
+                           ->first();
+               $sgst_account_name = "";
+               if($sgst_sundry){
+                  $sgst_account_name = $sgst_sundry->purchase_amt_account;
+               }
                $joundetail = new JournalDetails;
                $joundetail->journal_id = $journal->id;
                $joundetail->company_id = Session::get('user_company_id');
                $joundetail->type = "Debit";
-               $joundetail->account_name = 3;
+               $joundetail->account_name = $cgst_account_name;
                $joundetail->debit = $request->input('cgst');
                $joundetail->status = '1';
                $joundetail->save();
                //Ledger Entry
                $ledger = new AccountLedger();
-               $ledger->account_id = 3;
+               $ledger->account_id = $cgst_account_name;
                $ledger->debit = $request->input('cgst');                       
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
                $ledger->financial_year = Session::get('default_fy');
                $ledger->entry_type = 7;
-               $ledger->map_account_id = 3;
+               $ledger->map_account_id = $cgst_account_name;
                $ledger->entry_type_id = $journal->id;
                $ledger->created_by = Session::get('user_id');
                $ledger->created_at = date('d-m-Y H:i:s');
@@ -245,19 +267,19 @@ class JournalController extends Controller
                $joundetail->journal_id = $journal->id;
                $joundetail->company_id = Session::get('user_company_id');
                $joundetail->type = "Debit";
-               $joundetail->account_name = 4;
+               $joundetail->account_name = $sgst_account_name;
                $joundetail->debit = $request->input('sgst');
                $joundetail->status = '1';
                $joundetail->save();
                //Ledger Entry
                $ledger = new AccountLedger();
-               $ledger->account_id = 4;
+               $ledger->account_id = $sgst_account_name;
                $ledger->debit = $request->input('sgst');                       
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
                $ledger->financial_year = Session::get('default_fy');
                $ledger->entry_type = 7;
-               $ledger->map_account_id = 4;
+               $ledger->map_account_id = $sgst_account_name;
                $ledger->entry_type_id = $journal->id;
                $ledger->created_by = Session::get('user_id');
                $ledger->created_at = date('d-m-Y H:i:s');
@@ -367,7 +389,14 @@ class JournalController extends Controller
                ->where('delete','0')
                ->orderBy('account_name')
                ->get();
-      return view('journal/editJournal')->with('journal', $journal)->with('party_list', $party_list)->with('journal_detail', $journal_detail)->with('mat_series', $mat_series)->with('vendors', $vendors)->with('items', $items)->with('company_gst', $companyData->gst);
+
+      $sundry = BillSundrys::select('purchase_amt_account')
+                           ->whereIn('nature_of_sundry',['IGST','CGST','SGST'])
+                           ->where('company_id',Session::get('user_company_id'))
+                           ->pluck('purchase_amt_account');  
+                           
+      $sundry_arr = $sundry->toArray();
+      return view('journal/editJournal')->with('journal', $journal)->with('party_list', $party_list)->with('journal_detail', $journal_detail)->with('mat_series', $mat_series)->with('vendors', $vendors)->with('items', $items)->with('company_gst', $companyData->gst)->with('sundry', $sundry_arr);
    }
 
     /**
@@ -457,45 +486,69 @@ class JournalController extends Controller
             $ledger->save();
          }
          if(!empty($request->input('igst'))){
+            $sundry = BillSundrys::select('purchase_amt_account')
+                        ->where('nature_of_sundry','IGST')
+                        ->where('company_id',Session::get('user_company_id'))
+                        ->first();
+            $account_name = "";
+            if($sundry){
+               $account_name = $sundry->purchase_amt_account;
+            }
             $joundetail = new JournalDetails;
             $joundetail->journal_id = $request->journal_id;
             $joundetail->company_id = Session::get('user_company_id');
             $joundetail->type = "Debit";
-            $joundetail->account_name = 5;
+            $joundetail->account_name = $account_name;
             $joundetail->debit = $request->input('igst');
             $joundetail->status = '1';
             $joundetail->save();
             //Ledger Entry
             $ledger = new AccountLedger();
-            $ledger->account_id = 5;
+            $ledger->account_id = $account_name;
             $ledger->debit = $request->input('igst');                       
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
             $ledger->financial_year = Session::get('default_fy');
             $ledger->entry_type = 7;
-            $ledger->map_account_id = 5;
+            $ledger->map_account_id = $account_name;
             $ledger->entry_type_id = $request->journal_id;
             $ledger->created_by = Session::get('user_id');
             $ledger->created_at = date('d-m-Y H:i:s');
             $ledger->save();
          }else{
+            $cgst_sundry = BillSundrys::select('purchase_amt_account')
+                        ->where('nature_of_sundry','CGST')
+                        ->where('company_id',Session::get('user_company_id'))
+                        ->first();
+            $cgst_account_name = "";
+            if($cgst_sundry){
+               $cgst_account_name = $cgst_sundry->purchase_amt_account;
+            }
+            $sgst_sundry = BillSundrys::select('purchase_amt_account')
+                        ->where('nature_of_sundry','SGST')
+                        ->where('company_id',Session::get('user_company_id'))
+                        ->first();
+            $sgst_account_name = "";
+            if($sgst_sundry){
+               $sgst_account_name = $sgst_sundry->purchase_amt_account;
+            }
             $joundetail = new JournalDetails;
             $joundetail->journal_id = $request->journal_id;
             $joundetail->company_id = Session::get('user_company_id');
             $joundetail->type = "Debit";
-            $joundetail->account_name = 3;
+            $joundetail->account_name = $cgst_account_name;
             $joundetail->debit = $request->input('cgst');
             $joundetail->status = '1';
             $joundetail->save();
             //Ledger Entry
             $ledger = new AccountLedger();
-            $ledger->account_id = 3;
+            $ledger->account_id = $cgst_account_name;
             $ledger->debit = $request->input('cgst');                       
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
             $ledger->financial_year = Session::get('default_fy');
             $ledger->entry_type = 7;
-            $ledger->map_account_id = 3;
+            $ledger->map_account_id = $cgst_account_name;
             $ledger->entry_type_id = $request->journal_id;
             $ledger->created_by = Session::get('user_id');
             $ledger->created_at = date('d-m-Y H:i:s');
@@ -504,19 +557,19 @@ class JournalController extends Controller
             $joundetail->journal_id = $request->journal_id;
             $joundetail->company_id = Session::get('user_company_id');
             $joundetail->type = "Debit";
-            $joundetail->account_name = 4;
+            $joundetail->account_name = $sgst_account_name;
             $joundetail->debit = $request->input('sgst');
             $joundetail->status = '1';
             $joundetail->save();
             //Ledger Entry
             $ledger = new AccountLedger();
-            $ledger->account_id = 4;
+            $ledger->account_id = $sgst_account_name;
             $ledger->debit = $request->input('sgst');                       
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
             $ledger->financial_year = Session::get('default_fy');
             $ledger->entry_type = 7;
-            $ledger->map_account_id = 4;
+            $ledger->map_account_id = $sgst_account_name;
             $ledger->entry_type_id = $request->journal_id;
             $ledger->created_by = Session::get('user_id');
             $ledger->created_at = date('d-m-Y H:i:s');

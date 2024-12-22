@@ -47,6 +47,7 @@
                         <th>Particular</th>
                         <th style="text-align:right;">Invoice No.</th>
                         <th style="text-align:right;">Net Total</th>
+                        <th class="td_detail" style="text-align:right;display: none;">Purchase</th>
                         @foreach($bill_sundray as $bsundry)
                            <th class="td_detail" style="text-align:right;display: none;">{{$bsundry->name}}</th>
                         @endforeach
@@ -54,19 +55,37 @@
                      </tr>                     
                   </thead>
                   <tbody>
-                     @php $net_total = 0;$sundry_sum_arr = [];$grand_total = 0; @endphp
+                     @php $net_total = 0;$sundry_sum_arr = [];$grand_total = 0;$purchase_total = 0; @endphp
                      @foreach($purchase as $key => $value)  
 
                         <tr class="view_invoice" data-id="{{$value['id']}}" style="cursor:pointer;">
                            <td style="text-align:center;">{{date('d-m-Y',strtotime($value['date']))}}</td>
                            <td style="text-align:left;">{{$value['account']['account_name']}}</td>
                            <td style="text-align:right;">{{$value['voucher_no']}}</td>
+                           
+                           @php $adjust_sundry_amount = 0; @endphp
+                           @foreach($value['purchaseSundry'] as $v1)
+                              @if($v1->adjust_sale_amt=="Yes")
+                                 @if($v1->bill_sundry_type=="subtractive")
+                                    @php $adjust_sundry_amount = $adjust_sundry_amount - $v1->amount; @endphp
+                                 @elseif($v1->bill_sundry_type=="additive")
+                                    @php $adjust_sundry_amount = $adjust_sundry_amount + $v1->amount; @endphp
+                                 @endif
+                              @endif
+                           @endforeach
                            <td style="text-align:right;">
-                              {{number_format($value['purchase_description_sum_amount'],2)}}
+                              {{number_format($value['purchase_description_sum_amount'] + $adjust_sundry_amount,2)}}
                               @php 
-                                 $net_total = $net_total + $value['purchase_description_sum_amount']; 
+                                 $net_total = $net_total + $value['purchase_description_sum_amount'] + $adjust_sundry_amount; 
                               @endphp
                            </td>
+                           <td class="td_detail" style="text-align:right;display: none;">
+                              {{number_format($value['purchase_description_sum_amount'],2)}}
+                              @php 
+                                 $purchase_total = $purchase_total + $value['purchase_description_sum_amount']; 
+                              @endphp
+                           </td>
+
                            @foreach($bill_sundray as $bsundry)
                               <td class="td_detail" style="text-align:right;display: none;">
                                  @php $freight = '0.00'; @endphp
@@ -100,8 +119,8 @@
                         <th style="text-align:center;"></th>
                         <th style="text-align:right;">Total</th>
                         <th style="text-align:right;">{{number_format($net_total,2)}}</th>
+                        <th class="td_detail" style="text-align:right;display: none;">{{number_format($purchase_total,2)}}</th>
                         @foreach($bill_sundray as $bsundry)
-                        
                            <th class="td_detail" style="text-align:right;display: none;">
                               @php 
                                  if(isset($sundry_sum_arr[$bsundry->id])){

@@ -48,7 +48,7 @@
                         } ?>
                      </select>
                      
-                     <div class="calender-administrator my-2 my-xxl-0 ms-xxl-2 w-min-230">
+                     <div class="calender-administrator my-2 my-xxl-0 ms-xxl-2 w-min-230 from_date_div">
                         <input type="date" id="from_date" class="form-control calender-bg-icon calender-placeholder" placeholder="From date" required name="from_date" value="<?php if(isset($_GET['from_date'])){ echo $_GET['from_date'];}else{ echo $fdate;}?>" min="{{Session::get('from_date')}}" max="{{Session::get('to_date')}}">
                      </div>
                      <div class="calender-administrator   w-min-230 ms-xxl-2">
@@ -62,7 +62,7 @@
             </div>
             <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
                <h5 class="master-table-title m-0 py-2">Items Ledger</h5>
-               <a href="{{route('item-ledger-average')}}"><button class="btn btn-info">Item Legder With Average</button></a>
+               
                <span class="ms-auto font-14 fw-bold font-heading">
                    Opening Bal. : {{abs($opening)}} @if($opening<0)  @else  @endif
                </span>
@@ -101,7 +101,7 @@
                      }
                      foreach($items as $value){
                         if(isset($item_id) && $item_id=='all'){ ?>
-                           <tr class="font-14 font-heading bg-white" style="cursor: pointer;">
+                           <tr class="font-14 font-heading bg-white redirect_average_page"  data-item_id="{{$value->item_id}}" data-from_date="{{$fdate}}" data-to_date="{{$_GET['to_date']}}" style="cursor: pointer;">
                               <td class="w-min-120"><?php echo $value->name; ?></td>
                               <td class="w-min-120">Item</td>
                               <td class="w-min-120" style="text-align: right;">
@@ -273,9 +273,7 @@
 @include('layouts.footer')
 <script>
    $(document).ready(function() {
-      $('#acc_table').DataTable({
-            // order: [0, 'DESC']
-      });
+      changeItem();
    });
     
    $(document).ready(function() {      
@@ -308,6 +306,15 @@
          }
       });   
    });
+   $("#items_id").change(function(){
+      changeItem();
+   });
+   function changeItem(){
+      $(".from_date_div").show();
+      if($("#items_id").val()=='all'){
+         $(".from_date_div").hide();
+      }
+   }
    function getLedger(){
       var id = $("#items_id").val();
       if(id != ''){
@@ -316,6 +323,12 @@
          alert("Please select item.");
       }
    }
-    $(".select2-single").select2();
+   $(".select2-single").select2();
+   $(".redirect_average_page").click(function(){
+      let item_id = $(this).attr('data-item_id');
+      let from_date = $(this).attr('data-from_date');
+      let to_date = $(this).attr('data-to_date');
+      window.location = "{{url('item-ledger-average')}}/?items_id="+item_id+"&from_date="+from_date+"&to_date="+to_date;
+   })
 </script>
 @endsection

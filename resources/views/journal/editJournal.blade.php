@@ -167,10 +167,12 @@
                                     </select>
                                  </td>
                               </tr>
+                              
                               <?php
+                             
                               $j = 1;
                               foreach ($journal_detail as $value){
-                                 if($value->account_name!=3 && $value->account_name!=4 && $value->account_name!=5 && $value->debit!=''){?>
+                                 if(!in_array($value->account_name,$sundry) && $value->debit!=''){?>
                                     <tr id="withgst_tr_<?php echo $j;?>" class="font-14 font-heading bg-white">
                                        <td>
                                           <select class="form-control item" id="item_<?php echo $j;?>" data-index="<?php echo $j;?>" name="item[]" onchange="gstCalculation()" style="width: 598.611px;">

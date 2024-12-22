@@ -62,7 +62,7 @@
                         <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Qty. Out (Kg)</th>
                         <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Qty. Balance (Kg)</th>
                         <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Average Rate</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Amont</th>          
+                        <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Amount</th>          
                      </tr>
                   </thead>
                   <tbody>
