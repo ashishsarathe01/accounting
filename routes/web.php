@@ -36,6 +36,11 @@ use App\Http\Controllers\MerchantEmployeeController;
 use App\Http\Controllers\AdminModuleController\DashboradController;
 use App\Http\Controllers\AdminModuleController\MerchantController;
 use App\Http\Controllers\manageitem\ItemParameterizedController;
+use App\Http\Controllers\CreditNoteWithoutItemController;
+use App\Http\Controllers\DebitNoteWithoutItemController;
+use App\Http\Controllers\AdminModuleController\AccountHeadController;
+use App\Http\Controllers\AdminModuleController\AccountGroupController;
+use App\Http\Controllers\AdminModuleController\AccountController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -49,13 +54,17 @@ use App\Http\Controllers\manageitem\ItemParameterizedController;
 /*Route::get('/', function () {
     return view('welcome');
 });*/
-Route::prefix('admin')->name('admin.')->group(function(){
+Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
+//Route::prefix('admin')->name('admin.')->group(function(){
    Route::get('/',[AdminAuthController::class, 'index'])->name('password.login');
    Route::post('/login',[AdminAuthController::class, 'adminLogin'])->name('login');
    Route::group(['middleware' => ['adminAuth']], function() {
       Route::get('/dashboard',[DashboradController::class, 'index'])->name('dashboard');
       Route::get('/logout',[AdminAuthController::class, 'logout'])->name('logout');
       Route::Resource('/merchant',MerchantController::class)->name('*','merchant');
+      Route::Resource('/account-head',AccountHeadController::class)->name('*','account-head');
+      Route::Resource('/account-group',AccountGroupController::class)->name('*','account-group');
+      Route::Resource('/account',AccountController::class)->name('*','account');
    });
    
 });
@@ -210,6 +219,8 @@ Route::Resource('payment', PaymentController::class);
    Route::Resource('manage-merchant-employee', MerchantEmployeeController::class);
    Route::get('parameterized-configuration',[ItemParameterizedController::class,'index'])->name('parameterized-configuration');
    Route::post('store-parameterized-configuration',[ItemParameterizedController::class,'storeParameterizedConfiguration'])->name('store-parameterized-configuration');
+   Route::Resource('credit-note-without-item', CreditNoteWithoutItemController::class);
+   Route::Resource('debit-note-without-item', DebitNoteWithoutItemController::class);
    //Route::get('login', [AuthController::class, 'index'])->name('otp.login');
    //Route::get('/', 'AuthController@index')->name('index');
    //Route::post('dashboard', [AuthController::class, 'dashboard']); 

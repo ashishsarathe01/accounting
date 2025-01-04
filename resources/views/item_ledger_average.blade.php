@@ -87,21 +87,17 @@
                         </tr>
                      @endif
                      @php 
-                        
-                        
-                        $result = array();
-                        foreach ($item_in_data as $element){
-                           
-                           $result[$element->txn_date][] = $element->total_price;
-                        }
-                        
+                        $total_amount_result = array();
+                        foreach ($item_in_data as $element){                          
+                           $total_amount_result[$element->txn_date][] = array("amount"=>$element->total_price,"weight"=>$element->in_weight);
+                        }             
                      @endphp
                      @foreach($item_data as $i=>$item)
                         @php                                                     
                            if($item->in_weight!=0 && $item->in_weight!=''){
-                              foreach($result as $k=>$v){
+                              foreach($total_amount_result as $k=>$v){
                                  if($k==$item->txn_date){
-                                    $average_price = ($opening_amount + $v[0])/($item->in_weight + $opening_weight);
+                                    $average_price = ($opening_amount + $v[0]['amount'])/($v[0]['weight'] + $opening_weight);
                                  }
                               }                              
                            }

@@ -8,19 +8,38 @@
                <a class="nav-link text-white fw-500 font-14 ms-2 p-0" href="{{ route('admin.dashboard') }}">Dashboard</a>
             </div>
          </div>
-         <div class="card bg-blue py-20 px-2 rounded-0 border-bottom-divider">
-            <div class="card-header p-0 border-0 rounded-0 d-flex" id="companyHeading">
-               <img src="{{ URL::asset('public/assets/imgs/company.svg')}}" alt="">
-               <a class="nav-link text-white font-14 fw-500 ms-2 p-0" href="#" data-bs-toggle="collapse" data-bs-target="#companyCollapse" aria-expanded="true" aria-controls="companyCollapse">Manage Merchant</a>
-               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="ms-auto img-fluid " viewBox="0 0 18 18" fill="none">
-                  <path d="M12.4425 12L9 8.5575L5.5575 12L4.5 10.935L9 6.435L13.5 10.935L12.4425 12Z" fill="#E4E4E4" />
-               </svg>
+         <div class="card  bg-blue pt-2 px-2 rounded-0 aside-bottom-divider">
+            <div class="card-header py-12 px-2 border-0 d-flex rounded-0" id="administratorHeading">
+               <a class="nav-link text-white font-14 dropdown-icon-img d-flex fw-500  p-0 collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#merchantCollapse" aria-expanded="true" aria-controls="merchantCollapse">
+               <img src="{{ URL::asset('public/assets/imgs/administrator.svg')}}" class="me-2" alt="">Manage Merchant</a>
             </div>
-            <div id="companyCollapse" class="collapse" aria-labelledby="companyHeading" data-bs-parent="#accordion">
+            <div id="merchantCollapse" class="collapse" aria-labelledby="administratorHeading" data-bs-parent="#accordion">
                <ul class="nav flex-column">
-                  <a href="{{ route('admin.merchant.index') }}">
-                     <li class="font-14 text-blue fw-500 m-0 py-12 px-2 text-blue bg-white border-radius-4">View Merchant</li>
-                  </a>
+                  <li class="font-14  fw-500 m-0 py-12 px-2  border-radius-4 bg-white">
+                     <a class=" text-decoration-none  d-flex  text-blue " href="{{ route('admin.merchant.index') }}">
+                        View Merchant
+                     </a>
+                  </li>
+               </ul>
+            </div>
+         </div>
+         <div class="card  bg-blue pt-2 px-2 rounded-0 aside-bottom-divider">
+            <div class="card-header py-12 px-2 border-0 d-flex rounded-0" id="administratorHeading">
+               <a class="nav-link text-white font-14 dropdown-icon-img d-flex fw-500  p-0 collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#adminCollapse" aria-expanded="true" aria-controls="adminCollapse">
+               <img src="{{ URL::asset('public/assets/imgs/administrator.svg')}}" class="me-2" alt="">Master</a>
+            </div>
+            <div id="adminCollapse" class="collapse" aria-labelledby="administratorHeading" data-bs-parent="#accordion">
+               <ul class="nav flex-column">
+                  <li class="font-14  fw-500 m-0 py-12 px-2  border-radius-4 bg-white">
+                     <a class=" text-decoration-none  d-flex  text-blue" href="{{ route('admin.account-head.index') }}">Account Heading</a>
+                  </li>
+                  <li class="font-14  fw-500 m-0 py-12 px-2  ">
+                     <a class=" text-decoration-none  d-flex   text-white" href="{{ route('admin.account-group.index') }}">Account Group</a>
+                  </li>
+                  <li class="font-14  fw-500 m-0 py-12 px-2  ">
+                     <a class=" text-decoration-none  d-flex   text-white" href="{{ route('admin.account.index') }}">Account
+                     </a>
+                  </li>                  
                </ul>
             </div>
          </div>

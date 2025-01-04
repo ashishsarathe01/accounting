@@ -64,6 +64,10 @@
                     <div class="d-md-flex d-block"> 
                        <input type="text" id="search" class="form-control" placeholder="Search">
                     </div>
+                    <div class="d-md-flex d-block"> 
+                       <a href="{{ route('debit-note-without-item.create') }}" class="btn btn-xs-primary">ADD WITHOUT ITEM<svg class="position-relative ms-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                       <path d="M9.1665 15.8327V10.8327H4.1665V9.16602H9.1665V4.16602H10.8332V9.16602H15.8332V10.8327H10.8332V15.8327H9.1665Z" fill="white" /></svg> </a>
+                    </div>
                     <a href="{{ route('purchase-return.create') }}" class="btn btn-xs-primary">
                         ADD
                         <svg class="position-relative ms-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">

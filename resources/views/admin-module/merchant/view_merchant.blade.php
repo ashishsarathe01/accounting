@@ -1,11 +1,11 @@
-@extends('layouts.app')
+@extends('admin-module.layouts.app')
 @section('content')
 <!-- header-section -->
-@include('layouts.header')
+@include('admin-module.layouts.header')
 <div class="list-of-view-company ">
    <section class="list-of-view-company-section container-fluid">
       <div class="row vh-100">
-         @include('layouts.leftnav')
+         @include('admin-module.layouts.leftnav')
          <div class="col-md-12 ml-sm-auto  col-lg-10 px-md-4 bg-mint">
             @if(session('error'))
                <div class="alert alert-danger" role="alert"> {{session('error')}}</div>

@@ -31,33 +31,114 @@ class ProfitLossController extends Controller{
       $financial_year = Session::get('default_fy');
       $y = explode("-",$financial_year);
       if(date('m')<=3){
-         $current_year = (date('Y')-1);
+         $current_year = (date('y')-1) . '-' . date('y');
       }else{
-         $current_year = date('Y');
+         $current_year = date('y') . '-' . (date('y') + 1);
       }
-      $sfrom_date = $current_year."-".date('m')."-01";
-      $from_date = $current_year."-04-01";
-      $to_date = $current_year."-".date('m-t');
+      $from_date = $y[0]."-04-01";
+      $from_date = date('Y-m-d',strtotime($from_date));
+      $to_date = date('Y-m-t');
+      if($financial_year!=$current_year){
+         $y =  explode("-",$financial_year);
+         $from_date = $y[0]."-04-01";
+         $from_date = date('Y-m-d',strtotime($from_date));
+         $to_date = $y[1]."-03-31";
+         $to_date = date('Y-m-d',strtotime($to_date));
+      }      
+      //Purchase
       $tot_purchase_amt = DB::table('purchases')
-         ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
+         ->join('purchase_descriptions','purchases.id','=','purchase_descriptions.purchase_id')
+         ->where(['purchases.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
          ->whereBetween('date', [$from_date, $to_date])
          ->get()
-         ->sum("taxable_amt");
+         ->sum("amount");
+      $tot_purchase_sundry_amt = 0;
+      $purchase_sundry = DB::table('purchases')
+         ->join('purchase_sundries','purchases.id','=','purchase_sundries.purchase_id')
+         ->join('bill_sundrys','purchase_sundries.bill_sundry','=','bill_sundrys.id')
+         ->where(['purchases.delete' => '0', 'purchases.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
+         ->whereBetween('date', [$from_date, $to_date])
+         ->select('bill_sundry_type','amount')
+         ->get();
+      if(count($purchase_sundry)>0){
+         foreach ($purchase_sundry as $key => $value) {
+            if($value->bill_sundry_type=="additive"){
+               $tot_purchase_sundry_amt = $tot_purchase_sundry_amt + $value->amount;
+            }else if($value->bill_sundry_type=="subtractive"){
+               $tot_purchase_sundry_amt = $tot_purchase_sundry_amt - $value->amount;
+            }
+         }
+      }
+      //Sale
       $tot_sale_amt = DB::table('sales')
-         ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
+         ->join('sale_descriptions','sales.id','=','sale_descriptions.sale_id')
+         ->where(['sales.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
          ->whereBetween('date', [$from_date, $to_date])
          ->get()
-         ->sum("taxable_amt");
+         ->sum("amount");
+      $tot_sale_sundry_amt = 0;
+      $sale_sundry = DB::table('sales')
+         ->join('sale_sundries','sales.id','=','sale_sundries.sale_id')
+         ->join('bill_sundrys','sale_sundries.bill_sundry','=','bill_sundrys.id')
+         ->where(['sales.delete' => '0', 'sales.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
+         ->whereBetween('date', [$from_date, $to_date])
+         ->select('bill_sundry_type','amount')
+         ->get();
+      if(count($sale_sundry)>0){
+         foreach ($sale_sundry as $key => $value) {
+            if($value->bill_sundry_type=="additive"){
+               $tot_sale_sundry_amt = $tot_sale_sundry_amt + $value->amount;
+            }else if($value->bill_sundry_type=="subtractive"){
+               $tot_sale_sundry_amt = $tot_sale_sundry_amt - $value->amount;
+            }
+         }
+      }
+      //Purchase Return
       $tot_purchase_return_amt = DB::table('purchase_returns')
-         ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
+         ->join('purchase_return_descriptions','purchase_returns.id','=','purchase_return_descriptions.purchase_return_id')
+         ->where(['purchase_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
          ->whereBetween('date', [$from_date, $to_date])
          ->get()
-         ->sum("taxable_amt");
+         ->sum("amount");
+      $purchase_return_sundry = DB::table('purchase_returns')
+         ->join('purchase_return_sundries','purchase_returns.id','=','purchase_return_sundries.purchase_return_id')
+         ->join('bill_sundrys','purchase_return_sundries.bill_sundry','=','bill_sundrys.id')
+         ->where(['purchase_returns.delete' => '0', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
+         ->whereBetween('date', [$from_date, $to_date])
+         ->select('bill_sundry_type','amount')
+         ->get();
+      if(count($purchase_return_sundry)>0){
+         foreach ($purchase_return_sundry as $key => $value) {
+            if($value->bill_sundry_type=="additive"){
+               $tot_purchase_return_amt = $tot_purchase_return_amt + $value->amount;
+            }else if($value->bill_sundry_type=="subtractive"){
+               $tot_purchase_return_amt = $tot_purchase_return_amt - $value->amount;
+            }
+         }
+      }
+      //Sale Return
       $tot_sale_return_amt = DB::table('sales_returns')
-         ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
+         ->join('sale_return_descriptions','sales_returns.id','=','sale_return_descriptions.sale_return_id')
+         ->where(['sales_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
          ->whereBetween('date', [$from_date, $to_date])
          ->get()
-         ->sum("taxable_amt");
+         ->sum("amount");
+      $sale_return_sundry = DB::table('sales_returns')
+         ->join('sale_return_sundries','sales_returns.id','=','sale_return_sundries.sale_return_id')
+         ->join('bill_sundrys','sale_return_sundries.bill_sundry','=','bill_sundrys.id')
+         ->where(['sales_returns.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
+         ->whereBetween('date', [$from_date, $to_date])
+         ->select('bill_sundry_type','amount')
+         ->get();
+      if(count($sale_return_sundry)>0){
+         foreach ($sale_return_sundry as $key => $value) {
+            if($value->bill_sundry_type=="additive"){
+               $tot_sale_return_amt = $tot_sale_return_amt + $value->amount;
+            }else if($value->bill_sundry_type=="subtractive"){
+               $tot_sale_return_amt = $tot_sale_return_amt - $value->amount;
+            }
+         }
+      }
       //Direct Expensess
       $direct_expenses_account_id = Accounts::where('under_group','12')
                                     ->whereIn('company_id',[Session::get('user_company_id'),0])
@@ -170,39 +251,24 @@ class ProfitLossController extends Controller{
          $opening_stock = $opening_stock + ($item_balance*$average);
       }
       //Closing Stock      
-      $closing_stock = ItemLedger::where('status', '1')  
-                  ->where('company_id',Session::get('user_company_id'))
-                  ->where('delete_status','0')
-                  ->where(function($query) use ($to_date){
-                     $query->whereRaw("STR_TO_DATE(txn_date,'%Y-%m-%d')<=STR_TO_DATE('".$to_date."','%Y-%m-%d')");
-                     $query->orWhere('source','=','-1');
-                  })->sum('total_price');
-      $item_account = ItemLedger::where('status', '1')  
-                  ->where('company_id',Session::get('user_company_id'))
-                  ->where('delete_status','0')
-                  ->where('source','!=','-1')
-                  ->whereRaw("STR_TO_DATE(txn_date,'%Y-%m-%d')<=STR_TO_DATE('".$to_date."','%Y-%m-%d')")
-                  ->orderBy('txn_date')
-                  ->get();
-      $sale = $item_account->sum('out_weight');
-      $purchase = $item_account->sum('in_weight');
-      $item_balance = $purchase - $sale;
-      if($item_balance>0){
-         $weight = 0;$price_arr = [];
-         foreach ($item_account as $key => $value) {
-            if($item_balance>$weight){
-               array_push($price_arr,$value['price']);
-            }else{
-               break;
-            }
-            $weight = $weight + $value['in_weight'];
-         }         
-         $price_arr = array_filter($price_arr);
-         $average = array_sum($price_arr)/count($price_arr);
-         $average = round($average,2);
-         $closing_stock = $closing_stock + ($item_balance*$average);
+      $open_date = $y[0]."-04-01";
+      $open_date = date('Y-m-d',strtotime($open_date));
+      $item = DB::select(DB::raw("SELECT item_id,SUM(total_price) as total_price,SUM(in_weight) as in_weight,SUM(out_weight) as out_weight,manage_items.name,units.name as uname FROM item_ledger inner join manage_items on item_ledger.item_id=manage_items.id inner join units on manage_items.u_name=units.id WHERE item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') and item_ledger.status='1' and g_name!='' and item_ledger.delete_status='0' GROUP BY item_id order by manage_items.name"));
+      $item_in_data = DB::select(DB::raw("SELECT SUM(total_price) as total_price,SUM(in_weight) as in_weight,item_id FROM item_ledger WHERE (item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') and status='1' and delete_status='0' and in_weight!='' and source=2) || (item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') and status='1' and delete_status='0' and in_weight!='' and source=-1) GROUP BY item_id"));
+      $result = array();
+      foreach ($item_in_data as $element){
+         $result[$element->item_id][] = round($element->total_price/$element->in_weight,2);
       }
-      return  view('display/profitLoss')->with('data', ['tot_purchase_amt' => $tot_purchase_amt, 'tot_sale_amt' => $tot_sale_amt, 'tot_purchase_return_amt' => $tot_purchase_return_amt, 'tot_sale_return_amt' => $tot_sale_return_amt, 'financial_year' => $financial_year,'direct_expenses' => $direct_expenses,'direct_income' => $direct_income,'opening_stock' => $opening_stock,'closing_stock' => $closing_stock,'indirect_expenses' => $indirect_expenses,'indirect_income' => $indirect_income])->with('from_date',$sfrom_date)->with('to_date',$to_date)->with('opening_stock',$opening_stock);
+      $closing_stock = 0;$total_weight = 0;
+      foreach ($item as $key => $value){
+         $remaining_weight = $value->in_weight - $value->out_weight;
+         if (array_key_exists($value->item_id,$result)){
+            $closing_stock = $closing_stock + $remaining_weight*$result[$value->item_id][0];
+            $total_weight = $total_weight + $remaining_weight;
+         }
+      }
+      $closing_stock = round($closing_stock,2);
+      return  view('display/profitLoss')->with('data', ['tot_purchase_amt' => $tot_purchase_amt+$tot_purchase_sundry_amt, 'tot_sale_amt' => $tot_sale_amt+$tot_sale_sundry_amt, 'tot_purchase_return_amt' => $tot_purchase_return_amt, 'tot_sale_return_amt' => $tot_sale_return_amt, 'financial_year' => $financial_year,'direct_expenses' => $direct_expenses,'direct_income' => $direct_income,'opening_stock' => $opening_stock,'closing_stock' => $closing_stock,'indirect_expenses' => $indirect_expenses,'indirect_income' => $indirect_income])->with('from_date',$from_date)->with('to_date',$to_date)->with('opening_stock',$opening_stock);
    }
    public function filter(Request $request){
       $financial_year = $request->financial_year;
@@ -247,36 +313,101 @@ class ProfitLossController extends Controller{
          $average = array_sum($price_arr)/count($price_arr);
          $average = round($average,2);
          $opening_stock = $opening_stock + ($item_balance*$average);
-      }
-      $closing_stock = 0;
-      $check_stock = ClosingStock::where('status',1)
-                                 ->where('company_id',Session::get('user_company_id'))
-                                 ->whereRaw("STR_TO_DATE(to_date,'%Y-%m-%d')<=STR_TO_DATE('".$to_date."','%Y-%m-%d')")
-                                 ->orderBy('id','desc')
-                                 ->first();
-      if($check_stock){
-         $closing_stock = $check_stock->closing_amount;
-      }                       
+      }                    
+      //Purchase
       $tot_purchase_amt = DB::table('purchases')
-         ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
+         ->join('purchase_descriptions','purchases.id','=','purchase_descriptions.purchase_id')
+         ->where(['purchases.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
          ->whereBetween('date', [$from_date, $to_date])
          ->get()
-         ->sum("taxable_amt");
+         ->sum("amount");
+      $tot_purchase_sundry_amt = 0;
+      $purchase_sundry = DB::table('purchases')
+         ->join('purchase_sundries','purchases.id','=','purchase_sundries.purchase_id')
+         ->join('bill_sundrys','purchase_sundries.bill_sundry','=','bill_sundrys.id')
+         ->where(['purchases.delete' => '0', 'purchases.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
+         ->whereBetween('date', [$from_date, $to_date])
+         ->select('bill_sundry_type','amount')
+         ->get();
+      if(count($purchase_sundry)>0){
+         foreach ($purchase_sundry as $key => $value) {
+            if($value->bill_sundry_type=="additive"){
+               $tot_purchase_sundry_amt = $tot_purchase_sundry_amt + $value->amount;
+            }else if($value->bill_sundry_type=="subtractive"){
+               $tot_purchase_sundry_amt = $tot_purchase_sundry_amt - $value->amount;
+            }
+         }
+      }
+      //Sale
       $tot_sale_amt = DB::table('sales')
-         ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
+         ->join('sale_descriptions','sales.id','=','sale_descriptions.sale_id')
+         ->where(['sales.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
          ->whereBetween('date', [$from_date, $to_date])
          ->get()
-         ->sum("taxable_amt");
+         ->sum("amount");
+      $tot_sale_sundry_amt = 0;
+      $sale_sundry = DB::table('sales')
+         ->join('sale_sundries','sales.id','=','sale_sundries.sale_id')
+         ->join('bill_sundrys','sale_sundries.bill_sundry','=','bill_sundrys.id')
+         ->where(['sales.delete' => '0', 'sales.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
+         ->whereBetween('date', [$from_date, $to_date])
+         ->select('bill_sundry_type','amount')
+         ->get();
+      if(count($sale_sundry)>0){
+         foreach ($sale_sundry as $key => $value) {
+            if($value->bill_sundry_type=="additive"){
+               $tot_sale_sundry_amt = $tot_sale_sundry_amt + $value->amount;
+            }else if($value->bill_sundry_type=="subtractive"){
+               $tot_sale_sundry_amt = $tot_sale_sundry_amt - $value->amount;
+            }
+         }
+      }
+      //Purchase Return
       $tot_purchase_return_amt = DB::table('purchase_returns')
-         ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
+         ->join('purchase_return_descriptions','purchase_returns.id','=','purchase_return_descriptions.purchase_return_id')
+         ->where(['purchase_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
          ->whereBetween('date', [$from_date, $to_date])
          ->get()
-         ->sum("taxable_amt");
+         ->sum("amount");
+      $purchase_return_sundry = DB::table('purchase_returns')
+         ->join('purchase_return_sundries','purchase_returns.id','=','purchase_return_sundries.purchase_return_id')
+         ->join('bill_sundrys','purchase_return_sundries.bill_sundry','=','bill_sundrys.id')
+         ->where(['purchase_returns.delete' => '0', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
+         ->whereBetween('date', [$from_date, $to_date])
+         ->select('bill_sundry_type','amount')
+         ->get();
+      if(count($purchase_return_sundry)>0){
+         foreach ($purchase_return_sundry as $key => $value) {
+            if($value->bill_sundry_type=="additive"){
+               $tot_purchase_return_amt = $tot_purchase_return_amt + $value->amount;
+            }else if($value->bill_sundry_type=="subtractive"){
+               $tot_purchase_return_amt = $tot_purchase_return_amt - $value->amount;
+            }
+         }
+      }
+      //Sale Return
       $tot_sale_return_amt = DB::table('sales_returns')
-         ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
+         ->join('sale_return_descriptions','sales_returns.id','=','sale_return_descriptions.sale_return_id')
+         ->where(['sales_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
          ->whereBetween('date', [$from_date, $to_date])
          ->get()
-         ->sum("taxable_amt");
+         ->sum("amount");
+      $sale_return_sundry = DB::table('sales_returns')
+         ->join('sale_return_sundries','sales_returns.id','=','sale_return_sundries.sale_return_id')
+         ->join('bill_sundrys','sale_return_sundries.bill_sundry','=','bill_sundrys.id')
+         ->where(['sales_returns.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
+         ->whereBetween('date', [$from_date, $to_date])
+         ->select('bill_sundry_type','amount')
+         ->get();
+      if(count($sale_return_sundry)>0){
+         foreach ($sale_return_sundry as $key => $value) {
+            if($value->bill_sundry_type=="additive"){
+               $tot_sale_return_amt = $tot_sale_return_amt + $value->amount;
+            }else if($value->bill_sundry_type=="subtractive"){
+               $tot_sale_return_amt = $tot_sale_return_amt - $value->amount;
+            }
+         }
+      }
       //Direct Expensess
       $direct_expenses_account_id = Accounts::where('under_group','12')
                                     ->whereIn('company_id',[Session::get('user_company_id'),0])
@@ -353,8 +484,24 @@ class ProfitLossController extends Controller{
                   ->where('status','1')
                   ->where('financial_year',$financial_year)
                   ->sum('credit');
-      
-      return  view('display/profitLoss')->with('data', ['tot_purchase_amt' => $tot_purchase_amt, 'tot_sale_amt' => $tot_sale_amt, 'tot_purchase_return_amt' => $tot_purchase_return_amt, 'tot_sale_return_amt' => $tot_sale_return_amt, 'financial_year' => $financial_year,'direct_expenses' => $direct_expenses,'direct_income' => $direct_income,'opening_stock' => $opening_stock,'closing_stock' => $closing_stock,'indirect_expenses' => $indirect_expenses,'indirect_income' => $indirect_income])->with('from_date',$from_date)->with('to_date',$to_date)->with('opening_stock',$opening_stock);
+      $open_date = $y[0]."-04-01";
+      $open_date = date('Y-m-d',strtotime($open_date));
+      $item = DB::select(DB::raw("SELECT item_id,SUM(total_price) as total_price,SUM(in_weight) as in_weight,SUM(out_weight) as out_weight,manage_items.name,units.name as uname FROM item_ledger inner join manage_items on item_ledger.item_id=manage_items.id inner join units on manage_items.u_name=units.id WHERE item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') and item_ledger.status='1' and g_name!='' and item_ledger.delete_status='0' GROUP BY item_id order by manage_items.name"));
+      $item_in_data = DB::select(DB::raw("SELECT SUM(total_price) as total_price,SUM(in_weight) as in_weight,item_id FROM item_ledger WHERE (item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') and status='1' and delete_status='0' and in_weight!='' and source=2) || (item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') and status='1' and delete_status='0' and in_weight!='' and source=-1) GROUP BY item_id"));
+      $result = array();
+      foreach ($item_in_data as $element){
+         $result[$element->item_id][] = round($element->total_price/$element->in_weight,2);
+      }
+      $closing_stock = 0;$total_weight = 0;
+      foreach ($item as $key => $value){
+         $remaining_weight = $value->in_weight - $value->out_weight;
+         if (array_key_exists($value->item_id,$result)){
+            $closing_stock = $closing_stock + $remaining_weight*$result[$value->item_id][0];
+            $total_weight = $total_weight + $remaining_weight;
+         }
+      }
+      $closing_stock = round($closing_stock,2);
+      return  view('display/profitLoss')->with('data', ['tot_purchase_amt' => $tot_purchase_amt+$tot_purchase_sundry_amt, 'tot_sale_amt' => $tot_sale_amt+$tot_sale_sundry_amt, 'tot_purchase_return_amt' => $tot_purchase_return_amt, 'tot_sale_return_amt' => $tot_sale_return_amt, 'financial_year' => $financial_year,'direct_expenses' => $direct_expenses,'direct_income' => $direct_income,'opening_stock' => $opening_stock,'closing_stock' => $closing_stock,'indirect_expenses' => $indirect_expenses,'indirect_income' => $indirect_income])->with('from_date',$from_date)->with('to_date',$to_date)->with('opening_stock',$opening_stock);
    }
    public function saleByMonth(Request $request,$financial_year){
       $y = explode("-",$financial_year);
@@ -481,17 +628,21 @@ class ProfitLossController extends Controller{
                      ->get();                     
       foreach ($account_group as $key => $value) {
          $account_id = Accounts::where('under_group',$value->id)->where('accounts.delete','0')->whereIn('accounts.company_id',[Session::get('user_company_id'),0])->pluck('id');
-         $leger = AccountLedger::whereIn('account_id',$account_id)
+         $debit_sum = AccountLedger::whereIn('account_id',$account_id)
                         ->where('financial_year',$financial_year)
                         ->where('delete_status','0')
                         ->whereBetween('txn_date', [$from_date, $to_date])
                         ->whereIn('company_id',[Session::get('user_company_id'),0])
-                        ->sum($type);
-         if($type=="debit"){
-            $account_group[$key]->account_ledger_sum_debit = $leger;
-         }else{
-            $account_group[$key]->account_ledger_sum_credit = $leger;
-         }
+                        ->sum('debit');
+         $credit_sum = AccountLedger::whereIn('account_id',$account_id)
+                        ->where('financial_year',$financial_year)
+                        ->where('delete_status','0')
+                        ->whereBetween('txn_date', [$from_date, $to_date])
+                        ->whereIn('company_id',[Session::get('user_company_id'),0])
+                        ->sum('credit');         
+         $account_group[$key]->account_ledger_sum_debit = $debit_sum;
+         $account_group[$key]->account_ledger_sum_credit = $credit_sum;
+         
          
          $account_group[$key]->type = 1;
       }
@@ -500,12 +651,19 @@ class ProfitLossController extends Controller{
                               $query->where('financial_year', $financial_year);
                               $query->whereBetween('txn_date', [$from_date, $to_date]);
                               $query->where('delete_status','0');
-                            }], $type)
+                            }], 'debit')
+                           ->withSum([
+                            'accountLedger' => function ($query) use ($financial_year,$from_date,$to_date) { 
+                              $query->where('financial_year', $financial_year);
+                              $query->whereBetween('txn_date', [$from_date, $to_date]);
+                              $query->where('delete_status','0');
+                            }], 'credit')
                            ->where('under_group',$id)
                            ->where('accounts.delete','0')                           
                            ->whereIn('accounts.company_id',[Session::get('user_company_id'),0])
                            ->orderBy('account_name')
                            ->get();
+
       $account = $account->merge($account_group);           
       return view('display/account_balance_by_group')->with('data',$account)->with('group',$group)->with('financial_year',$financial_year)->with('type',$type)->with('from_date',$from_date)->with('to_date',$to_date);
    }

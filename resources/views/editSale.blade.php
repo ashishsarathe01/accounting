@@ -257,7 +257,7 @@ foreach($manageitems as $value) {
                                              <?php
                                              foreach ($billsundry as $value) { 
                                                 if($value->effect_gst_calculation==1){?>
-                                                   <option value="<?php echo $value->id;?>" data-sundry_percent="<?php echo $value->sundry_percent;?>" data-sundry_percent_date="<?php echo $value->sundry_percent_date;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_@php echo $index;@endphp" id="sundry_option_<?php echo $value->id;?>_1" <?php if($sundry->bill_sundry==$value->id){ echo "selected";} ?> data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
+                                                   <option value="<?php echo $value->id;?>" data-sundry_percent="<?php echo $value->sundry_percent;?>" data-sundry_percent_date="<?php echo $value->sundry_percent_date;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_@php echo $index;@endphp" id="sundry_option_<?php echo $value->id;?>_1" <?php if($sundry->bill_sundry==$value->id){ echo "selected";} ?> data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
                                                    <?php 
                                                 }
                                              } ?>
@@ -315,7 +315,7 @@ foreach($manageitems as $value) {
                                        <?php
                                        foreach ($billsundry as $value) { 
                                           if($value->nature_of_sundry=='CGST'){?>
-                                          <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_cgst" id="sundry_option_cgst" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name;?></option>
+                                          <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_cgst" id="sundry_option_cgst" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name;?></option>
                                              <?php 
                                           }
                                        } ?>
@@ -335,7 +335,7 @@ foreach($manageitems as $value) {
                                        foreach ($billsundry as $value) { 
                                           if($value->nature_of_sundry=='SGST'){
                                           ?>
-                                          <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_sgst" id="sundry_option_sgst" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
+                                          <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_sgst" id="sundry_option_sgst" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
                                           <?php 
                                           }
                                        } ?>
@@ -356,7 +356,7 @@ foreach($manageitems as $value) {
                                        <?php
                                        foreach ($billsundry as $value) { 
                                           if($value->nature_of_sundry=='IGST'){?>
-                                             <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_igst" id="sundry_option_igst" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
+                                             <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-sequence="<?php echo $value->sequence;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" class="sundry_option_igst" id="sundry_option_igst" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
                                              <?php 
                                           }
                                        } ?>
@@ -378,7 +378,7 @@ foreach($manageitems as $value) {
                                                 <?php
                                                 foreach ($billsundry as $value) { 
                                                    if($value->id==$v1['bill_sundry']){?>
-                                                      <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_@php echo $index;@endphp" id="sundry_option_@php echo $index;@endphp" data-sundry_percent="<?php echo $value->sundry_percent;?>" data-sundry_percent_date="<?php echo $value->sundry_percent_date;?>" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
+                                                      <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_@php echo $index;@endphp" id="sundry_option_@php echo $index;@endphp" data-sundry_percent="<?php echo $value->sundry_percent;?>" data-sundry_percent_date="<?php echo $value->sundry_percent_date;?>" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
                                                       <?php 
                                                    }
                                                 } ?>
@@ -416,7 +416,7 @@ foreach($manageitems as $value) {
                                                 if($value->effect_gst_calculation==0 && $value->nature_of_sundry!='CGST' && $value->nature_of_sundry!='SGST' && $value->nature_of_sundry!='IGST' && $value->nature_of_sundry!='ROUNDED OFF (+)' && $value->nature_of_sundry!='ROUNDED OFF (-)'){
 
                                                    ?>
-                                                   <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_@php echo $index;@endphp" id="sundry_option_<?php echo $value->id;?>_@php echo $index;@endphp" <?php if($value->id==$sundry->bill_sundry){ echo "selected";} ?> data-sundry_percent="<?php echo $value->sundry_percent;?>" data-sundry_percent_date="<?php echo $value->sundry_percent_date;?>" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
+                                                   <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_@php echo $index;@endphp" id="sundry_option_<?php echo $value->id;?>_@php echo $index;@endphp" <?php if($value->id==$sundry->bill_sundry){ echo "selected";} ?> data-sundry_percent="<?php echo $value->sundry_percent;?>" data-sundry_percent_date="<?php echo $value->sundry_percent_date;?>" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
                                                    <?php 
                                                 }
                                              } ?>
@@ -448,7 +448,7 @@ foreach($manageitems as $value) {
                                        <?php
                                        foreach ($billsundry as $value) { 
                                           if($value->nature_of_sundry=='ROUNDED OFF (+)'){?>
-                                             <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_round_plus" id="sundry_option_round_plus" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
+                                             <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_round_plus" id="sundry_option_round_plus" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
                                              <?php 
                                           }
                                        } ?>
@@ -468,7 +468,7 @@ foreach($manageitems as $value) {
                                        <?php
                                        foreach ($billsundry as $value) { 
                                           if($value->nature_of_sundry=='ROUNDED OFF (-)'){?>
-                                             <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_round_minus" id="sundry_option_round_minus" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
+                                             <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_round_minus" id="sundry_option_round_minus" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
                                              <?php 
                                           }
                                        } ?>
@@ -764,7 +764,7 @@ foreach($manageitems as $value) {
       <?php
       foreach ($billsundry as $value){ 
          if($value->effect_gst_calculation==1){?>
-            optionElements += '<option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-sundry_percent="<?php echo $value->sundry_percent;?>" data-sundry_percent_date="<?php echo $value->sundry_percent_date;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" class="sundry_option_'+add_more_bill_sundry_up_count+'" id="sundry_option_<?php echo $value->id;?>_'+add_more_bill_sundry_up_count+'" data-sequence="<?php echo $value->sequence;?>" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>';<?php 
+            optionElements += '<option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-sundry_percent="<?php echo $value->sundry_percent;?>" data-sundry_percent_date="<?php echo $value->sundry_percent_date;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" class="sundry_option_'+add_more_bill_sundry_up_count+'" id="sundry_option_<?php echo $value->id;?>_'+add_more_bill_sundry_up_count+'" data-sequence="<?php echo $value->sequence;?>" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>';<?php 
          }
       } ?>
       newRow = '<tr id="billtr_' + add_more_bill_sundry_up_count + '" class="font-14 font-heading bg-white extra_taxes_row sundry_tr"><td class="w-min-50"><select class="w-95-parsent bill_sundry_tax_type w-100 form-select"  id="bill_sundry_' + add_more_bill_sundry_up_count + '" name="bill_sundry[]" data-id="'+add_more_bill_sundry_up_count+'">';
@@ -779,7 +779,7 @@ foreach($manageitems as $value) {
       <?php
       foreach ($billsundry as $value) { 
          if($value->effect_gst_calculation==0){?>
-            optionElements += '<option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" class="sundry_option_'+add_more_bill_sundry_up_count+'" id="sundry_option_<?php echo $value->id;?>_'+add_more_bill_sundry_up_count+'" data-sequence="<?php echo $value->sequence;?>" data-sundry_percent="<?php echo $value->sundry_percent;?>" data-sundry_percent_date="<?php echo $value->sundry_percent_date;?>" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>';
+            optionElements += '<option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" class="sundry_option_'+add_more_bill_sundry_up_count+'" id="sundry_option_<?php echo $value->id;?>_'+add_more_bill_sundry_up_count+'" data-sequence="<?php echo $value->sequence;?>" data-sundry_percent="<?php echo $value->sundry_percent;?>" data-sundry_percent_date="<?php echo $value->sundry_percent_date;?>" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>';
             <?php 
          }
       } ?>
@@ -795,7 +795,7 @@ foreach($manageitems as $value) {
       <?php
       foreach ($billsundry as $value) { 
          if($value->nature_of_sundry=='CGST' || $value->nature_of_sundry=='SGST' || $value->nature_of_sundry=='IGST'){?>
-            optionElements += '<option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" class="sundry_option_'+add_more_bill_sundry_up_count+'" id="sundry_option_<?php echo $value->id;?>_'+add_more_bill_sundry_up_count+'" data-sequence="<?php echo $value->sequence;?>" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>';
+            optionElements += '<option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" class="sundry_option_'+add_more_bill_sundry_up_count+'" id="sundry_option_<?php echo $value->id;?>_'+add_more_bill_sundry_up_count+'" data-sequence="<?php echo $value->sequence;?>" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>';
             <?php 
          }
       } ?>
@@ -866,7 +866,7 @@ foreach($manageitems as $value) {
       $(".bill_sundry_tax_type").each(function(){            
          let id = $(this).attr('data-id');
          if($("#bill_sundry_amount_"+id).val()!='' && ($('option:selected', this).attr('data-sundry_percent')==undefined || $('option:selected', this).attr('data-sundry_percent')=="")){
-            billSundryArray.push({'id':$(this).val(),'value':$("#bill_sundry_amount_"+id).val(),'type':$('option:selected', this).attr('data-type'),'adjust_sale_amt':$('option:selected', this).attr('data-adjust_sale_amt'),'sequence':$('option:selected', this).attr('data-sequence'),'nature_of_sundry':$('option:selected', this).attr('data-nature_of_sundry')});
+            billSundryArray.push({'id':$(this).val(),'value':$("#bill_sundry_amount_"+id).val(),'type':$('option:selected', this).attr('data-type'),'adjust_sale_amt':$('option:selected', this).attr('data-adjust_sale_amt'),'effect_gst_calculation':$('option:selected', this).attr('data-effect_gst_calculation'),'sequence':$('option:selected', this).attr('data-sequence'),'nature_of_sundry':$('option:selected', this).attr('data-nature_of_sundry')});
             taxSundryArray[id] = $("#bill_sundry_amount_"+id).val();
          }
       });         
@@ -899,15 +899,15 @@ foreach($manageitems as $value) {
                      billSundryArray.forEach(function(e){
                         if(e.nature_of_sundry!='CGST' && e.nature_of_sundry!='SGST' && e.nature_of_sundry!='IGST' && e.nature_of_sundry!='ROUNDED OFF (+)' && e.nature_of_sundry!='ROUNDED OFF (-)'){ 
                            if(e.value>0){
-                              if(e.type=='additive' && e.adjust_sale_amt=='Yes'){
+                              if(e.type=='additive' && e.effect_gst_calculation=='1'){
                                  item_taxable_amount = item_taxable_amount + parseFloat(e.value);
                                  final_total = final_total + parseFloat(e.value);
-                              }else if(e.type=='subtractive' && e.adjust_sale_amt=='Yes'){
+                              }else if(e.type=='subtractive' && e.effect_gst_calculation=='1'){
                                  item_taxable_amount = item_taxable_amount - parseFloat(e.value);
                                  final_total = final_total - parseFloat(e.value);
-                              }else if(e.adjust_sale_amt=='No' && e.type=='additive'){
+                              }else if(e.effect_gst_calculation=='0' && e.type=='additive'){
                                  final_total = final_total + parseFloat(e.value);
-                              }else if(e.adjust_sale_amt=='No' && e.type=='subtractive'){
+                              }else if(e.effect_gst_calculation=='0' && e.type=='subtractive'){
                                  final_total = final_total - parseFloat(e.value);
                               }
                            }
@@ -1018,15 +1018,15 @@ foreach($manageitems as $value) {
                      billSundryArray.forEach(function(e){
                         if(e.nature_of_sundry!='CGST' && e.nature_of_sundry!='SGST' && e.nature_of_sundry!='IGST' && e.nature_of_sundry!='ROUNDED OFF (+)' && e.nature_of_sundry!='ROUNDED OFF (-)'){ 
                            if(e.value>0){
-                              if(e.type=='additive' && e.adjust_sale_amt=='Yes'){
+                              if(e.type=='additive' && e.effect_gst_calculation=='1'){
                                  item_taxable_amount = item_taxable_amount + parseFloat(e.value);
                                  final_total = final_total + parseFloat(e.value);
-                              }else if(e.type=='subtractive' && e.adjust_sale_amt=='Yes'){
+                              }else if(e.type=='subtractive' && e.effect_gst_calculation=='1'){
                                  item_taxable_amount = item_taxable_amount - parseFloat(e.value);
                                  final_total = final_total - parseFloat(e.value);
-                              }else if(e.adjust_sale_amt=='No' && e.type=='additive'){
+                              }else if(e.effect_gst_calculation=='0' && e.type=='additive'){
                                  final_total = final_total + parseFloat(e.value);
-                              }else if(e.adjust_sale_amt=='No' && e.type=='subtractive'){
+                              }else if(e.effect_gst_calculation=='0' && e.type=='subtractive'){
                                  final_total = final_total - parseFloat(e.value);
                               }
                            }
@@ -1099,6 +1099,7 @@ foreach($manageitems as $value) {
          let bill_date = $("#date").val();
          let nature_of_sundry = $('option:selected', this).attr('data-nature_of_sundry');
          let adjust_sale_amt = $('option:selected', this).attr('data-adjust_sale_amt');
+         let effect_gst_calculation = $('option:selected', this).attr('data-effect_gst_calculation');
          let type = $('option:selected', this).attr('data-type');
          if(sundry_percent!=undefined && sundry_percent_date!=undefined && sundry_percent!='' && sundry_percent_date!=''){
             if(new Date(sundry_percent_date) <= new Date(bill_date)){
@@ -1110,7 +1111,7 @@ foreach($manageitems as $value) {
                final_total = final_total + parseFloat(tcs_amount);
             }
          }else{
-            if(new Date(sundry_percent_date) <= new Date(bill_date) && adjust_sale_amt=="No"){
+            if(new Date(sundry_percent_date) <= new Date(bill_date) && effect_gst_calculation=="0"){
                if($("#bill_sundry_amount_"+id).val()!=""){
                   if(type=="additive"){
                      //final_total = final_total + parseFloat($("#bill_sundry_amount_"+id).val());
@@ -1121,7 +1122,7 @@ foreach($manageitems as $value) {
             }
          }
 
-         if($('option:selected', this).attr('data-adjust_sale_amt')=="No" && $("#bill_sundry_amount_"+id).val()!='' && nature_of_sundry!='ROUNDED OFF (+)' && nature_of_sundry!='ROUNDED OFF (-)'){
+         if($('option:selected', this).attr('data-effect_gst_calculation')=="0" && $("#bill_sundry_amount_"+id).val()!='' && nature_of_sundry!='ROUNDED OFF (+)' && nature_of_sundry!='ROUNDED OFF (-)'){
             if(type=="additive"){
                gstamount = parseFloat(gstamount) + parseFloat($("#bill_sundry_amount_"+id).val());
             }else{

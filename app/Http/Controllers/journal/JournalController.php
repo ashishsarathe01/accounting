@@ -231,6 +231,10 @@ class JournalController extends Controller
                $ledger->save();
             }else{
                $cgst_account_name = "";
+               $cgst_sundry = BillSundrys::select('purchase_amt_account')
+                        ->where('nature_of_sundry','CGST')
+                        ->where('company_id',Session::get('user_company_id'))
+                        ->first();
                if($cgst_sundry){
                   $cgst_account_name = $cgst_sundry->purchase_amt_account;
                }

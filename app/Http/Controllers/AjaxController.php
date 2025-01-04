@@ -386,7 +386,7 @@ class AjaxController extends Controller
                               ->where('financial_year',$financial_year)
                               ->pluck('invoice_no');
                               
-      $Accountdetails = Sales::select('voucher_no','id','series_no','financial_year')
+      $Accountdetails = Sales::select('voucher_no','id','series_no','financial_year','material_center')
                               ->where('party', $account_id)
                               ->where('delete','0')
                               ->where('financial_year',$financial_year)
@@ -404,7 +404,7 @@ class AjaxController extends Controller
                               ->where('financial_year',$financial_year)
                               ->where('delete','0')
                               ->pluck('invoice_no');
-      $Accountdetails = Purchase::select('voucher_no','id','series_no','financial_year')
+      $Accountdetails = Purchase::select('voucher_no','id','series_no','financial_year','material_center')
                                  ->where('delete','0')
                                  ->where('party', $account_id)
                                  ->where('financial_year',$financial_year)
@@ -547,14 +547,47 @@ class AjaxController extends Controller
       $input = $request->all();
       $financial_year = Session::get('default_fy');
       $y = explode("-",$financial_year);
-      $fdate = date('Y-m-d',strtotime($input['from_date']));
       $tdate = date('Y-m-d',strtotime($input['to_date']));
-      $y =  explode("-",$financial_year);
       $open_date = $y[0]."-04-01";
       $open_date = date('Y-m-d',strtotime($open_date));
-      
-
-
+      $item = DB::select(DB::raw("SELECT item_id,SUM(total_price) as total_price,SUM(in_weight) as in_weight,SUM(out_weight) as out_weight,manage_items.name,units.name as uname FROM item_ledger inner join manage_items on item_ledger.item_id=manage_items.id inner join units on manage_items.u_name=units.id WHERE item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$request->to_date."', '%Y-%m-%d') and item_ledger.status='1' and g_name!='' and item_ledger.delete_status='0' GROUP BY item_id order by manage_items.name"));
+      $item_in_data = DB::select(DB::raw("SELECT SUM(total_price) as total_price,SUM(in_weight) as in_weight,item_id FROM item_ledger WHERE item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$request->to_date."', '%Y-%m-%d') and status='1' and delete_status='0' and in_weight!='' GROUP BY item_id"));
+      $result = array();
+      foreach ($item_in_data as $element){
+         $result[$element->item_id][] = round($element->total_price/$element->in_weight,2);
+      }
+      $total_balance = 0;$total_weight = 0;
+      foreach ($item as $key => $value){
+         $remaining_weight = $value->in_weight - $value->out_weight;
+         if (array_key_exists($value->item_id,$result)){
+            $total_balance = $total_balance + $remaining_weight*$result[$value->item_id][0];
+            $total_weight = $total_weight + $remaining_weight;
+         }
+      }
+      echo $total_balance = round($total_balance,2);
+      die;
+      $stock = new ClosingStock();
+      $stock->closing_quantity = round($total_weight);
+      $stock->closing_price = round($total_balance/$total_weight,2);
+      $stock->closing_amount = $total_balance;
+      $stock->from_date = $open_date;
+      $stock->to_date = $to_date;
+      $stock->company_id = Session::get('user_company_id');
+      $stock->created_by = Session::get('user_id');
+      $stock->created_at = date("Y-m-d H:i:s");
+      if($stock->save()){
+         $response = array(
+            'status' => true,
+            'message' => 'Stock Updated Successfully.'
+         );
+         return json_encode($response);
+      }else{
+         $response = array(
+            'status' => false,
+            'message' => 'Something went wrong.'
+         );
+         return json_encode($response);
+      }
 
       
       $from_date = $input['from_date'];

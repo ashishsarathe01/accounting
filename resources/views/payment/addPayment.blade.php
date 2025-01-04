@@ -76,7 +76,7 @@
                         <?php
                         if(count($mat_series) > 0) {
                            foreach ($mat_series as $value) { ?>
-                              <option value="<?php echo $value['branch_series']; ?>"><?php echo $value['branch_series']; ?></option>
+                              <option value="<?php echo $value['branch_series']; ?>" <?php if(count($mat_series)==1) { echo "selected";} ?>><?php echo $value['branch_series']; ?></option>
                               <?php 
                            }
                         } ?>

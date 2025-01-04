@@ -397,14 +397,14 @@
             $("#credit_" + id).prop('readonly', false);
             let amount = debit_total - credit_total;
             if(amount>0){
-               $("#credit_"+id).val(amount);
+               $("#credit_"+id).val(amount.toFixed(2));
             }
         }else if ($("#type_" + id).val() == "Debit") {
             $("#debit_" + id).prop('readonly', false);
             $("#credit_" + id).prop('readonly', true);
             let amount = credit_total - debit_total;
             if(amount>0){
-               $("#debit_"+id).val(amount);
+               $("#debit_"+id).val(amount.toFixed(2));
             }
         }
         $("#account_"+id).html('<?php echo $account_html;?>');
@@ -437,7 +437,7 @@
              total_debit_amount = parseFloat(total_debit_amount) + parseFloat($(this).val());
           }
        });
-       $("#total_debit").html(total_debit_amount);
+       $("#total_debit").html(total_debit_amount.toFixed(2));
     }
     function creditTotal() {
        let total_credit_amount = 0;
@@ -446,7 +446,7 @@
              total_credit_amount = parseFloat(total_credit_amount) + parseFloat($(this).val());
           }
        });
-       $("#total_credit").html(total_credit_amount);
+       $("#total_credit").html(total_credit_amount.toFixed(2));
     }
     $(".select2-single").select2();
     $(document).ready(function() {

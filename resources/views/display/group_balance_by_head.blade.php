@@ -38,7 +38,15 @@
                      </tr>                     
                   </thead>
                   <tbody>
-                     @php $debit_total = 0;$credit_total = 0; @endphp
+                     @php 
+                     $undergroup_result = array();
+                    
+                     foreach ($undergroup->toArray() as $element){ 
+                        if(count($element['account_under_group'])>0){
+                           $undergroup_result[$element['id']][] = $element['account_under_group'];
+                        }
+                     } 
+                     $debit_total = 0;$credit_total = 0; @endphp
                      @foreach($group as $value)
                         @php $debit = 0;$credit = 0; @endphp
                         @if($value->account)
@@ -55,7 +63,31 @@
                               @endforeach
                            @endforeach
                         @endif
-                        @php $balance = $debit - $credit;@endphp
+                        
+
+                        @php 
+                        
+                        if(isset($undergroup_result[$value->id])){
+                           foreach($undergroup_result[$value->id] as $val){
+                              foreach($val as $val2){
+                                 if(count($val2['account'])>0){
+                                    foreach($val2['account'] as $val3){                  
+                                       if(count($val3['account_ledger'])>0){
+                                          foreach($val3['account_ledger'] as $val4){
+                                             if($val4['debit']!=""){
+                                                $debit = $debit + $val4['debit'];
+                                             }
+                                             if($val4['credit']!=""){
+                                                $credit = $credit + $val4['credit']; 
+                                             }
+                                          }
+                                       }
+                                    }
+                                 }
+                              }
+                           }
+                        }
+                        $balance = $debit - $credit;@endphp
                         <tr>
                            <td>
                               @if($value->stock_in_hand==1)

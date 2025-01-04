@@ -18,6 +18,7 @@ use App\Models\BillSundrys;
 use App\Models\GstBranch;
 use App\Models\Companies;
 use App\Models\AccountLedger;
+use App\Models\ItemLedger;
 use Session;
 use DateTime;
 
@@ -205,6 +206,21 @@ class SalesReturnController extends Controller
             $desc->amount = $amounts[$key];
             $desc->status = '1';
             $desc->save();
+            //ADD ITEM LEDGER
+            if($qtys[$key]!="" && $prices[$key]!="" && $prices[$key]!=0 && $qtys[$key]!=0){
+               $item_ledger = new ItemLedger();
+               $item_ledger->item_id = $good;
+               $item_ledger->in_weight = $qtys[$key];
+               $item_ledger->txn_date = $request->input('date');
+               $item_ledger->price = $prices[$key];
+               $item_ledger->total_price = $amounts[$key];
+               $item_ledger->company_id = Session::get('user_company_id');
+               $item_ledger->source = 4;
+               $item_ledger->source_id = $sale->id;
+               $item_ledger->created_by = Session::get('user_id');
+               $item_ledger->created_at = date('d-m-Y H:i:s');
+               $item_ledger->save();
+            }
          }
          $bill_sundrys = $request->input('bill_sundry');
          $tax_rate = $request->input('tax_rate');
@@ -468,6 +484,7 @@ class SalesReturnController extends Controller
          $prices = $request->input('price');
          $amounts = $request->input('amount');
          SaleReturnDescription::where('sale_return_id',$sale->id)->delete();
+         ItemLedger::where('source_id',$sale->id)->where('source',4)->delete();
          foreach ($goods_discriptions as $key => $good) {
             if($good=="" || $amounts[$key]==""){
                continue;
@@ -481,6 +498,21 @@ class SalesReturnController extends Controller
             $desc->amount = $amounts[$key];
             $desc->status = '1';
             $desc->save();
+            //ADD ITEM LEDGER
+            if($qtys[$key]!="" && $prices[$key]!="" && $prices[$key]!=0 && $qtys[$key]!=0){
+               $item_ledger = new ItemLedger();
+               $item_ledger->item_id = $good;
+               $item_ledger->in_weight = $qtys[$key];
+               $item_ledger->txn_date = $request->input('date');
+               $item_ledger->price = $prices[$key];
+               $item_ledger->total_price = $amounts[$key];
+               $item_ledger->company_id = Session::get('user_company_id');
+               $item_ledger->source = 4;
+               $item_ledger->source_id = $sale->id;
+               $item_ledger->created_by = Session::get('user_id');
+               $item_ledger->created_at = date('d-m-Y H:i:s');
+               $item_ledger->save();
+            }
          }
          $bill_sundrys = $request->input('bill_sundry');
          $tax_rate = $request->input('tax_rate');

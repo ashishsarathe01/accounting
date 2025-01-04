@@ -41,7 +41,7 @@
                      <button class="btn btn-info ms-xxl-2 next_btn">Next</button>
                   </div>
                </form>
-               <button class="btn btn-info ms-xxl-2 update_btn">Update Stock</button>
+               
             </div>
             <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
                <h5 class="master-table-title m-0 py-2">Balance Sheet</h5>
@@ -52,10 +52,51 @@
                      <div class="col-md-12 fw-bold font-14 d-flex px-3 py-12 border-bottom-divider">Liabilities (Rs.)
                         <span class="ms-auto">0.00</span>
                      </div>
-                     @php $liability_total = 0;$asset_total = 0;@endphp
+                      @php $liability_total = 0;$asset_total = 0;@endphp
+                     <div class="col-md-12 fw-500 font-14 d-flex px-3 py-12 border-bottom-divider" style="cursor:pointer;color: #0000EE">
+                        <?php 
+                        if($profitloss<0){
+                           echo "PROFIT FOR THE PERIOD";
+                        }else{
+                           echo "PROFIT/LOSS ADJUSTED";
+                        }
+                        ?>
+                        <span class="ms-auto">
+                           <?php 
+                           setlocale(LC_MONETARY, 'en_IN');                           
+                           if($profitloss<0){
+                              if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+                                 echo number_format(abs($profitloss),2);
+                              }else{
+                                 echo money_format('%!i', abs($profitloss));
+                              }
+                              $liability_total = $liability_total + abs($profitloss);
+                           }else{
+                              echo "0.0";
+                           }
+                           ?>
+                        </span>
+                     </div>
+                    
                      @foreach($liability as $value)
                         @php $debit = 0;$credit = 0; @endphp
                         @foreach($value->accountGroup as $v1)
+                           @if(count($v1->accountUnderGroup)>0)
+                              @foreach($v1->accountUnderGroup as $val1)
+                                 @foreach($val1->account as $val2)
+                                    @foreach($val2->accountLedger as $val3)
+                                       @php 
+                                          if($val3->debit!=""){
+                                             $debit = $debit + $val3->debit;
+                                          }
+                                          if($val3->credit!=""){
+                                             $credit = $credit + $val3->credit; 
+                                          }                                    
+                                       @endphp
+                                    @endforeach
+                                 @endforeach
+                              @endforeach
+                           @endif
                            @foreach($v1->account as $v2)
                               @foreach($v2->accountLedger as $v3)
                                  @php 
@@ -83,27 +124,17 @@
                         @endforeach
                         <?php
                         $amount = $debit - $credit;
-                        if($value->show_in_balance_sheet==1 || $amount!=0){?>
+                        if(($value->show_in_balance_sheet==1 || $amount!=0) && $value->id!=4){?>
                            <div class="col-md-12 fw-500 font-14 d-flex px-3 py-12 border-bottom-divider get_group_detail" data-id="{{$value->id}}" style="cursor:pointer;color: #0000EE">{{$value->name}}
                               <span class="ms-auto">
                                  <?php 
-                                 setlocale(LC_MONETARY, 'en_IN');
-                                 if($value->id==4){
-                                    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-                                       echo number_format(abs($profitloss),2);
-                                    }else{
-                                       echo money_format('%!i', abs($profitloss));
-                                    }
-                                    $liability_total = $liability_total + abs($profitloss);
+                                 setlocale(LC_MONETARY, 'en_IN');                                 
+                                 if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+                                    echo number_format(abs($amount),2);
                                  }else{
-                                    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-                                       echo number_format(abs($amount),2);
-                                    }else{
-                                       echo money_format('%!i', abs($amount));
-                                    }
-                                    $liability_total = $liability_total + abs($amount);
+                                    echo money_format('%!i', abs($amount));
                                  }
-                                 
+                                 $liability_total = $liability_total + abs($amount);                                 
                                  ?>
                               </span>
                            </div>
@@ -117,9 +148,49 @@
                      <div class="col-md-12 fw-bold font-14 d-flex px-3 py-12 border-bottom-divider">Assets (Rs.)
                         <span class="ms-auto">0.00</span>
                      </div>
+                     <div class="col-md-12 fw-500 font-14 d-flex px-3 py-12 border-bottom-divider" style="cursor:pointer;color: #0000EE">
+                        <?php 
+                        if($profitloss>0){
+                           echo "LOSS FOR THE PERIOD";
+                        }else{
+                           echo "PROFIT/LOSS ADJUSTED";
+                        }
+                        ?>
+                        <span class="ms-auto">
+                           <?php 
+                           setlocale(LC_MONETARY, 'en_IN');                           
+                           if($profitloss>0){
+                              if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+                                 echo number_format(abs($profitloss),2);
+                              }else{
+                                 echo money_format('%!i', abs($profitloss));
+                              }
+                              $asset_total = $asset_total + abs($profitloss);
+                           }else{
+                              echo "0.0";
+                           }
+                           ?>
+                        </span>
+                     </div>
                      @foreach($assets as $value)
                         @php $debit = 0;$credit = 0; @endphp
                         @foreach($value->accountGroup as $v1)
+                           @if(count($v1->accountUnderGroup)>0)
+                              @foreach($v1->accountUnderGroup as $val1)
+                                 @foreach($val1->account as $val2)
+                                    @foreach($val2->accountLedger as $val3)
+                                       @php 
+                                          if($val3->debit!=""){
+                                             $debit = $debit + $val3->debit;
+                                          }
+                                          if($val3->credit!=""){
+                                             $credit = $credit + $val3->credit; 
+                                          }                                    
+                                       @endphp
+                                    @endforeach
+                                 @endforeach
+                              @endforeach
+                           @endif
                            @php if($v1->stock_in_hand==0){ @endphp
                               @foreach($v1->account as $v2)
                                  @foreach($v2->accountLedger as $v3)
@@ -156,15 +227,18 @@
                            <div class="col-md-12 fw-500 font-14 d-flex px-3 py-12 border-bottom-divider get_group_detail" data-id="{{$value->id}}" style="cursor:pointer;color: #0000EE">{{$value->name}}
                               <span class="ms-auto">
                                  <?php 
+                                 setlocale(LC_MONETARY, 'en_IN');                                 
                                  if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
                                     echo $debit - $credit;
                                  }else{
                                     echo money_format('%!i', $debit-$credit);
                                  }
+                                 $asset_total = $asset_total + abs($debit-$credit);
+                                 
                                  ?>
                               </span>
                            </div>
-                           @php $asset_total = $asset_total + abs($debit-$credit); @endphp
+                           @php  @endphp
                            <?php 
                         } ?>
                      @endforeach                     
@@ -282,25 +356,6 @@
             window.location = "{{url('group-balance-by-head')}}/"+id+"/{{$from_date}}/{{$to_date}}";
          }
          
-      });
-      $(".update_btn").click(function(){
-         let from_date = $("#from_date").val();
-         let to_date = $("#to_date").val();
-         var _token = '<?php echo csrf_token(); ?>';
-         $.ajax({
-            url:"{{ url('update-item-stock') }}",
-            method:"POST",
-            data:{ _token:_token,from_date:from_date,to_date:to_date},
-            success:function(data){
-               let obj = JSON.parse(data);
-               if(obj.status==true){
-                  alert(obj.message);
-                  location.reload();
-               }else{
-                  alert(obj.message);
-               }
-            }
-         });
       });
    });
 </script>

@@ -15,5 +15,11 @@ class AccountGroups extends Model
                   ->where('under_group_type','=', 'group')
                   ->whereIn('company_id',[0,Session::get('user_company_id')]);
    }
-   
+   public function accountUnderGroup(){
+      return $this->hasMany(AccountGroups::class,'heading','id')
+                  ->where('delete','=', '0')
+                  ->where('status','=', '1')
+                  ->where('heading_type','=', 'group')
+                  ->whereIn('company_id',[0,Session::get('user_company_id')]);
+   }
 }

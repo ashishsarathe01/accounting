@@ -11,7 +11,7 @@
          <div class="card bg-blue py-20 px-2 rounded-0 border-bottom-divider">
             <div class="card-header p-0 border-0 rounded-0 d-flex" id="companyHeading">
                <img src="{{ URL::asset('public/assets/imgs/company.svg')}}" alt="">
-               <a class="nav-link text-white font-14 fw-500 ms-2 p-0" href="#" data-bs-toggle="collapse" data-bs-target="#companyCollapse" aria-expanded="true" aria-controls="companyCollapse">Company</a>
+               <a class="nav-link text-white font-14 fw-500 ms-2 p-0" href="#" data-bs-toggle="collapse" data-bs-target="#companyCollapse" aria-expanded="false" aria-controls="companyCollapse">Company</a>
                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="ms-auto img-fluid " viewBox="0 0 18 18" fill="none">
                   <path d="M12.4425 12L9 8.5575L5.5575 12L4.5 10.935L9 6.435L13.5 10.935L12.4425 12Z" fill="#E4E4E4" />
                </svg>
