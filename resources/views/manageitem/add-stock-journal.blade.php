@@ -7,6 +7,13 @@
    .form-control {
       height: 52px;
    }
+   input[type=number]::-webkit-inner-spin-button, 
+   input[type=number]::-webkit-outer-spin-button { 
+       -webkit-appearance: none;
+       -moz-appearance: none;
+       appearance: none;
+       margin: 0; 
+   }
 </style>
 <div class="list-of-view-company ">
    <?php
@@ -72,10 +79,10 @@
                               </select>
                            </td>
                            <td class="">
-                              <input type="text" name="consume_weight[]" class="form-control consume_weight" data-id="1" id="consume_weight_1" placeholder="Weight">
+                              <input type="number" name="consume_weight[]" class="form-control consume_weight" data-id="1" id="consume_weight_1" placeholder="Weight">
                            </td>
                            <td class="">
-                              <input type="text" name="consume_price[]" class="form-control consume_price" data-id="1" id="consume_price_1" placeholder="Price">
+                              <input type="number" name="consume_price[]" class="form-control consume_price" data-id="1" id="consume_price_1" placeholder="Price">
                            </td>
                            <td class="">
                               <input type="text" name="consume_amount[]" class="form-control consume_amount" data-id="1" id="consume_amount_1" placeholder="Amount" readonly>
@@ -269,7 +276,7 @@
       add_more_count++;
       var $curRow = $(this).closest('tr');
       var optionElements = '<?php echo $items_list;?>';
-      newRow = '<tr id="tr_'+add_more_count+'" class="font-14 font-heading bg-white"><td class=""><select class="form-control consume_item" name="consume_item[]" data-id="'+add_more_count+'" id="consume_item_1'+add_more_count+'">'+optionElements+'</select></td><td class=""><input type="text" name="consume_weight[]" class="form-control consume_weight" data-id="'+add_more_count+'" id="consume_weight_'+add_more_count+'" placeholder="Weight"></td><td class=""><input type="text" name="consume_price[]" class="form-control consume_price" data-id="'+add_more_count+'" id="consume_price_'+add_more_count+'" placeholder="Price"></td><td class=""><input type="text" name="consume_amount[]" class="form-control consume_amount" data-id="'+add_more_count+'" id="consume_amount_'+add_more_count+'" placeholder="Amount" readonly></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
+      newRow = '<tr id="tr_'+add_more_count+'" class="font-14 font-heading bg-white"><td class=""><select class="form-control consume_item" name="consume_item[]" data-id="'+add_more_count+'" id="consume_item_1'+add_more_count+'">'+optionElements+'</select></td><td class=""><input type="number" name="consume_weight[]" class="form-control consume_weight" data-id="'+add_more_count+'" id="consume_weight_'+add_more_count+'" placeholder="Weight"></td><td class=""><input type="number" name="consume_price[]" class="form-control consume_price" data-id="'+add_more_count+'" id="consume_price_'+add_more_count+'" placeholder="Price"></td><td class=""><input type="text" name="consume_amount[]" class="form-control consume_amount" data-id="'+add_more_count+'" id="consume_amount_'+add_more_count+'" placeholder="Amount" readonly></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
       $curRow.before(newRow);
    });
 

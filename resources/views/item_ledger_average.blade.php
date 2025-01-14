@@ -67,6 +67,7 @@
                   </thead>
                   <tbody>
                      @php $average_price = 0;  @endphp
+                     
                      @if($opening_weight!=0 && $opening_weight!='')
                         <tr>
                           <td>Opening</td>
@@ -81,7 +82,12 @@
                            </td>
                            <td style="text-align: right;">
                            @php 
-                           $opening_amount = $opening_weight*$average_price; 
+                           if($second_total_amount==0){
+                              $opening_amount = round($opening_amount,2);
+                           }else{
+                              $opening_amount = $opening_weight*$average_price;
+                           } 
+                           
                            echo number_format($opening_amount,2);
                            @endphp</td>
                         </tr>

@@ -25,7 +25,13 @@
    .form-control {
       height: 52px;
    }
-    
+   input[type=number]::-webkit-inner-spin-button, 
+   input[type=number]::-webkit-outer-spin-button { 
+       -webkit-appearance: none;
+       -moz-appearance: none;
+       appearance: none;
+       margin: 0; 
+   }
 </style>
 <div class="list-of-view-company ">
    <section class="list-of-view-company-section container-fluid">
@@ -127,10 +133,10 @@
                               </select>
                            </td>
                            <td class="">
-                              <input type="text" name="debit[]" class="form-control debit" data-id="1" id="debit_1" placeholder="Debit Amount" onkeyup="debitTotal();" >
+                              <input type="number" name="debit[]" class="form-control debit" data-id="1" id="debit_1" placeholder="Debit Amount" onkeyup="debitTotal();" >
                            </td>
                            <td class="">
-                              <input type="text" name="credit[]" class="form-control credit" data-id="1" id="credit_1" placeholder="Credit Amount" readonly onkeyup="creditTotal();">
+                              <input type="number" name="credit[]" class="form-control credit" data-id="1" id="credit_1" placeholder="Credit Amount" readonly onkeyup="creditTotal();">
                            </td>                           
                            <td class="">
                               <input type="text" name="narration[]" class="form-control narration" data-id="1" id="narration_1" placeholder="Enter Narration" value="">
@@ -155,10 +161,10 @@
                               </select>
                            </td>
                            <td class="">
-                              <input type="text" name="debit[]" class="form-control debit" data-id="2" id="debit_2" placeholder="Debit Amount" readonly onkeyup="debitTotal();">
+                              <input type="number" name="debit[]" class="form-control debit" data-id="2" id="debit_2" placeholder="Debit Amount" readonly onkeyup="debitTotal();">
                            </td>
                            <td class="">
-                              <input type="text" name="credit[]" class="form-control credit" data-id="2" id="credit_2" placeholder="Credit Amount" onkeyup="creditTotal();">
+                              <input type="number" name="credit[]" class="form-control credit" data-id="2" id="credit_2" placeholder="Credit Amount" onkeyup="creditTotal();">
                            </td>                           
                            <td class="">
                               <input type="text" name="narration[]" class="form-control narration" data-id="2" id="narration_2" placeholder="Enter Narration" value="">
@@ -341,7 +347,7 @@
       var optionElements = $('#account_1').html();
       newRow = '<tr id="tr_' + add_more_count + '"><td><select class="form-control type" name="type[]"  data-id="' + add_more_count + '" id="type_' + add_more_count + '"><option value="">Type</option><option value="Credit">Credit</option><option value="Debit">Debit</option></select></td><td><select class="form-control account select2-single" name="account_name[]" data-id="' + add_more_count + '" id="account_' + add_more_count + '">';
       newRow += optionElements;
-      newRow += '</select></td><td><input type="text" name="debit[]" class="form-control debit" data-id="' + add_more_count + '" id="debit_' + add_more_count + '" placeholder="Debit Amount" readonly onkeyup="debitTotal();"></td><td><input type="text" name="credit[]" class="form-control credit" data-id="' + add_more_count + '" id="credit_' + add_more_count + '" placeholder="Credit Amount" readonly onkeyup="creditTotal();"></td><td><input type="text" name="narration[]" class="form-control narration" data-id="' + add_more_count + '" id="narration_' + add_more_count + '" placeholder="Enter Narration"></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
+      newRow += '</select></td><td><input type="number" name="debit[]" class="form-control debit" data-id="' + add_more_count + '" id="debit_' + add_more_count + '" placeholder="Debit Amount" readonly onkeyup="debitTotal();"></td><td><input type="number" name="credit[]" class="form-control credit" data-id="' + add_more_count + '" id="credit_' + add_more_count + '" placeholder="Credit Amount" readonly onkeyup="creditTotal();"></td><td><input type="text" name="narration[]" class="form-control narration" data-id="' + add_more_count + '" id="narration_' + add_more_count + '" placeholder="Enter Narration"></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
       $("#example11").append(newRow);
       $('.select2-single').select2();
    });
@@ -433,22 +439,22 @@
       }
    });
    $(document).on("change",".debit",function(){
-      let id = $(this).attr('data-id');
-      let ind = parseInt(id)+1;
-      $("#type_"+ind).val('Credit');
-      $("#type_"+ind).change();
-      $("#credit_"+ind).prop("disabled",false);
-      $("#credit_"+ind).val($(this).val());
+      // let id = $(this).attr('data-id');
+      // let ind = parseInt(id)+1;
+      // $("#type_"+ind).val('Credit');
+      // $("#type_"+ind).change();
+      // $("#credit_"+ind).prop("disabled",false);
+      // $("#credit_"+ind).val($(this).val());
       debitTotal();
       creditTotal();
    });
    $(document).on("change",".credit",function(){
-      let id = $(this).attr('data-id');
-      let ind = parseInt(id)+1;
-      $("#type_"+ind).val('Debit');
-      $("#type_"+ind).change();
-      $("#debit_"+ind).prop("disabled",false);
-      $("#debit_"+ind).val($(this).val());
+      // let id = $(this).attr('data-id');
+      // let ind = parseInt(id)+1;
+      // $("#type_"+ind).val('Debit');
+      // $("#type_"+ind).change();
+      // $("#debit_"+ind).prop("disabled",false);
+      // $("#debit_"+ind).val($(this).val());
       debitTotal();
       creditTotal();
    });

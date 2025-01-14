@@ -40,6 +40,13 @@
    .form-select {
       height: 34px;
    }
+   input[type=number]::-webkit-inner-spin-button, 
+   input[type=number]::-webkit-outer-spin-button { 
+       -webkit-appearance: none;
+       -moz-appearance: none;
+       appearance: none;
+       margin: 0; 
+   }
 </style>
 <?php
 $item_list = '<option value="">Select</option>';
@@ -113,7 +120,7 @@ foreach ($manageitems as $value) {
                         <option value="">Select </option>
                         <?php
                         foreach ($party_list as $value) { ?>
-                           <option value="<?php echo $value->id; ?>" data-gstin="<?php echo $value->gstin; ?>" data-address="<?php echo $value->address.",".$value->pin_code; ?>" <?php if($value->id==$purchase->party){ echo "selected";}?>><?php echo $value->account_name; ?></option>
+                           <option value="<?php echo $value->id; ?>" data-gstin="<?php echo $value->gstin; ?>" data-address="<?php echo $value->address.",".$value->pin_code; ?>" data-state_code="<?php echo $value->state_code; ?>" <?php if($value->id==$purchase->party){ echo "selected";}?>><?php echo $value->account_name; ?></option>
                            <?php 
                         } ?>
                      </select>
@@ -169,16 +176,16 @@ foreach ($manageitems as $value) {
                                  </select>
                               </td>                              
                               <td class=" w-min-50">
-                                 <input type="text" class="quantity form-control w-100" id="quantity_tr_{{$i}}" name="qty[]" value="{{$item->qty}}" style="text-align:right"/>
+                                 <input type="number" class="quantity form-control w-100" id="quantity_tr_{{$i}}" name="qty[]" value="{{$item->qty}}" style="text-align:right"/>
                               </td>
                               <td class=" w-min-50">
                                  <input type="text" class="w-100 form-control" id="unit_tr_{{$i}}" readonly style="text-align:center;" value="{{$item->s_name}}" />
                                  <input type="hidden" class="units" name="units[]" id="units_tr_{{$i}}" value="{{$item->unit}}" />
                               </td>
                               <td class=" w-min-50">
-                                 <input type="text" class="price w-100 form-control" id="price_tr_{{$i}}" name="price[]" value="{{$item->price}}" style="text-align:right"/></td>
+                                 <input type="number" class="price w-100 form-control" id="price_tr_{{$i}}" name="price[]" value="{{$item->price}}" style="text-align:right"/></td>
                               <td class=" w-min-50">
-                                 <input type="text" id="amount_tr_{{$i}}" class="amount w-100 form-control" name="amount[]"   value="{{$item->amount}}" style="text-align:right" />
+                                 <input type="number" id="amount_tr_{{$i}}" class="amount w-100 form-control" name="amount[]"   value="{{$item->amount}}" style="text-align:right" />
                               </td>
                               <td class="">
                                  <svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="{{$i}}" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg>                                
@@ -266,7 +273,7 @@ foreach ($manageitems as $value) {
                                           <input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_@php echo $index;@endphp">
                                        </td>
                                        <td class="w-min-50 ">
-                                          <input class="bill_amt w-100 form-control" type="text" name="bill_sundry_amount[]" id="bill_sundry_amount_@php echo $index;@endphp" data-id="@php echo $index;@endphp" value="{{$sundry->amount}}" style="text-align:right;">
+                                          <input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_@php echo $index;@endphp" data-id="@php echo $index;@endphp" value="{{$sundry->amount}}" style="text-align:right;">
                                        </td>
                                        <td>
                                           <svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove_sundry_up" data-id="@php echo $index;@endphp" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg>
@@ -321,7 +328,7 @@ foreach ($manageitems as $value) {
                                     <span name="tax_amt[]" class="tax_amount" id="tax_amt_cgst">@if(isset($return['CGST'])){{$return['CGST'][0]['rate']}} %@endif</span>
                                     <input type="hidden" name="tax_rate[]" value="@if(isset($return['CGST'])){{$return['CGST'][0]['rate']}}@endif" id="tax_rate_tr_cgst"></td>
                                  <td class="w-min-50 ">
-                                    <input class="bill_amt w-100 form-control" type="text" name="bill_sundry_amount[]" id="bill_sundry_amount_cgst" data-id="cgst" <?php if(isset($return['CGST'])){?> value="{{$return['CGST'][0]['amount']}}" <?php } ?> style="text-align:right;"></td>
+                                    <input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_cgst" data-id="cgst" <?php if(isset($return['CGST'])){?> value="{{$return['CGST'][0]['amount']}}" <?php } ?> style="text-align:right;"></td>
                                  <td></td>
                               </tr>
                               <tr id="billtr_sgst" class="font-14 font-heading bg-white bill_taxes_row sundry_tr" <?php if(!isset($return['SGST'])){?> style="display:none" <?php } ?>>
@@ -342,7 +349,7 @@ foreach ($manageitems as $value) {
                                     <input type="hidden" name="tax_rate[]" value="@if(isset($return['SGST'])){{$return['SGST'][0]['rate']}}@endif" id="tax_rate_tr_sgst">
                                  </td>
                                  <td class="w-min-50 ">
-                                    <input class="bill_amt w-100 form-control" type="text" name="bill_sundry_amount[]" id="bill_sundry_amount_sgst" data-id="sgst" <?php if(isset($return['SGST'])){?> value="<?php echo $return['SGST'][0]['amount'];?>" <?php } ?> style="text-align:right;">
+                                    <input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_sgst" data-id="sgst" <?php if(isset($return['SGST'])){?> value="<?php echo $return['SGST'][0]['amount'];?>" <?php } ?> style="text-align:right;">
                                  </td>
                                  <td></td>
                               </tr>
@@ -362,7 +369,7 @@ foreach ($manageitems as $value) {
                                     <span name="tax_amt[]" class="tax_amount" id="tax_amt_igst">@if(isset($return['IGST'])){{$return['IGST'][0]['rate']}} %@endif</span>
                                     <input type="hidden" name="tax_rate[]" value="@if(isset($return['IGST'])){{$return['IGST'][0]['rate']}}@endif" id="tax_rate_tr_igst"></td>
                                  <td class="w-min-50 ">
-                                    <input class="bill_amt w-100 form-control" type="text" name="bill_sundry_amount[]" id="bill_sundry_amount_igst" data-id="igst" <?php if(isset($return['IGST'])){?> value="<?php echo $return['IGST'][0]['amount'];?>" <?php } ?> style="text-align:right;"></td>
+                                    <input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_igst" data-id="igst" <?php if(isset($return['IGST'])){?> value="<?php echo $return['IGST'][0]['amount'];?>" <?php } ?> style="text-align:right;"></td>
                                  <td></td>
                               </tr>
                               <?php 
@@ -385,7 +392,7 @@ foreach ($manageitems as $value) {
                                              <span name="tax_amt[]" class="tax_amount" id="tax_amt_@php echo $index;@endphp">{{$v1['rate']}} %</span>
                                              <input type="hidden" name="tax_rate[]" value="{{$v1['rate']}}" id="tax_rate_tr_@php echo $index;@endphp"></td>
                                           <td class="w-min-50 ">
-                                             <input class="bill_amt w-100 form-control" type="text" name="bill_sundry_amount[]" id="bill_sundry_amount_@php echo $index;@endphp" data-id="@php echo $index;@endphp" value="{{$v1['amount']}}" style="text-align:right;">
+                                             <input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_@php echo $index;@endphp" data-id="@php echo $index;@endphp" value="{{$v1['amount']}}" style="text-align:right;">
                                           </td>
                                           <td></td>
                                        </tr>
@@ -420,7 +427,7 @@ foreach ($manageitems as $value) {
                                        <td class="w-min-50 "><span name="tax_amt[]" class="tax_amount" id="tax_amt_@php echo $index;@endphp">{{$sundry->rate}} %</span>
                                        <input type="hidden" name="tax_rate[]"  id="tax_rate_tr_@php echo $index;@endphp" value="{{$sundry->rate}}"></td>
                                        <td class="w-min-50 ">
-                                          <input class="bill_amt w-100 form-control" type="text" name="bill_sundry_amount[]" id="bill_sundry_amount_@php echo $index;@endphp" data-id="@php echo $index;@endphp" value="{{$sundry->amount}}" style="text-align:right;">
+                                          <input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_@php echo $index;@endphp" data-id="@php echo $index;@endphp" value="{{$sundry->amount}}" style="text-align:right;">
                                        </td>
                                        <td>
                                           <svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove_sundry_up" data-id="@php echo $index;@endphp" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg>
@@ -454,7 +461,7 @@ foreach ($manageitems as $value) {
                                     <input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_round_plus">
                                  </td>
                                  <td class="w-min-50 ">
-                                    <input class="bill_amt w-100 form-control" type="text" name="bill_sundry_amount[]" id="bill_sundry_amount_round_plus" data-id="round_plus" <?php if(isset($roundReturn["ROUNDED OFF (+)"])){?> value="<?php echo $roundReturn["ROUNDED OFF (+)"][0]['amount'];?>" <?php } ?> style="text-align:right;"></td>
+                                    <input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_round_plus" data-id="round_plus" <?php if(isset($roundReturn["ROUNDED OFF (+)"])){?> value="<?php echo $roundReturn["ROUNDED OFF (+)"][0]['amount'];?>" <?php } ?> style="text-align:right;"></td>
                                  <td></td>
                               </tr>
                               <tr id="billtr_round_minus" class="font-14 font-heading bg-white bill_taxes_row sundry_tr" <?php if(!isset($roundReturn['ROUNDED OFF (-)'])){?> style="display:none" <?php } ?>>
@@ -474,7 +481,7 @@ foreach ($manageitems as $value) {
                                     <input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_round_minus">
                                  </td>
                                  <td class="w-min-50 ">
-                                    <input class="bill_amt w-100 form-control" type="text" name="bill_sundry_amount[]" id="bill_sundry_amount_round_minus" data-id="round_minus" <?php if(isset($roundReturn["ROUNDED OFF (-)"])){?> value="<?php echo $roundReturn["ROUNDED OFF (-)"][0]['amount'];?>" <?php } ?> style="text-align:right;">
+                                    <input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_round_minus" data-id="round_minus" <?php if(isset($roundReturn["ROUNDED OFF (-)"])){?> value="<?php echo $roundReturn["ROUNDED OFF (-)"][0]['amount'];?>" <?php } ?> style="text-align:right;">
                                  </td>
                                  <td></td>
                               </tr>
@@ -731,7 +738,7 @@ foreach ($manageitems as $value) {
       var tr_id = 'tr_' + add_more_count;
       newRow = '<tr id="tr_' + add_more_count + '" class="font-14 font-heading bg-white"><td class="w-min-50" id="srn_'+add_more_count+'">' + srn + '</td><td class=""><select onchange="call_fun(\'tr_' + add_more_count + '\');" id="goods_discription_tr_' + add_more_count + '" class="border-0 w-95-parsent  goods_items" name="goods_discription[]" required data-id="'+add_more_count+'">';
       newRow += optionElements;
-      newRow += '</select></td><td class=""><input type="text" class="quantity w-100 form-control" name="qty[]" id="quantity_tr_' + add_more_count + '"/ style="text-align:right"></td><td class=" w-min-50"><input type="text" class="w-100 form-control" id="unit_tr_'+add_more_count+'" readonly style="text-align:center;"/><input type="hidden" class="units w-100" name="units[]" id="units_tr_' + add_more_count + '"/></td><td class=" w-min-50"><input type="text" class="price w-100 form-control" name="price[]" id="price_tr_' + add_more_count + '"/ style="text-align:right"></td><td class=" w-min-50 form-control"><input type="text" class="amount w-100" name="amount[]" id="amount_tr_' + add_more_count + '"  / style="text-align:right"></td><td class="w-min-50"><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="'+add_more_count+'" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
+      newRow += '</select></td><td class=""><input type="number" class="quantity w-100 form-control" name="qty[]" id="quantity_tr_' + add_more_count + '"/ style="text-align:right"></td><td class=" w-min-50"><input type="text" class="w-100 form-control" id="unit_tr_'+add_more_count+'" readonly style="text-align:center;"/><input type="hidden" class="units w-100" name="units[]" id="units_tr_' + add_more_count + '"/></td><td class=" w-min-50"><input type="number" class="price w-100 form-control" name="price[]" id="price_tr_' + add_more_count + '"/ style="text-align:right"></td><td class=" w-min-50 form-control"><input type="number" class="amount w-100" name="amount[]" id="amount_tr_' + add_more_count + '"  / style="text-align:right"></td><td class="w-min-50"><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="'+add_more_count+'" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
       $("#max_sale_descrption").val(add_more_count);
       $("#example11").append(newRow);
       $("#goods_discription_tr_"+add_more_count).select2();
@@ -755,7 +762,7 @@ foreach ($manageitems as $value) {
       } ?>
       newRow = '<tr id="billtr_' + add_more_bill_sundry_up_count + '" class="font-14 font-heading bg-white extra_taxes_row sundry_tr"><td class="w-min-50"><select class="w-95-parsent bill_sundry_tax_type w-100 form-select"  id="bill_sundry_' + add_more_bill_sundry_up_count + '" name="bill_sundry[]" data-id="'+add_more_bill_sundry_up_count+'">';
       newRow += optionElements;
-      newRow += '</select></td><td class="w-min-50 "><span name="tax_amt[]" id="tax_amt_' + add_more_bill_sundry_up_count + '"></span><input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_' + add_more_bill_sundry_up_count + '"></td><td class="w-min-50 "><input type="text" class="bill_amt w-100 form-control" id="bill_sundry_amount_' + add_more_bill_sundry_up_count + '" name="bill_sundry_amount[]" data-id="'+add_more_bill_sundry_up_count+'" style="text-align:right;"></td><td class="w-min-50"><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove_sundry_up" data-id="' + add_more_bill_sundry_up_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
+      newRow += '</select></td><td class="w-min-50 "><span name="tax_amt[]" id="tax_amt_' + add_more_bill_sundry_up_count + '"></span><input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_' + add_more_bill_sundry_up_count + '"></td><td class="w-min-50 "><input type="number" class="bill_amt w-100 form-control" id="bill_sundry_amount_' + add_more_bill_sundry_up_count + '" name="bill_sundry_amount[]" data-id="'+add_more_bill_sundry_up_count+'" style="text-align:right;"></td><td class="w-min-50"><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove_sundry_up" data-id="' + add_more_bill_sundry_up_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
       $curRow.before(newRow);
    });   
    $(".add_more_bill_sundry_down").click(function() {
@@ -771,7 +778,7 @@ foreach ($manageitems as $value) {
       } ?>
       newRow = '<tr id="billtr_' + add_more_bill_sundry_up_count + '" class="font-14 font-heading bg-white extra_taxes_row sundry_tr"><td class="w-min-50"><select class="w-95-parsent  bill_sundry_tax_type form-select w-100"  id="bill_sundry_' + add_more_bill_sundry_up_count + '" name="bill_sundry[]" data-id="'+add_more_bill_sundry_up_count+'">';
       newRow += optionElements;
-      newRow += '</select></td><td class="w-min-50 "><span name="tax_amt[]" id="tax_amt_' + add_more_bill_sundry_up_count + '"></span><input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_' + add_more_bill_sundry_up_count + '"></td><td class="w-min-50 "><input type="text" class="bill_amt w-100 form-control" id="bill_sundry_amount_' + add_more_bill_sundry_up_count + '" name="bill_sundry_amount[]" data-id="'+add_more_bill_sundry_up_count+'" style="text-align:right;"></td><td class="w-min-50"><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove_sundry_up" data-id="' + add_more_bill_sundry_up_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
+      newRow += '</select></td><td class="w-min-50 "><span name="tax_amt[]" id="tax_amt_' + add_more_bill_sundry_up_count + '"></span><input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_' + add_more_bill_sundry_up_count + '"></td><td class="w-min-50 "><input type="number" class="bill_amt w-100 form-control" id="bill_sundry_amount_' + add_more_bill_sundry_up_count + '" name="bill_sundry_amount[]" data-id="'+add_more_bill_sundry_up_count+'" style="text-align:right;"></td><td class="w-min-50"><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove_sundry_up" data-id="' + add_more_bill_sundry_up_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
       $curRow.before(newRow);
    });
    $(".add_more_bill_sundry_gst").click(function() {
@@ -787,7 +794,7 @@ foreach ($manageitems as $value) {
       } ?>
       newRow = '<tr id="billtr_' + add_more_bill_sundry_up_count + '" class="font-14 font-heading bg-white extra_taxes_row sundry_tr extra_gst"><td class="w-min-50"><select class="w-95-parsent bill_sundry_tax_type form-select w-100"  id="bill_sundry_' + add_more_bill_sundry_up_count + '" name="bill_sundry[]" data-id="'+add_more_bill_sundry_up_count+'">';
       newRow += optionElements;
-      newRow += '</select></td><td class="w-min-50 "><span name="tax_amt[]" id="tax_amt_' + add_more_bill_sundry_up_count + '"></span><input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_' + add_more_bill_sundry_up_count + '"></td><td class="w-min-50 "><input type="text" class="bill_amt w-100 form-control" id="bill_sundry_amount_' + add_more_bill_sundry_up_count + '" name="bill_sundry_amount[]" data-id="'+add_more_bill_sundry_up_count+'" style="text-align:right;"></td><td class="w-min-50"></td></tr>';
+      newRow += '</select></td><td class="w-min-50 "><span name="tax_amt[]" id="tax_amt_' + add_more_bill_sundry_up_count + '"></span><input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_' + add_more_bill_sundry_up_count + '"></td><td class="w-min-50 "><input type="number" class="bill_amt w-100 form-control" id="bill_sundry_amount_' + add_more_bill_sundry_up_count + '" name="bill_sundry_amount[]" data-id="'+add_more_bill_sundry_up_count+'" style="text-align:right;"></td><td class="w-min-50"></td></tr>';
       $curRow.before(newRow);
    });
    $(document).on("click", ".remove", function() {
@@ -809,15 +816,15 @@ foreach ($manageitems as $value) {
       } ?>
       newRow = '<tr id="billtr_' + add_more_counts + '" class="font-14 font-heading bg-white extra_taxes_row sundry_tr"><td class="w-min-50 ">' + add_more_counts + '</td><td class="w-min-50"><select class="bill_sundry_tax_type  form-select"  id="bill_sundry_' + add_more_counts + '" name="bill_sundry[]" data-id="'+add_more_counts+'">';
       newRow += optionElements;
-      newRow += '</select></td><td class="w-min-120 "><span name="tax_amt[]" id="tax_amt_' + add_more_counts + '"></span><input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_' + add_more_counts + '"></td><td class="w-min-50 "><input type="text" class="bill_amt w-100 form-control" id="bill_sundry_amount' + add_more_counts + '" name="bill_sundry_amount[]" data-id="'+add_more_counts+'" style="text-align:right;"/></td><td><button data-id="' + add_more_counts + '" class="btn btn-danger remove_sundry" id="remove_sundry_'+add_more_counts+'">Remove</button></td></tr>';
+      newRow += '</select></td><td class="w-min-120 "><span name="tax_amt[]" id="tax_amt_' + add_more_counts + '"></span><input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_' + add_more_counts + '"></td><td class="w-min-50 "><input type="number" class="bill_amt w-100 form-control" id="bill_sundry_amount' + add_more_counts + '" name="bill_sundry_amount[]" data-id="'+add_more_counts+'" style="text-align:right;"/></td><td><button data-id="' + add_more_counts + '" class="btn btn-danger remove_sundry" id="remove_sundry_'+add_more_counts+'">Remove</button></td></tr>';
       $("#transcton-sale").append(newRow);
       $("#max_sale_sundry").val(add_more_counts);
    });
    // Function to calculate amount and update total sum
    function calculateAmount(key=null) {
-      customer_gstin = $("#party option:selected").attr("data-gstin");   
+      customer_gstin = $("#party option:selected").attr("data-state_code");   
       $(".extra_gst").remove();           
-      if(customer_gstin.substring(0,2)==merchant_gstin.substring(0,2)){  
+      if(customer_gstin==merchant_gstin.substring(0,2)){  
          $("#billtr_cgst").show();
          $("#billtr_sgst").show();
          $("#bill_sundry_amount_igst").val('');
@@ -893,7 +900,7 @@ foreach ($manageitems as $value) {
       final_total = total;
       let total_item_taxable_amount = 0;
       let on_tcs_amount = 0;
-      if(customer_gstin.substring(0,2)==merchant_gstin.substring(0,2)){            
+      if(customer_gstin==merchant_gstin.substring(0,2)){            
          var maxPercent = Math.max.apply(null, result.map(function(item){
            return item.percent;
          }))           

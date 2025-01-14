@@ -7,6 +7,13 @@
    .form-control {
       height: 52px;
    }
+   input[type=number]::-webkit-inner-spin-button, 
+   input[type=number]::-webkit-outer-spin-button { 
+       -webkit-appearance: none;
+       -moz-appearance: none;
+       appearance: none;
+       margin: 0; 
+   }
 </style>
 <div class="list-of-view-company ">
    <?php
@@ -76,10 +83,10 @@
                                     </select>
                                  </td>
                                  <td class="">
-                                    <input type="text" name="consume_weight[]" class="form-control consume_weight" data-id="{{$i}}" id="consume_weight_{{$i}}" placeholder="Weight" value="{{$value->consume_weight}}">
+                                    <input type="number" name="consume_weight[]" class="form-control consume_weight" data-id="{{$i}}" id="consume_weight_{{$i}}" placeholder="Weight" value="{{$value->consume_weight}}">
                                  </td>
                                  <td class="">
-                                    <input type="text" name="consume_price[]" class="form-control consume_price" data-id="{{$i}}" id="consume_price_{{$i}}" placeholder="Price" value="{{$value->consume_price}}">
+                                    <input type="number" name="consume_price[]" class="form-control consume_price" data-id="{{$i}}" id="consume_price_{{$i}}" placeholder="Price" value="{{$value->consume_price}}">
                                  </td>
                                  <td class="">
                                     <input type="text" name="consume_amount[]" class="form-control consume_amount" data-id="{{$i}}" id="consume_amount_{{$i}}" placeholder="Amount" readonly value="{{$value->consume_amount}}">
@@ -133,10 +140,10 @@
                                     </select>
                                  </td>
                                  <td class="">
-                                    <input type="text" name="generated_weight[]" class="form-control generated_weight" data-id="{{$j}}" id="generated_weight_{{$j}}" placeholder="Weight" value="{{$value->new_weight}}">
+                                    <input type="number" name="generated_weight[]" class="form-control generated_weight" data-id="{{$j}}" id="generated_weight_{{$j}}" placeholder="Weight" value="{{$value->new_weight}}">
                                  </td>
                                  <td class="">
-                                    <input type="text" name="generated_price[]" class="form-control generated_price" data-id="{{$j}}" id="generated_price_{{$j}}" placeholder="Price" value="{{$value->new_price}}">
+                                    <input type="number" name="generated_price[]" class="form-control generated_price" data-id="{{$j}}" id="generated_price_{{$j}}" placeholder="Price" value="{{$value->new_price}}">
                                  </td>
                                  <td class="">
                                     <input type="text" name="generated_amount[]" class="form-control generated_amount" data-id="{{$j}}" id="generated_amount_{{$j}}" placeholder="Amount" readonly value="{{$value->new_amount}}">
@@ -282,7 +289,7 @@
       add_more_count++;
       var $curRow = $(this).closest('tr');
       var optionElements = '<?php echo $items_list;?>';
-      newRow = '<tr id="tr_'+add_more_count+'" class="font-14 font-heading bg-white"><td class=""><select class="form-control consume_item" name="consume_item[]" data-id="'+add_more_count+'" id="consume_item_1'+add_more_count+'">'+optionElements+'</select></td><td class=""><input type="text" name="consume_weight[]" class="form-control consume_weight" data-id="'+add_more_count+'" id="consume_weight_'+add_more_count+'" placeholder="Weight"></td><td class=""><input type="text" name="consume_price[]" class="form-control consume_price" data-id="'+add_more_count+'" id="consume_price_'+add_more_count+'" placeholder="Price"></td><td class=""><input type="text" name="consume_amount[]" class="form-control consume_amount" data-id="'+add_more_count+'" id="consume_amount_'+add_more_count+'" placeholder="Amount" readonly></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
+      newRow = '<tr id="tr_'+add_more_count+'" class="font-14 font-heading bg-white"><td class=""><select class="form-control consume_item" name="consume_item[]" data-id="'+add_more_count+'" id="consume_item_1'+add_more_count+'">'+optionElements+'</select></td><td class=""><input type="number" name="consume_weight[]" class="form-control consume_weight" data-id="'+add_more_count+'" id="consume_weight_'+add_more_count+'" placeholder="Weight"></td><td class=""><input type="number" name="consume_price[]" class="form-control consume_price" data-id="'+add_more_count+'" id="consume_price_'+add_more_count+'" placeholder="Price"></td><td class=""><input type="text" name="consume_amount[]" class="form-control consume_amount" data-id="'+add_more_count+'" id="consume_amount_'+add_more_count+'" placeholder="Amount" readonly></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
       $curRow.before(newRow);
    });
    var add_more_count1 = '<?php echo $j;?>';
@@ -290,7 +297,7 @@
       add_more_count1++;
       var $curRow = $(this).closest('tr');
       var optionElements = '<?php echo $items_list;?>';
-      newRow = '<tr id="tr1_'+add_more_count1+'" class="font-14 font-heading bg-white"><td class=""><select class="form-control generated_item" name="generated_item[]" data-id="'+add_more_count1+'" id="generated_item_1'+add_more_count1+'">'+optionElements+'</select></td><td class=""><input type="text" name="generated_weight[]" class="form-control generated_weight" data-id="'+add_more_count1+'" id="generated_weight_'+add_more_count1+'" placeholder="Weight"></td><td class=""><input type="text" name="generated_price[]" class="form-control generated_price" data-id="'+add_more_count1+'" id="generated_price_'+add_more_count1+'" placeholder="Price"></td><td class=""><input type="text" name="generated_amount[]" class="form-control generated_amount" data-id="'+add_more_count1+'" id="generated_amount_'+add_more_count1+'" placeholder="Amount" readonly></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove1" data-id="' + add_more_count1+ '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
+      newRow = '<tr id="tr1_'+add_more_count1+'" class="font-14 font-heading bg-white"><td class=""><select class="form-control generated_item" name="generated_item[]" data-id="'+add_more_count1+'" id="generated_item_1'+add_more_count1+'">'+optionElements+'</select></td><td class=""><input type="number" name="generated_weight[]" class="form-control generated_weight" data-id="'+add_more_count1+'" id="generated_weight_'+add_more_count1+'" placeholder="Weight"></td><td class=""><input type="number" name="generated_price[]" class="form-control generated_price" data-id="'+add_more_count1+'" id="generated_price_'+add_more_count1+'" placeholder="Price"></td><td class=""><input type="text" name="generated_amount[]" class="form-control generated_amount" data-id="'+add_more_count1+'" id="generated_amount_'+add_more_count1+'" placeholder="Amount" readonly></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove1" data-id="' + add_more_count1+ '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
       $curRow.before(newRow);
    });
    $(document).on("click", ".remove", function(){

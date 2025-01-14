@@ -25,6 +25,13 @@
    .form-control {
       height: 52px;
    }
+   input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { 
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    margin: 0; 
+}
 </style>
 <div class="list-of-view-company ">
    <section class="list-of-view-company-section container-fluid">
@@ -102,7 +109,7 @@
                      <tbody>
                         <tr class="font-14 font-heading bg-white">
                            <td class="">
-                              <select class="form-control type" name="type[]" data-id="1" id="type_1">
+                              <select class="form-control type" name="type[]" data-id="1" id="type_1" onchange="onTypeChange(1)">
                                  <option value="">Type</option>
                                  <option value="Credit" selected>Credit</option>
                                  <option value="Debit">Debit</option>
@@ -119,10 +126,10 @@
                               </select>
                            </td>
                            <td class="">
-                              <input type="text" name="debit[]" class="form-control debit" data-id="1" id="debit_1" placeholder="Debit Amount" readonly onkeyup="debitTotal();">
+                              <input type="number" name="debit[]" class="form-control debit" data-id="1" id="debit_1" placeholder="Debit Amount" readonly onkeyup="debitTotal();">
                            </td>
                            <td class="">
-                              <input type="text" name="credit[]" class="form-control credit" data-id="1" id="credit_1" placeholder="Credit Amount" onkeyup="creditTotal();">
+                              <input type="number" name="credit[]" class="form-control credit" data-id="1" id="credit_1" placeholder="Credit Amount" onkeyup="creditTotal();">
                            </td>
                            <td class="">
                               <input type="text" name="narration[]" class="form-control narration" data-id="1" id="narration_1" placeholder="Enter Narration" value="">
@@ -130,7 +137,7 @@
                         </tr>
                         <tr class="font-14 font-heading bg-white">
                            <td class="">
-                              <select class="form-control type" name="type[]" data-id="2" id="type_2">
+                              <select class="form-control type" name="type[]" data-id="2" id="type_2" onchange="onTypeChange(2)">
                                  <option value="">Type</option>
                                  <option value="Credit">Credit</option>
                                  <option value="Debit" selected>Debit</option>
@@ -147,10 +154,10 @@
                               </select>
                            </td>
                            <td class="">
-                              <input type="text" name="debit[]" class="form-control debit" data-id="2" id="debit_2" placeholder="Debit Amount" onkeyup="debitTotal();">
+                              <input type="number" name="debit[]" class="form-control debit" data-id="2" id="debit_2" placeholder="Debit Amount" onkeyup="debitTotal();">
                            </td>
                            <td class="">
-                              <input type="text" name="credit[]" class="form-control credit" data-id="2" id="credit_2" placeholder="Credit Amount" readonly onkeyup="creditTotal();">
+                              <input type="number" name="credit[]" class="form-control credit" data-id="2" id="credit_2" placeholder="Credit Amount" readonly onkeyup="creditTotal();">
                            </td>
                            <td class="">
                               <input type="text" name="narration[]" class="form-control narration" data-id="2" id="narration_2" placeholder="Enter Narration" value="">
@@ -210,7 +217,7 @@
                               </select>
                            </td>
                            <td>
-                              <input type="text" class="form-control amount" id="amount_1" data-index="1" name="amount[]" placeholder="Enter Amount" onkeyup="gstCalculation()">
+                              <input type="number" class="form-control amount" id="amount_1" data-index="1" name="amount[]" placeholder="Enter Amount" onkeyup="gstCalculation()">
                            </td>
                            <td><button type="button" class="btn btn-info add_more_tr">Add</button></td>
                         </tr>
@@ -276,8 +283,7 @@
 @include('layouts.footer')
 <script>
    var company_gst = "{{$company_gst}}";
-   $(document).on("change", ".type", function() {
-      let id = $(this).attr('data-id');
+   function onTypeChange(id){
       $("#debit_" + id).val('');
       $("#credit_" + id).val('');
       let debit_total = 0;
@@ -292,7 +298,7 @@
             credit_total = parseFloat(credit_total) + parseFloat($(this).val());
          }
       });
-      if($("#type_" + id).val() == "Credit") {
+      if($("#type_" + id).val() == "Credit"){
          $("#debit_" + id).prop('readonly', true);
          $("#credit_" + id).prop('readonly', false);
          let amount = debit_total - credit_total;
@@ -300,7 +306,7 @@
             $("#credit_"+id).val(amount.toFixed(2));
          }
          $("#account_"+id).html('<?php echo $account_html;?>');
-      }else if ($("#type_" + id).val() == "Debit") {
+      }else if ($("#type_" + id).val() == "Debit"){
          $("#debit_" + id).prop('readonly', false);
          $("#credit_" + id).prop('readonly', true);
          let amount = credit_total - debit_total;
@@ -312,15 +318,16 @@
       $("#account_"+id).html('<?php echo $account_html;?>');
       debitTotal();
       creditTotal();
-   });
+   }
+   
    var add_more_count = 2;
-   $(".add_more").click(function() {
+   $(".add_more").click(function(){
       add_more_count++;
       var $curRow = $(this).closest('tr');
       var optionElements = $('#account_1').html();
-      newRow = '<tr id="tr_' + add_more_count + '"><td><select class="form-control type" name="type[]"  data-id="' + add_more_count + '" id="type_' + add_more_count + '"><option value="">Type</option><option value="Credit">Credit</option><option value="Debit">Debit</option></select></td><td><select class="form-control account select2-single" name="account_name[]" data-id="' + add_more_count + '" id="account_' + add_more_count + '">';
+      newRow = '<tr id="tr_' + add_more_count + '"><td><select class="form-control type" name="type[]" data-id="' + add_more_count + '" id="type_' + add_more_count + '" onchange="onTypeChange('+add_more_count+')"><option value="">Type</option><option value="Credit">Credit</option><option value="Debit">Debit</option></select></td><td><select class="form-control account select2-single" name="account_name[]" data-id="' + add_more_count + '" id="account_' + add_more_count + '">';
       newRow += optionElements;
-      newRow += '</select></td><td><input type="text" name="debit[]" class="form-control debit" data-id="' + add_more_count + '" id="debit_' + add_more_count + '" placeholder="Debit Amount" readonly onkeyup="debitTotal();"></td><td><input type="text" name="credit[]" class="form-control credit" data-id="' + add_more_count + '" id="credit_' + add_more_count + '" placeholder="Credit Amount" readonly onkeyup="creditTotal();"></td><td><input type="text" name="narration[]" class="form-control narration" data-id="' + add_more_count + '" id="narration_' + add_more_count + '" placeholder="Enter Narration"></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
+      newRow += '</select></td><td><input type="number" name="debit[]" class="form-control debit" data-id="' + add_more_count + '" id="debit_' + add_more_count + '" placeholder="Debit Amount" readonly onkeyup="debitTotal();"></td><td><input type="text" name="credit[]" class="form-control credit" data-id="' + add_more_count + '" id="credit_' + add_more_count + '" placeholder="Credit Amount" readonly onkeyup="creditTotal();"></td><td><input type="text" name="narration[]" class="form-control narration" data-id="' + add_more_count + '" id="narration_' + add_more_count + '" placeholder="Enter Narration"></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
       $curRow.before(newRow);
       $('.select2-single').select2();
    });
@@ -356,22 +363,22 @@
       }
    });
    $(document).on("change",".debit",function(){
-      let id = $(this).attr('data-id');
-      let ind = parseInt(id)+1;
-      $("#type_"+ind).val('Credit');
-      $("#type_"+ind).change();
-      $("#credit_"+ind).prop("disabled",false);
-      $("#credit_"+ind).val($(this).val());
+      // let id = $(this).attr('data-id');
+      // let ind = parseInt(id)+1;
+      // $("#type_"+ind).val('Credit');
+      // $("#type_"+ind).change();
+      // $("#credit_"+ind).prop("disabled",false);
+      // $("#credit_"+ind).val($(this).val());
       debitTotal();
       creditTotal();
    });
    $(document).on("change",".credit",function(){
-      let id = $(this).attr('data-id');
-      let ind = parseInt(id)+1;
-      $("#type_"+ind).val('Debit');
-      $("#type_"+ind).change();
-      $("#debit_"+ind).prop("disabled",false);
-      $("#debit_"+ind).val($(this).val());
+      // let id = $(this).attr('data-id');
+      // let ind = parseInt(id)+1;
+      // $("#type_"+ind).val('Debit');
+      // $("#type_"+ind).change();
+      // $("#debit_"+ind).prop("disabled",false);
+      // $("#debit_"+ind).val($(this).val());
       debitTotal();
       creditTotal();
    });
@@ -504,7 +511,7 @@
    $(".add_more_tr").click(function(){
       add_more_count_withgst++;
       var $curRow = $(this).closest('tr');
-      let newRow = '<tr id="withgst_tr_'+add_more_count_withgst+'" class="font-14 font-heading bg-white"><td><select class="form-control item" id="item_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="item[]" onchange="gstCalculation()" style="width: 598.611px;"><option value="">Select Item</option>@foreach($items as $item)<option value="{{$item->id}}">{{$item->account_name}}</option>@endforeach </select></td><td><select class="form-control percentage" id="percentage_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="percentage[]" onchange="gstCalculation()"><option value="">Select GST(%)</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option><option value="28">28%</option></select></td><td><input type="text" class="form-control amount" id="amount_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="amount[]" placeholder="Enter Amount" onkeyup="gstCalculation()"></td><td><button type="button" class="btn btn-danger remove_more_tr" data-id="'+add_more_count_withgst+'">Remove</button></td></tr>';
+      let newRow = '<tr id="withgst_tr_'+add_more_count_withgst+'" class="font-14 font-heading bg-white"><td><select class="form-control item" id="item_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="item[]" onchange="gstCalculation()" style="width: 598.611px;"><option value="">Select Item</option>@foreach($items as $item)<option value="{{$item->id}}">{{$item->account_name}}</option>@endforeach </select></td><td><select class="form-control percentage" id="percentage_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="percentage[]" onchange="gstCalculation()"><option value="">Select GST(%)</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option><option value="28">28%</option></select></td><td><input type="number" class="form-control amount" id="amount_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="amount[]" placeholder="Enter Amount" onkeyup="gstCalculation()"></td><td><button type="button" class="btn btn-danger remove_more_tr" data-id="'+add_more_count_withgst+'">Remove</button></td></tr>';
       $curRow.after(newRow);
       $("#item_"+add_more_count_withgst).select2();
    });

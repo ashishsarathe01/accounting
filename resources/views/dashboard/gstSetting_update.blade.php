@@ -43,7 +43,7 @@
                         </div>
                         <div class="mb-4 col-md-4">
                            <label for="name" class="form-label font-14 font-heading">GST No.</label>
-                           <input type="text" class="form-control" value="{{$value->gst_no }}" id="gst_no" name="gst_no[{{$index}}][]" placeholder="Enter here" / >
+                           <input type="text" class="form-control gstin" data-id="{{$index}}" value="{{$value->gst_no }}" id="gst_no" name="gst_no[{{$index}}][]" placeholder="Enter here" / >
                         </div>
                         <div class="mb-4 col-md-4">
                            <label for="name" class="form-label font-14 font-heading">Business Type</label>
@@ -64,25 +64,26 @@
                         </div>
                         <div class="mb-4 col-md-4">
                            <label for="name" class="form-label font-14 font-heading">Address</label>
-                           <input type="text" class="form-control" id="address" value="{{$value->address }}" name="address[{{$index}}][]" placeholder="Enter address"  />
+                           <input type="text" class="form-control" id="address_{{$index}}" value="{{$value->address }}" name="address[{{$index}}][]" placeholder="Enter address"  />
                         </div>
                         <div class="mb-4 col-md-4">
                            <label for="contact-number" class="form-label font-14 font-heading">State</label>
-                           <select class="form-select form-select-lg" name="state[{{$index}}][]" id="state" aria-label="form-select-lg example" >
+                           <select class="form-select form-select-lg" name="state[{{$index}}][]" id="state_{{$index}}" aria-label="form-select-lg example" >
                               <option value="">Select </option>
                               <?php
                               foreach ($state_list as $val) {
                                  $sel = '';
-                                 if ($value->state == $val->id)
-                                    $sel = 'selected'; ?>
-                                 <option <?php echo $sel; ?> value="<?php echo $val->id; ?>"><?php echo $val->name; ?></option>
-                                 <?php 
+                                 if($value->state == $val->id){
+                                    $sel = 'selected';
+                                 } ?>
+                                 <option <?php echo $sel; ?> value="<?php echo $val->id; ?>" data-state_code="{{$val->state_code}}"><?php echo $val->name; ?></option>
+                                    <?php 
                               } ?>
                            </select>
                         </div>
                         <div class="mb-4 col-md-4">
                            <label for="name" class="form-label font-14 font-heading">Pincode</label>
-                           <input type="text" class="form-control" id="pincode" value="{{$value->pincode }}" name="pincode[{{$index}}][]" placeholder="Enter pincode"  />
+                           <input type="text" class="form-control" id="pincode_{{$index}}" value="{{$value->pincode }}" name="pincode[{{$index}}][]" placeholder="Enter pincode"  />
                         </div>
                         <div class="mb-4 col-md-4">
                            <label for="contact-number" class="form-label font-14 font-heading">Scheme</label>
@@ -238,7 +239,7 @@
     var add_more = '{{$index}}';
     $(".add_more_gst").click(function() {
       add_more++;
-        var add_more_gst = '<div id="add_multiple_branch_html" class="bg-white px-4 py-4 border-divider border-radius-8 shadow-sm multipal-show "><div class="row"><div class="mb-4 col-md-4"><label for="name" class="form-label font-14 font-heading">GST No.</label><input type="text" class="form-control" name="gst_no['+add_more+'][]" id="name" placeholder="Enter here" /></div><div class="mb-4 col-md-4"><label for="name" class="form-label font-14 font-heading">Business Type</label><select class="form-select form-select-lg " aria-label="form-select-lg example" name="business_type['+add_more+'][]" ><option selected>Select </option><option value="1">Properitor</option><option value="2">Partnership</option><option value="3">Pvt.Ltd.</option></select></div><div class="calender-administrator mb-4 col-md-4"><label for="name" class="form-label font-14 font-heading">Validity From</label><input type="date" id="customDate" class="form-control calender-bg-icon calender-placeholder" placeholder="From date" name="validity_from['+add_more+'][]"></div><div class="calender-administrator mb-4 col-md-4"><label for="name" class="form-label font-14 font-heading">Validity To</label><input type="date" id="customDate" class="form-control calender-bg-icon calender-placeholder" name="validity_to['+add_more+'][]" placeholder="To date"></div><div class="mb-4 col-md-4"><label for="name" class="form-label font-14 font-heading">Address</label><input type="text" class="form-control" id="name" name="address['+add_more+'][]" placeholder="Enter address" /></div><div class="mb-4 col-md-4"><label for="contact-number" class="form-label font-14 font-heading">State</label><select class="form-select form-select-lg " aria-label="form-select-lg example" name="state['+add_more+'][]"><option selected>Select </option><option>Andaman and Nicobar Islands</option><option>Andhra Pradesh</option><option>Arunachal Pradesh</option><option>Assam, Bihar</option><option>Chandigarh</option><option>Chattisgarh</option></select></div><div class="mb-4 col-md-4"><label for="name" class="form-label font-14 font-heading">Pincode</label><input type="text" class="form-control" id="name" name="pincode['+add_more+'][]" placeholder="Enter pincode" /></div><div class="mb-4 col-md-4"><label for="contact-number" class="form-label font-14 font-heading">Scheme</label><select class="form-select form-select-lg " aria-label="form-select-lg example" name="scheme['+add_more+'][]"><option selected>Select </option><option value="regular">Regular</option><option value="composition">Composition</option></select></div><div class="mb-4 col-md-4"><label class="w-100">Add GST Certificate *<div class="border-divider border-radius-8 d-flex mt-6 cursor-pointer"><span class="transaction-select-opacity py-12 ps-3">choose file</span><div class="ms-auto py-12 px-3 bg-pink"><span class="font-heading fw-bold font-14">Browse</span><img src="/assets/imgs/upload-icon.svg" class=""></div><input type="file" name="gst_certificate['+add_more+'][]" class="d-none" name="myfile"></div></label></div><div class="mb-4 col-md-4"><label for="name" class="form-label font-14 font-heading">Mat Center</label><input type="text" class="form-control" name="mat_center['+add_more+'][]" placeholder="Enter mat center" /></div><div class="mb-4 col-md-4"><label for="name" class="form-label font-14 font-heading">Series</label><input type="text" name="series['+add_more+'][]" class="form-control" placeholder="Enter series" /></div><div class="mb-4 col-md-4"><label for="name" class="form-label font-14 font-heading">Invoice Start from</label><input type="text" class="form-control" placeholder="Enter " name="invoice_start_from['+add_more+'][]" /></div></div><label for="" class="form-label font-14 font-heading pb-2">E - Invoice</label><div class="d-sm-flex mb-4"><div class="me-4"><input type="radio" class="custom-radio-input me-2 e-invoice-show-two" name="e_invoice['+add_more+'][]" value="1" id="flexDefault1"><label for="flexDefault1" class="custom-radio-label pl-32 ">Yes</label></div><div class=""><input type="radio" class="custom-radio-input e-invoice-hide-two" name="e_invoice['+add_more+'][]" id="flexDefault2" value="0" checked><label for="flexDefault2" class="custom-radio-label pl-32 ">No</label></div></div><div class="row e-invoice-yes-two"><div class="mb-4 col-md-4"><label for="name" class="form-label font-14 font-heading">Username (Invoice Portal)</label><input type="text" class="form-control" id="name" placeholder="Enter username" name="einvoice_username['+add_more+'][]" /></div><div class="mb-4 col-md-4"><label for="name" class="form-label font-14 font-heading">Password</label><input type="password" class="form-control" id="name" name="einvoice_password['+add_more+'][]" placeholder="Enter password" /></div></div><label for="" class="form-label font-14 font-heading pb-2">E - Way Bill</label><div class="d-sm-flex mb-4"><div class="me-4"><input type="radio" class="custom-radio-input me-2 e-waybill-show-two" name="e_way_bill['+add_more+'][]" value="1" id="flexRadioDefaul3"><label for="flexRadioDefaul3" class="custom-radio-label pl-32">Yes</label></div><div class=""><input type="radio" class="custom-radio-input e-waybill-hide-two" name="e_way_bill['+add_more+'][]" id="flexRadioDefaul4" value="0" checked> <label for="flexRadioDefaul4" class="custom-radio-label pl-32">No</label></div></div><div class="row e-waybill-yes-two"><div class="mb-4 col-md-4"><label for="name" class="form-label font-14 font-heading">Username (Invoice Portal)</label><input type="text" class="form-control" id="name" placeholder="Enter username" name="ewaybill_username['+add_more+'][]" /></div><div class="mb-4 col-md-4"><label for="name" class="form-label font-14 font-heading">Password</label><input type="password" class="form-control" id="name" placeholder="Enter password" name="ewaybill_password['+add_more+'][]"/></div></div><div id="add_branch_multiple_' + add_more + '" class="add-branch11"></div><a onclick="add_more_branch_multiple(1,' + add_more + ');" class="add_more_branch btn btn-sm-black d-block ms-auto add-branch-toogle">ADD BRANCH</a></div></div>';
+        var add_more_gst = '<div id="add_multiple_branch_html" class="bg-white px-4 py-4 border-divider border-radius-8 shadow-sm multipal-show "><div class="row"><div class="mb-4 col-md-4"><label for="name" class="form-label font-14 font-heading">GST No.</label><input type="text" class="form-control gstin" data-id="'+add_more+'" name="gst_no['+add_more+'][]" id="name" placeholder="Enter here" /></div><div class="mb-4 col-md-4"><label for="name" class="form-label font-14 font-heading">Business Type</label><select class="form-select form-select-lg " aria-label="form-select-lg example" name="business_type['+add_more+'][]" ><option selected>Select </option><option value="1">Properitor</option><option value="2">Partnership</option><option value="3">Pvt.Ltd.</option></select></div><div class="calender-administrator mb-4 col-md-4"><label for="name" class="form-label font-14 font-heading">Validity From</label><input type="date" id="customDate" class="form-control calender-bg-icon calender-placeholder" placeholder="From date" name="validity_from['+add_more+'][]"></div><div class="calender-administrator mb-4 col-md-4"><label for="name" class="form-label font-14 font-heading">Validity To</label><input type="date" id="customDate" class="form-control calender-bg-icon calender-placeholder" name="validity_to['+add_more+'][]" placeholder="To date"></div><div class="mb-4 col-md-4"><label for="name" class="form-label font-14 font-heading">Address</label><input type="text" class="form-control" id="address_'+add_more+'" name="address['+add_more+'][]" placeholder="Enter address" /></div><div class="mb-4 col-md-4"><label for="contact-number" class="form-label font-14 font-heading">State</label><select class="form-select form-select-lg " aria-label="form-select-lg example" name="state['+add_more+'][]" id="state_'+add_more+'"><option value="">Select </option><?php foreach($state_list as $val) { ?><option  value="<?php echo $val->id; ?>" data-state_code="{{$val->state_code}}"><?php echo $val->name; ?></option><?php } ?></select></div><div class="mb-4 col-md-4"><label for="name" class="form-label font-14 font-heading">Pincode</label><input type="text" class="form-control" id="pincode_'+add_more+'" name="pincode['+add_more+'][]" placeholder="Enter pincode" /></div><div class="mb-4 col-md-4"><label for="contact-number" class="form-label font-14 font-heading">Scheme</label><select class="form-select form-select-lg " aria-label="form-select-lg example" name="scheme['+add_more+'][]"><option selected>Select </option><option value="regular">Regular</option><option value="composition">Composition</option></select></div><div class="mb-4 col-md-4"><label class="w-100">Add GST Certificate *<div class="border-divider border-radius-8 d-flex mt-6 cursor-pointer"><span class="transaction-select-opacity py-12 ps-3">choose file</span><div class="ms-auto py-12 px-3 bg-pink"><span class="font-heading fw-bold font-14">Browse</span><img src="/assets/imgs/upload-icon.svg" class=""></div><input type="file" name="gst_certificate['+add_more+'][]" class="d-none" name="myfile"></div></label></div><div class="mb-4 col-md-4"><label for="name" class="form-label font-14 font-heading">Mat Center</label><input type="text" class="form-control" name="mat_center['+add_more+'][]" placeholder="Enter mat center" /></div><div class="mb-4 col-md-4"><label for="name" class="form-label font-14 font-heading">Series</label><input type="text" name="series['+add_more+'][]" class="form-control" placeholder="Enter series" /></div><div class="mb-4 col-md-4"><label for="name" class="form-label font-14 font-heading">Invoice Start from</label><input type="text" class="form-control" placeholder="Enter " name="invoice_start_from['+add_more+'][]" /></div></div><label for="" class="form-label font-14 font-heading pb-2">E - Invoice</label><div class="d-sm-flex mb-4"><div class="me-4"><input type="radio" class="custom-radio-input me-2 e-invoice-show-two" name="e_invoice['+add_more+'][]" value="1" id="flexDefault1"><label for="flexDefault1" class="custom-radio-label pl-32 ">Yes</label></div><div class=""><input type="radio" class="custom-radio-input e-invoice-hide-two" name="e_invoice['+add_more+'][]" id="flexDefault2" value="0" checked><label for="flexDefault2" class="custom-radio-label pl-32 ">No</label></div></div><div class="row e-invoice-yes-two"><div class="mb-4 col-md-4"><label for="name" class="form-label font-14 font-heading">Username (Invoice Portal)</label><input type="text" class="form-control" id="name" placeholder="Enter username" name="einvoice_username['+add_more+'][]" /></div><div class="mb-4 col-md-4"><label for="name" class="form-label font-14 font-heading">Password</label><input type="password" class="form-control" id="name" name="einvoice_password['+add_more+'][]" placeholder="Enter password" /></div></div><label for="" class="form-label font-14 font-heading pb-2">E - Way Bill</label><div class="d-sm-flex mb-4"><div class="me-4"><input type="radio" class="custom-radio-input me-2 e-waybill-show-two" name="e_way_bill['+add_more+'][]" value="1" id="flexRadioDefaul3"><label for="flexRadioDefaul3" class="custom-radio-label pl-32">Yes</label></div><div class=""><input type="radio" class="custom-radio-input e-waybill-hide-two" name="e_way_bill['+add_more+'][]" id="flexRadioDefaul4" value="0" checked> <label for="flexRadioDefaul4" class="custom-radio-label pl-32">No</label></div></div><div class="row e-waybill-yes-two"><div class="mb-4 col-md-4"><label for="name" class="form-label font-14 font-heading">Username (Invoice Portal)</label><input type="text" class="form-control" id="name" placeholder="Enter username" name="ewaybill_username['+add_more+'][]" /></div><div class="mb-4 col-md-4"><label for="name" class="form-label font-14 font-heading">Password</label><input type="password" class="form-control" id="name" placeholder="Enter password" name="ewaybill_password['+add_more+'][]"/></div></div><div id="add_branch_multiple_' + add_more + '" class="add-branch11"></div><a onclick="add_more_branch_multiple(1,' + add_more + ');" class="add_more_branch btn btn-sm-black d-block ms-auto add-branch-toogle">ADD BRANCH</a></div></div>';
         
         $("#append_add_more_branch").append(add_more_gst);
     });
@@ -294,5 +295,38 @@
         $("#max_sale_descrption").val(max_val);
         //calculateAmount();
     });
+   $(".gstin").change(function(){
+      var inputvalues = $(this).val();
+      let id = $(this).attr('data-id');
+      $("#address_"+id).val("");
+      $("#pincode_"+id).val("");
+      $("#state_"+id).val("");
+      $.ajax({
+         url: '{{url("check-gstin")}}',
+         async: false,
+         type: 'POST',
+         dataType: 'JSON',
+         data: {
+            _token: '<?php echo csrf_token() ?>',
+            gstin: inputvalues
+         },
+         success: function(data) {
+            if(data!=""){
+               if(data.status==1){
+                  $('#state_'+id).val('');
+                  var GstateCode = inputvalues.substr(0, 2);
+                 
+                 $('#state_'+id+' [data-state_code = "'+GstateCode+'"]').prop('selected', true);           
+                  var GpanNum = inputvalues.substring(2, 12);
+                  
+                  $("#address_"+id).val(data.address);
+                  $("#pincode_"+id).val(data.pinCode);
+               }else if(data.status==0){
+                  alert(data.message)
+               }
+            }               
+         }
+      });         
+   });
 </script>
 @endsection

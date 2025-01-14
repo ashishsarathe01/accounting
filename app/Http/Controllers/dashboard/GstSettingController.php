@@ -244,6 +244,18 @@ class GstSettingController extends Controller
       Companies::where('id',Session::get('user_company_id'))->update(['gst_config_type'=>$gst_type]);
       if($gst_type=="multiple_gst"){
          foreach($gst_no as $index=>$val){
+            $einvoice_username = "";
+            $einvoice_password = "";
+            $ewaybill_username = "";
+            $ewaybill_password = "";
+            if($einvoice[$index][0]==1){
+               $einvoice_username = $einvoice_username[$index][0];
+               $einvoice_password = $einvoice_password[$index][0];
+            }
+            if($ewaybill[$index][0]==1){
+               $ewaybill_username = $ewaybill_username[$index][0];
+               $ewaybill_password = $ewaybill_password[$index][0];
+            }
             $gst_data= array(
                'company_id'=>Session::get('user_company_id'),
                'gst_type'=>$gst_type, 
@@ -260,11 +272,11 @@ class GstSettingController extends Controller
                'series'=>$series[$index][0], 
                'invoice_start_from'=>$invoice_start_from[$index][0], 
                'einvoice'=>$einvoice[$index][0], 
-               'einvoice_username'=>$einvoice_username[$index][0], 
-               'einvoice_password'=>$einvoice_password[$index][0], 
+               'einvoice_username'=>$einvoice_username, 
+               'einvoice_password'=>$einvoice_password, 
                'ewaybill'=> $ewaybill[$index][0], 
-               'ewaybill_username'=>$ewaybill_username[$index][0], 
-               'ewaybill_password'=>$ewaybill_password[$index][0]
+               'ewaybill_username'=>$ewaybill_username, 
+               'ewaybill_password'=>$ewaybill_password
             );
             $gst_settings_id = DB::table('gst_settings_multiple')->insertGetId($gst_data);
             if($branch_address!='' && count($branch_address[$index])>0){
@@ -286,6 +298,18 @@ class GstSettingController extends Controller
          }
       }else if($gst_type=="single_gst"){
          foreach($gst_no as $index=>$val){
+            $einvoice_username = "";
+            $einvoice_password = "";
+            $ewaybill_username = "";
+            $ewaybill_password = "";
+            if($einvoice[$index][0]==1){
+               $einvoice_username = $einvoice_username[$index][0];
+               $einvoice_password = $einvoice_password[$index][0];
+            }
+            if($ewaybill[$index][0]==1){
+               $ewaybill_username = $ewaybill_username[$index][0];
+               $ewaybill_password = $ewaybill_password[$index][0];
+            }
             $gst_data = array(
                'company_id'=>Session::get('user_company_id'),
                'gst_type'=>$gst_type, 
@@ -302,11 +326,11 @@ class GstSettingController extends Controller
                'series'=>$series[$index][0], 
                'invoice_start_from'=>$invoice_start_from[$index][0],
                'einvoice'=>$einvoice[$index][0], 
-               'einvoice_username'=>$einvoice_username[$index][0], 
-               'einvoice_password'=>$einvoice_password[$index][0], 
+               'einvoice_username'=>$einvoice_username, 
+               'einvoice_password'=>$einvoice_password, 
                'ewaybill'=> $ewaybill[$index][0], 
-               'ewaybill_username'=>$ewaybill_username[$index][0], 
-               'ewaybill_password'=>$ewaybill_password[$index][0]
+               'ewaybill_username'=>$ewaybill_username, 
+               'ewaybill_password'=>$ewaybill_password
             );
             $gst_settings_id = DB::table('gst_settings')->insertGetId($gst_data);
             if($branch_address!='' && count($branch_address[$index])>0){

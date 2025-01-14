@@ -57,7 +57,7 @@
                         <?php 
                         if($profitloss<0){
                            echo "PROFIT FOR THE PERIOD";
-                        }else{
+                        }else if($profitloss==0){
                            echo "PROFIT/LOSS ADJUSTED";
                         }
                         ?>
@@ -72,7 +72,7 @@
                               }
                               $liability_total = $liability_total + abs($profitloss);
                            }else{
-                              echo "0.0";
+                              echo "&nbsp;";
                            }
                            ?>
                         </span>
@@ -152,8 +152,6 @@
                         <?php 
                         if($profitloss>0){
                            echo "LOSS FOR THE PERIOD";
-                        }else{
-                           echo "PROFIT/LOSS ADJUSTED";
                         }
                         ?>
                         <span class="ms-auto">
@@ -167,7 +165,7 @@
                               }
                               $asset_total = $asset_total + abs($profitloss);
                            }else{
-                              echo "0.0";
+                              echo "&nbsp;";
                            }
                            ?>
                         </span>

@@ -466,6 +466,8 @@ class AjaxController extends Controller
                         $groups->push(3);
                         $groups->push(11);
          $data = DB::table('accounts')
+            ->select('accounts.*','states.state_code')
+            ->leftjoin('states','accounts.state','=','states.id')
             ->where('account_name', 'LIKE', "%{$query}%")
             ->where('delete', '=', '0')
             ->where('status', '=', '1')
@@ -475,7 +477,7 @@ class AjaxController extends Controller
             ->get();
          $output = '<ul class="dropdown-menu" style="display:block; position:relative">';
          foreach($data as $row){
-            $output .='<li class="party_li" data-gstin="'.$row->gstin.'" data-id="'.$row->id.'" data-address="'.$row->address.',".'.$row->pin_code.'"><a href="javascript:void(0)">'.$row->account_name.'</a></li>';
+            $output .='<li class="party_li"  data-state_code="'.$row->state_code.'" data-gstin="'.$row->gstin.'" data-id="'.$row->id.'" data-address="'.$row->address.',".'.$row->pin_code.'"><a href="javascript:void(0)">'.$row->account_name.'</a></li>';
          }
          $output .= '</ul>';
          echo $output;

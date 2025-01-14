@@ -208,23 +208,28 @@ class ItemLedgerController extends Controller
          $total_price = $opening_value[0]->total_price;
          $in_weight = $opening_value[0]->in_weight;
          $out_weight = 0;
-         if($open_date!=$request->from_date){
-            $opening_in_value = DB::select(DB::raw("SELECT sum(in_weight) as in_weight,SUM(total_price) as total_price FROM item_ledger WHERE item_id='".$item_id."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and source!='-1' and status='1' and delete_status='0'  and in_weight!=''"));
+         $second_total_amount = 0;
+         if($open_date!=$request->from_date){           
+            $opening_in_value = DB::select(DB::raw("SELECT sum(in_weight) as in_weight,SUM(total_price) as total_price FROM item_ledger WHERE item_id='".$item_id."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".date('Y-m-d', strtotime($request->from_date. " - 1 days"))."', '%Y-%m-%d') and source!='-1' and status='1' and delete_status='0'  and in_weight!=''"));
             if($opening_in_value[0]->in_weight!=0 && $opening_in_value[0]->in_weight!=''){
                $total_price = $total_price + $opening_in_value[0]->total_price;
-               $in_weight = $in_weight + $opening_in_value[0]->in_weight;               
+               $in_weight = $in_weight + $opening_in_value[0]->in_weight; 
+               $second_total_amount = 1;              
             }
             $opening_out_value = DB::select(DB::raw("SELECT SUM(out_weight) as out_weight FROM item_ledger WHERE item_id='".$item_id."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and source!='-1' and status='1' and delete_status='0' and out_weight!=''")); 
             $out_weight = $out_weight + $opening_out_value[0]->out_weight;       
-         } 
-
+         }
          if($in_weight!='' && $total_price!=''){
             $closing_price = $total_price/$in_weight;
             $closing_price = round($closing_price,2); 
-            $opening_weight = $in_weight - $out_weight;           
-            $opening_amount = $opening_weight * $closing_price;
-            $opening_amount = round($opening_amount,2); 
-            
+            $opening_weight = $in_weight - $out_weight;
+
+            if($second_total_amount==0 && $open_date==$request->from_date){
+               $opening_amount = round($total_price,2);
+            }else{               
+               $opening_amount = $opening_weight * $closing_price;
+               $opening_amount = round($opening_amount,2); 
+            }            
          }else{
             $opening_weight = 0 - $out_weight;
             $opening_amount = 0;
@@ -233,6 +238,6 @@ class ItemLedgerController extends Controller
          
          $item_in_data = DB::select(DB::raw("SELECT SUM(total_price) as total_price,SUM(in_weight) as in_weight,txn_date FROM item_ledger WHERE item_id='".$item_id."' and source!=-1 and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$request->to_date."', '%Y-%m-%d') and status='1' and delete_status='0' and in_weight!='' and source=2 GROUP BY txn_date order by STR_TO_DATE(txn_date, '%Y-%m-%d')"));
       }
-      return view('item_ledger_average')->with('item_list', $item_list)->with('opening', 0)->with('fdate', $fdate)->with('tdate',$tdate)->with('item_id', $item_id)->with('item_data', $item_data)->with('opening_amount', $opening_amount)->with('opening_weight', $opening_weight)->with('item_in_data', $item_in_data);
+      return view('item_ledger_average')->with('item_list', $item_list)->with('opening', 0)->with('fdate', $fdate)->with('tdate',$tdate)->with('item_id', $item_id)->with('item_data', $item_data)->with('opening_amount', $opening_amount)->with('opening_weight', $opening_weight)->with('item_in_data', $item_in_data)->with('second_total_amount', $second_total_amount);
    }
 }

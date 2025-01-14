@@ -271,12 +271,14 @@
    });
    $("#under_group").change(function(){
       $(".common_div").hide();
+      $("#state").attr('required',false);
       if(edit_id==""){
          $(".common_val").val('');
       }            
       if($(this).val()==1 && $('option:selected', this).attr('data-type')=='group'){
          $(".tax_type_div").show();
       }else if(($(this).val()==11 && $('option:selected', this).attr('data-type')=='group') || $('option:selected', this).attr('data-under_debtor_status')=='1'){
+         $("#state").attr('required',true);
          $(".gstin_div").show();
          $(".state_div").show();
          $(".address_div").show();
@@ -291,6 +293,7 @@
          $(".account_no_div").show();
          $(".ifsc_code_div").show();
       }else if(($(this).val()==3 && $('option:selected', this).attr('data-type')=='group') || ($(this).val()==10 && $('option:selected', this).attr('data-type')=='head') || $('option:selected', this).attr('data-under_creditors_status')=='1'){
+         $("#state").attr('required',true);
          $(".gstin_div").show();
          $(".state_div").show();
          $(".address_div").show();
@@ -304,6 +307,7 @@
          $(".account_no_div").show();
          $(".ifsc_code_div").show();
       }else if($(this).val()==7 && $('option:selected', this).attr('data-type')=='group'){
+         $("#state").attr('required',true);
          $(".gstin_div").show();
          $(".state_div").show();
          $(".address_div").show();

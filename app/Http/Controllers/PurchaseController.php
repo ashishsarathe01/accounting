@@ -395,12 +395,14 @@ class PurchaseController extends Controller{
                      ->pluck('id');
                      $groups->push(3);
                      $groups->push(11);
-      $party_list = Accounts::where('delete', '=', '0')
-                                ->where('status', '=', '1')
-                                ->whereIn('company_id', [Session::get('user_company_id'),0])
-                                ->whereIn('under_group', $groups)
-                                ->orderBy('account_name')
-                                ->get();
+      $party_list = Accounts::select('accounts.*','states.state_code')
+                              ->leftjoin('states','accounts.state','=','states.id')
+                              ->where('accounts.delete', '=', '0')
+                              ->where('accounts.status', '=', '1')
+                              ->whereIn('company_id', [Session::get('user_company_id'),0])
+                              ->whereIn('under_group', $groups)
+                              ->orderBy('account_name')
+                              ->get();
       $manageitems = DB::table('manage_items')->where('manage_items.company_id', Session::get('user_company_id'))
             ->select('units.s_name as unit', 'manage_items.*')
             ->where('manage_items.delete', '=', '0')
