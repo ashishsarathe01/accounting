@@ -250,4 +250,5 @@ Route::Resource('payment', PaymentController::class);
    Route::post('get-next-invoiceno', [AjaxController::class, 'getNextInvoiceno']);
    Route::post('get-next-salereturnno', [AjaxController::class, 'getNextSaleReturnno']);
    Route::post('get-next-purchasereturnno', [AjaxController::class, 'getNextPurchaseReturnno']);
+   Route::post('get-parameter-data', [AjaxController::class, 'getParameterData']);
 });

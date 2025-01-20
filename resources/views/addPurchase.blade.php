@@ -169,7 +169,7 @@
                               <input type="number" class="quantity w-100 form-control" id="quantity_tr_1" name="qty[]" placeholder="Quantity" style="text-align:right;"/>
                            </td>
                            <td class=" w-min-50">
-                              <input type="text" class="w-100 form-control" id="unit_tr_1" readonly style="text-align:center;" />
+                              <input type="text" class="w-100 form-control unit" id="unit_tr_1" readonly style="text-align:center;" data-id="1"/>
                               <input type="hidden" class="units" name="units[]" id="units_tr_1" />
                            </td>
                            <td class=" w-min-50">
@@ -179,6 +179,7 @@
                               <input type="number" id="amount_tr_1" class="amount w-100 form-control" name="amount[]"  placeholder="Amount" style="text-align:right;" />
                            </td>
                            <td class=""></td>
+                           <input type="hidden" name="item_parameters[]" id="item_parameters_1">
                         </tr>
                      </tbody>
                      <div class="plus-icon">
@@ -608,6 +609,24 @@
       </div>
    </section>
 </div>
+<div class="modal fade" id="parameter_modal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+   <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content p-4 border-divider border-radius-8">
+         <div class="modal-header border-0 p-0">
+            <h5 class="modal-title">Add Parameter Value</h5>
+            <button type="button" class="btn-close close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div>
+         <div class="modal-body parameter_body">
+            
+         </div>
+         <input type="hidden" id="parameter_modal_id">
+         <div class="modal-footer border-0 mx-auto p-0">
+            <button type="button" class="btn btn-border-body close" data-bs-dismiss="modal">CANCEL</button>
+            <button type="button" class="ms-3 btn btn-red parameter_save_btn">SUBMIT</button>
+         </div>
+      </div>
+   </div>
+</div>
 </body>
 @include('layouts.footer')
 <script>
@@ -637,7 +656,7 @@
       var tr_id = 'tr_' + add_more_count;
       newRow = '<tr id="tr_' + add_more_count + '" class="font-14 font-heading bg-white"><td class="w-min-50">' + add_more_count + '</td><td class=""><input type="text" placeholder="Enter Item Name" class="border-0 goods_items form-control" id="goods_discription_tr_'+add_more_count+'" required data-id="'+add_more_count+'"><div id="itemList_'+add_more_count+'"></div><input type="hidden" name="goods_discription[]" id="item_id_'+add_more_count+'" class="item_id">';
       newRow += optionElements;
-      newRow += '</td><td class=""><input type="number" class="quantity w-100 form-control" name="qty[]" id="quantity_tr_' + add_more_count + '" placeholder="Quantity" style="text-align:right;"  /></td><td class=" w-min-50"><input type="text" class="w-100 form-control" id="unit_tr_'+add_more_count+'" readonly style="text-align:center;"/><input type="hidden" class="units w-100" name="units[]" id="units_tr_' + add_more_count + '"/></td><td class=" w-min-50"><input type="number" class="price w-100 form-control" name="price[]" id="price_tr_' + add_more_count + '" placeholder="Price" style="text-align:right;" /></td><td class=" w-min-50"><input type="number" class="amount w-100 form-control" name="amount[]" id="amount_tr_' + add_more_count + '"  placeholder="Amount" style="text-align:right;" /></td><td class="w-min-50"><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
+      newRow += '</td><td class=""><input type="number" class="quantity w-100 form-control" name="qty[]" id="quantity_tr_' + add_more_count + '" placeholder="Quantity" style="text-align:right;"  /></td><td class=" w-min-50"><input type="text" class="w-100 form-control unit" id="unit_tr_'+add_more_count+'" readonly style="text-align:center;" data-id="'+add_more_count+'"/><input type="hidden" class="units w-100" name="units[]" id="units_tr_' + add_more_count + '"/></td><td class=" w-min-50"><input type="number" class="price w-100 form-control" name="price[]" id="price_tr_' + add_more_count + '" placeholder="Price" style="text-align:right;" /></td><td class=" w-min-50"><input type="number" class="amount w-100 form-control" name="amount[]" id="amount_tr_' + add_more_count + '" placeholder="Amount" style="text-align:right;" /></td><td class="w-min-50"><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td><input type="hidden" name="item_parameters[]" id="item_parameters_'+add_more_count+'"></tr>';
       $("#max_sale_descrption").val(add_more_count);
       $("#purchase_tbl").append(newRow);
       
@@ -714,7 +733,7 @@
          let freight_amount_arr = [];let discouint_amount_arr = [];
          let billSundryArray = [];
          let taxSundryArray = [];
-         $(".bill_sundry_tax_type").each(function(){          
+         $(".bill_sundry_tax_type").each(function(){         
             let id = $(this).attr('data-id');
             if($("#bill_sundry_amount_"+id).val()!='' && ($('option:selected', this).attr('data-sundry_percent')==undefined || $('option:selected', this).attr('data-sundry_percent')=="")){
                billSundryArray.push({'id':$(this).val(),'value':$("#bill_sundry_amount_"+id).val(),'type':$('option:selected', this).attr('data-type'),'adjust_sale_amt':$('option:selected', this).attr('data-adjust_sale_amt'),'effect_gst_calculation':$('option:selected', this).attr('data-effect_gst_calculation'),'sequence':$('option:selected', this).attr('data-sequence'),'nature_of_sundry':$('option:selected', this).attr('data-nature_of_sundry')});
@@ -1243,10 +1262,104 @@
       $('#goods_discription_tr_'+$(this).attr('data-id')).val($(this).text());
       $('#item_id_'+$(this).attr('data-id')).val($(this).attr('data-itemid'));      
       $('#unit_tr_'+$(this).attr('data-id')).val($(this).attr('data-val'));
+      $('#unit_tr_'+$(this).attr('data-id')).attr('data-parameterized_stock_status',$(this).attr('data-parameterized_stock_status'));
+      $('#unit_tr_'+$(this).attr('data-id')).attr('data-group_id',$(this).attr('data-group_id'));
+      $('#unit_tr_'+$(this).attr('data-id')).attr('data-config_status',$(this).attr('data-config_status'));
       $('#units_tr_'+$(this).attr('data-id')).val($(this).attr('data-unit_id'));
       $('#goods_discription_tr_'+$(this).attr('data-id')).attr('data-percent',$(this).attr('data-percent'));
       $('#itemList_'+$(this).attr('data-id')).fadeOut();  
       call_fun('tr_'+$(this).attr('data-id'));
    });
+   var paremeter_table_add_more_data = "";
+   $(document).on('click',".unit",function(){
+      let config_status = $(this).attr('data-config_status');
+      let parameterized_stock_status = $(this).attr('data-parameterized_stock_status');
+      let group_id = $(this).attr('data-group_id');
+      let id = $(this).attr('data-id');
+      let item_id = $("#item_id_"+id).val();
+      if(parameterized_stock_status==null){
+         return;
+      }      
+      $.ajax({
+         url: '{{url("get-parameter-data")}}',
+         async: false,
+         type: 'POST',
+         dataType: 'JSON',
+         data: {
+            _token: '<?php echo csrf_token() ?>',
+            config_status: config_status,
+            parameterized_stock_status : parameterized_stock_status,
+            group_id : group_id
+         },
+         success: function(data){
+            if((data.parameterized_stock_status!=undefined && data.parameterized_stock_status==1) || data.parameterized_status!=undefined && data.parameterized_status==1){
+               let html = "<table class='table table-bordered'><thead><tr>";
+               if(data.parameters.length>0){
+                  data.parameters.forEach(function(e){
+                     html+='<td>'+e.paremeter_name+'<input type="hidden" class="parameter_column" value="'+e.id+'"></td>';
+                  });
+               }
+               html+='<td></td>';
+               html+='</tr></thead><tbody>';
+               html+='<tr>';
+               paremeter_table_add_more_data+='<tr id="param_tr_param_index">';
+               if(data.parameters.length>0){
+                  data.parameters.forEach(function(e){
+                     if(e.parameter_type=="OPEN"){
+                        html+='<td><input type="text" class="form-control parameter_column_value_'+e.id+'" style="height: 52px;" placeholder="'+e.paremeter_name+'"></td>';
+                        paremeter_table_add_more_data+='<td><input type="text" class="form-control parameter_column_value_'+e.id+'" style="height: 52px;" placeholder="'+e.paremeter_name+'"></td>';
+                     }else{
+                        let predefined_list = "";
+                        if(e.predefined_value.length>0){
+                           predefined_list+='<select class="form-control parameter_column_value_'+e.id+'" style="height: 52px;"><option value="">Select</option>';
+                           e.predefined_value.forEach(function(e1){
+                              predefined_list+='<option value="'+e1.predefined_value+'">'+e1.predefined_value+'</option>';
+                           });
+                           predefined_list+='</select>';
+                        }
+                        html+='<td>'+predefined_list+'</td>';
+                        paremeter_table_add_more_data+='<td>'+predefined_list+'</td>';
+                     }                  
+                  });
+                  
+                  html+='<td></td>';
+                  paremeter_table_add_more_data+='<td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove_add_row" data-id="param_index" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td>';
+               }
+               html+='</tr>';
+               paremeter_table_add_more_data+='<tr>';
+               html+='<tr class="parameters_table"><td colspan="3"><svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle add_new_row" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg></td></tr>';
+               html+='</tbody></table>';
+               $(".parameter_body").html(html);
+               $("#parameter_modal_id").val(id);
+               $("#parameter_modal").modal('toggle');
+            }
+         }
+      });
+   });
+   let param_index = 1;
+   $(document).on('click','.add_new_row',function(){
+      param_index++;
+      let res = paremeter_table_add_more_data.replace(/\param_index/g,param_index);
+      $(".parameters_table").before(res);
+   });
+   $(document).on('click','.remove_add_row',function(){      
+      let id = $(this).attr('data-id');
+      $("#param_tr_"+id).remove();
+   });
+   $(document).on('click','.parameter_save_btn',function(){   
+      let data_arr = [];
+      $(".parameter_column").each(function(){
+         let parameter_column = $(this).val();
+         let data_value_arr = [];
+         $(".parameter_column_value_"+parameter_column).each(function(){            
+            data_value_arr.push($(this).val());
+         });
+         data_arr.push({'column_id':parameter_column,'column_value':data_value_arr});
+         
+      });
+      $("#item_parameters_"+$("#parameter_modal_id").val()).val(JSON.stringify(data_arr));
+      console.log(data_arr);
+   });
+   
 </script>
 @endsection

@@ -127,7 +127,11 @@ class PurchaseController extends Controller{
          'goods_discription' => 'required|array|min:1',
       ]);
       //Check Item Empty or not
-      
+      echo "<pre>";
+      //print_r($request->all());
+      print_r($request->input('item_parameters')[0]);
+      print_r(json_decode($request->input('item_parameters')[0],true));
+      die;
       if($request->input('goods_discription')[0]=="" || $request->input('qty')[0]=="" || $request->input('price')[0]=="" || $request->input('amount')[0]==""){
          return $this->failedMessage('Plases Select Item','purchase/create');
       }

@@ -15,6 +15,12 @@ use App\Models\PurchaseReturn;
 use App\Models\Bank;
 use App\Models\ItemLedger;
 use App\Models\ClosingStock;
+use App\Models\ItemParameter;
+use App\Models\ItemParameterList;
+use App\Models\ItemParameterPredefinedValue;
+use App\Models\ItemGroups;
+use App\Models\ItemGroupParameterList;
+use App\Models\ItemGroupParameterPredefinedValue;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use DB;
@@ -493,14 +499,14 @@ class AjaxController extends Controller
             ->where('manage_items.status', '=', '1')
             ->where('manage_items.company_id',Session::get('user_company_id'))
             ->orderBy('manage_items.name')
-            ->select(['units.s_name as unit', 'manage_items.*'])
+            ->select(['units.s_name as unit', 'manage_items.*','parameterized_stock_status','config_status','item_groups.id as group_id'])
             ->get();
          $output = '<ul class="dropdown-menu" style="display:block; position:relative">';
          foreach($data as $row){
             $item_in_weight = DB::table('item_ledger')->where('status','1')->where('delete_status','0')->where('company_id',Session::get('user_company_id'))->where('item_id',$row->id)->sum('in_weight');
             $item_out_weight = DB::table('item_ledger')->where('status','1')->where('delete_status','0')->where('company_id',Session::get('user_company_id'))->where('item_id',$row->id)->sum('out_weight');
             $available_item = $item_in_weight-$item_out_weight;
-            $output .='<li class="item_li" data-unit_id="'.$row->u_name.'" data-val="'.$row->unit.'" data-percent="'.$row->gst_rate.'" data-id="'.$request->get('id').'" data-itemid="'.$row->id.'" data-available_item="'.$available_item.'"><a href="javascript:void(0)">'.$row->name.'</a></li>';
+            $output .='<li class="item_li" data-unit_id="'.$row->u_name.'" data-val="'.$row->unit.'" data-percent="'.$row->gst_rate.'" data-id="'.$request->get('id').'" data-itemid="'.$row->id.'" data-available_item="'.$available_item.'" data-parameterized_stock_status="'.$row->parameterized_stock_status.'" data-config_status="'.$row->config_status.'" data-group_id="'.$row->group_id.'"><a href="javascript:void(0)">'.$row->name.'</a></li>';
          }
          $output .= '</ul>';
          echo $output;
@@ -766,4 +772,19 @@ class AjaxController extends Controller
          }
       }
    }
+   public function getParameterData(Request $request){
+      if($request->get('parameterized_stock_status')==1 && $request->get('config_status')=="SEPARATE"){
+
+         return ItemGroups::with(['parameters.predefinedValue'])
+            ->where('status','1')
+            ->where('id',$request->get('group_id'))
+            ->first();
+      }else{
+         return ItemParameter::with(['parameters.predefinedValue'])
+            ->where('status',1)
+            ->where('company_id',Session::get('user_company_id'))
+            ->first();
+      }
+   }
+
 }
