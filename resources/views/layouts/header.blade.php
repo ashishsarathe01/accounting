@@ -9,7 +9,7 @@
             <form id="change_company_frm" method="POST" action="{{ route('company.change') }}">
                 @csrf
                 <select name="change_company" id="change_company" class="form-select form-select-lg py-12 px-3 me-sm-3 font-14 bg-white border-divider border-radius-8 hedaer-dropdown-option" aria-label="form-select-lg example" required style="height: 48px;">
-                    <option value="">Select Company</option>
+                    <option value="" disabled>Select Company</option>
                     <?php
                     foreach ($company_list as $val) {
                         $sel = '';

@@ -39,6 +39,7 @@
                                         <option value="SALE">SALES</option>
                                         <option value="DEBIT NOTE">DEBIT NOTE</option>
                                         <option value="CREDIT NOTE">CREDIT NOTE</option>
+                                        <option value="STOCK TRANSFER">STOCK TRANSFER</option>
                                     </select>
                                 </div>
                                 <div class="clearfix"></div>

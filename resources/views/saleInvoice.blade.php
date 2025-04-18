@@ -57,7 +57,7 @@
       height: 90px;
       overflow: hidden;
       position: absolute;
-      margin-top: 26px;
+      margin-top: 20px;
       margin-left: 4px;
    }
    .bil_logo img{
@@ -105,6 +105,7 @@ body {
  
 
 </style>
+
 <div class="list-of-view-company ">
    <section class="list-of-view-company-section container-fluid">
       <div class="row vh-100">
@@ -113,7 +114,7 @@ body {
             <div class="d-md-flex justify-content-between py-4 px-2 align-items-center header-section">
                <div class="d-md-flex d-block noprint">
                   <div class="calender-administrator my-2 my-md-0  w-min-230 noprint">
-                     <a href="{{ route('sale.index') }}"><button type="button" class="btn btn-danger">QUIT</button></a>
+                     <button type="button" class="btn btn-danger" onclick="redirectBack()">QUIT</button>
                      <button class="btn btn-info" onclick="printpage();">Print</button>
                      <a href="{{ route('sale.create') }}"><button class="btn btn-primary">Add Sale</button></a>
                   </div>
@@ -126,7 +127,7 @@ body {
                   <tr>
                   <th colspan="8">
     <div style="width:auto; float:left; text-align:left;">
-        <strong style="margin:0;">GSTIN: {{$company_data->gst}}</strong>
+        <strong style="margin:0;">GSTIN: {{$seller_info->gst_no}}</strong>
     </div>
 
     <div class="bil_logo">
@@ -136,7 +137,7 @@ body {
     </div>
 
     <div style="width:auto; float:right; text-align:right;">
-        <strong style="margin:0;">PAN: {{$company_data->pan}}</strong><br>
+        <strong style="margin:0;">PAN: {{substr($seller_info->gst_no, 2, 10)}}</strong><br>
         <small>O/D/T</small>
     </div>
 
@@ -147,7 +148,7 @@ body {
         <p style="margin:0; font-size: 24px; font-weight: bold;">{{$company_data->company_name}}</p>
         <p style="margin:0;">
             <small style="font-size: 12px; display:inline-block; max-width:50%; word-break:break-word;">
-                {{$company_data->address}}
+                {{$seller_info->address}}
             </small>
         </p>
         <p style="margin:0;">
@@ -341,7 +342,7 @@ body {
                            <span class="mar_lft10"><u><small>Taxable Amount</small></u><br>
                               <small>{{number_format($val->taxable_amount,2)}}</small>
                            </span>
-                           @if(Str::limit($company_data->gst,2,'')==Str::limit($sale_detail->billing_gst,2,''))
+                           @if(Str::limit($seller_info->gst_no,2,'')==Str::limit($sale_detail->billing_gst,2,''))
                               <span class="mar_lft10"><u><small>CGST</small></u><br>
                                  <small>{{number_format($val->amount,2)}}</small>
                               </span>
@@ -354,7 +355,7 @@ body {
                               </span>
                            @endif                        
                            <span class="mar_lft10"><u><small>Total Tax</small></u><br>
-                              @if(Str::limit($company_data->gst,2,'')==Str::limit($sale_detail->billing_gst,2,''))
+                              @if(Str::limit($seller_info->gst_no,2,'')==Str::limit($sale_detail->billing_gst,2,''))
                                  <small>{{number_format($val->amount+$val->amount,2)}}</small>
                               @else
                                  <small>{{number_format($val->amount,2)}}</small>
@@ -455,6 +456,8 @@ body {
                </tbody>
             </table>
             <br>
+           
+            
             <div style="text-align: center;" class="noprint">
                <p id="jsonhtml"></p>
                @if($einvoice_status==1 && $sale_detail->e_invoice_status==0)
@@ -507,6 +510,17 @@ body {
 
 @include('layouts.footer')
 <script> 
+
+    function redirectBack(){
+      let previousUrl = document.referrer; // Get Previous URL
+
+      if(previousUrl == "{{ session('previous_url')  }}"){
+         window.location.href = "https://www.meriaccounting.com/sale"; // Fixed Redirect
+      }else{
+         history.back(); // Go Back to previous page
+      }
+   }
+   
    $(document).ready(function(){
       $(".generate_einvoice").click(function(){
          if(confirm("Are you confirm ?")==true){

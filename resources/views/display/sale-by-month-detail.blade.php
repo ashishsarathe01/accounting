@@ -71,7 +71,7 @@
                         <tr class="view_invoice" data-id="{{$value['id']}}" style="cursor:pointer;">
                            <td style="text-align:center;">{{date('d-m-Y',strtotime($value['date']))}}</td>
                            <td style="text-align:left;">{{$value['account']['account_name']}}</td>
-                           <td style="text-align:right;">{{$value['voucher_no']}}</td>
+                           <td style="text-align:right;">{{$value['voucher_no_prefix']}}</td>
                            @php $adjust_sundry_amount = 0; @endphp
                            @foreach($value['saleSundry'] as $v1)
                               @if($v1->adjust_sale_amt=="Yes")

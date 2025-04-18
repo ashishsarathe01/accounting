@@ -4,8 +4,43 @@
 @include('layouts.header')
 <!-- list-view-company-section -->
 <style type="text/css">
+   .text-ellipsis {
+      text-overflow: ellipsis;
+      overflow: hidden;
+      white-space: nowrap;
+   }
+   .w-min-50 {
+      min-width: 50px;
+   }
+   .dataTables_filter,
+   .dataTables_info,
+   .dataTables_length,
+   .dataTables_paginate {
+      display: none;
+   }
+   .select2-container--default .select2-selection--single .select2-selection__rendered{
+      line-height: 29px !important;
+   }
+   .select2-container--default .select2-selection--single .select2-selection__arrow{
+      height: 30px !important;
+   }
+   .select2-container .select2-selection--single{
+      height: 30px !important;
+   }
+   .select2-container{
+          width: 300 px !important;
+   }
+   .select2-container--default .select2-selection--single{
+      border-radius: 12px !important;
+   }
+   .selection{
+      font-size: 14px;
+   }
    .form-control {
-      height: 52px;
+      height: 28px;
+   }
+   .form-select {
+      height: 34px;
    }
    input[type=number]::-webkit-inner-spin-button, 
    input[type=number]::-webkit-outer-spin-button { 
@@ -19,7 +54,7 @@
    <?php
       $items_list = '<option value="">Select Item</option>';
       foreach($items as $item){
-         $items_list.='<option value="'.$item->id.'">'.$item->name.'</option>';
+         $items_list.='<option value="'.$item->id.'" data-unit_id="'.$item->u_name.'"  data-unit_name="'.$item->unit.'">'.$item->name.'</option>';
       }
    ?>
    <section class="list-of-view-company-section container-fluid">
@@ -34,38 +69,53 @@
                   {{ session('success') }}
                </div>
             @endif
-            <div class="d-md-flex justify-content-between py-4 px-2 align-items-center">
-               <nav aria-label="breadcrumb meri-breadcrumb ">
-                  <ol class="breadcrumb meri-breadcrumb m-0  ">
-                     <li class="breadcrumb-item"><a class="font-12 text-body text-decoration-none" href="#">Dashboard</a></li>
-                     <li class="breadcrumb-item p-0">
-                        <a class="fw-bold font-heading font-12  text-decoration-none" href="#">Stock Journal</a>
-                     </li>
-                  </ol>
-               </nav>
-            </div>
+            
             <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Edit Stock Journal</h5>
             <form id="frm" class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('update-stock-journal') }}">
                @csrf
                <div class="row">
                   <input type="hidden" name="edit_id" value="{{$journal->id}}">
                   <div class="mb-3 col-md-3">
+                     <label for="name" class="form-label font-14 font-heading">Series</label>
+                     <select id="series_no" name="series_no" class="form-select" required >
+                        @foreach($series_list as $key => $value)
+                           @if($value->series==$journal->series_no)
+                              <option value="{{$value->series}}"  >{{ $value->series }}</option>
+                           @endif
+                        @endforeach
+                     </select>
+                  </div>
+                  <div class="mb-3 col-md-3">
                      <label for="name" class="form-label font-14 font-heading">Date</label>
                      <input type="date" id="date" class="form-control calender-bg-icon calender-placeholder" name="date" placeholder="Select date" required value="{{$journal->jdate}}" >
                   </div>
-                  <div class="mb-3 col-md-8">
-                     <label for="name" class="form-label font-14 font-heading">Narration</label>
-                     <input type="text" id="narration" class="form-control" name="narration" placeholder="Narration" value="{{$journal->narration}}">
+                  <div class="mb-3 col-md-3">
+                     <label for="name" class="form-label font-14 font-heading">Stock Journal No.</label>
+                     <input type="text" class="form-control" id="voucher_prefix" name="voucher_prefix" placeholder="" readonly style="text-align: right;" placeholder="Voucher No" value="{{$journal->voucher_no_prefix}}">
+                     <input type="hidden" class="form-control" id="voucher_no" name="voucher_no" value="{{$journal->voucher_no}}">
                   </div>
+                  <div class="mb-3 col-md-3">
+                     <label for="name" class="form-label font-14 font-heading">Material Center</label>
+                     <select class="form-select" name="material_center" id="material_center" required>
+                        @foreach($series_list as $key => $value)
+                           @if($value->mat_center==$journal->material_center)
+                              <option value="{{ $value->mat_center }}" @if(count($series_list)==1) selected  @endif>{{ $value->mat_center }}</option>
+                           @endif
+                        @endforeach
+                     </select> 
+                  </div>                  
                </div>
                <div class="transaction-table transaction-main-table bg-white table-view shadow-sm border-radius-8 mb-4">
                   <table id="example11" class="table-striped table m-0 shadow-sm table-bordered">
                      <thead>
+                        <tr><th colspan="7" style="text-align:center">ITEMS CONSUMED</th></tr>
                         <tr class=" font-12 text-body bg-light-pink ">
-                           <th class="w-min-120 border-none bg-light-pink text-body ">Consume Item</th>
-                           <th class="w-min-120 border-none bg-light-pink text-body ">Weight</th>
-                           <th class="w-min-120 border-none bg-light-pink text-body ">New Generated Item</th>
-                           <th class="w-min-120 border-none bg-light-pink text-body ">Weight</th>
+                           <th class="w-min-50 border-none bg-light-pink text-body">S No.</th>
+                           <th class="w-min-120 border-none bg-light-pink text-body " style="width: 36%;">DESCRIPTION OF GOODS</th>
+                           <th class="w-min-120 border-none bg-light-pink text-body " style="text-align: right;padding-right: 24px;">QUANTITY</th>
+                           <th class="w-min-120 border-none bg-light-pink text-body " style="text-align: center;">UNIT</th>
+                           <th class="w-min-120 border-none bg-light-pink text-body " style="text-align: right;padding-right: 24px;">Price</th>
+                           <th class="w-min-120 border-none bg-light-pink text-body " style="text-align:right">Amount</th>
                            <th></th>
                         </tr>
                      </thead>
@@ -74,33 +124,39 @@
                         @foreach($journal_details as $value)
                            @if($value->consume_item!='')
                               <tr id="tr_{{$i}}" class="font-14 font-heading bg-white">
-                                 <td class="">
-                                    <select class="form-control consume_item" name="consume_item[]" data-id="{{$i}}" id="consume_item_{{$i}}">
+                                 <td class="w-min-50" id="consume_srn_{{$i}}">{{$i}}</td>
+                                 <td class="w-min-50">
+                                    <select class="form-control consume_item select2-single" name="consume_item[]" data-id="{{$i}}" id="consume_item_{{$i}}">
                                        <option value="">Item</option>      
                                        @foreach($items as $item)
-                                          <option value="{{$item->id}}" @if($item->id==$value->consume_item) selected @endif>{{$item->name}}</option>
+                                          <option value="{{$item->id}}" data-unit_id="{{$item->u_name}}"  data-unit_name="{{$item->unit}}" @if($item->id==$value->consume_item) selected @endif>{{$item->name}}</option>
                                        @endforeach
                                     </select>
                                  </td>
                                  <td class="">
-                                    <input type="number" name="consume_weight[]" class="form-control consume_weight" data-id="{{$i}}" id="consume_weight_{{$i}}" placeholder="Weight" value="{{$value->consume_weight}}">
+                                    <input type="number" name="consume_weight[]" class="form-control consume_weight" data-id="{{$i}}" id="consume_weight_{{$i}}" placeholder="Weight" value="{{$value->consume_weight}}" style="text-align:right">
+                                 </td>
+                                 <td class="w-min-50">                              
+                                       <input type="text" class="w-100 form-control consume_unit" id="consume_unit_tr_{{$i}}" readonly style="text-align:center;" data-id="{{$i}}" name="consume_unit_name[]" value="{{$value->consume_item_unit_name}}"/>
+                                       <input type="hidden" class="consume_units w-100" name="consume_units[]" id="consume_units_tr_{{$i}}" value="{{$value->consume_item_unit}}"/>
                                  </td>
                                  <td class="">
-                                    <input type="number" name="consume_price[]" class="form-control consume_price" data-id="{{$i}}" id="consume_price_{{$i}}" placeholder="Price" value="{{$value->consume_price}}">
+                                    <input type="number" name="consume_price[]" class="form-control consume_price" data-id="{{$i}}" id="consume_price_{{$i}}" placeholder="Price" value="{{$value->consume_price}}" style="text-align:right">
                                  </td>
                                  <td class="">
-                                    <input type="text" name="consume_amount[]" class="form-control consume_amount" data-id="{{$i}}" id="consume_amount_{{$i}}" placeholder="Amount" readonly value="{{$value->consume_amount}}">
+                                    <input type="text" name="consume_amount[]" class="form-control consume_amount" data-id="{{$i}}" id="consume_amount_{{$i}}" placeholder="Amount" readonly value="{{$value->consume_amount}}" style="text-align:right">
                                  </td>                                 
                                  <td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="{{$i}}" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td>
                               </tr>
+                              @php $i++; @endphp
                            @endif
-                           @php $i++; @endphp
+                           
                         @endforeach
                      </tbody>
                      <div class="plus-icon">
                         <tr class="font-14 font-heading bg-white">
                            <td class="w-min-120 " colspan="7">
-                              <a class="add_more"><svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;">
+                              <a class="add_more"><svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;float: right;">
                               <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" />
                               </svg></a>
                            </td>
@@ -108,21 +164,26 @@
                      </div>
                      <div class="total">
                         <tr class="font-14 font-heading bg-white">
-                           <td class="fw-bold">Total</td>
-                           <td class="fw-bold" id="consume_weight_total">0</td>
                            <td class="fw-bold"></td>
-                           <td class="fw-bold" id="consume_amount_total">0</td>
+                           <td class="fw-bold" style="text-align:right">Total</td>
+                           <td class="fw-bold" id="consume_weight_total" style="text-align:right">0</td>
+                           <td class="fw-bold"></td>
+                           <td class="fw-bold"></td>
+                           <td class="fw-bold" id="consume_amount_total" style="text-align:right">0</td>
                            <td class="fw-bold"></td>
                         </tr>
                      </div>
                   </table>
                   <table id="example11" class="table-striped table m-0 shadow-sm table-bordered">
                      <thead>
+                     <tr><th colspan="7" style="text-align:center">ITEMS GENERATED</th></tr>
                         <tr class=" font-12 text-body bg-light-pink ">
-                           <th class="w-min-120 border-none bg-light-pink text-body ">Generated Item</th>
-                           <th class="w-min-120 border-none bg-light-pink text-body ">Weight</th>
-                           <th class="w-min-120 border-none bg-light-pink text-body ">Price</th>
-                           <th class="w-min-120 border-none bg-light-pink text-body ">Amount</th>
+                           <th class="w-min-50 border-none bg-light-pink text-body">S No.</th>
+                           <th class="w-min-120 border-none bg-light-pink text-body " style="width: 36%;">DESCRIPTION OF GOODS</th>
+                           <th class="w-min-120 border-none bg-light-pink text-body " style="text-align: right;padding-right: 24px;">QUANTITY</th>
+                           <th class="w-min-120 border-none bg-light-pink text-body " style="text-align: center;">UNIT</th>
+                           <th class="w-min-120 border-none bg-light-pink text-body " style="text-align: right;padding-right: 24px;">Price</th>
+                           <th class="w-min-120 border-none bg-light-pink text-body " style="text-align:right">Amount</th>
                            <th></th>
                         </tr>
                      </thead>
@@ -131,33 +192,39 @@
                         @foreach($journal_details as $value)
                            @if($value->new_item!='')
                               <tr id="tr1_{{$j}}" class="font-14 font-heading bg-white">
+                              <td class="w-min-50" id="generated_srn_{{$j}}">{{$j}}</td>
                                  <td class="">
-                                    <select class="form-control generated_item" name="generated_item[]" data-id="{{$j}}" id="generated_item_{{$j}}">
+                                    <select class="form-control generated_item select2-single" name="generated_item[]" data-id="{{$j}}" id="generated_item_{{$j}}">
                                        <option value="">Item</option>      
                                        @foreach($items as $item)
-                                          <option value="{{$item->id}}" @if($item->id==$value->new_item) selected @endif>{{$item->name}}</option>
+                                          <option value="{{$item->id}}" data-unit_id="{{$item->u_name}}"  data-unit_name="{{$item->unit}}" @if($item->id==$value->new_item) selected @endif>{{$item->name}}</option>
                                        @endforeach
                                     </select>
                                  </td>
                                  <td class="">
-                                    <input type="number" name="generated_weight[]" class="form-control generated_weight" data-id="{{$j}}" id="generated_weight_{{$j}}" placeholder="Weight" value="{{$value->new_weight}}">
+                                    <input type="number" name="generated_weight[]" class="form-control generated_weight" data-id="{{$j}}" id="generated_weight_{{$j}}" placeholder="Weight" value="{{$value->new_weight}}" style="text-align:right">
+                                 </td>
+                                 <td class="w-min-50">                              
+                                    <input type="text" class="w-100 form-control generated_unit" id="generated_unit_tr_{{$j}}" readonly style="text-align:center;" data-id="{{$j}}" name="generated_unit_name[]" value="{{$value->new_item_unit_name}}"/>
+                                    <input type="hidden" class="generated_units w-100" name="generated_units[]" id="generated_units_tr_{{$j}}" value="{{$value->new_item_unit}}"/>
                                  </td>
                                  <td class="">
-                                    <input type="number" name="generated_price[]" class="form-control generated_price" data-id="{{$j}}" id="generated_price_{{$j}}" placeholder="Price" value="{{$value->new_price}}">
+                                    <input type="number" name="generated_price[]" class="form-control generated_price" data-id="{{$j}}" id="generated_price_{{$j}}" placeholder="Price" value="{{$value->new_price}}" style="text-align:right">
                                  </td>
                                  <td class="">
-                                    <input type="text" name="generated_amount[]" class="form-control generated_amount" data-id="{{$j}}" id="generated_amount_{{$j}}" placeholder="Amount" readonly value="{{$value->new_amount}}">
+                                    <input type="text" name="generated_amount[]" class="form-control generated_amount" data-id="{{$j}}" id="generated_amount_{{$j}}" placeholder="Amount" readonly value="{{$value->new_amount}}" style="text-align:right">
                                  </td>                           
                                  <td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove1" data-id="{{$j}}" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td>
                               </tr>
+                              @php $j++; @endphp
                            @endif
-                           @php $j++; @endphp
+                           
                         @endforeach
                      </tbody>
                      <div class="plus-icon">
                         <tr class="font-14 font-heading bg-white">
                            <td class="w-min-120 " colspan="7">
-                              <a class="add_more1"><svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;">
+                              <a class="add_more1"><svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;float:right">
                               <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" />
                               </svg></a>
                            </td>
@@ -165,15 +232,20 @@
                      </div>
                      <div class="total">
                         <tr class="font-14 font-heading bg-white">
-                           <td class="fw-bold">Total</td>
+                           <td class="fw-bold"></td>
+                           <td class="fw-bold" style="text-align:right">Total</td>
                            <td class="fw-bold" id="consume_weight_total1" style="text-align: right;">0</td>
+                           <td class="fw-bold"></td>
                            <td class="fw-bold"></td>
                            <td class="fw-bold" id="consume_amount_total1" style="text-align: right;">0</td>
                            <td class="fw-bold"></td>
-
                         </tr>
                      </div>
-                  </table>
+                  </table>                  
+               </div>
+               <div class="mb-3 col-md-12">
+                  <label for="name" class="form-label font-14 font-heading">Narration</label>
+                  <input type="text" id="narration" class="form-control" name="narration" placeholder="Narration" value="{{$journal->narration}}">
                </div>
                <div class=" d-flex">
                   <div class="ms-auto">
@@ -282,23 +354,34 @@
 </body>
 @include('layouts.footer')
 <script>
-   calculateAmount(1);
-   calculateAmountNew(1);
+   $(document).ready(function() {
+      $( ".select2-single, .select2-multiple" ).select2(); 
+      calculateAmount(1);
+      calculateAmountNew(1);
+   });   
    var add_more_count = '<?php echo $i;?>';
-   $(".add_more").click(function() {
+   add_more_count--;
+   $(".add_more").click(function() {      
+      let srn = $("#consume_srn_"+add_more_count).html();
+      srn++
       add_more_count++;
       var $curRow = $(this).closest('tr');
       var optionElements = '<?php echo $items_list;?>';
-      newRow = '<tr id="tr_'+add_more_count+'" class="font-14 font-heading bg-white"><td class=""><select class="form-control consume_item" name="consume_item[]" data-id="'+add_more_count+'" id="consume_item_1'+add_more_count+'">'+optionElements+'</select></td><td class=""><input type="number" name="consume_weight[]" class="form-control consume_weight" data-id="'+add_more_count+'" id="consume_weight_'+add_more_count+'" placeholder="Weight"></td><td class=""><input type="number" name="consume_price[]" class="form-control consume_price" data-id="'+add_more_count+'" id="consume_price_'+add_more_count+'" placeholder="Price"></td><td class=""><input type="text" name="consume_amount[]" class="form-control consume_amount" data-id="'+add_more_count+'" id="consume_amount_'+add_more_count+'" placeholder="Amount" readonly></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
+      newRow = '<tr id="tr_'+add_more_count+'" class="font-14 font-heading bg-white"><td class="w-min-50" id="consume_srn_'+add_more_count+'">'+srn+'</td><td class=""><select class="form-select consume_item select2-single" name="consume_item[]" data-id="'+add_more_count+'" id="consume_item_1'+add_more_count+'">'+optionElements+'</select></td><td class=""><input type="number" name="consume_weight[]" class="form-control consume_weight" data-id="'+add_more_count+'" id="consume_weight_'+add_more_count+'" placeholder="Weight" style="text-align:right"></td><td class="w-min-50"><input type="text" class="w-100 form-control consume_unit" id="consume_unit_tr_'+add_more_count+'" readonly="" style="text-align:center;" data-id="'+add_more_count+'" name="consume_unit_name[]"><input type="hidden" class="consume_units w-100" name="consume_units[]" id="consume_units_tr_'+add_more_count+'"></td><td class=""><input type="number" name="consume_price[]" class="form-control consume_price" data-id="'+add_more_count+'" id="consume_price_'+add_more_count+'" placeholder="Price" style="text-align:right"></td><td class=""><input type="text" name="consume_amount[]" class="form-control consume_amount" data-id="'+add_more_count+'" id="consume_amount_'+add_more_count+'" placeholder="Amount" readonly style="text-align:right"></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
       $curRow.before(newRow);
+      $( ".select2-single, .select2-multiple" ).select2(); 
    });
    var add_more_count1 = '<?php echo $j;?>';
+   add_more_count1--;
    $(".add_more1").click(function() {
+      let srn = $("#generated_srn_"+add_more_count1).html();
+      srn++
       add_more_count1++;
       var $curRow = $(this).closest('tr');
       var optionElements = '<?php echo $items_list;?>';
-      newRow = '<tr id="tr1_'+add_more_count1+'" class="font-14 font-heading bg-white"><td class=""><select class="form-control generated_item" name="generated_item[]" data-id="'+add_more_count1+'" id="generated_item_1'+add_more_count1+'">'+optionElements+'</select></td><td class=""><input type="number" name="generated_weight[]" class="form-control generated_weight" data-id="'+add_more_count1+'" id="generated_weight_'+add_more_count1+'" placeholder="Weight"></td><td class=""><input type="number" name="generated_price[]" class="form-control generated_price" data-id="'+add_more_count1+'" id="generated_price_'+add_more_count1+'" placeholder="Price"></td><td class=""><input type="text" name="generated_amount[]" class="form-control generated_amount" data-id="'+add_more_count1+'" id="generated_amount_'+add_more_count1+'" placeholder="Amount" readonly></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove1" data-id="' + add_more_count1+ '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
+      newRow = '<tr id="tr1_'+add_more_count1+'" class="font-14 font-heading bg-white"><td class="w-min-50" id="generated_srn_'+add_more_count1+'">'+srn+'</td><td class=""><select class="form-select generated_item select2-single" name="generated_item[]" data-id="'+add_more_count1+'" id="generated_item_1'+add_more_count1+'">'+optionElements+'</select></td><td class=""><input type="number" name="generated_weight[]" class="form-control generated_weight" data-id="'+add_more_count1+'" id="generated_weight_'+add_more_count1+'" placeholder="Weight" style="text-align:right"></td><td class="w-min-50"><input type="text" class="w-100 form-control generated_unit" id="generated_unit_tr_'+add_more_count1+'" readonly="" style="text-align:center;" data-id="'+add_more_count1+'" name="generated_unit_name[]"><input type="hidden" class="generated_units w-100" name="generated_units[]" id="generated_units_tr_'+add_more_count1+'" ></td><td class=""><input type="number" name="generated_price[]" class="form-control generated_price" data-id="'+add_more_count1+'" id="generated_price_'+add_more_count1+'" placeholder="Price" style="text-align:right"></td><td class=""><input type="text" name="generated_amount[]" class="form-control generated_amount" data-id="'+add_more_count1+'" id="generated_amount_'+add_more_count1+'" placeholder="Amount" readonly style="text-align:right"></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove1" data-id="' + add_more_count1+ '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
       $curRow.before(newRow);
+      $( ".select2-single, .select2-multiple" ).select2(); 
    });
    $(document).on("click", ".remove", function(){
       let id = $(this).attr('data-id');
@@ -391,6 +474,29 @@
          }
       });
       $("#consume_amount_total1").html(namount);
-   } 
+   }
+   $("#voucher_prefix").keyup(function(){
+      $("#voucher_no").val($(this).val());
+   });
+   $(document).on('change', '.consume_item', function(){
+      $('#consume_unit_tr_'+$(this).attr('data-id')).val($('option:selected', this).attr('data-unit_name'));
+      $('#consume_units_tr_'+$(this).attr('data-id')).val($('option:selected', this).attr('data-unit_id'));
+      if($(this).val()==""){
+         $("#consume_weight_"+$(this).attr('data-id')).val('');
+         $("#consume_price_"+$(this).attr('data-id')).val('');
+         $("#consume_amount_"+$(this).attr('data-id')).val('');
+         calculateAmount($(this).attr('data-id'))
+      } 
+   });
+   $(document).on('change', '.generated_item', function(){
+      $('#generated_unit_tr_'+$(this).attr('data-id')).val($('option:selected', this).attr('data-unit_name'));
+      $('#generated_units_tr_'+$(this).attr('data-id')).val($('option:selected', this).attr('data-unit_id'));
+      if($(this).val()==""){
+         $("#generated_weight_"+$(this).attr('data-id')).val('');
+         $("#generated_price_"+$(this).attr('data-id')).val('');
+         $("#generated_amount_"+$(this).attr('data-id')).val('');
+         calculateAmountNew($(this).attr('data-id'))
+      } 
+   });
 </script>
 @endsection

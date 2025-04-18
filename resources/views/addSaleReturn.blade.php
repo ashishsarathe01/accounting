@@ -167,7 +167,7 @@
                      <thead>
                         <tr class=" font-12 text-body bg-light-pink ">
                            <th class="w-min-50 border-none bg-light-pink text-body">S No.</th>
-                           <th class="w-min-50 border-none bg-light-pink text-body " style="    width: 36%;">Description of Goods
+                           <th class="w-min-50 border-none bg-light-pink text-body " style="width: 36%;">Description of Goods
                            </th>                           
                            <th class="w-min-50 border-none bg-light-pink text-body " style="text-align: right;padding-right: 24px;">Qty</th>
                            <th class="w-min-50 border-none bg-light-pink text-body " style="text-align: center;">Unit</th>
@@ -332,25 +332,7 @@
                                        <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg></a>
                                     </td>
                                  </tr>
-                              </div>
-                              <!-- <tr id="billtr_2" class="font-14 font-heading bg-white bill_taxes_row sundry_tr">
-                                 <td class="w-min-50">
-                                    <select id="bill_sundry_2" class="w-95-parsent  bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="2">
-                                       <option value="">Select</option>
-                                       <?php
-                                       foreach ($billsundry as $value) {
-                                          if($value->effect_gst_calculation==0){?>
-                                             <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_2" id="sundry_option_<?php echo $value->id;?>_2" data-sundry_percent="<?php echo $value->sundry_percent;?>" data-sundry_percent_date="<?php echo $value->sundry_percent_date;?>" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
-                                             <?php 
-                                          }
-                                       } ?>
-                                    </select>
-                                 </td>
-                                 <td class="w-min-50 "><span name="tax_amt[]" class="tax_amount" id="tax_amt_2"></span><input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_2"></td>
-                                 <td class="w-min-50 "><input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_2" data-id="2" readonly  style="text-align:right;"></td>
-                                 <td></td>
-                              </tr> -->
-                              
+                              </div>                              
                               <tr id="billtr_round_plus" class="font-14 font-heading bg-white bill_taxes_row sundry_tr" style="display:none">
                                  <td class="w-min-50">
                                     <select id="bill_sundry_round_plus" class=" w-95-parsent bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="round_plus">
@@ -778,6 +760,28 @@
       });
    });
    $(document).ready(function() {
+       // Properly initialize Select2 with search enabled
+    $('#party_id').select2({
+      placeholder: "Select Account",
+      allowClear: true,
+      width: '100%' // Ensure dropdown matches Bootstrap styling
+    });
+
+    // Move focus to next field after selecting an option
+    $('#party_id').on('select2:select', function (e) {
+      $('#voucher_no').focus();
+    });
+    // Properly initialize Select2 with search enabled
+    $('#voucher_no').select2({
+      placeholder: "Select Account",
+      allowClear: true,
+      width: '100%' // Ensure dropdown matches Bootstrap styling
+    });
+
+    // Move focus to next field after selecting an option
+    $('#voucher_no').on('select2:select', function (e) {
+      $('#series_no').focus();
+    });
       // Function to calculate amount and update total sum
       window.calculateAmount = function(key=null) {         
          customer_gstin = $('#party_id option:selected').attr("data-state_code");              
@@ -1520,8 +1524,6 @@
          $(".with_gst_without_item_section").show();
          $(".item").select2();
       }
-      
-
    }
    $(".transport_info").click(function(){
       $("#transport_info_modal").modal('toggle');

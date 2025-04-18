@@ -36,7 +36,7 @@
 
                 <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
                     <h5 class="transaction-table-title m-0 py-2">
-                        List of Add Purchase Return Voucher
+                    Purchase Return/Debit Note
                     </h5>
                     <form  action="{{ route('purchase-return.index') }}" method="GET">
                        @csrf
@@ -52,11 +52,7 @@
                     </form>
                     <div class="d-md-flex d-block"> 
                        <input type="text" id="search" class="form-control" placeholder="Search">
-                    </div>
-                    <div class="d-md-flex d-block"> 
-                       <a href="{{ route('debit-note-without-item.create') }}" class="btn btn-xs-primary">ADD WITHOUT ITEM<svg class="position-relative ms-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
-                       <path d="M9.1665 15.8327V10.8327H4.1665V9.16602H9.1665V4.16602H10.8332V9.16602H15.8332V10.8327H10.8332V15.8327H9.1665Z" fill="white" /></svg> </a>
-                    </div>
+                    </div>                    
                     <a href="{{ route('purchase-return.create') }}" class="btn btn-xs-primary">
                         ADD
                         <svg class="position-relative ms-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -99,7 +95,14 @@
                                              </button>
                                           <?php 
                                        } ?>
-                                        <a href="{{ URL::to('purchase-return-invoice/' . $value->purchases_id) }}" target="__blank"><img src="{{ URL::asset('public/assets/imgs/eye-icon.svg')}}" class="px-1" alt=""></a>
+                                       @if(($value->sr_nature=="WITH GST" && $value->sr_type=="WITH ITEM") || $value->sr_nature=="RATE DIFFERENCE")
+                                            <a href="{{ URL::to('purchase-return-invoice/' . $value->purchases_id) }}" target="__blank"><img src="{{ URL::asset('public/assets/imgs/eye-icon.svg')}}" class="px-1" alt=""></a>
+                                        @elseif($value->sr_nature=="WITH GST" && $value->sr_type=="WITHOUT ITEM")
+                                            <a href="{{ URL::to('purchase-return-without-item-invoice/' . $value->purchases_id) }}" target="__blank"><img src="{{ URL::asset('public/assets/imgs/eye-icon.svg')}}" class="px-1" alt=""></a>
+                                        @elseif($value->sr_nature=="WITHOUT GST")
+                                            <a href="{{ URL::to('purchase-return-without-gst-invoice/' . $value->purchases_id) }}" target="__blank"><img src="{{ URL::asset('public/assets/imgs/eye-icon.svg')}}" class="px-1" alt=""></a>
+                                        @endif
+                                        
                                     </td>
                                 </tr>
                             <?php } ?>

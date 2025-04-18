@@ -199,10 +199,10 @@
                                  @foreach($v2->accountLedger as $v3)
                                     @php 
                                        if($v3->debit!="" && $v3->debit!='null'){
-                                          $debit = $debit + $v3->debit;
+                                          $debit += floatval($v3->debit);
                                        }
                                        if($v3->credit!="" && $v3->credit!='null'){
-                                          $credit = $credit + $v3->credit; 
+                                          $credit += floatval($v3->credit); 
                                        }                                    
                                     @endphp
                                  @endforeach
@@ -216,10 +216,10 @@
                            @foreach($v1->accountLedger as $v3)
                               @php 
                                  if($v3->debit!="" && $v3->debit!='null'){
-                                    $debit = $debit + $v3->debit;
+                                    $debit += floatval($v3->debit);
                                  }
                                  if($v3->credit!="" && $v3->credit!='null'){
-                                    $credit = $credit + $v3->credit; 
+                                    $credit += floatval($v3->credit); 
                                  }                                    
                               @endphp
                            @endforeach                           
@@ -329,7 +329,7 @@
       });
    });
    $(".profitloss_redirect").click(function(){
-      window.location = "{{url('profitloss-filter')}}?financial_year=24-25&from_date={{$from_date}}&to_date={{$to_date}}";
+      window.location = "{{url('profitloss-filter')}}?financial_year={{ Session::get('default_fy') }}&from_date={{$from_date}}&to_date={{$to_date}}";
    });
 </script>
 @endsection

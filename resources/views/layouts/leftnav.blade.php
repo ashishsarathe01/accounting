@@ -163,6 +163,11 @@
                                     Stock Journal
                         </a>
                      </li>
+                     <li class="font-14  fw-500 m-0 py-12 px-2  ">
+                        <a class=" text-decoration-none  d-flex   text-white" href="{{ route('stock-transfer.index') }}">
+                           Stock Transfer
+                        </a>
+                     </li>
                      <div class="card bg-blue pt-2 px-2 rounded-0 aside-bottom-divider">
                         <div class="card-header py-12 px-2 border-0 rounded-0 d-flex" id="importDataHeading">
                            <a class="nav-link text-white font-14 fw-500 dropdown-icon-img p-0 collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#importDataCollapse" aria-expanded="true" aria-controls="importDataCollapse">

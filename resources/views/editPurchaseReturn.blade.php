@@ -52,6 +52,7 @@
    <section class="list-of-view-company-section container-fluid">
       <div class="row vh-100">
          @include('layouts.leftnav')
+         <!-- view-table-Content -->
          <div class="col-md-12 ml-sm-auto  col-lg-9 px-md-4 bg-mint">
             @if (session('error'))
                <div class="alert alert-danger" role="alert"> {{session('error')}}</div>
@@ -62,22 +63,19 @@
                </div>
             @endif
             
-            <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">
-               Edit Return Sale
-            </h5>
-            <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('sale-return-update') }}" id="saleReturnForm">
+            <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Edit Purchase Return/Debit Note</h5>
+            <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('purchase-return-update') }}" id="purchaseReturnForm">
                @csrf
                <div class="row">
-                  <input type="hidden" name="sale_return_edit_id" value="{{$sale_return->id}}">
-                  
+                  <input type="hidden" name="purchase_return_edit_id" value="{{$purchase_return->id}}">
                   <div class="mb-4 col-md-4">
                      <label for="name" class="form-label font-14 font-heading">NATURE</label>
                      <select id="nature" name="nature" class="form-select" required onChange="sectionHideShow();">
-                        @if($sale_return->sr_nature=="WITH GST")
-                           <option value="WITH GST" @if($sale_return->sr_nature=="WITH GST") selected @endif>WITH GST</option>
+                        @if($purchase_return->sr_nature=="WITH GST")
+                           <option value="WITH GST" @if($purchase_return->sr_nature=="WITH GST") selected @endif>WITH GST</option>
                         @endif
-                        @if($sale_return->sr_nature=="WITHOUT GST")
-                           <option value="WITHOUT GST" @if($sale_return->sr_nature=="WITHOUT GST") selected @endif>WITHOUT GST</option>
+                        @if($purchase_return->sr_nature=="WITHOUT GST")
+                           <option value="WITHOUT GST" @if($purchase_return->sr_nature=="WITHOUT GST") selected @endif>WITHOUT GST</option>
                         @endif
                      </select>
                      <ul style="color: red;">
@@ -87,65 +85,57 @@
                   <div class="mb-4 col-md-4 type_div" style="display:none">
                      <label for="name" class="form-label font-14 font-heading">TYPE</label>
                      <select id="type" name="type" class="form-select" onChange="sectionHideShow()">
-                        @if($sale_return->sr_type=="WITH ITEM")
-                           <option value="WITH ITEM" @if($sale_return->sr_type=="WITH ITEM") selected @endif>WITH ITEM</option>
+                        @if($purchase_return->sr_type=="WITH ITEM")
+                           <option value="WITH ITEM" @if($purchase_return->sr_type=="WITH ITEM") selected @endif>WITH ITEM</option>
                         @endif
-                        @if($sale_return->sr_type=="WITHOUT ITEM")
-                           <option value="WITHOUT ITEM" @if($sale_return->sr_type=="WITHOUT ITEM") selected @endif>WITHOUT ITEM</option>
+                        @if($purchase_return->sr_type=="WITHOUT ITEM")
+                           <option value="WITHOUT ITEM" @if($purchase_return->sr_type=="WITHOUT ITEM") selected @endif>WITHOUT ITEM</option>
                         @endif
-                        @if($sale_return->sr_type=="RATE DIFFERENCE")
-                           <option value="RATE DIFFERENCE" @if($sale_return->sr_type=="RATE DIFFERENCE") selected @endif>RATE DIFFERENCE</option>
+                        @if($purchase_return->sr_type=="RATE DIFFERENCE")
+                           <option value="RATE DIFFERENCE" @if($purchase_return->sr_type=="RATE DIFFERENCE") selected @endif>RATE DIFFERENCE</option>
                         @endif
                      </select>
                   </div>
                   <div class="mb-4 col-md-4">
                      <label for="name" class="form-label font-14 font-heading">Date</label>
-                     <input type="date" id="date" class="form-control calender-bg-icon calender-placeholder" name="date" placeholder="Select date" value="{{$sale_return->date}}" required min="{{Session::get('from_date')}}" max="{{Session::get('to_date')}}">
+                     <input type="date" id="date" class="form-control calender-bg-icon calender-placeholder" name="date" value="{{$purchase_return->date}}" placeholder="Select date" required min="{{Session::get('from_date')}}" max="{{Session::get('to_date')}}">
                      <ul style="color: red;">
                         @error('date'){{$message}}@enderror                        
                      </ul>
                   </div>
                   <div class="mb-4 col-md-4">
                      <label for="name" class="form-label font-14 font-heading">Accounts</label>
-                     <select class="form-select select2-single" id="party" name="party" required>
+                     <select class="form-select select2-single" id="party_id" name="party_id" required>
                         <option value="">Select</option>
                         <?php
                         foreach ($party_list as $value) { ?>
-                           <option value="<?php echo $value->id; ?>" data-state_code="<?php echo $value->state_code; ?>" data-gstin="<?php echo $value->gstin; ?>" data-address="<?php echo $value->address.",".$value->pin_code; ?>" <?php if($sale_return->party==$value->id){ echo "selected";} ?>><?php echo $value->account_name; ?></option>
+                           <option value="<?php echo $value->id; ?>" data-gstin="<?php echo $value->gstin; ?>" data-address="<?php echo $value->address.",".$value->pin_code; ?>" data-state_code="<?php echo $value->state_code; ?>" <?php if($purchase_return->party==$value->id){ echo "selected";} ?>><?php echo $value->account_name; ?></option>
                            <?php 
                         } ?>
                      </select>
                      <p id="partyaddress" style="font-size: 9px;"></p>
                      <ul style="color: red;">
-                       @error('party'){{$message}}@enderror                        
+                        @error('party_id'){{$message}}@enderror
                      </ul>
                   </div>
                   <div class="mb-3 col-md-3 voucher_no_div">
-                     <label for="name" class="form-label font-14 font-heading">Sale Invoice No. </label>
-                     <select class="form-select select2-single" id="voucher_no" name="voucher_no" required>
+                     <label for="name" class="form-label font-14 font-heading">Purchase Invoice No. *</label>
+                     <select class="form-select select2-single" id="voucher_no" name="voucher_no">
                         <option value="">Select</option>
                      </select>
                      <ul style="color: red;">
-                       @error('voucher_no'){{$message}}@enderror                        
+                        @error('voucher_no'){{$message}}@enderror                        
                      </ul>
-                     <input type="hidden" name="sale_bill_id" id="sale_bill_id" value="{{$sale_return->sale_bill_id}}">
+                     <input type="hidden" name="purchase_bill_id" id="purchase_bill_id" value="{{$purchase_return->purchase_bill_id}}">
                   </div>
                   <div class="mb-1 col-md-1 voucher_no_div">
                      <br>
-                     <a href="{{ URL::to('sale-invoice/')}}/{{$sale_return->invoice_no}}" title="View Invoice" target="__blank" id="invoice_id"><img src="{{ URL::asset('public/assets/imgs/eye-icon.svg')}}" style="margin-top: 20px;"></a>
+                     <a href="" title="View Invoice" target="__blank" id="invoice_id"><img src="{{ URL::asset('public/assets/imgs/eye-icon.svg')}}" style="margin-top: 20px;"></a>
                   </div>
                   <div class="mb-4 col-md-4">
                      <label for="name" class="form-label font-14 font-heading">Series No.</label>
                      <select id="series_no" name="series_no" class="form-select" required>
-                        <?php
-                        if(count($mat_series) > 0) {
-                           foreach ($mat_series as $value) { 
-                              if($value->series==$sale_return->series_no){?>
-                                 <option value="<?php echo $value->series; ?>" <?php if($value->series==$sale_return->series_no){ echo "selected";} ?> data-mat_center="<?php echo $value->mat_center;?>" data-gst_no="<?php echo $value->gst_no;?>" data-invoice_start_from="<?php echo $value->invoice_start_from;?>" data-invoice_prefix="<?php echo $value->invoice_prefix;?>" data-without_invoice_start_from="<?php echo $value->without_invoice_start_from;?>" ><?php echo $value->series; ?></option>
-                                 <?php 
-                              }
-                           }
-                        } ?>
+                        <option value="{{$purchase_return->series_no}}">{{$purchase_return->series_no}}</option>                        
                      </select>
                      <ul style="color: red;">
                        @error('series_no'){{$message}}@enderror                        
@@ -154,27 +144,18 @@
                   <div class="mb-4 col-md-4">
                      <label for="name" class="form-label font-14 font-heading">Material Center</label>
                      <select name="material_center" class="form-select" required>
-                        <?php
-                        if(count($mat_series) > 0) {
-                           foreach ($mat_series as $value) {
-                              if($sale_return->material_center==$value->mat_center){ ?>
-                              <option value="<?php echo $value->mat_center; ?>" <?php if($sale_return->material_center==$value->mat_center){ echo "selected";} ?>><?php echo $value->mat_center; ?></option>
-                              <?php 
-                              }
-                           }
-                        } ?>
+                        <option value="{{$purchase_return->material_center}}">{{$purchase_return->material_center}}</option>
                      </select>
                      <ul style="color: red;">
                        @error('material_center'){{$message}}@enderror                        
                      </ul>
                   </div>
                   <div class="mb-4 col-md-4">
-                     <label for="sale_return_no" class="form-label font-14 font-heading">Credit Note No.</label>
-                     <input type="text" class="form-control" id="voucher_prefix" name="voucher_prefix" placeholder="" value="{{$sale_return->sr_prefix}}"  readonly style="text-align: right;">
-                     <input type="hidden" id="sale_return_no" class="form-control" name="sale_return_no" value="{{$sale_return->sale_return_no}}">
+                     <label for="purchase_return_no" class="form-label font-14 font-heading">Debit Note No.</label>
+                     <input type="text" class="form-control" id="voucher_prefix" name="voucher_prefix" placeholder="" value="{{$purchase_return->sr_prefix}}"  readonly style="text-align: right;">
+                     <input type="hidden" id="purchase_return_no" class="form-control" name="purchase_return_no" value="{{$purchase_return->purchase_return_no}}" readonly>
                   </div>
                </div>
-               <!-- With Gst With Item Section Start -->
                <div class=" transaction-table transaction-main-table bg-white table-view shadow-sm border-radius-8 mb-4 with_gst_with_item_section" style="display:none">
                   <table id="example11" class="table-striped table m-0 shadow-sm table-bordered">
                      <thead>
@@ -191,45 +172,51 @@
                      </thead>
                      <tbody>
                         @php $i = 1; $item_arr = [];$total_amount = 0;@endphp
-                        @foreach($sale_return_description as $item)
+                        @foreach($purchase_return_description as $item)
                            @php $item_arr[$i] = $item->goods_discription;@endphp
-                           <tr id="tr_@php $i; @endphp" class="font-14 font-heading bg-white">
+                           <tr id="tr_@php echo $i; @endphp" class="font-14 font-heading bg-white">
                               <td class="w-min-50">@php echo $i; @endphp</td>
-                              <td class="w-min-50">
-                                 <select onchange="call_fun('tr_@php echo $i; @endphp');" class="border-0 goods_items form-select" id="goods_discription_tr_@php echo $i; @endphp" name="goods_discription[]" required data-id="@php echo $i; @endphp">
+                              <td class="">
+                                 <select onchange="call_fun('tr_@php echo $i; @endphp');" class="border-0 form-select  goods_items" id="goods_discription_tr_@php echo $i; @endphp" name="goods_discription[]"  data-id="@php echo $i; @endphp">
                                     <option value="">Select</option>
                                  </select>
                               </td>                              
                               <td class=" w-min-50">
-                                 <input type="number" class="quantity w-100 form-control" id="quantity_tr_@php echo $i; @endphp" name="qty[]" value="{{$item->qty}}" style="text-align:right;"/>
+                                 <input type="number" class="quantity w-100 form-control" id="quantity_tr_@php echo $i; @endphp" name="qty[]" value="{{$item->qty}}" style="text-align: right;"/>
                               </td>
                               <td class=" w-min-50">
-                                 <input type="text" class="w-100 form-control" id="unit_tr_@php echo $i; @endphp" readonly style="text-align:center;" value="{{$item->s_name}}" />       
-                                 <input type="hidden" class="units w-100" name="units[]" id="units_tr_@php echo $i; @endphp" value="{{$item->unit}}" />
+                                 <input type="text" class="w-100 form-control" id="unit_tr_@php echo $i; @endphp" readonly style="text-align:center;" value="{{$item->s_name}}" />
+                                 <input type="hidden" class="units" name="units[]" id="units_tr_@php echo $i; @endphp" value="{{$item->unit}}" />
                               </td>
                               <td class=" w-min-50">
-                                 <input type="number" class="price form-control" id="price_tr_@php echo $i; @endphp" name="price[]" value="{{$item->price}}" style="text-align:right;"/>
+                                 <input type="number" class="price w-100 form-control" id="price_tr_@php echo $i; @endphp" name="price[]" value="{{$item->price}}" style="text-align: right;"/>
                               </td>
                               <td class=" w-min-50">
-                                 <input type="number" id="amount_tr_@php echo $i; @endphp" class="amount w-100 form-control" name="amount[]" value="{{$item->amount}}" style="text-align:right;">
+                                 <input type="number" id="amount_tr_@php echo $i; @endphp" class="amount w-100 form-control" name="amount[]" value="{{$item->amount}}" style="text-align: right;"/>
                               </td>
-                              <td>
-                                 <svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle add_more" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg>
-                              </td>
+                              <td class=""></td>
                            </tr>
                            @php $i++; $total_amount = $total_amount + $item->amount; @endphp
                         @endforeach
                      </tbody>
-                     
+                     <div class="plus-icon">
+                        <tr class="font-14 font-heading bg-white">
+                           <td class="" colspan="7">
+                              <a class="add_more"><svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;">
+                                 <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg>
+                              </a>
+                           </td>
+                        </tr>
+                     </div>
                      <div class="total">
                         <tr class="font-14 font-heading bg-white">
                            <td class="w-min-50 fw-bold"></td>
-                           <td class="w-min-50 fw-bold"></td>
+                           <td class="fw-bold"></td>
                            <td class="w-min-50 fw-bold"></td>
                            <td class="w-min-50 fw-bold"></td>
                            <td class="w-min-50 fw-bold">Total</td>
                            <td class="w-min-50 fw-bold">
-                              <span id="totalSum" style="float:right;">{{$total_amount}}</span>
+                              <span id="totalSum" style="float: right;">{{$total_amount}}</span>
                               <input type="hidden" name="taxable_amt" id="total_taxable_amounts" value="{{$total_amount}}">
                            </td>
                         </tr>
@@ -239,12 +226,12 @@
                <div class="row with_gst_with_item_section" style="display:none">
                   <div class="col-lg-5">
                      <div class="transaction-table transacton-extra-table bg-white table-view shadow-sm border-radius-8 mb-4">
-                        <table id="transcton-sale3" class="table-striped table m-0 shadow-sm table-bordered">
+                        <table id="transcton-sale11" class="table-striped table m-0 shadow-sm table-bordered">
                            <thead>
                               <tr class=" font-12 text-body bg-light-pink ">
-                                 <th class="w-min-50 border-none bg-light-pink text-body">Tax Rate </th>
-                                 <th class="w-min-50 border-none bg-light-pink text-body ">Taxable Amt.</th>
-                                 <th class="w-min-50 border-none bg-light-pink text-body ">Tax </th>
+                                 <th class="border-none bg-light-pink text-body">Tax Rate </th>
+                                 <th class="border-none bg-light-pink text-body ">Taxable Amt.</th>
+                                 <th class="border-none bg-light-pink text-body ">Tax </th>
                               </tr>
                            </thead>
                            <tbody>
@@ -270,16 +257,16 @@
                            </thead>
                            <tbody class="testWrapper">   
                               @php $index = 1;@endphp                           
-                              @foreach($sale_return_sundry as $sundry)
-                                 @if($sundry->nature_of_sundry!='CGST' && $sundry->nature_of_sundry!='SGST' && $sundry->nature_of_sundry!='IGST' && $sundry->nature_of_sundry!='ROUNDED OFF (+)' && $sundry->nature_of_sundry!='ROUNDED OFF (-)')
+                              @foreach($purchase_return_sundry as $sundry)
+                                 @if($sundry->effect_gst_calculation==1)
                                     <tr id="billtr_@php echo $index;@endphp" class="font-14 font-heading bg-white bill_taxes_row sundry_tr">
                                        <td class="w-min-50">
                                           <select id="bill_sundry_@php echo $index;@endphp" class="w-95-parsent  bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="@php echo $index;@endphp">
                                              <option value="">Select</option>
                                              <?php
                                              foreach ($billsundry as $value) { 
-                                                if($value->nature_of_sundry!='CGST' && $value->nature_of_sundry!='SGST' && $value->nature_of_sundry!='IGST' && $value->nature_of_sundry!='ROUNDED OFF (+)' && $value->nature_of_sundry!='ROUNDED OFF (-)'){?>
-                                                   <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-sundry_percent="<?php echo $value->sundry_percent;?>" data-sundry_percent_date="<?php echo $value->sundry_percent_date;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_@php echo $index;@endphp" id="sundry_option_<?php echo $value->id;?>_1" <?php if($sundry->bill_sundry==$value->id){ echo "selected";} ?> data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
+                                                if($value->effect_gst_calculation==1){?>
+                                                   <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-sundry_percent="<?php echo $value->sundry_percent;?>" data-sundry_percent_date="<?php echo $value->sundry_percent_date;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_@php echo $index;@endphp" id="sundry_option_<?php echo $value->id;?>_1" <?php if($sundry->bill_sundry==$value->id){ echo "selected";} ?>  data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
                                                    <?php 
                                                 }
                                              } ?>
@@ -294,18 +281,24 @@
                                        </td>
                                        <td>
                                           <svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove_sundry_up" data-id="@php echo $index;@endphp" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg>
-                                          @if($index==1)
-                                             <svg style="cursor:pointer" xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle add_more_bill_sundry_up" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" ></svg>
-                                          @endif
-
                                        </td>
                                     </tr>
                                     @php $index++;@endphp
                                  @endif
                               @endforeach
+                              
+                              <div class="plus-icon">
+                                 <tr class="font-14 font-heading bg-white">
+                                    <td class="w-min-120 " colspan="5">
+                                       <a class="add_more_bill_sundry_up"><svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                       <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg></a>
+                                    </td>
+                                 </tr>
+                              </div>
+                              
                               <?php 
                               $return = array();$roundReturn = array();
-                              foreach($sale_return_sundry as $val) {
+                              foreach($purchase_return_sundry as $val) {
                                  if($val['nature_of_sundry']=='CGST' || $val['nature_of_sundry']=='SGST' || $val['nature_of_sundry']=='IGST'){
                                     $return[$val['nature_of_sundry']][] = $val;
                                  }else if($val['nature_of_sundry']=='ROUNDED OFF (+)' || $val['nature_of_sundry']=='ROUNDED OFF (-)'){
@@ -344,7 +337,7 @@
                               </tr>
                               <tr id="billtr_sgst" class="font-14 font-heading bg-white bill_taxes_row sundry_tr" <?php if(!isset($return['SGST'])){?> style="display:none" <?php } ?>>
                                  <td class="w-min-50">
-                                    <select id="bill_sundry_sgst" class="w-95-parsent  bill_sundry_tax_type  form-select" name="bill_sundry[]" data-id="sgst">
+                                    <select id="bill_sundry_sgst" class="w-95-parsent  bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="sgst">
                                        <?php
                                        foreach ($billsundry as $value) { 
                                           if($value->nature_of_sundry=='SGST'){
@@ -378,9 +371,8 @@
                                  </td>
                                  <td class="w-min-50 ">
                                     <span name="tax_amt[]" class="tax_amount" id="tax_amt_igst">@if(isset($return['IGST'])){{$return['IGST'][0]['rate']}} %@endif</span>
-                                    <input type="hidden" name="tax_rate[]" value="@if(isset($return['IGST'])){{$return['IGST'][0]['rate']}} @endif" id="tax_rate_tr_igst"></td>
-                                 <td class="w-min-50 ">
-                                    <input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_igst" data-id="igst" <?php if(isset($return['IGST'])){?> value="<?php echo $return['IGST'][0]['amount'];?>" <?php } ?> style="text-align: right;"></td>
+                                    <input type="hidden" name="tax_rate[]" value="@if(isset($return['IGST'])){{$return['IGST'][0]['rate']}}@endif" id="tax_rate_tr_igst"></td>
+                                 <td class="w-min-50 "><input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_igst" data-id="igst" <?php if(isset($return['IGST'])){?> value="<?php echo $return['IGST'][0]['amount'];?>" <?php } ?> style="text-align: right;"></td>
                                  <td></td>
                               </tr>
                               <?php 
@@ -393,7 +385,7 @@
                                                 <?php
                                                 foreach ($billsundry as $value) { 
                                                    if($value->id==$v1['bill_sundry']){?>
-                                                      <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_@php echo $index;@endphp" id="sundry_option_@php echo $index;@endphp" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
+                                                      <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_@php echo $index;@endphp" id="sundry_option_@php echo $index;@endphp" data-sundry_percent="<?php echo $value->sundry_percent;?>" data-sundry_percent_date="<?php echo $value->sundry_percent_date;?>" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
                                                       <?php 
                                                    }
                                                 } ?>
@@ -420,7 +412,7 @@
                                     </td>
                                  </tr>
                               </div>
-                              @foreach($sale_return_sundry as $sundry)
+                              @foreach($purchase_return_sundry as $sundry)
                                  @if($sundry->effect_gst_calculation==0 && $sundry->nature_of_sundry!='CGST' && $sundry->nature_of_sundry!='SGST' && $sundry->nature_of_sundry!='IGST' && $sundry->nature_of_sundry!='ROUNDED OFF (+)' && $sundry->nature_of_sundry!='ROUNDED OFF (-)')
                                     <tr id="billtr_@php echo $index;@endphp" class="font-14 font-heading bg-white bill_taxes_row sundry_tr">
                                        <td class="w-min-50">
@@ -447,10 +439,17 @@
                                     @php $index++;@endphp
                                  @endif
                               @endforeach
-                              
-                              <tr id="billtr_round_plus" class="font-14 font-heading bg-white bill_taxes_row sundry_tr" <?php if(!isset($roundReturn['ROUNDED OFF (+)'])){?> style="display:none" <?php } ?>>
+                              <div class="plus-icon">
+                                 <tr class="font-14 font-heading bg-white">
+                                    <td class="w-min-120 " colspan="5">
+                                       <a class="add_more_bill_sundry_down"><svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                       <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg></a>
+                                    </td>
+                                 </tr>
+                              </div>
+                              <tr id="billtr_round_plus" class="font-14 font-heading bg-white bill_taxes_row sundry_tr" <?php if(!isset($roundReturn['ROUNDED OFF (+)'])){?> style="display:none" <?php }?>>
                                  <td class="w-min-50">
-                                    <select id="bill_sundry_round_plus" class="w-95-parsent bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="round_plus">
+                                    <select id="bill_sundry_round_plus" class="w-95-parsent  bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="round_plus">
                                        <?php
                                        foreach ($billsundry as $value) { 
                                           if($value->nature_of_sundry=='ROUNDED OFF (+)'){?>
@@ -470,7 +469,7 @@
                               </tr>
                               <tr id="billtr_round_minus" class="font-14 font-heading bg-white bill_taxes_row sundry_tr" <?php if(!isset($roundReturn['ROUNDED OFF (-)'])){?> style="display:none" <?php } ?>>
                                  <td class="w-min-50">
-                                    <select id="bill_sundry_round_minus" class="w-95-parsent bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="round_minus">
+                                    <select id="bill_sundry_round_minus" class="w-95-parsent  bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="round_minus">
                                        <?php
                                        foreach ($billsundry as $value) { 
                                           if($value->nature_of_sundry=='ROUNDED OFF (-)'){?>
@@ -493,80 +492,37 @@
                                  <td class="w-min-50 fw-bold">Total</td>
                                  <td class="w-min-50 fw-bold"></td>
                                  <td class="w-min-50 fw-bold">
-                                    <span id="bill_sundry_amt" style="float:right ;">{{$sale_return->total}}</span>
-                                    <input type="hidden" name="total" id="total_amounts" value="{{$sale_return->total}}">
+                                    <span id="bill_sundry_amt" style="float: right;">{{$purchase_return->total}}</span>
+                                    <input type="hidden" name="total" id="total_amounts" value="{{$purchase_return->total}}"> 
                                  </td>
                               </tr>
                            </tbody>
                         </table>
-                        
                         <table id="transcton-sale3" class="table-striped table m-0 shadow-sm table-bordered">
                            <tbody>
-                           <div>
-                              <tr class="font-14 font-heading bg-white">
-                                 <td colspan="4" class="pl-40"><button type="button" class="btn btn-info transport_info" style="float: right;">Transport Info</button></td>
-                              </tr>
-                           </div>
-                           <div class="modal fade" id="transport_info_modal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-                              <div class="modal-dialog modal-dialog-centered">
-                                 <div class="modal-content p-4 border-divider border-radius-8">
-                                    <div class="modal-header border-0 p-0">
-                                       <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                    </div>
-                                    <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">
-                                    Transport Info
-                                    </h5>
-                                    <br>
-                                    <div class="row">
-                                       <div class="mb-6 col-md-6">
-                                          <label for="name" class="form-label font-14 font-heading">Vehicle No.</label>
-                                          <input type="text" name="vehicle_no" class="form-control" placeholder="Vehicle No." value="{{$sale_return->vehicle_no}}"/>
-                                       </div>
-                                       <div class="mb-6 col-md-6">
-                                          <label for="name" class="form-label font-14 font-heading">Transport Name</label>
-                                          <input type="text" id="transport_name" name="transport_name" class="form-control" placeholder="Transport Name" />
-                                       </div>
-                                       <div class="mb-6 col-md-6">
-                                          <label for="name" class="form-label font-14 font-heading">GR/RR No.</label>
-                                          <input type="text" id="gr_pr_no" name="gr_pr_no" class="form-control" placeholder="GR/RR No"/>
-                                       </div>
-                                       <div class="mb-6 col-md-6">
-                                          <label for="name" class="form-label font-14 font-heading">Station</label>
-                                          <input type="text" id="station" name="station" class="form-control" placeholder="Station"/>
-                                       </div>
-                                    </div>
-                                    <br>
-                                    <div class="text-start">
-                                       <button type="button" class="btn  btn-xs-primary save_transport_info">
-                                             SAVE
-                                       </button>
-                                    </div>
-                                 </div>
-                              </div>
-                           </div>
                               <div>
                                  <tr class="font-14 font-heading bg-white">
                                     <td colspan="2" class="pl-40">Vehicle No.</td>
                                     <td colspan="3" class="">
-                                       <input type="text" name="vehicle_no" placeholder="Vehicle No." value="" class="form-control"/>
+                                       <input type="text" name="vehicle_no" placeholder="Vehicle No." value="{{$purchase_return->vehicle_no}}" class="form-control"/>
                                     </td>
                                  </tr>
                                  <tr class="font-14 font-heading bg-white">
                                     <td colspan="2" class="pl-40">GR/RR No.</td>
                                     <td colspan="3" class="">
-                                       <input type="text" name="gr_pr_no" placeholder="GR/RR No." value="{{$sale_return->gr_pr_no}}" class="form-control" >
+                                       <input type="text" name="gr_pr_no" placeholder="GR/RR No." value="{{$purchase_return->gr_pr_no}}" class="form-control"/>
                                     </td>
                                  </tr>
                                  <tr class="font-14 font-heading bg-white">
                                     <td colspan="2" class="pl-40">Transport Name</td>
                                     <td colspan="3" class="">
-                                       <input type="text" name="transport_name" placeholder="Transport Name" value="{{$sale_return->transport_name}}" class="form-control"/>
+                                       <input type="text" name="transport_name" placeholder="Transport Name" value="{{$purchase_return->transport_name}}" class="form-control"/>
                                     </td>
                                  </tr>
                                  <tr class="font-14 font-heading bg-white">
                                     <td colspan="2" class="pl-40">Station</td>
                                     <td colspan="3" class="">
-                                       <input type="text" name="station" placeholder="Station" value="{{$sale_return->station}}" class="form-control" placeholder="Station"/>
+                                       <input type="text" name="station" placeholder="Station" value="{{$purchase_return->station}}" class="form-control" />
                                     </td>
                                  </tr>
                               </div>
@@ -575,8 +531,8 @@
                      </div>
                   </div>
                </div>
-                <!-- With Gst WithOut Item Section Start -->
-                <div class="transaction-table transaction-main-table bg-white table-view shadow-sm border-radius-8 mb-4 with_gst_without_item_section" style="display:none">
+               <!-- With Gst WithOut Item Section Start -->
+               <div class="transaction-table transaction-main-table bg-white table-view shadow-sm border-radius-8 mb-4 with_gst_without_item_section" style="display:none">
                   <table class="table-striped table m-0 shadow-sm table-bordered with_gst_section">
                      <tbody>
                         @php $add_more_count_withgst = 1; @endphp
@@ -662,7 +618,7 @@
                            <td></td>
                            <td style="text-align: right;">Remark</td>
                            <td>
-                              <input type="text" class="form-control" name="remark" placeholder="Enter Remark" value="{{$sale_return->remark}}">
+                              <input type="text" class="form-control" name="remark" placeholder="Enter Remark" value="{{$purchase_return->remark}}">
                            </td>
                         </tr>
                      </tbody>
@@ -699,7 +655,7 @@
                                  </select>
                               </td>
                               <td class="">
-                                 <input type="number" name="debit[]" class="form-control debit" data-id="{{$k1}}" id="debit_{{$k1}}" placeholder="Debit Amount" onkeyup="debitTotal();" value="{{$v->debit}}">
+                                 <input type="number" name="debit[]" class="form-control debit" data-id="{{$k1}}" id="debit_{{$k1}}" placeholder="Debit Amount" onkeyup="debitTotal();" value="{{$v->credit}}">
                               </td>
                               <td class="">
                                  <input type="text" name="narration[]" class="form-control narration" data-id="{{$k1}}" id="narration_{{$k1}}" placeholder="Enter Narration" value="{{$v->narration}}">
@@ -731,10 +687,10 @@
                      </div>
                   </table>
                </div>
-               <div class=" d-flex">                  
+               <div class=" d-flex">
                   <div class="ms-auto">
-                     <input type="submit" value="SAVE" class="btn btn-xs-primary " id="saleReturnBtn">
-                     <a href="{{ route('sale-return.index') }}" class="btn  btn-black ">QUIT</a>
+                     <input type="submit" value="SAVE" class="btn btn-xs-primary" id="purchaseReturnBtn">
+                     <a href="{{ route('purchase-return.index') }}" class="btn  btn-black ">QUIT</a>
                   </div>
                   <input type="hidden" clas="max_sale_descrption" name="max_sale_descrption" value="1" id="max_sale_descrption">
                   <input type="hidden" name="max_sale_sundry" id="max_sale_sundry" value="1" />
@@ -744,8 +700,7 @@
          <div class="col-lg-1 d-none d-lg-flex justify-content-center px-1">
             <div class="shortcut-key w-100">
                <p class="font-14 fw-500 font-heading m-0">Shortcut Keys</p>
-               <button class="p-2 transaction-shortcut-btn my-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Help">F1
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Help</span>
+               <button class="p-2 transaction-shortcut-btn my-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Help">F1<span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Help</span>
                </button>
                <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Account">
                   <span class="border-bottom-black">F1</span>
@@ -755,8 +710,7 @@
                   <span class="border-bottom-black">F2</span>
                   <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Item</span>
                </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Master">
-                     F3
+               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Master">F3
                   <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Master</span>
                </button>
                <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Voucher">
@@ -830,7 +784,7 @@
                   <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">GST Portal</span>
                </button>
                <button class="p-2 transaction-shortcut-btn mb-4 text-ellipsis d-inline-block" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Search Menu">
-                     Search Menu
+                  Search Menu
                </button>
             </div>
          </div>
@@ -843,34 +797,12 @@
    var enter_gst_status = 0;
    var auto_gst_calculation = 0;
    var customer_gstin = "";
-   var merchant_gstin = "";
+   var merchant_gstin = "{{$merchant_gst}}";
    var percent_arr = [];
    var item_count = '{{--$i}}';
    var add_more_count = item_count;
    var add_more_counts = 1;
    var add_more_bill_sundry_up_count = '<?php echo --$index;?>';
-   
-   $('body').on('keydown', 'input, select, textarea', function(e) {
-      var self = $(this),
-      form = self.parents('form:eq(0)'),
-      focusable, next, prev;
-      if(e.shiftKey) {
-         if(e.keyCode == 13) {
-            focusable = form.find('input,a,select,button,textarea').filter(':visible');
-            prev = focusable.eq(focusable.index(this) - 1);
-            if(prev.length) {
-               prev.focus();
-            }  
-         }
-      }else if (e.keyCode == 13) {
-         focusable = form.find('input,a,select,button,textarea').filter(':visible');
-         next = focusable.eq(focusable.index(this) + 1);
-         if(next.length) {
-            next.focus();
-         }
-         return false;
-      }
-   });   
    $(".add_more").click(function() {
       let empty_status = 0;
       $('.goods_items').each(function(){   
@@ -886,9 +818,9 @@
       add_more_count++;
       var optionElements = $('#goods_discription_tr_1').html();
       var tr_id = 'tr_' + add_more_count;
-      newRow = '<tr id="tr_' + add_more_count + '" class="font-14 font-heading bg-white"><td class="w-min-50">' + add_more_count + '</td><td class=""><select onchange="call_fun(\'tr_' + add_more_count + '\');" id="goods_discription_tr_' + add_more_count + '" class="w-95-parsent form-select goods_items" name="goods_discription[]" required data-id="'+add_more_count+'">';
+      newRow = '<tr id="tr_' + add_more_count + '" class="font-14 font-heading bg-white"><td class="w-min-50">' + add_more_count + '</td><td class=""><select onchange="call_fun(\'tr_' + add_more_count + '\');" id="goods_discription_tr_' + add_more_count + '" class="w-95-parsent goods_items form-select" name="goods_discription[]" required data-id="'+add_more_count+'">';
       newRow += optionElements;
-      newRow += '</select></td><td class="w-min-50"><input type="number" class="quantity w-100 form-control" name="qty[]" id="quantity_tr_' + add_more_count + '" style="text-align:right"/></td><td class=" w-min-50"><input type="text" class="w-100 form-control" id="unit_tr_'+add_more_count+'" readonly style="text-align:center;"/><input type="hidden" class="units w-100" name="units[]" id="units_tr_' + add_more_count + '"/></td><td class=" w-min-50"><input type="number" class="price w-100 form-control" name="price[]" id="price_tr_' + add_more_count + '" style="text-align:right"/></td><td class=" w-min-50"><input type="number" class="amount w-100 form-control" name="amount[]" id="amount_tr_' + add_more_count + '" style="text-align:right"/></td><td class="w-min-50"><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
+      newRow += '</select></td><td class=""><input type="number" class="quantity w-100 form-control" name="qty[]" id="quantity_tr_' + add_more_count + '" style="text-align:right"/></td><td class=" w-min-50"><input type="text" class="w-100 form-control" id="unit_tr_'+add_more_count+'" readonly style="text-align:center;"/><input type="hidden" class="units w-100" name="units[]" id="units_tr_' + add_more_count + '"/></td><td class=" w-min-50"><input type="number" class="price w-100 form-control" name="price[]" id="price_tr_' + add_more_count + '" style="text-align:right"/></td><td class=" w-min-50"><input type="number" class="amount w-100 form-control" name="amount[]" id="amount_tr_' + add_more_count + '" style="text-align:right" /></td><td class="w-min-50"><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
       $("#max_sale_descrption").val(add_more_count);
       $("#example11").append(newRow);
    });
@@ -899,24 +831,24 @@
       max_val--;
       $("#max_sale_descrption").val(max_val);
       calculateAmount();
-   });
-   $('#party').change(function() {
+   });   
+   $('#party_id').change(function() {
       // Get the selected value
       var account_id = $(this).val();
-      var sale_bill_id = '{{$sale_return->sale_bill_id}}';
-      var invoice_no = '{{$sale_return->invoice_no}}';
+      var purchase_bill_id = '{{$purchase_return->purchase_bill_id}}';
+      var invoice_no = '{{$purchase_return->invoice_no}}';
       $.ajax({
-         url: '{{url("get/invoice/details")}}',
+         url: '{{url("get/purchaseinvoice/details")}}',
          async: false,
          type: 'POST',
          dataType: 'JSON',
          data: {
-            _token: '<?php echo csrf_token() ?>',
+             _token: '<?php echo csrf_token() ?>',
             account_id: account_id,
-            sale_bill_id : sale_bill_id
+            purchase_bill_id : purchase_bill_id
          },
-         success: function(data){
-            var optionElements = '<option value="">Select</option>';
+         success: function(data) {
+            var optionElements = '';
             $.each(data, function(key, val) {
                let selected = "";
                if(invoice_no==val.voucher_no){
@@ -924,18 +856,21 @@
                }
                optionElements += '<option value="' + val.voucher_no + '" data-id="'+val.id+'" '+selected+'>' + val.voucher_no + '</option>';
             });
-            $("#voucher_no").html(optionElements);
+            $("#voucher_no").append(optionElements);
             $('#voucher_no').change();
          }
       });
    });
    $('#voucher_no').change(function() {
       // Get the selected value
-      $("#invoice_id").attr('href',"{{ URL::to('sale-invoice/')}}/"+$('option:selected', this).attr('data-id'));
-      $("#sale_bill_id").val($('option:selected', this).attr('data-id'));
+      $("#invoice_id").attr('href',"{{ URL::to('purchase-invoice/')}}/"+$('option:selected', this).attr('data-id'));
+      $("#purchase_bill_id").val($('option:selected', this).attr('data-id'));
       var invoice_id = $(this).val();
+      if(invoice_id==""){
+         return;
+      }
       $.ajax({
-         url: '{{url("get/saleitems/details")}}',
+         url: '{{url("get/purchaseitems/details")}}',
          async: false,
          type: 'POST',
          dataType: 'JSON',
@@ -943,7 +878,7 @@
             _token: '<?php echo csrf_token() ?>',
             voucher_no: invoice_id
          },
-         success: function(data){
+         success: function(data) {
             var optionElements = '<option value="">Select</option>';
             $.each(data, function(key, val) {
                optionElements += '<option unit_id="' + val.unit_id + '" data-val="' + val.unit + '" value="' + val.item_id + '" data-percent="' + val.gst_rate + '">' + val.items_name + '</option>';
@@ -954,14 +889,13 @@
                $("#goods_discription_tr_"+'@php echo $k; @endphp').val('@php echo $v; @endphp');
               @php 
             }
-            @endphp            
+            @endphp 
          }
       });
    });
    // Function to calculate amount and update total sum
-   function calculateAmount(key=null) {
-
-      customer_gstin = $("#party option:selected").attr("data-state_code");              
+   function calculateAmount(key=null) {         
+      customer_gstin = $("#party_id option:selected").attr("data-state_code");              
       if(customer_gstin==merchant_gstin.substring(0,2)){  
          $("#billtr_cgst").show();
          $("#billtr_sgst").show();
@@ -987,7 +921,7 @@
       var tax_rate_display = "";
       var tax_amount = 0;
       var final_total = 0;
-      $('#example11 tbody tr').each(function() {         
+      $('#example11 tbody tr').each(function() {        
          var price = $(this).find('.price').val();
          var quantity = $(this).find('.quantity').val();
          if(key=="A"){
@@ -1004,7 +938,6 @@
          if(amount!=undefined){
             total += parseFloat(amount);
          }
-         
       });
       let k = 1;
       $('.goods_items').each(function(){   
@@ -1018,7 +951,7 @@
       let freight_amount_arr = [];let discouint_amount_arr = [];
       let billSundryArray = [];
       let taxSundryArray = [];
-      $(".bill_sundry_tax_type").each(function(){          
+      $(".bill_sundry_tax_type").each(function(){            
          let id = $(this).attr('data-id');
          if($("#bill_sundry_amount_"+id).val()!='' && ($('option:selected', this).attr('data-sundry_percent')==undefined || $('option:selected', this).attr('data-sundry_percent')=="")){
             billSundryArray.push({'id':$(this).val(),'value':$("#bill_sundry_amount_"+id).val(),'type':$('option:selected', this).attr('data-type'),'adjust_sale_amt':$('option:selected', this).attr('data-adjust_sale_amt'),'effect_gst_calculation':$('option:selected', this).attr('data-effect_gst_calculation'),'sequence':$('option:selected', this).attr('data-sequence'),'nature_of_sundry':$('option:selected', this).attr('data-nature_of_sundry')});
@@ -1034,6 +967,7 @@
          res[value.percent].amount += parseFloat(value.amount);
          return res;
       }, {});
+
       $("#totalSum").html(total.toFixed(2));
       let taxable_amount = total;
       final_total = total;
@@ -1053,11 +987,15 @@
                      billSundryArray.forEach(function(e){
                         if(e.nature_of_sundry!='CGST' && e.nature_of_sundry!='SGST' && e.nature_of_sundry!='IGST' && e.nature_of_sundry!='ROUNDED OFF (+)' && e.nature_of_sundry!='ROUNDED OFF (-)'){ 
                            if(e.value>0){
-                              if(e.type=='additive'){
+                              if(e.type=='additive' && e.effect_gst_calculation=='1'){
                                  item_taxable_amount = item_taxable_amount + parseFloat(e.value);
                                  final_total = final_total + parseFloat(e.value);
-                              }else if(e.type=='subtractive'){
+                              }else if(e.type=='subtractive' && e.effect_gst_calculation=='1'){
                                  item_taxable_amount = item_taxable_amount - parseFloat(e.value);
+                                 final_total = final_total - parseFloat(e.value);
+                              }else if(e.effect_gst_calculation=='0' && e.type=='additive'){
+                                 final_total = final_total + parseFloat(e.value);
+                              }else if(e.effect_gst_calculation=='0' && e.type=='subtractive'){
                                  final_total = final_total - parseFloat(e.value);
                               }
                            }
@@ -1112,7 +1050,6 @@
                      taxSundryArray['cgst'] = sundry_amount;
                      taxSundryArray['sgst'] = sundry_amount;
                   }
-                  //CGST
                   let cgst_sundry_value = "";
                   if(billSundryArray.length>0){
                      billSundryArray.forEach(function(e){
@@ -1168,11 +1105,15 @@
                      billSundryArray.forEach(function(e){
                         if(e.nature_of_sundry!='CGST' && e.nature_of_sundry!='SGST' && e.nature_of_sundry!='IGST' && e.nature_of_sundry!='ROUNDED OFF (+)' && e.nature_of_sundry!='ROUNDED OFF (-)'){ 
                            if(e.value>0){
-                              if(e.type=='additive'){
+                              if(e.type=='additive' && e.effect_gst_calculation=='1'){
                                  item_taxable_amount = item_taxable_amount + parseFloat(e.value);
                                  final_total = final_total + parseFloat(e.value);
-                              }else if(e.type=='subtractive'){
+                              }else if(e.type=='subtractive' && e.effect_gst_calculation=='1'){
                                  item_taxable_amount = item_taxable_amount - parseFloat(e.value);
+                                 final_total = final_total - parseFloat(e.value);
+                              }else if(e.effect_gst_calculation=='0' && e.type=='additive'){
+                                 final_total = final_total + parseFloat(e.value);
+                              }else if(e.effect_gst_calculation=='0' && e.type=='subtractive'){
                                  final_total = final_total - parseFloat(e.value);
                               }
                            }
@@ -1214,7 +1155,6 @@
                      sundry_amount = sundry_amount.toFixed(2);
                      taxSundryArray['igst'] = sundry_amount;
                   }
-                  $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(taxSundryArray['igst']);
                   let sundry_value = "";
                   if(billSundryArray.length>0){
                      billSundryArray.forEach(function(e){
@@ -1223,6 +1163,8 @@
                         }
                      });
                   }
+                  $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(taxSundryArray['igst']);
+                  //$("#bill_sundry_amount_"+add_more_bill_sundry_up_count).prop('readonly',true);
                   $("#bill_sundry_"+add_more_bill_sundry_up_count).val(sundry_value)
                   $("#tax_amt_"+add_more_bill_sundry_up_count).html(e.percent+" %");
                   $("#tax_rate_tr_"+add_more_bill_sundry_up_count).val(e.percent);
@@ -1267,7 +1209,7 @@
                }
             }
          }
-         if($("#bill_sundry_amount_"+id).val()!='' && (nature_of_sundry=='CGST' || nature_of_sundry=='SGST' || nature_of_sundry=='IGST') && nature_of_sundry!='ROUNDED OFF (+)' && nature_of_sundry!='ROUNDED OFF (-)'){
+         if($('option:selected', this).attr('data-effect_gst_calculation')=="0" && $("#bill_sundry_amount_"+id).val()!='' && nature_of_sundry!='ROUNDED OFF (+)' && nature_of_sundry!='ROUNDED OFF (-)'){
             if(type=="additive"){
                gstamount = parseFloat(gstamount) + parseFloat($("#bill_sundry_amount_"+id).val());
             }else{
@@ -1278,7 +1220,7 @@
       final_total = Math.round(final_total);
       $("#bill_sundry_amt").html(final_total);
       $("#total_amounts").val(final_total);
-      
+      console.log(parseFloat(final_total)+"-"+parseFloat($("#total_taxable_amounts").val())+"-"+parseFloat(gstamount));
       let roundoff = parseFloat(final_total) - parseFloat($("#total_taxable_amounts").val()) - parseFloat(gstamount);         
       roundoff = roundoff.toFixed(2);
       $("#billtr_round_plus").hide();
@@ -1296,75 +1238,133 @@
       }
       return;         
    }
-   $(document).ready(function(){  
+   $(document).ready(function() {
       sectionHideShow();
-      $('#party').change();   
+      $('#party_id').change();      
       calculateAmount();
       gstCalculation();
-      // Calculate amount on input change
-      $(document).on('input', '.price',function(){
-         calculateAmount();
-      });
-      $(document).on('input', '.quantity',function(){
-         calculateAmount();
-      });
-      $(document).on('input', '.amount',function(){
-         calculateAmount('A');
-      });      
-      $(document).on('change', '.bill_sundry_tax_type',function(){
-         let id = $(this).attr('data-id');
-         if($(this).val()==""){
-            $("#bill_sundry_amount_"+id).val('');
-         }else{
-            $("#bill_sundry_amount_"+id).attr('readonly',false);
-         }
-         let sequence = $('option:selected', this).attr('data-sequence');
-         let sundry_percent = $('option:selected', this).attr('data-sundry_percent');
-         let sundry_percent_date = $('option:selected', this).attr('data-sundry_percent_date');
-         let bill_date = $("#date").val();
-         if(sundry_percent!=undefined && sundry_percent_date!=undefined){
-            if(new Date(sundry_percent_date) <= new Date(bill_date)){
-               $("#tax_amt_"+id).html(sundry_percent+" %");
-               $("#tax_rate_tr_"+id).val(sundry_percent);
-               
-            }
-         } 
-         $("#billtr_"+id).attr('data-sequence',sequence);
-         $("#bill_sundry_amount_"+id).addClass('sundry_amt_'+$(this).val());
-         calculateAmount();
-      });      
-      $(document).on('input', '.bill_amt',function(){
-         calculateAmount($("#bill_sundry_tr_"+$(this).attr('data-id')).val());
-      });   
-      $("#saleReturnBtn").click(function(){
-         if(confirm("Are you sure to submit?")==true){
-            $("#saleReturnForm").validate({
-               ignore: [], 
-               rules: {
-                  series_no: "required",
-                  voucher_no: "required",
-                  party: "required",
-                  material_center: "required",
-                  "goods_discription[]": "required",
-                  "qty[]" : "required",
-                  "price[]" : "required",
-                  "amount[]" : "required",
-               },
-               messages: {
-                  series_no: "Please select series no",
-                  voucher_no: "Please enter voucher no",
-                  party: "Please select party",
-                  material_center: "Please select material center",
-                  "goods_discription[]" : "Please select item",
-                  "qty[]" : "Please enter quantity",
-                  "price[]" : "Please enter price",
-                  "amount[]" : "Please enter amount",                
-               }
-            });
-         }else{
-            return false;
-         }
-      });   
+        // Calculate amount on input change
+        // Calculate amount on input change
+        $(document).on('input', '.price',function(){
+           calculateAmount();
+        });
+        $(document).on('input', '.quantity',function(){
+           calculateAmount();
+        });
+        $(document).on('input', '.amount',function(){
+           calculateAmount('A');
+        });
+        $(document).on('change', '.bill_sundry_tax_type',function(){
+           let id = $(this).attr('data-id');
+           if($(this).val()==""){
+              $("#bill_sundry_amount_"+id).val('');
+           }else{
+              $("#bill_sundry_amount_"+id).attr('readonly',false);
+           }
+           let sequence = $('option:selected', this).attr('data-sequence');
+           let sundry_percent = $('option:selected', this).attr('data-sundry_percent');
+           let sundry_percent_date = $('option:selected', this).attr('data-sundry_percent_date');
+           let bill_date = $("#date").val();
+           if(sundry_percent!=undefined && sundry_percent_date!=undefined){
+              if(new Date(sundry_percent_date) <= new Date(bill_date)){
+                 $("#tax_amt_"+id).html(sundry_percent+" %");
+                 $("#tax_rate_tr_"+id).val(sundry_percent);
+                 
+              }
+           }  
+           $("#billtr_"+id).attr('data-sequence',sequence);
+           $("#bill_sundry_amount_"+id).addClass('sundry_amt_'+$(this).val());
+           calculateAmount();
+        });
+        
+        $(document).on('input', '.bill_amt',function(){
+           calculateAmount($("#bill_sundry_tr_"+$(this).attr('data-id')).val());
+        });
+      $("#purchaseReturnBtn").click(function(){
+         
+            
+            let nature = $("#nature").val();
+            let type = $("#type").val();
+            if(confirm("Are you sure to submit?")==true){
+               if(nature=="WITHOUT GST"){
+                  $("#purchaseReturnForm").validate({
+                     ignore: [], 
+                     rules: {
+                        series_no: "required",
+                        material_center: "required",
+                        "account_name[]": "required",
+                        "without_type[]" : "required",
+                     },
+                     messages: {
+                        series_no: "Please select series no",
+                        material_center: "Please select material center",
+                        "account_name[]" : "Please Select Account",
+                        "without_type[]" : "Please Select Type"               
+                     }
+                  });
+               }else if((nature=="WITH GST" && type=="WITH ITEM") || nature=="RATE DIFFERENCE"){
+                  $("#purchaseReturnForm").validate({
+                     ignore: [], 
+                     rules: {
+                        series_no: "required",
+                        voucher_no: "required",
+                        party_id: "required",
+                        material_center: "required",
+                        "goods_discription[]": "required",
+                        "qty[]" : "required",
+                        "price[]" : "required",
+                        "amount[]" : "required",
+                     },
+                     messages: {
+                        series_no: "Please select series no",
+                        voucher_no: "Please enter voucher no",
+                        party_id: "Please select party",
+                        material_center: "Please select material center",
+                        "goods_discription[]" : "Please select item",
+                        "qty[]" : "Please enter quantity",
+                        "price[]" : "Please enter price",
+                        "amount[]" : "Please enter amount",                
+                     }
+                  });
+               }else if((nature=="WITH GST" && type=="WITHOUT ITEM")){
+                  $("#purchaseReturnForm").validate({
+                     ignore: [], 
+                     rules: {
+                        series_no: "required",
+                        party_id: "required",
+                        material_center: "required",
+                        total_amount: "required",
+                        "item[]": "required",
+                        "percentage[]" : "required",
+                        "without_item_amount[]" : "required",
+                     },
+                     messages: {
+                        series_no: "Please select series no",
+                        party_id: "Please select party",
+                        material_center: "Please select material center",
+                        total_amount: "Total Amount Required",
+                        "item[]" : "Please select item",
+                        "percentage[]" : "Please enter percentage",
+                        "without_item_amount[]" : "Please enter amount",                
+                     }
+                  });
+               }else{
+                  
+                  $("#saleReturnForm").validate({
+                     ignore: [], 
+                     rules: {
+                        nature: "required",
+                     },
+                     messages: {
+                        nature: "Please select nature",              
+                     }
+                  });
+               } 
+            }else{
+               return false;
+            } 
+      
+      }); 
    });
    function call_fun(data) {
       if($('#goods_discription_'+data).val()==""){
@@ -1378,7 +1378,7 @@
       var selectedOptionData = $('#goods_discription_' + data + ' option:selected').data('val');
       var item_units_id = $('#goods_discription_' + data + ' option:selected').attr('unit_id');
       var itemId = $('#goods_discription_' + data + ' option:selected').val();
-      var party_id = $('#party').val();
+      var party_id = $('#party_id').val();
       if (party_id.length > 0) {
          $('#unit_' + data).val(selectedOptionData);
          $('#units_' + data).val(item_units_id);
@@ -1390,25 +1390,6 @@
          $('#goods_discription_'+data).select2("val","");
       }
    }
-   function getAccountDeatils(e) {
-      var account_id = $(e).val();
-      $.ajax({
-         url: '{{url("get/accounts/details")}}',
-         async: false,
-         type: 'POST',
-         dataType: 'JSON',
-         data: {
-            _token: '<?php echo csrf_token() ?>',
-            account_id: account_id
-         },
-         success: function(data) {
-            $("input[name='shipping_address']").val(data.data.accounts.address);
-            $("input[name='shipping_pincode']").val(data.data.accounts.pin_code);
-            $("input[name='shipping_gst']").val(data.data.accounts.gstin);
-            $("input[name='shipping_pan']").val(data.data.accounts.pan);
-         }
-      });
-   }
    $(document).on("click", ".remove_sundry", function() {
       let id = $(this).attr('data-id');
       $("#billtr_" + id).remove();
@@ -1418,6 +1399,12 @@
       calculateAmount();
    });
    $( ".select2-single, .select2-multiple" ).select2(  );
+   $(document).on("click", ".remove_sundry_up", function() {
+      let id = $(this).attr('data-id');
+      $("#billtr_" + id).remove();      
+      calculateAmount();
+   });   
+   $( ".select2-single, .select2-multiple" ).select2();
    //Ashish Javascript   
    $(".add_more_bill_sundry_up").click(function() {
       add_more_bill_sundry_up_count++;
@@ -1425,11 +1412,11 @@
       var optionElements = "<option value=''>Select</option>";
       <?php
       foreach ($billsundry as $value){ 
-         if($value->nature_of_sundry!='CGST' && $value->nature_of_sundry!='SGST' && $value->nature_of_sundry!='IGST' && $value->nature_of_sundry!='ROUNDED OFF (+)' && $value->nature_of_sundry!='ROUNDED OFF (-)'){?>
+         if($value->effect_gst_calculation==1){?>
             optionElements += '<option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-sundry_percent="<?php echo $value->sundry_percent;?>" data-sundry_percent_date="<?php echo $value->sundry_percent_date;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" class="sundry_option_'+add_more_bill_sundry_up_count+'" id="sundry_option_<?php echo $value->id;?>_'+add_more_bill_sundry_up_count+'" data-sequence="<?php echo $value->sequence;?>" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>';<?php 
          }
       } ?>
-      newRow = '<tr id="billtr_' + add_more_bill_sundry_up_count + '" class="font-14 font-heading bg-white extra_taxes_row sundry_tr"><td class="w-min-50"><select class="w-95-parsent bill_sundry_tax_type form-select w-100"  id="bill_sundry_' + add_more_bill_sundry_up_count + '" name="bill_sundry[]" data-id="'+add_more_bill_sundry_up_count+'">';
+      newRow = '<tr id="billtr_' + add_more_bill_sundry_up_count + '" class="font-14 font-heading bg-white extra_taxes_row sundry_tr"><td class="w-min-50"><select class="w-95-parsent  bill_sundry_tax_type form-select w-100"  id="bill_sundry_' + add_more_bill_sundry_up_count + '" name="bill_sundry[]" data-id="'+add_more_bill_sundry_up_count+'">';
       newRow += optionElements;
       newRow += '</select></td><td class="w-min-50 "><span name="tax_amt[]" id="tax_amt_' + add_more_bill_sundry_up_count + '"></span><input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_' + add_more_bill_sundry_up_count + '"></td><td class="w-min-50 "><input type="number" class="bill_amt w-100 form-control" id="bill_sundry_amount_' + add_more_bill_sundry_up_count + '" name="bill_sundry_amount[]" data-id="'+add_more_bill_sundry_up_count+'" readonly style="text-align: right;"></td><td class="w-min-50"><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove_sundry_up" data-id="' + add_more_bill_sundry_up_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
       $curRow.before(newRow);
@@ -1445,7 +1432,7 @@
             <?php 
          }
       } ?>
-      newRow = '<tr id="billtr_' + add_more_bill_sundry_up_count + '" class="font-14 font-heading bg-white extra_taxes_row sundry_tr"><td class="w-min-50"><select class="w-95-parsent bill_sundry_tax_type form-select w-100"  id="bill_sundry_' + add_more_bill_sundry_up_count + '" name="bill_sundry[]" data-id="'+add_more_bill_sundry_up_count+'">';
+      newRow = '<tr id="billtr_' + add_more_bill_sundry_up_count + '" class="font-14 font-heading bg-white extra_taxes_row sundry_tr"><td class="w-min-50"><select class="w-95-parsent  bill_sundry_tax_type form-select w-100"  id="bill_sundry_' + add_more_bill_sundry_up_count + '" name="bill_sundry[]" data-id="'+add_more_bill_sundry_up_count+'">';
       newRow += optionElements;
       newRow += '</select></td><td class="w-min-50 "><span name="tax_amt[]" id="tax_amt_' + add_more_bill_sundry_up_count + '"></span><input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_' + add_more_bill_sundry_up_count + '"></td><td class="w-min-50 "><input type="number" class="bill_amt w-100 form-control" id="bill_sundry_amount_' + add_more_bill_sundry_up_count + '" name="bill_sundry_amount[]" data-id="'+add_more_bill_sundry_up_count+'" readonly style="text-align: right;"></td><td class="w-min-50"><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove_sundry_up" data-id="' + add_more_bill_sundry_up_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
       $curRow.before(newRow);
@@ -1461,7 +1448,7 @@
             <?php 
          }
       } ?>
-      newRow = '<tr id="billtr_' + add_more_bill_sundry_up_count + '" class="font-14 font-heading bg-white extra_taxes_row sundry_tr extra_gst"><td class="w-min-50"><select class="w-95-parsent bill_sundry_tax_type form-select w-100"  id="bill_sundry_' + add_more_bill_sundry_up_count + '" name="bill_sundry[]" data-id="'+add_more_bill_sundry_up_count+'">';
+      newRow = '<tr id="billtr_' + add_more_bill_sundry_up_count + '" class="font-14 font-heading bg-white extra_taxes_row sundry_tr extra_gst"><td class="w-min-50"><select class="w-95-parsent  bill_sundry_tax_type form-select w-100"  id="bill_sundry_' + add_more_bill_sundry_up_count + '" name="bill_sundry[]" data-id="'+add_more_bill_sundry_up_count+'">';
       newRow += optionElements;
       newRow += '</select></td><td class="w-min-50 "><span name="tax_amt[]" id="tax_amt_' + add_more_bill_sundry_up_count + '"></span><input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_' + add_more_bill_sundry_up_count + '"></td><td class="w-min-50 "><input type="number" class="bill_amt w-100 form-control" id="bill_sundry_amount_' + add_more_bill_sundry_up_count + '" name="bill_sundry_amount[]" data-id="'+add_more_bill_sundry_up_count+'" readonly style="text-align: right;"></td><td class="w-min-50"></td></tr>';
       $curRow.before(newRow);
@@ -1471,13 +1458,13 @@
       $("#billtr_" + id).remove();      
       calculateAmount();
    });
-   $("#party").change(function(){
+   $("#party_id").change(function(){
       $("#partyaddress").html('');
       if($(this).val()==""){
-         $("#party-error").show();
+         $("#party_id-error").show();
          return;
       }
-      $("#party-error").hide();
+      $("#party_id-error").hide();
       $("#partyaddress").html("GSTIN : "+$('option:selected', this).attr('data-gstin')+"<br>Address : "+$('option:selected', this).attr('data-address'));
    });
    $("#voucher_no").change(function(){
@@ -1713,45 +1700,7 @@
       debitTotal();
       creditTotal();
    });
-   $("#nature").change(function(){
-      $("#series_no").change();
-   });
-   $("#series_no").change(function(){
-      let nature = $("#nature").val();
-      if(nature==""){
-         alert("Please Select Nature");
-         $("#series_no").val('');
-         return;
-      }
-      if($("#series_no").val()==""){
-         $("#material_center").val("");
-         $("#voucher_prefix").val("");
-         $("#sale_return_no").val("");
-         return;
-      }
-      let series = $(this).val();
-      let invoice_prefix = $('option:selected', this).attr('data-invoice_prefix');
-      let invoice_start_from = $('option:selected', this).attr('data-invoice_start_from');
-      $("#material_center").val($('option:selected', this).attr('data-mat_center'));
-      merchant_gstin = $('option:selected', this).attr('data-gst_no');
-      if(nature=="WITHOUT GST"){
-         if(invoice_prefix!=""){
-            $("#voucher_prefix").val(invoice_prefix+"CRWT/{{Session::get('default_fy')}}/"+$('option:selected', this).attr('data-without_invoice_start_from'));
-         }else{
-            $("#voucher_prefix").val($('option:selected', this).attr('data-without_invoice_start_from'));
-         }
-         $("#sale_return_no").val($('option:selected', this).attr('data-without_invoice_start_from'));
-      }else{
-         if(invoice_prefix!=""){
-            $("#voucher_prefix").val(invoice_prefix);
-         }else{
-            $("#voucher_prefix").val(invoice_start_from);
-         }         
-         $("#sale_return_no").val(invoice_start_from);
-      }
-      
-      calculateAmount();
-          
-   });
+   
+   
 </script>
 @endsection

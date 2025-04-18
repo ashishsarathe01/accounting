@@ -76,7 +76,7 @@
                         <?php
                         if(count($GstSettings) > 0) {
                            foreach ($GstSettings as $value){ ?>
-                              <option value="<?php echo $value->series;?>" data-mat_center="<?php echo $value->mat_center;?>" data-gst_no="<?php echo $value->gst_no;?>" data-invoice_start_from="<?php echo $value->invoice_start_from;?>" data-invoice_prefix="<?php echo $value->invoice_prefix;?>" data-manual_enter_invoice_no="<?php echo $value->manual_enter_invoice_no;?>" data-duplicate_voucher="<?php echo $value->duplicate_voucher;?>" data-blank_voucher="<?php echo $value->blank_voucher;?>" <?php if(count($GstSettings)==1) { echo "selected";} ?>><?php echo $value->series; ?></option>
+                              <option value="<?php echo $value->series;?>" data-mat_center="<?php echo $value->mat_center;?>" data-gst_no="<?php echo $value->gst_no;?>" data-invoice_start_from="<?php echo $value->invoice_start_from;?>" data-invoice_prefix="<?php echo $value->invoice_prefix;?>" data-manual_enter_invoice_no="<?php echo $value->manual_enter_invoice_no;?>" data-duplicate_voucher="<?php echo $value->duplicate_voucher;?>" data-blank_voucher="<?php echo $value->blank_voucher;?>" data-last_bill_date="<?php echo $value->last_bill_date;?>" <?php if(count($GstSettings)==1) { echo "selected";} ?>><?php echo $value->series; ?></option>
                               <?php 
                            }
                         } ?>
@@ -660,6 +660,17 @@
       calculateAmount();
    });
    $(document).ready(function(){
+      // Properly initialize Select2 with search enabled
+      $('#party_id').select2({
+         placeholder: "Select Account",
+         allowClear: true,
+         width: '100%' // Ensure dropdown matches Bootstrap styling
+      });
+      // Move focus to next field after selecting an option
+      $('#party_id').on('select2:select', function (e) {
+         $('#material_center').focus();
+      });
+      
       // Function to calculate amount and update total sum
       window.calculateAmount = function(key=null) {         
          customer_gstin = $('#party_id option:selected').attr('data-state_code'); 
@@ -1241,6 +1252,7 @@
       
       let series = $(this).val();
       let invoice_prefix = $('option:selected', this).attr('data-invoice_prefix');
+      let last_bill_date = $('option:selected', this).attr('data-last_bill_date');
       let manual_enter_invoice_no = $('option:selected', this).attr('data-manual_enter_invoice_no');
       $("#manual_enter_invoice_no").val(manual_enter_invoice_no);
       if(manual_enter_invoice_no==0){
@@ -1265,6 +1277,7 @@
             $("#sale_type").val('CENTER');
          }
       }
+      $("#date").attr('min',last_bill_date)
       
       calculateAmount();
             
@@ -1374,9 +1387,11 @@
       }
       $("#partyaddress").html('');   
       $("#partyaddress").html("GSTIN : "+$('option:selected', this).attr('data-gstin')+"<br>Address : "+$('option:selected', this).attr('data-address'));
+      calculateAmount();
    }); 
    $(document).on('keyup', '.goods_items', function(){
       let id = $(this).attr('data-id');
+
       var query = $(this).val();
       if(query != ''){
          
@@ -1399,6 +1414,16 @@
       $('#unit_tr_'+$(this).attr('data-id')).attr('data-group_id',$('option:selected', this).attr('data-group_id'));
       $('#unit_tr_'+$(this).attr('data-id')).attr('data-config_status',$('option:selected', this).attr('data-config_status'));
       call_fun('tr_'+$(this).attr('data-id'));
+
+      $('#item_id_'+$(this).attr('data-id')).select2({
+         placeholder: "Select Item",
+         allowClear: true,
+         width: '100%' // Ensure dropdown matches Bootstrap styling
+      });
+      // Move focus to next field after selecting an option
+      $('#item_id_'+$(this).attr('data-id')).on('select2:select', function (e) {
+         $('#quantity_tr_'+$(this).attr('data-id')).focus();
+      });
    });
    $(document).on('change', '.quantity',function(){
       let id = $(this).attr("data-id");

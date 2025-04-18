@@ -1311,6 +1311,7 @@ foreach($manageitems as $value) {
       }
       $("#party-error").hide()
       $("#partyaddress").html("GSTIN : "+$('option:selected', this).attr('data-gstin')+"<br>Address : "+$('option:selected', this).attr('data-address'));
+      calculateAmount();
    });
    $('body').on('keydown', 'input, select', function(e){
       if (e.key === "Enter") {
