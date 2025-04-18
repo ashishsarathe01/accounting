@@ -1,0 +1,48 @@
+.transacton-extra-table{
+    @media screen and (min-width:$lg-brekpoint) {
+        div.dataTables_wrapper div.dataTables_length label{
+            white-space: inherit;
+        }
+        div.dataTables_wrapper div.dataTables_filter input{
+            display: inline;
+        }
+        div.dataTables_wrapper div.dataTables_filter label{
+            white-space: inherit;
+            display: flex;
+            flex-direction: column;
+        }
+        div.dataTables_wrapper div.dataTables_info{
+            display: none;
+        }
+        div.dataTables_wrapper div.dataTables_paginate{
+            width: 100px;
+        }
+        div.dataTables_wrapper div.dataTables_length select{
+            display: block;
+        }
+    }
+    @media screen and (max-width:$sm-brekpoint) {
+        div.dataTables_wrapper div.dataTables_filter input{
+            display: block;
+        }
+    }
+
+}
+.transaction-main-table{
+    @media screen and (max-width:$sm-brekpoint) {
+        div.dataTables_wrapper div.dataTables_filter input{
+            display: block;
+        }
+}
+}
+  
+.transaction-select-opacity{
+    opacity: 54%;
+}
+
+.table>:not(:last-child)>:last-child>*{
+    border-bottom: $border-width-1 $border-solid $divider;
+}
+.other-details-show{
+    display: none;
+}

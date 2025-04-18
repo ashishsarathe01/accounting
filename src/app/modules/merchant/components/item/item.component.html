@@ -1,0 +1,135 @@
+<br><ng-http-loader></ng-http-loader>
+<div class="content-wrapper">
+    <section class="content">
+       <div class="container-fluid">
+          <div class="row">
+             <div class="col-md-12">
+                <div class="card card-primary">
+                   <div class="card-header">
+                      <h3 class="card-title">{{form_title}}</h3>
+                   </div>
+                   <form [formGroup]="itemForm" (ngSubmit)="saveItem()">
+                      <div class="card-body row">
+                         <div class="col-md-3">
+                            <div class="form-group">
+                               <label for="name">Name</label>
+                               <input type="text" class="form-control" id="name" placeholder="Enter Name" formControlName="name">
+                               <span style="color:red" *ngIf="nameValidator && nameValidator.invalid && nameValidator.touched">This field is not valid</span>
+                            </div>
+                         </div>
+                         <div class="col-md-3">
+                            <div class="form-group">
+                               <label for="print_name">Print Name</label>
+                               <input type="text" class="form-control" id="print_name" placeholder="Enter Print Name"  formControlName="print_name">
+                               <span style="color:red" *ngIf="printNameValidator && printNameValidator.invalid && printNameValidator.touched">This field is not valid</span>
+                            </div>
+                         </div>
+                         <div class="col-md-3">
+                           <div class="form-group">
+                              <label for="unit">Unit</label>
+                              <select class="form-control" id="unit" formControlName="unit">
+                                <option value="">Select Unit</option>
+                                <option value="{{u['id']}}" *ngFor="let u of unit_list">{{u['name']}}</option>
+                              </select>
+                              <span style="color:red" *ngIf="unitValidator && unitValidator.invalid && unitValidator.touched">This field is not valid</span>
+                           </div>
+                        </div>
+                         <div class="col-md-3">
+                            <div class="form-group">
+                               <label for="hsn_code">HSN Code</label>
+                               <input type="text" class="form-control" id="hsn_code" placeholder="Enter HSN Code" formControlName="hsn_code">
+                               <span style="color:red" *ngIf="hsnCodeValidator && hsnCodeValidator.invalid && hsnCodeValidator.touched">This field is not valid</span>
+                            </div>
+                         </div>
+                         <div class="col-md-3">
+                            <div class="form-group">
+                               <label for="GSTIN">GST(%)</label>
+                               <input type="text" class="form-control" id="GSTIN" placeholder="Enter GSTIN" formControlName="GSTIN">
+                               <span style="color:red" *ngIf="GSTINValidator && GSTINValidator.invalid && GSTINValidator.touched">This field is not valid</span>
+                            </div>
+                         </div>
+                         <div class="col-md-2">
+                            <div class="form-group">
+                               <label for="stock_qty">Opening Stock(Qty)</label>
+                               <input type="text" class="form-control" id="stock_qty" placeholder="Enter Stock(Qty)" formControlName="stock_qty">
+                               <span style="color:red" *ngIf="stockQtyValidator && stockQtyValidator.invalid && stockQtyValidator.touched">This field is not valid</span>
+                            </div>
+                         </div>
+                         <div class="col-md-2">
+                            <div class="form-group">
+                               <label for="stock_val">Opening Stock(value)</label>
+                               <input type="text" class="form-control" id="stock_val" placeholder="Enter Stock(value)" formControlName="stock_val">
+                               <span style="color:red" *ngIf="stockValValidator && stockValValidator.invalid && stockValValidator.touched">This field is not valid</span>
+                            </div>
+                         </div>
+                         <div class="col-md-3">
+                            <div class="form-group">
+                               <label for="item_group">Item Group</label>
+                               <select class="form-control" id="item_group" formControlName="item_group">
+                                 <option value="">Select Item Group</option>
+                                 <option value="{{ig['id']}}" *ngFor="let ig of item_group_list">{{ig['name']}}</option>                                                
+                               </select>
+                               <span style="color:red" *ngIf="itemGroupValidator && itemGroupValidator.invalid && itemGroupValidator.touched">This field is not valid</span>
+                            </div>
+                         </div>
+                         <div class="col-md-2">
+                           <div class="form-group">
+                              <label for="status">Status</label>
+                              <select class="form-control" formControlName="status" id="status">
+                                 <option value="1">Enable</option>
+                                 <option value="0">Disable</option>
+                              </select>                              
+                           </div>
+                        </div>
+                      </div>
+                      <div class="card-footer">
+                         <input type="hidden" formControlName="edit_id">
+                         <button type="submit" class="btn btn-primary" [disabled]="itemForm.invalid">Submit</button>
+                      </div>
+                   </form>
+                </div>
+             </div>
+             <div class="col-md-12">
+                <div class="card card-primary">
+                   <div class="card-header">
+                      <h3 class="card-title">View Item</h3>
+                   </div>
+                   <table mat-table [dataSource]="item_list" class="mat-elevation-z8">
+                    <ng-container matColumnDef="name">
+                       <th mat-header-cell *matHeaderCellDef> Name </th>
+                       <td mat-cell *matCellDef="let element"> {{element.name}} </td>
+                    </ng-container>                    
+                    <ng-container matColumnDef="unit">
+                       <th mat-header-cell *matHeaderCellDef> Unit </th>
+                       <td mat-cell *matCellDef="let element"> {{element.unit_name}} </td>
+                    </ng-container>
+                    <ng-container matColumnDef="hsn_code">
+                       <th mat-header-cell *matHeaderCellDef> HSN Code </th>
+                       <td mat-cell *matCellDef="let element"> {{element.hsn_code}} </td>
+                    </ng-container>
+                    <ng-container matColumnDef="gst">
+                        <th mat-header-cell *matHeaderCellDef> Gst Percentage </th>
+                        <td mat-cell *matCellDef="let element"> {{element.gst_percentage}} </td>
+                     </ng-container>
+                     <ng-container matColumnDef="item_group">
+                        <th mat-header-cell *matHeaderCellDef> Item Group </th>
+                        <td mat-cell *matCellDef="let element"> {{element.item_group_name}} </td>
+                     </ng-container>
+                     <ng-container matColumnDef="status">
+                        <th mat-header-cell *matHeaderCellDef> Status </th>
+                        <td mat-cell *matCellDef="let element"> <ng-container *ngIf="element.status==1">Enable</ng-container> <ng-container *ngIf="element.status==0">Disabled</ng-container></td>
+                     </ng-container>
+                    <ng-container matColumnDef="action">
+                       <th mat-header-cell *matHeaderCellDef> Action </th>
+                       <td mat-cell *matCellDef="let element"><button mat-button class="btn btn-info" (click)="editItemDetail(element)">Edit</button></td>
+                    </ng-container>
+                    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+                 </table>
+                </div>
+             </div>
+          </div>
+       </div>
+    </section>
+ </div>
+ 
