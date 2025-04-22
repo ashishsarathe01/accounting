@@ -736,7 +736,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
       $sale_return->deleted_by = Session::get('user_id');
       $sale_return->update();
       if($sale_return) {
-         if($sale_return->sr_nature=="WITH GST" && ($sale_return->sr_type=="WITH ITEM" || $purchase_return->sr_type=="RATE DIFFERENCE")){
+         if($sale_return->sr_nature=="WITH GST" && ($sale_return->sr_type=="WITH ITEM" || $sale_return->sr_type=="RATE DIFFERENCE")){
             SaleReturnDescription::where('sale_return_id',$request->sale_return_id)
                         ->update(['delete'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
             AccountLedger::where('entry_type',3)
@@ -906,85 +906,37 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
                               ->orderBy('account_name')
                               ->get();      
       $companyData = Companies::where('id', Session::get('user_company_id'))->first();
-      $GstSettings = (object)NULL;
-      $GstSettings->mat_center = array();
-      $mat_series = array();
       if($companyData->gst_config_type == "single_gst") {
-         $GstSettings = DB::table('gst_settings')->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])->first();
-
-         $mat_series = DB::table('gst_settings')
-                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])
-                           ->get();
-         $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series')
-                           ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_id'=>$mat_series[0]->id])
-                           ->get();
-         if(count($branch)>0){
-            $mat_series = $mat_series->merge($branch);
-         }
+         $GstSettings = DB::table('gst_settings')->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst",'series' => $sale_return->series_no])->first();
+         if($GstSettings){
+            $merchant_gst = $GstSettings->gst_no;
+         }else{            
+            $branch = GstBranch::select('gst_number as gst_no')
+                              ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'branch_series'=>$sale_return->series_no])
+                              ->first();
+            if($branch){
+               $merchant_gst = $branch->gst_no;
+            }
+         }         
       }elseif ($companyData->gst_config_type == "multiple_gst") {
-         $GstSettings = DB::table('gst_settings_multiple')->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst"])->first();
-
-         $mat_series = DB::table('gst_settings_multiple')
-                           ->select('id','gst_no','mat_center','series')
-                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst"])
-                           ->get();
-         foreach ($mat_series as $key => $value) {
-            $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series')
-                        ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_multiple_id'=>$value->id])
-                        ->get();
-            if(count($branch)>0){
-               $mat_series = $mat_series->merge($branch);
+         $GstSettings = DB::table('gst_settings_multiple')->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst",'series' => $sale_return->series_no])->first();
+         if($GstSettings){
+            $merchant_gst = $GstSettings->gst_no;
+         }else{            
+            $branch = GstBranch::select('gst_number as gst_no')
+                              ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'branch_series'=>$sale_return->series_no])
+                              ->first();
+            if($branch){
+               $merchant_gst = $branch->gst_no;
             }
-         }
+         }         
       }
-      if(!$GstSettings || !isset($companyData->gst_config_type)){
-         return $this->failedMessage('Please Enter GST Configuration!','sale-return');
-      }
+      if(!isset($companyData->gst_config_type)){
+         return $this->failedMessage('Please Enter GST Configuration!','purchase-return');
+      } 
+      
       $financial_year = Session::get('default_fy'); 
-      foreach ($mat_series as $key => $value) {
-         if($sale_return->series_no==$value->series){
-            $mat_series[$key]->invoice_start_from =  $sale_return->sale_return_no;
-            $mat_series[$key]->without_invoice_start_from =  $sale_return->sale_return_no;
-            $mat_series[$key]->invoice_prefix =  $sale_return->sr_prefix;
-         }else{
-            $series_configuration = VoucherSeriesConfiguration::where('company_id',Session::get('user_company_id'))
-               ->where('series',$value->series)
-               ->where('configuration_for','CREDIT NOTE')
-               ->where('status','1')
-               ->first();
-            $voucher_no = SalesReturn::select('sale_return_no')                   
-                        ->where('company_id',Session::get('user_company_id'))
-                        ->where('financial_year','=',$financial_year)
-                        ->where('sr_nature','!=',"WITHOUT GST")
-                        ->where('delete','=','0')
-                        ->where('series_no',$value->series)
-                        ->max(\DB::raw("cast(sale_return_no as SIGNED)"));
-            
-            if(!$voucher_no){
-               $mat_series[$key]->invoice_start_from =  "001";
-            }else{
-               $invc = $voucher_no + 1;
-               $invc = sprintf("%'03d", $invc);
-               $mat_series[$key]->invoice_start_from =  $invc;
-            }
-            //Without GST
-            $sale_return_no_without = SalesReturn::select('sale_return_no')                     
-                                                ->where('company_id',Session::get('user_company_id'))
-                                                ->where('financial_year','=',$financial_year)
-                                                ->where('sr_nature','=',"WITHOUT GST")
-                                                ->where('series_no','=',$value->series)
-                                                ->where('delete','=','0')
-                                                ->max(\DB::raw("cast(sale_return_no as SIGNED)"));
-            if(!$sale_return_no_without){
-               $mat_series[$key]->without_invoice_start_from =  "001";
-            }else{
-               $invc = $sale_return_no_without + 1;
-               $invc = sprintf("%'03d", $invc);
-               $mat_series[$key]->without_invoice_start_from =  $invc;
-            }
-         }
-         
-      }
+      
       $billsundry = BillSundrys::where('delete', '=', '0')
                                  ->where('status', '=', '1')
                                  ->whereIn('company_id',[Session::get('user_company_id'),0])
@@ -1030,7 +982,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
                ->get();   
       //Withoyt GST and Without Item Data
       $without_gst = SaleReturnWithoutGstEntry::where('sale_return_id',$id)->get();              
-      return view('editSaleReturn')->with('party_list', $party_list)->with('billsundry', $billsundry)->with('mat_series', $mat_series)->with('sale_return', $sale_return)->with('sale_return_description', $sale_return_description)->with('sale_return_sundry', $sale_return_sundry)->with('vendors', $vendors)->with('items', $items)->with('all_account_list', $all_account_list)->with('without_gst', $without_gst);
+      return view('editSaleReturn')->with('party_list', $party_list)->with('billsundry', $billsundry)->with('sale_return', $sale_return)->with('sale_return_description', $sale_return_description)->with('sale_return_sundry', $sale_return_sundry)->with('vendors', $vendors)->with('items', $items)->with('all_account_list', $all_account_list)->with('without_gst', $without_gst)->with('merchant_gst',$merchant_gst);
    }
    public function update(Request $request){
       // echo "<pre>";

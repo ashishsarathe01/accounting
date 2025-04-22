@@ -77,7 +77,9 @@
                                  }
                               } 
                               if($value->status=='1'){?>
-                                 <a href="{{ URL::to('sale-invoice/' . $value->sales_id) }}" target="__blank"><img src="{{ URL::asset('public/assets/imgs/eye-icon.svg')}}" class="px-1" alt=""></a>
+                                 <button type="button" class="border-0 bg-transparent" onclick="location.href='{{ url('sale-invoice/' . $value->sales_id) }}'">
+    <img src="{{ asset('public/assets/imgs/eye-icon.svg') }}" class="px-1" alt="">
+</button>
                                  <?php 
                               }
                               if($value->status=='2'){?>

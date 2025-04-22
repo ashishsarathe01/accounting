@@ -5,6 +5,7 @@ namespace App\Http\Controllers\payment;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\URL;
 use Carbon\Carbon;
 use App\Models\Accounts;
 use App\Models\Payment;
@@ -202,6 +203,7 @@ class PaymentController extends Controller
             $ledger->save();
             $i++;
          }
+         session(['previous_url_payment' => URL::previous()]);
          return redirect('payment')->withSuccess('Payment voucher added successfully!');
       }else{
          $this->failedMessage();

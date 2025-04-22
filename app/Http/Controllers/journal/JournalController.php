@@ -4,6 +4,7 @@ namespace App\Http\Controllers\journal;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\URL;
 use App\Models\Accounts;
 use App\Models\Journal;
 use App\Models\JournalDetails;
@@ -380,6 +381,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
                $i++;
             }
          }
+         session(['previous_url_journal' => URL::previous()]);
          return redirect('journal')->withSuccess('Journal added successfully!');
       }else{
          $this->failedMessage();

@@ -377,6 +377,26 @@
    }
    $(document).ready(function() {
       $(".submit_data").click(function() {
+            
+         let date = $("#date").val();
+        let mode = $("#mode").val();
+        let series_no = $("#series_no").val(); // Added series_no validation
+
+        // Field-wise alerts
+        if (date === "") {
+            alert("Please enter the Date.");
+            return false;
+        }
+
+        if (mode === "") {
+            alert("Please select a Mode.");
+            return false;
+        }
+
+        if (series_no === "") {
+            alert("Please enter the Series Name/Number.");
+            return false;
+        }
          var form_data = [];
          let dr = 0;
          let cr = 0;

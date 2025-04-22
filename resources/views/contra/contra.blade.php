@@ -66,69 +66,105 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <?php
-                            $tot_dbt = 0;
-                            $tot_crt = 0;
-                            setlocale(LC_MONETARY, 'en_IN');
-                            foreach ($contra as $value) { ?>
-                                <tr class="font-14 font-heading bg-white">
-                                    <td class="w-min-120 "><?php echo date("d-m-Y", strtotime($value->date)); ?></td>
-                                    <td class="w-min-120 "><?php echo $value->acc_name ?></td>
-                                    <td class="w-min-120 " style="text-align: right;"><?php 
-                                    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-                                       echo $value->debit;
-                                    }else{
-                                        if(!empty($value->debit)){
-                                            echo number_format(str_replace(",","",$value->debit));
-                                        }else{
-                                            echo $value->debit;
-                                        }
-                                       
-                                    }
-                                    if(!empty($value->debit)){
-                                        $tot_dbt = $tot_dbt + $value->debit;
-                                    }
-                                     ?></td>
-                                    <td class="w-min-120 " style="text-align: right;"><?php 
-                                    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-                                       echo $value->credit;
-                                    }else{
-                                        if(!empty($value->credit)){
-                                            echo number_format(str_replace(",","",$value->credit));
-                                        }else{
-                                            echo $value->credit;
-                                        }
-                                    }
-                                    if(!empty($value->credit)){
-                                        $tot_crt = $tot_crt + $value->credit;
-                                    }
-                                     ?></td>
-                                    <td class="w-min-120 ">
-                                       <?php 
-                                       if($value->m == '1'){
-                                          echo 'Cash';
-                                       }else if($value->m == '0'){
-                                          echo 'IMPS/NEFT/RTGS'; 
-                                       }else if($value->m == '2'){
-                                          echo 'CHEQUE';
-                                       }else{
-                                          echo 'IMPS/NEFT/RTGS'; 
-                                       }?>
-                                    </td>
-                                    <td class="w-min-120 "><?php echo $value->series_no ?></td>
-                                    <td class="w-min-120  text-center">
-                                       <?php 
-                                       if(in_array(date('Y-m',strtotime($value->date)),$month_arr)){?>
-                                          <a href="{{ URL::to('contra/' . $value->con_id . '/edit') }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
-                                           <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $value->con_id;?>">
-                                               <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
-                                           </button>
-                                          <?php 
-                                       }?>
-                                    </td>
-                                </tr>
-                            <?php } ?>
-                            <tr class="font-14 font-heading bg-white">
+                           <?php
+$tot_dbt = 0;
+$tot_crt = 0;
+$prev_con_id = null;
+setlocale(LC_MONETARY, 'en_IN');
+
+
+
+foreach ($contra as $value) {
+   
+?>
+<tr class="font-14 font-heading bg-white"><td>
+    <!-- Show date only if con_id is different -->
+    <?php if ($value->con_id != $prev_con_id) {
+    echo date("d-m-Y", strtotime($value->date));
+}
+?></td>
+    <!-- Account Name -->
+    <td class="w-min-120 "><?php echo $value->acc_name ?></td>
+
+    <!-- Debit -->
+    <td class="w-min-120 " style="text-align: right;"><?php 
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            echo $value->debit;
+        } else {
+            if(!empty($value->debit)){
+                echo number_format(str_replace(",","",$value->debit));
+            } else {
+                echo $value->debit;
+            }
+        }
+        if(!empty($value->debit)){
+            $tot_dbt += $value->debit;
+        }
+    ?></td>
+
+    <!-- Credit -->
+    <td class="w-min-120 " style="text-align: right;"><?php 
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            echo $value->credit;
+        } else {
+            if(!empty($value->credit)){
+                echo number_format(str_replace(",","",$value->credit));
+            } else {
+                echo $value->credit;
+            }
+        }
+        if(!empty($value->credit)){
+            $tot_crt += $value->credit;
+        }
+    ?></td>
+
+    <!-- Mode (shown once per con_id) -->
+    <td class="w-min-120 ">
+        <?php 
+        if ($value->con_id != $prev_con_id) {
+            if($value->m == '1'){
+                echo 'Cash';
+            } else if($value->m == '0'){
+                echo 'IMPS/NEFT/RTGS'; 
+            } else if($value->m == '2'){
+                echo 'CHEQUE';
+            } else {
+                echo 'IMPS/NEFT/RTGS'; 
+            }
+        } else {
+            echo "&nbsp;";
+        }
+        ?>
+    </td>
+
+    <!-- Series Number (shown once per con_id) -->
+    <td class="w-min-120 ">
+        <?php 
+        echo ($value->con_id != $prev_con_id) ? $value->series_no : "&nbsp;";
+        ?>
+    </td>
+
+    <!-- Action (shown once per con_id) -->
+    <td class="w-min-120 text-center">
+        <?php 
+        if ($value->con_id != $prev_con_id && in_array(date('Y-m',strtotime($value->date)),$month_arr)) {
+        ?>
+            <a href="{{ URL::to('contra/' . $value->con_id . '/edit') }}">
+                <img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt="">
+            </a>
+            <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $value->con_id;?>">
+                <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
+            </button>
+        <?php 
+        }
+        ?>
+    </td>
+</tr>
+<?php 
+    $prev_con_id = $value->con_id; // Update for next iteration
+} 
+?>
+  <tr class="font-14 font-heading bg-white">
                                 <td class="w-min-120 fw-bold font-heading">TOTAL</td>
                                 <td class="w-min-120"></td>
                                 <td class="w-min-120 fw-bold font-heading" style="text-align: right;"><?php echo $tot_dbt;?></td>

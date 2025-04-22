@@ -8,18 +8,9 @@
       <div class="row vh-100">
          @include('layouts.leftnav')
          <!-- view-table-Content -->
-         <div class="col-md-12 ml-sm-auto  col-lg-10 px-md-4 bg-mint">
-            <div class="d-xxl-flex justify-content-between py-4 px-2 align-items-center">
-               <nav aria-label="breadcrumb meri-breadcrumb ">
-                  <ol class="breadcrumb meri-breadcrumb m-0  ">
-                     <li class="breadcrumb-item">
-                        <a class="font-12 text-body text-decoration-none" href="#">Dashboard</a>
-                     </li>
-                     <li class="breadcrumb-item p-0">
-                        <a class="fw-bold font-heading font-12  text-decoration-none" href="#">Items Ledger Average</a>
-                     </li>
-                  </ol>
-               </nav>
+         <div class="col-md-12 ml-sm-auto  col-lg-10 px-md-4 bg-mint">           
+            <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
+               <h5 class="master-table-title m-0 py-2">Items Ledger</h5> 
                <form class="" id="frm" method="GET" action="{{ route('item-ledger-average') }}">
                   @csrf
                   <div class="d-xxl-flex d-block  align-items-center">
@@ -48,10 +39,7 @@
                         <button type="button" class="btn  btn-xs-primary" id="serachBtn">SUBMIT</button>
                      </div>
                   </div>
-               </form>
-            </div>
-            <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
-               <h5 class="master-table-title m-0 py-2">Items Ledger</h5>               
+               </form>             
             </div>
             <div class="display-sale-month  bg-white table-view shadow-sm">
                <table id="acc_table1" class="table-striped table-bordered table m-0 shadow-sm ">                  
@@ -66,8 +54,18 @@
                      </tr>
                   </thead>
                   <tbody>
-                     @php $average_price = 0;  @endphp
-                     
+                     @foreach($new_purchase_data as $purchase)                        
+                        <tr>
+                           <td>{{date('d-m-Y',strtotime($purchase->stock_date))}}</td>
+                           <td style="text-align: right;">{{$purchase->purchase_weight}}</td>
+                           <td style="text-align: right;">{{$purchase->sale_weight}}</td>
+                           <td style="text-align: right;">{{$purchase->average_weight}}</td>
+                           <td style="text-align: right;">{{$purchase->price}}</td>
+                           <td style="text-align: right;">{{number_format($purchase->amount,2)}}</td>
+                        </tr>
+                     @endforeach
+                     <tr><td colspan="6">----------------------</td></tr>
+                     <!-- @php $average_price = 0;  @endphp                     
                      @if($opening_weight!=0 && $opening_weight!='')
                         <tr>
                           <td>Opening</td>
@@ -86,8 +84,7 @@
                               $opening_amount = round($opening_amount,2);
                            }else{
                               $opening_amount = $opening_weight*$average_price;
-                           } 
-                           
+                           }
                            echo number_format($opening_amount,2);
                            @endphp</td>
                         </tr>
@@ -119,7 +116,7 @@
                            <td style="text-align: right;">{{number_format($average_price,2)}}</td>
                            <td style="text-align: right;">{{number_format($opening_amount,2)}}</td>
                         </tr>
-                     @endforeach
+                     @endforeach -->
                   </tbody>                  
                   </div>
                </table>

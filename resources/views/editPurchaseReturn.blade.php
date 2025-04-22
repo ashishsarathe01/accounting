@@ -290,7 +290,7 @@
                               <div class="plus-icon">
                                  <tr class="font-14 font-heading bg-white">
                                     <td class="w-min-120 " colspan="5">
-                                       <a class="add_more_bill_sundry_up"><svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                       <a class="add_more_bill_sundry_up"><svg style="float:right;cursor:pointer;" xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle" width="24" height="24" viewBox="0 0 24 24" fill="none">
                                        <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg></a>
                                     </td>
                                  </tr>
@@ -439,14 +439,7 @@
                                     @php $index++;@endphp
                                  @endif
                               @endforeach
-                              <div class="plus-icon">
-                                 <tr class="font-14 font-heading bg-white">
-                                    <td class="w-min-120 " colspan="5">
-                                       <a class="add_more_bill_sundry_down"><svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle" width="24" height="24" viewBox="0 0 24 24" fill="none">
-                                       <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg></a>
-                                    </td>
-                                 </tr>
-                              </div>
+                              
                               <tr id="billtr_round_plus" class="font-14 font-heading bg-white bill_taxes_row sundry_tr" <?php if(!isset($roundReturn['ROUNDED OFF (+)'])){?> style="display:none" <?php }?>>
                                  <td class="w-min-50">
                                     <select id="bill_sundry_round_plus" class="w-95-parsent  bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="round_plus">

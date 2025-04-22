@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Accounts;
 use App\Models\Contra;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\URL;
 use App\Models\ContraDetails;
 use App\Models\AccountLedger;
 use App\Models\Companies;
@@ -54,6 +55,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
             ->where('contras.delete','0')
             ->whereRaw("STR_TO_DATE(contras.date,'%Y-%m-%d')>=STR_TO_DATE('".date('Y-m-d',strtotime($from_date))."','%Y-%m-%d') and STR_TO_DATE(contras.date,'%Y-%m-%d')<=STR_TO_DATE('".date('Y-m-d',strtotime($to_date))."','%Y-%m-%d')")
             ->orderBy('contras.date', 'asc')
+              ->orderBy('contra_details.id', 'asc')
             ->get();
       return view('contra/contra')->with('contra', $contra)->with('month_arr', $month_arr)->with("from_date",$from_date)->with("to_date",$to_date);
    }
@@ -188,6 +190,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
             $ledger->save();
             $i++;
          }
+         session(['previous_url_contra' => URL::previous()]);
          return redirect('contra')->withSuccess('Contra added successfully!');
       }else{
          $this->failedMessage();

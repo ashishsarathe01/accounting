@@ -155,11 +155,12 @@
                                  <td style="text-align: right;">                                    
                                     @php 
                                        if($head_total>=0){
+                                          $total_debit_amount = $total_debit_amount + $head_total; 
                                           echo "<span style='color:blue'>".$head_total."</span>";
                                        }else{
                                           echo "&nbsp;";
                                        }
-                                       $total_debit_amount = $total_debit_amount + $head->debit; 
+                                       
                                     @endphp
                                     @foreach($head->accountGroup as $group)
                                        @php 
@@ -168,17 +169,17 @@
                                           }                                 
                                        @endphp
                                        <p style="text-align: right;">{{$group->debit}}</p>
-                                       @php $total_debit_amount = $total_debit_amount + $group->debit; @endphp
                                     @endforeach
                                  </td>
                                  <td style="text-align: right;">                                    
                                     @php 
                                        if($head_total<0){
+                                          $total_credit_amount = $total_credit_amount + abs($head_total); 
                                           echo "<span style='color:blue'>".abs($head_total)."</span>";
                                        }else{
                                           echo "&nbsp;";
                                        }
-                                       $total_credit_amount = $total_credit_amount + $head->credit; 
+                                       
                                     @endphp
                                     @foreach($head->accountGroup as $group)
                                        @php 
@@ -187,7 +188,7 @@
                                           }                              
                                        @endphp
                                        <p >{{$group->credit}}</p>
-                                       @php $total_credit_amount = $total_credit_amount + $group->credit; @endphp
+                                       
                                     @endforeach
                                  </td>
                               </tr>                              

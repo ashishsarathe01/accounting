@@ -137,15 +137,7 @@
                   <div class="mb-4 col-md-4">
                      <label for="name" class="form-label font-14 font-heading">Series No.</label>
                      <select id="series_no" name="series_no" class="form-select" required>
-                        <?php
-                        if(count($mat_series) > 0) {
-                           foreach ($mat_series as $value) { 
-                              if($value->series==$sale_return->series_no){?>
-                                 <option value="<?php echo $value->series; ?>" <?php if($value->series==$sale_return->series_no){ echo "selected";} ?> data-mat_center="<?php echo $value->mat_center;?>" data-gst_no="<?php echo $value->gst_no;?>" data-invoice_start_from="<?php echo $value->invoice_start_from;?>" data-invoice_prefix="<?php echo $value->invoice_prefix;?>" data-without_invoice_start_from="<?php echo $value->without_invoice_start_from;?>" ><?php echo $value->series; ?></option>
-                                 <?php 
-                              }
-                           }
-                        } ?>
+                     <option value="{{$sale_return->series_no}}">{{$sale_return->series_no}}</option> 
                      </select>
                      <ul style="color: red;">
                        @error('series_no'){{$message}}@enderror                        
@@ -154,15 +146,7 @@
                   <div class="mb-4 col-md-4">
                      <label for="name" class="form-label font-14 font-heading">Material Center</label>
                      <select name="material_center" class="form-select" required>
-                        <?php
-                        if(count($mat_series) > 0) {
-                           foreach ($mat_series as $value) {
-                              if($sale_return->material_center==$value->mat_center){ ?>
-                              <option value="<?php echo $value->mat_center; ?>" <?php if($sale_return->material_center==$value->mat_center){ echo "selected";} ?>><?php echo $value->mat_center; ?></option>
-                              <?php 
-                              }
-                           }
-                        } ?>
+                        <option value="{{$sale_return->material_center}}">{{$sale_return->material_center}}</option>
                      </select>
                      <ul style="color: red;">
                        @error('material_center'){{$message}}@enderror                        
@@ -294,15 +278,19 @@
                                        </td>
                                        <td>
                                           <svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove_sundry_up" data-id="@php echo $index;@endphp" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg>
-                                          @if($index==1)
-                                             <svg style="cursor:pointer" xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle add_more_bill_sundry_up" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" ></svg>
-                                          @endif
-
                                        </td>
                                     </tr>
                                     @php $index++;@endphp
                                  @endif
                               @endforeach
+                              <div class="plus-icon">
+                                 <tr class="font-14 font-heading bg-white">
+                                    <td class="w-min-120 " colspan="5">
+                                       <a style="float: right;cursor:pointer" class="add_more_bill_sundry_up"><svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                       <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg></a>
+                                    </td>
+                                 </tr>
+                              </div>
                               <?php 
                               $return = array();$roundReturn = array();
                               foreach($sale_return_sundry as $val) {
@@ -843,7 +831,7 @@
    var enter_gst_status = 0;
    var auto_gst_calculation = 0;
    var customer_gstin = "";
-   var merchant_gstin = "";
+   var merchant_gstin = "{{$merchant_gst}}";
    var percent_arr = [];
    var item_count = '{{--$i}}';
    var add_more_count = item_count;
@@ -922,7 +910,7 @@
                if(invoice_no==val.voucher_no){
                   selected = "selected";
                }
-               optionElements += '<option value="' + val.voucher_no + '" data-id="'+val.id+'" '+selected+'>' + val.voucher_no + '</option>';
+               optionElements += '<option value="' + val.voucher_no + '" data-id="'+val.id+'" '+selected+'>' + val.voucher_no_prefix + '</option>';
             });
             $("#voucher_no").html(optionElements);
             $('#voucher_no').change();

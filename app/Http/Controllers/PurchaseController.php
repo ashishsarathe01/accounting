@@ -16,8 +16,11 @@ use App\Models\ManageItems;
 use App\Models\ParameterInfo;
 use App\Models\ParameterInfoValue;
 use App\Models\ParameterInfoValueDetail;
+use App\Models\ItemAverage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\URL;
 use Carbon\Carbon;
+use App\Helpers\CommonHelper;
 use DB;
 use Session;
 use DateTime;
@@ -28,19 +31,19 @@ class PurchaseController extends Controller{
      * @return \Illuminate\Http\Response
      */
    public function index(Request $request){
-       $input = $request->all();
+      echo CommonHelper::RewriteItemAverage('2025-14-01');
+      $input = $request->all();
       // Default date range (first day of current month to today)
-$from_date = session('purchase_from_date', "01-" . date('m-Y'));
-$to_date = session('purchase_to_date', date('d-m-Y'));
+      $from_date = session('purchase_from_date', "01-" . date('m-Y'));
+      $to_date = session('purchase_to_date', date('d-m-Y'));
 
-// Check if user has selected a date range
-if (!empty($input['from_date']) && !empty($input['to_date'])) {
-    $from_date = date('d-m-Y', strtotime($input['from_date']));
-    $to_date = date('d-m-Y', strtotime($input['to_date']));
-    
-    // Store in session so it persists after refresh
-    session(['purchase_from_date' => $from_date, 'purchase_to_date' => $to_date]);
-}
+      // Check if user has selected a date range
+      if (!empty($input['from_date']) && !empty($input['to_date'])) {
+         $from_date = date('d-m-Y', strtotime($input['from_date']));
+         $to_date = date('d-m-Y', strtotime($input['to_date']));    
+         // Store in session so it persists after refresh
+         session(['purchase_from_date' => $from_date, 'purchase_to_date' => $to_date]);
+      }
       Session::put('redirect_url','');
       $financial_year = Session::get('default_fy');      
       $y =  explode("-",$financial_year);
@@ -178,13 +181,9 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
          'total' => 'required',
          'goods_discription' => 'required|array|min:1',
       ]);
-      //Check Item Empty or not
-      // echo "<pre>";
-      // print_r($request->all());
-      // print_r(json_decode($request->input('item_parameters')[0],true));
-      // print_r($request->input('item_parameters')[0]);
-      // print_r(json_decode($request->input('item_parameters')[0],true));
-      //die;
+      
+          
+      
       if($request->input('goods_discription')[0]=="" || $request->input('qty')[0]=="" || $request->input('price')[0]=="" || $request->input('amount')[0]==""){
          return $this->failedMessage('Plases Select Item','purchase/create');
       }
@@ -256,6 +255,10 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
             $item_ledger->created_by = Session::get('user_id');
             $item_ledger->created_at = date('d-m-Y H:i:s');
             $item_ledger->save();
+            //ADD ITEM AVERAGE
+
+
+
             //Parameter Info
             if($item_parameters[$key]!=""){
                $parameter = json_decode($item_parameters[$key],true);
@@ -351,7 +354,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
          $ledger->created_by = Session::get('user_id');
          $ledger->created_at = date('d-m-Y H:i:s');
          $ledger->save();
-         //ADD DATA IN Sale ACCOUNT
+         //ADD DATA IN Purcahse ACCOUNT
          $ledger = new AccountLedger();
          $ledger->account_id = 36;//Purchase
          $ledger->debit = $request->input('taxable_amt');
@@ -364,7 +367,191 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
          $ledger->created_by = Session::get('user_id');
          $ledger->created_at = date('d-m-Y H:i:s');
          $ledger->save();
-          
+         //Item Average Calculation Logic Start Here   
+         $goods_discriptions = $request->input('goods_discription');
+         $qtys = $request->input('qty');
+         $prices = $request->input('price');
+         $amounts = $request->input('amount');
+         $item_average_arr = [];$item_average_total = 0;
+         foreach ($goods_discriptions as $key => $good) {
+            if($good=="" || $qtys[$key]=="" || $prices[$key]=="" || $amounts[$key]==""){
+               continue;
+            }
+            array_push($item_average_arr,array("item"=>$good,"quantity"=>$qtys[$key],"price"=>$prices[$key],"amount"=>$amounts[$key]));
+            $item_average_total = $item_average_total + $amounts[$key];
+         }
+         //Sundry
+         $additive_sundry_amount = 0;$subtractive_sundry_amount = 0;
+         $bill_sundrys = $request->input('bill_sundry');
+         $bill_sundry_amounts = $request->input('bill_sundry_amount');
+         foreach($bill_sundrys as $key => $bill){
+            if($bill_sundry_amounts[$key]=="" || $bill==""){
+               continue;
+            }
+            $billsundry = BillSundrys::where('id', $bill)->first();  
+            if($billsundry->nature_of_sundry=="OTHER"){
+               if($billsundry->bill_sundry_type=="additive"){
+                  $additive_sundry_amount = $additive_sundry_amount + $bill_sundry_amounts[$key];
+               }else if($billsundry->bill_sundry_type=="subtractive"){
+                  $subtractive_sundry_amount = $subtractive_sundry_amount + $bill_sundry_amounts[$key];
+               }
+            }
+         }
+         foreach ($item_average_arr as $key => $value) {
+            if($additive_sundry_amount>0){
+               $additive_sundry_amount = ($value['amount']/$item_average_total)*$additive_sundry_amount;
+            }
+            if($subtractive_sundry_amount>0){
+               $subtractive_sundry_amount = ($value['amount']/$item_average_total)*$subtractive_sundry_amount;
+            }
+            $additive_sundry_amount = round($additive_sundry_amount,2);
+            $subtractive_sundry_amount = round($subtractive_sundry_amount,2);
+            $average_amount = $value['amount'] + $additive_sundry_amount - $subtractive_sundry_amount;
+            $average_amount =  round($average_amount,2);
+            $average_price = $average_amount/$value['quantity'];
+            $average_price =  round($average_price,4);
+            $stock_average = ItemAverage::where('item_id',$value['item'])
+                        ->orderBy('stock_date','desc')
+                        ->orderBy('id','desc')
+                        ->first();
+            if($stock_average){            
+               $stock_average_amount = $stock_average->amount + $average_amount;
+               $stock_average_weight = $stock_average->average_weight + $value['quantity'];
+               $stock_average_price = $stock_average_amount / $stock_average_weight;
+               $stock_average_price =  round($stock_average_price,4);
+               $stock_average_amount = $stock_average_weight*$stock_average_price;
+               $stock_average_amount =  round($stock_average_amount,2);
+               if(strtotime($stock_average->stock_date)>strtotime($request->date)){
+                  // $old_stock_average = ItemAverage::where('item_id',$value['item'])
+                  //                   ->where('stock_date','<=',$request->date)
+                  //                   ->orderBy('stock_date','desc')
+                  //                   ->orderBy('id','desc')
+                  //                   ->first();
+                  // if($old_stock_average){
+                  //    $stock_average_amount = $old_stock_average->amount + $average_amount;
+                  //    $stock_average_weight = $old_stock_average->weight + $value['quantity'];
+                  //    $stock_average_price = $stock_average_amount / $stock_average_weight;
+                  //    $stock_average_price =  round($stock_average_price,2);
+                  //    if(strtotime($old_stock_average->stock_date)==strtotime($request->date)){
+                  //       $average = ItemAverage::find($old_stock_average->id);
+                  //       $average->item_id = $value['item'];
+                  //       $average->average_weight = $stock_average_weight;
+                  //       $average->price = $stock_average_price;
+                  //       $average->amount = $stock_average_amount;
+                  //       $average->stock_date = $request->date;
+                  //       $average->updated_at = Carbon::now();
+                  //       $average->save();
+                  //    }else if(strtotime($old_stock_average->stock_date)<strtotime($request->date)){
+                  //       $average = new ItemAverage;
+                  //       $average->item_id = $value['item'];
+                  //       $average->average_weight = $stock_average_weight;
+                  //       $average->price = $stock_average_price;
+                  //       $average->amount = $stock_average_amount;
+                  //       $average->stock_date = $request->date;
+                  //       $average->company_id = Session::get('user_company_id');
+                  //       $average->created_at = Carbon::now();
+                  //       $average->save();
+                  //    }
+                  //    //Check Purchase
+                  //    $purchase = Purchase::with(['purchaseDescription','purchaseSundry'])->where('company_id',Session::get('user_company_id'))
+                  //             ->where('date','>',$request->date)
+                  //             ->orderBy('date','asc')
+                  //             ->get();
+                  //    if(count($purchase)>0){
+                  //       foreach ($purchase as $k1 => $v1) {
+                           
+                  //       }
+                  //    }
+                  // }else{
+                  //    $opening = ItemLedger::where('item_id',$value['item'])
+                  //                         ->where('source','-1')
+                  //                         ->first();
+                  //    if($opening){
+                  //       $stock_average_amount = $opening->total_price + $average_amount;
+                  //       $stock_average_weight = $opening->in_weight + $value['quantity'];
+                  //       $stock_average_price = $stock_average_amount / $stock_average_weight;
+                  //       $stock_average_price =  round($stock_average_price,2);
+                  //       $average = new ItemAverage;
+                  //       $average->item_id = $value['item'];
+                  //       $average->average_weight = $stock_average_weight;
+                  //       $average->price = $stock_average_price;
+                  //       $average->amount = $stock_average_amount;
+                  //       $average->stock_date = $request->date;
+                  //       $average->company_id = Session::get('user_company_id');
+                  //       $average->created_at = Carbon::now();
+                  //       $average->save();
+                  //    }else{
+                  //       $average = new ItemAverage;
+                  //       $average->item_id = $value['item'];
+                  //       $average->average_weight = $value['quantity'];
+                  //       $average->price = $average_price;
+                  //       $average->amount = $average_amount;
+                  //       $average->stock_date = $request->date;
+                  //       $average->company_id = Session::get('user_company_id');
+                  //       $average->created_at = Carbon::now();
+                  //       $average->save();
+                  //    }
+                  // }                  
+               }else if(strtotime($stock_average->stock_date)==strtotime($request->date)){
+
+                  $average = ItemAverage::find($stock_average->id);
+                  $average->item_id = $value['item'];
+                  $average->purchase_weight = $value['quantity'] + $stock_average->purchase_weight;
+                  $average->average_weight = $stock_average_weight;
+                  $average->price = $stock_average_price;
+                  $average->amount = $stock_average_amount;
+                  $average->stock_date = $request->date;
+                  $average->updated_at = Carbon::now();
+                  $average->save();
+               }else if(strtotime($stock_average->stock_date)<strtotime($request->date)){
+                  $average = new ItemAverage;
+                  $average->item_id = $value['item'];
+                  $average->purchase_weight = $value['quantity'];
+                  $average->average_weight = $stock_average_weight;
+                  $average->price = $stock_average_price;
+                  $average->amount = $stock_average_amount;
+                  $average->stock_date = $request->date;
+                  $average->company_id = Session::get('user_company_id');
+                  $average->created_at = Carbon::now();
+                  $average->save();
+               }
+            }else{
+               $opening = ItemLedger::where('item_id',$value['item'])
+                                    ->where('source','-1')
+                                    ->first();
+               if($opening){
+                  $stock_average_amount = $opening->total_price + $average_amount;
+                  $stock_average_weight = $opening->in_weight + $value['quantity'];
+                  $stock_average_price = $stock_average_amount / $stock_average_weight;
+                  $stock_average_price =  round($stock_average_price,4);
+                  $stock_average_amount = $stock_average_weight*$stock_average_price;
+                  $stock_average_amount =  round($stock_average_amount,2);
+                  $average = new ItemAverage;
+                  $average->item_id = $value['item'];
+                  $average->purchase_weight = $stock_average_weight;
+                  $average->average_weight = $stock_average_weight;
+                  $average->price = $stock_average_price;
+                  $average->amount = $stock_average_amount;
+                  $average->stock_date = $request->date;
+                  $average->company_id = Session::get('user_company_id');
+                  $average->created_at = Carbon::now();
+                  $average->save();
+               }else{
+                  $average = new ItemAverage;
+                  $average->item_id = $value['item'];
+                  $average->purchase_weight = $value['quantity'];
+                  $average->average_weight = $value['quantity'];
+                  $average->price = $average_price;
+                  $average->amount = $average_amount;
+                  $average->stock_date = $request->date;
+                  $average->company_id = Session::get('user_company_id');
+                  $average->created_at = Carbon::now();
+                  $average->save();
+               }
+            }
+         }
+         //Item Average Calculation Logic End Here
+         session(['previous_url_purchase' => URL::previous()]);
          return redirect('purchase')->withSuccess('Purchase voucher added successfully!');
       }else{
          return $this->failedMessage('Something went wrong','purchase/create');

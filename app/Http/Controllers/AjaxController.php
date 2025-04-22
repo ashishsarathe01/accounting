@@ -394,7 +394,7 @@ class AjaxController extends Controller
                               ->where('financial_year',$financial_year)
                               ->pluck('invoice_no');
                               
-      $Accountdetails = Sales::select('voucher_no','id','series_no','financial_year','material_center','voucher_no_prefix')
+      $Accountdetails = Sales::select('voucher_no','id','series_no','financial_year','material_center','voucher_no_prefix','date')
                               ->where('party', $account_id)
                               ->where('delete','0')
                               ->where('financial_year',$financial_year)

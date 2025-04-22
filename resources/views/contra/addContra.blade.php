@@ -21,24 +21,12 @@
             @include('layouts.leftnav')
             <!-- view-table-Content -->
             <div class="col-md-12 ml-sm-auto  col-lg-10 px-md-4 bg-mint">
-                <div class="d-md-flex justify-content-between py-4 px-2 align-items-center">
-                    <nav aria-label="breadcrumb meri-breadcrumb ">
-                        <ol class="breadcrumb meri-breadcrumb m-0  ">
-                            <li class="breadcrumb-item">
-                                <a class="font-12 text-body text-decoration-none" href="#">Dashboard</a>
-                            </li>
-                            <li class="breadcrumb-item p-0">
-                            <a class="fw-bold font-heading font-12  text-decoration-none" href="#">
-                            Contra</a>
-                            </li>
-                        </ol>
-                    </nav>
-                </div>
+                
                 <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">
                     Add Contra Voucher
                 </h5>
                 <?php 
-                $account_html = "<option value=''>Select</option>";            
+                $account_html = "<option value=''>Select</option>";           
                 foreach ($party_list as $value) {
                    $account_html.="<option value='".$value->id."'>".$value->account_name."</option>";
                 }
@@ -316,7 +304,7 @@
          if(amount>0){
             $("#credit_"+id).val(amount);
          }
-         $("#account_"+id).html('<?php echo $account_html;?>');
+         $("#account_"+id).html("<?php echo $account_html;?>");
       }else if ($("#type_" + id).val() == "Debit") {
          $("#debit_" + id).prop('readonly', false);
          $("#credit_" + id).prop('readonly', true);
@@ -324,7 +312,7 @@
          if(amount>0){
             $("#debit_"+id).val(amount);
          }
-         $("#account_"+id).html('<?php echo $account_html;?>');
+         $("#account_"+id).html("<?php echo $account_html;?>");
       }       
       debitTotal();
       creditTotal();
@@ -348,6 +336,25 @@
     });
     $(document).ready(function() {
        $(".submit_data").click(function() {
+           let date = $("#date").val();
+        let mode = $("#mode").val();
+        let series_no = $("#series_no").val(); // Added series_no validation
+
+        // Field-wise alerts
+        if (date === "") {
+            alert("Please enter the Date.");
+            return false;
+        }
+
+        if (mode === "") {
+            alert("Please select a Mode.");
+            return false;
+        }
+
+        if (series_no === "") {
+            alert("Please enter the Series Name/Number.");
+            return false;
+        }
           var form_data = [];
           let dr = 0;
           let cr = 0;

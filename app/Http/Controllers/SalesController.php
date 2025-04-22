@@ -24,6 +24,7 @@ use App\Models\SaleInvoiceConfiguration;
 use App\Models\Bank;
 use App\Models\SaleInvoiceTermCondition;
 use App\Models\EinvoiceToken;
+use App\Models\ItemAverage;
 use Illuminate\Support\Facades\URL;
 use DB;
 use Session;
@@ -88,7 +89,7 @@ class SalesController extends Controller
             $query->orderBy('sales.date','asc');
         } else {
             // No date filter: show last 10 transactions
-            $query->orderBy('financial_year', 'desc')->orderBy(DB::raw("cast(voucher_no as SIGNED)"), 'desc')->limit(10);
+           $query->orderBy('financial_year','desc')->orderBy(DB::raw("cast(voucher_no as SIGNED)"), 'desc')->limit(10);
         }
     
         // Default ordering
@@ -210,12 +211,13 @@ class SalesController extends Controller
                   $invoice_prefix.=$series_configuration->separator_2;
             }
             if($series_configuration->year=="SUFFIX TO NUMBER" && $series_configuration->year_format!=""){
-               if($series_configuration->year_format=="YY-YY"){
+                  if($series_configuration->year_format=="YY-YY"){
                   $invoice_prefix.=Session::get('default_fy');
                }else if($series_configuration->year_format=="YYYY-YY"){
                   $default_fy = Session::get('default_fy');  // 23-24
                   $fy_parts = explode('-', $default_fy);     // [23, 24]
-                  $invoice_prefix .= '20' . $fy_parts[0] . '-20' . $fy_parts[1];
+                  $invoice_prefix .= '20' . $fy_parts[0] . '-' . $fy_parts[1];
+
                }
             }        
             if($series_configuration->suffix=="ENABLE" && $series_configuration->suffix_value!="" && $series_configuration->separator_3!=""){
@@ -310,9 +312,10 @@ class SalesController extends Controller
          'goods_discription' => 'required|array|min:1',
       ]); 
 
-      // echo "<pre>";
-      // print_r($request->all());
-      // die;
+      //echo "<pre>";
+      //print_r($request->all());
+      
+      //die;
       //Check Item Empty or not
       if($request->input('goods_discription')[0]=="" || $request->input('qty')[0]=="" || $request->input('price')[0]=="" || $request->input('amount')[0]==""){
          return $this->failedMessage('Plases Select Item','sale/create');
@@ -358,15 +361,7 @@ class SalesController extends Controller
       $sale->series_no = $request->input('series_no');
       $sale->company_id = Session::get('user_company_id');
       $sale->date = $request->input('date');
-      $voucher_prefix = $request->input('voucher_prefix');
-      // if(!empty($request->input('voucher_prefix'))){
-      //    $voucher_prefix_arr = explode("/",$request->input('voucher_prefix'));
-      //    if(count($voucher_prefix_arr)>1){
-      //       $voucher_prefix = $voucher_prefix_arr[0]."/".$voucher_prefix_arr[1]."/";
-      //    }else if(count($voucher_prefix_arr)==1){
-      //       $voucher_prefix = "";
-      //    }
-      // }
+      $voucher_prefix = $request->input('voucher_prefix');      
       $sale->voucher_no_prefix = $voucher_prefix;
       $sale->voucher_no = $voucher_no;
       $sale->party = $request->input('party_id');
@@ -495,6 +490,93 @@ class SalesController extends Controller
                $ledger->created_at = date('d-m-Y H:i:s');
                $ledger->save();
                $roundoff = $roundoff - $bill_sundry_amounts[$key];
+            }
+         }
+         $goods_discriptions = $request->input('goods_discription');
+         $qtys = $request->input('qty');
+         $sale_item_array = [];
+         foreach($goods_discriptions as $key => $good){
+            if($good=="" || $qtys[$key]==""){
+               continue;
+            }
+            if(array_key_exists($good,$sale_item_array)){
+               $sale_item_array[$good] = $sale_item_array[$good] + $qtys[$key];
+            }else{
+               $sale_item_array[$good] = $qtys[$key];
+            }     
+         }
+         foreach ($sale_item_array as $key => $value) {
+            $stock_average = ItemAverage::where('item_id',$key)
+                           ->orderBy('stock_date','desc')
+                           ->orderBy('id','desc')
+                           ->first();
+            if($stock_average){  
+               if(strtotime($stock_average->stock_date)==strtotime($request->date)){
+                  $purchase_weight = $stock_average->purchase_weight;
+                  $sale_weight = $value;
+                  $price = $stock_average->price;
+                  if(!empty($stock_average->sale_weight)){
+                     $sale_weight = $sale_weight + $stock_average->sale_weight;
+                  }
+                  $average_weight = $purchase_weight - $sale_weight;
+                  $average = ItemAverage::find($stock_average->id);
+                  $average->sale_weight = $sale_weight;
+                  $average->average_weight = $average_weight;
+                  $average->amount = round($average_weight*$price,2);
+                  $average->updated_at = Carbon::now();
+                  $average->save();
+               }else if(strtotime($stock_average->stock_date)<strtotime($request->date)){
+                  $stock_average_weight = $stock_average->average_weight - $value;
+                  $stock_average_price = $stock_average->price;
+                  $stock_average_amount = round($stock_average_weight*$stock_average_price,2);
+
+                  $average = new ItemAverage;
+                  $average->item_id = $key;
+                  $average->sale_weight = $value;
+                  $average->average_weight = $stock_average_weight;
+                  $average->price = $stock_average_price;
+                  $average->amount = $stock_average_amount;
+                  $average->stock_date = $request->date;
+                  $average->company_id = Session::get('user_company_id');
+                  $average->created_at = Carbon::now();
+                  $average->save();               
+               }else if(strtotime($stock_average->stock_date)>strtotime($request->date)){
+                  
+               
+               }
+            }else{
+               $opening = ItemLedger::where('item_id',$key)
+                                       ->where('source','-1')
+                                       ->first();
+               if($opening){
+                  $stock_average_weight = $opening->in_weight - $value;
+                  $stock_average_price = $opening->total_price/$opening->in_weight;
+                  $stock_average_price = round($stock_average_price,4);
+                  $stock_average_amount = round($stock_average_weight*$stock_average_price,2);
+                  $average = new ItemAverage;
+                  $average->item_id = $key;
+                  $average->sale_weight = $value;
+                  $average->purchase_weight = $opening->in_weight;
+                  $average->average_weight = $stock_average_weight;
+                  $average->price = $stock_average_price;
+                  $average->amount = $stock_average_amount;
+                  $average->stock_date = $request->date;
+                  $average->company_id = Session::get('user_company_id');
+                  $average->created_at = Carbon::now();
+                  $average->save();
+               }else{
+                  $average = new ItemAverage;
+                  $average->item_id = $key;
+                  $average->sale_weight = $value;
+                  $average->purchase_weight = 0;
+                  $average->average_weight = -$value;
+                  $average->price = 0;
+                  $average->amount = 0;
+                  $average->stock_date = $request->date;
+                  $average->company_id = Session::get('user_company_id');
+                  $average->created_at = Carbon::now();
+                  $average->save();
+               }
             }
          }
          //ADD DATA IN Customer ACCOUNT

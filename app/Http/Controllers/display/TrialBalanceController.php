@@ -115,9 +115,7 @@ class TrialBalanceController extends Controller
       return view('display/trialbalance')->with('account', $account)->with('type','open')->with('to_date',$to_date);
    }
    public function filter(Request $request){
-      changeDateFormate();
-
-      die;
+     
       $req = $request->all();   
       $financial_year = Session::get('default_fy');
       $y = explode("-",$financial_year);

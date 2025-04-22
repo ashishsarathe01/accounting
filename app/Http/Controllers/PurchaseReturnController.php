@@ -925,7 +925,6 @@ class PurchaseReturnController extends Controller
                                 ->whereIn('company_id',[Session::get('user_company_id'),0])
                                 //->OrwhereIn('id',[1,2,3,8,9])
                                 ->get();
-      $financial_year = Session::get('default_fy');
 
       //Vendor
       $vendors = Accounts::select('id','account_name','gstin')

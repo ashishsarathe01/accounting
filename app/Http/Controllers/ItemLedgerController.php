@@ -12,6 +12,7 @@ use App\Models\ItemLedger;
 use App\Models\Purchase;
 use App\Models\Sales;
 use App\Models\StockJournal;
+use App\Models\ItemAverage;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -263,6 +264,17 @@ class ItemLedgerController extends Controller
          
          $item_in_data = DB::select(DB::raw("SELECT SUM(total_price) as total_price,SUM(in_weight) as in_weight,txn_date FROM item_ledger WHERE item_id='".$item_id."' and source!=-1 and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$request->to_date."', '%Y-%m-%d') and status='1' and delete_status='0' and in_weight!='' and source=2 GROUP BY txn_date order by STR_TO_DATE(txn_date, '%Y-%m-%d')"));
       }
-      return view('item_ledger_average')->with('item_list', $item_list)->with('opening', 0)->with('fdate', $fdate)->with('tdate',$tdate)->with('item_id', $item_id)->with('item_data', $item_data)->with('opening_amount', $opening_amount)->with('opening_weight', $opening_weight)->with('item_in_data', $item_in_data)->with('second_total_amount', $second_total_amount);
+
+      $new_purchase_data = ItemAverage::select('sale_weight','purchase_weight','average_weight','price','amount','stock_date')->where('item_id',$item_id)
+                  ->whereRaw("STR_TO_DATE(stock_date, '%Y-%m-%d')>=STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and STR_TO_DATE(stock_date, '%Y-%m-%d')<=STR_TO_DATE('".$request->to_date."', '%Y-%m-%d')")
+                  ->get();
+      
+
+      // echo "<pre>";
+      // print_r($new_purchase_data->toArray());
+      // print_r($new_sale_data->toArray());die;
+      //print_r($item_data);
+      
+      return view('item_ledger_average')->with('item_list', $item_list)->with('opening', 0)->with('fdate', $fdate)->with('tdate',$tdate)->with('item_id', $item_id)->with('item_data', $item_data)->with('opening_amount', $opening_amount)->with('opening_weight', $opening_weight)->with('item_in_data', $item_in_data)->with('second_total_amount', $second_total_amount)->with('new_purchase_data', $new_purchase_data);
    }
 }

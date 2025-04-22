@@ -71,13 +71,12 @@ class ManageItemsController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function create()
-    {
-        $com_id = Session::get('user_company_id');
-        $itemGroups = ItemGroups::where('delete', '=', '0')->where('company_id', $com_id)->get();
-        $accountunit = Units::where('delete', '=', '0')->where('company_id', $com_id)->get();
+   public function create(){
+      $com_id = Session::get('user_company_id');
+      $itemGroups = ItemGroups::where('delete', '=', '0')->where('company_id', $com_id)->get();
+      $accountunit = Units::where('delete', '=', '0')->where('company_id', $com_id)->get();
         return view('manageitem/addAccountManageItem')->with('accountunit', $accountunit)->with('itemGroups', $itemGroups);
-    }
+   }
 
     /**
      * Store a newly created resource in storage.

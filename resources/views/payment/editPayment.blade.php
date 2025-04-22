@@ -32,13 +32,13 @@
             </div>
             <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Edit Payment Voucher</h5>
             <?php 
-            $debit_html = '<option value="">Select</option>';            
+             $debit_html = "<option value=''>Select</option>";            
             foreach ($party_list as $value) {
-               $debit_html.='<option value="'.$value->id.'">'.$value->account_name.'</option>';
+               $debit_html.="<option value='".$value->id."'>".$value->account_name.'</option>';
             } 
-            $credit_html = '<option value="">Select</option>';            
+            $credit_html = "<option value=''>Select</option>";            
             foreach ($credit_accounts as $value) {
-               $credit_html.='<option value="'.$value->id.'">'.$value->account_name.'</option>';
+               $credit_html.="<option value='".$value->id."'>".$value->account_name.'</option>';
             }
             ?>
             <form id="frm" class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('payment.update') }}">
@@ -172,7 +172,7 @@
                </div>
                <div class=" d-flex">
                   <div class="ms-auto">
-                     <a href="{{ route('payment.index') }}"><button type="button" class="btn btn-danger">QUIT</button></a>
+                     <button type="button" onclick="redirectBack()" class="btn btn-danger">QUIT</button>
                      <input type="button" value="UPDATE" class="btn btn-xs-primary submit_data">
                   </div>
                   <input type="hidden" clas="max_sale_descrption" name="max_sale_descrption" value="1" id="max_sale_descrption">
@@ -188,6 +188,17 @@
 </body>
 @include('layouts.footer')
 <script>
+
+     function redirectBack(){
+      let previousUrl = document.referrer; // Get Previous URL
+
+      if(previousUrl == "{{ session('previous_url_payment')  }}"){
+         window.location.href = "https://www.meriaccounting.com/payment"; // Fixed Redirect
+      }else{
+         history.back(); // Go Back to previous page
+      }
+   }
+
    $(document).on("change", ".type", function() {
       let id = $(this).attr('data-id');
       $("#debit_" + id).val('');
@@ -211,7 +222,7 @@
          if(amount>0){
             $("#credit_"+id).val(amount);
          }
-         $("#account_"+id).html('<?php echo $credit_html;?>');
+          $("#account_"+id).html("<?php echo $credit_html;?>");
       }else if ($("#type_" + id).val() == "Debit") {
          $("#debit_" + id).prop('readonly', false);
          $("#credit_" + id).prop('readonly', true);
@@ -219,7 +230,7 @@
          if(amount>0){
             $("#debit_"+id).val(amount);
          }
-         $("#account_"+id).html('<?php echo $debit_html;?>');
+        $("#account_"+id).html("<?php echo $debit_html;?>");
       }
       debitTotal();
       creditTotal();

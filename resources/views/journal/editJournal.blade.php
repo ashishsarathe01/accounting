@@ -101,7 +101,7 @@
                                             </select>
                                         </td>
                                         <td class="">
-                                            <select class="form-select" id="account_<?php echo $i ?>" name="account_name[]" required>
+                                            <select class="form-select select2-single" id="account_<?php echo $i ?>" name="account_name[]" required>
                                                 <option value="">Select</option>
                                                 <?php
                                                 foreach ($party_list as $val) {
@@ -261,7 +261,7 @@
                     <div class=" d-flex">
 
                         <div class="ms-auto">
-                           <a href="{{ route('journal.index') }}"><button type="button" class="btn btn-danger">QUIT</button></a>
+                           <button type="button" onclick="redirectBack()" class="btn btn-danger">QUIT</button>
                             <input type="button" value="SUBMIT" class="btn btn-xs-primary submit_data">
 
                         </div>
@@ -373,6 +373,18 @@
 </body>
 @include('layouts.footer')
 <script>
+
+    function redirectBack(){
+      let previousUrl = document.referrer; // Get Previous URL
+
+      if(previousUrl == "{{ session('previous_url_journal')  }}"){
+         window.location.href = "https://www.meriaccounting.com/journal"; // Fixed Redirect
+      }else{
+         history.back(); // Go Back to previous page
+      }
+   }
+   
+   
    var company_gst = "{{$company_gst}}";
    var claim_gst_status = "{{$journal->claim_gst_status}}";
    $(document).on("change", ".type", function() {
@@ -407,7 +419,7 @@
                $("#debit_"+id).val(amount.toFixed(2));
             }
         }
-        $("#account_"+id).html('<?php echo $account_html;?>');
+         $("#account_" + id).html(`{!! $account_html !!}`);
         debitTotal();
         creditTotal();
     });

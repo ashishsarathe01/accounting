@@ -88,13 +88,7 @@
                         <option value="RATE DIFFERENCE">RATE DIFFERENCE</option>
                      </select>
                   </div>
-                  <div class="mb-4 col-md-4">
-                     <label for="name" class="form-label font-14 font-heading">Date</label>
-                     <input type="date" id="date" class="form-control calender-bg-icon calender-placeholder" name="date" placeholder="Select date" value="{{$bill_date}}" required min="{{Session::get('from_date')}}" max="{{Session::get('to_date')}}">
-                     <ul style="color: red;">
-                        @error('date'){{$message}}@enderror                        
-                     </ul>
-                  </div>
+                  
                   <div class="mb-4 col-md-4 account_div">
                      <label for="name" class="form-label font-14 font-heading">Accounts</label>                     
                      <select class="form-select select2-single" name="party_id" id="party_id">
@@ -121,6 +115,13 @@
                   <div class="mb-1 col-md-1 voucher_no_div" style="display:none">
                      <br>
                      <a href="" title="View Invoice" target="__blank" id="invoice_id"><img src="{{ URL::asset('public/assets/imgs/eye-icon.svg')}}" style="margin-top: 20px;"></a>
+                  </div>
+                  <div class="mb-4 col-md-4">
+                     <label for="name" class="form-label font-14 font-heading">Date</label>
+                     <input type="date" id="date" class="form-control calender-bg-icon calender-placeholder" name="date" placeholder="Select date" value="{{$bill_date}}" required min="{{Session::get('from_date')}}" max="{{Session::get('to_date')}}">
+                     <ul style="color: red;">
+                        @error('date'){{$message}}@enderror                        
+                     </ul>
                   </div>
                   <div class="mb-4 col-md-4">
                      <label for="name" class="form-label font-14 font-heading">Series No.</label>
@@ -737,7 +738,10 @@
       $("#sale_bill_id").val($('option:selected', this).attr('data-id'));
       $("#series_no").val($('option:selected', this).attr('data-series_no'));
       $("#material_center").val($('option:selected', this).attr('data-material_center'));
-     // $("#voucher_prefix").val($('option:selected', this).attr('data-series_no')+"/{{Session::get('default_fy')}}/CR");
+      let date  = $('option:selected', this).attr('data-date');
+      if(date!=""){
+         $("#date").attr('min',date);
+      }
       var invoice_id = $(this).val();
       let series_no = $('option:selected', this).attr('data-series_no');
       $.ajax({
@@ -783,8 +787,9 @@
       $('#series_no').focus();
     });
       // Function to calculate amount and update total sum
-      window.calculateAmount = function(key=null) {         
-         customer_gstin = $('#party_id option:selected').attr("data-state_code");              
+      window.calculateAmount = function(key=null) {     
+
+         customer_gstin = $('#party_id option:selected').attr("data-state_code");
          if(customer_gstin==merchant_gstin.substring(0,2)){  
             $("#billtr_cgst").show();
             $("#billtr_sgst").show();
@@ -1402,7 +1407,7 @@
                // if(val.voucher_no_prefix!="" && val.voucher_no_prefix!=null){
                //    name = val.voucher_no_prefix+val.financial_year+"/"+val.voucher_no;
                // }
-               optionElements += '<option value="' + val.voucher_no + '" data-id="'+val.id+'" data-series_no="'+val.series_no+'" data-material_center="'+val.material_center+'" data-voucher_no_prefix="'+val.voucher_no_prefix+'">' + name + '</option>';
+               optionElements += '<option value="' + val.voucher_no + '" data-id="'+val.id+'" data-series_no="'+val.series_no+'" data-material_center="'+val.material_center+'" data-voucher_no_prefix="'+val.voucher_no_prefix+'" data-date="'+val.date+'">' + name + '</option>';
             });
             $("#voucher_no").html(optionElements);
          }
@@ -1697,5 +1702,7 @@
       debitTotal();
       creditTotal();
    });
+
+   
 </script>
 @endsection

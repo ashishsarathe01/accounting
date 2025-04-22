@@ -90,7 +90,7 @@
                         </div>
                         <div style="width:auto; float:right; text-align:right;"><small>O/D/T</small></div>
                         <div style="clear:both"></div>
-                        <p style="margin-top:0;" class="text-center">(Input TAX Credit is available to a taxable person against this copy)</p>
+                        
                         <p style="margin-top:0;" class="text-center"><u>CREDIT NOTE</u></p>
                         <h1 style="margin:0px" class="text-center">{{$company_data->company_name}}</h1>
                         <p class="text-center"><small style="font-size: 13px;">{{$company_data->address}},{{$company_data->sname}},{{$company_data->pin_code}}</small></p>
@@ -218,49 +218,67 @@
                      <td colspan="8" style="border-top:0">
                         <strong>
                            <?php
-                           $number = $sale_return->total;
-                           $no = floor($number);
-                           $point = round($number - $no, 2) * 100;
-                           $hundred = null;
-                           $digits_1 = strlen($no);
-                           $i = 0;
-                           $str = array();
-                           $words = array(
-                               '0' => '', '1' => 'one', '2' => 'two',
-                               '3' => 'three', '4' => 'four', '5' => 'five', '6' => 'six',
-                               '7' => 'seven', '8' => 'eight', '9' => 'nine',
-                               '10' => 'ten', '11' => 'eleven', '12' => 'twelve',
-                               '13' => 'thirteen', '14' => 'fourteen',
-                               '15' => 'fifteen', '16' => 'sixteen', '17' => 'seventeen',
-                               '18' => 'eighteen', '19' => 'nineteen', '20' => 'twenty',
-                               '30' => 'thirty', '40' => 'forty', '50' => 'fifty',
-                               '60' => 'sixty', '70' => 'seventy',
-                               '80' => 'eighty', '90' => 'ninety'
-                           );
-                           $digits = array('', 'hundred', 'thousand', 'lakh', 'crore');
-                           while ($i < $digits_1) {
-                               $divider = ($i == 2) ? 10 : 100;
-                               $number = floor($no % $divider);
-                               $no = floor($no / $divider);
-                               $i += ($divider == 10) ? 1 : 2;
-                               if ($number) {
-                                   $plural = (($counter = count($str)) && $number > 9) ? 's' : null;
-                                   $hundred = ($counter == 1 && $str[0]) ? ' and ' : null;
-                                   $str[] = ($number < 21) ? $words[$number] .
-                                       " " . $digits[$counter] . $plural . " " . $hundred
-                                       :
-                                       $words[floor($number / 10) * 10]
-                                       . " " . $words[$number % 10] . " "
-                                       . $digits[$counter] . $plural . " " . $hundred;
-                               } else $str[] = null;
-                           }
-                           $str = array_reverse($str);
-                           $result = implode('', $str);
-                           $points = ($point) ?
-                               "." . $words[$point / 10] . " " .
-                               $words[$point = $point % 10] : '';
-                           echo ucfirst($result) . "Rupees  only";
-                           ?>
+$number = $sale_return->total;
+$no = floor($number);
+$point = round($number - $no, 2) * 100;
+$hundred = null;
+$digits_1 = strlen($no);
+$i = 0;
+$str = array();
+$words = array(
+    '0' => '', '1' => 'one', '2' => 'two',
+    '3' => 'three', '4' => 'four', '5' => 'five', '6' => 'six',
+    '7' => 'seven', '8' => 'eight', '9' => 'nine',
+    '10' => 'ten', '11' => 'eleven', '12' => 'twelve',
+    '13' => 'thirteen', '14' => 'fourteen',
+    '15' => 'fifteen', '16' => 'sixteen', '17' => 'seventeen',
+    '18' => 'eighteen', '19' => 'nineteen', '20' => 'twenty',
+    '30' => 'thirty', '40' => 'forty', '50' => 'fifty',
+    '60' => 'sixty', '70' => 'seventy',
+    '80' => 'eighty', '90' => 'ninety'
+);
+$digits = array('', 'hundred', 'thousand', 'lakh', 'crore');
+
+while ($i < $digits_1) {
+    $divider = ($i == 2) ? 10 : 100;
+    $number = floor($no % $divider);
+    $no = floor($no / $divider);
+    $i += ($divider == 10) ? 1 : 2;
+
+    if ($number) {
+        $counter = count($str);
+        $plural = ($counter && $number > 9) ? 's' : null;
+        $hundred = ($counter == 1 && isset($str[0]) && $str[0]) ? ' and ' : null;
+
+        $text = '';
+        if ($number < 21) {
+            $text = isset($words[$number]) ? $words[$number] : '';
+        } else {
+            $ten = floor($number / 10) * 10;
+            $unit = $number % 10;
+            $text = (isset($words[$ten]) ? $words[$ten] . " " : '') . (isset($words[$unit]) ? $words[$unit] : '');
+        }
+
+        $digit_text = isset($digits[$counter]) ? $digits[$counter] : ''; // prevent undefined offset here
+
+        $str[] = $text . " " . $digit_text . $plural . " " . $hundred;
+    } else {
+        $str[] = null;
+    }
+}
+
+$str = array_reverse(array_filter($str)); // remove nulls and reverse
+$result = implode('', $str);
+
+$points = ($point)
+    ? "point " .
+        (isset($words[floor($point / 10) * 10]) ? $words[floor($point / 10) * 10] . " " : '') .
+        (isset($words[$point % 10]) ? $words[$point % 10] : '')
+    : '';
+
+echo ucfirst(trim($result)) . " rupees " . trim($points) . " only";
+?>
+
                         </strong>
                      </td>
                   </tr>                  

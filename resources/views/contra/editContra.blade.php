@@ -158,7 +158,7 @@
                </div>
                <div class=" d-flex">
                   <div class="ms-auto">
-                     <a href="{{ route('contra.index') }}"><button type="button" class="btn btn-danger">QUIT</button></a>
+                      <button type="button" onclick="redirectBack()" class="btn btn-danger">QUIT</button>
                      <input type="button" value="UPDATE" class="btn btn-xs-primary submit_data">
                   </div>
                </div>
@@ -172,6 +172,18 @@
 </body>
 @include('layouts.footer')
 <script>
+
+     function redirectBack(){
+      let previousUrl = document.referrer; // Get Previous URL
+
+      if(previousUrl == "{{ session('previous_url_contra')  }}"){
+         window.location.href = "https://www.meriaccounting.com/contra"; // Fixed Redirect
+      }else{
+         history.back(); // Go Back to previous page
+      }
+   }
+   
+   
    $(document).on("change", ".type", function() {
       let id = $(this).attr('data-id');
       $("#debit_" + id).val('');

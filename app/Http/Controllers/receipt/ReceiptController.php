@@ -5,6 +5,7 @@ namespace App\Http\Controllers\receipt;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\URL;
 use App\Models\Accounts;
 use App\Models\Receipt;
 use App\Models\ReceiptDetails;
@@ -195,6 +196,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
             $ledger->save();
             $i++;
          }
+         session(['previous_url_receipt' => URL::previous()]);
          return redirect('receipt')->withSuccess('Receipt added successfully!');
       }else{
          $this->failedMessage();

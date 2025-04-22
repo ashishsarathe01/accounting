@@ -55,7 +55,7 @@ input[type=number]::-webkit-outer-spin-button {
             <?php 
             $account_html = "<option value=''>Select</option>";            
             foreach ($party_list as $value) {
-               $account_html.="<option value='".$value->id."'>'.$value->account_name.'</option>";
+               $account_html.="<option value='".$value->id."'>$value->account_name</option>";
             }?>
             <form id="frm" class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('journal.store') }}">
                @csrf
@@ -385,6 +385,20 @@ input[type=number]::-webkit-outer-spin-button {
    $(document).ready(function(){
       $('.select2-single').select2();
       $(".submit_data").click(function() {
+            
+         let date = $("#date").val();
+        let series_no = $("#series_no").val(); // Added series_no validation
+
+        // Field-wise alerts
+        if (date === "") {
+            alert("Please enter the Date.");
+            return false;
+        }
+
+        if (series_no === "") {
+            alert("Please enter the Series Name/Number.");
+            return false;
+        }
          var form_data = [];
          let dr = 0;
          let cr = 0;
