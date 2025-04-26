@@ -367,9 +367,9 @@ class AccountsController extends Controller{
             $name = $data[0];
             $under_group = $data[1];
             $debit = $data[2];
-            $debit = str_replace(",","",$debit);
+            $debit = trim(str_replace(",","",$debit));
             $credit = $data[3];
-            $credit = str_replace(",","",$credit);
+            $credit = trim(str_replace(",","",$credit));
             $gstin = $data[4];
             $address = $data[5];
             $state = $data[6];
@@ -421,8 +421,7 @@ class AccountsController extends Controller{
             if($debit!="" && $debit!="0" && $debit!="0.00"){
                $opening_balance = $debit;
                $opening_balance_type = "debit";
-            }
-            if($credit!="" && $credit!="0" && $credit!="0.00"){
+            }else if($credit!="" && $credit!="0" && $credit!="0.00"){
                $opening_balance = $credit;
                $opening_balance_type = "credit";
             }

@@ -88,7 +88,13 @@
                         <option value="RATE DIFFERENCE">RATE DIFFERENCE</option>
                      </select>
                   </div>
-                  
+                  <div class="mb-4 col-md-4">
+                     <label for="name" class="form-label font-14 font-heading">Date</label>
+                     <input type="date" id="date" class="form-control calender-bg-icon calender-placeholder" name="date" placeholder="Select date" value="{{$bill_date}}" required min="{{Session::get('from_date')}}" max="{{Session::get('to_date')}}">
+                     <ul style="color: red;">
+                        @error('date'){{$message}}@enderror                        
+                     </ul>
+                  </div>
                   <div class="mb-4 col-md-4 account_div">
                      <label for="name" class="form-label font-14 font-heading">Accounts</label>                     
                      <select class="form-select select2-single" name="party_id" id="party_id">
@@ -115,13 +121,6 @@
                   <div class="mb-1 col-md-1 voucher_no_div" style="display:none">
                      <br>
                      <a href="" title="View Invoice" target="__blank" id="invoice_id"><img src="{{ URL::asset('public/assets/imgs/eye-icon.svg')}}" style="margin-top: 20px;"></a>
-                  </div>
-                  <div class="mb-4 col-md-4">
-                     <label for="name" class="form-label font-14 font-heading">Date</label>
-                     <input type="date" id="date" class="form-control calender-bg-icon calender-placeholder" name="date" placeholder="Select date" value="{{$bill_date}}" required min="{{Session::get('from_date')}}" max="{{Session::get('to_date')}}">
-                     <ul style="color: red;">
-                        @error('date'){{$message}}@enderror                        
-                     </ul>
                   </div>
                   <div class="mb-4 col-md-4">
                      <label for="name" class="form-label font-14 font-heading">Series No.</label>
@@ -160,6 +159,7 @@
                         <input type="text" class="form-control" id="voucher_prefix" name="voucher_prefix" placeholder="" value=""  readonly style="text-align: right;">
                         <input type="hidden" id="sale_return_no" class="form-control" name="sale_return_no" value="" required readonly style="width: 30%;">
                         <input type="hidden" class="form-control" id="manual_enter_invoice_no" name="manual_enter_invoice_no">
+                        <input type="hidden" class="form-control" id="merchant_gst" name="merchant_gst">
                   </div>
                </div>
                <!-- With Gst With Item Section Start -->
@@ -168,7 +168,7 @@
                      <thead>
                         <tr class=" font-12 text-body bg-light-pink ">
                            <th class="w-min-50 border-none bg-light-pink text-body">S No.</th>
-                           <th class="w-min-50 border-none bg-light-pink text-body " style="width: 36%;">Description of Goods
+                           <th class="w-min-50 border-none bg-light-pink text-body " style="    width: 36%;">Description of Goods
                            </th>                           
                            <th class="w-min-50 border-none bg-light-pink text-body " style="text-align: right;padding-right: 24px;">Qty</th>
                            <th class="w-min-50 border-none bg-light-pink text-body " style="text-align: center;">Unit</th>
@@ -333,7 +333,25 @@
                                        <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg></a>
                                     </td>
                                  </tr>
-                              </div>                              
+                              </div>
+                              <!-- <tr id="billtr_2" class="font-14 font-heading bg-white bill_taxes_row sundry_tr">
+                                 <td class="w-min-50">
+                                    <select id="bill_sundry_2" class="w-95-parsent  bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="2">
+                                       <option value="">Select</option>
+                                       <?php
+                                       foreach ($billsundry as $value) {
+                                          if($value->effect_gst_calculation==0){?>
+                                             <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_2" id="sundry_option_<?php echo $value->id;?>_2" data-sundry_percent="<?php echo $value->sundry_percent;?>" data-sundry_percent_date="<?php echo $value->sundry_percent_date;?>" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
+                                             <?php 
+                                          }
+                                       } ?>
+                                    </select>
+                                 </td>
+                                 <td class="w-min-50 "><span name="tax_amt[]" class="tax_amount" id="tax_amt_2"></span><input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_2"></td>
+                                 <td class="w-min-50 "><input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_2" data-id="2" readonly  style="text-align:right;"></td>
+                                 <td></td>
+                              </tr> -->
+                              
                               <tr id="billtr_round_plus" class="font-14 font-heading bg-white bill_taxes_row sundry_tr" style="display:none">
                                  <td class="w-min-50">
                                     <select id="bill_sundry_round_plus" class=" w-95-parsent bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="round_plus">
@@ -738,10 +756,7 @@
       $("#sale_bill_id").val($('option:selected', this).attr('data-id'));
       $("#series_no").val($('option:selected', this).attr('data-series_no'));
       $("#material_center").val($('option:selected', this).attr('data-material_center'));
-      let date  = $('option:selected', this).attr('data-date');
-      if(date!=""){
-         $("#date").attr('min',date);
-      }
+     // $("#voucher_prefix").val($('option:selected', this).attr('data-series_no')+"/{{Session::get('default_fy')}}/CR");
       var invoice_id = $(this).val();
       let series_no = $('option:selected', this).attr('data-series_no');
       $.ajax({
@@ -755,41 +770,28 @@
          },
          success: function(data){
             var optionElements = '<option value="">Select</option>';
+            var itemQtyMap = {}; // to store item_id → max_qty
+
             $.each(data, function(key, val) {
-               optionElements += '<option unit_id="' + val.unit_id + '" data-val="' + val.unit + '" value="' + val.item_id + '" data-percent="' + val.gst_rate + '">' + val.items_name + '</option>';
+            optionElements += '<option unit_id="' + val.unit_id + '" ' +
+                     'data-val="' + val.unit + '" ' +
+                     'value="' + val.item_id + '" ' +
+                     'data-percent="' + val.gst_rate + '" ' +
+                     'data-qty="' + val.qty + '">' + val.items_name + '</option>';
+
+            itemQtyMap[val.item_id] = val.qty; // store item qty for JS access
             });
-            $("#goods_discription_tr_1").html(optionElements);
-            $("#series_no").change();
+
+         $("#goods_discription_tr_1").html(optionElements);
+         $("#series_no").change();
+
          }
       });
    });
    $(document).ready(function() {
-       // Properly initialize Select2 with search enabled
-    $('#party_id').select2({
-      placeholder: "Select Account",
-      allowClear: true,
-      width: '100%' // Ensure dropdown matches Bootstrap styling
-    });
-
-    // Move focus to next field after selecting an option
-    $('#party_id').on('select2:select', function (e) {
-      $('#voucher_no').focus();
-    });
-    // Properly initialize Select2 with search enabled
-    $('#voucher_no').select2({
-      placeholder: "Select Account",
-      allowClear: true,
-      width: '100%' // Ensure dropdown matches Bootstrap styling
-    });
-
-    // Move focus to next field after selecting an option
-    $('#voucher_no').on('select2:select', function (e) {
-      $('#series_no').focus();
-    });
       // Function to calculate amount and update total sum
-      window.calculateAmount = function(key=null) {     
-
-         customer_gstin = $('#party_id option:selected').attr("data-state_code");
+      window.calculateAmount = function(key=null) {         
+         customer_gstin = $('#party_id option:selected').attr("data-state_code");              
          if(customer_gstin==merchant_gstin.substring(0,2)){  
             $("#billtr_cgst").show();
             $("#billtr_sgst").show();
@@ -1247,29 +1249,53 @@
       });   
    });
    function call_fun(data) {
-      if($('#goods_discription_'+data).val()==""){
-         $("#quantity_"+data).val('');
-         $("#price_"+data).val('');
-         $("#amount_"+data).val('');
-         $("#quantity_"+data).keyup();
-         $("#price_"+data).keyup();
-         $("#amount_"+data).keyup();
-      }
-      var selectedOptionData = $('#goods_discription_' + data + ' option:selected').data('val');
-      var item_units_id = $('#goods_discription_' + data + ' option:selected').attr('unit_id');
-      var itemId = $('#goods_discription_' + data + ' option:selected').val();
-      var party_id = $('#party_id').val();
-      if (party_id.length > 0) {
-         $('#unit_' + data).val(selectedOptionData);
-         $('#units_' + data).val(item_units_id);
-         calculateAmount();
-      }else{
-         alert("Select Party Name First.");
-         $('#unit_' + data).val(selectedOptionData);
-         $('#units_' + data).val(item_units_id);      
-         $('#goods_discription_'+data).select2("val","");
-      }
+   // Clear related fields if no item selected
+   if ($('#goods_discription_' + data).val() == "") {
+      $("#quantity_" + data).val('');
+      $("#price_" + data).val('');
+      $("#amount_" + data).val('');
+      $("#quantity_" + data).keyup();
+      $("#price_" + data).keyup();
+      $("#amount_" + data).keyup();
    }
+
+   // Get selected <option> data attributes
+   var selectedOptionData = $('#goods_discription_' + data + ' option:selected').data('val');  // unit name
+   var item_units_id = $('#goods_discription_' + data + ' option:selected').attr('unit_id');    // unit ID
+   var itemId = $('#goods_discription_' + data + ' option:selected').val();                     // item ID
+   var party_id = $('#party_id').val();                                                         // customer
+
+   // Check if party is selected
+   if (party_id.length > 0) {
+      $('#unit_' + data).val(selectedOptionData);
+      $('#units_' + data).val(item_units_id);
+      calculateAmount();
+   } else {
+      alert("Select Party Name First.");
+      $('#unit_' + data).val(selectedOptionData);
+      $('#units_' + data).val(item_units_id);
+      $('#goods_discription_' + data).select2("val", "");
+      return;
+   }
+
+   // ✅ New logic: get max allowed quantity for this item
+   let maxQty = $('#goods_discription_' + data + ' option:selected').data('qty');
+
+   // Add `max` attribute and live validation to prevent exceeding allowed qty
+   let qtyInput = $('#quantity_' + data);
+   qtyInput.attr('max', maxQty);
+   qtyInput.attr('title', 'Max allowed: ' + maxQty);
+
+   // Re-bind the input event (unbind first to prevent duplicates)
+   qtyInput.off('input').on('input', function () {
+      let enteredQty = parseFloat($(this).val());
+      if (enteredQty > maxQty) {
+         alert("Entered quantity cannot exceed available quantity (" + maxQty + ").");
+         $(this).val('');
+      }
+   });
+}
+
    function getAccountDeatils(e) {
       var account_id = $(e).val();
       $.ajax({
@@ -1407,7 +1433,7 @@
                // if(val.voucher_no_prefix!="" && val.voucher_no_prefix!=null){
                //    name = val.voucher_no_prefix+val.financial_year+"/"+val.voucher_no;
                // }
-               optionElements += '<option value="' + val.voucher_no + '" data-id="'+val.id+'" data-series_no="'+val.series_no+'" data-material_center="'+val.material_center+'" data-voucher_no_prefix="'+val.voucher_no_prefix+'" data-date="'+val.date+'">' + name + '</option>';
+               optionElements += '<option value="' + val.voucher_no + '" data-id="'+val.id+'" data-series_no="'+val.series_no+'" data-material_center="'+val.material_center+'" data-voucher_no_prefix="'+val.voucher_no_prefix+'">' + name + '</option>';
             });
             $("#voucher_no").html(optionElements);
          }
@@ -1529,6 +1555,8 @@
          $(".with_gst_without_item_section").show();
          $(".item").select2();
       }
+      
+
    }
    $(".transport_info").click(function(){
       $("#transport_info_modal").modal('toggle');
@@ -1702,7 +1730,7 @@
       debitTotal();
       creditTotal();
    });
-
-   
+   $("#material_center").val($('option:selected', this).attr('data-mat_center'));
+   merchant_gstin = $('option:selected', this).attr('data-gst_no');
 </script>
 @endsection

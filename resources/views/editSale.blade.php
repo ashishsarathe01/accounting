@@ -76,8 +76,8 @@ foreach($manageitems as $value) {
                <div class="row">
                   <input type="hidden" name="sale_edit_id" value="{{$sale->id}}">
                   <div class="mb-3 col-md-3">
-                     <label for="name" class="form-label font-14 font-heading">Series No.</label>
-                     <select id="series_no" name="series_no" class="form-select" required autofocus>
+                     <label for="name" class="form-label font-14 font-heading" >Series No.</label>
+                     <select id="series_no" name="series_no" class="form-select"autofocus required>
                         <?php
                         if(count($mat_series) > 0) {
                            foreach ($mat_series as $value) { 
@@ -1691,51 +1691,125 @@ $('#party').on('select2:close', function (e) {
 });
 
 
-$(document).ready(function() {
-  // Initialize Select2 for all goods_items_# fields
-  $('[id^="goods_discription_tr_"]').each(function() {
+// $(document).ready(function() {
+//   // Initialize Select2 for all goods_items_# fields
+//   $('[id^="goods_discription_tr_"]').each(function() {
+//     $(this).select2({
+//       placeholder: "Select Item",
+//       allowClear: true,
+//       width: '100%'
+//     });
+//   });
+
+//   // When an item is selected
+//   $(document).on('select2:select', '[id^="goods_discription_tr_"]', function(e) {
+//     const currentId = $(this).attr('id');
+//     const match = currentId.match(/goods_discription_tr_(\d+)/);
+//     if (match) {
+//       const num = match[1];
+//       $('#quantity_tr_' + num).focus();
+//     }
+//   });
+
+//   // When selection is cleared
+//   $(document).on('select2:unselect', '[id^="goods_discription_tr_"]', function(e) {
+//     const currentId = $(this).attr('id');
+//     const match = currentId.match(/goods_discription_tr_(\d+)/);
+//     if (match) {
+//       const num = match[1];
+//       $('#quantity_tr_' + num).focus();
+//     }
+//   });
+
+//   // Handle re-selecting the same value
+//   $(document).on('select2:close', '[id^="goods_discription_tr_"]', function(e) {
+//     const selectedValue = $(this).val();
+//     const previousValue = $(this).data('previousValue');
+//     if (selectedValue === previousValue) {
+//       const currentId = $(this).attr('id');
+//       const match = currentId.match(/goods_discription_tr_(\d+)/);
+//       if (match) {
+//         const num = match[1];
+//         $('#quantity_tr_' + num).focus();
+//       }
+//     }
+//     // Update previous value
+//     $(this).data('previousValue', selectedValue);
+//   });
+// });
+$(document).ready(function () {
+  // Utility function to check if element is in viewport
+  function isInViewport(element) {
+    const rect = element[0].getBoundingClientRect();
+    return (
+      rect.top >= 0 &&
+      rect.left >= 0 &&
+      rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+      rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+    );
+  }
+
+  // Initialize Select2 for all relevant fields
+  $('[id^="goods_discription_tr_"]').each(function () {
     $(this).select2({
       placeholder: "Select Item",
       allowClear: true,
       width: '100%'
     });
+
+    // Store initial value as previousValue for comparison later
+    const initialVal = $(this).val();
+    $(this).data('previousValue', initialVal);
   });
 
-  // When an item is selected
-  $(document).on('select2:select', '[id^="goods_discription_tr_"]', function(e) {
+  function focusQuantityField(num) {
+    const input = $('#quantity_tr_' + num);
+    if (!input.is(':focus') && !isInViewport(input)) {
+      input[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    if (!input.is(':focus')) {
+      input.focus();
+    }
+  }
+
+  // On item selected
+  $(document).on('select2:select', '[id^="goods_discription_tr_"]', function () {
     const currentId = $(this).attr('id');
     const match = currentId.match(/goods_discription_tr_(\d+)/);
     if (match) {
-      const num = match[1];
-      $('#quantity_tr_' + num).focus();
+      focusQuantityField(match[1]);
     }
   });
 
-  // When selection is cleared
-  $(document).on('select2:unselect', '[id^="goods_discription_tr_"]', function(e) {
+  // On selection cleared
+  $(document).on('select2:unselect', '[id^="goods_discription_tr_"]', function () {
     const currentId = $(this).attr('id');
     const match = currentId.match(/goods_discription_tr_(\d+)/);
     if (match) {
-      const num = match[1];
-      $('#quantity_tr_' + num).focus();
+      focusQuantityField(match[1]);
     }
   });
 
-  // Handle re-selecting the same value
-  $(document).on('select2:close', '[id^="goods_discription_tr_"]', function(e) {
+  // On Select2 closed (handles re-selecting the same value)
+  $(document).on('select2:close', '[id^="goods_discription_tr_"]', function () {
     const selectedValue = $(this).val();
     const previousValue = $(this).data('previousValue');
+
     if (selectedValue === previousValue) {
       const currentId = $(this).attr('id');
       const match = currentId.match(/goods_discription_tr_(\d+)/);
       if (match) {
-        const num = match[1];
-        $('#quantity_tr_' + num).focus();
+        focusQuantityField(match[1]);
       }
     }
+
     // Update previous value
     $(this).data('previousValue', selectedValue);
   });
+
+  // OPTIONAL: if you want to apply this logic to #party too:
+  const partyInitial = $('#party').val();
+  $('#party').data('previousValue', partyInitial);
 });
 
 

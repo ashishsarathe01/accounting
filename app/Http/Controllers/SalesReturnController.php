@@ -20,8 +20,12 @@ use App\Models\Companies;
 use App\Models\AccountLedger;
 use App\Models\ItemLedger;
 use App\Models\AccountGroups;
-use App\Models\SaleReturnWithoutGstEntry;
 use App\Models\VoucherSeriesConfiguration;
+use App\Models\SaleInvoiceConfiguration;
+use App\Models\Bank;
+use App\Models\SaleInvoiceTermCondition;
+use App\Models\SaleReturnWithoutGstEntry;
+
 use Session;
 use DateTime;
 
@@ -66,6 +70,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
             ->orderBy('sales_returns.created_at', 'ASC')
             ->get();
       return view('saleReturn')->with('sale', $sale)->with('month_arr', $month_arr)->with("from_date",$from_date)->with("to_date",$to_date);
+      
    }
     /**
      * Show the specified resources in storage.
@@ -100,16 +105,37 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
             ->join('units', 'manage_items.u_name', '=', 'units.id')
             ->orderBy('manage_items.name')
             ->get();
+
       $companyData = Companies::where('id', Session::get('user_company_id'))->first();
 
       $GstSettings = (object)NULL;
-      if($companyData->gst_config_type == "single_gst") {
-         $GstSettings = DB::table('gst_settings')->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])->first();
-      }elseif ($companyData->gst_config_type == "multiple_gst") {
-         $GstSettings = DB::table('gst_settings_multiple')->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst"])->first();
+      if($companyData->gst_config_type == "single_gst"){
+         $GstSettings = DB::table('gst_settings')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])
+                           ->get();
+         $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series')
+                           ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_id'=>$GstSettings[0]->id])
+                           ->get();
+         if(count($branch)>0){
+            $GstSettings = $GstSettings->merge($branch);
+         }         
+      }else if($companyData->gst_config_type == "multiple_gst"){
+         $GstSettings = DB::table('gst_settings_multiple')
+                           ->select('id','gst_no','mat_center','series')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst"])
+                           ->get();
+         foreach ($GstSettings as $key => $value) {
+            $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series')
+                        ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_multiple_id'=>$value->id])
+                        ->get();
+            if(count($branch)>0){
+               $GstSettings = $GstSettings->merge($branch);
+            }
+         }         
       }
-      if(!$GstSettings || !isset($companyData->gst_config_type)){
-         return $this->failedMessage('Please Enter GST Configuration!','sale-return');
+     
+      if(!$companyData->gst_config_type || empty($companyData->gst_config_type) || !$GstSettings){
+         return $this->failedMessage('Please Enter GST Configuration!','sale');
       }
       $mat_series = array();
       if($companyData->gst_config_type == "single_gst"){
@@ -302,7 +328,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
                ->select('accounts.id','accounts.gstin','accounts.address','accounts.pin_code','accounts.account_name','states.state_code')
                ->orderBy('account_name')
                ->get();  
-      return view('addSaleReturn')->with('party_list', $party_list)->with('manageitems', $manageitems)->with('billsundry', $billsundry)->with('mat_series', $mat_series)->with('bill_date', $bill_date)->with('vendors', $vendors)->with('items', $items)->with('all_account_list', $all_account_list);
+      return view('addSaleReturn')->with('party_list', $party_list)->with('manageitems', $manageitems)->with('GstSettings', $GstSettings)->with('billsundry', $billsundry)->with('mat_series', $mat_series)->with('bill_date', $bill_date)->with('vendors', $vendors)->with('items', $items)->with('all_account_list', $all_account_list);
    }
 
     /**
@@ -397,11 +423,12 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
       $sale->tax_cgst = $request->input('cgst');
       $sale->tax_sgst = $request->input('sgst');
       $sale->tax_igst = $request->input('igst');
-     
+        $sale->merchant_gst = $request->input('merchant_gst');
       $sale->remark = $request->input('remark');
       $sale->station = $request->input('station');
 
       $sale->sale_return_no = $sale_return_no;
+     
       $sale->financial_year = $financial_year;
       $sale->sale_bill_id = $request->input('sale_bill_id');
       $sale->save();
@@ -504,7 +531,9 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
             $ledger->entry_type_id = $sale->id;
             $ledger->created_by = Session::get('user_id');
             $ledger->created_at = date('d-m-Y H:i:s');
-            $ledger->save();  
+            $ledger->save(); 
+            $configuration = SaleInvoiceConfiguration::with(['terms','banks'])->where('company_id',Session::get('user_company_id'))->first();
+            
             return redirect('sale-return-invoice/'.$sale->id)->withSuccess('Sale return added successfully!');
          }else if($request->input('nature')=="WITH GST" && $request->input('type')=="WITHOUT ITEM"){
             //
@@ -769,9 +798,10 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
                         ->select(['companies.*','states.name as sname'])
                         ->first();
       $sale_return = SalesReturn::leftjoin('sales','sales_returns.sale_bill_id','=','sales.id')
+                                 ->leftjoin('accounts','sales_returns.party','=','accounts.id')
                                  ->join('states','sales.billing_state','=','states.id')
                                  ->where('sales_returns.id',$id)
-                                 ->select(['sales_returns.date','sales_returns.invoice_no','sales_returns.total','sales.billing_name','sales.billing_address','sales.billing_pincode','sales.billing_gst','states.name as sname','sale_return_no','sales_returns.vehicle_no','sales_returns.gr_pr_no','sales_returns.transport_name','sales_returns.station','sales.voucher_no','sales.date as sale_date','sales.series_no','sales.financial_year','sales_returns.series_no as sr_series_no','sales_returns.financial_year as sr_financial_year','sr_nature','sr_type','sr_prefix'])
+                                 ->select(['sales_returns.date','sales_returns.id','sales_returns.invoice_no','sales_returns.total','sales.billing_name','sales.billing_address','sales.billing_pincode','sales.billing_gst','states.name as sname','sale_return_no','sales_returns.vehicle_no','sales_returns.gr_pr_no','sales_returns.transport_name','sales_returns.station','sales.voucher_no','sales.date as sale_date','sales.series_no','sales.financial_year','sales_returns.series_no as sr_series_no','sales_returns.financial_year as sr_financial_year','sr_nature','sr_type','sr_prefix','sales.merchant_gst','accounts.address as party_address'])
                                  ->first();      
       $items_detail = DB::table('sale_return_descriptions')->where('sale_return_id', $id)
             ->select('units.s_name as unit', 'units.id as unit_id', 'sale_return_descriptions.qty', 'sale_return_descriptions.price', 'sale_return_descriptions.amount', 'manage_items.name as items_name', 'manage_items.id as item_id','manage_items.hsn_code','manage_items.gst_rate')
@@ -838,10 +868,56 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
       }
       if($company_data->gst_config_type == "single_gst") {
          $GstSettings = DB::table('gst_settings')->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])->first();
-      }else if($company_data->gst_config_type == "multiple_gst") {
-         $GstSettings = DB::table('gst_settings_multiple')->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst"])->first();
+         //Seller Info
+         // echo "<pre>";
+         // print_r($GstSettings);die;
+         $seller_info = DB::table('gst_settings')
+                           ->join('states','gst_settings.state','=','states.id')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst",'gst_no' => $sale_return->merchant_gst,'series'=>$sale_return->series_no])
+                           ->select(['gst_no','address','pincode','states.name as sname'])
+                           ->first();
+         if(!$seller_info){
+            $seller_info = GstBranch::select('gst_number as gst_no','branch_address as address','branch_pincode as pincode')
+                           ->where(['delete' => '0', 'company_id' => $sale_return->company_id,'gst_number'=>$sale_return->merchant_gst,'branch_series'=>$sale_return->series_no])
+                           ->first();
+            $state_info = DB::table('states')
+                           ->where('id',$GstSettings->state)
+                           ->first();
+            $seller_info->sname = $state_info->name;
+         }
+      }else if($company_data->gst_config_type == "multiple_gst") {         
+         $GstSettings = DB::table('gst_settings_multiple')->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst",'gst_no' => $sale_return->merchant_gst])->first();
+         //Seller Info
+         $seller_info = DB::table('gst_settings_multiple')
+                           ->join('states','gst_settings_multiple.state','=','states.id')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst",'gst_no' => $sale_return->merchant_gst,'series'=>$sale_return->series_no])
+                           ->select(['gst_no','address','pincode','states.name as sname'])
+                           ->first();
+                          
+         if(!$seller_info){
+            $seller_info = GstBranch::select('gst_number as gst_no','branch_address as address','branch_pincode as pincode')
+                           ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_number'=>$sale_return->merchant_gst,'branch_series'=>$sale_return->series_no])
+                           ->first();
+            $state_info = DB::table('states')
+                                 ->where('id',$GstSettings->state)
+                                 ->first();
+            $seller_info->sname = $state_info->name;
+                          
+         }         
       }
-      return view('saleReturnInvoice')->with(['items_detail' => $items_detail, 'sale_sundry' => $sale_sundry,'company_data' => $company_data,'gst_detail'=>$gst_detail,'sale_return'=>$sale_return,'einvoice_status'=>$GstSettings->einvoice]);
+      Session::put('redirect_url','');
+      $financial_year = Session::get('default_fy');      
+      $y =  explode("-",$financial_year);
+      $from = $y[0];
+      $from = DateTime::createFromFormat('y', $from);
+      $from = $from->format('Y');
+      $to = $y[1];
+      $to = DateTime::createFromFormat('y', $to);
+      $to = $to->format('Y');
+      $month_arr = array($from.'-04',$from.'-05',$from.'-06',$from.'-07',$from.'-08',$from.'-09',$from.'-10',$from.'-11',$from.'-12',$to.'-01',$to.'-02',$to.'-03');
+      
+       $configuration = SaleInvoiceConfiguration::with(['terms','banks'])->where('company_id',Session::get('user_company_id'))->first();
+      return view('saleReturnInvoice')->with(['items_detail' => $items_detail, 'month_arr' => $month_arr,'configuration'=>$configuration, 'sale_sundry' => $sale_sundry,'company_data' => $company_data,'gst_detail'=>$gst_detail,'sale_return'=>$sale_return,'einvoice_status'=>$GstSettings->einvoice,'seller_info'=>$seller_info]);
    }
    public function saleReturnWithoutItemInvoice($id){
       $company_data = Companies::join('states','companies.state','=','states.id')
@@ -906,37 +982,85 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
                               ->orderBy('account_name')
                               ->get();      
       $companyData = Companies::where('id', Session::get('user_company_id'))->first();
+      $GstSettings = (object)NULL;
+      $GstSettings->mat_center = array();
+      $mat_series = array();
       if($companyData->gst_config_type == "single_gst") {
-         $GstSettings = DB::table('gst_settings')->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst",'series' => $sale_return->series_no])->first();
-         if($GstSettings){
-            $merchant_gst = $GstSettings->gst_no;
-         }else{            
-            $branch = GstBranch::select('gst_number as gst_no')
-                              ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'branch_series'=>$sale_return->series_no])
-                              ->first();
-            if($branch){
-               $merchant_gst = $branch->gst_no;
-            }
-         }         
+         $GstSettings = DB::table('gst_settings')->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])->first();
+
+         $mat_series = DB::table('gst_settings')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])
+                           ->get();
+         $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series')
+                           ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_id'=>$mat_series[0]->id])
+                           ->get();
+         if(count($branch)>0){
+            $mat_series = $mat_series->merge($branch);
+         }
       }elseif ($companyData->gst_config_type == "multiple_gst") {
-         $GstSettings = DB::table('gst_settings_multiple')->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst",'series' => $sale_return->series_no])->first();
-         if($GstSettings){
-            $merchant_gst = $GstSettings->gst_no;
-         }else{            
-            $branch = GstBranch::select('gst_number as gst_no')
-                              ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'branch_series'=>$sale_return->series_no])
-                              ->first();
-            if($branch){
-               $merchant_gst = $branch->gst_no;
+         $GstSettings = DB::table('gst_settings_multiple')->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst"])->first();
+
+         $mat_series = DB::table('gst_settings_multiple')
+                           ->select('id','gst_no','mat_center','series')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst"])
+                           ->get();
+         foreach ($mat_series as $key => $value) {
+            $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series')
+                        ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_multiple_id'=>$value->id])
+                        ->get();
+            if(count($branch)>0){
+               $mat_series = $mat_series->merge($branch);
             }
-         }         
+         }
       }
-      if(!isset($companyData->gst_config_type)){
-         return $this->failedMessage('Please Enter GST Configuration!','purchase-return');
-      } 
-      
+      if(!$GstSettings || !isset($companyData->gst_config_type)){
+         return $this->failedMessage('Please Enter GST Configuration!','sale-return');
+      }
       $financial_year = Session::get('default_fy'); 
-      
+      foreach ($mat_series as $key => $value) {
+         if($sale_return->series_no==$value->series){
+            $mat_series[$key]->invoice_start_from =  $sale_return->sale_return_no;
+            $mat_series[$key]->without_invoice_start_from =  $sale_return->sale_return_no;
+            $mat_series[$key]->invoice_prefix =  $sale_return->sr_prefix;
+         }else{
+            $series_configuration = VoucherSeriesConfiguration::where('company_id',Session::get('user_company_id'))
+               ->where('series',$value->series)
+               ->where('configuration_for','CREDIT NOTE')
+               ->where('status','1')
+               ->first();
+            $voucher_no = SalesReturn::select('sale_return_no')                   
+                        ->where('company_id',Session::get('user_company_id'))
+                        ->where('financial_year','=',$financial_year)
+                        ->where('sr_nature','!=',"WITHOUT GST")
+                        ->where('delete','=','0')
+                        ->where('series_no',$value->series)
+                        ->max(\DB::raw("cast(sale_return_no as SIGNED)"));
+            
+            if(!$voucher_no){
+               $mat_series[$key]->invoice_start_from =  "001";
+            }else{
+               $invc = $voucher_no + 1;
+               $invc = sprintf("%'03d", $invc);
+               $mat_series[$key]->invoice_start_from =  $invc;
+            }
+            //Without GST
+            $sale_return_no_without = SalesReturn::select('sale_return_no')                     
+                                                ->where('company_id',Session::get('user_company_id'))
+                                                ->where('financial_year','=',$financial_year)
+                                                ->where('sr_nature','=',"WITHOUT GST")
+                                                ->where('series_no','=',$value->series)
+                                                ->where('delete','=','0')
+                                                ->max(\DB::raw("cast(sale_return_no as SIGNED)"));
+            if(!$sale_return_no_without){
+               $mat_series[$key]->without_invoice_start_from =  "001";
+            }else{
+               $invc = $sale_return_no_without + 1;
+               $invc = sprintf("%'03d", $invc);
+               $mat_series[$key]->without_invoice_start_from =  $invc;
+            }
+         }
+         
+      }
       $billsundry = BillSundrys::where('delete', '=', '0')
                                  ->where('status', '=', '1')
                                  ->whereIn('company_id',[Session::get('user_company_id'),0])
@@ -982,7 +1106,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
                ->get();   
       //Withoyt GST and Without Item Data
       $without_gst = SaleReturnWithoutGstEntry::where('sale_return_id',$id)->get();              
-      return view('editSaleReturn')->with('party_list', $party_list)->with('billsundry', $billsundry)->with('sale_return', $sale_return)->with('sale_return_description', $sale_return_description)->with('sale_return_sundry', $sale_return_sundry)->with('vendors', $vendors)->with('items', $items)->with('all_account_list', $all_account_list)->with('without_gst', $without_gst)->with('merchant_gst',$merchant_gst);
+      return view('editSaleReturn')->with('party_list', $party_list)->with('billsundry', $billsundry)->with('mat_series', $mat_series)->with('sale_return', $sale_return)->with('sale_return_description', $sale_return_description)->with('sale_return_sundry', $sale_return_sundry)->with('vendors', $vendors)->with('items', $items)->with('all_account_list', $all_account_list)->with('without_gst', $without_gst);
    }
    public function update(Request $request){
       // echo "<pre>";

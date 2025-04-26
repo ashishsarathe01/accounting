@@ -291,4 +291,5 @@ Route::Resource('payment', PaymentController::class);
    Route::post('generate-ewaybill', [SalesController::class, 'generateEwayBill']);
    Route::post('cancel-einvoice', [SalesController::class, 'cancelEinvoice']);
    Route::post('cancel-ewaybill', [SalesController::class, 'cancelEwayBill']);
+   Route::post('get-item-average-details', [ItemLedgerController::class, 'itemAverageDetails']);
 });

@@ -13,6 +13,7 @@ use App\Models\Purchase;
 use App\Models\Sales;
 use App\Models\StockJournal;
 use App\Models\ItemAverage;
+use App\Models\ItemAverageDetail;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -73,32 +74,28 @@ class ItemLedgerController extends Controller
          $tdate = date('Y-m-d',strtotime($request->to_date));
          $y =  explode("-",$financial_year);
          $open_date = $y[0]."-04-01";
-         $open_date = date('Y-m-d',strtotime($open_date));
-         $item = DB::select(DB::raw("SELECT item_id,SUM(total_price) as total_price,SUM(in_weight) as in_weight,SUM(out_weight) as out_weight,manage_items.name,units.name as uname FROM item_ledger inner join manage_items on item_ledger.item_id=manage_items.id inner join units on manage_items.u_name=units.id WHERE item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$request->to_date."', '%Y-%m-%d') and item_ledger.status='1' and g_name!='' and item_ledger.delete_status='0' GROUP BY item_id order by manage_items.name"));
-
-         $item_in_data = DB::select(DB::raw("SELECT SUM(total_price) as total_price,SUM(in_weight) as in_weight,item_id FROM item_ledger WHERE (item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$request->to_date."', '%Y-%m-%d') and status='1' and delete_status='0' and in_weight!='' and source=2) || (item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$request->to_date."', '%Y-%m-%d') and status='1' and delete_status='0' and in_weight!='' and source=-1) GROUP BY item_id"));
-         foreach ($item_in_data as $key => $value) {
-            echo $value->total_price;
-            $check = ItemLedger::select('id')
-                        ->where('item_id',$value->item_id)
-                        ->whereRaw("REPLACE(total_price, '.00', '')=$value->total_price")
-                        ->whereRaw("REPLACE(in_weight, '.00', '')=$value->in_weight")
-                        //->where('total_price',$value->total_price)
-                        //->where('in_weight',$value->in_weight)
-                        ->where('source','-1')
-                        ->where('company_id',Session::get('user_company_id'))
-                        ->first();
-            if($check){
-               $item_in_data[$key]->opening = 1;
-            }else{
-               $item_in_data[$key]->opening = 0;
-            }
-         }
-            // echo "<pre>";
-            // print_r($item_in_data);die;
-         return view('itemledger')->with('item_list', $item_list)->with('items', $item)->with('item_id', $item_id)->with('opening', $opening)->with('item_in_data', $item_in_data)->with('fdate', $open_date)->with('tdate',$tdate);
+         $open_date = date('Y-m-d',strtotime($open_date));     
+         $sub = DB::table('item_averages')
+                     ->select(DB::raw('MAX(id) as latest_id'))
+                     ->where('stock_date', '<=', $request->to_date)
+                     ->groupBy('item_id');
+                 
+         $item = ItemAverage::join('manage_items', 'item_averages.item_id', '=', 'manage_items.id')
+                     ->join('units', 'manage_items.u_name', '=', 'units.id')
+                     ->whereIn('item_averages.id', $sub)
+                     ->select(
+                         'item_averages.item_id',
+                         'item_averages.average_weight',
+                         'item_averages.amount',
+                         'item_averages.stock_date',
+                         'manage_items.name as item_name',
+                         'units.name as unit_name'
+                     )
+                     ->orderBy('stock_date', 'desc')
+                     ->get();
+         //print_r($data->toArray());die;
+         return view('itemledger')->with('item_list', $item_list)->with('items', $item)->with('item_id', $item_id)->with('opening', $opening)->with('fdate', $open_date)->with('tdate',$tdate);
       }
-
       if(isset($request->from_date) && !empty($request->from_date) && isset($request->to_date) && !empty($request->to_date)){         
          $item = DB::select(DB::raw("SELECT * FROM item_ledger WHERE item_id='".$item_id."' and source!=-1 and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$request->to_date."', '%Y-%m-%d') and status=1 and delete_status='0' order by STR_TO_DATE(txn_date, '%Y-%m-%d')"));
       }else{
@@ -201,9 +198,6 @@ class ItemLedgerController extends Controller
       if(isset($request->from_date) && !empty($request->from_date) && isset($request->to_date) && !empty($request->to_date)){ 
          $fdate = date('Y-m-d',strtotime($request->from_date));
          $tdate = date('Y-m-d',strtotime($request->to_date));
-         $y =  explode("-",$financial_year);
-         $open_date = $y[0]."-04-01";
-         $open_date = date('Y-m-d',strtotime($open_date));
       }else{
          $fdate = date('Y-m-')."01";
          $tdate = date('Y-m-t');
@@ -226,55 +220,50 @@ class ItemLedgerController extends Controller
                                 ->select(['manage_items.id','manage_items.name'])
                                 ->orderBy('manage_items.name')
                                 ->get();
-      $item_data = [];
-      $opening_amount = 0;$opening_weight = 0;
-      $item_in_data = [];
-      if(isset($request->items_id)){
-         $opening_value = DB::select(DB::raw("SELECT SUM(total_price) as total_price,sum(in_weight) as in_weight FROM item_ledger WHERE item_id='".$item_id."' and STR_TO_DATE(txn_date, '%Y-%m-%d')=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and source='-1' and status='1' and delete_status='0' and in_weight!=''"));
-         $total_price = $opening_value[0]->total_price;
-         $in_weight = $opening_value[0]->in_weight;
-         $out_weight = 0;
-         $second_total_amount = 0;
-         if($open_date!=$request->from_date){           
-            $opening_in_value = DB::select(DB::raw("SELECT sum(in_weight) as in_weight,SUM(total_price) as total_price FROM item_ledger WHERE item_id='".$item_id."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".date('Y-m-d', strtotime($request->from_date. " - 1 days"))."', '%Y-%m-%d') and source!='-1' and status='1' and delete_status='0'  and in_weight!=''"));
-            if($opening_in_value[0]->in_weight!=0 && $opening_in_value[0]->in_weight!=''){
-               $total_price = $total_price + $opening_in_value[0]->total_price;
-               $in_weight = $in_weight + $opening_in_value[0]->in_weight; 
-               $second_total_amount = 1;              
-            }
-            $opening_out_value = DB::select(DB::raw("SELECT SUM(out_weight) as out_weight FROM item_ledger WHERE item_id='".$item_id."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and source!='-1' and status='1' and delete_status='0' and out_weight!=''")); 
-            $out_weight = $out_weight + $opening_out_value[0]->out_weight;       
-         }
-         if($in_weight!='' && $total_price!=''){
-            $closing_price = $total_price/$in_weight;
-            $closing_price = round($closing_price,2); 
-            $opening_weight = $in_weight - $out_weight;
-
-            if($second_total_amount==0 && $open_date==$request->from_date){
-               $opening_amount = round($total_price,2);
-            }else{               
-               $opening_amount = $opening_weight * $closing_price;
-               $opening_amount = round($opening_amount,2); 
-            }            
-         }else{
-            $opening_weight = 0 - $out_weight;
-            $opening_amount = 0;
-         }         
-         $item_data = DB::select(DB::raw("SELECT sum(in_weight) as in_weight,sum(out_weight) as out_weight,SUM(total_price) as total_price,txn_date FROM item_ledger WHERE item_id='".$item_id."' and source!=-1 and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$request->to_date."', '%Y-%m-%d') and status='1' and delete_status='0'  GROUP BY txn_date order by STR_TO_DATE(txn_date, '%Y-%m-%d') "));
-         
-         $item_in_data = DB::select(DB::raw("SELECT SUM(total_price) as total_price,SUM(in_weight) as in_weight,txn_date FROM item_ledger WHERE item_id='".$item_id."' and source!=-1 and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$request->to_date."', '%Y-%m-%d') and status='1' and delete_status='0' and in_weight!='' and source=2 GROUP BY txn_date order by STR_TO_DATE(txn_date, '%Y-%m-%d')"));
-      }
-
-      $new_purchase_data = ItemAverage::select('sale_weight','purchase_weight','average_weight','price','amount','stock_date')->where('item_id',$item_id)
+      $opening_amount = 0;$opening_weight = 0;      
+      $average_data = ItemAverage::select('sale_weight','purchase_weight','average_weight','price','amount','stock_date')->where('item_id',$item_id)
                   ->whereRaw("STR_TO_DATE(stock_date, '%Y-%m-%d')>=STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and STR_TO_DATE(stock_date, '%Y-%m-%d')<=STR_TO_DATE('".$request->to_date."', '%Y-%m-%d')")
                   ->get();
-      
-
-      // echo "<pre>";
-      // print_r($new_purchase_data->toArray());
-      // print_r($new_sale_data->toArray());die;
-      //print_r($item_data);
-      
-      return view('item_ledger_average')->with('item_list', $item_list)->with('opening', 0)->with('fdate', $fdate)->with('tdate',$tdate)->with('item_id', $item_id)->with('item_data', $item_data)->with('opening_amount', $opening_amount)->with('opening_weight', $opening_weight)->with('item_in_data', $item_in_data)->with('second_total_amount', $second_total_amount)->with('new_purchase_data', $new_purchase_data);
+      $average_opening = ItemAverage::where('item_id',$item_id)
+                     ->where('stock_date','<',$request->from_date)
+                     ->first();
+      if($average_opening){
+         $opening_amount = $average_opening->amount;
+         $opening_weight = $average_opening->average_weight;
+      }else{
+         $opening = ItemLedger::where('item_id',$item_id)
+                                    ->where('source','-1')
+                                    ->first();
+         $opening_amount = $opening->total_price;
+         $opening_weight = $opening->in_weight;
+      }      
+      return view('item_ledger_average')->with('item_list', $item_list)->with('fdate', $fdate)->with('tdate',$tdate)->with('item_id', $item_id)->with('opening_amount', $opening_amount)->with('opening_weight', $opening_weight)->with('average_data', $average_data);
    }
+   public function itemAverageDetails(Request $request){
+      $average_detail = ItemAverageDetail::where('item_id',$request->items_id)
+                     ->where('entry_date',$request->date)
+                     ->get();
+      $opening_amount = 0;$opening_weight = 0;
+      $average_opening = ItemAverage::where('item_id',$request->items_id)
+                     ->where('stock_date','<',$request->date)
+                     ->first();
+      if($average_opening){
+         $opening_amount = $average_opening->amount;
+         $opening_weight = $average_opening->average_weight;
+      }else{
+         $opening = ItemLedger::where('item_id',$request->items_id)
+                                    ->where('source','-1')
+                                    ->first();
+         $opening_amount = $opening->total_price;
+         $opening_weight = $opening->in_weight;
+      }
+      $response = array(
+         'status' => true,
+         'data' => $average_detail,
+         'opening_amount' => $opening_amount,
+         'opening_weight' => $opening_weight,
+      );
+      return json_encode($response);
+   }
+   
 }

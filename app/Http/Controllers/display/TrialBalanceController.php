@@ -8,6 +8,7 @@ use App\Models\Accounts;
 use App\Models\ItemLedger;
 use App\Models\AccountHeading;
 use App\Models\AccountGroups;
+use App\Helpers\CommonHelper;
 use DB;
 use Session;
 
@@ -88,7 +89,7 @@ class TrialBalanceController extends Controller
          }
       }
       $stock_in_hand = round($stock_in_hand,2);
-
+      $stock_in_hand = CommonHelper::ClosingStock($to_date);
       if($stock_in_hand<0){
          $newCompete = collect([
             [
@@ -200,7 +201,8 @@ class TrialBalanceController extends Controller
                         $total_weight = $total_weight + $remaining_weight;
                      }
                   }
-                  $stock_in_hand = round($stock_in_hand,2);
+                  //$stock_in_hand = round($stock_in_hand,2);
+                  $stock_in_hand = CommonHelper::ClosingStock($to_date);
                   if($stock_in_hand<0){
                      $value->accountGroup[$k2]->debit = 0;
                      $value->accountGroup[$k2]->credit = $stock_in_hand;                     
@@ -319,6 +321,8 @@ class TrialBalanceController extends Controller
          }
       }
       $stock_in_hand = round($stock_in_hand,2);
+      $stock_in_hand = CommonHelper::ClosingStock($to_date);
+      
       if($stock_in_hand<0){
          $newCompete = collect([
             [

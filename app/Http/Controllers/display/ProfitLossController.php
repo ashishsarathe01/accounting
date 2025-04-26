@@ -18,6 +18,7 @@ use App\Models\ClosingStock;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use App\Helpers\CommonHelper;
 use DB;
 use Session;
 use DateTime;
@@ -296,6 +297,7 @@ class ProfitLossController extends Controller{
          }
       }
       $closing_stock = round($closing_stock,2);
+      $closing_stock = CommonHelper::ClosingStock($to_date);
       return  view('display/profitLoss')->with('data', ['tot_purchase_amt' => $tot_purchase_amt+$tot_purchase_sundry_amt, 'tot_sale_amt' => $tot_sale_amt+$tot_sale_sundry_amt, 'tot_purchase_return_amt' => $tot_purchase_return_amt, 'tot_sale_return_amt' => $tot_sale_return_amt, 'financial_year' => $financial_year,'direct_expenses' => $direct_expenses,'direct_income' => $direct_income,'opening_stock' => $opening_stock,'closing_stock' => $closing_stock,'indirect_expenses' => $indirect_expenses,'indirect_income' => $indirect_income])->with('from_date',$from_date)->with('to_date',$to_date)->with('opening_stock',$opening_stock)->with('indirect_expenses_credit',$indirect_expenses_credit)->with('direct_expenses_credit',$direct_expenses_credit)->with('debit_indirect_income',$debit_indirect_income)->with('debit_direct_income',$debit_direct_income);
    }
    public function filter(Request $request){
@@ -557,6 +559,7 @@ class ProfitLossController extends Controller{
          }
       }
       $closing_stock = round($closing_stock,2);
+      $closing_stock = CommonHelper::ClosingStock($to_date);
       return  view('display/profitLoss')->with('data', ['tot_purchase_amt' => $tot_purchase_amt+$tot_purchase_sundry_amt, 'tot_sale_amt' => $tot_sale_amt+$tot_sale_sundry_amt, 'tot_purchase_return_amt' => $tot_purchase_return_amt, 'tot_sale_return_amt' => $tot_sale_return_amt, 'financial_year' => $financial_year,'direct_expenses' => $direct_expenses,'direct_income' => $direct_income,'opening_stock' => $opening_stock,'closing_stock' => $closing_stock,'indirect_expenses' => $indirect_expenses,'indirect_income' => $indirect_income])->with('from_date',$from_date)->with('to_date',$to_date)->with('opening_stock',$opening_stock)->with('indirect_expenses_credit',$indirect_expenses_credit)->with('direct_expenses_credit',$direct_expenses_credit)->with('debit_indirect_income',$debit_indirect_income)->with('debit_direct_income',$debit_direct_income);
    }
    public function saleByMonth(Request $request,$financial_year){

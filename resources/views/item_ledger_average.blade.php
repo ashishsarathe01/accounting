@@ -54,8 +54,23 @@
                      </tr>
                   </thead>
                   <tbody>
-                     @foreach($new_purchase_data as $purchase)                        
-                        <tr>
+                  <tr>
+                          <td>Opening</td>
+                          <td style="text-align: right;"></td>
+                          <td style="text-align: right;"></td>
+                          <td style="text-align: right;">{{$opening_weight}}</td>
+                          <td style="text-align: right;">                             
+                              @php 
+                              echo $average_price = round($opening_amount/$opening_weight,6);
+                              @endphp
+                           </td>
+                           <td style="text-align: right;">
+                           @php                            
+                              echo number_format($opening_amount,2);
+                           @endphp</td>
+                        </tr>
+                     @foreach($average_data as $purchase)                        
+                        <tr class="average_details" data-date="{{$purchase->stock_date}}" style="cursor: pointer;">
                            <td>{{date('d-m-Y',strtotime($purchase->stock_date))}}</td>
                            <td style="text-align: right;">{{$purchase->purchase_weight}}</td>
                            <td style="text-align: right;">{{$purchase->sale_weight}}</td>
@@ -64,59 +79,7 @@
                            <td style="text-align: right;">{{number_format($purchase->amount,2)}}</td>
                         </tr>
                      @endforeach
-                     <tr><td colspan="6">----------------------</td></tr>
-                     <!-- @php $average_price = 0;  @endphp                     
-                     @if($opening_weight!=0 && $opening_weight!='')
-                        <tr>
-                          <td>Opening</td>
-                          <td style="text-align: right;"></td>
-                          <td style="text-align: right;"></td>
-                          <td style="text-align: right;">{{$opening_weight}}</td>
-                          <td style="text-align: right;">
-                              @if($opening_weight!=0)
-                                 {{number_format($opening_amount/$opening_weight,2)}}
-                              @endif
-                              @php $average_price = round($opening_amount/$opening_weight,4);@endphp
-                           </td>
-                           <td style="text-align: right;">
-                           @php 
-                           if($second_total_amount==0){
-                              $opening_amount = round($opening_amount,2);
-                           }else{
-                              $opening_amount = $opening_weight*$average_price;
-                           }
-                           echo number_format($opening_amount,2);
-                           @endphp</td>
-                        </tr>
-                     @endif
-                     @php 
-                        $total_amount_result = array();
-                        foreach ($item_in_data as $element){                          
-                           $total_amount_result[$element->txn_date][] = array("amount"=>$element->total_price,"weight"=>$element->in_weight);
-                        }             
-                     @endphp
-                     @foreach($item_data as $i=>$item)
-                        @php                                                     
-                           if($item->in_weight!=0 && $item->in_weight!=''){
-                              foreach($total_amount_result as $k=>$v){
-                                 if($k==$item->txn_date){
-                                    $average_price = ($opening_amount + $v[0]['amount'])/($v[0]['weight'] + $opening_weight);
-                                 }
-                              }                              
-                           }
-                           $average_price = round($average_price,4);                        
-                           $opening_weight = $opening_weight + $item->in_weight - $item->out_weight;
-                           $opening_amount = $opening_weight * $average_price;
-                        @endphp
-                        <tr>
-                           <td>{{date('d-m-Y',strtotime($item->txn_date))}}</td>
-                           <td style="text-align: right;">{{$item->in_weight}}</td>
-                           <td style="text-align: right;">{{$item->out_weight}}</td>
-                           <td style="text-align: right;">{{$opening_weight}}</td>
-                           <td style="text-align: right;">{{number_format($average_price,2)}}</td>
-                           <td style="text-align: right;">{{number_format($opening_amount,2)}}</td>
-                        </tr>
-                     @endforeach -->
+                    
                   </tbody>                  
                   </div>
                </table>
@@ -124,6 +87,34 @@
          </div>
       </div>
    </section>
+</div>
+
+<div class="modal fade" id="item_ledger_details" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+   <div class="modal-dialog  modal-dialog-centered modal-lg">
+      <div class="modal-content p-4 border-divider border-radius-8">
+         <div class="modal-header border-0 p-0">
+            <h4 class="modal-title">Average Details <span id="modal_parameter_name"></span></h4>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div>
+         <div class="modal-body text-center p-0">
+            <table class="table table-striped table-bordered table-sm m-0 shadow-sm">
+               <thead>
+                  <tr class=" font-12 text-body bg-light-pink">                        
+                     <th class="w-min-120 border-none bg-light-pink text-body">Date </th>
+                     <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Purchase Quantity</th>
+                     <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Purchase Amount</th>
+                     <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Sale Quantity</th>      
+                  </tr>
+               </thead>
+               <tbody>
+               </tbody>
+            </table>
+         </div>
+         <div class="modal-footer border-0 mx-auto p-0">
+            <button type="button" class="btn btn-danger cancel">Close</button>
+         </div>
+      </div>
+   </div>
 </div>
 </body>
 @include('layouts.footer')
@@ -173,5 +164,69 @@
       }
    }
     $(".select2-single").select2();
+
+    $(".average_details").click(function(){
+      var date = $(this).attr('data-date');      
+      if(date != ''){
+         $.ajax({
+            url: '{{url("get-item-average-details")}}',
+            type: 'POST',
+            dataType: 'JSON',
+            data: {
+               _token: '<?php echo csrf_token() ?>',
+               date: date,
+               items_id: '<?php echo $_GET['items_id'];?>'
+            },
+            success: function(res){
+               if(res.status == true){
+                  let html = "";
+                  let purchase_weight = 0;
+                  let purchase_total_amount = 0;
+                  let sale_weight = 0;
+                  res.data.forEach(function(item) {
+                     if(item.purchase_weight == null){
+                        item.purchase_weight = '-';
+                     }else{
+                        purchase_weight += parseFloat(item.purchase_weight);
+                     }
+                     if(item.purchase_total_amount == null){
+                        item.purchase_total_amount = '-';
+                     }else{
+                        purchase_total_amount += parseFloat(item.purchase_total_amount);
+                     }
+                     if(item.sale_weight == null){
+                        item.sale_weight = '-';
+                     }else{
+                        sale_weight += parseFloat(item.sale_weight);
+                     }
+                    
+                     html += "<tr>";
+                     html += "<td>"+item.entry_date+"</td>";
+                     html += "<td style='text-align: right;'>"+item.purchase_weight+"</td>";
+                     html += "<td style='text-align: right;'>"+item.purchase_total_amount+"</td>";
+                     html += "<td style='text-align: right;'>"+item.sale_weight+"</td>";                     
+                     html += "</tr>";
+                  });
+                  html += "<tr>";
+                  html += "<th>Total</th>";
+                  html += "<th style='text-align: right;'>"+purchase_weight+"</th>";
+                  html += "<th style='text-align: right;'>"+purchase_total_amount+"</th>";
+                  html += "<th style='text-align: right;'>"+sale_weight+"</th>";                     
+                  html += "</tr>";
+                  html += "<tr>";
+                  
+                  $("#modal_parameter_name").html(" | Opening Weight : "+res.opening_weight+" | Opening Amount : "+res.opening_amount);
+                  $("#item_ledger_details tbody").html(html);
+                  $("#item_ledger_details").modal('show');
+               }else{
+                  alert("No data found.");
+               }
+            }
+         });
+      }
+   });
+   $(".cancel").click(function() {
+       $("#item_ledger_details").modal("hide");
+   });
 </script>
 @endsection

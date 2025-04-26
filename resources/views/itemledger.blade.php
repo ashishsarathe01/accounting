@@ -61,8 +61,7 @@
                </form>
             </div>
             <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
-               <h5 class="master-table-title m-0 py-2">Items Ledger</h5>
-               
+               <h5 class="master-table-title m-0 py-2">Items Ledger</h5>               
                <span class="ms-auto font-14 fw-bold font-heading">
                    Opening Bal. : {{abs($opening)}} @if($opening<0)  @else  @endif
                </span>
@@ -93,44 +92,28 @@
                      <?php
                      $tot_blance = $opening;
                      $in = 0; $out = 0;setlocale(LC_MONETARY, 'en_IN');$qty = 0;
-                     if(isset($item_id) && $item_id=='all'){
-                        $result = array();
-                        foreach ($item_in_data as $element){
-                           if($element->opening==1){
-                              $result[$element->item_id][] = $element->total_price/$element->in_weight;
-                           }else{
-                              $result[$element->item_id][] = round($element->total_price/$element->in_weight,2);
-                           }
-                           
-                        }
-                     }
-                     // echo "<pre>";
-                     // print_r($item_in_data);
+                     
+                     
                      foreach($items as $value){
                         if(isset($item_id) && $item_id=='all'){ ?>
                            <tr class="font-14 font-heading bg-white redirect_average_page"  data-item_id="{{$value->item_id}}" data-from_date="{{$fdate}}" data-to_date="{{$_GET['to_date']}}" style="cursor: pointer;">
-                              <td class="w-min-120"><?php echo $value->name; ?></td>
+                              <td class="w-min-120"><?php echo $value->item_name; ?></td>
                               <td class="w-min-120">Item</td>
                               <td class="w-min-120" style="text-align: right;">
                                  <?php 
-                                 echo $value->in_weight-$value->out_weight;
+                                 echo $value->average_weight;
                                  ?>
                               </td>
-                              <td class="w-min-120"><?php echo $value->uname;?></td>
+                              <td class="w-min-120"><?php echo $value->unit_name;?></td>
                               <td class="w-min-120" style="text-align: right;">
                                  <?php 
-                                 $total_blance = 0;
-                                 foreach($result as $k=>$v){
-                                    if($k==$value->item_id){
-                                       $total_blance = ($value->in_weight-$value->out_weight)*$v[0];
-                                    }
-                                 }  
-                                 echo $total_blance;?>                                    
+                                  
+                                 echo $value->amount;?>                                    
                               </td>
                            </tr>
                            <?php
-                           $qty = $qty + $value->in_weight - $value->out_weight;
-                           $tot_blance = $tot_blance + $total_blance;
+                           $qty = $qty + $value->average_weight;
+                           $tot_blance = $tot_blance + $value->amount;
                         }else{                            
                            $inWeight = isset($value['in_weight']) ? $value['in_weight'] : 0;
                            $outWeight = isset($value['out_weight']) ? $value['out_weight'] : 0;
