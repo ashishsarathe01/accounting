@@ -53,7 +53,7 @@ use App\Http\Controllers\AdminModuleController\AccountController;
 */
 /*Route::get('/', function () {
     return view('welcome');
-});*/
+});*/ 
 Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
 //Route::prefix('admin')->name('admin.')->group(function(){
    Route::get('/',[AdminAuthController::class, 'index'])->name('password.login');
