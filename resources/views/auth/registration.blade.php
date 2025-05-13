@@ -40,15 +40,10 @@
                         <div class="position-relative">
                             <input type="text" class="form-control pl-56" id="mobile_no" required name="mobile_no" placeholder="Enter mobile number" />
                             <span class="position-absolute login-number font-14">+91</span>
-                            <button type="button" class="btn btn-link-primary border-0 font-12 position-absolute verify-button" data-bs-toggle="modal" data-bs-target="#exampleModal">VERIFY</button>
+                            <button type="button" class="btn btn-link-primary border-0 font-12 position-absolute verify-button">VERIFY</button>
                         </div>
                     </div>
-                    <!--<div class="mb-4 col-md-6">
-                        <label for="contact-number" class="form-label font-14 heading-color">Company Name</label>
-                        <div class="position-relative">
-                            <input type="text" class="form-control" id="contact-number" placeholder="Enter company name" />
-                        </div>
-                    </div>-->
+                    
                     <div class="mb-4 col-md-6">
                         <label for="password" class="form-label font-14 heading-color">Set Password</label>
                         <div class="position-relative">
@@ -66,7 +61,7 @@
                 </div>
 
                 <div class="text-center">
-                    <button type="submit" class="btn btn-creat btn-primary mb-4">CREATE ACCOUNT</button>
+                    <button type="submit" disabled class="btn btn-creat btn-primary mb-4 create_account_btn">CREATE ACCOUNT</button>
                 </div>
             </form>
             <div class="text-center">
@@ -78,91 +73,107 @@
         </div>
     </div>
 </section>
-<!--<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">{{ __('Register') }}</div>
-  
-                <div class="card-body">
-                    <form method="POST" action="{{ route('register') }}">
-                        @csrf
-  
-                        <div class="row mb-3">
-                            <label for="name" class="col-md-4 col-form-label text-md-end">{{ __('Name') }}</label>
-  
-                            <div class="col-md-6">
-                                <input id="name" type="text" class="form-control @error('name') is-invalid @enderror" name="name" value="{{ old('name') }}" required autocomplete="name" autofocus>
-  
-                                @error('name')
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $message }}</strong>
-                                    </span>
-                                @enderror
-                            </div>
-                        </div>
-  
-                        <div class="row mb-3">
-                            <label for="email" class="col-md-4 col-form-label text-md-end">{{ __('Email Address') }}</label>
-  
-                            <div class="col-md-6">
-                                <input id="email" type="email" class="form-control @error('email') is-invalid @enderror" name="email" value="{{ old('email') }}" required autocomplete="email">
-  
-                                @error('email')
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $message }}</strong>
-                                    </span>
-                                @enderror
-                            </div>
-                        </div>
-  
-                        <div class="row mb-3">
-                            <label for="mobile_no" class="col-md-4 col-form-label text-md-end">{{ __('Mobile No') }}</label>
-  
-                            <div class="col-md-6">
-                                <input id="mobile_no" type="text" class="form-control @error('mobile_no') is-invalid @enderror" name="mobile_no" value="{{ old('mobile_no') }}" required autocomplete="mobile_no" autofocus>
-  
-                                @error('mobile_no')
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $message }}</strong>
-                                    </span>
-                                @enderror
-                            </div>
-                        </div>
-  
-                        <div class="row mb-3">
-                            <label for="password" class="col-md-4 col-form-label text-md-end">{{ __('Password') }}</label>
-  
-                            <div class="col-md-6">
-                                <input id="password" type="password" class="form-control @error('password') is-invalid @enderror" name="password" required autocomplete="new-password">
-  
-                                @error('password')
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $message }}</strong>
-                                    </span>
-                                @enderror
-                            </div>
-                        </div>
-  
-                        <div class="row mb-3">
-                            <label for="password-confirm" class="col-md-4 col-form-label text-md-end">{{ __('Confirm Password') }}</label>
-  
-                            <div class="col-md-6">
-                                <input id="password-confirm" type="password" class="form-control" name="password_confirmation" required autocomplete="new-password">
-                            </div>
-                        </div>
-  
-                        <div class="row mb-0">
-                            <div class="col-md-6 offset-md-4">
-                                <button type="submit" class="btn btn-primary">
-                                    {{ __('Register') }}
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
+<div class="modal fade" id="otp_modal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+   <div class="modal-dialog w-360  modal-dialog-centered  ">
+      <div class="modal-content p-4 border-divider border-radius-8">
+         <div class="modal-header border-0 p-0">
+         <h4 class="modal-title"><span id="modal_parameter_name"></span>Enter OTP</h4>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div>
+            <div class="modal-body text-center p-0">               
+               <input type="text" class="form-control mb-4" id="otp" required name="otp" placeholder="Enter OTP" />
             </div>
-        </div>
-    </div>
-</div>-->
+            <div class="modal-footer border-0 mx-auto p-0">
+               <button type="button" class="ms-3 btn btn-red verify_otp">Submit</button>
+            </div>
+      </div>
+   </div>
+</div>
+@include('layouts.footer')
+<script>
+    $(document).ready(function() {
+        $('.verify-button').on('click', function() {
+            let mobileNumber = $('#mobile_no').val();
+            if (mobileNumber.length!=10) {
+                alert('Please enter a valid mobile number');
+                return;
+            }
+            // Make an AJAX request to send the OTP
+            $.ajax({
+                url: "{{route('send-otp')}}", // Update with your route to send OTP
+                type: 'POST',
+                data: {
+                    mobile_no: mobileNumber,
+                    _token: '{{ csrf_token() }}' // Include CSRF token for security
+                },
+                success: function(res) {
+                    let response = JSON.parse(res);
+                    if (response.status==1) {
+                        alert('OTP sent successfully!');
+                        $('#otp_modal').modal('show');
+                        // Optionally, you can show the OTP modal here
+                    } else {
+                        alert('Failed to send OTP. Please try again.');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    if(xhr.responseJSON.errors.mobile_no[0]){
+                        alert(xhr.responseJSON.errors.mobile_no[0]);
+                    }else{
+                        alert('An error occurred. Please try again.');
+                    }
+                    
+                }
+            });
+        });
+        $('.verify_otp').on('click', function() {
+            let otp = $('#otp').val();
+            if (otp.length!=4) {
+                alert('Please enter a valid otp');
+                return;
+            }
+            // Make an AJAX request to send the OTP
+            $.ajax({
+                url: "{{route('verify-otp')}}", // Update with your route to send OTP
+                type: 'POST',
+                data: {
+                    otp: otp,
+                    _token: '{{ csrf_token() }}' // Include CSRF token for security
+                },
+                success: function(res) {
+                    let response = JSON.parse(res);
+                    if (response.status==1) {
+                        alert(response.message);
+                        $('.create_account_btn').removeAttr('disabled');
+                        $('#otp_modal').modal('hide');
+                        $(".verify-button").html("<span style='color:green'>VERIFIED</span>");
+                    }else if (response.status==0) {
+                        alert(response.message);
+                    } else {
+                        alert('Failed to send OTP. Please try again.');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    alert('An error occurred. Please try again.');
+                }
+            });
+        });
+        $("#mobile_no").on('input', function() {
+            $(".verify-button").html("VERIFY");
+            $('.create_account_btn').attr('disabled', true);
+            $('#otp').val('');
+            $('#otp_modal').modal('hide');
+            $.ajax({
+                url: "{{route('change-otp-verify-status')}}", // Update with your route to send OTP
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}' // Include CSRF token for security
+                },
+                success: function(res) {
+                    
+                }
+            });
+        });
+    });
+</script>
 @endsection

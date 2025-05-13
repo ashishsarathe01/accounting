@@ -65,7 +65,7 @@
                            <?php 
                            setlocale(LC_MONETARY, 'en_IN');                           
                            if($profitloss<0){
-                             echo number_format(abs($profitloss),2);
+                             echo formatIndianNumber(abs($profitloss));
                               $liability_total = $liability_total + abs($profitloss);
                            }else{
                               echo "&nbsp;";
@@ -140,9 +140,17 @@
                            <div class="col-md-12 fw-500 font-14 d-flex px-3 py-12 border-bottom-divider get_group_detail" data-id="{{$value->id}}" style="cursor:pointer;color: #0000EE">{{$value->name}}
                               <span class="ms-auto">
                                  <?php 
-                                 setlocale(LC_MONETARY, 'en_IN');                                 
-                                 echo number_format(abs($amount),2);
-                                 $liability_total = $liability_total + abs($amount);                                 
+                                 setlocale(LC_MONETARY, 'en_IN');     
+                                 if($amount>0){
+                                    echo "- ".formatIndianNumber($amount);
+                                    $liability_total = $liability_total - $amount;  
+                                 }else{
+                                    echo formatIndianNumber(abs($amount));
+                                    $liability_total = $liability_total + abs($amount);  
+                                 }                          
+                                 
+
+                                                                
                                  ?>
                               </span>
                            </div>
@@ -166,7 +174,7 @@
                            <?php 
                            setlocale(LC_MONETARY, 'en_IN');                           
                            if($profitloss>0){
-                              echo number_format(abs($profitloss),2);
+                              echo formatIndianNumber(abs($profitloss));
                               $asset_total = $asset_total + abs($profitloss);
                            }else{
                               echo "&nbsp;";
@@ -231,7 +239,7 @@
                               <span class="ms-auto">
                                  <?php 
                                  setlocale(LC_MONETARY, 'en_IN');                                 
-                                 echo $debit - $credit;
+                                 echo formatIndianNumber($debit - $credit);
                                  $asset_total = $asset_total + abs($debit-$credit);
                                  
                                  ?>
@@ -260,7 +268,7 @@
                         <span class="ms-auto">
                            <?php 
                           if($total<0){ 
-                                 echo abs($total);
+                                 echo formatIndianNumber(abs($total));
                               }                             
                            ?>
                         </span>
@@ -270,9 +278,9 @@
                         <span class="ms-auto">
                            <?php                            
                            if($total>0){ 
-                              echo abs($liability_total);
+                              echo formatIndianNumber(abs($liability_total));
                            }else{
-                              echo abs($asset_total);                           
+                              echo formatIndianNumber(abs($asset_total));                           
                            }                              
                            ?>
                         </span>
@@ -292,7 +300,7 @@
                      <span class="ms-auto">
                         <?php                       
                         if($total>0){ 
-                              echo abs($total);
+                              echo formatIndianNumber(abs($total));
                            }                         
                         ?>
                      </span>
@@ -301,9 +309,9 @@
                      <span class="ms-auto">
                         <?php                            
                         if($total>0){ 
-                           echo abs($liability_total);
+                           echo formatIndianNumber(abs($liability_total));
                         }else{
-                          echo abs($asset_total);                           
+                          echo formatIndianNumber(abs($asset_total));                           
                         }                              
                         ?>
                      </span>

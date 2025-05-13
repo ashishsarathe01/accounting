@@ -246,14 +246,15 @@ class ProfitLossController extends Controller{
                   ->where('status','1')
                   ->where('financial_year',$financial_year)
                   ->sum('debit');
-      //Opening Stock      
-      $opening_stock = ItemLedger::where('status', '1')  
-                  ->where('company_id',Session::get('user_company_id'))
-                  ->where('delete_status','0')
-                  ->where(function($query) use ($from_date){
-                     $query->whereRaw("STR_TO_DATE(txn_date,'%Y-%m-%d')<STR_TO_DATE('".$from_date."','%Y-%m-%d')");
-                     $query->orWhere('source','=','-1');
-                  })->sum('total_price');
+      //Opening Stock 
+      $opening_stock = 0;
+    //   $opening_stock = ItemLedger::where('status', '1')  
+    //               ->where('company_id',Session::get('user_company_id'))
+    //               ->where('delete_status','0')
+    //               ->where(function($query) use ($from_date){
+    //                  $query->whereRaw("STR_TO_DATE(txn_date,'%Y-%m-%d')<STR_TO_DATE('".$from_date."','%Y-%m-%d')");
+    //                  $query->orWhere('source','=','-1');
+    //               })->sum('total_price');
       $item_account = ItemLedger::where('status', '1')  
                   ->where('company_id',Session::get('user_company_id'))
                   ->where('delete_status','0')
@@ -277,8 +278,10 @@ class ProfitLossController extends Controller{
          $price_arr = array_filter($price_arr);
          $average = array_sum($price_arr)/count($price_arr);
          $average = round($average,2);
-         $opening_stock = $opening_stock + ($item_balance*$average);
+         //$opening_stock = $opening_stock + ($item_balance*$average);
       }
+       $previous_date = Carbon::parse($from_date)->subDay();
+    $opening_stock = CommonHelper::ClosingStock($previous_date);  
       //Closing Stock      
       $open_date = $y[0]."-04-01";
       $open_date = date('Y-m-d',strtotime($open_date));
@@ -311,14 +314,15 @@ class ProfitLossController extends Controller{
          $from_date = $request->from_date;
          $to_date = $request->to_date;
       } 
-      //Opening Stock      
-      $opening_stock = ItemLedger::where('status', '1')  
-                  ->where('company_id',Session::get('user_company_id'))
-                  ->where('delete_status','0')
-                  ->where(function($query) use ($from_date){
-                     $query->whereRaw("STR_TO_DATE(txn_date,'%Y-%m-%d')<STR_TO_DATE('".$from_date."','%Y-%m-%d')");
-                     $query->orWhere('source','=','-1');
-                  })->sum('total_price');
+      //Opening Stock 
+      $opening_stock = 0 ;
+    //   $opening_stock = ItemLedger::where('status', '1')  
+    //               ->where('company_id',Session::get('user_company_id'))
+    //               ->where('delete_status','0')
+    //               ->where(function($query) use ($from_date){
+    //                  $query->whereRaw("STR_TO_DATE(txn_date,'%Y-%m-%d')<STR_TO_DATE('".$from_date."','%Y-%m-%d')");
+    //                  $query->orWhere('source','=','-1');
+    //               })->sum('total_price');
       $item_account = ItemLedger::where('status', '1')  
                   ->where('company_id',Session::get('user_company_id'))
                   ->where('delete_status','0')
@@ -342,8 +346,11 @@ class ProfitLossController extends Controller{
          $price_arr = array_filter($price_arr);
          $average = array_sum($price_arr)/count($price_arr);
          $average = round($average,2);
-         $opening_stock = $opening_stock + ($item_balance*$average);
-      }                    
+        //  $opening_stock = $opening_stock + ($item_balance*$average);
+         
+      }  
+       $previous_date = Carbon::parse($from_date)->subDay();
+    $opening_stock = CommonHelper::ClosingStock($previous_date);  
       //Purchase
       $tot_purchase_amt = DB::table('purchases')
          ->join('purchase_descriptions','purchases.id','=','purchase_descriptions.purchase_id')
@@ -723,15 +730,27 @@ class ProfitLossController extends Controller{
                             'accountLedger' => function ($query) use ($financial_year,$from_date,$to_date) { 
                               $query->where('financial_year', $financial_year);
                               $query->whereBetween('txn_date', [$from_date, $to_date]);
-                              $query->where('delete_status','0');
-                              $query->orWhere('entry_type','-1');
+                              $query->where('delete_status','0');    
+                              $query->whereIn('accounts.company_id',[Session::get('user_company_id'),0]);                       
+                              $query->orWhere(function($q1)use($financial_year,$from_date, $to_date) {
+                                 $q1->Where('entry_type','-1');
+                                 $q1->where('financial_year', $financial_year);
+                                 $q1->whereBetween('txn_date', [$from_date, $to_date]);
+                                 $q1->where('delete_status','0');  
+                              });
                             }], 'debit')
                            ->withSum([
                             'accountLedger' => function ($query) use ($financial_year,$from_date,$to_date) { 
                               $query->where('financial_year', $financial_year);
                               $query->whereBetween('txn_date', [$from_date, $to_date]);
-                              $query->where('delete_status','0');
-                              $query->orWhere('entry_type','-1');
+                              $query->where('delete_status1','0');
+                              $query->whereIn('accounts.company_id',[Session::get('user_company_id'),0]);  
+                              $query->orWhere(function($q1)use($financial_year,$from_date, $to_date) {
+                                 $q1->Where('entry_type','-1');
+                                 $q1->where('financial_year', $financial_year);
+                                 $q1->whereBetween('txn_date', [$from_date, $to_date]);
+                                 $q1->where('delete_status','0');  
+                              });
                             }], 'credit')
                            ->where('under_group',$id)
                            ->where('accounts.delete','0')                           

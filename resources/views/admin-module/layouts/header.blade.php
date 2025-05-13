@@ -20,8 +20,8 @@
                 </svg>
             </button>
             <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton2">
-               
-                <li><a class="dropdown-item" href="{{ route('admin.logout') }}">log Out</a></li>
+                <li><a class="dropdown-item" href="{{ route('admin.change-password-view') }}">Change Password</a></li>
+                <li><a class="dropdown-item" href="{{ route('admin.logout') }}">Log Out</a></li>
             </ul>
         </div>
     </div>

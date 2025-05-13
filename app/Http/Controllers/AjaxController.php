@@ -393,14 +393,29 @@ class AjaxController extends Controller
                               ->where('sale_bill_id','!=',$request->sale_bill_id)
                               ->where('financial_year',$financial_year)
                               ->pluck('invoice_no');
-                              
+      //Purchase Invoice
+      $purchase_account_details = Purchase::select('voucher_no','id','series_no','financial_year','material_center')
+                                 ->where('delete','0')
+                                 ->where('party', $account_id)
+                                 ->where('financial_year',$financial_year)
+                                 ->orderBy('voucher_no','desc')
+                                 ->get();
+      $purchase_account_details = $purchase_account_details->map(function ($item) {
+         $item->voucher_type = 'PURCHASE';
+         return $item;
+      });
       $Accountdetails = Sales::select('voucher_no','id','series_no','financial_year','material_center','voucher_no_prefix','date')
                               ->where('party', $account_id)
                               ->where('delete','0')
                               ->where('financial_year',$financial_year)
-                              ->whereNotIn('voucher_no', $assign)
+                              //->whereNotIn('voucher_no', $assign)
                               ->orderBy('voucher_no','desc')
                               ->get();
+      $Accountdetails = $Accountdetails->map(function ($item) {
+         $item->voucher_type = 'SALE';
+         return $item;
+      });
+      $Accountdetails = $Accountdetails->merge($purchase_account_details);
       return json_encode($Accountdetails);
    }
 
@@ -412,39 +427,81 @@ class AjaxController extends Controller
                               ->where('financial_year',$financial_year)
                               ->where('delete','0')
                               ->pluck('invoice_no');
+      //Purchase Invoice
       $Accountdetails = Purchase::select('voucher_no','id','series_no','financial_year','material_center')
                                  ->where('delete','0')
                                  ->where('party', $account_id)
                                  ->where('financial_year',$financial_year)
-                                 ->whereNotIn('voucher_no', $assign)
+                                 //->whereNotIn('voucher_no', $assign)
                                  ->orderBy('voucher_no','desc')
                                  ->get();
+      $Accountdetails = $Accountdetails->map(function ($item) {
+         $item->voucher_type = 'PURCHASE';
+         return $item;
+      });
+      //Sale Invoice
+      $sale_voucher = Sales::select('voucher_no','id','series_no','financial_year','material_center','voucher_no_prefix','date')
+                                 ->where('party', $account_id)
+                                 ->where('delete','0')
+                                 ->where('financial_year',$financial_year)
+                                 ->orderBy('voucher_no','desc')
+                                 ->get();
+      $sale_voucher = $sale_voucher->map(function ($item) {
+         $item->voucher_type = 'SALE';
+         return $item;
+      });
+      $Accountdetails = $Accountdetails->merge($sale_voucher);
       return json_encode($Accountdetails);
    }
 
     public function getSaleItemsDetails(Request $request)
     {
-        $voucher_no  = $request->voucher_no;
-        $sale_id = Sales::select('id')->where('voucher_no', $voucher_no)->where('company_id',Session::get('user_company_id'))->first();
-        $id = $sale_id->id;
-        $manageitems = DB::table('sale_descriptions')->where('sale_id', $id)
-            ->select('units.s_name as unit','manage_items.gst_rate', 'units.id as unit_id', 'sale_descriptions.goods_discription', 'manage_items.name as items_name', 'manage_items.id as item_id')
+        $invoice_id  = $request->invoice_id;
+        $voucher_type  = $request->voucher_type;
+        if($voucher_type == 'SALE'){   
+            
+            $manageitems = DB::table('sale_descriptions')->where('sale_id', $invoice_id)
+            ->select('units.s_name as unit','manage_items.gst_rate', 'units.id as unit_id', 'sale_descriptions.goods_discription', 'manage_items.name as items_name', 'manage_items.id as item_id', 'sale_descriptions.qty')
             ->join('units', 'sale_descriptions.unit', '=', 'units.id')
             ->join('manage_items', 'sale_descriptions.goods_discription', '=', 'manage_items.id')
             ->get();
+        }else{
+            
+            $manageitems = DB::table('purchase_descriptions')->where('purchase_id', $invoice_id)
+               ->select('units.s_name as unit','manage_items.gst_rate', 'units.id as unit_id', 'purchase_descriptions.goods_discription', 'manage_items.name as items_name', 'manage_items.id as item_id', 'purchase_descriptions.qty')
+               ->join('units', 'purchase_descriptions.unit', '=', 'units.id')
+               ->join('manage_items', 'purchase_descriptions.goods_discription', '=', 'manage_items.id')
+               ->get();
+        }
+
+        
         return json_encode($manageitems);
     }
-    public function getPurchaseItemsDetails(Request $request)
-    {
-        $voucher_no  = $request->voucher_no;
-        $purchase_id = Purchase::select('id')->where('voucher_no', $voucher_no)->where('company_id',Session::get('user_company_id'))->first();
-        $id = $purchase_id->id;
-        $manageitems = DB::table('purchase_descriptions')->where('purchase_id', $id)
+   public function getPurchaseItemsDetails(Request $request){
+      $voucher_no  = $request->voucher_no;
+      $voucher_type  = $request->voucher_type;
+      if($voucher_type == 'PURCHASE'){        
+         $purchase = Purchase::select('id')
+                              ->where('voucher_no', $voucher_no)
+                              ->where('company_id',Session::get('user_company_id'))
+                              ->first();
+         $manageitems = DB::table('purchase_descriptions')->where('purchase_id', $purchase->id)
             ->select('units.s_name as unit','manage_items.gst_rate', 'units.id as unit_id', 'purchase_descriptions.goods_discription', 'manage_items.name as items_name', 'manage_items.id as item_id')
             ->join('units', 'purchase_descriptions.unit', '=', 'units.id')
             ->join('manage_items', 'purchase_descriptions.goods_discription', '=', 'manage_items.id')
             ->get();
-        return json_encode($manageitems);
+      }else if($voucher_type == 'SALE'){
+         $sale = Sales::select('id')
+                           ->where('voucher_no', $voucher_no)
+                           ->where('company_id',Session::get('user_company_id'))
+                           ->first();
+         $manageitems = DB::table('sale_descriptions')->where('sale_id', $sale->id)
+                           ->select('units.s_name as unit','manage_items.gst_rate', 'units.id as unit_id', 'sale_descriptions.goods_discription', 'manage_items.name as items_name', 'manage_items.id as item_id', 'sale_descriptions.qty')
+                           ->join('units', 'sale_descriptions.unit', '=', 'units.id')
+                           ->join('manage_items', 'sale_descriptions.goods_discription', '=', 'manage_items.id')
+                           ->get();
+      }
+      return json_encode($manageitems);
    }
    public function setRedircetUrl(Request $request){
       $url  = $request->url;  

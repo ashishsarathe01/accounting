@@ -13,6 +13,7 @@ use App\Models\StockJournalDetail;
 use App\Models\Companies;
 use App\Models\VoucherSeriesConfiguration;
 use App\Models\GstBranch;
+use App\Models\ItemBalanceBySeries;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Session;
@@ -62,7 +63,18 @@ class ManageItemsController extends Controller
         ->whereIn('manage_items.status',$status)
         ->get();
       }
-      
+      $manageitems = $manageitems->map(function ($item, $key) {
+         $item->series_open = ItemBalanceBySeries::where('item_id',$item->id)->get();
+         $item->item_delete_btn_view = 1;
+         $exist = ItemLedger::where('item_id', $item->id)
+                           ->where('source', '!=', '-1')
+                           ->where('delete_status', '=', '0')
+                           ->first();
+         if($exist){
+            $item->item_delete_btn_view = 0;
+         }
+         return $item;
+     });  
       return view('manageitem/accountManageItem')->with('manageitems', $manageitems);
    }
 
@@ -71,11 +83,36 @@ class ManageItemsController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-   public function create(){
+   public function create(){      
       $com_id = Session::get('user_company_id');
+      $companyData = Companies::where('id', Session::get('user_company_id'))->first();      
+      if($companyData->gst_config_type == "single_gst"){
+         $series = DB::table('gst_settings')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])
+                           ->get();
+         $branch = GstBranch::select('id','branch_series as series')
+                           ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_id'=>$series[0]->id])
+                           ->get();
+         if(count($branch)>0){
+            $series = $series->merge($branch);
+         }         
+      }else if($companyData->gst_config_type == "multiple_gst"){
+         $series = DB::table('gst_settings_multiple')
+                           ->select('id','series')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst"])
+                           ->get();
+         foreach ($series as $key => $value) {
+            $branch = GstBranch::select('id','branch_series as series')
+                        ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_multiple_id'=>$value->id])
+                        ->get();
+            if(count($branch)>0){
+               $series = $series->merge($branch);
+            }
+         }         
+      }
       $itemGroups = ItemGroups::where('delete', '=', '0')->where('company_id', $com_id)->get();
       $accountunit = Units::where('delete', '=', '0')->where('company_id', $com_id)->get();
-        return view('manageitem/addAccountManageItem')->with('accountunit', $accountunit)->with('itemGroups', $itemGroups);
+        return view('manageitem/addAccountManageItem')->with('accountunit', $accountunit)->with('itemGroups', $itemGroups)->with('series',$series);
    }
 
     /**
@@ -93,6 +130,8 @@ class ManageItemsController extends Controller
       if($validator->fails()) {
          return response()->json($validator->errors(), 422);
       }
+      // echo "<pre>";
+      // print_r($request->all());die;
       $items = new ManageItems;
       $items->company_id =  Session::get('user_company_id');
       $items->name = $request->input('name');
@@ -101,30 +140,49 @@ class ManageItemsController extends Controller
       $items->u_name = $request->input('u_name');
       $items->hsn_code = $request->input('hsn_code');
       $items->gst_rate = $request->input('gst_rate');
-      $items->opening_balance_qty = $request->input('opening_balance_qty');
-      $items->opening_balance_qt_type = $request->input('opening_balance_qt_type');
-      $items->opening_balance = $request->input('opening_balance');
-      $items->opening_balance_type = $request->input('opening_balance_type');      
       $items->status = $request->input('status');
+      $items->section = $request->input('section');
+      $items->rate_of_tcs = $request->input('rate_of_tcs');      
+      // $items->opening_balance_qty = $request->input('opening_balance_qty');
+      // $items->opening_balance_qt_type = $request->input('opening_balance_qt_type');
+      // $items->opening_balance = $request->input('opening_balance');
+      // $items->opening_balance_type = $request->input('opening_balance_type');
       $items->save();
-      if ($items->id) {
-         if(!empty($request->input('opening_balance_qty')) && !empty($request->input('opening_balance_qt_type'))){
-            $ledger = new ItemLedger();
-            $ledger->item_id = $items->id;
-            if($request->input('opening_balance_qt_type')=='Debit'){
-               $ledger->in_weight = $request->input('opening_balance_qty');
-            }else if($request->input('opening_balance_qt_type')=='Credit'){
-               $ledger->out_weight = $request->input('opening_balance_qty');
+      if($items->id) {
+         $series = $request->input('series');
+         $opening_amount = $request->input('opening_amount');
+         $opening_qty = $request->input('opening_qty');
+         $opening_balance_type = $request->input('opening_balance_type');
+         foreach ($series as $key => $value) {
+            if(!empty($opening_amount[$key]) && !empty($opening_qty[$key])){
+               $series_balance = new ItemBalanceBySeries;
+               $series_balance->item_id = $items->id;
+               $series_balance->series = $value;
+               $series_balance->opening_amount = $opening_amount[$key];
+               $series_balance->opening_quantity = $opening_qty[$key];
+               $series_balance->type = $opening_balance_type[$key];
+               $series_balance->company_id = Session::get('user_company_id');
+               $series_balance->created_at =  Carbon::now();;
+               $series_balance->save();
+               //Add In Item Ledger
+               $ledger = new ItemLedger();
+               $ledger->item_id = $items->id;
+               if($opening_balance_type[$key]=='Debit'){
+                  $ledger->in_weight = $opening_qty[$key];
+               }else if($opening_balance_type[$key]=='Credit'){
+                  $ledger->out_weight = $opening_qty[$key];
+               }
+               $ledger->series_no = $value;
+               $ledger->total_price = $opening_amount[$key];
+               $ledger->company_id = Session::get('user_company_id');
+               $ledger->source = -1;
+               $ledger->created_by = Session::get('user_id');
+               $ledger->created_at = date('d-m-Y H:i:s');
+               $default_fy = explode("-",Session::get('default_fy'));
+               $txn_date = $default_fy[0]."-04-01";
+               $ledger->txn_date = date('Y-m-d',strtotime($txn_date));
+               $ledger->save();
             }
-            $ledger->total_price = $request->input('opening_balance');
-            $ledger->company_id = Session::get('user_company_id');
-            $ledger->source = -1;
-            $ledger->created_by = Session::get('user_id');
-            $ledger->created_at = date('d-m-Y H:i:s');
-            $default_fy = explode("-",Session::get('default_fy'));
-            $txn_date = $default_fy[0]."-04-01";
-            $ledger->txn_date = date('Y-m-d',strtotime($txn_date));
-            $ledger->save();
          }
          return redirect('account-manage-item')->withSuccess('Items added successfully!');
       }else{
@@ -132,12 +190,49 @@ class ManageItemsController extends Controller
       }
    }
    public function edit($id){
-
+      $companyData = Companies::where('id', Session::get('user_company_id'))->first();      
+      if($companyData->gst_config_type == "single_gst"){
+         $series = DB::table('gst_settings')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])
+                           ->get();
+         $branch = GstBranch::select('id','branch_series as series')
+                           ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_id'=>$series[0]->id])
+                           ->get();
+         if(count($branch)>0){
+            $series = $series->merge($branch);
+         }         
+      }else if($companyData->gst_config_type == "multiple_gst"){
+         $series = DB::table('gst_settings_multiple')
+                           ->select('id','series')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst"])
+                           ->get();
+         foreach ($series as $key => $value) {
+            $branch = GstBranch::select('id','branch_series as series')
+                        ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_multiple_id'=>$value->id])
+                        ->get();
+            if(count($branch)>0){
+               $series = $series->merge($branch);
+            }
+         }         
+      }
         $manageitems = ManageItems::find($id);
+        $series_open = ItemBalanceBySeries::select('series','opening_amount','opening_quantity','type')->where('item_id',$id)->get();
+      $grouped = $series_open->groupBy('series')->toArray();
+      foreach ($series as $key => $value) {
+         if(isset($grouped[$value->series])){
+            $series[$key]->opening_amount = $grouped[$value->series][0]['opening_amount'];
+            $series[$key]->opening_quantity = $grouped[$value->series][0]['opening_quantity'];
+            $series[$key]->type = $grouped[$value->series][0]['type'];
+         }else{
+            $series[$key]->opening_amount = "";
+            $series[$key]->opening_quantity = "";
+            $series[$key]->type = "";
+         }
+      }
         $com_id = Session::get('user_company_id');
         $itemGroups = ItemGroups::where('delete', '=', '0')->where('company_id', $com_id)->get();
         $accountunit = Units::where('delete', '=', '0')->where('company_id', $com_id)->get();
-        return view('manageitem/editAccountManageItems')->with('accountunit', $accountunit)->with('itemGroups', $itemGroups)->with('manageitems', $manageitems);
+        return view('manageitem/editAccountManageItems')->with('accountunit', $accountunit)->with('itemGroups', $itemGroups)->with('manageitems', $manageitems)->with('series',$series);
     }
     /**
      * Update the specified resource in storage.
@@ -154,80 +249,88 @@ class ManageItemsController extends Controller
       ]);
       if ($validator->fails()) {
          return response()->json($validator->errors(), 422);
-      }        
+      }
       $items =  ManageItems::find($request->mangeitem_id);
       $items->name = $request->input('name');
       $items->p_name = $request->input('p_name');
       $items->g_name = $request->input('g_name');
       $items->u_name = $request->input('u_name');
-      $items->opening_balance_qty = $request->input('opening_balance_qty');
-      $items->opening_balance_qt_type = $request->input('opening_balance_qt_type');
-      $items->opening_balance = $request->input('opening_balance');
-      $items->opening_balance_type = $request->input('opening_balance_type');
+      // $items->opening_balance_qty = $request->input('opening_balance_qty');
+      // $items->opening_balance_qt_type = $request->input('opening_balance_qt_type');
+      // $items->opening_balance = $request->input('opening_balance');
+      // $items->opening_balance_type = $request->input('opening_balance_type');
       $items->gst_rate = $request->input('gst_rate');
       $items->hsn_code = $request->input('hsn_code');
       $items->status = $request->input('status');
       $items->updated_at = Carbon::now();
-      $items->update();
-      if(!empty($request->input('opening_balance_qty')) && !empty($request->input('opening_balance_qt_type'))){
-         $check = ItemLedger::where('item_id',$request->mangeitem_id)
-                                 ->where('source','-1')
-                                 ->first();
-         if($check){          
-            $ledger = ItemLedger::find($check->id);
-            if($request->input('opening_balance_qt_type')=='Debit'){
-               $ledger->in_weight = $request->input('opening_balance_qty');
-               $ledger->out_weight = "";
-            }else if($request->input('opening_balance_qt_type')=='Credit'){
-               $ledger->out_weight = $request->input('opening_balance_qty');
-               $ledger->in_weight = "";
+      if($items->update()){
+         ItemBalanceBySeries::where('item_id',$items->id)->delete();
+         ItemLedger::where('item_id',$items->id)->where('source','-1')->delete();
+         $series = $request->input('series');
+         $opening_amount = $request->input('opening_amount');
+         $opening_qty = $request->input('opening_qty');
+         $opening_balance_type = $request->input('opening_balance_type');
+         foreach ($series as $key => $value) {
+            if(!empty($opening_amount[$key]) && !empty($opening_qty[$key])){
+               $series_balance = new ItemBalanceBySeries;
+               $series_balance->item_id = $items->id;
+               $series_balance->series = $value;
+               $series_balance->opening_amount = $opening_amount[$key];
+               $series_balance->opening_quantity = $opening_qty[$key];
+               $series_balance->type = $opening_balance_type[$key];
+               $series_balance->company_id = Session::get('user_company_id');
+               $series_balance->created_at =  Carbon::now();;
+               $series_balance->save();
+               //Add In Item Ledger
+               $ledger = new ItemLedger();
+               $ledger->item_id = $items->id;
+               if($opening_balance_type[$key]=='Debit'){
+                  $ledger->in_weight = $opening_qty[$key];
+               }else if($opening_balance_type[$key]=='Credit'){
+                  $ledger->out_weight = $opening_qty[$key];
+               }
+               $ledger->series_no = $value;
+               $ledger->total_price = $opening_amount[$key];
+               $ledger->company_id = Session::get('user_company_id');
+               $ledger->source = -1;
+               $ledger->created_by = Session::get('user_id');
+               $ledger->created_at = date('d-m-Y H:i:s');
+               $default_fy = explode("-",Session::get('default_fy'));
+               $txn_date = $default_fy[0]."-04-01";
+               $ledger->txn_date = date('Y-m-d',strtotime($txn_date));
+               $ledger->save();
             }
-            $ledger->total_price = $request->input('opening_balance');
-            $ledger->updated_by = Session::get('user_id');
-            $ledger->updated_at = date('d-m-Y H:i:s');
-            $ledger->save();
-         }else{
-            $ledger = new ItemLedger();
-            $ledger->item_id = $request->mangeitem_id;
-            if($request->input('opening_balance_qt_type')=='Debit'){
-               $ledger->in_weight = $request->input('opening_balance_qty');
-            }else if($request->input('opening_balance_qt_type')=='Credit'){
-               $ledger->out_weight = $request->input('opening_balance_qty');
-            }
-            $ledger->total_price = $request->input('opening_balance');
-            $ledger->company_id = Session::get('user_company_id');
-            $ledger->source = -1;
-            $default_fy = explode("-",Session::get('default_fy'));
-            $txn_date = $default_fy[0]."-04-01";
-            $ledger->txn_date = date('Y-m-d',strtotime($txn_date));
-            $ledger->created_by = Session::get('user_id');
-            $ledger->created_at = date('d-m-Y H:i:s');
-            $ledger->save();
-         }
-      }else{
-         $check = ItemLedger::where('item_id',$request->mangeitem_id)
-                                 ->where('source','-1')
-                                 ->first();
-         if($check){
-            ItemLedger::where('source','-1')
-                           ->where('item_id',$request->mangeitem_id)
-                           ->delete();
          }
       }
       return redirect('account-manage-item')->withSuccess('item updated successfully!');
    }
-   public function delete(Request $request){
-      $account =  ManageItems::find($request->heading_id);
-      $account->delete = '1';
-      $account->deleted_at = Carbon::now();
-      $account->update();
-      if($account){
+   public function delete(Request $request)
+   {
+      $exist = ItemLedger::where('item_id', $request->heading_id)
+      ->where('source', '!=', -1)
+      ->where('delete_status', '=', '0')
+      ->first();
+      // If no ItemLedger exists except source = -1
+      if (!$exist) {
+         $account = ManageItems::find($request->heading_id);
+         if ($account) {
+            $account->delete = '1'; // Optional custom flag, avoid using "delete" as column name
+            $account->deleted_at = Carbon::now();
+            $account->update(); // Use save() to persist model changes
+         }
+         $del = ItemLedger::where('item_id', $request->heading_id)
+               ->where('source', -1)
+               ->first();
+         if ($del) {
+            $del->delete_status = '1'; // Optional custom flag
+            $del->deleted_at = Carbon::now();
+            $del->update(); // Persist changes
+         }
          return redirect('account-manage-item')->withSuccess('Item deleted successfully!');
+      } else {
+         return redirect('account-manage-item')->withErrors('Item cannot be deleted. Transactions exist.');
       }
    }
-    /**
-     * Generates failed response and message.
-     */
    public function failedMessage(){
       return response()->json([
          'code' => 422,
@@ -440,6 +543,7 @@ class ManageItemsController extends Controller
             //ADD IN Stock
             $item_ledger = new ItemLedger();
             $item_ledger->item_id = $consume_item[$key];
+            $item_ledger->series_no = $request->input('series_no');
             $item_ledger->out_weight = $consume_weight[$key];
             $item_ledger->txn_date = $request->input('date');
             $item_ledger->price = $consume_price[$key];
@@ -468,6 +572,7 @@ class ManageItemsController extends Controller
             //ADD IN Stock
             $item_ledger = new ItemLedger();
             $item_ledger->item_id = $generated_item[$key];
+            $item_ledger->series_no = $request->input('series_no');
             $item_ledger->in_weight = $generated_weight[$key];
             $item_ledger->txn_date = $request->input('date');
             $item_ledger->price = $generated_price[$key];
@@ -585,6 +690,7 @@ class ManageItemsController extends Controller
             $item_ledger = new ItemLedger();
             $item_ledger->item_id = $consume_item[$key];
             $item_ledger->out_weight = $consume_weight[$key];
+            $item_ledger->series_no = $request->input('series_no');
             $item_ledger->txn_date = $request->input('date');
             $item_ledger->price = $consume_price[$key];
             $item_ledger->total_price = $consume_amount[$key];
@@ -614,6 +720,7 @@ class ManageItemsController extends Controller
             $item_ledger->item_id = $generated_item[$key];
             $item_ledger->in_weight = $generated_weight[$key];
             $item_ledger->txn_date = $request->input('date');
+            $item_ledger->series_no = $request->input('series_no');
             $item_ledger->price = $generated_price[$key];
             $item_ledger->total_price = $generated_amount[$key];
             $item_ledger->company_id = Session::get('user_company_id');
@@ -747,9 +854,9 @@ class ManageItemsController extends Controller
                $name = $value['name'];
                $group = $value['group'];
                $amount = $value['amount'];
-               $amount = str_replace(",","",$amount); 
+               $amount = trim(str_replace(",","",$amount)); 
                $quantity = $value['quantity'];
-               $quantity = str_replace(",","",$quantity);
+               $quantity = trim(str_replace(",","",$quantity));
                $unit = $value['unit'];
                $gst_rate = $value['gst_rate'];
                $hsn_code = $value['hsn_code'];
@@ -772,6 +879,7 @@ class ManageItemsController extends Controller
                      $opening_balance_type = "Debit";
                   }                  
                }
+               $quantity = (float)$quantity;
                if(!empty($quantity) && $quantity!=0){
                   if($quantity<0){
                      $opening_balance_qty = abs($quantity);

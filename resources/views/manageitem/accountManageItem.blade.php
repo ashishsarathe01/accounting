@@ -9,13 +9,19 @@
             @include('layouts.leftnav')
             <!-- view-table-Content -->
             <div class="col-md-12 ml-sm-auto  col-lg-10 px-md-4 bg-mint">
-                <nav>
-                    <ol class="breadcrumb m-0 py-4 px-2 px-md-0 font-12">
-                        <li class="breadcrumb-item">Dashboard</li>
-                        <img src="{{ URL::asset('public/assets/imgs/right-icon.svg')}}" class="px-1" alt="">
-                        <li class="breadcrumb-item fw-bold font-heading" aria-current="page">Manage Item</li>
-                    </ol>
-                </nav>
+                 @if ($errors->any())
+             <div class="alert alert-danger d-flex align-items-center" style="height: 48px;">
+                @foreach ($errors->all() as $error)
+            <p class="mb-0">{{ $error }}</p>
+                @endforeach
+            </div>
+            @endif
+            @if(session('success'))
+            <div class="alert alert-success" style="height: 48px; display: flex; align-items: center;">
+                <p class="mb-0">{{ session('success') }}</p>
+            </div>
+            @endif
+
                 <div class="position-relative table-title-bottom-line d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
                     <h5 class="table-title m-0 py-2 ">
                         List of Manage Item
@@ -46,8 +52,7 @@
                                 <th class="w-min-120 border-none bg-light-pink text-body ">Unit </th>
                                 <th class="w-min-120 border-none bg-light-pink text-body ">HSN Code </th>
                                 <th class="w-min-120 border-none bg-light-pink text-body ">GST </th>
-                                <th class="w-min-120 border-none bg-light-pink text-body ">Opening Stock(Qty) </th>
-                                <th class="w-min-120 border-none bg-light-pink text-body ">Opening Stock(Val) </th>
+                                <th class="w-min-120 border-none bg-light-pink text-body ">Opening Stock</th>                                
                                 <th class="w-min-120 border-none bg-light-pink text-body ">Group </th>
                                 <th class="w-min-120 border-none bg-light-pink text-body ">Staus </th>
                                 <th class="w-min-120 border-none bg-light-pink text-body text-center"> Action</th>
@@ -61,8 +66,28 @@
                                     <td class="w-min-120"><?php echo $value->unit_name ?></td>
                                     <td class="w-min-120"><?php echo $value->hsn_code ?></td>
                                     <td class="w-min-120"><?php echo $value->gst_rate ?></td>
-                                    <td class="w-min-120"><?php echo $value->opening_balance_qty ?></td>
-                                    <td class="w-min-120"><?php echo $value->opening_balance ?></td>
+                                    <td class="w-min-120">
+                                        @if(count($value->series_open)>0)
+                                            <table class="table table-bordered">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Series</th>
+                                                        <th>Amount</th>
+                                                        <th>Weight</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach($value->series_open as $k1=>$v1)
+                                                        <tr>
+                                                            <td>{{$v1->series}}</td>
+                                                            <td style="text-align:right;">{{$v1->opening_amount}}</td>
+                                                            <td style="text-align:right;">{{$v1->opening_quantity}}</td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        @endif
+                                    </td>                                    
                                     <td class="w-min-120"><?php echo $value->group_name ?></td>
                                     <td class="w-min-120">
                                         <span class="bg-secondary-opacity-16 border-radius-4 text-secondary py-1 px-2 fw-bold">
@@ -74,9 +99,11 @@
                                     </td>
                                     <td class="w-min-120 text-center">
                                         <a href="{{ URL::to('account-manage-item/' . $value->id . '/edit') }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
-                                        <button type="button" class="border-0 bg-transparent delete_partner" data-id="<?php echo $value->id; ?>">
-                                            <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
-                                        </button>
+                                        @if($value->item_delete_btn_view==1)
+                                            <button type="button" class="border-0 bg-transparent delete_partner" data-id="<?php echo $value->id; ?>">
+                                                <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
+                                            </button>
+                                        @endif
                                     </td>
                                 </tr>
                             <?php } ?>

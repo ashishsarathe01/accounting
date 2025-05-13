@@ -15,6 +15,7 @@
                   {{ session('success') }}
                </div>
             @endif
+            
             <div class="d-xxl-flex justify-content-between py-4 px-2 align-items-center">
                <nav aria-label="breadcrumb meri-breadcrumb ">
                   <ol class="breadcrumb meri-breadcrumb m-0  ">
@@ -56,12 +57,27 @@
                </form>
             </div>
             <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
-               <h5 class="master-table-title m-0 py-2">
-                  Account Ledger
-               </h5>
-               <span class="ms-auto font-14 fw-bold font-heading">
-                  Opening Bal. : {{abs($opening)}} @if($opening<0) CR @else DR @endif 
-               </span>
+              <div class="d-flex align-items-center">
+   <h5 class="master-table-title m-0 py-2 me-2">
+      Account Ledger 
+   </h5>
+   
+   @if(request()->get('party'))
+   <form method="GET" action="{{ route('ledger.export.pdf') }}" target="_blank">
+      <input type="hidden" name="party" value="{{ request()->get('party') }}">
+      <input type="hidden" name="from_date" value="{{ request()->get('from_date') }}">
+      <input type="hidden" name="to_date" value="{{ request()->get('to_date') }}">
+      <button type="submit" class="btn btn-sm btn-success">Download PDF</button>
+   </form>
+   @endif
+</div>
+
+              <span class="ms-auto font-14 fw-bold font-heading">
+  Opening Bal. : {{ formatIndianNumber(abs((float)str_replace(',', '', $opening))) }} @if($opening < 0) CR @else DR @endif
+
+
+</span>
+
             </div>
             <div class="display-sale-month  bg-white table-view shadow-sm">
                <table id="acc_table1" class="table-striped table-bordered table m-0 shadow-sm ">
@@ -78,8 +94,10 @@
                      </tr>
                   </thead>
                   <tbody>
+                     
+
                      <?php
-                     $tot_blance = $opening;
+                     $tot_blance = (float)str_replace(',', '', $opening);
                      $tot_crt = 0;$tot_dbt = 0;setlocale(LC_MONETARY, 'en_IN');
                      foreach($ledger as $value) {?>
                         <tr class="font-14 font-heading bg-white account_tr" data-type="{{$value['entry_type']}}" data-id="{{$value['entry_type_id']}}" style="cursor: pointer;" data-einvoice_status="{{$value['einvoice_status']}}" style="cursor: pointer;">
@@ -116,22 +134,27 @@
                               ?>
                            </td>
                            <td class="w-min-120 " style="text-align: right;">
-                              <?php
+                         <?php
                               if(!empty($value['debit'])){
-                                 echo $value['debit'];
+                                 echo formatIndianNumber((float) str_replace(',', '', $value['debit']));
+
                                  
-                                 $tot_blance = $tot_blance + $value['debit'];
-                                 $tot_dbt = $tot_dbt + abs($value['debit']);
+                                 $tot_blance = $tot_blance + (float)$value['debit'];
+                                 $tot_dbt = $tot_dbt + abs((float)$value['debit']);
                               }
                               ?>
+
+
                            </td>
                            <td class="w-min-120 " style="text-align: right;">
                               <?php
                               if(!empty($value['credit'])) {
-                                 echo $value['credit'];
+                                echo formatIndianNumber((float) str_replace(',', '', $value['credit']));
+
+
                                  
-                                 $tot_blance = $tot_blance - $value['credit'];
-                                 $tot_crt = $tot_crt + abs($value['credit']);
+                                 $tot_blance = $tot_blance - (float)$value['credit'];
+                                 $tot_crt = $tot_crt + abs((float)$value['credit']);
                               }
                               ?>
                            </td>
@@ -139,9 +162,9 @@
                               <?php 
                               
                               if($tot_blance<0){
-                                 echo abs($tot_blance). ' Cr';                                
+                                echo formatIndianNumber(abs((float) str_replace(',', '', $tot_blance))) . ' Cr';
                               }else{
-                                 echo $tot_blance. ' Dr';                                
+                                 echo formatIndianNumber((float) str_replace(',', '', $tot_blance)) . ' Dr';
                               }                              
                               ?>
                            </td>
@@ -171,12 +194,12 @@
                         <td class="w-min-120" colspan="4"></td>
                         <td class="w-min-120 fw-bold" style="text-align: right;">
                            <?php 
-                           echo $tot_dbt;
+                          echo formatIndianNumber(abs((float) str_replace(',','',$tot_dbt))); 
                            ?>
                         </td>
                         <td class="w-min-120 fw-bold" style="text-align: right;">
                            <?php 
-                          echo $tot_crt;                         
+                          echo formatIndianNumber(abs((float) str_replace(',','',$tot_crt)));                         
                            ?>
                         </td>
                         <td></td>
@@ -188,9 +211,10 @@
                         <td class="text-end " colspan="7" style="text-align: right;">
                            Closing Bal. : <?php 
                            if($tot_blance<0){
-                              echo abs($tot_blance). ' Cr';                                
+                              echo formatIndianNumber(abs((float) str_replace(',', '', $tot_blance))) . ' Cr';
+                               
                            }else{
-                              echo $tot_blance. ' Dr';                               
+                               echo formatIndianNumber((float) str_replace(',', '', $tot_blance)) . ' Dr';                         
                            }?>
                         </td>
                      </tr>

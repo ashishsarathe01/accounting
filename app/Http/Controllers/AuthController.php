@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use App\Models\UserOtp;
 use App\Models\Companies;
+use App\Helpers\CommonHelper;
 use Hash;
 use Session;
 class AuthController extends Controller{
@@ -42,48 +43,27 @@ class AuthController extends Controller{
         $otp =  rand(1234, 9999);
         /* Generate An OTP */
         $userOtp = $this->generateOtp($request->mobile_no, $otp);
-        $authKey = "252256AwyPQCtcYQbR5c17926c";
-        //Multiple mobiles numbers separated by comma
+        
         $length_mobile = strlen($request->mobile_no);
-        if ($length_mobile == 10) {
-            $mobileNumber = '+91' . $request->mobile_no;
-        } else {
-            $mobileNumber = $request->mobile_no;
-        }
-        $senderId = "KRAFTZ";
-        $message = urlencode("KRAFTPAPER Your mobile verification code is : $otp");
-        $route = "4";
-        $postData = array(
-            'authkey' => $authKey,
-            'mobiles' => $mobileNumber,
-            'message' => $message,
-            'sender' => $senderId,
-            'route' => $route
-        );
+        $mobileNumber = $request->mobile_no;
+        $template = "customer_otp_verify";
+        $mobile = $request->mobile_no;
+        $var1 = $otp;
+        $req = '{
+                "countryCode": "+91",
+                "phoneNumber": '.$mobile.',
+                "callbackData": "some text here",
+                "type": "Template",
+                "template": {
+                    "name": "'.$template.'",
+                    "languageCode": "en",
+                    "bodyValues": ["'
+                    .$var1.'"
+                    ]
+                }
+        }';
+        CommonHelper::sendWhatsappMessage($req);
 
-        //API URL
-        $url = "https://api.msg91.com/api/v2/sendsms?DLT_TE_ID=1307161717926311553";
-
-        // init the resource
-        $ch = curl_init();
-        curl_setopt_array($ch, array(
-            CURLOPT_URL => $url,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $postData
-            //,CURLOPT_FOLLOWLOCATION => true
-        ));
-        //Ignore SSL certificate verification
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-        //get response
-        $output = curl_exec($ch);
-        //Print error if any
-        if (curl_errno($ch)) {
-            echo 'error:' . curl_error($ch);
-        }
-        curl_close($ch);
-        //$userOtp->sendSMS($request->mobile_no, $otp);
         return view('auth.otpVerification')->with(['user_id' => $userOtp->user_id, 'mobile_no' => $mobileNumber, 'successMessage' => 'OTP has been sent on Your Mobile Number!']);
         //return redirect()->route('otp.verification', ['user_id' => $userOtp->user_id])
         //        ->with('success',  "OTP has been sent on Your Mobile Number."); 
@@ -158,9 +138,6 @@ class AuthController extends Controller{
       }
       return redirect("password-login")->withError('Login details are not valid!');
    }
-
-
-
     public function registration()
     {
         return view('auth.registration');
@@ -189,11 +166,14 @@ class AuthController extends Controller{
         if ($validator->fails()) {
             return redirect()->route('register.user')->withErrors($validator)->withInput();
         }
-        
+        if(!Session::get('registration_otp_verify') || Session::get('registration_otp_verify')=='' || Session::get('registration_otp_verify')==0){
+            return redirect()->route('register.user')->withErrors("Please Verify Mobile No.");
+        }
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'mobile_no' => $request->mobile_no,
+            'ip_address' => $request->ip(),
             'password' => \Hash::make($request->password)
         ]);
 
@@ -201,6 +181,51 @@ class AuthController extends Controller{
         if (!$token) {
             return redirect("password-login")->withSuccess('You have signed-in');
         } else {
+            Session::put('registration_otp','');
+            Session::put('registration_otp_verify',0);
+            //send message to admin
+            $template = "ma_admin_registration_message";
+            $mobile = "9255104995";
+            $var1 = $request->name;
+            $var2 = $request->email;
+            $var3 = $request->mobile_no;
+            $var4 = date('d-m-Y H:i');
+            $req = '{
+                    "countryCode": "+91",
+                    "phoneNumber": '.$mobile.',
+                    "callbackData": "some text here",
+                    "type": "Template",
+                    "template": {
+                        "name": "'.$template.'",
+                        "languageCode": "en_GB",
+                        "bodyValues": ["'
+                        .$var1.'","'
+                        .$var2.'","'
+                        .$var3.'","'
+                        .$var4.'"
+                        ]
+                    }
+            }';
+            CommonHelper::sendWhatsappMessage($req);
+
+            //send message to user
+            $template = "ma_user_registration_message";
+            $mobile = $request->mobile_no;
+            $var1 = $request->name;
+            $req = '{
+                    "countryCode": "+91",
+                    "phoneNumber": '.$mobile.',
+                    "callbackData": "some text here",
+                    "type": "Template",
+                    "template": {
+                        "name": "'.$template.'",
+                        "languageCode": "en_GB",
+                        "bodyValues": ["'
+                        .$var1.'"
+                        ]
+                    }
+            }';
+            CommonHelper::sendWhatsappMessage($req);
             return redirect("password-login")->withSuccess('User Created successfully!');
         }
     }
@@ -224,7 +249,7 @@ class AuthController extends Controller{
         ]);
         if ($validator->fails()) {
             //return response()->json($validator->errors(), 422);
-            return redirect("otp-login")->withError('Some thing went wrong, please try after some time!');
+            return view('auth.otpVerification')->with(['user_id' => $userOtp->user_id, 'mobile_no' => $mobileNumber, 'errorMessage' => 'Some thing went wrong, please try after some time!']);
         }
         /* Validation Logic */
         $otp = $request->otp1 . '' . $request->otp2 . '' . $request->otp3 . '' . $request->otp4;
@@ -232,33 +257,53 @@ class AuthController extends Controller{
 
         $now = now();
         if (!$userOtp) {
-            return response()->json(['code' => 422, 'message' => 'Your OTP is not correct.']);
+            return view('auth.otpVerification')->with(['user_id' => $userOtp->user_id, 'mobile_no' => $mobileNumber, 'errorMessage' => 'Your OTP is not correct.']);
+            
         } else if ($userOtp && $now->isAfter($userOtp->expire_at)) {
-            return response()->json(['code' => 422, 'message' => 'Your OTP has been expired.']);
+            return view('auth.otpVerification')->with(['user_id' => $userOtp->user_id, 'mobile_no' => $mobileNumber, 'errorMessage' => 'Your OTP has been expired.']);
         }
 
         $user = User::whereId($request->user_id)->first();
 
         if ($user) {
-
             $userOtp->update([
                 'expire_at' => now()
             ]);
-
             Auth::login($user);
-            $user_data  = auth()->user();
-            $company = Companies::where('user_id', $user_data->id)->where('default_company', '1')->first();
+            $user_data  = auth()->user();  
+            if($user_data->status=='0' || $user_data->delete_status=='1'){
+                return redirect("password-login")->withError('Login details are not valid!');
+            }
+            $from_date = "";$to_date = "";
+            if($user_data->type=="OWNER"){
+                $company = Companies::where('user_id', $user_data->id)->where('default_company', '1')->first();
+                if($company){
+                $y = explode("-",$company->default_fy);
+                $from_date = date('Y-m-d',strtotime($y[0]."-04-01"));
+                $to_date = date('Y-m-d',strtotime($y[1]."-03-31"));
+                }
+            }else if($user_data->type=="EMPLOYEE"){
+                $company = Companies::where('id', $user_data->company_id)->first();
+                if($company){
+                $y = explode("-",$company->default_fy);
+                $from_date = date('Y-m-d',strtotime($y[0]."-04-01"));
+                $to_date = date('Y-m-d',strtotime($y[1]."-03-31"));
+                }
+            }
             Session::put([
                 'user_id' => $user_data->id,
                 'user_name' => $user_data->name,
                 'user_email' => $user_data->email,
                 'user_mobile_no' => $user_data->mobile_no,
+                'business_type' => isset($company) ? $company->business_type : '',
+                'default_fy' => isset($company) ? $company->default_fy : '',
+                'from_date' => $from_date,
+                'user_type' => $user_data->type,
+                'to_date' => $to_date,
                 'user_company_id' => isset($company) ? $company->id : '',
             ]);
-            //$allSessionData = session()->all();
             return redirect()->intended('dashboard')->withSuccess('Signed in Successfully!');
-            //$token = auth()->user()->createToken('Token')->accessToken;
-            //return response()->json(['code' => 200, 'message' => 'Login Successfully!']);
+            
         }
         return redirect("otp-login")->withError('Login details are not valid!');
         //return response()->json(['code' => 422, 'message' => 'Unauthoriesd access!']);
@@ -277,8 +322,6 @@ class AuthController extends Controller{
 
         return redirect("dashboard")->withSuccess('You have signed-in');
     }
-
-
     public function create(array $data)
     {
         return User::create([
@@ -287,8 +330,6 @@ class AuthController extends Controller{
             'password' => Hash::make($data['password'])
         ]);
     }
-
-
     public function dashboard()
     {
       
@@ -306,8 +347,7 @@ class AuthController extends Controller{
         }
         return redirect("password-login")->withSuccess('Please Login Again!');
     }
-
-   public function changeCompany(Request $request){
+    public function changeCompany(Request $request){
       if(Session::get('user_type')=="OWNER"){
          Companies::where('user_id',Session::get('user_id'))->update(['default_company'=>'0']);
       }else if(Session::get('user_type')=="EMPLOYEE"){
@@ -319,20 +359,17 @@ class AuthController extends Controller{
       $comp->update();
       Session::put('user_company_id', $request->change_company);
       return redirect("dashboard")->withSuccess('Company change successfully!');
-   }
-
+    }
     public function logout()
     {
         Session::flush();
         Auth::logout();
         return Redirect('password-login')->withSuccess('Logout Successfully!');;
     }
-
     public function forgotPassword()
     {
         return view('auth.forgotPassword');
     }
-
     public function forgotOtp(Request $request)
     {
         /* Validate Data */
@@ -349,53 +386,26 @@ class AuthController extends Controller{
         $otp =  rand(1234, 9999);
         /* Generate An OTP */
         $userOtp = $this->generateForgotOtp($request->mobile_no, $otp);
-        $authKey = "252256AwyPQCtcYQbR5c17926c";
-        //Multiple mobiles numbers separated by comma
-        $length_mobile = strlen($request->mobile_no);
-        if ($length_mobile == 10) {
-            $mobileNumber = '+91' . $request->mobile_no;
-        } else {
-            $mobileNumber = $request->mobile_no;
-        }
-        $senderId = "KRAFTZ";
-        $message = urlencode("KRAFTPAPER Your mobile verification code is : $otp");
-        $route = "4";
-        $postData = array(
-            'authkey' => $authKey,
-            'mobiles' => $mobileNumber,
-            'message' => $message,
-            'sender' => $senderId,
-            'route' => $route
-        );
-
-        //API URL
-        $url = "https://api.msg91.com/api/v2/sendsms?DLT_TE_ID=1307161717926311553";
-
-        // init the resource
-        $ch = curl_init();
-        curl_setopt_array($ch, array(
-            CURLOPT_URL => $url,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $postData
-            //,CURLOPT_FOLLOWLOCATION => true
-        ));
-        //Ignore SSL certificate verification
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-        //get response
-        $output = curl_exec($ch);
-        //Print error if any
-        if (curl_errno($ch)) {
-            echo 'error:' . curl_error($ch);
-        }
-        curl_close($ch);
-        //$userOtp->sendSMS($request->mobile_no, $otp);
-        return view('auth.forgotOtpVerification')->with(['user_id' => $userOtp->user_id, 'mobile_no' => $mobileNumber, 'successMessage' => 'OTP has been sent on Your Mobile Number for change password!']);
-        //return redirect()->route('otp.verification', ['user_id' => $userOtp->user_id])
-        //        ->with('success',  "OTP has been sent on Your Mobile Number."); 
+        $template = "customer_otp_verify";
+        $mobile = $request->mobile_no;
+        $var1 = $otp;
+        $req = '{
+                "countryCode": "+91",
+                "phoneNumber": '.$mobile.',
+                "callbackData": "some text here",
+                "type": "Template",
+                "template": {
+                    "name": "'.$template.'",
+                    "languageCode": "en",
+                    "bodyValues": ["'
+                    .$var1.'"
+                    ]
+                }
+        }';
+        CommonHelper::sendWhatsappMessage($req);
+        return view('auth.forgotOtpVerification')->with(['user_id' => $userOtp->user_id, 'mobile_no' => $mobile, 'successMessage' => 'OTP has been sent on Your Mobile Number for change password!']);
+        
     }
-
     public function generateForgotOtp($mobile_no, $otp)
     {
         $user = User::where('mobile_no', $mobile_no)->first();
@@ -414,7 +424,6 @@ class AuthController extends Controller{
             'expire_at' => $now->addMinutes(10)
         ]);
     }
-
     public function changePassword(Request $request)
     {
 
@@ -437,9 +446,12 @@ class AuthController extends Controller{
 
         $now = now();
         if (!$userOtp) {
-            return response()->json(['code' => 422, 'message' => 'Your OTP is not correct.']);
+            return view('auth.forgotOtpVerification')->with(['user_id' => $request->user_id, 'mobile_no' => $request->mobile_no, 'errorMessage' => 'Your OTP is not correct!']);
+            
+            //return response()->json(['code' => 422, 'message' => 'Your OTP is not correct.']);
         } else if ($userOtp && $now->isAfter($userOtp->expire_at)) {
-            return response()->json(['code' => 422, 'message' => 'Your OTP has been expired.']);
+            return view('auth.forgotOtpVerification')->with(['user_id' => $request->user_id, 'mobile_no' => $request->mobile_no, 'errorMessage' => 'Your OTP has been expired.!']);
+            
         }
 
         $user = User::whereId($request->user_id)->first();
@@ -454,9 +466,10 @@ class AuthController extends Controller{
         return redirect("otp-login")->withError('Login details are not valid!');
         //return response()->json(['code' => 422, 'message' => 'Unauthoriesd access!']);
     }
-
     public function submitChangePassword(Request $request)
     {
+
+        
         $validator = Validator::make($request->all(), [
 
             'password' => 'required|string',
@@ -468,7 +481,7 @@ class AuthController extends Controller{
             return redirect()->route('password.login')->withErrors($validator)->withInput();
         }
         $user = User::whereId($request->user_id)->first();
-
+       
         if ($user) {
 
             $user->update([
@@ -478,4 +491,66 @@ class AuthController extends Controller{
         }
         return redirect("password-login")->withErrors('Something went wrong, please try after some time!');
     }
+    public function sendOtp(Request $request){
+        $request->validate([
+            'mobile_no' => 'required|string|min:10|max:10|unique:users',
+        ]);
+        $otp =  rand(1234, 9999);
+        $template = "customer_otp_verify";
+        $mobile = $request->mobile_no;
+        $var1 = $otp;
+        $req = '{
+                "countryCode": "+91",
+                "phoneNumber": '.$mobile.',
+                "callbackData": "some text here",
+                "type": "Template",
+                "template": {
+                    "name": "'.$template.'",
+                    "languageCode": "en",
+                    "bodyValues": ["'
+                    .$var1.'"
+                    ]
+                }
+        }';
+        CommonHelper::sendWhatsappMessage($req);
+        Session::put('registration_otp', $otp);
+        Session::put('registration_otp_verify',0);
+        $response = array(
+            'status' => 1,
+            'message' => 'OTP sent successfully!'
+        );
+        return json_encode($response);
+    }
+    public function verifyOtp(Request $request){        
+        if($request->otp == Session::get('registration_otp')){
+            Session::put('registration_otp_verify',1);
+            $response = array(
+                'status' => 1,
+                'message' => 'OTP verified successfully!'
+            );
+        }else{
+            $response = array(
+                'status' => 0,
+                'message' => 'OTP not matched!'
+            );
+        }
+        return json_encode($response);
+    }
+    public function changeOtpVerifyStatus(Request $request){
+        Session::put('registration_otp_verify',1);
+    }
+    public function changePasswordView(Request $request){
+        return view('change_password');
+    }
+    public function changePasswordUpdate(Request $request)
+    {        
+        $validated = $request->validate([
+            'password' => 'required',
+        ]); 
+        User::where('id',Session::get('user_id'))->update(['password' => \Hash::make($request->password)]);
+        return redirect('change-password-view')->withSuccess('Password reset successfully!');
+        
+        
+    }
+    
 }

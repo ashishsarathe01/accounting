@@ -46,6 +46,7 @@
                   <thead>
                      <tr class=" font-12 text-body bg-light-pink ">
                         <th class="w-min-120 border-none bg-light-pink text-body">Date </th>
+                        <th class="w-min-120 border-none bg-light-pink text-body">Payment Voucher No. </th>
                         <th class="w-min-120 border-none bg-light-pink text-body ">Account Name </th>
                         <th class="w-min-120 border-none bg-light-pink text-body " style="text-align:right;">Debit</th>
                         <th class="w-min-120 border-none bg-light-pink text-body ">Mode</th>
@@ -62,6 +63,7 @@
                      foreach ($payment as $value) { ?>
                         <tr class="font-14 font-heading bg-white">
                            <td class="w-min-120 "><?php  echo date("d-m-Y", strtotime($value->date)); ?></td>
+                           <td class="w-min-120"><?php echo $value->voucher_no ?></td>
                            <td class="w-min-120 "><?php echo $value->acc_name ?></td>
                            <td class="w-min-120 " style="text-align: right;">
                               <?php 
@@ -97,6 +99,7 @@
                      } 
                      ?>
                      <tr class="font-14 font-heading bg-white">
+                         <td></td>
                         <td class="w-min-120 fw-bold font-heading">TOTAL</td>
                         <td class="w-min-120"></td>
                         <td class="w-min-120 fw-bold font-heading" style="text-align: right;"><?php echo $tot_dbt; ?></td>

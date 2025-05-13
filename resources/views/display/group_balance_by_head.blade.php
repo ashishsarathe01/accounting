@@ -175,7 +175,15 @@
                      <tr>
                         <th colspan="4">Balance : 
                            <?php 
-                           echo str_replace("-","",number_format($debit_total-$credit_total)).' Cr'; 
+                           $bal = $debit_total - $credit_total;
+                           if($bal>=0){
+                              $balance = $bal;
+                              echo number_format($bal,2).' Dr';
+                           }else{
+                              $balance = abs($bal);
+                              echo number_format(abs($bal),2).' Cr';
+                           }
+                           
                            ?>
                         </th>
                      </tr>               

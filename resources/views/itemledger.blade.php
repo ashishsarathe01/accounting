@@ -18,23 +18,14 @@
                </div>
             @endif
             <div class="d-xxl-flex justify-content-between py-4 px-2 align-items-center">
-               <nav aria-label="breadcrumb meri-breadcrumb ">
-                  <ol class="breadcrumb meri-breadcrumb m-0  ">
-                     <li class="breadcrumb-item">
-                        <a class="font-12 text-body text-decoration-none" href="#">Dashboard</a>
-                     </li>
-                     <li class="breadcrumb-item p-0">
-                        <a class="fw-bold font-heading font-12  text-decoration-none" href="#">Items Ledger</a>
-                     </li>
-                  </ol>
-               </nav>
+               
                <form class="" id="frm" method="GET" action="{{ route('itemledger.filter') }}">
                   @csrf
                   <div class="d-xxl-flex d-block  align-items-center">
-                     <p class="text-nowrap m-0 font-14 fw-500 font-heading my-2 my-xxl-0">Items</p>
+                    
                      <select class="form-select select2-single w-min-230 ms-xxl-2" aria-label="Default select example" id="items_id" name="items_id" required>
-                        <option value="">Select</option>
-                        <option value="all" <?php if(isset($item_id) && $item_id != '' && $item_id=='all'){ echo "selected";}?>>All</option>
+                        <option value="">Select Item</option>
+                        <option value="all" <?php if(isset($item_id) && $item_id != '' && $item_id=='all'){ echo "selected";}?>>All Item</option>
                         <?php
                         foreach($item_list as $value){
                            $sel = '';
@@ -47,12 +38,27 @@
                               <?php 
                         } ?>
                      </select>
+                     <select class="form-select select2-single w-min-230 ms-xxl-2" aria-label="Default select example" id="selected_series" name="selected_series" required>
+                        
+                        <option value="all" <?php if(isset($selected_series) && $selected_series != '' && $selected_series=='all'){ echo "selected";}?>>All Series</option>
+                        <?php
+                        foreach($series as $value){
+                           $sel = '';
+                           if(isset($selected_series) && $selected_series != '') {
+                              if($selected_series == $value->series){
+                                 $sel = 'selected';
+                              }
+                           }?>
+                           <option <?php echo $sel; ?> value="<?php echo $value->series; ?>"><?php echo $value->series; ?></option>
+                              <?php 
+                        } ?>
+                     </select>
                      
                      <div class="calender-administrator my-2 my-xxl-0 ms-xxl-2 w-min-230 from_date_div">
-                        <input type="date" id="from_date" class="form-control calender-bg-icon calender-placeholder" placeholder="From date" required name="from_date" value="<?php if(isset($_GET['from_date'])){ echo $_GET['from_date'];}else{ echo $fdate;}?>" min="{{Session::get('from_date')}}" max="{{Session::get('to_date')}}">
+                        <input type="date" id="from_date" class="form-control calender-bg-icon calender-placeholder" placeholder="From date" required name="from_date" value="<?php if(isset($_GET['from_date'])){ echo $_GET['from_date'];}else{ echo $fdate;}?>" min="{{Session::get('from_date')}}" max="{{Session::get('to_date')}}" style="height: 33px;">
                      </div>
                      <div class="calender-administrator   w-min-230 ms-xxl-2">
-                        <input type="date" id="to_date" class="form-control calender-bg-icon calender-placeholder" placeholder="To date" required name="to_date" value="<?php  if(isset($_GET['to_date'])){ echo $_GET['to_date']; }else{ echo $tdate;}?>" min="{{Session::get('from_date')}}" max="{{Session::get('to_date')}}">
+                        <input type="date" id="to_date" class="form-control calender-bg-icon calender-placeholder" placeholder="To date" required name="to_date" value="<?php  if(isset($_GET['to_date'])){ echo $_GET['to_date']; }else{ echo $tdate;}?>" min="{{Session::get('from_date')}}" max="{{Session::get('to_date')}}" style="height: 33px;">
                      </div>
                      <div class="calender-administrator   w-min-130 ms-xxl-1">
                         <button type="button" class="btn  btn-xs-primary" id="serachBtn">SUBMIT</button>
@@ -63,14 +69,13 @@
             <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
                <h5 class="master-table-title m-0 py-2">Items Ledger</h5>               
                <span class="ms-auto font-14 fw-bold font-heading">
-                   Opening Bal. : {{abs($opening)}} @if($opening<0)  @else  @endif
+                   Opening Bal. : {{formatIndianNumber(abs($opening))}} @if($opening<0)  @else  @endif
                </span>
             </div>
             <div class="display-sale-month  bg-white table-view shadow-sm">
                <table id="acc_table1" class="table-striped table-bordered table m-0 shadow-sm ">                  
                   <thead>
                      <tr class=" font-12 text-body bg-light-pink ">
-
                         @if(isset($item_id) && $item_id=='all')
                            <th class="w-min-120 border-none bg-light-pink text-body">Group</th>
                            <th class="w-min-120 border-none bg-light-pink text-body">Type</th>
@@ -93,7 +98,7 @@
                      $tot_blance = $opening;
                      $in = 0; $out = 0;setlocale(LC_MONETARY, 'en_IN');$qty = 0;
                      
-                     
+                     $tot_blance1 = $opening;
                      foreach($items as $value){
                         if(isset($item_id) && $item_id=='all'){ ?>
                            <tr class="font-14 font-heading bg-white redirect_average_page"  data-item_id="{{$value->item_id}}" data-from_date="{{$fdate}}" data-to_date="{{$_GET['to_date']}}" style="cursor: pointer;">
@@ -101,26 +106,27 @@
                               <td class="w-min-120">Item</td>
                               <td class="w-min-120" style="text-align: right;">
                                  <?php 
-                                 echo $value->average_weight;
+                                 echo formatIndianNumber($value->average_weight);
                                  ?>
                               </td>
                               <td class="w-min-120"><?php echo $value->unit_name;?></td>
                               <td class="w-min-120" style="text-align: right;">
                                  <?php 
                                   
-                                 echo $value->amount;?>                                    
+                                 echo formatIndianNumber($value->amount);?>                                    
                               </td>
                            </tr>
                            <?php
                            $qty = $qty + $value->average_weight;
                            $tot_blance = $tot_blance + $value->amount;
-                        }else{                            
+                        }else{     
+
                            $inWeight = isset($value['in_weight']) ? $value['in_weight'] : 0;
                            $outWeight = isset($value['out_weight']) ? $value['out_weight'] : 0;
-                           $tot_blance += $inWeight - $outWeight;
+                           $tot_blance1 += $inWeight - $outWeight;
                            $in += $inWeight;
                            $out += $outWeight;
-                           $redStyle = $tot_blance < 0 ? 'background-color: red !important; color: white !important;' : '';
+                           $redStyle = $tot_blance1 < 0 ? 'background-color: red !important; color: white !important;' : '';
                            ?>
                            <tr class="font-14 font-heading bg-white account_tr" style="cursor: pointer; " data-type="{{$value['source']}}" data-id="{{$value['source_id']}}" data-einvoice_status="{{$value['einvoice_status']}}">
                               <td class="w-min-120 " style="<?= $redStyle ?>"><?php echo date("d-m-Y", strtotime($value['txn_date'])); ?></td>
@@ -129,26 +135,25 @@
                               <td class="w-min-120" style="<?= $redStyle ?>"><?php echo $value['account_name'];?></td>
                               <td class="w-min-120 " style="text-align: right;<?= $redStyle ?>">
                                  <?php 
-                                 echo $value['in_weight'];
+                                 echo formatIndianNumber($value['in_weight']);
                                  
                                  ?>
                               </td>
                               <td class="w-min-120 " style="text-align: right;<?= $redStyle ?>">
                                  <?php 
-                                 echo $value['out_weight'];
-                                 
-                                 ?>
+                                 echo formatIndianNumber($value['out_weight']);
+                                ?>
                               </td>
                               <td class="w-min-120 " style="text-align: right;<?= $redStyle ?>">
                                  <?php
                                  if(isset($value['in_weight'])){
                                     $tot_blance = $tot_blance + $value['in_weight'];
-                                    echo $tot_blance;
+                                    echo formatIndianNumber($tot_blance);
                                     
                                      $in = $in + $value['in_weight'];
                                  }else if(isset($value['out_weight'])) {
                                     $tot_blance = $tot_blance - $value['out_weight'];
-                                    echo $tot_blance;
+                                    echo formatIndianNumber($tot_blance);
                                     
                                     $out = $out + $value['out_weight'];
                                  }?>
@@ -165,11 +170,11 @@
                            <td class="w-min-120" colspan="4"></td>
                            <td class="w-min-120 fw-bold" style="text-align: right;">
                               <?php 
-                              echo $in;?>
+                              echo formatIndianNumber($in);?>
                            </td>
                            <td class="w-min-120 fw-bold" style="text-align: right;">
                               <?php 
-                              echo $out;                             
+                              echo formatIndianNumber($out);                             
                               ?>
                            </td>
                            <td></td>
@@ -189,7 +194,7 @@
                         <th style="text-align: right;">Closing Bal</th>
                         <th class="text-end" style="text-align: right;">
                            <?php 
-                           echo $tot_blance;                         
+                           echo formatIndianNumber($tot_blance);                         
                            ?>
                         </th>
                         
@@ -202,13 +207,13 @@
                         <th></th>
                         <th style="text-align: right;">
                            <?php 
-                           echo $qty;                           
+                           echo formatIndianNumber($qty);                           
                            ?>                           
                         </th>
                         <th></th>
                         <th class="text-end" style="text-align: right;">
                            <?php 
-                           echo $tot_blance;                          
+                           echo formatIndianNumber($tot_blance);                          
                            ?>
                         </th>                        
                      </tr>

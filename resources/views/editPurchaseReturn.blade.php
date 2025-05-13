@@ -126,6 +126,7 @@
                      <ul style="color: red;">
                         @error('voucher_no'){{$message}}@enderror                        
                      </ul>
+                     <input type="hidden" name="voucher_type" id="voucher_type" value="{{$purchase_return->voucher_type}}">
                      <input type="hidden" name="purchase_bill_id" id="purchase_bill_id" value="{{$purchase_return->purchase_bill_id}}">
                   </div>
                   <div class="mb-1 col-md-1 voucher_no_div">
@@ -829,6 +830,7 @@
       // Get the selected value
       var account_id = $(this).val();
       var purchase_bill_id = '{{$purchase_return->purchase_bill_id}}';
+      let voucher_type = '{{$purchase_return->voucher_type}}';
       var invoice_no = '{{$purchase_return->invoice_no}}';
       $.ajax({
          url: '{{url("get/purchaseinvoice/details")}}',
@@ -847,7 +849,7 @@
                if(invoice_no==val.voucher_no){
                   selected = "selected";
                }
-               optionElements += '<option value="' + val.voucher_no + '" data-id="'+val.id+'" '+selected+'>' + val.voucher_no + '</option>';
+               optionElements += '<option value="' + val.voucher_no + '" data-id="'+val.id+'" data-voucher_type="'+val.voucher_type+'" '+selected+'>' + val.voucher_no + '</option>';
             });
             $("#voucher_no").append(optionElements);
             $('#voucher_no').change();
@@ -856,8 +858,15 @@
    });
    $('#voucher_no').change(function() {
       // Get the selected value
-      $("#invoice_id").attr('href',"{{ URL::to('purchase-invoice/')}}/"+$('option:selected', this).attr('data-id'));
+      
+      $("#voucher_type").val($('option:selected', this).attr('data-voucher_type'));
       $("#purchase_bill_id").val($('option:selected', this).attr('data-id'));
+
+      if($('option:selected', this).attr('data-voucher_type')=="PURCHASE"){
+         $("#invoice_id").attr('href',"{{ URL::to('purchase-invoice/')}}/"+$('option:selected', this).attr('data-id'));
+      }else if($('option:selected', this).attr('data-voucher_type')=="SALE"){
+         $("#invoice_id").attr('href',"{{ URL::to('sale-invoice/')}}/"+$('option:selected', this).attr('data-id'));
+      }
       var invoice_id = $(this).val();
       if(invoice_id==""){
          return;
@@ -869,7 +878,8 @@
          dataType: 'JSON',
          data: {
             _token: '<?php echo csrf_token() ?>',
-            voucher_no: invoice_id
+            voucher_no: invoice_id,
+            voucher_type: $('option:selected', this).attr('data-voucher_type'),
          },
          success: function(data) {
             var optionElements = '<option value="">Select</option>';

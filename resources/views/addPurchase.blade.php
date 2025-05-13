@@ -612,11 +612,11 @@
 
    $(".item_id").each(function (index) {
       let dataId = $(this).attr("data-id");
-      let removeIcon = '<svg style="color: red; cursor: pointer; margin-right: 8px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + dataId + '" viewBox="0 0 16 16">' +
+      let removeIcon = '<svg style="color: red; cursor: pointer; margin-right: 8px;" xmlns="http://www.w3.org/2000/svg" tabindex="0" width="24" height="24" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + dataId + '" viewBox="0 0 16 16">' +
          '<path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/>' +
          '</svg>';
 
-      let addIcon = '<svg style="color: green;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="bg-primary rounded-circle add_more_wrapper" data-id="' + dataId + '" >' +
+      let addIcon = '<svg style="color: green;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" tabindex="0" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="bg-primary rounded-circle add_more_wrapper" data-id="' + dataId + '" >' +
          '<path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/>' +
          '</svg>';
 
@@ -657,12 +657,12 @@
       let $iconCell = $("#tr_" + rowId + " td:last");
 
       let removeIcon = `
-        <svg style="color: red; cursor: pointer; margin-right: 8px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="${rowId}" viewBox="0 0 16 16">
+        <svg style="color: red; cursor: pointer; margin-right: 8px;" xmlns="http://www.w3.org/2000/svg" tabindex="0" width="24" height="24" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="${rowId}" viewBox="0 0 16 16">
           <path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/>
         </svg>`;
 
       let addIcon = `
-        <svg style="color: green;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="bg-primary rounded-circle add_more_wrapper" data-id="${rowId}">
+        <svg style="color: green;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" tabindex="0" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="bg-primary rounded-circle add_more_wrapper" data-id="${rowId}">
           <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/>
         </svg>`;
         
@@ -1224,6 +1224,7 @@
       $lastCell.html(removeIcon);
     }
   });
+  calculateAmount();
 });
 
    $( ".select2-single, .select2-multiple" ).select2();
@@ -1737,17 +1738,34 @@ $(document).ready(function() {
 
 
 $(document).on("keydown", ".amount", function (event) {
-  if ((event.key === "Tab" && !event.shiftKey) || event.key === "Enter") {
+  if (event.key === "Enter") {
     event.preventDefault();
 
-    let id = $(this).data("id");
-    let lastRowId = $(".item_id").last().data("id");
-if(id=="1"){
-   $("#tr_" + id).find(".add_more_wrapper").focus();
-}
-    else {
-      // Go to Remove (-) button
-      $("#tr_" + id).find(".remove").focus();
+    let $current = $(this);
+    let id = parseInt($current.data("id")); // Current input ID
+    let $currentRow = $("#tr_" + id);
+    let lastRowId = $(".goods_items").last().data("id");
+
+    if (id === 1) {
+      // If id is 1, focus on Add More button
+      $currentRow.find(".add_more_wrapper").focus();
+    } else {
+      let $removeButton = $currentRow.find(".remove");
+
+      if ($removeButton.length > 0) {
+        // If Remove button exists, focus it
+        $removeButton.focus();
+      } else {
+        // Else, move to next goods description input
+        let nextId = id + 1;
+        let $nextInput = $("#goods_discription_tr_" + nextId);
+
+        if ($nextInput.length > 0) {
+          $nextInput.focus();
+        } else {
+          console.warn("Next description field not found for ID: " + nextId);
+        }
+      }
     }
   }
 });
@@ -1879,5 +1897,25 @@ $('select.bill_sundry_tax_type').each(function () {
     $(this).data('previousValue', selectedValue);
   });
 });
+
+
+
+$(document).ready(function() {
+  
+  //   // When clicking purchaseBtn
+  //   $("#purchaseBtn").on('click', function(event) {
+  //     event.preventDefault(); // Stop default submit behavior
+  //     $(this).closest('form').submit(); // Manually submit the form
+  //   });
+  
+    // When pressing Enter on purchaseBtn
+    $("#purchaseBtn").on('keydown', function(event) {
+      if (event.key === "Enter") {
+        event.preventDefault(); // prevent default behavior
+        $(this).click(); // trigger click event (which submits)
+      }
+    });
+  
+  });
 </script>
 @endsection

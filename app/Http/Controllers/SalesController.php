@@ -39,8 +39,7 @@ class SalesController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-   public function index(Request $request)
-    {
+   public function index(Request $request){
         $input = $request->all();
     
         // Initialize dates as null
@@ -297,12 +296,7 @@ class SalesController extends Controller
       } 
       return view('addSale')->with('party_list', $party_list)->with('billsundry', $billsundry)->with('bill_date', $bill_date)->with('GstSettings', $GstSettings)->with('item', $item);
    }
-   /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-   */
+   
    public function store(Request $request){
       $validated = $request->validate([
          'series_no' => 'required',
@@ -417,6 +411,7 @@ class SalesController extends Controller
             $item_ledger = new ItemLedger();
             $item_ledger->item_id = $good;
             $item_ledger->out_weight = $qtys[$key];
+            $item_ledger->series_no = $request->input('series_no');
             $item_ledger->txn_date = $request->input('date');
             $item_ledger->price = $prices[$key];
             $item_ledger->total_price = $amounts[$key];
@@ -531,7 +526,8 @@ class SalesController extends Controller
                   if(!empty($stock_average->sale_weight)){
                      $sale_weight = $sale_weight + $stock_average->sale_weight;
                   }
-                  $average_weight = $purchase_weight - $value;                  
+                  $average_weight = $purchase_weight - $value;  
+                                  
                   $average = ItemAverage::find($stock_average->id);
                   $average->sale_weight = $sale_weight;
                   $average->average_weight = $average_weight;
@@ -796,27 +792,41 @@ class SalesController extends Controller
             }
             $gst_detail[$key]->rate = $rate;
             if($max_gst==$rate){
-               $freight = SaleSundry::select('amount')
-                           ->where('sale_id', $id)
-                           ->where('bill_sundry',4)
-                           ->first();
-               $insurance = SaleSundry::select('amount')
-                           ->where('sale_id', $id)
-                           ->where('bill_sundry',7)
-                           ->first();
-               $discount = SaleSundry::select('amount')
-                           ->where('sale_id', $id)
-                           ->where('bill_sundry',5)
-                           ->first();
-               if($freight && !empty($freight->amount)){
-                  $taxable_amount = $taxable_amount + $freight->amount;
+
+               $sun = SaleSundry::join('bill_sundrys','sale_sundries.bill_sundry','=','bill_sundrys.id')
+                              ->select('amount','bill_sundry_type')
+                              ->where('sale_id', $id)
+                              ->where('nature_of_sundry','OTHER')
+                              ->get();
+               foreach ($sun as $k1 => $v1) {
+                  if($v1->bill_sundry_type=="additive"){
+                     $taxable_amount = $taxable_amount + $v1->amount;
+                  }else if($v1->bill_sundry_type=="subtractive"){
+                     $taxable_amount = $taxable_amount - $v1->amount;
+
+                  }
                }
-               if($insurance && !empty($insurance->amount)){
-                  $taxable_amount = $taxable_amount + $insurance->amount;
-               }
-               if($discount && !empty($discount->amount)){
-                  $taxable_amount = $taxable_amount - $discount->amount;
-               }
+               // $freight = SaleSundry::select('amount')
+               //             ->where('sale_id', $id)
+               //             ->where('bill_sundry',4)
+               //             ->first();
+               // $insurance = SaleSundry::select('amount')
+               //             ->where('sale_id', $id)
+               //             ->where('bill_sundry',7)
+               //             ->first();
+               // $discount = SaleSundry::select('amount')
+               //             ->where('sale_id', $id)
+               //             ->where('bill_sundry',5)
+               //             ->first();
+               // if($freight && !empty($freight->amount)){
+               //    $taxable_amount = $taxable_amount + $freight->amount;
+               // }
+               // if($insurance && !empty($insurance->amount)){
+               //    $taxable_amount = $taxable_amount + $insurance->amount;
+               // }
+               // if($discount && !empty($discount->amount)){
+               //    $taxable_amount = $taxable_amount - $discount->amount;
+               // }
             }
             $gst_detail[$key]->taxable_amount = $taxable_amount;
          }
@@ -1004,6 +1014,7 @@ class SalesController extends Controller
                $item_ledger = new ItemLedger();
                $item_ledger->item_id = $good;
                $item_ledger->out_weight = $qtys[$key];
+               $item_ledger->series_no = $request->input('series_no');
                $item_ledger->txn_date = $request->input('date');
                $item_ledger->price = $prices[$key];
                $item_ledger->total_price = $amounts[$key];
@@ -1155,6 +1166,7 @@ class SalesController extends Controller
             $index = 1;
             $series_no = "";
             while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+               
                if($data[0]!="" && $data[2]!=""){
                   $series_no = $data[0];
                   $voucher_no = $data[2];                             
@@ -1584,6 +1596,7 @@ class SalesController extends Controller
                         $item_ledger = new ItemLedger();
                         $item_ledger->item_id = $item->id;
                         $item_ledger->out_weight = $v1['item_weight'];
+                        $item_ledger->series_no = $series_no;
                         $item_ledger->txn_date = $date;
                         $item_ledger->price = $v1['price'];
                         $item_ledger->total_price = str_replace(",","",$v1['amount']);
@@ -2958,9 +2971,9 @@ class SalesController extends Controller
          $result = json_decode($response); 
          if(isset($result->status_cd) && $result->status_cd=='1'){
             Sales::where('id',$request->id)->update(['e_invoice_status'=>0,'status'=>'2','einvoice_response'=>'','total'=>'0']);
-            SaleDescription::where('sale_id',$request->sale_id)
+            SaleDescription::where('sale_id',$request->id)
                         ->update(['delete'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);            
-            SaleSundry::where('sale_id',$request->sale_id)
+            SaleSundry::where('sale_id',$request->id)
                         ->update(['delete'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
             AccountLedger::where('entry_type',1)
                         ->where('entry_type_id',$request->id)
@@ -2968,6 +2981,14 @@ class SalesController extends Controller
             ItemLedger::where('source',1)
                      ->where('source_id',$request->id)
                      ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
+                     ItemAverageDetail::where('sale_id',$request->sale_id)
+                     ->where('type','SALE')
+                     ->delete();         
+            $desc = SaleDescription::where('sale_id',$request->id)
+                                 ->get();
+            foreach ($desc as $key => $value) {
+               CommonHelper::RewriteItemAverageByItem($sale->date,$value->goods_discription);
+            }
             $response = [
                'success' => true,
                'data'    => "",

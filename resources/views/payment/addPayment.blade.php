@@ -69,7 +69,7 @@
                <div class="row">
                   <div class="mb-2 col-md-2">
                      <label for="name" class="form-label font-14 font-heading">Date</label>
-                     <input type="date" id="date" class="form-control calender-bg-icon calender-placeholder" name="date" placeholder="Select date" required value="{{$date}}" min="{{Session::get('from_date')}}" max="{{Session::get('to_date')}}">
+                     <input type="date" id="date" class="form-control calender-bg-icon calender-placeholder" name="date" placeholder="Select date" autofocus required value="{{$date}}" min="{{Session::get('from_date')}}" max="{{Session::get('to_date')}}">
                   </div>
                   <div class="mb-2 col-md-2">
                      <label for="name" class="form-label font-14 font-heading">Voucher No.</label>
@@ -77,7 +77,7 @@
                   </div>
                   <div class="mb-2 col-md-2">
                      <label for="series_no" class="form-label font-14 font-heading">Series No.</label>
-                     <select id="series_no" class="form-control" name="series_no">
+                     <select id="series_no" class="form-control select2-single" name="series_no">
                         <option value="">Select Series</option>
                         <?php
                         if(count($mat_series) > 0) {
@@ -88,9 +88,9 @@
                         } ?>
                      </select>
                   </div>
-                  <div class="mb-2 col-md-2">
+                  <div class="mb-2 col-md-2 ">
                      <label for="name" class="form-label font-14 font-heading">Mode</label>
-                     <select id="mode" class="form-control" name="mode">
+                     <select id="mode" class="form-control select2-single" name="mode">
                         <option value="">Select Mode</option>
                         <option value="0">IMPS/NEFT/RTGS</option>
                         <option value="1">CASH</option>                        
@@ -106,8 +106,8 @@
                   <table id="example11" class="table-striped table m-0 shadow-sm table-bordered">
                      <thead>
                         <tr class=" font-12 text-body bg-light-pink ">
-                           <th class="w-min-120 border-none bg-light-pink text-body ">Debit/Credit</th>
-                           <th class="w-min-120 border-none bg-light-pink text-body ">Account</th>
+                           <th style="width:10%;"class="w-min-120 border-none bg-light-pink text-body ">Debit/Credit</th>
+                           <th style="width:35%;"class="w-min-120 border-none bg-light-pink text-body ">Account</th>
                            <th class="w-min-120 border-none bg-light-pink text-body ">Debit</th>
                            <th class="w-min-120 border-none bg-light-pink text-body ">Credit</th>                           
                            <th class="w-min-120 border-none bg-light-pink text-body ">Narration</th>
@@ -116,7 +116,7 @@
                      <tbody>
                         <tr class="font-14 font-heading bg-white">
                            <td class="">
-                              <select class="form-control type" name="type[]" data-id="1" id="type_1">
+                              <select class="form-control type select2-single" name="type[]" data-id="1" id="type_1">
                                  <option value="">Type</option>
                                  <option value="Credit">Credit</option>
                                  <option value="Debit" selected>Debit</option>
@@ -151,7 +151,7 @@
                               </select>
                            </td>
                            <td class="">
-                              <select class="form-select" id="account_2" data-id="2" name="account_name[]" required>
+                              <select class="form-select select2-single" id="account_2" data-id="2" name="account_name[]" required>
                                  <option value="">Select</option>
                                  <?php
                                  foreach ($credit_accounts as $value) { ?>
@@ -204,100 +204,7 @@
                </div>
             </form>
          </div>
-         <!-- <div class="col-lg-1 d-flex justify-content-center">
-            <div class="shortcut-key ">
-               <p class="font-14 fw-500 font-heading m-0">Shortcut Keys</p>
-               <button class="p-2 transaction-shortcut-btn my-2 ">
-                  F1
-                  <span class="ps-1 fw-normal text-body">Help</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 ">
-                  <span class="border-bottom-black">F1</span>
-                  <span class="ps-1 fw-normal text-body">Add Account</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 ">
-                  <span class="border-bottom-black">F2</span>
-                  <span class="ps-1 fw-normal text-body">Add Item</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 ">
-                  F3
-                  <span class="ps-1 fw-normal text-body">Add Master</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 ">
-                  <span class="border-bottom-black">F3</span>
-                  <span class="ps-1 fw-normal text-body">Add Voucher</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 ">
-                  <span class="border-bottom-black">F5</span>
-                  <span class="ps-1 fw-normal text-body">Add Payment</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 ">
-                  <span class="border-bottom-black">F6</span>
-                  <span class="ps-1 fw-normal text-body">Add Receipt</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 ">
-                  <span class="border-bottom-black">F7</span>
-                  <span class="ps-1 fw-normal text-body">Add Journal</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 ">
-                  <span class="border-bottom-black">F8</span>
-                  <span class="ps-1 fw-normal text-body">Add Sales</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-4 ">
-                  <span class="border-bottom-black">F9</span>
-                  <span class="ps-1 fw-normal text-body">Add Purchase</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 ">
-                  <span class="border-bottom-black">B</span>
-                  <span class="ps-1 fw-normal text-body">Balance Sheet</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 ">
-                  <span class="border-bottom-black">T</span>
-                  <span class="ps-1 fw-normal text-body">Trial Balance</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 ">
-                  <span class="border-bottom-black">S</span>
-                  <span class="ps-1 fw-normal text-body">Stock Status</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 ">
-                  <span class="border-bottom-black">L</span>
-                  <span class="ps-1 fw-normal text-body">Acc. Ledger</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 ">
-                  <span class="border-bottom-black">I</span>
-                  <span class="ps-1 fw-normal text-body">Item Summary</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 ">
-                  <span class="border-bottom-black">D</span>
-                  <span class="ps-1 fw-normal text-body">Item Ledger</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 ">
-                  <span class="border-bottom-black">G</span>
-                  <span class="ps-1 fw-normal text-body">GST Summary</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 ">
-                  <span class="border-bottom-black">U</span>
-                  <span class="ps-1 fw-normal text-body">Switch User</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 ">
-                  <span class="border-bottom-black">F</span>
-                  <span class="ps-1 fw-normal text-body">Configuration</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 ">
-                  <span class="border-bottom-black">K</span>
-                  <span class="ps-1 fw-normal text-body">Lock Program</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 ">
-                  <span class="ps-1 fw-normal text-body">Training Videos</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 ">
-                  <span class="ps-1 fw-normal text-body">GST Portal</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-4 ">
-                  Search Menu
-               </button>
-            </div>
-         </div> -->
+         
       </div>
    </section>
 </div>
@@ -358,9 +265,8 @@
       creditTotal();
    });
    $(document).ready(function() {
-      $(".submit_data").click(function() {
-             
-         let date = $("#date").val();
+      $(".submit_data").click(function () {
+        let date = $("#date").val();
         let mode = $("#mode").val();
         let series_no = $("#series_no").val(); // Added series_no validation
 
@@ -379,12 +285,7 @@
             alert("Please enter the Series Name/Number.");
             return false;
         }
-         let date = $("#date").val();
-         let mode = $("#mode").val();
-         if(date=="" || mode==""){
-            alert("Please Enter required fields");
-            return false;
-         }
+
          var form_data = [];
          let dr = 0;
          let cr = 0;

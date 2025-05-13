@@ -81,20 +81,34 @@
             </div>
             <table>
                <tbody>
-                  <tr>
-                     <th colspan="8">
-                        <div style="width:auto; float:left; text-align:left;"><h4 style="margin-top:0; margin-bottom: 0px;"> GSTIN : {{$party_detail->gstin}}</h4></div>
-                        <div class="bil_logo">
-                           
-                        </div>
-                        <div style="width:auto; float:right; text-align:right;"><small>O/D/T</small></div>
-                        <div style="clear:both"></div>
-                        <p style="margin-top:0;" class="text-center">(Input TAX Credit is available to a taxable person against this copy)</p>
-                        <p style="margin-top:0;" class="text-center"><u>TAX INVOICE </u></p>
-                        <h1 style="margin:0px" class="text-center">{{$party_detail->account_name}}</h1>
-                        <p class="text-center"><small style="font-size: 13px;">{{$party_detail->address}},{{$party_detail->sname}},{{$party_detail->pin_code}}</small></p>
-                     </th>
-                  </tr> 
+                <tr>
+    <th colspan="8">
+        <div style="width:auto; float:left; text-align:left;">
+            <h4 style="margin: 0;">GSTIN : {{$party_detail->gstin}}</h4>
+        </div>
+        <div class="bil_logo">
+            <!-- Logo or any image can be placed here -->
+        </div>
+        <div style="clear:both"></div>
+
+        <!-- No vertical spacing -->
+        <p class="text-center" style="margin: 0;"><u>PURCHASE INVOICE</u></p>
+
+        <h1 class="text-center" style="margin: 0;">{{$party_detail->account_name}}</h1>
+
+        <!-- Centered address with max width and zero margin -->
+        <div style="max-width: 60%; margin: 0 auto;">
+            <p class="text-center" style="margin: 0;">
+                <small style="font-size: 13px;">
+                    {{$party_detail->address}},{{$party_detail->sname}},{{$party_detail->pin_code}}
+                </small>
+            </p>
+        </div>
+    </th>
+</tr>
+
+
+
                                                                          
                      <tr>
                         <td colspan="4">
@@ -159,9 +173,28 @@
                      <tr>
                         <td style="border-right:0; border-top:0;" colspan="2"></td>
                         <td colspan="4" style="border-left:0; border-right:0; border-top:0;">
-                           @foreach($sale_sundry as $sundry)
-                           <p>Add : {{$sundry->name}} </p>
-                           @endforeach                           
+                              @php
+    $addTypes = ['CGST', 'SGST', 'IGST', 'ROUNDED OFF (+)'];
+    $lessTypes = ['ROUNDED OFF (-)'];
+@endphp
+
+@foreach($sale_sundry as $sundry)
+    @php
+        $billsundry = \App\Models\BillSundrys::find($sundry->bill_sundry);  
+    @endphp
+
+    @if($sundry->nature_of_sundry === 'OTHER')
+        @if($sundry->bill_sundry_type === 'additive')
+            <p>Add : {{ $sundry->name }}</p>
+        @elseif($sundry->bill_sundry_type === 'subtractive')
+            <p>Less : {{ $sundry->name }}</p>
+        @endif
+    @elseif(in_array($sundry->nature_of_sundry, $addTypes))
+        <p>Add : {{ $sundry->name }}</p>
+    @elseif(in_array($sundry->nature_of_sundry, $lessTypes))
+        <p>Less : {{ $sundry->name }}</p>
+    @endif
+@endforeach                                
                         </td>
                         <td style="border-left:0; border-top:0;">
                            <!-- <p style="white-space: nowrap;">&nbsp;</p> -->

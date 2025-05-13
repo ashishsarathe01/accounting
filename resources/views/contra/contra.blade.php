@@ -55,7 +55,7 @@
                         <thead>
                             <tr class=" font-12 text-body bg-light-pink ">
                                 <th class="w-min-120 border-none bg-light-pink text-body">Date </th>
-                                <!-- <th class="w-min-120 border-none bg-light-pink text-body ">Vch/Bill No </th> -->
+                                <th class="w-min-120 border-none bg-light-pink text-body ">Vch/Bill No </th>
                                 <th class="w-min-120 border-none bg-light-pink text-body ">Account </th>
                                 <th class="w-min-120 border-none bg-light-pink text-body " style="text-align:right;">Debit(Rs.)
                                 </th>
@@ -83,6 +83,7 @@ foreach ($contra as $value) {
     echo date("d-m-Y", strtotime($value->date));
 }
 ?></td>
+     <td class="w-min-120"><?php echo $value->voucher_no ?></td>
     <!-- Account Name -->
     <td class="w-min-120 "><?php echo $value->acc_name ?></td>
 

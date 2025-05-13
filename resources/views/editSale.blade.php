@@ -192,6 +192,7 @@ foreach($manageitems as $value) {
     {{-- Show remove icon for all rows except the first --}}
     @if($i != "1")
         <svg style="color: red; cursor: pointer; margin-left: 10px;" 
+        tabindex="0"
              xmlns="http://www.w3.org/2000/svg" 
              width="24" height="24" 
              fill="currentColor" 
@@ -309,23 +310,25 @@ foreach($manageitems as $value) {
                                        
                                        <td >
                                        @if($index != "1")
-        <svg style="color: red; cursor: pointer; margin-left: 10px;" 
+                                       <svg style="color: red; cursor: pointer; margin-left: 10px;" 
              xmlns="http://www.w3.org/2000/svg" 
+             tabindex="0"
              width="24" height="24" 
              fill="currentColor" 
              class="bi bi-file-minus-fill remove_sundry_up" 
-             data-id="{{ $i }}" 
+             data-id="@php echo $index;@endphp" 
              viewBox="0 0 16 16">
             <path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/>
         </svg>
     @endif
 
-    {{-- Show add icon only on the last row --}}
-    @if($index == $count_sundry)
-        <span class="add_btn_class" id="add_btn_id_{{ $i }}">
+
+    <!-- {{-- Show add icon only on the last row --}}
+    @if($index == $count_sundry) -->
+        <!-- <span class="add_btn_class" id="add_btn_id_{{ $i }}">
             <svg xmlns="http://www.w3.org/2000/svg" 
             tabindex="0"
-            data-id="{{$i}}"
+            data-id="@php echo $index;@endphp"
                  class="bg-primary rounded-circle add_more_bill_sundry_up" 
                  width="24" height="24" 
                  viewBox="0 0 24 24" 
@@ -333,18 +336,17 @@ foreach($manageitems as $value) {
                  style="cursor: pointer;">
                 <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" />
             </svg>
-        </span>
-    @endif
-                                          <!-- <svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" tabindex="0" fill="currentColor" class="bi bi-file-minus-fill remove_sundry_up" data-id="@php echo $index;@endphp" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg>
-                                          
-                                          <span class="add_sundry_btn_class" tabindex="0" id="add_sundry_btn_id_@php echo $index;@endphp" data-id="@php echo $index;@endphp">
-                                          </span> -->
-                                          
+        </span>  -->
+    <!-- @endif -->
+                                          <!-- <svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-file-minus-fill remove_sundry_up" data-id="@php echo $index;@endphp" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg> -->
+
+                                          <span class="add_sundry_btn_class"  id="add_sundry_btn_id_@php echo $index;@endphp" data-id="@php echo $index;@endphp">
+                                          </span>
                                        </td>
                                     </tr>
                                     @php $index++;@endphp
                                  @endif
-                              @endforeach
+                              @endforeach  
                               @php 
                                  if($count_sundry==0){@endphp
                                     <tr class="font-14 font-heading bg-white bill_taxes_row">
@@ -356,7 +358,7 @@ foreach($manageitems as $value) {
                                     </tr>
                                     @php 
                                  }
-                              @endphp
+                              @endphp 
                               <?php 
 
                               $return = array();$roundReturn = array();
@@ -1100,7 +1102,8 @@ foreach($manageitems as $value) {
             billSundryArray.push({'id':$(this).val(),'value':$("#bill_sundry_amount_"+id).val(),'type':$('option:selected', this).attr('data-type'),'adjust_sale_amt':$('option:selected', this).attr('data-adjust_sale_amt'),'effect_gst_calculation':$('option:selected', this).attr('data-effect_gst_calculation'),'sequence':$('option:selected', this).attr('data-sequence'),'nature_of_sundry':$('option:selected', this).attr('data-nature_of_sundry')});
             taxSundryArray[id] = $("#bill_sundry_amount_"+id).val();
          }
-      });         
+      });    
+      console.log(billSundryArray)     
       var result = [];         
       percent_arr.reduce(function(res, value){
          if (!res[value.percent]) {
@@ -1213,6 +1216,7 @@ foreach($manageitems as $value) {
                         }
                      });
                   }
+                  
                   $(".add_more_bill_sundry_gst").click();
                   $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(taxSundryArray['sgst']);
                   $("#bill_sundry_"+add_more_bill_sundry_up_count).val(sgst_sundry_value)
@@ -1291,7 +1295,7 @@ foreach($manageitems as $value) {
                      sundry_amount = sundry_amount.toFixed(2);
                      taxSundryArray['igst'] = sundry_amount;
                   }
-                  $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(taxSundryArray['igst']);
+                  
                   let sundry_value = "";
                   if(billSundryArray.length>0){
                      billSundryArray.forEach(function(e){
@@ -1300,6 +1304,8 @@ foreach($manageitems as $value) {
                         }
                      });
                   }
+                  $(".add_more_bill_sundry_gst").click();
+                  $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(taxSundryArray['igst']);
                   $("#bill_sundry_"+add_more_bill_sundry_up_count).val(sundry_value)
                   $("#tax_amt_"+add_more_bill_sundry_up_count).html(e.percent+" %");
                   $("#tax_rate_tr_"+add_more_bill_sundry_up_count).val(e.percent);
@@ -1385,7 +1391,7 @@ foreach($manageitems as $value) {
          si = $(this).attr('data-id');
       });
       let last_index = si;
-      $("#add_sundry_btn_id_"+last_index).html('<svg style="cursor:pointer;float:right" xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle add_more_bill_sundry_up" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"></path></svg>'); 
+      $("#add_sundry_btn_id_"+last_index).html('<svg style="cursor:pointer;float:right" xmlns="http://www.w3.org/2000/svg" tabindex="0" class="bg-primary rounded-circle add_more_bill_sundry_up" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"></path></svg>'); 
       $("#party").change();
       selected_series = "{{$sale->series_no}}";
       calculateAmount();
@@ -1569,6 +1575,7 @@ foreach($manageitems as $value) {
       $lastCell.html(removeIcon);
     }
   });
+  calculateAmount();
 });
    $( ".select2-single, .select2-multiple" ).select2(  );
    $("#party").change(function(){
@@ -1850,17 +1857,34 @@ $(document).ready(function () {
 
 
 $(document).on("keydown", ".amount", function (event) {
-  if ((event.key === "Tab" && !event.shiftKey) || event.key === "Enter") {
+  if (event.key === "Enter") {
     event.preventDefault();
 
-    let id = $(this).data("id");
+    let $current = $(this);
+    let id = parseInt($current.data("id")); // Current input ID
+    let $currentRow = $("#tr_" + id);
     let lastRowId = $(".goods_items").last().data("id");
-if(id=="1"){
-   $("#tr_" + id).find(".add_more_wrapper").focus();
-}
-    else {
-      // Go to Remove (-) button
-      $("#tr_" + id).find(".remove").focus();
+
+    if (id === 1) {
+      // If id is 1, focus on Add More button
+      $currentRow.find(".add_more_wrapper").focus();
+    } else {
+      let $removeButton = $currentRow.find(".remove");
+
+      if ($removeButton.length > 0) {
+        // If Remove button exists, focus it
+        $removeButton.focus();
+      } else {
+        // Else, move to next goods description input
+        let nextId = id + 1;
+        let $nextInput = $("#goods_discription_tr_" + nextId);
+
+        if ($nextInput.length > 0) {
+          $nextInput.focus();
+        } else {
+          console.warn("Next description field not found for ID: " + nextId);
+        }
+      }
     }
   }
 });
@@ -2000,5 +2024,25 @@ $('select.bill_sundry_tax_type').each(function () {
     $(this).data('previousValue', selectedValue);
   });
 });
+
+
+
+$(document).ready(function() {
+  
+  //   // When clicking purchaseBtn
+  //   $("#purchaseBtn").on('click', function(event) {
+  //     event.preventDefault(); // Stop default submit behavior
+  //     $(this).closest('form').submit(); // Manually submit the form
+  //   });
+  
+    // When pressing Enter on purchaseBtn
+    $("#saveBtn").on('keydown', function(event) {
+      if (event.key === "Enter") {
+        event.preventDefault(); // prevent default behavior
+        $(this).click(); // trigger click event (which submits)
+      }
+    });
+  
+  });
 </script>
 @endsection

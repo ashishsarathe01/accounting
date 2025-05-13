@@ -5,11 +5,14 @@ namespace App\Http\Controllers\accountledger;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Carbon\Carbon;
+use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Accounts;
 use Illuminate\Support\Collection;
 use App\Models\AccountLedger;
+use App\Models\SaleInvoiceConfiguration;
 use App\Models\Sales;
 use App\Models\Purchase;
+use App\Models\Companies;
 use App\Models\SalesReturn;
 use App\Models\PurchaseReturn;
 use App\Models\Payment;
@@ -213,4 +216,152 @@ class AccountLedgerController extends Controller
       
       return view('accountledger/accountledger')->with('party_list', $party_list)->with('ledger', $ledger)->with('party_id', $party_id)->with('opening', $opening);
    }
+   public function exportPdf(Request $request)
+    {
+        $party_id = $request->input('party');
+        $from_date = $request->input('from_date');
+        $to_date = $request->input('to_date');
+
+        // Fetch account name
+        $accounts = Accounts::find($party_id);
+
+        $comp = Companies::where('id', Session::get('user_company_id'))->first();
+
+
+        // Fetch ledger entries
+        $ledger = DB::select(DB::raw("SELECT * FROM account_ledger WHERE account_id='".$party_id."' and entry_type!=-1 and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$request->to_date."', '%Y-%m-%d') and status=1 and delete_status='0' and company_id='".Session::get('user_company_id')."' order by STR_TO_DATE(txn_date, '%Y-%m-%d'),entry_type,entry_type_id"));
+        
+        if(count($ledger)>0){
+         foreach ($ledger as $key => $value) {
+            $ledger[$key]->account = "";
+        
+            if (!empty($value->map_account_id)) {
+                $account = Accounts::select('account_name')->where('id', $value->map_account_id)->first();
+                $ledger[$key]->account = $account->account_name ?? '';
+            }
+        
+            $ledger[$key]->bill_no = '';
+            $ledger[$key]->narration = '';
+            $ledger[$key]->long_narration = '';
+        
+            if ($value->entry_type == 1) {  // Sales
+                $action = Sales::select('voucher_no', 'series_no', 'financial_year')->where('id', $value->entry_type_id)->first();
+                if ($action) {
+                    $ledger[$key]->bill_no = $action->series_no . "/" . $action->financial_year . "/" . $action->voucher_no;
+                }
+        
+            } else if ($value->entry_type == 2) {  // Purchase
+                $action = Purchase::select('voucher_no')->where('id', $value->entry_type_id)->first();
+                $ledger[$key]->bill_no = $action->voucher_no ?? '';
+        
+            } else if ($value->entry_type == 3) {  // Sales Return
+                $action = SalesReturn::select('sale_return_no', 'sr_prefix')->where('id', $value->entry_type_id)->first();
+                if ($action) {
+                    $ledger[$key]->bill_no = $action->sr_prefix . $action->sale_return_no;
+                }
+        
+            } else if ($value->entry_type == 4) {  // Purchase Return
+                $action = PurchaseReturn::select('invoice_no', 'series_no', 'financial_year')->where('id', $value->entry_type_id)->first();
+                if ($action) {
+                    $ledger[$key]->bill_no = $action->series_no . "/" . $action->financial_year . "/DR" . $action->invoice_no;
+                }
+        
+            } else if ($value->entry_type == 5) {  // Payment
+                $action = Payment::select('voucher_no', 'long_narration')->where('id', $value->entry_type_id)->first();
+                $narration = PaymentDetails::where('id', $value->entry_type_detail_id)->value('narration');
+        
+                $ledger[$key]->bill_no = $action->voucher_no ?? '';
+                $ledger[$key]->long_narration = $action->long_narration ?? '';
+                $ledger[$key]->narration =  $narration ?? '';
+        
+            } else if ($value->entry_type == 6) {  // Receipt
+                $action = Receipt::select('voucher_no', 'long_narration')->where('id', $value->entry_type_id)->first();
+                $narration = ReceiptDetails::where('id', $value->entry_type_detail_id)->value('narration');
+        
+                $ledger[$key]->bill_no = $action->voucher_no ?? '';
+                $ledger[$key]->long_narration = $action->long_narration ?? '';
+                $ledger[$key]->narration = $narration ?? '';
+        
+            } else if ($value->entry_type == 7) {  // Journal
+                $action = Journal::select('voucher_no', 'long_narration')->where('id', $value->entry_type_id)->first();
+                $narration = JournalDetails::where('id', $value->entry_type_detail_id)->value('narration');
+        
+                $ledger[$key]->bill_no = $action->voucher_no ?? '';
+                $ledger[$key]->long_narration = $action->long_narration ?? '';
+                $ledger[$key]->narration = $narration ?? '';
+        
+            } else if ($value->entry_type == 8) {  // Contra
+                $action = Contra::select('voucher_no', 'long_narration')->where('id', $value->entry_type_id)->first();
+                $narration = ContraDetails::where('id', $value->entry_type_detail_id)->value('narration');
+        
+                $ledger[$key]->bill_no = $action->voucher_no ?? '';
+                $ledger[$key]->long_narration = $action->long_narration ?? '';
+                $ledger[$key]->narration = $narration ?? '';
+        
+            } else if (in_array($value->entry_type, [9,10])) {  // Other Sales Returns
+                $action = SalesReturn::select('sale_return_no', 'sr_prefix')->where('id', $value->entry_type_id)->first();
+                if ($action) {
+                    $ledger[$key]->bill_no = $action->sr_prefix . $action->sale_return_no;
+                }
+            }
+        }
+        
+      }
+        // Opening balance logic (optional)
+        $opening = 0;
+        if(isset($request->from_date) && !empty($request->from_date)){
+           $open_ledger = DB::select(DB::raw("SELECT SUM(debit) as debit,SUM(credit) as credit FROM account_ledger WHERE account_id='".$party_id."' and STR_TO_DATE(txn_date, '%Y-%m-%d')<STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and status=1 and delete_status='0' and company_id='".Session::get('user_company_id')."'"));
+           if(count($open_ledger)>0){
+              if($open_ledger[0]->debit=="" && $open_ledger[0]->credit==""){
+                 $open_ledger = AccountLedger::where('account_id',$party_id)
+                                         ->where('company_id',Session::get('user_company_id'))
+                                         ->where('entry_type','-1')
+                                         ->first();
+                 if($open_ledger){
+                    if($open_ledger->credit!=""){
+                       $opening = -$open_ledger->credit;
+                    }else if($open_ledger->debit!=""){
+                       $opening = $open_ledger->debit;
+                    }
+                 }
+              }else{
+  
+                 $balance = $open_ledger[0]->debit - $open_ledger[0]->credit;
+                 $basic_open_ledger = AccountLedger::where('account_id',$party_id)
+                                         ->where('company_id',Session::get('user_company_id'))
+                                         ->where('entry_type','-1')
+                                         ->first();
+                 if($basic_open_ledger){
+                    if($basic_open_ledger->credit!=""){
+                       $balance = $balance - $basic_open_ledger->credit;
+                    }else if($basic_open_ledger->debit!=""){
+                       $balance = $balance + $basic_open_ledger->debit;
+                    }
+                 }
+                 if($balance<0){
+                    $opening = $balance;
+                 }else{
+                    $opening = $balance;
+                 }
+              }            
+           }
+        }else{
+           $open_ledger = AccountLedger::where('account_id',$party_id)
+                                   ->where('company_id',Session::get('user_company_id'))
+                                   ->where('entry_type','-1')
+                                   ->first();
+           if($open_ledger){
+              if($open_ledger->credit!=""){
+                 $opening = -$open_ledger->credit;
+              }else if($open_ledger->debit!=""){
+                 $opening = $open_ledger->debit;
+              }
+           }
+        }   
+        
+        $configuration = SaleInvoiceConfiguration::where('company_id',Session::get('user_company_id'))->first();
+
+        $pdf = Pdf::loadView('accountledger.ledger', compact('ledger', 'opening', 'account', 'from_date', 'to_date','accounts','comp','configuration'));
+        return $pdf->download('Account-Ledger-'.$accounts->account_name.'.pdf');
+    }
 }

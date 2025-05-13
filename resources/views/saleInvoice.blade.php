@@ -125,43 +125,56 @@ body {
             <table style="font-family: 'Source Sans Pro', sans-serif;letter-spacing: 0.05em;color: #404040;font-size: 12px;font-weight: 500;padding: 10px;">
                <tbody>
                   <tr>
-                  <th colspan="8">
-    <div style="width:auto; float:left; text-align:left;">
-        <strong style="margin:0;">GSTIN: {{$seller_info->gst_no}}</strong>
-    </div>
+    <th colspan="8" style="padding: 0;">
+        <div style="min-height: 120px; position: relative;">
+            <div style="width:auto; float:left; text-align:left;">
+                <strong style="margin:0;">GSTIN: {{ $seller_info->gst_no }}</strong>
+            </div>
 
-    <div class="bil_logo">
-        @if($configuration && $configuration->company_logo_status==1 && !empty($configuration->company_logo))
-            <img src="{{ URL::asset('public/images')}}/{{$configuration->company_logo}}" alt="My Logo">
-        @endif
-    </div>
+            @php
+                $companyName = $company_data->company_name;
+                $fontSize = strlen($companyName) > 30 ? '18px' : '24px';
+                
+            @endphp
 
-    <div style="width:auto; float:right; text-align:right;">
-        <strong style="margin:0;">PAN: {{substr($seller_info->gst_no, 2, 10)}}</strong><br>
-        <small>O/D/T</small>
-    </div>
+            <div class="bil_logo" style="float: left; margin-left: 10px;">
+                @if($configuration && $configuration->company_logo_status==1 && !empty($configuration->company_logo))
+                    <!--<img src="{{ URL::asset('public/images') }}/{{ $configuration->company_logo }}" -->
+                    <!--     alt="My Logo" -->
+                    <!--     style="object-fit: contain;">-->
+                        
+    <img src="{{ URL::asset('public/images') }}/{{ $configuration->company_logo }}" 
+         alt="My Logo" 
+         style="max-height: 100%; max-width: 100%; object-fit: contain; display: block;">
 
-    <div style="clear:both;"></div>
+                @endif
+            </div>
 
-    <div style="text-align:center; line-height:1; margin:0; padding:0;">
-        <p style="margin:0;"><u>TAX INVOICE</u></p>
-        <p style="margin:0; font-size: 24px; font-weight: bold;">{{$company_data->company_name}}</p>
-        <p style="margin:0;">
-            <small style="font-size: 12px; display:inline-block; max-width:50%; word-break:break-word;">
-                {{$seller_info->address}}
-            </small>
-        </p>
-        <p style="margin:0;">
-            <small style="font-size: 12px;">Phone: {{$company_data->mobile_no}} &nbsp; Email: {{$company_data->email_id}}</small>
-        </p>
-    </div>
-</th>
+            <div style="width:auto; float:right; text-align:right;">
+                <strong style="margin:0;">PAN: {{ substr($seller_info->gst_no, 2, 10) }}</strong><br>
+                <small>O/D/T</small>
+            </div>
 
-                       
+            <div style="clear:both;"></div>
 
-                     
-                  </tr> 
-                  @if($sale_detail->e_invoice_status==1 && !empty($sale_detail->einvoice_response))
+            <div style="text-align:center; line-height:1; margin:0; padding:0;">
+                <p style="margin:0;"><u>TAX INVOICE</u></p>
+                <p style="margin:0; font-size: {{ $fontSize }}; font-weight: bold;">
+                    {{ $companyName }}
+                </p>
+                <p style="margin:0;">
+                    <small style="font-size: 12px; display:inline-block; max-width:50%; word-break:break-word;">
+                        {{ $seller_info->address }}
+                    </small>
+                </p>
+                <p style="margin:0;">
+                    <small style="font-size: 12px;">Phone: {{ $company_data->mobile_no }} &nbsp; Email: {{ $company_data->email_id }}</small>
+                </p>
+            </div>
+        </div>
+    </th>
+</tr>
+              @if($sale_detail->e_invoice_status==1 && !empty($sale_detail->einvoice_response))
                   <?php 
                      $einvoice_data = json_decode($sale_detail->einvoice_response);
                      //$data = $einvoice_data->SignedQRCode;
@@ -309,9 +322,28 @@ body {
                      <tr>
                         <td style="border-right:0; border-top:0;" colspan="2"></td>
                         <td colspan="4" style="border-left:0; border-right:0; border-top:0;">
-                           @foreach($sale_sundry as $sundry)
-                           <p>Add : {{$sundry->name}} </p>
-                           @endforeach                           
+                            @php
+    $addTypes = ['CGST', 'SGST', 'IGST', 'ROUNDED OFF (+)'];
+    $lessTypes = ['ROUNDED OFF (-)'];
+@endphp
+
+@foreach($sale_sundry as $sundry)
+    @php
+        $billsundry = \App\Models\BillSundrys::find($sundry->bill_sundry);  
+    @endphp
+
+    @if($sundry->nature_of_sundry === 'OTHER')
+        @if($sundry->bill_sundry_type === 'additive')
+            <p>Add : {{ $sundry->name }}</p>
+        @elseif($sundry->bill_sundry_type === 'subtractive')
+            <p>Less : {{ $sundry->name }}</p>
+        @endif
+    @elseif(in_array($sundry->nature_of_sundry, $addTypes))
+        <p>Add : {{ $sundry->name }}</p>
+    @elseif(in_array($sundry->nature_of_sundry, $lessTypes))
+        <p>Less : {{ $sundry->name }}</p>
+    @endif
+@endforeach                           
                         </td>
                         <td style="border-left:0; border-top:0;">
                            <!-- <p style="white-space: nowrap;">&nbsp;</p> -->
@@ -335,6 +367,7 @@ body {
                      </tr>
                      <tr>
                      <td colspan="8" style="border-top:0; border-bottom:0;">
+                        
                         @foreach($gst_detail as $val)
                            <span><u><small>Tax Rate</small></u><br>
                               <small>{{$val->rate}}%</small>
@@ -417,7 +450,7 @@ body {
                   @if($bank_detail)
                      <tr>
                         <td colspan="8">   
-                           @if($configuration->banks)                     
+                           @if($configuration && $configuration->banks)                     
                               <p>
                                  <strong>Bank Details : </strong> <strong>ACCOUNT NAME-</strong>{{$configuration->banks->name}} <br><strong>ACCOUNT NO:</strong>{{$configuration->banks->account_no}} ,<strong>IFSC CODE:</strong>{{$configuration->banks->ifsc}} ,<strong>BANK NAME:</strong>{{$configuration->banks->bank_name}},{{$configuration->banks->branch}} 
                               </p>
@@ -447,6 +480,9 @@ body {
       <p style="text-align:right; margin:0; padding:0;">
          <img src="{{ URL::asset('public/images')}}/{{$configuration->signature}}" style="width: 145px; height:70px;">
       </p>
+      @else
+      <p style="text-align:right; margin:0; padding:0;width: 145px; height:70px;">
+          </p>
    @endif
 
    <p style="text-align:right; margin:0; padding:0;"><strong>Authorised Signatory</strong></p>
@@ -462,8 +498,7 @@ body {
                <p id="jsonhtml"></p>
                @if($einvoice_status==1 && $sale_detail->e_invoice_status==0)
                   <button type="button" class="btn btn-info generate_einvoice">GENERATE E-INVOICE</button>
-               @endif
-               
+               @endif               
                @if(($einvoice_status==1 && $sale_detail->e_invoice_status==1 &&  $ewaybill_status==1 && $sale_detail->e_waybill_status==0) || ($einvoice_status==0 && $ewaybill_status==1 && $sale_detail->e_waybill_status==0))                  
                   <button type="button" class="btn btn-info generate_eway">GENERATE E-WAY BILL</button>                  
                @endif

@@ -1,3 +1,16 @@
+<style>
+    .dropdown-submenu {
+    /* position: relative; */
+}
+
+.dropdown-submenu > .dropdown-menu {
+    /* display: none; */
+    /* position: absolute; */
+    top:44px;
+    left: -55%;
+    margin-top: 0;
+}
+</style>
 <header class="header-section px-4 py-3  justify-content-between align-items-center" style="display:flex">
     <div class="meri-accounting-logo">
         <a href="{{ route('dashboard') }}">
@@ -34,13 +47,21 @@
                 </svg>
             </button>
             <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton2">
-               <li><a class="dropdown-item" href="{{ route('gst-setting.index') }}">GST Configuration</a></li>
-               <li><a class="dropdown-item" href="{{ route('voucher-series-configuration') }}">Voucher Series Configuration</a></li>
-               <li><a class="dropdown-item" href="{{ route('sale-invoice-configuration') }}">Sale Invoice Configuration</a></li>
-               <li><a class="dropdown-item" href="#">TDS Configuration</a></li>
-               <li><a class="dropdown-item" href="#">ESI</a></li>
-               <li><a class="dropdown-item" href="#">PF</a></li>
-               <li><a class="dropdown-item" href="{{ route('parameterized-configuration') }}">Parameterized Configuration</a></li>
+            <li class="dropdown-submenu">
+                    <a class="dropdown-item dropdown-toggle" href="#" id="tdsConfigMenu">Configuration</a>
+                    <ul class="dropdown-menu" aria-labelledby="tdsConfigMenu">
+                        <li><a class="dropdown-item" href="{{ route('parameterized-configuration') }}">Parameterized Configuration</a></li>
+                        <li><a class="dropdown-item" href="{{ route('gst-setting.index') }}">GST Configuration</a></li>
+                        <li><a class="dropdown-item" href="{{ route('voucher-series-configuration') }}">Voucher Series Configuration</a></li>
+                        <li><a class="dropdown-item" href="{{ route('sale-invoice-configuration') }}">Sale Invoice Configuration</a></li>
+                        <li><a class="dropdown-item" href="#">TDS Configuration</a></li>
+                        <li><a class="dropdown-item" href="#">ESI</a></li>
+                        <li><a class="dropdown-item" href="#">PF</a></li>
+                    </ul>
+                </li>
+               
+              
+               <li><a class="dropdown-item" href="{{ route('change-password-view') }}">Change Password</a></li>
                <li><a class="dropdown-item" href="{{ route('logout') }}">Log Out</a></li>
             </ul>
         </div>
@@ -90,3 +111,15 @@
         </span>
     </div>
 </header>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const tdsMenu = document.getElementById('tdsConfigMenu');
+        const submenu = tdsMenu.nextElementSibling;
+
+        tdsMenu.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation(); // Prevent Bootstrap from closing the dropdown
+            submenu.classList.toggle('show');
+        });
+    });
+</script>

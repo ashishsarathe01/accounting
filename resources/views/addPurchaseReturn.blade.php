@@ -114,6 +114,8 @@
                      <ul style="color: red;">
                         @error('voucher_no'){{$message}}@enderror                        
                      </ul>
+                     
+                     <input type="hidden" name="voucher_type" id="voucher_type">
                      <input type="hidden" name="purchase_bill_id" id="purchase_bill_id">
                   </div>
                   <div class="mb-1 col-md-1 voucher_no_div" style="display:none">
@@ -703,17 +705,25 @@
    });
    $('#voucher_no').change(function() {
       // Get the selected value
+      let voucher_type = $('option:selected', this).attr('data-voucher_type');
       $(".extra_taxes_row").remove();
       $("#bill_sundry_tr_1").val('');
       $("#bill_sundry_amount_1").val('');
       $("#tax_rate_tr_1").val('');
-      $("#invoice_id").attr('href',"{{ URL::to('purchase-invoice/')}}/"+$('option:selected', this).attr('data-id'));
+      if(voucher_type=="PURCHASE"){
+         $("#invoice_id").attr('href',"{{ URL::to('purchase-invoice/')}}/"+$('option:selected', this).attr('data-id'));
+      }else if(voucher_type=="SALE"){
+         $("#invoice_id").attr('href',"{{ URL::to('sale-invoice/')}}/"+$('option:selected', this).attr('data-id'));
+      }
+      
       $("#purchase_bill_id").val($('option:selected', this).attr('data-id'));
+      $("#voucher_type").val(voucher_type);
       $("#series_no").val($('option:selected', this).attr('data-series_no'));
       $("#material_center").val($('option:selected', this).attr('data-material_center'));
       $("#voucher_prefix").val($('option:selected', this).attr('data-series_no')+"/{{Session::get('default_fy')}}/DR");
       var invoice_id = $(this).val();
       let series_no = $('option:selected', this).attr('data-series_no');
+      
       $.ajax({
          url: '{{url("get/purchaseitems/details")}}',
          async: false,
@@ -721,7 +731,8 @@
          dataType: 'JSON',
          data: {
             _token: '<?php echo csrf_token() ?>',
-            voucher_no: invoice_id
+            voucher_no: invoice_id,
+            voucher_type: voucher_type,
          },
          success: function(data) {
             var optionElements = '<option value="">Select</option>';
@@ -1391,7 +1402,13 @@
             var optionElements = '';
             $.each(data, function(key, val) {
                //  var val = JSON.parse(val);
-               optionElements += '<option value="' + val.voucher_no + '" data-id="'+val.id+'" data-series_no="'+val.series_no+'" data-material_center="'+val.material_center+'">' + val.series_no+'/'+val.financial_year+'/'+ val.voucher_no + '</option>';
+               let voc_no = "";
+               if(val.voucher_type=="PURCHASE"){
+                  voc_no = val.voucher_no;
+               }else{
+                  voc_no = val.voucher_no_prefix;
+               }
+               optionElements += '<option value="' + voc_no + '" data-id="'+val.id+'" data-series_no="'+val.series_no+'" data-material_center="'+val.material_center+'" data-voucher_type="'+val.voucher_type+'">'+ voc_no + '</option>';
             });
             $("#voucher_no").append(optionElements);
          }

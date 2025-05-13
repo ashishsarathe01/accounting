@@ -95,7 +95,7 @@
                                              </button>
                                           <?php 
                                        } ?>
-                                       @if(($value->sr_nature=="WITH GST" && $value->sr_type=="WITH ITEM") || $value->sr_nature=="RATE DIFFERENCE")
+                                       @if($value->sr_nature=="WITH GST" && ($value->sr_type=="WITH ITEM" || $value->sr_type=="RATE DIFFERENCE"))
                                             <a href="{{ URL::to('purchase-return-invoice/' . $value->purchases_id) }}" target="__blank"><img src="{{ URL::asset('public/assets/imgs/eye-icon.svg')}}" class="px-1" alt=""></a>
                                         @elseif($value->sr_nature=="WITH GST" && $value->sr_type=="WITHOUT ITEM")
                                             <a href="{{ URL::to('purchase-return-without-item-invoice/' . $value->purchases_id) }}" target="__blank"><img src="{{ URL::asset('public/assets/imgs/eye-icon.svg')}}" class="px-1" alt=""></a>

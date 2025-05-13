@@ -242,6 +242,7 @@ class PurchaseController extends Controller{
             //ADD ITEM LEDGER
             $item_ledger = new ItemLedger();
             $item_ledger->item_id = $good;
+            $item_ledger->series_no = $request->input('series_no');
             $item_ledger->in_weight = $qtys[$key];
             $item_ledger->txn_date = $request->input('date');
             $item_ledger->price = $prices[$key];
@@ -378,7 +379,7 @@ class PurchaseController extends Controller{
             $item_average_total = $item_average_total + $amounts[$key];
          }
          //Sundry
-         $additive_sundry_amount = 0;$subtractive_sundry_amount = 0;
+         $additive_sundry_amount_first = 0;$subtractive_sundry_amount_first = 0;
          $bill_sundrys = $request->input('bill_sundry');
          $bill_sundry_amounts = $request->input('bill_sundry_amount');
          foreach($bill_sundrys as $key => $bill){
@@ -388,18 +389,19 @@ class PurchaseController extends Controller{
             $billsundry = BillSundrys::where('id', $bill)->first();  
             if($billsundry->nature_of_sundry=="OTHER"){
                if($billsundry->bill_sundry_type=="additive"){
-                  $additive_sundry_amount = $additive_sundry_amount + $bill_sundry_amounts[$key];
+                  $additive_sundry_amount_first = $additive_sundry_amount_first + $bill_sundry_amounts[$key];
                }else if($billsundry->bill_sundry_type=="subtractive"){
-                  $subtractive_sundry_amount = $subtractive_sundry_amount + $bill_sundry_amounts[$key];
+                  $subtractive_sundry_amount_first = $subtractive_sundry_amount_first + $bill_sundry_amounts[$key];
                }
             }
          }
          foreach ($item_average_arr as $key => $value) {
-            if($additive_sundry_amount>0){
-               $additive_sundry_amount = ($value['amount']/$item_average_total)*$additive_sundry_amount;
+            $subtractive_sundry_amount = 0;$additive_sundry_amount = 0;
+            if($additive_sundry_amount_first>0){
+               $additive_sundry_amount = ($value['amount']/$item_average_total)*$additive_sundry_amount_first;
             }
-            if($subtractive_sundry_amount>0){
-               $subtractive_sundry_amount = ($value['amount']/$item_average_total)*$subtractive_sundry_amount;
+            if($subtractive_sundry_amount_first>0){
+               $subtractive_sundry_amount = ($value['amount']/$item_average_total)*$subtractive_sundry_amount_first;
             }
             $additive_sundry_amount = round($additive_sundry_amount,2);
             $subtractive_sundry_amount = round($subtractive_sundry_amount,2);
@@ -575,7 +577,7 @@ class PurchaseController extends Controller{
       $sale_sundry = DB::table('purchase_sundries')
                            ->join('bill_sundrys','purchase_sundries.bill_sundry','=','bill_sundrys.id')
                            ->where('purchase_id', $id)
-                           ->select('purchase_sundries.bill_sundry','purchase_sundries.rate','purchase_sundries.amount','bill_sundrys.name')
+                           ->select('purchase_sundries.bill_sundry','purchase_sundries.rate','purchase_sundries.amount','bill_sundrys.name','bill_sundrys.bill_sundry_type','bill_sundrys.nature_of_sundry')
                            ->orderBy('sequence')
                            ->get();
       $gst_detail = DB::table('purchase_sundries')
@@ -604,27 +606,40 @@ class PurchaseController extends Controller{
             }
             $gst_detail[$key]->rate = $rate;
             if($max_gst==$rate){
-               $freight = PurchaseSundry::select('amount')
-                           ->where('purchase_id', $id)
-                           ->where('bill_sundry',4)
-                           ->first();
-               $insurance = PurchaseSundry::select('amount')
-                           ->where('purchase_id', $id)
-                           ->where('bill_sundry',7)
-                           ->first();
-               $discount = PurchaseSundry::select('amount')
-                           ->where('purchase_id', $id)
-                           ->where('bill_sundry',5)
-                           ->first();
-               if($freight && !empty($freight->amount)){
-                  $taxable_amount = $taxable_amount + $freight->amount;
+               $sun = PurchaseSundry::join('bill_sundrys','purchase_sundries.bill_sundry','=','bill_sundrys.id')
+                              ->select('amount','bill_sundry_type')
+                              ->where('purchase_id', $id)
+                              ->where('nature_of_sundry','OTHER')
+                              ->get();
+               foreach ($sun as $k1 => $v1) {
+                  if($v1->bill_sundry_type=="additive"){
+                     $taxable_amount = $taxable_amount + $v1->amount;
+                  }else if($v1->bill_sundry_type=="subtractive"){
+                     $taxable_amount = $taxable_amount - $v1->amount;
+
+                  }
                }
-               if($insurance && !empty($insurance->amount)){
-                  $taxable_amount = $taxable_amount + $insurance->amount;
-               }
-               if($discount && !empty($discount->amount)){
-                  $taxable_amount = $taxable_amount - $discount->amount;
-               }
+               // $freight = PurchaseSundry::select('amount')
+               //             ->where('purchase_id', $id)
+               //             ->where('bill_sundry',4)
+               //             ->first();
+               // $insurance = PurchaseSundry::select('amount')
+               //             ->where('purchase_id', $id)
+               //             ->where('bill_sundry',7)
+               //             ->first();
+               // $discount = PurchaseSundry::select('amount')
+               //             ->where('purchase_id', $id)
+               //             ->where('bill_sundry',5)
+               //             ->first();
+               // if($freight && !empty($freight->amount)){
+               //    $taxable_amount = $taxable_amount + $freight->amount;
+               // }
+               // if($insurance && !empty($insurance->amount)){
+               //    $taxable_amount = $taxable_amount + $insurance->amount;
+               // }
+               // if($discount && !empty($discount->amount)){
+               //    $taxable_amount = $taxable_amount - $discount->amount;
+               // }
             }
             $gst_detail[$key]->taxable_amount = $taxable_amount;
          }
@@ -769,6 +784,7 @@ class PurchaseController extends Controller{
       }
       $account = Accounts::where('id',$request->input('party'))->first();
       $purchase = Purchase::find($request->input('purchase_edit_id'));
+      $last_date = $purchase->date;
       $purchase->series_no = $request->input('series_no');
       $purchase->date = $request->input('date');
       $purchase->voucher_no = $request->input('voucher_no');
@@ -825,6 +841,7 @@ class PurchaseController extends Controller{
             //ADD ITEM LEDGER
             $item_ledger = new ItemLedger();
             $item_ledger->item_id = $good;
+            $item_ledger->series_no = $request->input('series_no');
             $item_ledger->in_weight = $qtys[$key];
             $item_ledger->txn_date = $request->input('date');
             $item_ledger->price = $prices[$key];
@@ -839,7 +856,7 @@ class PurchaseController extends Controller{
          $bill_sundrys = $request->input('bill_sundry');
          $tax_amts = $request->input('tax_rate');
          $bill_sundry_amounts = $request->input('bill_sundry_amount');
-
+         
          AccountLedger::where('entry_type_id',$purchase->id)->where('entry_type',2)->delete();
          PurchaseSundry::where('purchase_id',$purchase->id)->delete();
          foreach($bill_sundrys as $key => $bill){
@@ -889,7 +906,7 @@ class PurchaseController extends Controller{
             $item_average_total = $item_average_total + $amounts[$key];
          }
          //Sundry
-         $additive_sundry_amount = 0;$subtractive_sundry_amount = 0;
+         $additive_sundry_amount_first = 0;$subtractive_sundry_amount_first = 0;
          $bill_sundrys = $request->input('bill_sundry');
          $bill_sundry_amounts = $request->input('bill_sundry_amount');
          foreach($bill_sundrys as $key => $bill){
@@ -899,19 +916,20 @@ class PurchaseController extends Controller{
             $billsundry = BillSundrys::where('id', $bill)->first();  
             if($billsundry->nature_of_sundry=="OTHER"){
                if($billsundry->bill_sundry_type=="additive"){
-                  $additive_sundry_amount = $additive_sundry_amount + $bill_sundry_amounts[$key];
+                  $additive_sundry_amount_first = $additive_sundry_amount_first + $bill_sundry_amounts[$key];
                }else if($billsundry->bill_sundry_type=="subtractive"){
-                  $subtractive_sundry_amount = $subtractive_sundry_amount + $bill_sundry_amounts[$key];
+                  $subtractive_sundry_amount_first = $subtractive_sundry_amount_first + $bill_sundry_amounts[$key];
                }
             }
          }
          
          foreach ($item_average_arr as $key => $value) {
-            if($additive_sundry_amount>0){
-               $additive_sundry_amount = ($value['amount']/$item_average_total)*$additive_sundry_amount;
+            $subtractive_sundry_amount = 0;$additive_sundry_amount = 0;
+            if($additive_sundry_amount_first>0){
+               $additive_sundry_amount = ($value['amount']/$item_average_total)*$additive_sundry_amount_first;
             }
-            if($subtractive_sundry_amount>0){
-               $subtractive_sundry_amount = ($value['amount']/$item_average_total)*$subtractive_sundry_amount;
+            if($subtractive_sundry_amount_first>0){
+               $subtractive_sundry_amount = ($value['amount']/$item_average_total)*$subtractive_sundry_amount_first;
             }
             $additive_sundry_amount = round($additive_sundry_amount,2);
             $subtractive_sundry_amount = round($subtractive_sundry_amount,2);
@@ -938,7 +956,7 @@ class PurchaseController extends Controller{
          }
          foreach ($desc_item_arr as $key => $value) {
             if(!in_array($value, $update_item__arr)){
-               CommonHelper::RewriteItemAverageByItem($request->date,$value);
+               CommonHelper::RewriteItemAverageByItem($last_date,$value);
             }
          }
          
@@ -1106,6 +1124,8 @@ class PurchaseController extends Controller{
                $station = $data[11];
                $ewaybill_no = $data[12];            
                $shipping_name = $data[13];
+               $date = str_replace("/","-",$date);
+               $date = date('Y-m-d',strtotime($date));
                if(strtotime($from_date)>strtotime(date('Y-m-d',strtotime($date))) || strtotime($to_date)<strtotime(date('Y-m-d',strtotime($date)))){                  
                   array_push($error_arr, 'Date '.$date.' not in Financial Year - Invoice No. '.$voucher_no);                  
                }
@@ -1252,7 +1272,19 @@ class PurchaseController extends Controller{
                         ItemLedger::where('source',2)
                                     ->whereIn('source_id',$check_invoices)
                                     ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
-                     
+                        // Delete old average details for selected purchases
+                            ItemAverageDetail::whereIn('purchase_id', $check_invoices)->delete();
+
+                        // Get item IDs and corresponding purchase dates for those invoices
+                        $itemKiId = PurchaseDescription::whereIn('purchase_id', $check_invoices)
+                                                        ->join('purchases', 'purchases.id', '=', 'purchase_descriptions.purchase_id')
+                                                         ->select('purchase_descriptions.goods_discription as item_id', 'purchases.date')
+                                                             ->get();
+
+                                        // Recalculate item averages
+                                        foreach ($itemKiId as $k) {
+                                            CommonHelper::RewriteItemAverageByItem($k->date, $k->item_id);
+                                        }
                   }                  
                }
                $item_taxable_amount = 0;
@@ -1413,39 +1445,152 @@ class PurchaseController extends Controller{
                         }
                      }
                   }
-                  foreach ($item_arr as $k1 => $v1) {
-                     if(!empty($v1['amount'])){
-                        $item_taxable_amount = $item_taxable_amount + str_replace(",","",$v1['amount']);
-                        $item = ManageItems::join('units','manage_items.u_name','=','units.id')
-                           ->select('manage_items.id','manage_items.hsn_code','manage_items.gst_rate','units.s_name as unit','units.id as uid')
-                           ->where('manage_items.name',trim($v1['item_name']))
-                           ->where('manage_items.company_id',trim(Session::get('user_company_id')))
-                           ->first();
-                        $desc = new PurchaseDescription;
-                        $desc->purchase_id = $purchase->id;
-                        $desc->goods_discription = $item->id;
-                        $desc->qty = $v1['item_weight'];
-                        $desc->unit = $item->uid;
-                        $desc->price = $v1['price'];
-                        $desc->amount = str_replace(",","",$v1['amount']);
-                        $desc->status = '1';
-                        $desc->save();
-                        //ADD ITEM LEDGER
-                        $item_ledger = new ItemLedger();
-                        $item_ledger->item_id = $item->id;
-                        $item_ledger->in_weight = $v1['item_weight'];
-                        $item_ledger->txn_date = $date;
-                        $item_ledger->price = $v1['price'];
-                        $item_ledger->total_price = str_replace(",","",$v1['amount']);
-                        $item_ledger->company_id = Session::get('user_company_id');
-                        $item_ledger->source = 2;
-                        $item_ledger->source_id = $purchase->id;
-                        $item_ledger->created_by = Session::get('user_id');
-                        $item_ledger->created_at = date('d-m-Y H:i:s');
-                        $item_ledger->save(); 
+                   foreach ($item_arr as $k1 => $v1) {
+                     if (!empty($v1['amount'])) {
+                         // Add item amount (after removing comma)
+                         $item_taxable_amount += str_replace(",", "", $v1['amount']);
+                 
+                         // Fetch item with unit info
+                         $item = ManageItems::join('units', 'manage_items.u_name', '=', 'units.id')
+                             ->select('manage_items.id', 'manage_items.hsn_code', 'manage_items.gst_rate', 'units.s_name as unit', 'units.id as uid')
+                             ->where('manage_items.name', trim($v1['item_name']))
+                             ->where('manage_items.company_id', Session::get('user_company_id'))
+                             ->first();
+                 
+                         // Save item in purchase description
+                         $desc = new PurchaseDescription;
+                         $desc->purchase_id = $purchase->id;
+                         $desc->goods_discription = $item->id;
+                         $desc->qty = $v1['item_weight'];
+                         $desc->unit = $item->uid;
+                         $desc->price = $v1['price'];
+                         $desc->amount = str_replace(",", "", $v1['amount']);
+                         $desc->status = '1';
+                         $desc->save();
+                 
+                         // Save item in item ledger
+                         $item_ledger = new ItemLedger();
+                         $item_ledger->item_id = $item->id;
+                         $item_ledger->series_no = $series_no;
+                         $item_ledger->in_weight = $v1['item_weight'];
+                         $item_ledger->txn_date = $date;
+                         $item_ledger->price = $v1['price'];
+                         $item_ledger->total_price = str_replace(",", "", $v1['amount']);
+                         $item_ledger->company_id = Session::get('user_company_id');
+                         $item_ledger->source = 2;
+                         $item_ledger->source_id = $purchase->id;
+                         $item_ledger->created_by = Session::get('user_id');
+                         $item_ledger->created_at = date('Y-m-d H:i:s');
+                         $item_ledger->save();
                      }
-                                          
-                  }
+                 }
+                 
+                 // Code for average costing
+                 $update_item_arr = [];
+                 $item_average_arr = [];
+                 $item_average_total = 0;
+                 
+                 foreach ($item_arr as $k1 => $v1) {
+                     if (!empty($v1['amount'])) {
+                         $item = ManageItems::join('units', 'manage_items.u_name', '=', 'units.id')
+                             ->select('manage_items.id', 'manage_items.hsn_code', 'manage_items.gst_rate', 'units.s_name as unit', 'units.id as uid')
+                             ->where('manage_items.name', trim($v1['item_name']))
+                             ->where('manage_items.company_id', Session::get('user_company_id'))
+                             ->first();
+                 
+                         if (!$item || $v1['item_weight'] == "" || $v1['price'] == "" || $v1['amount'] == "") {
+                             continue;
+                         }
+                 
+                         $amount = str_replace(",", "", $v1['amount']);
+                         $item_average_arr[] = [
+                             "item" => $item->id,
+                             "quantity" => $v1['item_weight'],
+                             "price" => $v1['price'],
+                             "amount" => $amount
+                         ];
+                         $update_item_arr[] = $item->id;
+                         $item_average_total += $amount;
+                     }
+                 }
+                 
+                 // Handle bill sundry (paired as name, value)
+                 $additive_sundry_amount_first = 0;
+                 $subtractive_sundry_amount_first = 0;
+                 $bill_sundry_ids = [];
+                 $bill_sundry_amounts = [];
+                 
+                 foreach ($slicedData as $k2 => $v2) {
+                     $v2 = trim($v2);
+                     if ($v2 !== "" && $v2 !== '0') {
+                         if ($k2 % 2 == 0) {
+                             // Even index: Bill Sundry Name
+                             $bill = BillSundrys::where('delete', '0')
+                                 ->where('status', '1')
+                                 ->where('name', $v2)
+                                 ->whereIn('company_id', [Session::get('user_company_id'), 0])
+                                 ->first();
+                             $bill_sundry_ids[] = $bill ? $bill->id : null;
+                         } else {
+                             // Odd index: Bill Sundry Amount
+                             $bill_sundry_amounts[] = str_replace(",", "", $v2);
+                         }
+                     }
+                 }
+                 
+                 // Match bill sundry amounts with their types
+                 foreach ($bill_sundry_ids as $i => $bill_id) {
+                     if ($bill_id === null || !isset($bill_sundry_amounts[$i])) continue;
+                 
+                     $billsundry = BillSundrys::find($bill_id);
+                     $amount = $bill_sundry_amounts[$i];
+                 
+                     if ($billsundry && $billsundry->nature_of_sundry == "OTHER") {
+                         if ($billsundry->bill_sundry_type == "additive") {
+                             $additive_sundry_amount_first += $amount;
+                         } elseif ($billsundry->bill_sundry_type == "subtractive") {
+                             $subtractive_sundry_amount_first += $amount;
+                         }
+                     }
+                 }
+                 
+                 // Distribute sundry amount to items proportionally
+                 foreach ($item_average_arr as $value) {
+                     $subtractive_sundry_amount = 0;
+                     $additive_sundry_amount = 0;
+                 
+                     if ($additive_sundry_amount_first > 0) {
+                         $additive_sundry_amount = ($value['amount'] / $item_average_total) * $additive_sundry_amount_first;
+                     }
+                 
+                     if ($subtractive_sundry_amount_first > 0) {
+                         $subtractive_sundry_amount = ($value['amount'] / $item_average_total) * $subtractive_sundry_amount_first;
+                     }
+                 
+                     $additive_sundry_amount = round($additive_sundry_amount, 2);
+                     $subtractive_sundry_amount = round($subtractive_sundry_amount, 2);
+                     $average_amount = $value['amount'] + $additive_sundry_amount - $subtractive_sundry_amount;
+                     $average_amount = round($average_amount, 2);
+                     $average_price = round($average_amount / $value['quantity'], 6);
+                 
+                     // Save to average detail
+                     $average_detail = new ItemAverageDetail;
+                     $average_detail->entry_date = $date;
+                     $average_detail->item_id = $value['item'];
+                     $average_detail->type = 'PURCHASE';
+                     $average_detail->purchase_id = $purchase->id;
+                     $average_detail->purchase_weight = $value['quantity'];
+                     $average_detail->purchase_amount = $value['amount'];
+                     $average_detail->purchase_bill_sundry_additive_amount = $additive_sundry_amount;
+                     $average_detail->purchase_bill_sundry_subtractive_amount = $subtractive_sundry_amount;
+                     $average_detail->purchase_total_amount = $average_amount;
+                     $average_detail->company_id = Session::get('user_company_id');
+                     $average_detail->created_at = Carbon::now();
+                     $average_detail->save();
+                 
+                     // Update average rate
+                     CommonHelper::RewriteItemAverageByItem($date, $value['item']);
+                 }
                   //Other Bill Sundry
                   $sundry_id = "";
                   $adjust_purchase_amt = "";

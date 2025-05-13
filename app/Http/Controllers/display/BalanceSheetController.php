@@ -9,6 +9,7 @@ use App\Models\Accounts;
 use App\Models\AccountLedger;
 use App\Models\ItemLedger;
 use App\Models\ClosingStock;
+use App\Helpers\CommonHelper;
 use Illuminate\Support\Facades\Validator;
 use Session;
 use DB;
@@ -140,6 +141,7 @@ class BalanceSheetController extends Controller{
                      ->where('total_price',$value->total_price)
                      ->where('in_weight',$value->in_weight)
                      ->where('source','-1')
+                     ->where('delete_status','0')
                      ->where('company_id',Session::get('user_company_id'))
                      ->first();
          if($check){
@@ -164,7 +166,10 @@ class BalanceSheetController extends Controller{
             $total_weight = $total_weight + $remaining_weight;
          }
       }
+      $stock_in_hand = CommonHelper::ClosingStock($to_date);
       $stock_in_hand = round($stock_in_hand,2);
+      
+
       //Profit & Loss
       $profitloss = 0;
       //Opening Stock      
@@ -510,6 +515,7 @@ class BalanceSheetController extends Controller{
                      ->where('total_price',$value->total_price)
                      ->where('in_weight',$value->in_weight)
                      ->where('source','-1')
+                     ->where('delete_status','0')
                      ->where('company_id',Session::get('user_company_id'))
                      ->first();
          if($check){
@@ -534,6 +540,7 @@ class BalanceSheetController extends Controller{
             $total_weight = $total_weight + $remaining_weight;
          }
       }
+      $stock_in_hand = CommonHelper::ClosingStock($to_date);
       $stock_in_hand = round($stock_in_hand,2);
       $profitloss = 0;
       //Opening Stock      
@@ -916,6 +923,7 @@ class BalanceSheetController extends Controller{
                      ->where('total_price',$value->total_price)
                      ->where('in_weight',$value->in_weight)
                      ->where('source','-1')
+                     ->where('delete_status','0')
                      ->where('company_id',Session::get('user_company_id'))
                      ->first();
          if($check){
@@ -940,6 +948,7 @@ class BalanceSheetController extends Controller{
             $total_weight = $total_weight + $remaining_weight;
          }
       }
+      $stock_in_hand = CommonHelper::ClosingStock($to_date);
       $stock_in_hand = round($stock_in_hand,2);
       return view('display/group_balance_by_head',["from_date"=>$from_date,"to_date"=>$to_date,"head"=>$head,"group"=>$group,"head_account"=>$head_account,"stock_in_hand"=>$stock_in_hand,"undergroup"=>$undergroup]);
    }

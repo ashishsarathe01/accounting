@@ -37,8 +37,8 @@
                      <p style="min-width: 97px;"><input type="radio"  name="trial_balance_by" {{$trial_balance_by_account}} value="by_account"> By Account</p> 
                      <p style="min-width: 97px;"><input type="radio" name="trial_balance_by" {{$trial_balance_by_group}} value="by_group"> By Group</p>
                      <select class="form-select w-min-230 ms-xxl-2" aria-label="Default select example" name="type">
-                        <option value="open">Opening Trial Balance</option>
-                        <option value="close">Closing Trial Balance</option>
+                        <option value="open" @if($type && $type=='open') selected @endif>Opening Trial Balance</option>
+                        <option value="close" @if($type && $type=='close') selected @endif>Closing Trial Balance</option>
                      </select>
                      <div class="calender-administrator w-min-150 ms-xxl-2">
                         <input type="date" id="to_date" name="to_date" class="form-control calender-bg-icon calender-placeholder" placeholder="To date" required value="{{$to_date}}" min="{{Session::get('from_date')}}" max="{{Session::get('to_date')}}">
@@ -71,7 +71,7 @@
                               <td class="w-min-230 fw-500 py-12 px-3">{{$value['account_name']}}</td>
                               <td class="w-min-180 fw-500 py-12 px-3 border-left-divider detail_td" style="text-align: right;">
                                  @if($balance>=0)
-                                    @php echo number_format($balance,2); @endphp
+                                    @php echo formatIndianNumber($balance,2); @endphp
                                     @php 
                                        $total_debit_amount = $total_debit_amount + $balance;
                                     @endphp                   
@@ -81,7 +81,7 @@
                               </td>
                               <td class="w-min-180 fw-500 py-12 px-3 border-left-divider detail_td" style="text-align: right;">
                                  @if($balance<0)
-                                    @php echo number_format(abs($balance),2); @endphp
+                                    @php echo formatIndianNumber(abs($balance),2); @endphp
                                     @php 
                                        $total_credit_amount = $total_credit_amount + abs($balance);
                                     @endphp                         
@@ -99,16 +99,16 @@
                      
                         @if($diff!=0)
                            <tr>
-                              <th>Opening Difference</th>
-                              <th style="text-align: right;">@if($diff<0) {{$diff}} @endif</th>
-                              <th style="text-align: right;">@if($diff>0) {{$diff}} @endif</th>
+                                 <th>Opening Difference</th>
+                                 <th style="text-align: right;">@if($diff<0) {{formatIndianNumber($diff)}} @endif</th>
+                                 <th style="text-align: right;">@if($diff>0) {{formatIndianNumber($diff)}} @endif</th>
+                              </tr>
+                           @endif
+                           <tr>
+                              <th>Total</th>
+                              <th style="text-align: right;">@if($diff!=0) @if($diff<0) {{formatIndianNumber($total_credit_amount)}} @else  {{formatIndianNumber($total_debit_amount)}}@endif @else {{formatIndianNumber($total_debit_amount)}} @endif</th>
+                              <th style="text-align: right;">@if($diff!=0) @if($diff<0) {{formatIndianNumber($total_credit_amount)}} @else  {{formatIndianNumber($total_debit_amount)}}@endif @else {{formatIndianNumber($total_debit_amount)}} @endif</th>
                            </tr>
-                        @endif
-                        <tr>
-                           <th>Total</th>
-                           <th style="text-align: right;">@if($diff!=0) @if($diff<0) {{$total_credit_amount}} @else  {{$total_debit_amount}}@endif @else {{$total_debit_amount}} @endif</th>
-                           <th style="text-align: right;">@if($diff!=0) @if($diff<0) {{$total_credit_amount}} @else  {{$total_debit_amount}}@endif @else {{$total_debit_amount}} @endif</th>
-                        </tr>
                      </tbody>
                   </table>
                   <?php 
@@ -156,7 +156,7 @@
                                     @php 
                                        if($head_total>=0){
                                           $total_debit_amount = $total_debit_amount + $head_total; 
-                                          echo "<span style='color:blue'>".$head_total."</span>";
+                                          echo "<span style='color:blue'>" . formatIndianNumber(abs($head_total)) . "</span>";
                                        }else{
                                           echo "&nbsp;";
                                        }
@@ -168,14 +168,14 @@
                                              continue;
                                           }                                 
                                        @endphp
-                                       <p style="text-align: right;">{{$group->debit}}</p>
+                                       <p style="text-align: right;">{{formatIndianNumber($group->debit)}}</p>
                                     @endforeach
                                  </td>
                                  <td style="text-align: right;">                                    
                                     @php 
                                        if($head_total<0){
                                           $total_credit_amount = $total_credit_amount + abs($head_total); 
-                                          echo "<span style='color:blue'>".abs($head_total)."</span>";
+                                          echo "<span style='color:blue'>" . formatIndianNumber(abs($head_total)) . "</span>";
                                        }else{
                                           echo "&nbsp;";
                                        }
@@ -187,7 +187,7 @@
                                              continue;
                                           }                              
                                        @endphp
-                                       <p >{{$group->credit}}</p>
+                                       <p >{{formatIndianNumber($group->credit)}}</p>
                                        
                                     @endforeach
                                  </td>
@@ -204,11 +204,11 @@
                                     <a href="trialbalance-filter?trial_balance_by=by_account&type=<?php echo $_GET['type'];?>&to_date=<?php echo $_GET['to_date'];?>&group_id=<?php echo $value->id;?>&under=group">{{$value->name}}</a>
                                  </td>
                                  <td style="text-align: right;">
-                                    {{$value->debit}}
+                                    {{formatIndianNumber($value->debit)}}
                                     @php $total_debit_amount = $total_debit_amount + $value->debit; @endphp
                                  </td>
                                  <td style="text-align: right;">
-                                    {{$value->credit}}  
+                                    {{formatIndianNumber($value->credit)}}  
                                     @php $total_credit_amount = $total_credit_amount + $value->credit; @endphp                                    
                                  </td>
                               </tr>                              
@@ -221,14 +221,14 @@
                            @if($diff!=0)
                               <tr>
                                  <th>Opening Difference</th>
-                                 <th style="text-align: right;">@if($diff<0) {{$diff}} @endif</th>
-                                 <th style="text-align: right;">@if($diff>0) {{$diff}} @endif</th>
+                                 <th style="text-align: right;">@if($diff<0) {{formatIndianNumber($diff)}} @endif</th>
+                                 <th style="text-align: right;">@if($diff>0) {{formatIndianNumber($diff)}} @endif</th>
                               </tr>
                            @endif
                            <tr>
                               <th>Total</th>
-                              <th style="text-align: right;">@if($diff!=0) @if($diff<0) {{$total_credit_amount}} @else  {{$total_debit_amount}}@endif @else {{$total_debit_amount}} @endif</th>
-                              <th style="text-align: right;">@if($diff!=0) @if($diff<0) {{$total_credit_amount}} @else  {{$total_debit_amount}}@endif @else {{$total_debit_amount}} @endif</th>
+                              <th style="text-align: right;">@if($diff!=0) @if($diff<0) {{formatIndianNumber($total_credit_amount)}} @else  {{formatIndianNumber($total_debit_amount)}}@endif @else {{formatIndianNumber($total_debit_amount)}} @endif</th>
+                              <th style="text-align: right;">@if($diff!=0) @if($diff<0) {{formatIndianNumber($total_credit_amount)}} @else  {{formatIndianNumber($total_debit_amount)}}@endif @else {{formatIndianNumber($total_debit_amount)}} @endif</th>
                            </tr>
                         </tbody>
                      </table>

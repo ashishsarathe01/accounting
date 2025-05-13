@@ -50,9 +50,33 @@ class ItemLedgerController extends Controller
                                 ->orderBy('manage_items.name')
                                 ->get();
       $items = array();
-      return view('itemledger')->with('item_list', $item_list)->with('items', $items)->with('opening', 0)->with('fdate', $fdate)->with('tdate',$tdate);
+      $companyData = Companies::where('id', Session::get('user_company_id'))->first();      
+      if($companyData->gst_config_type == "single_gst"){
+         $series = DB::table('gst_settings')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])
+                           ->get();
+         $branch = GstBranch::select('id','branch_series as series')
+                           ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_id'=>$series[0]->id])
+                           ->get();
+         if(count($branch)>0){
+            $series = $series->merge($branch);
+         }         
+      }else if($companyData->gst_config_type == "multiple_gst"){
+         $series = DB::table('gst_settings_multiple')
+                           ->select('id','series')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst"])
+                           ->get();
+         foreach ($series as $key => $value) {
+            $branch = GstBranch::select('id','branch_series as series')
+                        ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_multiple_id'=>$value->id])
+                        ->get();
+            if(count($branch)>0){
+               $series = $series->merge($branch);
+            }
+         }         
+      }
+      return view('itemledger')->with('item_list', $item_list)->with('items', $items)->with('opening', 0)->with('fdate', $fdate)->with('tdate',$tdate)->with('series',$series);
    }
-
     /**
      * Show the specified resources in storage.
      *
@@ -61,12 +85,45 @@ class ItemLedgerController extends Controller
 
    public function filter(Request $request){
       $item_id = $request->items_id;
+      $selected_series = $request->selected_series;
+
+      
+      if($selected_series=="all"){
+         $selected_series_query = "";
+      }else{
+         $selected_series_query = " and item_ledger.series_no='".$selected_series."'";
+      }
       $item_list = ManageItems::join('units', 'units.id', '=', 'manage_items.u_name')
                               ->join('item_groups', 'item_groups.id', '=', 'manage_items.g_name')
                               ->where(['manage_items.delete' => '0', 'manage_items.company_id' => Session::get('user_company_id')])
                               ->select(['manage_items.id','manage_items.name'])
                               ->orderBy('manage_items.name')
                               ->get();
+      $companyData = Companies::where('id', Session::get('user_company_id'))->first();      
+      if($companyData->gst_config_type == "single_gst"){
+         $series = DB::table('gst_settings')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])
+                           ->get();
+         $branch = GstBranch::select('id','branch_series as series')
+                           ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_id'=>$series[0]->id])
+                           ->get();
+         if(count($branch)>0){
+            $series = $series->merge($branch);
+         }         
+      }else if($companyData->gst_config_type == "multiple_gst"){
+         $series = DB::table('gst_settings_multiple')
+                           ->select('id','series')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst"])
+                           ->get();
+         foreach ($series as $key => $value) {
+            $branch = GstBranch::select('id','branch_series as series')
+                        ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_multiple_id'=>$value->id])
+                        ->get();
+            if(count($branch)>0){
+               $series = $series->merge($branch);
+            }
+         }         
+      }
       if($item_id=="all"){
          $opening = 0;
          $financial_year = Session::get('default_fy');
@@ -74,12 +131,22 @@ class ItemLedgerController extends Controller
          $tdate = date('Y-m-d',strtotime($request->to_date));
          $y =  explode("-",$financial_year);
          $open_date = $y[0]."-04-01";
-         $open_date = date('Y-m-d',strtotime($open_date));     
+         $open_date = date('Y-m-d',strtotime($open_date));
+         $item_ledger = ItemLedger::join('manage_items', 'item_ledger.item_id', '=', 'manage_items.id')
+                                    ->join('units', 'manage_items.u_name', '=', 'units.id')
+                                    ->select('item_id','in_weight as average_weight','txn_date as stock_date','total_price as amount','manage_items.name as item_name',
+                         'units.name as unit_name')
+                                    ->where('item_ledger.company_id',Session::get('user_company_id'))
+                                    ->where('source','-1')
+                                    ->where('delete_status','0')
+                                    ->groupBy('item_id')
+                                    ->get();
+         
          $sub = DB::table('item_averages')
                      ->select(DB::raw('MAX(id) as latest_id'))
                      ->where('stock_date', '<=', $request->to_date)
+                     ->where('company_id',Session::get('user_company_id'))
                      ->groupBy('item_id');
-                 
          $item = ItemAverage::join('manage_items', 'item_averages.item_id', '=', 'manage_items.id')
                      ->join('units', 'manage_items.u_name', '=', 'units.id')
                      ->whereIn('item_averages.id', $sub)
@@ -93,19 +160,31 @@ class ItemLedgerController extends Controller
                      )
                      ->orderBy('stock_date', 'desc')
                      ->get();
-         //print_r($data->toArray());die;
-         return view('itemledger')->with('item_list', $item_list)->with('items', $item)->with('item_id', $item_id)->with('opening', $opening)->with('fdate', $open_date)->with('tdate',$tdate);
+         foreach ($item_ledger as $key => $value) {  
+            if(count($item)==0){
+               $item->push($value);
+               continue;
+            }    
+            $exists = 0;  
+            $exists = $item->contains(function ($row)use ($value,$item) {
+               if ($row['item_id']==$value['item_id']) {
+                  return 1;
+               }               
+            });            
+            if ($exists==0) {
+               $item->push($value);
+            }
+         }      
+         // echo "<pre>"; 
+         // print_r($item->toArray());
+         // die;
+         return view('itemledger')->with('item_list', $item_list)->with('items', $item)->with('item_id', $item_id)->with('opening', $opening)->with('fdate', $open_date)->with('tdate',$tdate)->with('series',$series)->with('selected_series',$selected_series);
       }
-      if(isset($request->from_date) && !empty($request->from_date) && isset($request->to_date) && !empty($request->to_date)){         
-         $item = DB::select(DB::raw("SELECT * FROM item_ledger WHERE item_id='".$item_id."' and source!=-1 and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$request->to_date."', '%Y-%m-%d') and status=1 and delete_status='0' order by STR_TO_DATE(txn_date, '%Y-%m-%d')"));
-      }else{
-         $item = ItemLedger::where('item_id',$item_id)
-                                 ->where('company_id',Session::get('user_company_id'))
-                                 ->where('source','!=','-1')
-                                 ->where('delete_status','=','0')
-                                 ->orderBy(DB::raw("STR_TO_DATE(txn_date, '%Y-%m-%d')"))
-                                 ->get();
-      }      
+      //Particular Item Ledger
+
+      if(isset($request->from_date) && !empty($request->from_date) && isset($request->to_date) && !empty($request->to_date)){
+         $item = DB::select(DB::raw("SELECT * FROM item_ledger WHERE item_id='".$item_id."' and source!=-1 and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$request->to_date."', '%Y-%m-%d') and status=1 and delete_status='0' ".$selected_series_query." order by STR_TO_DATE(txn_date, '%Y-%m-%d')"));
+      }     
       if(count($item)>0){
          foreach ($item as $key => $value) {
             if($value->source==1){
@@ -157,37 +236,21 @@ class ItemLedgerController extends Controller
             }
          }
       }
+      //Opening Balance
       $opening = 0;
-      if(isset($request->from_date) && !empty($request->from_date)){
-         $financial_year = Session::get('default_fy');
-         $y =  explode("-",$financial_year);
-         $open_date = $y[0]."-04-01";
-         $open_date = date('Y-m-d',strtotime($open_date));  
-         if($request->from_date!=$open_date){
-            $open_ledger = DB::select(DB::raw("SELECT SUM(in_weight) as debit,SUM(out_weight) as credit FROM item_ledger WHERE item_id='".$item_id."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and status=1 and delete_status='0'"));
-         }else{
-            $open_ledger = DB::select(DB::raw("SELECT SUM(in_weight) as debit,SUM(out_weight) as credit FROM item_ledger WHERE item_id='".$item_id."' and STR_TO_DATE(txn_date, '%Y-%m-%d')=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and status=1 and delete_status='0' and source='-1'"));
-         }
+      if(isset($request->from_date) && !empty($request->from_date)){ 
+            $from_date = date('Y-m-d', strtotime($request->from_date . ' -1 day'));
+            $open_ledger = DB::select(DB::raw("SELECT SUM(in_weight) as debit,SUM(out_weight) as credit FROM item_ledger WHERE item_id='".$item_id."' and ( STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$from_date."', '%Y-%m-%d') || source='-1') and status=1 and delete_status='0' ".$selected_series_query.""));         
          if(count($open_ledger)>0){
                $opening = $open_ledger[0]->debit - $open_ledger[0]->credit;
          }
-      }else{
-         $open_ledger = ItemLedger::where('item_id',$item_id)
-                                 ->where('company_id',Session::get('user_company_id'))
-                                 ->where('source','-1')
-                                 ->first();
-         if($open_ledger){
-            if($open_ledger->out_weight!=""){
-               $opening = -$open_ledger->out_weight;
-            }else if($open_ledger->in_weight!=""){
-               $opening = $open_ledger->in_weight;
-            }
-         }
-      } 
+      }
       $collection = new Collection($item);
       //$item = $collection->sortByDesc('date');
       $item = json_decode($collection, true);
-      return view('itemledger')->with('item_list', $item_list)->with('items', $item)->with('item_id', $item_id)->with('opening', $opening);
+      // echo "<pre>";
+      // print_r($item);die;
+      return view('itemledger')->with('item_list', $item_list)->with('items', $item)->with('item_id', $item_id)->with('opening', $opening)->with('series',$series)->with('selected_series',$selected_series);
    }
    public function itemLedgerAverage(Request $request){
       $item_id = "";
@@ -233,9 +296,13 @@ class ItemLedgerController extends Controller
       }else{
          $opening = ItemLedger::where('item_id',$item_id)
                                     ->where('source','-1')
+                                    ->where('delete_status','0')
                                     ->first();
-         $opening_amount = $opening->total_price;
-         $opening_weight = $opening->in_weight;
+         if($opening){
+            $opening_amount = $opening->total_price;
+            $opening_weight = $opening->in_weight;
+         }
+         
       }      
       return view('item_ledger_average')->with('item_list', $item_list)->with('fdate', $fdate)->with('tdate',$tdate)->with('item_id', $item_id)->with('opening_amount', $opening_amount)->with('opening_weight', $opening_weight)->with('average_data', $average_data);
    }
@@ -253,6 +320,7 @@ class ItemLedgerController extends Controller
       }else{
          $opening = ItemLedger::where('item_id',$request->items_id)
                                     ->where('source','-1')
+                                    ->where('delete_status','0')
                                     ->first();
          $opening_amount = $opening->total_price;
          $opening_weight = $opening->in_weight;

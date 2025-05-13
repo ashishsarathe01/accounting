@@ -521,14 +521,9 @@
                <button class="p-2 transaction-shortcut-btn my-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Help">F1
                   <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Help</span>
                </button>
-             <a href="https://meriaccounting.com/add-account"
-   class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center"
-   data-bs-toggle="tooltip"
-   data-bs-placement="bottom"
-   title="Add Master">
-   F3
-   <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Master</span>
-</a>
+               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Account">
+                  <span class="border-bottom-black">F1</span><span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Account</span>
+               </button>
                <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Item">
                   <span class="border-bottom-black">F2</span>
                   <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Item</span>
@@ -636,22 +631,6 @@
 </body>
 @include('layouts.footer')
 <script>
-    
-   document.addEventListener('keydown', function(event) {
-   // Check if Alt + A is pressed
-   if (event.altKey && event.key.toLowerCase() === 'a') {
-      event.preventDefault(); // Prevent any default behavior
-      const addMasterLink = document.querySelector('a[href="https://meriaccounting.com/add-account"]');
-      if (addMasterLink) {
-         addMasterLink.click();
-      }
-   }
-});
-
-
-
-
-
    var mat_series = "<?php echo count($GstSettings);?>";
    var enter_gst_status = 0;
    var auto_gst_calculation = 0;
@@ -719,11 +698,11 @@
 
    $(".item_id").each(function (index) {
       let dataId = $(this).attr("data-id");
-      let removeIcon = '<svg style="color: red; cursor: pointer; margin-right: 8px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + dataId + '" viewBox="0 0 16 16">' +
+      let removeIcon = '<svg style="color: red; cursor: pointer; margin-right: 8px;" xmlns="http://www.w3.org/2000/svg" tabindex="0" width="24" height="24" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + dataId + '" viewBox="0 0 16 16">' +
          '<path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/>' +
          '</svg>';
 
-      let addIcon = '<svg style="color: green;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="bg-primary rounded-circle add_more_wrapper" data-id="' + dataId + '" >' +
+      let addIcon = '<svg style="color: green;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" tabindex="0" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="bg-primary rounded-circle add_more_wrapper" data-id="' + dataId + '" >' +
          '<path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/>' +
          '</svg>';
 
@@ -768,12 +747,12 @@ function removeItem() {
       let $iconCell = $("#tr_" + rowId + " td:last");
 
       let removeIcon = `
-        <svg style="color: red; cursor: pointer; margin-right: 8px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="${rowId}" viewBox="0 0 16 16">
+        <svg style="color: red; cursor: pointer; margin-right: 8px;" xmlns="http://www.w3.org/2000/svg" tabindex="0" width="24" height="24" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="${rowId}" viewBox="0 0 16 16">
           <path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/>
         </svg>`;
 
       let addIcon = `
-        <svg style="color: green;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="bg-primary rounded-circle add_more_wrapper" data-id="${rowId}">
+        <svg style="color: green;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" tabindex="0" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="bg-primary rounded-circle add_more_wrapper" data-id="${rowId}">
           <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/>
         </svg>`;
         
@@ -955,6 +934,7 @@ function removeItem() {
          let freight_amount_arr = [];let discouint_amount_arr = [];
          let billSundryArray = [];
          let taxSundryArray = [];
+         
          $(".bill_sundry_tax_type").each(function(){          
             let id = $(this).attr('data-id');
             if($("#bill_sundry_amount_"+id).val()!='' && ($('option:selected', this).attr('data-sundry_percent')==undefined || $('option:selected', this).attr('data-sundry_percent')=="")){
@@ -979,8 +959,7 @@ function removeItem() {
          if(customer_gstin==merchant_gstin.substring(0,2)){            
             var maxPercent = Math.max.apply(null, result.map(function(item){
               return item.percent;
-            }))   
-
+            }))
             if(result.length>0){
                let index = 1;
                $(".extra_gst").remove();
@@ -1003,7 +982,7 @@ function removeItem() {
                         });
                      }
                   }
-                  console.log(item_taxable_amount);
+                  
                   total_item_taxable_amount = total_item_taxable_amount + parseFloat(item_taxable_amount);
                   on_tcs_amount = parseFloat(on_tcs_amount) + parseFloat(total_item_taxable_amount);
                   if(index==1){
@@ -1098,7 +1077,8 @@ function removeItem() {
               return item.percent;
             }))    
 
-            if(result.length>0){   
+            if(result.length>0){  
+               
                let index = 1;
                $(".extra_gst").remove();            
                result.forEach(function(e){     
@@ -1108,7 +1088,6 @@ function removeItem() {
                         billSundryArray.forEach(function(e){
                            if(e.nature_of_sundry!='CGST' && e.nature_of_sundry!='SGST' && e.nature_of_sundry!='IGST' && e.nature_of_sundry!='ROUNDED OFF (+)' && e.nature_of_sundry!='ROUNDED OFF (-)'){ 
                               if(e.value>0){
-
                                  if(e.type=='additive'){
                                     item_taxable_amount = item_taxable_amount + parseFloat(e.value);
                                     final_total = final_total + parseFloat(e.value);
@@ -1121,7 +1100,7 @@ function removeItem() {
                         });
                      }
                   }  
-                  console.log(item_taxable_amount);                 
+                                
                   total_item_taxable_amount = total_item_taxable_amount + parseFloat(item_taxable_amount);
                   on_tcs_amount = parseFloat(on_tcs_amount) + parseFloat(total_item_taxable_amount);
                   if(index==1){
@@ -1155,7 +1134,7 @@ function removeItem() {
                         sundry_amount = sundry_amount.toFixed(2);
                         taxSundryArray['igst'] = sundry_amount;
                      }
-                     $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(taxSundryArray['igst']);
+                     
                      let sundry_value = "";
                      if(billSundryArray.length>0){
                         billSundryArray.forEach(function(e){
@@ -1164,6 +1143,8 @@ function removeItem() {
                            }
                         });
                      }
+                     $(".add_more_bill_sundry_gst").click();
+                     $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(taxSundryArray['igst']);
                      $("#bill_sundry_"+add_more_bill_sundry_up_count).val(sundry_value);
                      $("#tax_amt_"+add_more_bill_sundry_up_count).html(e.percent+" %");
                      $("#tax_rate_tr_"+add_more_bill_sundry_up_count).val(e.percent);
@@ -1227,7 +1208,7 @@ function removeItem() {
          $("#bill_sundry_amt").html(formattedNumber);
          $("#total_amounts").val(final_total);         
          let roundoff = parseFloat(final_total) - parseFloat($("#total_taxable_amounts").val()) - parseFloat(gstamount);     
-         console.log(parseFloat(final_total)+"-"+parseFloat($("#total_taxable_amounts").val())+"-"+ parseFloat(gstamount));    
+            
          roundoff = roundoff.toFixed(2);
          $("#billtr_round_plus").hide();
          $("#billtr_round_minus").hide();
@@ -1435,6 +1416,7 @@ function removeItem() {
       $lastCell.html(removeIcon);
     }
   });
+  calculateAmount();
 });
 
    $( ".select2-single, .select2-multiple" ).select2();
@@ -1766,6 +1748,7 @@ function removeItem() {
       }
       $("#partyaddress").html('');   
       $("#partyaddress").html("GSTIN : "+$('option:selected', this).attr('data-gstin')+"<br>Address : "+$('option:selected', this).attr('data-address'));
+      calculateAmount();
    }); 
    $(document).on('keyup', '.goods_items', function(){
       let id = $(this).attr('data-id');
@@ -2152,17 +2135,34 @@ $(document).ready(function() {
 
 
 $(document).on("keydown", ".amount", function (event) {
-  if ((event.key === "Tab" && !event.shiftKey) || event.key === "Enter") {
+  if (event.key === "Enter") {
     event.preventDefault();
 
-    let id = $(this).data("id");
-    let lastRowId = $(".item_id").last().data("id");
-if(id=="1"){
-   $("#tr_" + id).find(".add_more_wrapper").focus();
-}
-    else {
-      // Go to Remove (-) button
-      $("#tr_" + id).find(".remove").focus();
+    let $current = $(this);
+    let id = parseInt($current.data("id")); // Current input ID
+    let $currentRow = $("#tr_" + id);
+    let lastRowId = $(".goods_items").last().data("id");
+
+    if (id === 1) {
+      // If id is 1, focus on Add More button
+      $currentRow.find(".add_more_wrapper").focus();
+    } else {
+      let $removeButton = $currentRow.find(".remove");
+
+      if ($removeButton.length > 0) {
+        // If Remove button exists, focus it
+        $removeButton.focus();
+      } else {
+        // Else, move to next goods description input
+        let nextId = id + 1;
+        let $nextInput = $("#goods_discription_tr_" + nextId);
+
+        if ($nextInput.length > 0) {
+          $nextInput.focus();
+        } else {
+          console.warn("Next description field not found for ID: " + nextId);
+        }
+      }
     }
   }
 });
@@ -2312,7 +2312,23 @@ $('select.bill_sundry_tax_type').each(function () {
 //   }
 // });
 
-
+$(document).ready(function() {
+  
+  //   // When clicking purchaseBtn
+  //   $("#purchaseBtn").on('click', function(event) {
+  //     event.preventDefault(); // Stop default submit behavior
+  //     $(this).closest('form').submit(); // Manually submit the form
+  //   });
+  
+    // When pressing Enter on purchaseBtn
+    $("#saveBtn").on('keydown', function(event) {
+      if (event.key === "Enter") {
+        event.preventDefault(); // prevent default behavior
+        $(this).click(); // trigger click event (which submits)
+      }
+    });
+  
+  });
 
 </script>
 @endsection

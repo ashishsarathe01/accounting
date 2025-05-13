@@ -14,6 +14,12 @@
                 {{ $successMessage }}
             </div>
             @endif
+            @if(isset($errorMessage))
+            <!-- Display success message -->
+            <div class="alert alert-danger">
+                {{ $errorMessage }}
+            </div>
+            @endif
             @if (session('error'))
             <div class="alert alert-danger" role="alert"> {{session('error')}}
             </div>
@@ -21,6 +27,7 @@
             <form method="POST" action="{{ route('submit.otplogin') }}">
                 @csrf
                 <input type="hidden" name="user_id" value="{{$user_id}}" />
+                <input type="hidden" name="mobile_no" value="{{$mobile_no}}" />
                 <div class="mb-4 input-otp mx-auto">
                     <label for="contact-number" class="form-label font-14 heading-color">OTP</label>
                     <div class="d-flex align-items-center mb-4">
@@ -56,4 +63,20 @@
         </div>
     </div>
 </section>
+@include('layouts.footer')
+<script>
+    $(document).ready(function() {
+  $('.otp-input').on('input', function() {
+    if (this.value.length === 1) {
+      $(this).next('.otp-input').focus();
+    }
+  });
+
+  $('.otp-input').on('keydown', function(e) {
+    if (e.key === "Backspace" && this.value === '') {
+      $(this).prev('.otp-input').focus();
+    }
+  });
+});
+</script>
 @endsection

@@ -61,12 +61,18 @@
                           <td style="text-align: right;">{{$opening_weight}}</td>
                           <td style="text-align: right;">                             
                               @php 
-                              echo $average_price = round($opening_amount/$opening_weight,6);
+                              
+                              if($opening_weight != 0 && $opening_weight != ''){
+                                 echo $average_price = round($opening_amount/$opening_weight,6);
+                              }else{
+                                 $average_price = 0;
+                              }
+                              
                               @endphp
                            </td>
                            <td style="text-align: right;">
                            @php                            
-                              echo number_format($opening_amount,2);
+                              echo formatIndianNumber($opening_amount,2);
                            @endphp</td>
                         </tr>
                      @foreach($average_data as $purchase)                        
@@ -76,7 +82,7 @@
                            <td style="text-align: right;">{{$purchase->sale_weight}}</td>
                            <td style="text-align: right;">{{$purchase->average_weight}}</td>
                            <td style="text-align: right;">{{$purchase->price}}</td>
-                           <td style="text-align: right;">{{number_format($purchase->amount,2)}}</td>
+                           <td style="text-align: right;">{{formatIndianNumber($purchase->amount,2)}}</td>
                         </tr>
                      @endforeach
                     

@@ -43,53 +43,14 @@ class TrialBalanceController extends Controller
                            ->get();
                            
       foreach ($account as $key => $value){
-         $debit_credit = DB::select("select sum(debit) as debit,sum(credit) as credit from account_ledger where account_id='".$value['id']."' and status='1' and delete_status='0' and company_id='".Session::get('user_company_id')."' and ((STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$from_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<STR_TO_DATE('".$to_date."', '%Y-%m-%d')) || entry_type=-1 )");
+         $debit_credit = DB::select("select sum(debit) as debit,sum(credit) as credit from account_ledger where account_id='".$value['id']."' and status='1' and delete_status='0' and company_id='".Session::get('user_company_id')."' and (STR_TO_DATE(txn_date, '%Y-%m-%d')<STR_TO_DATE('".$to_date."', '%Y-%m-%d') || entry_type=-1 )");
          $debit = $debit_credit[0]->debit;
          $credit = $debit_credit[0]->credit;
          $account[$key]->debit = $debit;
          $account[$key]->credit = $credit;
       }
-      //Closing Stock      
-      $open_date = $y[0]."-04-01";
-      $open_date = date('Y-m-d',strtotime($open_date));
-      $item = DB::select(DB::raw("SELECT item_id,SUM(total_price) as total_price,SUM(in_weight) as in_weight,SUM(out_weight) as out_weight,manage_items.name,units.name as uname FROM item_ledger inner join manage_items on item_ledger.item_id=manage_items.id inner join units on manage_items.u_name=units.id WHERE item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') and item_ledger.status='1' and g_name!='' and item_ledger.delete_status='0' GROUP BY item_id order by manage_items.name"));
-      
-      $item_in_data = DB::select(DB::raw("SELECT SUM(total_price) as total_price,SUM(in_weight) as in_weight,item_id FROM item_ledger WHERE (item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') and status='1' and delete_status='0' and in_weight!='' and source=2) || (item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') and status='1' and delete_status='0' and in_weight!='' and source=-1) GROUP BY item_id"));
-      foreach ($item_in_data as $key => $value) {
-         $check = ItemLedger::select('id')
-                     ->where('item_id',$value->item_id)
-                     ->whereRaw("REPLACE(total_price, '.00', '')=$value->total_price")
-                     ->whereRaw("REPLACE(in_weight, '.00', '')=$value->in_weight")
-                     // ->where('total_price',$value->total_price)
-                     // ->where('in_weight',$value->in_weight)
-                     ->where('source','-1')
-                     ->where('company_id',Session::get('user_company_id'))
-                     ->first();
-         if($check){
-            $item_in_data[$key]->opening = 1;
-         }else{
-            $item_in_data[$key]->opening = 0;
-         }
-      }
-      $result = array();
-      foreach ($item_in_data as $element){
-         if($element->opening==1){
-            $result[$element->item_id][] = $element->total_price/$element->in_weight;
-         }else{
-            $result[$element->item_id][] = round($element->total_price/$element->in_weight,2);
-         }
-         
-      }
-      $stock_in_hand = 0;$total_weight = 0;
-      foreach ($item as $key => $value){
-         $remaining_weight = $value->in_weight - $value->out_weight;
-         if (array_key_exists($value->item_id,$result)){
-            $stock_in_hand = $stock_in_hand + $remaining_weight*$result[$value->item_id][0];
-            $total_weight = $total_weight + $remaining_weight;
-         }
-      }
-      $stock_in_hand = round($stock_in_hand,2);
       $stock_in_hand = CommonHelper::ClosingStock($to_date);
+      $stock_in_hand = round($stock_in_hand,2);
       if($stock_in_hand<0){
          $newCompete = collect([
             [
@@ -115,8 +76,7 @@ class TrialBalanceController extends Controller
       
       return view('display/trialbalance')->with('account', $account)->with('type','open')->with('to_date',$to_date);
    }
-   public function filter(Request $request){
-     
+   public function filter(Request $request){     
       $req = $request->all();   
       $financial_year = Session::get('default_fy');
       $y = explode("-",$financial_year);
@@ -151,10 +111,12 @@ class TrialBalanceController extends Controller
          if(count($value->accountWithHead)>0){
             $account_id = implode(',', $value->accountWithHead->pluck('id')->toArray());
             if($account_id!=""){                 
-               if($req['type']=="open"){                  
-                  $debit_credit = DB::select("select sum(debit) as debit,sum(credit) as credit from account_ledger where account_id in (".$account_id.") and status='1' and delete_status='0' and company_id='".Session::get('user_company_id')."' and ((STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$from_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d')) || entry_type=-1 )");
+               if($req['type']=="open"){    
+                  $to_date1 = date('Y-m-d', strtotime($to_date . ' -1 day'));             
+                  $debit_credit = DB::select("select sum(debit) as debit,sum(credit) as credit from account_ledger where account_id in (".$account_id.") and status='1' and delete_status='0' and company_id='".Session::get('user_company_id')."' and (STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date1."', '%Y-%m-%d') || entry_type=-1 )");
                }else if($req['type']=="close"){
-                  $debit_credit = DB::select("select sum(debit) as debit,sum(credit) as credit from account_ledger where account_id in (".$account_id.") and status='1' and delete_status='0' and company_id='".Session::get('user_company_id')."' and ((STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$from_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d')) || entry_type=-1)");
+                  
+                  $debit_credit = DB::select("select sum(debit) as debit,sum(credit) as credit from account_ledger where account_id in (".$account_id.") and status='1' and delete_status='0' and company_id='".Session::get('user_company_id')."' and (STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') || entry_type=-1)");
                }
                $debit = $debit_credit[0]->debit;
                $credit = $debit_credit[0]->credit;
@@ -176,33 +138,9 @@ class TrialBalanceController extends Controller
          }
          if(count($value->accountGroup)>0){
             foreach ($value->accountGroup as $k2 => $v2) {   
-               if($v2->id==30){
-                  //Closing Stock      
-                  $open_date = $y[0]."-04-01";
-                  $open_date = date('Y-m-d',strtotime($open_date));
-                  if($req['type']=="open"){         
-                     $item = DB::select(DB::raw("SELECT item_id,SUM(total_price) as total_price,SUM(in_weight) as in_weight,SUM(out_weight) as out_weight,manage_items.name,units.name as uname FROM item_ledger inner join manage_items on item_ledger.item_id=manage_items.id inner join units on manage_items.u_name=units.id WHERE item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') and item_ledger.status='1' and g_name!='' and item_ledger.delete_status='0' GROUP BY item_id order by manage_items.name"));
-                  
-                     $item_in_data = DB::select(DB::raw("SELECT SUM(total_price) as total_price,SUM(in_weight) as in_weight,item_id FROM item_ledger WHERE (item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') and status='1' and delete_status='0' and in_weight!='' and source=2) || (item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') and status='1' and delete_status='0' and in_weight!='' and source=-1) GROUP BY item_id"));
-                  }else{
-                     $item = DB::select(DB::raw("SELECT item_id,SUM(total_price) as total_price,SUM(in_weight) as in_weight,SUM(out_weight) as out_weight,manage_items.name,units.name as uname FROM item_ledger inner join manage_items on item_ledger.item_id=manage_items.id inner join units on manage_items.u_name=units.id WHERE item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') and item_ledger.status='1' and g_name!='' and item_ledger.delete_status='0' GROUP BY item_id order by manage_items.name"));
-                  
-                     $item_in_data = DB::select(DB::raw("SELECT SUM(total_price) as total_price,SUM(in_weight) as in_weight,item_id FROM item_ledger WHERE (item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') and status='1' and delete_status='0' and in_weight!='' and source=2) || (item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') and status='1' and delete_status='0' and in_weight!='' and source=-1) GROUP BY item_id"));
-                  }     
-                  $result = array();
-                  foreach ($item_in_data as $element){
-                     $result[$element->item_id][] = round($element->total_price/$element->in_weight,2);
-                  }
-                  $stock_in_hand = 0;$total_weight = 0;
-                  foreach ($item as $item_value){
-                     $remaining_weight = $item_value->in_weight - $item_value->out_weight;
-                     if (array_key_exists($item_value->item_id,$result)){
-                        $stock_in_hand = $stock_in_hand + $remaining_weight*$result[$item_value->item_id][0];
-                        $total_weight = $total_weight + $remaining_weight;
-                     }
-                  }
-                  //$stock_in_hand = round($stock_in_hand,2);
+               if($v2->id==30){                  
                   $stock_in_hand = CommonHelper::ClosingStock($to_date);
+                  $stock_in_hand = round($stock_in_hand,2);
                   if($stock_in_hand<0){
                      $value->accountGroup[$k2]->debit = 0;
                      $value->accountGroup[$k2]->credit = $stock_in_hand;                     
@@ -213,10 +151,12 @@ class TrialBalanceController extends Controller
                }else{
                   $account_id = implode(',', $v2->account->pluck('id')->toArray());
                   if($account_id!=""){                 
-                     if($req['type']=="open"){                     
-                        $debit_credit = DB::select("select sum(debit) as debit,sum(credit) as credit from account_ledger where account_id in (".$account_id.") and status='1' and delete_status='0' and company_id='".Session::get('user_company_id')."' and ((STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$from_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d')) || entry_type=-1 )");
+                     if($req['type']=="open"){    
+                        $to_date1 = date('Y-m-d', strtotime($to_date . ' -1 day'));                 
+                        $debit_credit = DB::select("select sum(debit) as debit,sum(credit) as credit from account_ledger where account_id in (".$account_id.") and status='1' and delete_status='0' and company_id='".Session::get('user_company_id')."' and (STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date1."', '%Y-%m-%d') || entry_type=-1 )");
                      }else if($req['type']=="close"){
-                        $debit_credit = DB::select("select sum(debit) as debit,sum(credit) as credit from account_ledger where account_id in (".$account_id.") and status='1' and delete_status='0' and company_id='".Session::get('user_company_id')."' and ((STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$from_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d')) || entry_type=-1)");
+                        
+                        $debit_credit = DB::select("select sum(debit) as debit,sum(credit) as credit from account_ledger where account_id in (".$account_id.") and status='1' and delete_status='0' and company_id='".Session::get('user_company_id')."' and (STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') || entry_type=-1)");
                      }
                      $debit = $debit_credit[0]->debit;
                      $credit = $debit_credit[0]->credit;
@@ -246,10 +186,12 @@ class TrialBalanceController extends Controller
       foreach ($group_primary_yes as $k2 => $v2) {               
          $account_id = implode(',', $v2->account->pluck('id')->toArray());
          if($account_id!=""){                 
-            if($req['type']=="open"){                 
-               $debit_credit = DB::select("select sum(debit) as debit,sum(credit) as credit from account_ledger where account_id in (".$account_id.") and status='1' and delete_status='0' and company_id='".Session::get('user_company_id')."' and ((STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$from_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d')) || entry_type=-1 )");
+            if($req['type']=="open"){  
+               $to_date1 = date('Y-m-d', strtotime($to_date . ' -1 day'));               
+               $debit_credit = DB::select("select sum(debit) as debit,sum(credit) as credit from account_ledger where account_id in (".$account_id.") and status='1' and delete_status='0' and company_id='".Session::get('user_company_id')."' and ( STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date1."', '%Y-%m-%d') || entry_type=-1 )");
             }else if($req['type']=="close"){
-               $debit_credit = DB::select("select sum(debit) as debit,sum(credit) as credit from account_ledger where account_id in (".$account_id.") and status='1' and delete_status='0' and company_id='".Session::get('user_company_id')."' and ((STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$from_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d')) || entry_type=-1)");
+               
+               $debit_credit = DB::select("select sum(debit) as debit,sum(credit) as credit from account_ledger where account_id in (".$account_id.") and status='1' and delete_status='0' and company_id='".Session::get('user_company_id')."' and ( STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') || entry_type=-1)");
             }
             $debit = $debit_credit[0]->debit;
             $credit = $debit_credit[0]->credit;
@@ -286,43 +228,18 @@ class TrialBalanceController extends Controller
       }
       foreach ($account as $key => $value) {         
          if($req['type']=="open"){
-            $debit_credit = DB::select("select sum(debit) as debit,sum(credit) as credit from account_ledger where account_id='".$value['id']."' and status='1' and delete_status='0' and company_id='".Session::get('user_company_id')."' and ((STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$from_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d')) || entry_type=-1 )");
-         }else if($req['type']=="close"){
-            $debit_credit = DB::select("select sum(debit) as debit,sum(credit) as credit from account_ledger where account_id='".$value['id']."' and status='1' and delete_status='0' and company_id='".Session::get('user_company_id')."' and ((STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$from_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d')) || entry_type=-1)");
+            $to_date1 = date('Y-m-d', strtotime($to_date . ' -1 day'));
+            $debit_credit = DB::select("select sum(debit) as debit,sum(credit) as credit from account_ledger where account_id='".$value['id']."' and status='1' and delete_status='0' and company_id='".Session::get('user_company_id')."' and ( STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date1."', '%Y-%m-%d') || entry_type=-1 )");
+         }else if($req['type']=="close"){            
+            $debit_credit = DB::select("select sum(debit) as debit,sum(credit) as credit from account_ledger where account_id='".$value['id']."' and status='1' and delete_status='0' and company_id='".Session::get('user_company_id')."' and ( STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') || entry_type=-1)");
          }
          $debit = $debit_credit[0]->debit;
          $credit = $debit_credit[0]->credit;
          $account[$key]->debit = $debit;
-         $account[$key]->credit = $credit;
-         
+         $account[$key]->credit = $credit;         
       }
-      //Closing Stock      
-      $open_date = $y[0]."-04-01";
-      $open_date = date('Y-m-d',strtotime($open_date));
-      if($req['type']=="open"){         
-         $item = DB::select(DB::raw("SELECT item_id,SUM(total_price) as total_price,SUM(in_weight) as in_weight,SUM(out_weight) as out_weight,manage_items.name,units.name as uname FROM item_ledger inner join manage_items on item_ledger.item_id=manage_items.id inner join units on manage_items.u_name=units.id WHERE item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') and item_ledger.status='1' and g_name!='' and item_ledger.delete_status='0' GROUP BY item_id order by manage_items.name"));
-      
-         $item_in_data = DB::select(DB::raw("SELECT SUM(total_price) as total_price,SUM(in_weight) as in_weight,item_id FROM item_ledger WHERE (item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') and status='1' and delete_status='0' and in_weight!='' and source=2) || (item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') and status='1' and delete_status='0' and in_weight!='' and source=-1) GROUP BY item_id"));
-      }else{
-         $item = DB::select(DB::raw("SELECT item_id,SUM(total_price) as total_price,SUM(in_weight) as in_weight,SUM(out_weight) as out_weight,manage_items.name,units.name as uname FROM item_ledger inner join manage_items on item_ledger.item_id=manage_items.id inner join units on manage_items.u_name=units.id WHERE item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') and item_ledger.status='1' and g_name!='' and item_ledger.delete_status='0' GROUP BY item_id order by manage_items.name"));
-      
-         $item_in_data = DB::select(DB::raw("SELECT SUM(total_price) as total_price,SUM(in_weight) as in_weight,item_id FROM item_ledger WHERE (item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') and status='1' and delete_status='0' and in_weight!='' and source=2) || (item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') and status='1' and delete_status='0' and in_weight!='' and source=-1) GROUP BY item_id"));
-      }     
-      $result = array();
-      foreach ($item_in_data as $element){
-         $result[$element->item_id][] = round($element->total_price/$element->in_weight,2);
-      }
-      $stock_in_hand = 0;$total_weight = 0;
-      foreach ($item as $key => $value){
-         $remaining_weight = $value->in_weight - $value->out_weight;
-         if (array_key_exists($value->item_id,$result)){
-            $stock_in_hand = $stock_in_hand + $remaining_weight*$result[$value->item_id][0];
-            $total_weight = $total_weight + $remaining_weight;
-         }
-      }
-      $stock_in_hand = round($stock_in_hand,2);
       $stock_in_hand = CommonHelper::ClosingStock($to_date);
-      
+      $stock_in_hand = round($stock_in_hand,2);
       if($stock_in_hand<0){
          $newCompete = collect([
             [

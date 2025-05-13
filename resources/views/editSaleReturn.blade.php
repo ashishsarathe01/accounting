@@ -128,6 +128,7 @@
                      <ul style="color: red;">
                        @error('voucher_no'){{$message}}@enderror                        
                      </ul>
+                     <input type="hidden" name="voucher_type" id="voucher_type" value="{{$sale_return->voucher_type}}">
                      <input type="hidden" name="sale_bill_id" id="sale_bill_id" value="{{$sale_return->sale_bill_id}}">
                   </div>
                   <div class="mb-1 col-md-1 voucher_no_div">
@@ -893,6 +894,7 @@
       var account_id = $(this).val();
       var sale_bill_id = '{{$sale_return->sale_bill_id}}';
       var invoice_no = '{{$sale_return->invoice_no}}';
+      let voucher_type = '{{$sale_return->voucher_type}}';
       $.ajax({
          url: '{{url("get/invoice/details")}}',
          async: false,
@@ -910,7 +912,13 @@
                if(invoice_no==val.voucher_no){
                   selected = "selected";
                }
-               optionElements += '<option value="' + val.voucher_no + '" data-id="'+val.id+'" '+selected+'>' + val.voucher_no_prefix + '</option>';
+               let voc_no = "";
+               if(val.voucher_type=="PURCHASE"){
+                  voc_no = val.voucher_no;
+               }else{
+                  voc_no = val.voucher_no_prefix;
+               }
+               optionElements += '<option value="' + val.voucher_no + '" data-id="'+val.id+'" data-voucher_type="'+val.voucher_type+'" '+selected+'>' + voc_no + '</option>';
             });
             $("#voucher_no").html(optionElements);
             $('#voucher_no').change();
@@ -919,9 +927,14 @@
    });
    $('#voucher_no').change(function() {
       // Get the selected value
-      $("#invoice_id").attr('href',"{{ URL::to('sale-invoice/')}}/"+$('option:selected', this).attr('data-id'));
+      $("#voucher_type").val($('option:selected', this).attr('data-voucher_type'));
+      if($('option:selected', this).attr('data-voucher_type')=="PURCHASE"){
+         $("#invoice_id").attr('href',"{{ URL::to('purchase-invoice/')}}/"+$('option:selected', this).attr('data-id'));
+      }else if($('option:selected', this).attr('data-voucher_type')=="SALE"){
+         $("#invoice_id").attr('href',"{{ URL::to('sale-invoice/')}}/"+$('option:selected', this).attr('data-id'));
+      }
       $("#sale_bill_id").val($('option:selected', this).attr('data-id'));
-      var invoice_id = $(this).val();
+      var invoice_id = $('option:selected', this).attr('data-id');
       $.ajax({
          url: '{{url("get/saleitems/details")}}',
          async: false,
@@ -929,7 +942,8 @@
          dataType: 'JSON',
          data: {
             _token: '<?php echo csrf_token() ?>',
-            voucher_no: invoice_id
+            invoice_id: invoice_id,
+            voucher_type: $('option:selected', this).attr('data-voucher_type'),
          },
          success: function(data){
             var optionElements = '<option value="">Select</option>';
@@ -1721,7 +1735,7 @@
       let invoice_prefix = $('option:selected', this).attr('data-invoice_prefix');
       let invoice_start_from = $('option:selected', this).attr('data-invoice_start_from');
       $("#material_center").val($('option:selected', this).attr('data-mat_center'));
-      merchant_gstin = $('option:selected', this).attr('data-gst_no');
+     // merchant_gstin = $('option:selected', this).attr('data-gst_no');
       if(nature=="WITHOUT GST"){
          if(invoice_prefix!=""){
             $("#voucher_prefix").val(invoice_prefix+"CRWT/{{Session::get('default_fy')}}/"+$('option:selected', this).attr('data-without_invoice_start_from'));

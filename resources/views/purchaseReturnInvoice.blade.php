@@ -122,7 +122,7 @@
                            <p>GSTIN / UIN : {{$purchase_return->billing_gst}}</p>
                         </td>
                         <td colspan="4">
-                           <p><span class="width25">Dr. Note No </span>: <span class="lft_mar15">{{$purchase_return->dr_series_no}}/{{$purchase_return->dr_financial_year}}/DR{{$purchase_return->purchase_return_no}}</span> </p>
+                           <p><span class="width25">Dr. Note No </span>: <span class="lft_mar15">{{$purchase_return->sr_prefix}}</span> </p>
                            <p><span class="width25">Dr. Note Date </span>: <span class="lft_mar15">{{date('d-m-Y',strtotime($purchase_return->date))}}</span> </p>
                            <p><span class="width25">Org. Inv. No. </span>: <span class="lft_mar15">{{$purchase_return->voucher_no}}</span> </p>
                            <p><span class="width25">Org. Inv. Date </span>: <span class="lft_mar15">{{date('d-m-Y',strtotime($purchase_return->purchase_date))}}</span> </p>
@@ -287,8 +287,172 @@
                   </tr>
                </tbody>
             </table>
+            <br>
+            <div style="text-align: center;" class="noprint">
+               @if($einvoice_status==1 && $purchase_return->e_invoice_status==0)
+                  <button class="btn btn-border border-secondary generate_einvoice">GENERATE E-INVOICE</button>
+               @endif
+               @if(($einvoice_status==1 && $purchase_return->e_invoice_status==1 &&  $ewaybill_status==1 && $purchase_return->e_waybill_status==0) || ($einvoice_status==0 && $ewaybill_status==1 && $purchase_return->e_waybill_status==0))                  
+                  <button type="button" class="btn btn-info generate_eway">GENERATE E-WAY BILL</button>                  
+               @endif
+
+               @if($einvoice_status==1 && $purchase_return->e_invoice_status==1)
+                  <button type="button" class="btn btn-danger cancel_einvoice">CANCEL E-INVOICE</button>
+               @endif
+
+               @if($ewaybill_status==1 && $purchase_return->e_waybill_status==1)
+                  <button type="button" class="btn btn-danger cancel_eway" style="margin-left: 100px;">CANCEL E-WAY BILL</button>                  
+               @endif
+               
+            </div>
          </div>                     
       </div>
    </section>
 </div>
+<div class="modal fade" id="ewayBillModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+   <div class="modal-dialog w-360  modal-dialog-centered">
+      <div class="modal-content p-4 border-divider border-radius-8">
+         <div class="modal-header border-0 p-0">
+            <h4 class="modal-title"><span id="modal_parameter_name"></span>Eway Details</h4>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div>
+         <div class="modal-body text-center p-0">
+            <div class="row">
+               <div class="mb-12 col-md-12">
+                  <label for="no_of_parameter" class="form-label font-14 font-heading">Vehicle Number</label>
+                  <input type="text" class="form-control" id="vehicle_no" placeholder="Enter Vehicle Number" value="{{$purchase_return->vehicle_no}}">
+               </div>
+               <div class="mb-12 col-md-12">
+                  <label for="no_of_parameter" class="form-label font-14 font-heading">Distance</label>
+                  <input type="text" class="form-control" id="distance" placeholder="Enter Distance">
+               </div>
+            </div>
+         </div>
+         <br></br>
+         <div class="modal-footer border-0 mx-auto p-0">
+            <button type="button" class="btn btn-danger cancel">CANCEL</button>
+            <button type="button" class="ms-3 btn btn-info generate_eway_btn">Generate</button>
+         </div>
+      </div>
+   </div>
+</div>
 @include('layouts.footer')
+<script>
+   $(document).ready(function(){
+      $(".generate_einvoice").click(function(){
+         if(confirm("Are you confirm ?")==true){
+            let id = "<?php echo $purchase_return->id ?>";
+            $.ajax({
+               url: '{{url("generate-debit-note-einvoice")}}',
+               async: false,
+               type: 'POST',
+               dataType: 'JSON',
+               data: {
+                  _token: '<?php echo csrf_token() ?>',
+                  id: id
+               },
+               success: function(res){ 
+                  if(res.success==true){
+                     alert(res.message)
+                     location.reload();
+                  }else{
+                     alert(res.message)
+                  }                  
+               }
+            });
+         }
+      });
+      $(".generate_eway").click(function(){
+         $("#ewayBillModal").modal('toggle');         
+      });      
+      $(".generate_eway_btn").click(function(){
+            let id = "<?php echo $purchase_return->id; ?>";
+            let vehicle_no = $("#vehicle_no").val();
+            let distance = $("#distance").val();
+            if(vehicle_no==""){
+               alert("Please Enter Vehicle No.");
+               return;
+            }
+            if(distance==""){
+               alert("Please Enter Distance");
+               return;
+            }
+         if(confirm("Are you confirm ?")==true){
+            
+            $.ajax({
+               url: '{{url("generate-ewaybill-purchase-return")}}',
+               async: false,
+               type: 'POST',
+               dataType: 'JSON',
+               data: {
+                  _token: '<?php echo csrf_token() ?>',
+                  id: id,
+                  vehicle_number : vehicle_no,
+                  distance : distance
+               },
+               success: function(data){                  
+                  if(res.success==true){
+                     alert(res.message)
+                     location.reload();
+                     //$("#jsonhtml").html("<pre>" + JSON.stringify(res.data) + "</pre>");
+                  }else{
+                     alert(res.message)
+                  } 
+               }
+            });
+         }
+      });
+      $(".cancel_einvoice").click(function(){
+         if(confirm("Are you confirm cancel einvoice?")==true){
+            let id = "<?php echo $purchase_return->id ?>";
+            $.ajax({
+               url: '{{url("cancel-einvoice-purchase-return")}}',
+               async: false,
+               type: 'POST',
+               dataType: 'JSON',
+               data: {
+                  _token: '<?php echo csrf_token() ?>',
+                  id: id
+               },
+               success: function(res){ 
+                  if(res.success==true){
+                     alert(res.message)
+                     location.reload();
+                  }else{
+                     alert(res.message)
+                  }                  
+               }
+            });
+         }
+      });
+      $(".cancel_eway").click(function(){
+         if(confirm("Are you confirm eway bill?")==true){
+            let id = "<?php echo $purchase_return->id ?>";
+            $.ajax({
+               url: '{{url("cancel-ewaybill-purchase-return")}}',
+               async: false,
+               type: 'POST',
+               dataType: 'JSON',
+               data: {
+                  _token: '<?php echo csrf_token() ?>',
+                  id: id
+               },
+               success: function(res){ 
+                  if(res.success==true){
+                     alert(res.message)
+                     location.reload();
+                  }else{
+                     alert(res.message)
+                  }                  
+               }
+            });
+         }
+      });
+   });
+      function printpage(){
+         $('.header-section').addClass('importantRule');
+         window.print();
+         $('.header-section').removeClass('importantRule');
+      }
+</script>
+@endsection

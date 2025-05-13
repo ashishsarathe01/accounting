@@ -50,7 +50,7 @@ class PaymentController extends Controller
       $month_arr = array($from.'-04',$from.'-05',$from.'-06',$from.'-07',$from.'-08',$from.'-09',$from.'-10',$from.'-11',$from.'-12',$to.'-01',$to.'-02',$to.'-03');
       $com_id = Session::get('user_company_id');
       $payment = DB::table('payment_details')
-                     ->select('payments.series_no','payments.id as pay_id', 'payments.date','payments.mode as m', 'accounts.account_name as acc_name', 'payment_details.*')
+                     ->select('payments.series_no','payments.id as pay_id', 'payments.date','payments.mode as m', 'accounts.account_name as acc_name', 'payment_details.*','payments.voucher_no')
                      ->join('payments', 'payment_details.payment_id', '=', 'payments.id')
                      ->join('accounts', 'payment_details.account_name', '=', 'accounts.id')
                      ->where('payment_details.company_id', $com_id)
@@ -59,6 +59,7 @@ class PaymentController extends Controller
                      ->where('payment_details.debit','!=','')
                      ->where('payment_details.debit','!=','0')
                      ->orderBy('payments.date', 'asc')
+                     ->orderBy('payments.voucher_no','asc')
                      ->get();
         return view('payment/payment')->with('payment', $payment)->with('month_arr', $month_arr)->with("from_date",$from_date)->with("to_date",$to_date);
     }

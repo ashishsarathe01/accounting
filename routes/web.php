@@ -63,6 +63,8 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
    Route::group(['middleware' => ['adminAuth']], function() {
       Route::get('/dashboard',[DashboradController::class, 'index'])->name('dashboard');
       Route::get('/logout',[AdminAuthController::class, 'logout'])->name('logout');
+      Route::get('/change-password-view',[AdminAuthController::class, 'changePasswordView'])->name('change-password-view');
+      Route::post('/change-password-update',[AdminAuthController::class, 'changePasswordUpdate'])->name('change-password-update');
       Route::Resource('/merchant',MerchantController::class)->name('*','merchant');
       Route::Resource('/account-head',AccountHeadController::class)->name('*','account-head');
       Route::Resource('/account-group',AccountGroupController::class)->name('*','account-group');
@@ -83,18 +85,23 @@ Route::post('submit-otp-login', [AuthController::class, 'loginWithOtp'])->name('
 Route::post('password-login-check', [AuthController::class, 'passwordLoginCheck'])->name('password.login-check');
 Route::get('registration', [AuthController::class, 'registration'])->name('register.user');
 Route::post('register', [AuthController::class, 'register'])->name('register');
-Route::group(['middleware' => ['merchantloginstatus']], function () {
+Route::post('send-otp', [AuthController::class, 'sendOtp'])->name('send-otp');
+Route::post('verify-otp', [AuthController::class, 'verifyOtp'])->name('verify-otp');
+Route::post('change-otp-verify-status', [AuthController::class, 'changeOtpVerifyStatus'])->name('change-otp-verify-status');
 Route::post('change-password', [AuthController::class, 'submitChangePassword'])->name('password.changepassword');
-Route::get('dashboard', [AuthController::class, 'dashboard'])->name('dashboard');
-Route::post('change-company', [AuthController::class, 'changeCompany'])->name('company.change');
-Route::get('logout', [AuthController::class, 'logout'])->name('logout');
-Route::get('view-company', [CompanyController::class, 'viewCompany'])->name('view-company');
-Route::get('manage-financial-year', [CompanyController::class, 'manageFinancialYear'])->name('manage-financial-year');
-Route::post('change-financial-year', [CompanyController::class, 'changeDefaultFY'])->name('change-financial-year');
-Route::get('company-listing', [CompanyController::class, 'companyListing'])->name('company-listing');
-Route::get('add-company', [CompanyController::class, 'addCompany'])->name('add-company');
-Route::post('check-gst', [CompanyController::class, 'checkGst'])->name('check-gst');
-Route::post('submit-add-company', [CompanyController::class, 'submitAddCompany'])->name('submit-add-company');
+Route::group(['middleware' => ['merchantloginstatus']], function () {
+   Route::get('change-password-view', [AuthController::class, 'changePasswordView'])->name('change-password-view');
+   Route::post('change-password-update', [AuthController::class, 'changePasswordUpdate'])->name('change-password-update');
+   Route::get('dashboard', [AuthController::class, 'dashboard'])->name('dashboard');
+   Route::post('change-company', [AuthController::class, 'changeCompany'])->name('company.change');
+   Route::get('logout', [AuthController::class, 'logout'])->name('logout');
+   Route::get('view-company', [CompanyController::class, 'viewCompany'])->name('view-company');
+   Route::get('manage-financial-year', [CompanyController::class, 'manageFinancialYear'])->name('manage-financial-year');
+   Route::post('change-financial-year', [CompanyController::class, 'changeDefaultFY'])->name('change-financial-year');
+   Route::get('company-listing', [CompanyController::class, 'companyListing'])->name('company-listing');
+   Route::get('add-company', [CompanyController::class, 'addCompany'])->name('add-company');
+   Route::post('check-gst', [CompanyController::class, 'checkGst'])->name('check-gst');
+   Route::post('submit-add-company', [CompanyController::class, 'submitAddCompany'])->name('submit-add-company');
 Route::post('submit-edit-company', [CompanyController::class, 'submitEditCompany'])->name('submit-edit-company');
 Route::get('add-owner', [OwnerController::class, 'addOwner'])->name('add-owner');
 Route::post('submit-add-owner', [OwnerController::class, 'submitAddOwner'])->name('submit-add-owner');
@@ -174,6 +181,11 @@ Route::get('sale-return-without-gst-invoice/{id}', [SalesReturnController::class
 Route::get('sale-return-edit/{id}', [SalesReturnController::class, 'edit']);
 Route::post('sale-return-update', [SalesReturnController::class, 'update'])->name('sale-return-update');
 Route::post('sale-return-delete', [SalesReturnController::class, 'delete'])->name('sale-return.delete');
+Route::post('generate-credit-note-einvoice', [SalesReturnController::class, 'generateEinvoice'])->name('generate-credit-note-einvoice');
+Route::post('generate-credit-note-without-item-einvoice', [SalesReturnController::class, 'generateEinvoiceWithoutItem'])->name('generate-credit-note-without-item-einvoice');
+Route::post('generate-ewaybill-sale-return', [SalesReturnController::class, 'generateEinvoice'])->name('generateEwaybillSaleReturn');
+Route::post('cancel-einvoice-sale-return', [SalesReturnController::class, 'generateEinvoice'])->name('cancelEinvoiceSaleReturn');
+Route::post('cancel-ewaybill-sale-return', [SalesReturnController::class, 'cancelEwaybillSaleReturn'])->name('cancel-ewaybill-sale-return');
 Route::Resource('purchase-return', PurchaseReturnController::class);
 Route::post('purchase-return-update', [PurchaseReturnController::class, 'update'])->name('purchase-return-update');
 Route::post('purchase-return-delete', [PurchaseReturnController::class, 'delete'])->name('purchase-return.delete');
@@ -181,6 +193,11 @@ Route::get('purchase-return-invoice/{id}', [PurchaseReturnController::class, 'pu
 Route::get('purchase-return-without-item-invoice/{id}', [PurchaseReturnController::class, 'purchaseReturnWithoutItemInvoice']);
 Route::get('purchase-return-without-gst-invoice/{id}', [PurchaseReturnController::class, 'purchaseReturnWithoutGstInvoice']);
 Route::get('purchase-return-edit/{id}', [PurchaseReturnController::class, 'edit']);
+Route::post('generate-debit-note-einvoice', [PurchaseReturnController::class, 'generateEinvoice'])->name('generate-debit-note-einvoice');
+Route::post('generate-debit-note-without-item-einvoice', [PurchaseReturnController::class, 'generateEinvoiceWithoutItem'])->name('generate-debit-note-without-item-einvoice');
+Route::post('generate-ewaybill-purchase-return', [PurchaseReturnController::class, 'generateEwaybillPurchaseReturn'])->name('generate-ewaybill-purchase-return');
+Route::post('cancel-einvoice-purchase-return', [PurchaseReturnController::class, 'cancelEinvoicePurchaseReturn'])->name('cancel-einvoice-purchase-return');
+Route::post('cancel-ewaybill-purchase-return', [PurchaseReturnController::class, 'cancelEwaybillPurchaseReturn'])->name('cancel-ewaybill-purchase-return');
 Route::Resource('payment', PaymentController::class);
    Route::post('payment-update', [PaymentController::class, 'update'])->name('payment.update');
    Route::post('payment-delete', [PaymentController::class, 'delete'])->name('payment.delete');
@@ -228,6 +245,7 @@ Route::Resource('payment', PaymentController::class);
    Route::post('accountledger-update', [AccountLedgerController::class, 'update'])->name('accountledger.update');
    Route::post('accountledger-delete', [AccountLedgerController::class, 'delete'])->name('accountledger.delete');
    Route::get('accountledger-filter', [AccountLedgerController::class, 'filter'])->name('accountledger.filter');
+   Route::get('/ledger/export-pdf', [AccountLedgerController::class, 'exportPdf'])->name('ledger.export.pdf');
    Route::Resource('itemledger', ItemLedgerController::class);
    Route::post('itemledger-update', [ItemLedgerController::class, 'update'])->name('itemledger.update');
    Route::post('itemledger-delete', [ItemLedgerController::class, 'delete'])->name('itemledger.delete');

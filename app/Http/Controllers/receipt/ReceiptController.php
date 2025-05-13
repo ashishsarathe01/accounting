@@ -49,7 +49,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
       $month_arr = array($from.'-04',$from.'-05',$from.'-06',$from.'-07',$from.'-08',$from.'-09',$from.'-10',$from.'-11',$from.'-12',$to.'-01',$to.'-02',$to.'-03');
       $com_id = Session::get('user_company_id');
       $receipt = DB::table('receipt_details')
-        ->select('receipts.series_no','receipts.id as rec_id', 'receipts.date','accounts.account_name as acc_name','receipts.mode as m','receipt_details.*')
+        ->select('receipts.series_no','receipts.id as rec_id', 'receipts.date','accounts.account_name as acc_name','receipts.mode as m','receipt_details.*','receipts.voucher_no')
         ->join('receipts', 'receipt_details.receipt_id', '=', 'receipts.id')
         ->join('accounts', 'receipt_details.account_name', '=', 'accounts.id')
         ->where('receipt_details.company_id', $com_id)
@@ -58,6 +58,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
         ->where('receipt_details.credit','!=','')
         ->where('receipt_details.credit','!=','0')
         ->orderBy('receipts.date', 'asc')
+        ->orderBy('receipts.voucher_no','asc')
         ->get();
         return view('receipt/receipt')->with('receipt', $receipt)->with('month_arr', $month_arr)->with("from_date",$from_date)->with("to_date",$to_date);
    }
@@ -492,7 +493,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
                array_push($error_arr, 'Account Name '.$account.' Not Found - Row '.$index);
             }
             $debit = $data[5];
-            $debit = str_replace(",","",$debit);
+            $debit = trim(str_replace(",","",$debit));
             $credit = $data[6];
             $credit = str_replace(",","",$credit);
             if($debit=="" && $credit==""){
@@ -604,7 +605,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
                      $ledger->financial_year = Session::get('default_fy');
                      $ledger->entry_type = 6;
                      $ledger->entry_type_id = $receipt->id;
-                     $ledger->entry_type_detail_id = $rectype->id;
+                     $ledger->entry_type_detail_id = $paytype->id;
                      $ledger->map_account_id = $map_account_id;
                      $ledger->created_by = Session::get('user_id');
                      $ledger->created_at = date('d-m-Y H:i:s');

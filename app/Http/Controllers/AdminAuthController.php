@@ -5,6 +5,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use App\Models\Admin;
 use Hash;
 use Session;
 class AdminAuthController extends Controller{
@@ -43,4 +44,19 @@ class AdminAuthController extends Controller{
       Auth::guard('admin')->logout();
       return Redirect('admin')->withSuccess('Logout Successfully!');
    }
+   public function changePasswordView(Request $request){
+      return view('admin-module.auth.change_password_view');
+   }
+   public function changePasswordUpdate(Request $request)
+    {       
+        $validated = $request->validate([
+            'password' => 'required|min:6',
+        ]); 
+        Admin::where('id',Session::get('admin_id'))
+        ->update(['password' => \Hash::make($request->password)]);
+        return redirect('admin/change-password-view')->withSuccess('Password reset successfully!');
+        
+        
+    }
+   
 }
