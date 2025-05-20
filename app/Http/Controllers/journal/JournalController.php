@@ -162,7 +162,8 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
      * @return \Illuminate\Http\Response
      */
    public function store(Request $request){
-      
+      // echo "<pre>";
+      // print_r($request->all());die;
       $financial_year = Session::get('default_fy');
       $journal = new Journal;
       $journal->date = $request->input('date');
@@ -172,6 +173,9 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
       $journal->company_id = Session::get('user_company_id');
       $journal->financial_year = $financial_year;
       $journal->claim_gst_status = $request->input('flexRadioDefault');
+      if($request->input('form_source') && !empty($request->input('form_source'))){
+         $journal->form_source = $request->input('form_source');
+      }     
       if($request->input('flexRadioDefault')=="YES"){
          $journal->invoice_no = $request->input('invoice_no');
          $journal->net_total = $request->input('net_amount');
@@ -382,7 +386,12 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
             }
          }
          session(['previous_url_journal' => URL::previous()]);
-         return redirect('journal')->withSuccess('Journal added successfully!');
+         if($request->input('form_source') && !empty($request->input('form_source'))){
+            return redirect('profitloss')->withSuccess('Journal added successfully!');
+         }else{
+            return redirect('journal')->withSuccess('Journal added successfully!');
+         }
+         
       }else{
          $this->failedMessage();
       }

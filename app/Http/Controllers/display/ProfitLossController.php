@@ -15,6 +15,8 @@ use App\Models\Purchase;
 use App\Models\AccountLedger;
 use App\Models\ItemLedger;
 use App\Models\ClosingStock;
+use App\Models\Journal;
+use App\Models\JournalDetails;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -247,61 +249,58 @@ class ProfitLossController extends Controller{
                   ->where('financial_year',$financial_year)
                   ->sum('debit');
       //Opening Stock 
-      $opening_stock = 0;
-    //   $opening_stock = ItemLedger::where('status', '1')  
-    //               ->where('company_id',Session::get('user_company_id'))
-    //               ->where('delete_status','0')
-    //               ->where(function($query) use ($from_date){
-    //                  $query->whereRaw("STR_TO_DATE(txn_date,'%Y-%m-%d')<STR_TO_DATE('".$from_date."','%Y-%m-%d')");
-    //                  $query->orWhere('source','=','-1');
-    //               })->sum('total_price');
-      $item_account = ItemLedger::where('status', '1')  
-                  ->where('company_id',Session::get('user_company_id'))
-                  ->where('delete_status','0')
-                  ->where('source','!=','-1')
-                  ->whereRaw("STR_TO_DATE(txn_date,'%Y-%m-%d')<STR_TO_DATE('".$from_date."','%Y-%m-%d')")
-                  ->orderBy('txn_date')
-                  ->get();
-      $sale = $item_account->sum('out_weight');
-      $purchase = $item_account->sum('in_weight');
-      $item_balance = $purchase - $sale;
-      if($item_balance>0){
-         $weight = 0;$price_arr = [];
-         foreach ($item_account as $key => $value) {
-            if($item_balance>$weight){
-               array_push($price_arr,$value['price']);
-            }else{
-               break;
+      $opening_stock = 0;    
+      $previous_date = Carbon::parse($from_date)->subDay();
+      $opening_stock = CommonHelper::ClosingStock($previous_date);
+      $closing_stock = CommonHelper::ClosingStock($to_date);
+      $closing_stock = round($closing_stock,2);
+      $companyData = Companies::where('id', Session::get('user_company_id'))->first();
+      $GstSettings = (object)NULL;
+      $GstSettings->series = array();
+      $mat_series = array();
+      if($companyData->gst_config_type == "single_gst") {
+         $GstSettings = DB::table('gst_settings')->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])->first();
+         $mat_series = DB::table('gst_settings')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])
+                           ->get();
+         $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series','branch_invoice_start_from as invoice_start_from')
+                           ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_id'=>$mat_series[0]->id])
+                           ->get();
+         if(count($branch)>0){
+            $mat_series = $mat_series->merge($branch);
+         }
+      }else if($companyData->gst_config_type == "multiple_gst") {
+         $GstSettings = DB::table('gst_settings_multiple')->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst"])->first();
+         $mat_series = DB::table('gst_settings_multiple')
+                           ->select('id','gst_no','mat_center','series','invoice_start_from')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst"])
+                           ->get();
+         foreach ($mat_series as $key => $value) {
+            $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series','branch_invoice_start_from as invoice_start_from')
+                        ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_multiple_id'=>$value->id])
+                        ->get();
+            if(count($branch)>0){
+               $mat_series = $mat_series->merge($branch);
             }
-            $weight = $weight + $value['in_weight'];
-         }         
-         $price_arr = array_filter($price_arr);
-         $average = array_sum($price_arr)/count($price_arr);
-         $average = round($average,2);
-         //$opening_stock = $opening_stock + ($item_balance*$average);
-      }
-       $previous_date = Carbon::parse($from_date)->subDay();
-    $opening_stock = CommonHelper::ClosingStock($previous_date);  
-      //Closing Stock      
-      $open_date = $y[0]."-04-01";
-      $open_date = date('Y-m-d',strtotime($open_date));
-      $item = DB::select(DB::raw("SELECT item_id,SUM(total_price) as total_price,SUM(in_weight) as in_weight,SUM(out_weight) as out_weight,manage_items.name,units.name as uname FROM item_ledger inner join manage_items on item_ledger.item_id=manage_items.id inner join units on manage_items.u_name=units.id WHERE item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') and item_ledger.status='1' and g_name!='' and item_ledger.delete_status='0' GROUP BY item_id order by manage_items.name"));
-      $item_in_data = DB::select(DB::raw("SELECT SUM(total_price) as total_price,SUM(in_weight) as in_weight,item_id FROM item_ledger WHERE (item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') and status='1' and delete_status='0' and in_weight!='' and source=2) || (item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') and status='1' and delete_status='0' and in_weight!='' and source=-1) GROUP BY item_id"));
-      $result = array();
-      foreach ($item_in_data as $element){
-         $result[$element->item_id][] = round($element->total_price/$element->in_weight,2);
-      }
-      $closing_stock = 0;$total_weight = 0;
-      foreach ($item as $key => $value){
-         $remaining_weight = $value->in_weight - $value->out_weight;
-         if (array_key_exists($value->item_id,$result)){
-            $closing_stock = $closing_stock + $remaining_weight*$result[$value->item_id][0];
-            $total_weight = $total_weight + $remaining_weight;
          }
       }
-      $closing_stock = round($closing_stock,2);
-      $closing_stock = CommonHelper::ClosingStock($to_date);
-      return  view('display/profitLoss')->with('data', ['tot_purchase_amt' => $tot_purchase_amt+$tot_purchase_sundry_amt, 'tot_sale_amt' => $tot_sale_amt+$tot_sale_sundry_amt, 'tot_purchase_return_amt' => $tot_purchase_return_amt, 'tot_sale_return_amt' => $tot_sale_return_amt, 'financial_year' => $financial_year,'direct_expenses' => $direct_expenses,'direct_income' => $direct_income,'opening_stock' => $opening_stock,'closing_stock' => $closing_stock,'indirect_expenses' => $indirect_expenses,'indirect_income' => $indirect_income])->with('from_date',$from_date)->with('to_date',$to_date)->with('opening_stock',$opening_stock)->with('indirect_expenses_credit',$indirect_expenses_credit)->with('direct_expenses_credit',$direct_expenses_credit)->with('debit_indirect_income',$debit_indirect_income)->with('debit_direct_income',$debit_direct_income);
+      $party_list = Accounts::whereIn('company_id', [Session::get('user_company_id'),0])
+                                ->where('delete', '=', '0')
+                                ->orderBy('account_name')
+                                ->get();
+      //Check Profit & Loss Account Entry
+      $journal = Journal::with(['journal_details'=>function($q){
+                                 $q->select('journal_id','type','journal_details.account_name','debit','credit','narration');
+                                 $q->with(['account_details'=>function($q1){
+                                    $q1->select('id','accounts.account_name');
+                                 }]);
+                              }])
+               ->where('journals.company_id',Session::get('user_company_id'))
+               ->where('journals.financial_year',Session::get('default_fy'))
+               ->where('form_source','profitloss')
+               ->select('journals.id','series_no','voucher_no','long_narration')
+               ->get();
+      return  view('display/profitLoss')->with('data', ['tot_purchase_amt' => $tot_purchase_amt+$tot_purchase_sundry_amt, 'tot_sale_amt' => $tot_sale_amt+$tot_sale_sundry_amt, 'tot_purchase_return_amt' => $tot_purchase_return_amt, 'tot_sale_return_amt' => $tot_sale_return_amt, 'financial_year' => $financial_year,'direct_expenses' => $direct_expenses,'direct_income' => $direct_income,'opening_stock' => $opening_stock,'closing_stock' => $closing_stock,'indirect_expenses' => $indirect_expenses,'indirect_income' => $indirect_income])->with('from_date',$from_date)->with('to_date',$to_date)->with('opening_stock',$opening_stock)->with('indirect_expenses_credit',$indirect_expenses_credit)->with('direct_expenses_credit',$direct_expenses_credit)->with('debit_indirect_income',$debit_indirect_income)->with('debit_direct_income',$debit_direct_income)->with('current_year',$current_year)->with('mat_series',$mat_series)->with('party_list',$party_list)->with('journal',$journal);
    }
    public function filter(Request $request){
       $financial_year = $request->financial_year;
@@ -314,43 +313,15 @@ class ProfitLossController extends Controller{
          $from_date = $request->from_date;
          $to_date = $request->to_date;
       } 
+      if(date('m')<=3){
+         $current_year = (date('y')-1) . '-' . date('y');
+      }else{
+         $current_year = date('y') . '-' . (date('y') + 1);
+      }
       //Opening Stock 
-      $opening_stock = 0 ;
-    //   $opening_stock = ItemLedger::where('status', '1')  
-    //               ->where('company_id',Session::get('user_company_id'))
-    //               ->where('delete_status','0')
-    //               ->where(function($query) use ($from_date){
-    //                  $query->whereRaw("STR_TO_DATE(txn_date,'%Y-%m-%d')<STR_TO_DATE('".$from_date."','%Y-%m-%d')");
-    //                  $query->orWhere('source','=','-1');
-    //               })->sum('total_price');
-      $item_account = ItemLedger::where('status', '1')  
-                  ->where('company_id',Session::get('user_company_id'))
-                  ->where('delete_status','0')
-                  ->where('source','!=','-1')
-                  ->whereRaw("STR_TO_DATE(txn_date,'%Y-%m-%d')<STR_TO_DATE('".$from_date."','%Y-%m-%d')")
-                  ->orderBy('txn_date')
-                  ->get();
-      $sale = $item_account->sum('out_weight');
-      $purchase = $item_account->sum('in_weight');
-      $item_balance = $purchase - $sale;
-      if($item_balance>0){
-         $weight = 0;$price_arr = [];
-         foreach ($item_account as $key => $value) {
-            if($item_balance>$weight){
-               array_push($price_arr,$value['price']);
-            }else{
-               break;
-            }
-            $weight = $weight + $value['in_weight'];
-         }         
-         $price_arr = array_filter($price_arr);
-         $average = array_sum($price_arr)/count($price_arr);
-         $average = round($average,2);
-        //  $opening_stock = $opening_stock + ($item_balance*$average);
-         
-      }  
-       $previous_date = Carbon::parse($from_date)->subDay();
-    $opening_stock = CommonHelper::ClosingStock($previous_date);  
+      $opening_stock = 0;     
+      $previous_date = Carbon::parse($from_date)->subDay();
+      $opening_stock = CommonHelper::ClosingStock($previous_date);  
       //Purchase
       $tot_purchase_amt = DB::table('purchases')
          ->join('purchase_descriptions','purchases.id','=','purchase_descriptions.purchase_id')
@@ -549,25 +520,56 @@ class ProfitLossController extends Controller{
                   ->where('status','1')
                   ->where('financial_year',$financial_year)
                   ->sum('debit');
-      $open_date = $y[0]."-04-01";
-      $open_date = date('Y-m-d',strtotime($open_date));
-      $item = DB::select(DB::raw("SELECT item_id,SUM(total_price) as total_price,SUM(in_weight) as in_weight,SUM(out_weight) as out_weight,manage_items.name,units.name as uname FROM item_ledger inner join manage_items on item_ledger.item_id=manage_items.id inner join units on manage_items.u_name=units.id WHERE item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') and item_ledger.status='1' and g_name!='' and item_ledger.delete_status='0' GROUP BY item_id order by manage_items.name"));
-      $item_in_data = DB::select(DB::raw("SELECT SUM(total_price) as total_price,SUM(in_weight) as in_weight,item_id FROM item_ledger WHERE (item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') and status='1' and delete_status='0' and in_weight!='' and source=2) || (item_ledger.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$open_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d') and status='1' and delete_status='0' and in_weight!='' and source=-1) GROUP BY item_id"));
-      $result = array();
-      foreach ($item_in_data as $element){
-         $result[$element->item_id][] = round($element->total_price/$element->in_weight,2);
-      }
-      $closing_stock = 0;$total_weight = 0;
-      foreach ($item as $key => $value){
-         $remaining_weight = $value->in_weight - $value->out_weight;
-         if (array_key_exists($value->item_id,$result)){
-            $closing_stock = $closing_stock + $remaining_weight*$result[$value->item_id][0];
-            $total_weight = $total_weight + $remaining_weight;
+      $closing_stock = CommonHelper::ClosingStock($to_date);
+      $closing_stock = round($closing_stock,2);
+
+      $companyData = Companies::where('id', Session::get('user_company_id'))->first();
+      $GstSettings = (object)NULL;
+      $GstSettings->series = array();
+      $mat_series = array();
+      if($companyData->gst_config_type == "single_gst") {
+         $GstSettings = DB::table('gst_settings')->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])->first();
+         $mat_series = DB::table('gst_settings')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])
+                           ->get();
+         $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series','branch_invoice_start_from as invoice_start_from')
+                           ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_id'=>$mat_series[0]->id])
+                           ->get();
+         if(count($branch)>0){
+            $mat_series = $mat_series->merge($branch);
+         }
+      }else if($companyData->gst_config_type == "multiple_gst") {
+         $GstSettings = DB::table('gst_settings_multiple')->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst"])->first();
+         $mat_series = DB::table('gst_settings_multiple')
+                           ->select('id','gst_no','mat_center','series','invoice_start_from')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst"])
+                           ->get();
+         foreach ($mat_series as $key => $value) {
+            $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series','branch_invoice_start_from as invoice_start_from')
+                        ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_multiple_id'=>$value->id])
+                        ->get();
+            if(count($branch)>0){
+               $mat_series = $mat_series->merge($branch);
+            }
          }
       }
-      $closing_stock = round($closing_stock,2);
-      $closing_stock = CommonHelper::ClosingStock($to_date);
-      return  view('display/profitLoss')->with('data', ['tot_purchase_amt' => $tot_purchase_amt+$tot_purchase_sundry_amt, 'tot_sale_amt' => $tot_sale_amt+$tot_sale_sundry_amt, 'tot_purchase_return_amt' => $tot_purchase_return_amt, 'tot_sale_return_amt' => $tot_sale_return_amt, 'financial_year' => $financial_year,'direct_expenses' => $direct_expenses,'direct_income' => $direct_income,'opening_stock' => $opening_stock,'closing_stock' => $closing_stock,'indirect_expenses' => $indirect_expenses,'indirect_income' => $indirect_income])->with('from_date',$from_date)->with('to_date',$to_date)->with('opening_stock',$opening_stock)->with('indirect_expenses_credit',$indirect_expenses_credit)->with('direct_expenses_credit',$direct_expenses_credit)->with('debit_indirect_income',$debit_indirect_income)->with('debit_direct_income',$debit_direct_income);
+      $party_list = Accounts::whereIn('company_id', [Session::get('user_company_id'),0])
+                                ->where('delete', '=', '0')
+                                ->orderBy('account_name')
+                                ->get();
+      //Check Profit & Loss Account Entry
+      $journal = Journal::with(['journal_details'=>function($q){
+                           $q->select('journal_id','type','journal_details.account_name','debit','credit','narration');
+                           $q->with(['account_details'=>function($q1){
+                              $q1->select('id','accounts.account_name');
+                           }]);
+                        }])
+                  ->where('journals.company_id',Session::get('user_company_id'))
+                  ->where('journals.financial_year',Session::get('default_fy'))
+                  ->where('form_source','profitloss')
+                  ->select('journals.id','series_no','voucher_no','long_narration')
+                  ->get();
+      return  view('display/profitLoss')->with('data', ['tot_purchase_amt' => $tot_purchase_amt+$tot_purchase_sundry_amt, 'tot_sale_amt' => $tot_sale_amt+$tot_sale_sundry_amt, 'tot_purchase_return_amt' => $tot_purchase_return_amt, 'tot_sale_return_amt' => $tot_sale_return_amt, 'financial_year' => $financial_year,'direct_expenses' => $direct_expenses,'direct_income' => $direct_income,'opening_stock' => $opening_stock,'closing_stock' => $closing_stock,'indirect_expenses' => $indirect_expenses,'indirect_income' => $indirect_income])->with('from_date',$from_date)->with('to_date',$to_date)->with('opening_stock',$opening_stock)->with('indirect_expenses_credit',$indirect_expenses_credit)->with('direct_expenses_credit',$direct_expenses_credit)->with('debit_indirect_income',$debit_indirect_income)->with('debit_direct_income',$debit_direct_income)->with('current_year',$current_year)->with('mat_series',$mat_series)->with('party_list',$party_list)->with('journal',$journal);
    }
    public function saleByMonth(Request $request,$financial_year){
       $y = explode("-",$financial_year);

@@ -91,6 +91,23 @@
                               </td>                           
                            </tr>                        
                         @endforeach
+                        <?php 
+                           if($prev_year_profitloss!=0){
+                              if($prev_year_profit_status==1){
+                                 $ac_name = "UNADJUSTED PROFIT AMOUNT (".$prevFy.")";
+                                 $credit = $prev_year_profitloss;
+                                 $total_credit_amount = $total_credit_amount + $prev_year_profitloss;
+                                 $debit = 0; 
+                              }else{
+                                 $ac_name = "UNADJUSTED LOSS AMOUNT (".$prevFy.")";
+                                 $debit = $prev_year_profitloss;
+                                 $total_debit_amount = $total_debit_amount + $prev_year_profitloss;
+                                 $credit = 0; 
+                              }  
+                              echo '<tr class="font-14 font-heading bg-white"><td class="w-min-230 fw-500 py-12 px-3">'.$ac_name.'</td><td class="w-min-180 fw-500 py-12 px-3 border-left-divider" style="text-align: right;">'.formatIndianNumber($debit).'</td><td class="w-min-180 fw-500 py-12 px-3 border-left-divider detail_td" style="text-align: right;">'.formatIndianNumber($credit).'</td></tr>';
+                           }
+                        ?>
+                        
                         @php
                         
                         $diff = $total_debit_amount - $total_credit_amount;  

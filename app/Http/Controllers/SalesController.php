@@ -40,23 +40,24 @@ class SalesController extends Controller
      * @return \Illuminate\Http\Response
      */
    public function index(Request $request){
-        $input = $request->all();
-    
-        // Initialize dates as null
-        $from_date = null;
-        $to_date = null;
-    
-        // If user has submitted dates, sanitize and store them in session
-        if (!empty($input['from_date']) && !empty($input['to_date'])) {
-            $from_date = date('d-m-Y', strtotime($input['from_date']));
-            $to_date = date('d-m-Y', strtotime($input['to_date']));
-    
-            // Optional: Store for persistence
-            session(['sales_from_date' => $from_date, 'sales_to_date' => $to_date]);
-        } else {
-            // Clear session if no dates provided
-            session()->forget(['sales_from_date', 'sales_to_date']);
-        }
+       
+    $input = $request->all();
+
+    // Initialize dates
+    $from_date = null;
+    $to_date = null;
+
+    // If user submitted new dates, update session
+    if (!empty($input['from_date']) && !empty($input['to_date'])) {
+        $from_date = date('d-m-Y', strtotime($input['from_date']));
+        $to_date = date('d-m-Y', strtotime($input['to_date']));
+
+        session(['sales_from_date' => $from_date, 'sales_to_date' => $to_date]);
+    } elseif (session()->has('sales_from_date') && session()->has('sales_to_date')) {
+        // Use previously stored session dates
+        $from_date = session('sales_from_date');
+        $to_date = session('sales_to_date');
+    }
     
         Session::put('redirect_url', '');
     
@@ -308,10 +309,10 @@ class SalesController extends Controller
          'goods_discription' => 'required|array|min:1',
       ]); 
 
-      //echo "<pre>";
-      //print_r($request->all());
+      // echo "<pre>";
+      // print_r($request->all());
       
-      //die;
+      // die;
       //Check Item Empty or not
       if($request->input('goods_discription')[0]=="" || $request->input('qty')[0]=="" || $request->input('price')[0]=="" || $request->input('amount')[0]==""){
          return $this->failedMessage('Plases Select Item','sale/create');
@@ -763,7 +764,7 @@ class SalesController extends Controller
       $sale_sundry = DB::table('sale_sundries')
                         ->join('bill_sundrys','sale_sundries.bill_sundry','=','bill_sundrys.id')
                         ->where('sale_id', $id)
-                        ->select('sale_sundries.bill_sundry','sale_sundries.rate','sale_sundries.amount','bill_sundrys.name','nature_of_sundry')
+                        ->select('sale_sundries.bill_sundry','sale_sundries.rate','sale_sundries.amount','bill_sundrys.name','nature_of_sundry','bill_sundry_type')
                         ->orderBy('sequence')
                         ->get();
       $gst_detail = DB::table('sale_sundries')
@@ -1124,6 +1125,7 @@ class SalesController extends Controller
             if(!empty(Session::get('redirect_url'))){
                return redirect(Session::get('redirect_url'));
             }else{
+               session(['previous_url_saleEdit' => URL::previous()]);
                return redirect('sale-invoice/'.$sale->id)->withSuccess('Sale voucher updated successfully!');
             }
             
@@ -1137,7 +1139,7 @@ class SalesController extends Controller
       return view('sale_import')->with('upload_log',0)->with('total_count',5)->with('success_count',3)->with('failed_count',2)->with('error_message',array(0 => array(0=>'Voucher A41 already exists - Invoice No. A41'),1 => array(0=>'Voucher A42 already exists - Invoice No. A42')));
       
    }
-   public function saleImportProcess(Request $request) { 
+    public function saleImportProcess(Request $request) { 
       
       $validator = Validator::make($request->all(), [
          'csv_file' => 'required|file|mimes:csv,txt|max:2048', // Max 2MB, CSV or TXT file
@@ -1166,7 +1168,6 @@ class SalesController extends Controller
             $index = 1;
             $series_no = "";
             while (($data = fgetcsv($handle, 1000, ',')) !== false) {
-               
                if($data[0]!="" && $data[2]!=""){
                   $series_no = $data[0];
                   $voucher_no = $data[2];                             
@@ -1409,6 +1410,13 @@ class SalesController extends Controller
                         ItemLedger::where('source',1)
                                     ->where('source_id',$check_invoices->id)
                                     ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
+                        ItemAverageDetail::where('sale_id',$check_invoices->id)
+                                          ->delete();
+                        $itemKiId =  SaleDescription::where('sale_id',$check_invoices->id)
+                                    ->select('sale_descriptions.goods_description as item_id');
+                                    foreach( $itemKiId as $k){
+                        CommonHelper::RewriteItemAverageByItem($check_invoices->date,$k->item_id);       
+                                    }
                      }
                   }                  
                }
@@ -1596,8 +1604,8 @@ class SalesController extends Controller
                         $item_ledger = new ItemLedger();
                         $item_ledger->item_id = $item->id;
                         $item_ledger->out_weight = $v1['item_weight'];
-                        $item_ledger->series_no = $series_no;
                         $item_ledger->txn_date = $date;
+                        $item_ledger->series_no = $series_no;
                         $item_ledger->price = $v1['price'];
                         $item_ledger->total_price = str_replace(",","",$v1['amount']);
                         $item_ledger->company_id = Session::get('user_company_id');
@@ -1671,6 +1679,30 @@ class SalesController extends Controller
                         }
                      }                     
                   }
+                  foreach ($item_arr as $k1 => $v1) {
+                     if(!empty($v1['amount'])){
+                        $item_taxable_amount = $item_taxable_amount + str_replace(",","",$v1['amount']);
+                        $item = ManageItems::join('units','manage_items.u_name','=','units.id')
+                           ->select('manage_items.id','manage_items.hsn_code','manage_items.gst_rate','units.s_name as unit','units.id as uid')
+                           ->where('manage_items.name',trim($v1['item_name']))
+                           ->where('manage_items.company_id',trim(Session::get('user_company_id')))
+                           ->first();
+                 
+               //Add Data In Average Details table
+               $average_detail = new ItemAverageDetail;
+               $average_detail->entry_date = $sale->date;
+               $average_detail->item_id = $item->id;
+               $average_detail->type = 'SALE';
+               $average_detail->sale_id = $sale->id;
+               $average_detail->sale_weight = $v1['item_weight'];
+               $average_detail->company_id = Session::get('user_company_id');
+               $average_detail->created_at = Carbon::now();
+               $average_detail->save();
+               CommonHelper::RewriteItemAverageByItem($sale->date,$item->id);               
+            
+                     }
+                  }
+                  
                   //ADD DATA IN Customer ACCOUNT
                   $ledger = new AccountLedger();
                   $ledger->account_id = $account->id;
@@ -2770,7 +2802,10 @@ class SalesController extends Controller
                }
             }
          }
-      }else if($sale->gst_config_type=="single_gst"){         
+      }else if($sale->gst_config_type=="single_gst"){ 
+          $gst_info = DB::table('gst_settings')
+                           ->where(['company_id' => $sale->company_id, 'gst_type' => 'single_gst'])
+                           ->first();
          $einvoice_company = $gst_info->id;
          $einvoice_username = $gst_info->einvoice_username; 
          $einvoice_password = $gst_info->einvoice_password;

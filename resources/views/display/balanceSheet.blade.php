@@ -52,23 +52,48 @@
                      <div class="col-md-12 fw-bold font-14 d-flex px-3 py-12 border-bottom-divider">Liabilities (Rs.)
                         <span class="ms-auto">0.00</span>
                      </div>
-                      @php $liability_total = 0;$asset_total = 0;@endphp
+                      @php 
+                        $liability_total = 0;
+                        $asset_total = 0;
+                        if($prev_year_profitloss!=0){
+                           if($prev_year_profit_status==1){
+                              $liability_total = $liability_total + $prev_year_profitloss;
+                           }else{
+                              $liability_total = $liability_total - $prev_year_profitloss;
+                           }
+                        }
+                        $liability_total = $liability_total - $current_journal_amount;
+                     @endphp
                      <div class="col-md-12 fw-500 font-14 d-flex px-3 py-12 border-bottom-divider profitloss_redirect" style="cursor:pointer;color: #0000EE">
                         <?php 
                         if($profitloss<0){
-                           echo "PROFIT FOR THE PERIOD";
+                           echo "<span>PROFIT FOR THE PERIOD</span>";                           
                         }else if($profitloss==0){
                            echo "PROFIT/LOSS ADJUSTED";
                         }
+                        if($prev_year_profitloss!=0){                           
+                           if($prev_year_profit_status==1){
+                              echo "UNADJUSTED PROFIT AMOUNT (".$prevFy.")";
+                           }else{
+                              echo "UNADJUSTED LOSS AMOUNT (".$prevFy.")";
+                           }                    
+                        }
                         ?>
-                        <span class="ms-auto">
+                        <span class="ms-auto" style="text-align: right;">
                            <?php 
                            setlocale(LC_MONETARY, 'en_IN');                           
                            if($profitloss<0){
-                             echo formatIndianNumber(abs($profitloss));
+                              echo formatIndianNumber(abs($profitloss));
+                              if($current_journal_amount>0){
+                                 echo "<p style='font-size:10px'>ADJUSTED IN ACCOUNT : ".formatIndianNumber($current_journal_amount)."</p>";
+                              }
+                              echo formatIndianNumber(abs($profitloss)-$current_journal_amount);
                               $liability_total = $liability_total + abs($profitloss);
                            }else{
                               echo "&nbsp;";
+                           }
+                           if($prev_year_profitloss!=0){
+                              echo formatIndianNumber($prev_year_profitloss);
                            }
                            ?>
                         </span>
@@ -147,10 +172,7 @@
                                  }else{
                                     echo formatIndianNumber(abs($amount));
                                     $liability_total = $liability_total + abs($amount);  
-                                 }                          
-                                 
-
-                                                                
+                                 }                                                                 
                                  ?>
                               </span>
                            </div>

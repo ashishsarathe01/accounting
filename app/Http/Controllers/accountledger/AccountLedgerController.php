@@ -23,6 +23,7 @@ use App\Models\Journal;
 use App\Models\JournalDetails;
 use App\Models\Contra;
 use App\Models\ContraDetails;
+use App\Models\AccountGroups;
 use DB;
 use Session;
 
@@ -163,57 +164,80 @@ class AccountLedgerController extends Controller
       $collection = new Collection($ledger);
       //$ledger = $collection->sortByAsc('date');
       $opening = 0;
-      if(isset($request->from_date) && !empty($request->from_date)){
-         $open_ledger = DB::select(DB::raw("SELECT SUM(debit) as debit,SUM(credit) as credit FROM account_ledger WHERE account_id='".$party_id."' and STR_TO_DATE(txn_date, '%Y-%m-%d')<STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and status=1 and delete_status='0' and company_id='".Session::get('user_company_id')."'"));
-         if(count($open_ledger)>0){
-            if($open_ledger[0]->debit=="" && $open_ledger[0]->credit==""){
-               $open_ledger = AccountLedger::where('account_id',$party_id)
-                                       ->where('company_id',Session::get('user_company_id'))
-                                       ->where('entry_type','-1')
-                                       ->first();
-               if($open_ledger){
-                  if($open_ledger->credit!=""){
-                     $opening = -$open_ledger->credit;
-                  }else if($open_ledger->debit!=""){
-                     $opening = $open_ledger->debit;
-                  }
-               }
-            }else{
-
-               $balance = $open_ledger[0]->debit - $open_ledger[0]->credit;
-               $basic_open_ledger = AccountLedger::where('account_id',$party_id)
-                                       ->where('company_id',Session::get('user_company_id'))
-                                       ->where('entry_type','-1')
-                                       ->first();
-               if($basic_open_ledger){
-                  if($basic_open_ledger->credit!=""){
-                     $balance = $balance - $basic_open_ledger->credit;
-                  }else if($basic_open_ledger->debit!=""){
-                     $balance = $balance + $basic_open_ledger->debit;
-                  }
-               }
-               if($balance<0){
-                  $opening = $balance;
-               }else{
-                  $opening = $balance;
-               }
-            }            
-         }
+      //Check Profit & Loss Account
+      $profitloss_account_status = 0;
+      $account = Accounts::select('under_group','under_group_type')
+                     ->where('id',$party_id)
+                     ->first();
+      if($account->under_group==4 && $account->under_group_type=='head'){
+         $profitloss_account_status = 1;
       }else{
-         $open_ledger = AccountLedger::where('account_id',$party_id)
-                                 ->where('company_id',Session::get('user_company_id'))
-                                 ->where('entry_type','-1')
-                                 ->first();
-         if($open_ledger){
-            if($open_ledger->credit!=""){
-               $opening = -$open_ledger->credit;
-            }else if($open_ledger->debit!=""){
-               $opening = $open_ledger->debit;
+         $group = AccountGroups::select('heading','heading_type')
+                        ->where('id',$account->under_group)
+                        ->first();
+         if($group && $group->heading==4 && $group->heading_type=='head'){
+            $profitloss_account_status = 1;
+         }else if($group->heading_type=='group'){
+            $inner_group = AccountGroups::select('heading','heading_type')
+                        ->where('id',$group->heading)
+                        ->first();
+            if($inner_group && $inner_group->heading==4 && $inner_group->heading_type=='head'){
+               $profitloss_account_status = 1;
             }
          }
-      }      
-      $ledger = json_decode($collection, true);
-      
+      }
+      if($profitloss_account_status==0){         
+         if(isset($request->from_date) && !empty($request->from_date)){
+            $open_ledger = DB::select(DB::raw("SELECT SUM(debit) as debit,SUM(credit) as credit FROM account_ledger WHERE account_id='".$party_id."' and STR_TO_DATE(txn_date, '%Y-%m-%d')<STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and status=1 and delete_status='0' and company_id='".Session::get('user_company_id')."'"));
+            if(count($open_ledger)>0){
+               if($open_ledger[0]->debit=="" && $open_ledger[0]->credit==""){
+                  $open_ledger = AccountLedger::where('account_id',$party_id)
+                                          ->where('company_id',Session::get('user_company_id'))
+                                          ->where('entry_type','-1')
+                                          ->first();
+                  if($open_ledger){
+                     if($open_ledger->credit!=""){
+                        $opening = -$open_ledger->credit;
+                     }else if($open_ledger->debit!=""){
+                        $opening = $open_ledger->debit;
+                     }
+                  }
+               }else{
+   
+                  $balance = $open_ledger[0]->debit - $open_ledger[0]->credit;
+                  $basic_open_ledger = AccountLedger::where('account_id',$party_id)
+                                          ->where('company_id',Session::get('user_company_id'))
+                                          ->where('entry_type','-1')
+                                          ->first();
+                  if($basic_open_ledger){
+                     if($basic_open_ledger->credit!=""){
+                        $balance = $balance - $basic_open_ledger->credit;
+                     }else if($basic_open_ledger->debit!=""){
+                        $balance = $balance + $basic_open_ledger->debit;
+                     }
+                  }
+                  if($balance<0){
+                     $opening = $balance;
+                  }else{
+                     $opening = $balance;
+                  }
+               }            
+            }
+         }else{
+            $open_ledger = AccountLedger::where('account_id',$party_id)
+                                    ->where('company_id',Session::get('user_company_id'))
+                                    ->where('entry_type','-1')
+                                    ->first();
+            if($open_ledger){
+               if($open_ledger->credit!=""){
+                  $opening = -$open_ledger->credit;
+               }else if($open_ledger->debit!=""){
+                  $opening = $open_ledger->debit;
+               }
+            }
+         }
+      }           
+      $ledger = json_decode($collection, true);      
       return view('accountledger/accountledger')->with('party_list', $party_list)->with('ledger', $ledger)->with('party_id', $party_id)->with('opening', $opening);
    }
    public function exportPdf(Request $request)

@@ -8,4 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 class Journal extends Model
 {
     use HasFactory;
+    public function journal_details(){
+        return $this->hasMany('App\Models\JournalDetails', 'journal_id','id')
+                     ->where('status','1');
+    }
 }

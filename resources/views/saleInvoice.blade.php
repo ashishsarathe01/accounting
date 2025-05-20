@@ -548,9 +548,12 @@ body {
 
     function redirectBack(){
       let previousUrl = document.referrer; // Get Previous URL
+      
+      const sessionPreviousUrl = "{{ session('previous_url') }}";
+       const sessionPreviousSaleEditUrl = "{{ session('previous_url_saleEdit') }}";
 
-      if(previousUrl == "{{ session('previous_url')  }}"){
-         window.location.href = "https://www.meriaccounting.com/sale"; // Fixed Redirect
+      if(previousUrl === sessionPreviousUrl || previousUrl === sessionPreviousSaleEditUrl  ){
+         window.location.href = "{{ url('sale') }}"; // Fixed Redirect
       }else{
          history.back(); // Go Back to previous page
       }
