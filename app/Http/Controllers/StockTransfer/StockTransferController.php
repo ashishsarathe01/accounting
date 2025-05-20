@@ -178,7 +178,7 @@ class StockTransferController extends Controller
      */
     public function store(Request $request)
     {
-        //ashish 
+        //ashish  
         $validatedData = $request->validate([
             'series_no' => 'required',
             'date' => 'required',
