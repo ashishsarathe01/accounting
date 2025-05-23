@@ -473,11 +473,11 @@ class SalesController extends Controller
             if($billsundry->adjust_sale_amt=='No'){
                $ledger = new AccountLedger();
                $ledger->account_id = $billsundry->sale_amt_account;
-               if($billsundry->nature_of_sundry=='ROUNDED OFF (-)'){
+               if($billsundry->bill_sundry_type=='subtractive'){
                   $ledger->debit = $bill_sundry_amounts[$key];
                }else{
                   $ledger->credit = $bill_sundry_amounts[$key];
-               }               
+               }              
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
                $ledger->financial_year = Session::get('default_fy');
@@ -602,9 +602,47 @@ class SalesController extends Controller
          $ledger->created_at = date('d-m-Y H:i:s');
          $ledger->save();
          //ADD DATA IN Sale ACCOUNT
+         $SaleLgr=0;
+            if($sale->id){
+               $goods_discriptions = $request->input('goods_discription');
+               $qtys = $request->input('qty');
+               $units = $request->input('units');
+               $prices = $request->input('price');
+               $amounts = $request->input('amount');
+               $item_parameters = $request->input('item_parameters');
+               foreach($goods_discriptions as $key => $good){
+                  if($good=="" || $qtys[$key]=="" || $units[$key]=="" || $prices[$key]=="" || $amounts[$key]==""){
+                     continue;
+                  }
+                  $SaleLgr += $amounts[$key];
+                  
+               }}
+               
+               $bill_sundrys = $request->input('bill_sundry');
+               $tax_amts = $request->input('tax_rate');
+               $bill_sundry_amounts = $request->input('bill_sundry_amount');
+               foreach($bill_sundrys as $key => $bill){
+                  if($bill_sundry_amounts[$key]=="" || $bill==""){
+                     continue;
+                  }
+               
+                
+                  //ADD DATA IN CGST ACCOUNT
+                  $billsundry = BillSundrys::where('id', $bill)->first();
+      
+                  if($billsundry->adjust_sale_amt=='Yes'){
+                     if( $billsundry->bill_sundry_type=="additive"){
+                        $SaleLgr += $bill_sundry_amounts[$key];
+                     }else if( $billsundry->bill_sundry_type=="subtractive"){
+                        $SaleLgr -= $bill_sundry_amounts[$key];
+                     }          
+                    
+                     
+                  }
+               }
          $ledger = new AccountLedger();
          $ledger->account_id = 35;//Sales Account
-         $ledger->credit = $request->input('taxable_amt');
+         $ledger->credit = $SaleLgr;
          $ledger->txn_date = $request->input('date');
          $ledger->company_id = Session::get('user_company_id');
          $ledger->financial_year = Session::get('default_fy');
@@ -1047,11 +1085,11 @@ class SalesController extends Controller
                if($billsundry->adjust_sale_amt=='No'){
                   $ledger = new AccountLedger();
                   $ledger->account_id = $billsundry->sale_amt_account;
-                  if($billsundry->nature_of_sundry=='ROUNDED OFF (-)'){
-                     $ledger->debit = $bill_sundry_amounts[$key];
-                  }else{
-                     $ledger->credit = $bill_sundry_amounts[$key];
-                  } 
+                  if($billsundry->bill_sundry_type=='subtractive'){
+                  $ledger->debit = $bill_sundry_amounts[$key];
+               }else{
+                  $ledger->credit = $bill_sundry_amounts[$key];
+               }   
                   $ledger->txn_date = $request->input('date');
                   $ledger->company_id = Session::get('user_company_id');
                   $ledger->financial_year = Session::get('default_fy');
@@ -1140,6 +1178,7 @@ class SalesController extends Controller
       
    }
     public function saleImportProcess(Request $request) { 
+        ini_set('max_execution_time', 600);
       
       $validator = Validator::make($request->all(), [
          'csv_file' => 'required|file|mimes:csv,txt|max:2048', // Max 2MB, CSV or TXT file

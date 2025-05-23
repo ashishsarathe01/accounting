@@ -43,6 +43,7 @@ use App\Http\Controllers\AdminModuleController\AccountGroupController;
 use App\Http\Controllers\AdminModuleController\AccountController;
 use App\Http\Controllers\VoucherSeriesConfigurationController;
 use App\Http\Controllers\StockTransfer\StockTransferController;
+use App\Http\Controllers\gstReturn\gstR1Controller;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -274,6 +275,8 @@ Route::Resource('payment', PaymentController::class);
    
    
    Route::Resource('stock-transfer', StockTransferController::class);
+   Route::get('/gstr1', [gstR1Controller::class, 'gstmain'])->name('gstr1');
+  Route::get('/gst/b2c-normal-statewise', [gstR1Controller::class, 'B2Cstatewise'])->name('gst.b2c.normal.statewise');
    //Route::get('login', [AuthController::class, 'index'])->name('otp.login');
    //Route::get('/', 'AuthController@index')->name('index');
    //Route::post('dashboard', [AuthController::class, 'dashboard']); 

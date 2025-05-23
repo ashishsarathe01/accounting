@@ -122,8 +122,8 @@ input[type=number]::-webkit-outer-spin-button {
                      </div>
                      <?php
                      $gross_profit = 0;$gross_loss = 0;
-                     $total_net_sale = $data['closing_stock'] + $data['tot_sale_amt'] + $data['direct_income']  - $debit_direct_income;
-                     $total_net_purchase = $data['opening_stock'] + $data['tot_purchase_amt'] + $data['direct_expenses'] - $direct_expenses_credit;
+                     $total_net_sale = $data['closing_stock'] + $data['tot_sale_amt'] - $data['tot_sale_return_amt'] + $data['direct_income']  - $debit_direct_income;
+                     $total_net_purchase = $data['opening_stock'] + $data['tot_purchase_amt'] - $data['tot_purchase_return_amt'] + $data['direct_expenses'] - $direct_expenses_credit;
                      $balance = $total_net_purchase - $total_net_sale;
                      if($balance < 0) {
                         $gross_profit = str_replace("-","",$balance);

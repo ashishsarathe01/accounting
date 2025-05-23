@@ -50,12 +50,12 @@
                         <td>{{$stockTransfer->grand_total}}</td>
                         <td>
                            @if($stockTransfer->e_waybill_status==0)
-                              <!-- <a href="{{ URL::to('edit-stock-transfer/'.$stockTransfer->id) }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a> -->
+                              <a href="{{ URL::to('stock-transfer/'.$stockTransfer->id.'/edit') }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
                               <button type="button" class="border-0 bg-transparent delete_entry"   data-id="<?php echo $stockTransfer->id;?>">
                                  <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
                               </button>
                            @endif
-                           <a href="{{ URL::to('sale-invoice/' . $stockTransfer->id) }}" target="__blank"><img src="{{ URL::asset('public/assets/imgs/eye-icon.svg')}}" class="px-1" alt=""></a>
+                           <a href="{{ URL::to('stock-transfer',$stockTransfer->id) }}" target="__blank"><img src="{{ URL::asset('public/assets/imgs/eye-icon.svg')}}" class="px-1" alt=""></a>
                         </td>
                      </tr>
                      @endforeach

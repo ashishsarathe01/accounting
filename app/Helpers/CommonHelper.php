@@ -64,8 +64,7 @@ class CommonHelper
          
     }
     public static function RewriteItemAverageByItem($date,$item)
-    {
-        
+    {        
         $max_date = ItemAverage::where('item_id',$item)->max('stock_date');
         $startDate = Carbon::parse($date);
         $endDate = Carbon::parse($max_date);
@@ -77,7 +76,7 @@ class CommonHelper
         for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
             ItemAverage::where('item_id',$item)
                     ->where('stock_date',$date->toDateString())
-                    ->delete();          
+                    ->delete();         
             $average_detail = ItemAverageDetail::where('item_id',$item)
                                                 ->where('entry_date',$date->toDateString())
                                                 ->get();
@@ -85,10 +84,19 @@ class CommonHelper
                 $purchase_weight = $average_detail->sum('purchase_weight');
                 $purchase_amount = $average_detail->sum('purchase_total_amount');
                 $sale_weight = $average_detail->sum('sale_weight');
+                $stock_transfer_weight = $average_detail->sum('stock_transfer_weight');
                 $purchase_return_weight = $average_detail->sum('purchase_return_weight');
                 $purchase_return_amount = $average_detail->sum('purchase_return_amount');
                 $purchase_return_amount = $purchase_return_amount*2;
                 $sale_return_weight = $average_detail->sum('sale_return_weight');
+                $stock_transfer_in_weight = $average_detail->sum('stock_transfer_in_weight');
+                $stock_transfer_in_amount = $average_detail->sum('stock_transfer_in_amount');
+                if(!empty($stock_transfer_in_weight)){
+                    $purchase_weight = $purchase_weight + $stock_transfer_in_weight;
+                }
+                if(!empty($stock_transfer_in_amount)){
+                    $purchase_amount = $purchase_amount + $stock_transfer_in_amount;
+                }
                 $on_date_purchase_weight = $purchase_weight + $sale_return_weight;
                 $average = ItemAverage::where('item_id',$item)
                         ->where('stock_date','<',$date->toDateString())
@@ -113,13 +121,13 @@ class CommonHelper
                 }else{
                     $average_price = 0;
                 }               
-                $stock_average_amount = ($purchase_weight - $sale_weight + $sale_return_weight) * $average_price;
+                $stock_average_amount = ($purchase_weight - $sale_weight - $stock_transfer_weight + $sale_return_weight) * $average_price;
                 $stock_average_amount =  round($stock_average_amount,2);
                 $average = new ItemAverage;
                 $average->item_id = $item;
-                $average->sale_weight = $sale_weight + $purchase_return_weight;
+                $average->sale_weight = $sale_weight + $stock_transfer_weight + $purchase_return_weight;
                 $average->purchase_weight = $on_date_purchase_weight;
-                $average->average_weight = $purchase_weight - $sale_weight  + $sale_return_weight;
+                $average->average_weight = $purchase_weight - $sale_weight - $stock_transfer_weight + $sale_return_weight;
                 $average->price = $average_price;
                 $average->company_id = Session::get('user_company_id');
                 $average->amount = $stock_average_amount;
@@ -359,8 +367,8 @@ class CommonHelper
                   ->where('status','1')
                   ->where('financial_year',$financial_year)
                   ->sum('debit');
-        $total_net_sale = $stock_in_hand + $tot_sale_amt + $direct_income - $debit_direct_income + $indirect_income - $debit_indirect_income;
-        $total_net_purchase = $opening_stock + $tot_purchase_amt + $direct_expenses - $direct_expenses_credit + $indirect_expenses - $indirect_expenses_credit;
+        $total_net_sale = $stock_in_hand + $tot_sale_amt - $tot_sale_return_amt + $direct_income - $debit_direct_income + $indirect_income - $debit_indirect_income;
+        $total_net_purchase = $opening_stock + $tot_purchase_amt - $tot_purchase_return_amt + $direct_expenses - $direct_expenses_credit + $indirect_expenses - $indirect_expenses_credit;
         $profitloss = $total_net_purchase - $total_net_sale;
         $profitloss = round($profitloss,2);
         return $profitloss;

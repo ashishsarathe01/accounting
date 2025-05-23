@@ -73,9 +73,9 @@
                         }
                         if($prev_year_profitloss!=0){                           
                            if($prev_year_profit_status==1){
-                              echo "UNADJUSTED PROFIT AMOUNT (".$prevFy.")";
+                              echo "<br>UNADJUSTED PROFIT AMOUNT (".$prevFy.")";
                            }else{
-                              echo "UNADJUSTED LOSS AMOUNT (".$prevFy.")";
+                              echo "<br>UNADJUSTED LOSS AMOUNT (".$prevFy.")";
                            }                    
                         }
                         ?>
@@ -87,13 +87,13 @@
                               if($current_journal_amount>0){
                                  echo "<p style='font-size:10px'>ADJUSTED IN ACCOUNT : ".formatIndianNumber($current_journal_amount)."</p>";
                               }
-                              echo formatIndianNumber(abs($profitloss)-$current_journal_amount);
+                              //echo formatIndianNumber(abs($profitloss)- $current_journal_amount);
                               $liability_total = $liability_total + abs($profitloss);
                            }else{
                               echo "&nbsp;";
                            }
                            if($prev_year_profitloss!=0){
-                              echo formatIndianNumber($prev_year_profitloss);
+                              echo "<br>".formatIndianNumber($prev_year_profitloss);
                            }
                            ?>
                         </span>

@@ -382,6 +382,7 @@
                                                 <?php
                                                 foreach ($billsundry as $value) { 
                                                    if($value->id==$v1['bill_sundry']){?>
+                                                   
                                                       <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_@php echo $index;@endphp" id="sundry_option_@php echo $index;@endphp" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
                                                       <?php 
                                                    }
@@ -409,33 +410,7 @@
                                     </td>
                                  </tr>
                               </div>
-                              @foreach($sale_return_sundry as $sundry)
-                                 @if($sundry->effect_gst_calculation==0 && $sundry->nature_of_sundry!='CGST' && $sundry->nature_of_sundry!='SGST' && $sundry->nature_of_sundry!='IGST' && $sundry->nature_of_sundry!='ROUNDED OFF (+)' && $sundry->nature_of_sundry!='ROUNDED OFF (-)')
-                                    <tr id="billtr_@php echo $index;@endphp" class="font-14 font-heading bg-white bill_taxes_row sundry_tr">
-                                       <td class="w-min-50">
-                                          <select id="bill_sundry_@php echo $index;@endphp" class="w-95-parsent  bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="@php echo $index;@endphp">
-                                             <option value="">Select</option>
-                                             <?php
-                                             foreach ($billsundry as $value) {
-                                                if($value->effect_gst_calculation==0 && $value->nature_of_sundry!='CGST' && $value->nature_of_sundry!='SGST' && $value->nature_of_sundry!='IGST' && $value->nature_of_sundry!='ROUNDED OFF (+)' && $value->nature_of_sundry!='ROUNDED OFF (-)'){?>
-                                                   <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_@php echo $index;@endphp" id="sundry_option_<?php echo $value->id;?>_@php echo $index;@endphp" <?php if($value->id==$sundry->bill_sundry){ echo "selected";} ?> data-sundry_percent="<?php echo $value->sundry_percent;?>" data-sundry_percent_date="<?php echo $value->sundry_percent_date;?>" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
-                                                   <?php 
-                                                }
-                                             } ?>
-                                          </select>
-                                       </td>
-                                       <td class="w-min-50 "><span name="tax_amt[]" class="tax_amount" id="tax_amt_@php echo $index;@endphp">{{$sundry->rate}} %</span>
-                                       <input type="hidden" name="tax_rate[]" id="tax_rate_tr_@php echo $index;@endphp" value="{{$sundry->rate}}"></td>
-                                       <td class="w-min-50 ">
-                                          <input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_@php echo $index;@endphp" data-id="@php echo $index;@endphp" value="{{$sundry->amount}}" style="text-align: right;">
-                                       </td>
-                                       <td>
-                                          <svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove_sundry_up" data-id="@php echo $index;@endphp" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg>
-                                       </td>
-                                    </tr>
-                                    @php $index++;@endphp
-                                 @endif
-                              @endforeach
+                              
                               
                               <tr id="billtr_round_plus" class="font-14 font-heading bg-white bill_taxes_row sundry_tr" <?php if(!isset($roundReturn['ROUNDED OFF (+)'])){?> style="display:none" <?php } ?>>
                                  <td class="w-min-50">
