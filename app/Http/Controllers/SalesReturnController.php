@@ -527,6 +527,7 @@ class SalesReturnController extends Controller
                //Add Data In Average Details table
                $average_detail = new ItemAverageDetail;
                $average_detail->entry_date = $request->date;
+               $average_detail->series_no = $request->input('series_no');
                $average_detail->item_id = $key;
                $average_detail->type = 'SALE RETURN';
                $average_detail->sale_return_id = $sale->id;
@@ -534,7 +535,7 @@ class SalesReturnController extends Controller
                $average_detail->company_id = Session::get('user_company_id');
                $average_detail->created_at = Carbon::now();
                $average_detail->save();
-               CommonHelper::RewriteItemAverageByItem($request->date,$key); 
+               CommonHelper::RewriteItemAverageByItem($request->date,$key,$request->input('series_no')); 
             }
             //ADD DATA IN Customer ACCOUNT
             $ledger = new AccountLedger();
@@ -804,7 +805,7 @@ class SalesReturnController extends Controller
                $desc = SaleReturnDescription::where('sale_return_id',$request->sale_return_id)
                               ->get();
                foreach ($desc as $key => $value) {
-                  CommonHelper::RewriteItemAverageByItem($sale_return->date,$value->goods_discription);
+                  CommonHelper::RewriteItemAverageByItem($sale_return->date,$value->goods_discription,$sale_return->series_no);
                }
             }
             SaleReturnDescription::where('sale_return_id',$request->sale_return_id)
@@ -1371,6 +1372,7 @@ class SalesReturnController extends Controller
                   //Add Data In Average Details table
                   $average_detail = new ItemAverageDetail;
                   $average_detail->entry_date = $request->date;
+                  $average_detail->series_no = $request->input('series_no');
                   $average_detail->item_id = $key;
                   $average_detail->type = 'SALE RETURN';
                   $average_detail->sale_return_id = $sale->id;
@@ -1378,7 +1380,7 @@ class SalesReturnController extends Controller
                   $average_detail->company_id = Session::get('user_company_id');
                   $average_detail->created_at = Carbon::now();
                   $average_detail->save();
-                  CommonHelper::RewriteItemAverageByItem($request->date,$key);               
+                  CommonHelper::RewriteItemAverageByItem($request->date,$key,$request->input('series_no'));               
                }
             }
            
@@ -1412,7 +1414,7 @@ class SalesReturnController extends Controller
             $ledger->save();
             foreach ($desc_item_arr as $key => $value) {
                if(!array_key_exists($value, $update_item_arr)){
-                  CommonHelper::RewriteItemAverageByItem($last_date,$value);
+                  CommonHelper::RewriteItemAverageByItem($last_date,$value,$request->input('series_no'));
                }
             }
             return redirect('sale-return-invoice/'.$sale->id)->withSuccess('Sale return added successfully!'); 
@@ -1589,7 +1591,7 @@ class SalesReturnController extends Controller
             }
             foreach ($desc_item_arr as $key => $value) {
                if(!array_key_exists($value, $update_item_arr)){
-                  CommonHelper::RewriteItemAverageByItem($last_date,$value);
+                  CommonHelper::RewriteItemAverageByItem($last_date,$value,$request->input('series_no'));
                }
             }
             return redirect('sale-return-without-item-invoice/'.$sale->id)->withSuccess('Sale return added successfully!');
@@ -1641,7 +1643,7 @@ class SalesReturnController extends Controller
          }
          foreach ($desc_item_arr as $key => $value) {
             if(!array_key_exists($value, $update_item_arr)){
-               CommonHelper::RewriteItemAverageByItem($last_date,$value);
+               CommonHelper::RewriteItemAverageByItem($last_date,$value,$request->input('series_no'));
             }
          }
          if(!empty(Session::get('redirect_url'))){
@@ -2896,7 +2898,7 @@ class SalesReturnController extends Controller
                   $desc = SaleReturnDescription::where('sale_return_id',$request->id)
                                  ->get();
                   foreach ($desc as $key => $value) {
-                     CommonHelper::RewriteItemAverageByItem($sale->date,$value->goods_discription);
+                     CommonHelper::RewriteItemAverageByItem($sale->date,$value->goods_discription,$sale->series_no);
                   }
                }
                

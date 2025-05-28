@@ -63,9 +63,9 @@ class CommonHelper
         return $stock;
          
     }
-    public static function RewriteItemAverageByItem($date,$item)
-    {        
-        $max_date = ItemAverage::where('item_id',$item)->max('stock_date');
+    public static function RewriteItemAverageByItem($date,$item,$series=null)
+    {      
+        $max_date = ItemAverage::where('item_id',$item)->where('series_no',$series)->max('stock_date');
         $startDate = Carbon::parse($date);
         $endDate = Carbon::parse($max_date);
         if($endDate < $startDate){
@@ -75,9 +75,11 @@ class CommonHelper
         // Loop through the date range
         for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
             ItemAverage::where('item_id',$item)
+                    ->where('series_no',$series)
                     ->where('stock_date',$date->toDateString())
                     ->delete();         
             $average_detail = ItemAverageDetail::where('item_id',$item)
+                                                ->where('series_no',$series)
                                                 ->where('entry_date',$date->toDateString())
                                                 ->get();
             if(count($average_detail)>0){
@@ -100,6 +102,7 @@ class CommonHelper
                 $on_date_purchase_weight = $purchase_weight + $sale_return_weight;
                 $average = ItemAverage::where('item_id',$item)
                         ->where('stock_date','<',$date->toDateString())
+                        ->where('series_no',$series)
                         ->orderBy('stock_date','desc')
                         ->orderBy('id','desc')
                         ->first();
@@ -108,6 +111,7 @@ class CommonHelper
                     $purchase_amount = $purchase_amount - $purchase_return_amount + $average->amount;
                 }else{
                     $opening = ItemLedger::where('item_id',$item)
+                                    ->where('series_no',$series)
                                     ->where('source','-1')
                                     ->first();
                     if($opening){
@@ -125,6 +129,7 @@ class CommonHelper
                 $stock_average_amount =  round($stock_average_amount,2);
                 $average = new ItemAverage;
                 $average->item_id = $item;
+                $average->series_no = $series;
                 $average->sale_weight = $sale_weight + $stock_transfer_weight + $purchase_return_weight;
                 $average->purchase_weight = $on_date_purchase_weight;
                 $average->average_weight = $purchase_weight - $sale_weight - $stock_transfer_weight + $sale_return_weight;

@@ -124,6 +124,9 @@ class ItemLedgerController extends Controller
             }
          }         
       }
+      $series_list = $series;
+      
+     
       if($item_id=="all"){
          $opening = 0;
          $financial_year = Session::get('default_fy');
@@ -132,53 +135,87 @@ class ItemLedgerController extends Controller
          $y =  explode("-",$financial_year);
          $open_date = $y[0]."-04-01";
          $open_date = date('Y-m-d',strtotime($open_date));
-         $item_ledger = ItemLedger::join('manage_items', 'item_ledger.item_id', '=', 'manage_items.id')
-                                    ->join('units', 'manage_items.u_name', '=', 'units.id')
-                                    ->select('item_id','in_weight as average_weight','txn_date as stock_date','total_price as amount','manage_items.name as item_name',
-                         'units.name as unit_name')
-                                    ->where('item_ledger.company_id',Session::get('user_company_id'))
-                                    ->where('source','-1')
-                                    ->where('delete_status','0')
-                                    ->groupBy('item_id')
-                                    ->get();
-         
-         $sub = DB::table('item_averages')
-                     ->select(DB::raw('MAX(id) as latest_id'))
-                     ->where('stock_date', '<=', $request->to_date)
-                     ->where('company_id',Session::get('user_company_id'))
-                     ->groupBy('item_id');
-         $item = ItemAverage::join('manage_items', 'item_averages.item_id', '=', 'manage_items.id')
-                     ->join('units', 'manage_items.u_name', '=', 'units.id')
-                     ->whereIn('item_averages.id', $sub)
-                     ->select(
-                         'item_averages.item_id',
-                         'item_averages.average_weight',
-                         'item_averages.amount',
-                         'item_averages.stock_date',
-                         'manage_items.name as item_name',
-                         'units.name as unit_name'
-                     )
-                     ->orderBy('stock_date', 'desc')
-                     ->get();
-         foreach ($item_ledger as $key => $value) {  
-            if(count($item)==0){
-               $item->push($value);
-               continue;
-            }    
-            $exists = 0;  
-            $exists = $item->contains(function ($row)use ($value,$item) {
-               if ($row['item_id']==$value['item_id']) {
-                  return 1;
-               }               
-            });            
-            if ($exists==0) {
-               $item->push($value);
+
+         if($request->selected_series!="all"){
+            $series_list = [];              
+            $object = new \stdClass();
+            $object->series = $request->selected_series;
+            $series_list[] = $object;            
+         }         
+         $allArrays = [];
+         foreach ($series_list as $s1 => $s) {           
+            $item_ledger = ItemLedger::join('manage_items', 'item_ledger.item_id', '=', 'manage_items.id')
+                                       ->join('units', 'manage_items.u_name', '=', 'units.id')
+                                       ->select('item_id','in_weight as average_weight','txn_date as stock_date','total_price as amount','manage_items.name as item_name','units.name as unit_name')
+                              ->where('item_ledger.company_id',Session::get('user_company_id'))
+                              ->where('source','-1')
+                              ->where('series_no',$s->series)
+                              ->where('delete_status','0')
+                              ->groupBy('item_id')
+                              ->get();
+
+            $sub = DB::table('item_averages')
+                  ->select(DB::raw('MAX(id) as latest_id'))
+                  ->where('stock_date', '<=', $request->to_date)
+                  ->where('series_no',$s->series)
+                  ->where('company_id',Session::get('user_company_id'))
+                  ->groupBy('item_id');
+            $item = ItemAverage::join('manage_items', 'item_averages.item_id', '=', 'manage_items.id')
+                  ->join('units', 'manage_items.u_name', '=', 'units.id')
+                  ->whereIn('item_averages.id', $sub)
+                  ->where('series_no',$s->series)
+                  ->select(
+                  'item_averages.item_id',
+                  'item_averages.average_weight',
+                  'item_averages.amount',
+                  'item_averages.stock_date',
+                  'manage_items.name as item_name',
+                  'units.name as unit_name'
+                  )
+                  ->orderBy('stock_date', 'desc')
+                  ->get();
+            foreach ($item_ledger as $key => $value) {  
+               if(count($item)==0){
+                  $item->push($value);
+                  continue;
+               }    
+               $exists = 0;  
+               $exists = $item->contains(function ($row)use ($value,$item) {
+                  if ($row['item_id']==$value['item_id']) {
+                     return 1;
+                  }               
+               });            
+               if ($exists==0) {
+                  $item->push($value);
+               }
             }
-         }      
-         // echo "<pre>"; 
-         // print_r($item->toArray());
-         // die;
-         return view('itemledger')->with('item_list', $item_list)->with('items', $item)->with('item_id', $item_id)->with('opening', $opening)->with('fdate', $open_date)->with('tdate',$tdate)->with('series',$series)->with('selected_series',$selected_series);
+            
+           array_push($allArrays, $item->toArray());
+            // Initialize result array
+            
+            
+         }
+       
+         $result = [];
+
+            foreach ($allArrays as $array) {
+               foreach ($array as $item) {
+                  $id = $item['item_id'];
+
+                  if (!isset($result[$id])) {
+                        // Initialize if not set
+                        $result[$id] = $item;
+                  } else {
+                        // Merge values
+                        $result[$id]['average_weight'] += $item['average_weight'];
+                        $result[$id]['amount'] += $item['amount'];
+                  }
+               }
+            }
+         // Re-index array
+         $result = array_values($result);
+         
+         return view('itemledger')->with('item_list', $item_list)->with('items', collect($result))->with('item_id', $item_id)->with('opening', $opening)->with('fdate', $open_date)->with('tdate',$tdate)->with('series',$series)->with('selected_series',$selected_series);
       }
       //Particular Item Ledger
 
@@ -285,9 +322,11 @@ class ItemLedgerController extends Controller
                                 ->get();
       $opening_amount = 0;$opening_weight = 0;      
       $average_data = ItemAverage::select('sale_weight','purchase_weight','average_weight','price','amount','stock_date')->where('item_id',$item_id)
+                  ->where('series_no',$request->series)
                   ->whereRaw("STR_TO_DATE(stock_date, '%Y-%m-%d')>=STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and STR_TO_DATE(stock_date, '%Y-%m-%d')<=STR_TO_DATE('".$request->to_date."', '%Y-%m-%d')")
                   ->get();
       $average_opening = ItemAverage::where('item_id',$item_id)
+                     ->where('series_no',$request->series)
                      ->where('stock_date','<',$request->from_date)
                      ->first();
       if($average_opening){
@@ -296,6 +335,7 @@ class ItemLedgerController extends Controller
       }else{
          $opening = ItemLedger::where('item_id',$item_id)
                                     ->where('source','-1')
+                                    ->where('series_no',$request->series)
                                     ->where('delete_status','0')
                                     ->first();
          if($opening){
@@ -309,10 +349,12 @@ class ItemLedgerController extends Controller
    public function itemAverageDetails(Request $request){
       $average_detail = ItemAverageDetail::where('item_id',$request->items_id)
                      ->where('entry_date',$request->date)
+                     ->where('series_no',$request->series)                     
                      ->get();
       $opening_amount = 0;$opening_weight = 0;
       $average_opening = ItemAverage::where('item_id',$request->items_id)
                      ->where('stock_date','<',$request->date)
+                     ->where('series_no',$request->series)  
                      ->first();
       if($average_opening){
          $opening_amount = $average_opening->amount;
@@ -320,6 +362,7 @@ class ItemLedgerController extends Controller
       }else{
          $opening = ItemLedger::where('item_id',$request->items_id)
                                     ->where('source','-1')
+                                    ->where('series_no',$request->series)  
                                     ->where('delete_status','0')
                                     ->first();
          $opening_amount = $opening->total_price;

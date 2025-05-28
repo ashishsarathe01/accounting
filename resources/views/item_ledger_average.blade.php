@@ -181,7 +181,8 @@
             data: {
                _token: '<?php echo csrf_token() ?>',
                date: date,
-               items_id: '<?php echo $_GET['items_id'];?>'
+               items_id: '<?php echo $_GET['items_id'];?>',
+               series: '<?php echo $_GET['series'];?>'
             },
             success: function(res){
                if(res.status == true){

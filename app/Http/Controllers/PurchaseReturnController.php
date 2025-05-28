@@ -521,6 +521,7 @@ class PurchaseReturnController extends Controller
                   
                   $average_detail = new ItemAverageDetail;
                   $average_detail->entry_date = $request->date;
+                  $average_detail->series_no = $request->input('series_no');
                   $average_detail->item_id = $value['item'];
                   $average_detail->type = 'PURCHASE RETURN';
                   $average_detail->purchase_return_id = $purchase->id;
@@ -534,7 +535,7 @@ class PurchaseReturnController extends Controller
                   $average_detail->company_id = Session::get('user_company_id');
                   $average_detail->created_at = Carbon::now();
                   $average_detail->save();
-                  CommonHelper::RewriteItemAverageByItem($request->date,$value['item']);                  
+                  CommonHelper::RewriteItemAverageByItem($request->date,$value['item'],$request->input('series_no'));                  
                }
             }
             //ADD DATA IN Customer ACCOUNT
@@ -800,7 +801,7 @@ class PurchaseReturnController extends Controller
                $desc = PurchaseReturnDescription::where('purchase_return_id',$request->purchase_return_id)
                               ->get();
                foreach ($desc as $key => $value) {
-                  CommonHelper::RewriteItemAverageByItem($purchase_return->date,$value->goods_discription);
+                  CommonHelper::RewriteItemAverageByItem($purchase_return->date,$value->goods_discription,$purchase_return->series_no);
                }
             }
             PurchaseReturnDescription::where('purchase_return_id',$request->purchase_return_id)
@@ -1262,6 +1263,7 @@ class PurchaseReturnController extends Controller
                   //Add Data In Average Details table
                   $average_detail = new ItemAverageDetail;
                   $average_detail->entry_date = $request->date;
+                  $average_detail->series_no = $request->input('series_no');
                   $average_detail->item_id = $value['item'];
                   $average_detail->type = 'PURCHASE RETURN';
                   $average_detail->purchase_return_id = $purchase->id;
@@ -1275,7 +1277,7 @@ class PurchaseReturnController extends Controller
                   $average_detail->company_id = Session::get('user_company_id');
                   $average_detail->created_at = Carbon::now();
                   $average_detail->save();
-                  CommonHelper::RewriteItemAverageByItem($request->date,$value['item']);                  
+                  CommonHelper::RewriteItemAverageByItem($request->date,$value['item'],$request->input('series_no'));                  
                }
             }            
             //ADD DATA IN Customer ACCOUNT
@@ -1306,7 +1308,7 @@ class PurchaseReturnController extends Controller
             $ledger->save();
             foreach ($desc_item_arr as $key => $value) {
                if(!in_array($value, $update_item_arr)){
-                  CommonHelper::RewriteItemAverageByItem($last_date,$value);
+                  CommonHelper::RewriteItemAverageByItem($last_date,$value,$request->input('series_no'));
                }
             }
             return redirect('purchase-return-invoice/'.$purchase->id)->withSuccess('Purchase return added successfully!');
@@ -1481,7 +1483,7 @@ class PurchaseReturnController extends Controller
             }
             foreach ($desc_item_arr as $key => $value) {
                if(!in_array($value, $update_item_arr)){
-                  CommonHelper::RewriteItemAverageByItem($last_date,$value);
+                  CommonHelper::RewriteItemAverageByItem($last_date,$value,$request->input('series_no'));
                }
             }
             return redirect('purchase-return-without-item-invoice/'.$purchase->id)->withSuccess('Sale return added successfully!');
@@ -1531,7 +1533,7 @@ class PurchaseReturnController extends Controller
             PurchaseReturn::where('id',$purchase->id)->update(['total'=>$debit_total]);
             foreach ($desc_item_arr as $key => $value) {
                if(!in_array($value, $update_item_arr)){
-                  CommonHelper::RewriteItemAverageByItem($last_date,$value);
+                  CommonHelper::RewriteItemAverageByItem($last_date,$value,$request->input('series_no'));
                }
             }
             return redirect('purchase-return-without-gst-invoice/'.$purchase->id)->withSuccess('Sale return added successfully!');
@@ -2783,7 +2785,7 @@ class PurchaseReturnController extends Controller
                   $desc = PurchaseReturnDescription::where('purchase_return_id',$request->id)
                                  ->get();
                   foreach ($desc as $key => $value) {
-                     CommonHelper::RewriteItemAverageByItem($sale->date,$value->goods_discription);
+                     CommonHelper::RewriteItemAverageByItem($sale->date,$value->goods_discription,$sale->series_no);
                   }
                }               
             }else if($sale->sr_nature=="WITH GST" && $sale->sr_type=="WITHOUT ITEM"){

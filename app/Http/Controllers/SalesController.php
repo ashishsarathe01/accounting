@@ -296,8 +296,7 @@ class SalesController extends Controller
         
       } 
       return view('addSale')->with('party_list', $party_list)->with('billsundry', $billsundry)->with('bill_date', $bill_date)->with('GstSettings', $GstSettings)->with('item', $item);
-   }
-   
+   }   
    public function store(Request $request){
       $validated = $request->validate([
          'series_no' => 'required',
@@ -508,6 +507,7 @@ class SalesController extends Controller
             //Add Data In Average Details table
             $average_detail = new ItemAverageDetail;
             $average_detail->entry_date = $request->date;
+            $average_detail->series_no = $request->input('series_no');
             $average_detail->item_id = $key;
             $average_detail->type = 'SALE';
             $average_detail->sale_id = $sale->id;
@@ -515,78 +515,79 @@ class SalesController extends Controller
             $average_detail->company_id = Session::get('user_company_id');
             $average_detail->created_at = Carbon::now();
             $average_detail->save();
-            $stock_average = ItemAverage::where('item_id',$key)
-                           ->orderBy('stock_date','desc')
-                           ->orderBy('id','desc')
-                           ->first();
-            if($stock_average){
-               if(strtotime($stock_average->stock_date)==strtotime($request->date)){
-                  $purchase_weight = $stock_average->average_weight;
-                  $sale_weight = $value;
-                  $price = $stock_average->price;
-                  if(!empty($stock_average->sale_weight)){
-                     $sale_weight = $sale_weight + $stock_average->sale_weight;
-                  }
-                  $average_weight = $purchase_weight - $value;  
+            CommonHelper::RewriteItemAverageByItem($request->date,$key,$request->input('series_no')); 
+            // $stock_average = ItemAverage::where('item_id',$key)
+            //                ->orderBy('stock_date','desc')
+            //                ->orderBy('id','desc')
+            //                ->first();
+            // if($stock_average){
+            //    if(strtotime($stock_average->stock_date)==strtotime($request->date)){
+            //       $purchase_weight = $stock_average->average_weight;
+            //       $sale_weight = $value;
+            //       $price = $stock_average->price;
+            //       if(!empty($stock_average->sale_weight)){
+            //          $sale_weight = $sale_weight + $stock_average->sale_weight;
+            //       }
+            //       $average_weight = $purchase_weight - $value;  
                                   
-                  $average = ItemAverage::find($stock_average->id);
-                  $average->sale_weight = $sale_weight;
-                  $average->average_weight = $average_weight;
-                  $average->amount = round($average_weight*$price,2);
-                  $average->updated_at = Carbon::now();
-                  $average->save();
-               }else if(strtotime($stock_average->stock_date)<strtotime($request->date)){
-                  $stock_average_weight = $stock_average->average_weight - $value;
-                  $stock_average_price = $stock_average->price;
-                  $stock_average_amount = round($stock_average_weight*$stock_average_price,2);
+            //       $average = ItemAverage::find($stock_average->id);
+            //       $average->sale_weight = $sale_weight;
+            //       $average->average_weight = $average_weight;
+            //       $average->amount = round($average_weight*$price,2);
+            //       $average->updated_at = Carbon::now();
+            //       $average->save();
+            //    }else if(strtotime($stock_average->stock_date)<strtotime($request->date)){
+            //       $stock_average_weight = $stock_average->average_weight - $value;
+            //       $stock_average_price = $stock_average->price;
+            //       $stock_average_amount = round($stock_average_weight*$stock_average_price,2);
 
-                  $average = new ItemAverage;
-                  $average->item_id = $key;
-                  $average->sale_weight = $value;
-                  $average->average_weight = $stock_average_weight;
-                  $average->price = $stock_average_price;
-                  $average->amount = $stock_average_amount;
-                  $average->stock_date = $request->date;
-                  $average->company_id = Session::get('user_company_id');
-                  $average->created_at = Carbon::now();
-                  $average->save();               
-               }else if(strtotime($stock_average->stock_date)>strtotime($request->date)){
-                  CommonHelper::RewriteItemAverageByItem($request->date,$key);
-               }
-            }else{
-               $opening = ItemLedger::where('item_id',$key)
-                                       ->where('source','-1')
-                                       ->first();
-               if($opening){
-                  $stock_average_weight = $opening->in_weight - $value;
-                  $stock_average_price = $opening->total_price/$opening->in_weight;
-                  $stock_average_price = round($stock_average_price,6);
-                  $stock_average_amount = round($stock_average_weight*$stock_average_price,2);
-                  $average = new ItemAverage;
-                  $average->item_id = $key;
-                  $average->sale_weight = $value;
-                  $average->purchase_weight = 0;
-                  $average->average_weight = $stock_average_weight;
-                  $average->price = $stock_average_price;
-                  $average->amount = $stock_average_amount;
-                  $average->stock_date = $request->date;
-                  $average->company_id = Session::get('user_company_id');
-                  $average->created_at = Carbon::now();
-                  $average->save();
-               }else{
-                  $average = new ItemAverage;
-                  $average->item_id = $key;
-                  $average->sale_weight = $value;
-                  $average->purchase_weight = 0;
-                  $average->average_weight = -$value;
-                  $average->price = 0;
-                  $average->amount = 0;
-                  $average->stock_date = $request->date;
-                  $average->company_id = Session::get('user_company_id');
-                  $average->created_at = Carbon::now();
-                  $average->save();
-               }
-            }
+            //       $average = new ItemAverage;
+            //       $average->item_id = $key;
+            //       $average->sale_weight = $value;
+            //       $average->average_weight = $stock_average_weight;
+            //       $average->price = $stock_average_price;
+            //       $average->amount = $stock_average_amount;
+            //       $average->stock_date = $request->date;
+            //       $average->company_id = Session::get('user_company_id');
+            //       $average->created_at = Carbon::now();
+            //       $average->save();               
+            //    }else if(strtotime($stock_average->stock_date)>strtotime($request->date)){
+            //       CommonHelper::RewriteItemAverageByItem($request->date,$key);
+            //    }
+            // }else{
+            //    $opening = ItemLedger::where('item_id',$key)
+            //                            ->where('source','-1')
+            //                            ->first();
+            //    if($opening){
+            //       $stock_average_weight = $opening->in_weight - $value;
+            //       $stock_average_price = $opening->total_price/$opening->in_weight;
+            //       $stock_average_price = round($stock_average_price,6);
+            //       $stock_average_amount = round($stock_average_weight*$stock_average_price,2);
+            //       $average = new ItemAverage;
+            //       $average->item_id = $key;
+            //       $average->sale_weight = $value;
+            //       $average->purchase_weight = 0;
+            //       $average->average_weight = $stock_average_weight;
+            //       $average->price = $stock_average_price;
+            //       $average->amount = $stock_average_amount;
+            //       $average->stock_date = $request->date;
+            //       $average->company_id = Session::get('user_company_id');
+            //       $average->created_at = Carbon::now();
+            //       $average->save();
+            //    }else{
+            //       $average = new ItemAverage;
+            //       $average->item_id = $key;
+            //       $average->sale_weight = $value;
+            //       $average->purchase_weight = 0;
+            //       $average->average_weight = -$value;
+            //       $average->price = 0;
+            //       $average->amount = 0;
+            //       $average->stock_date = $request->date;
+            //       $average->company_id = Session::get('user_company_id');
+            //       $average->created_at = Carbon::now();
+            //       $average->save();
+            //    }
+            // }
          }
          //ADD DATA IN Customer ACCOUNT
          $ledger = new AccountLedger();
@@ -945,7 +946,7 @@ class SalesController extends Controller
          $desc = SaleDescription::where('sale_id',$request->sale_id)
                               ->get();
          foreach ($desc as $key => $value) {
-            CommonHelper::RewriteItemAverageByItem($sale->date,$value->goods_discription);
+            CommonHelper::RewriteItemAverageByItem($sale->date,$value->goods_discription,$sale->series_no);
          }
          SaleDescription::where('sale_id',$request->sale_id)
                         ->update(['delete'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
@@ -1120,6 +1121,7 @@ class SalesController extends Controller
                //Add Data In Average Details table
                $average_detail = new ItemAverageDetail;
                $average_detail->entry_date = $request->date;
+               $average_detail->series_no = $request->input('series_no');
                $average_detail->item_id = $key;
                $average_detail->type = 'SALE';
                $average_detail->sale_id = $sale->id;
@@ -1127,11 +1129,11 @@ class SalesController extends Controller
                $average_detail->company_id = Session::get('user_company_id');
                $average_detail->created_at = Carbon::now();
                $average_detail->save();
-               CommonHelper::RewriteItemAverageByItem($request->date,$key);               
+               CommonHelper::RewriteItemAverageByItem($request->date,$key,$request->input('series_no'));               
             }
             foreach ($desc_item_arr as $key => $value) {
                if(!array_key_exists($value, $sale_item_array)){
-                  CommonHelper::RewriteItemAverageByItem($request->date,$value);
+                  CommonHelper::RewriteItemAverageByItem($request->date,$value,$request->input('series_no'));
                }
             }
             //ADD DATA IN Customer ACCOUNT
@@ -1177,7 +1179,7 @@ class SalesController extends Controller
       return view('sale_import')->with('upload_log',0)->with('total_count',5)->with('success_count',3)->with('failed_count',2)->with('error_message',array(0 => array(0=>'Voucher A41 already exists - Invoice No. A41'),1 => array(0=>'Voucher A42 already exists - Invoice No. A42')));
       
    }
-    public function saleImportProcess(Request $request) { 
+   public function saleImportProcess(Request $request) { 
         ini_set('max_execution_time', 600);
       
       $validator = Validator::make($request->all(), [
@@ -1454,7 +1456,7 @@ class SalesController extends Controller
                         $itemKiId =  SaleDescription::where('sale_id',$check_invoices->id)
                                     ->select('sale_descriptions.goods_description as item_id');
                                     foreach( $itemKiId as $k){
-                        CommonHelper::RewriteItemAverageByItem($check_invoices->date,$k->item_id);       
+                        CommonHelper::RewriteItemAverageByItem($check_invoices->date,$k->item_id,$series_no);       
                                     }
                      }
                   }                  
@@ -1730,6 +1732,7 @@ class SalesController extends Controller
                //Add Data In Average Details table
                $average_detail = new ItemAverageDetail;
                $average_detail->entry_date = $sale->date;
+               $average_detail->series_no = $series_no;
                $average_detail->item_id = $item->id;
                $average_detail->type = 'SALE';
                $average_detail->sale_id = $sale->id;
@@ -1737,7 +1740,7 @@ class SalesController extends Controller
                $average_detail->company_id = Session::get('user_company_id');
                $average_detail->created_at = Carbon::now();
                $average_detail->save();
-               CommonHelper::RewriteItemAverageByItem($sale->date,$item->id);               
+               CommonHelper::RewriteItemAverageByItem($sale->date,$item->id,$series_no);               
             
                      }
                   }
@@ -3061,7 +3064,7 @@ class SalesController extends Controller
             $desc = SaleDescription::where('sale_id',$request->id)
                                  ->get();
             foreach ($desc as $key => $value) {
-               CommonHelper::RewriteItemAverageByItem($sale->date,$value->goods_discription);
+               CommonHelper::RewriteItemAverageByItem($sale->date,$value->goods_discription,$sale->series_no);
             }
             $response = [
                'success' => true,
