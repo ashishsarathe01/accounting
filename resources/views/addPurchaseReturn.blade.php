@@ -733,6 +733,7 @@
             _token: '<?php echo csrf_token() ?>',
             voucher_no: invoice_id,
             voucher_type: voucher_type,
+            id:$('option:selected', this).attr('data-id')
          },
          success: function(data) {
             var optionElements = '<option value="">Select</option>';

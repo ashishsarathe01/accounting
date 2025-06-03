@@ -154,12 +154,12 @@
                                     $tot_blance = $tot_blance + $value['in_weight'];
                                     echo formatIndianNumber($tot_blance);
                                     
-                                     $in = $in + $value['in_weight'];
+                                     //$in = $in + $value['in_weight'];
                                  }else if(isset($value['out_weight'])) {
                                     $tot_blance = $tot_blance - $value['out_weight'];
                                     echo formatIndianNumber($tot_blance);
                                     
-                                    $out = $out + $value['out_weight'];
+                                    //$out = $out + $value['out_weight'];
                                  }?>
                               </td>
                            </tr>

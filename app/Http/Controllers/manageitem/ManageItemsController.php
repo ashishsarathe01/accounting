@@ -140,6 +140,7 @@ class ManageItemsController extends Controller
       $items->u_name = $request->input('u_name');
       $items->hsn_code = $request->input('hsn_code');
       $items->gst_rate = $request->input('gst_rate');
+      $items->item_type = $request->input('item_type');
       $items->status = $request->input('status');
       $items->section = $request->input('section');
       $items->rate_of_tcs = $request->input('rate_of_tcs');      
@@ -154,6 +155,8 @@ class ManageItemsController extends Controller
          $opening_qty = $request->input('opening_qty');
          $opening_balance_type = $request->input('opening_balance_type');
          foreach ($series as $key => $value) {
+            $opening_amount[$key] = trim(str_replace(",","",$opening_amount[$key]));
+            $opening_qty[$key] = trim(str_replace(",","",$opening_qty[$key]));
             if(!empty($opening_amount[$key]) && !empty($opening_qty[$key])){
                $series_balance = new ItemBalanceBySeries;
                $series_balance->item_id = $items->id;
@@ -260,6 +263,7 @@ class ManageItemsController extends Controller
       // $items->opening_balance = $request->input('opening_balance');
       // $items->opening_balance_type = $request->input('opening_balance_type');
       $items->gst_rate = $request->input('gst_rate');
+      $items->item_type = $request->input('item_type');
       $items->hsn_code = $request->input('hsn_code');
       $items->status = $request->input('status');
       $items->updated_at = Carbon::now();
@@ -271,6 +275,8 @@ class ManageItemsController extends Controller
          $opening_qty = $request->input('opening_qty');
          $opening_balance_type = $request->input('opening_balance_type');
          foreach ($series as $key => $value) {
+            $opening_amount[$key] = trim(str_replace(",","",$opening_amount[$key]));
+            $opening_qty[$key] = trim(str_replace(",","",$opening_qty[$key]));
             if(!empty($opening_amount[$key]) && !empty($opening_qty[$key])){
                $series_balance = new ItemBalanceBySeries;
                $series_balance->item_id = $items->id;

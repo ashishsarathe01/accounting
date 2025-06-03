@@ -482,7 +482,7 @@ class AjaxController extends Controller
       $voucher_type  = $request->voucher_type;
       if($voucher_type == 'PURCHASE'){        
          $purchase = Purchase::select('id')
-                              ->where('voucher_no', $voucher_no)
+                              ->where('id', $request->id)
                               ->where('company_id',Session::get('user_company_id'))
                               ->first();
          $manageitems = DB::table('purchase_descriptions')->where('purchase_id', $purchase->id)
@@ -492,7 +492,7 @@ class AjaxController extends Controller
             ->get();
       }else if($voucher_type == 'SALE'){
          $sale = Sales::select('id')
-                           ->where('voucher_no', $voucher_no)
+                           ->where('id', $request->id)
                            ->where('company_id',Session::get('user_company_id'))
                            ->first();
          $manageitems = DB::table('sale_descriptions')->where('sale_id', $sale->id)

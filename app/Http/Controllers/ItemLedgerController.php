@@ -14,6 +14,8 @@ use App\Models\Sales;
 use App\Models\StockJournal;
 use App\Models\ItemAverage;
 use App\Models\ItemAverageDetail;
+use App\Models\SalesReturn;
+use App\Models\PurchaseReturn;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -264,7 +266,37 @@ class ItemLedgerController extends Controller
                   $item[$key]->account_name = "";
                   $item[$key]->type = "";
                }  
-               $item[$key]->einvoice_status = 0;             
+               $item[$key]->einvoice_status = 0;
+            }else if($value->source==4){
+               $action = SalesReturn::join('accounts',"sales_returns.party","=","accounts.id")
+                           ->where('sales_returns.id',$value->source_id)
+                           ->select(['sr_prefix','account_name'])
+                           ->first();
+               if($action){
+                  $item[$key]->bill_no = $action->sr_prefix;
+                  $item[$key]->account_name = $action->account_name;
+                  $item[$key]->type = "Sale Return";
+               }else{
+                  $item[$key]->bill_no = "";
+                  $item[$key]->account_name = "";
+                  $item[$key]->type = "Sale Return";
+               }                  
+               $item[$key]->einvoice_status = 0; 
+            }else if($value->source==5){
+               $action = PurchaseReturn::join('accounts',"purchase_returns.party","=","accounts.id")
+                           ->where('purchase_returns.id',$value->source_id)
+                           ->select(['sr_prefix','account_name'])
+                           ->first();
+               if($action){
+                  $item[$key]->bill_no = $action->sr_prefix;
+                  $item[$key]->account_name = $action->account_name;
+                  $item[$key]->type = "Purchase Return";
+               }else{
+                  $item[$key]->bill_no = "";
+                  $item[$key]->account_name = "";
+                  $item[$key]->type = "Purchase Return";
+               } 
+               $item[$key]->einvoice_status = 0; 
             }else{
                $item[$key]->bill_no = "";
                $item[$key]->account_name = "";

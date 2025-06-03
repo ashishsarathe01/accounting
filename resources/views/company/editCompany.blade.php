@@ -92,7 +92,7 @@
                            <label for="contact-number" class="form-label font-14 font-heading">Country Name</label>
                            <select class="form-select" id="country_name" name="country_name" required>
                               <option value="">Select</option>
-                              <option value="india" <?php echo $company->country_name =='INDIA' ? 'selected':'';?>>INDIA</option>
+                              <option value="INDIA" <?php echo $company->country_name =='INDIA' ? 'selected':'';?>>INDIA</option>
                            </select>
                         </div>
                         <div class="mb-4 col-md-4">
@@ -244,7 +244,6 @@
                                     <td class="w-120">{{$value->mobile_no}}</td>
                                     <td class="text-center">
                                        <a target="__blank" href="{{ URL::to('view-owner/' . $value->id . '/') }}"><img src="public/assets/imgs/eye-icon.svg" class="px-1" alt=""></a>
-
                                        <img src="public/assets/imgs/edit-icon.svg" class="px-1 edit_owner"  data-id="{{$value->id}}" data-owner_name="{{$value->owner_name}}" data-father_name="{{$value->father_name}}" data-date_of_birth="{{$value->date_of_birth}}" data-address="{{$value->address}}" data-pan="{{$value->pan}}" data-designation="{{$value->designation}}" data-date_of_joining="{{$value->date_of_joining}}" data-mobile_no="{{$value->mobile_no}}" data-email_id="{{$value->email_id}}" data-din="{{$value->din}}" data-share_percentage="{{$value->share_percentage}}" data-authorized_signatory="{{$value->authorized_signatory}}" data-date_of_resigning="{{$value->date_of_resigning}}" alt="" style="cursor:pointer;">
                                        @if($company->business_type!= 1)
                                           <button type="button" data-id="<?php echo $value->id; ?>" class="border-0 bg-transparent delete_partner">
@@ -677,6 +676,7 @@
       $("#designation").val($(this).attr('data-designation'));
       $("#date_of_joining").val($(this).attr('data-date_of_joining'));
       $("#owner_mobile_no").val($(this).attr('data-mobile_no'));
+      $("#din").val($(this).attr('data-din'));
       $("#owner_email_id").val($(this).attr('data-email_id'));
       $("#authorized_signatory").val($(this).attr('data-authorized_signatory'));
       $("#share_percentage").val($(this).attr('data-share_percentage'));

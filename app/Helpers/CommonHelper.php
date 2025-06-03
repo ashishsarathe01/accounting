@@ -6,6 +6,8 @@ use App\Models\ItemLedger;
 use App\Models\Accounts;
 use App\Models\AccountGroups;
 use App\Models\AccountLedger;
+use App\Models\Companies;
+use App\Models\GstBranch;
 use Carbon\Carbon;
 use DB;
 use Session;
@@ -13,54 +15,92 @@ class CommonHelper
 {
     public static function ClosingStock($date)
     {
-        $item_ledger = ItemLedger::join('manage_items', 'item_ledger.item_id', '=', 'manage_items.id')
+        
+        $companyData = Companies::where('id', Session::get('user_company_id'))->first();      
+        if($companyData->gst_config_type == "single_gst"){
+            $series = DB::table('gst_settings')
+                                ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])
+                                ->get();
+            $branch = GstBranch::select('id','branch_series as series')
+                                ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_id'=>$series[0]->id])
+                                ->get();
+            if(count($branch)>0){
+                $series = $series->merge($branch);
+            }         
+        }else if($companyData->gst_config_type == "multiple_gst"){
+            $series = DB::table('gst_settings_multiple')
+                                ->select('id','series')
+                                ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst"])
+                                ->get();
+            foreach ($series as $key => $value) {
+                $branch = GstBranch::select('id','branch_series as series')
+                            ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_multiple_id'=>$value->id])
+                            ->get();
+                if(count($branch)>0){
+                    $series = $series->merge($branch);
+                }
+            }         
+        }
+        $final_stock_value = 0;
+        
+        foreach ($series as $s1 => $s) {             
+            $item_ledger = ItemLedger::join('manage_items', 'item_ledger.item_id', '=', 'manage_items.id')
                                     ->join('units', 'manage_items.u_name', '=', 'units.id')
                                     ->select('item_id','in_weight as average_weight','txn_date as stock_date','total_price as amount','manage_items.name as item_name',
                          'units.name as unit_name')
                                     ->where('item_ledger.company_id',Session::get('user_company_id'))
                                     ->where('source','-1')
+                                    ->where('series_no',$s->series)
                                     ->where('delete_status','0')
                                     ->groupBy('item_id')
                                     ->get();
-        $sub = DB::table('item_averages')
-                     ->select(DB::raw('MAX(id) as latest_id'))
-                     ->where('stock_date', '<=', $date)
-                     ->where('company_id', Session::get('user_company_id'))
-                     ->groupBy('item_id')
-                     ->pluck('latest_id'); 
-        $stock_id = ItemAverage::whereIn('item_averages.id', $sub)
-                     ->select('item_id')
-                     ->orderBy('stock_date', 'desc')
-                     ->pluck('item_id');      
-        $stock = ItemAverage::whereIn('item_averages.id', $sub)
-                     ->select(
-                         'item_averages.item_id',
-                         'item_averages.average_weight',
-                         'item_averages.amount',
-                         'item_averages.stock_date',
-                         'manage_items.name as item_name',
-                         'units.name as unit_name'
-                     )
-                     ->orderBy('stock_date', 'desc')
-                     ->sum('amount');
-          
-        foreach ($item_ledger as $key => $value) {
-            if(count($stock_id)==0){
-                $stock += $value['amount'];
-                continue;
-            } 
-            $exists = 0;
-            $exists = $stock_id->contains(function ($row)use ($value) {
-                if ($row==$value['item_id']) {
-                    return 1;
-                }              
-            });
-            if ($exists==0) {
-                $stock += $value['amount'];
+                
+            $sub = DB::table('item_averages')
+                                    ->select(DB::raw('MAX(id) as latest_id'))
+                                    ->where('stock_date', '<=', $date)
+                                    ->where('series_no',$s->series)
+                                    ->where('company_id', Session::get('user_company_id'))
+                                    ->groupBy('item_id')
+                                    ->pluck('latest_id'); 
+            $stock_id = ItemAverage::whereIn('item_averages.id', $sub)
+                                    ->where('series_no',$s->series)
+                                    ->select('item_id')
+                                    ->orderBy('stock_date', 'desc')
+                                    ->pluck('item_id'); 
+            $stock = ItemAverage::whereIn('item_averages.id', $sub)
+                                    ->where('series_no',$s->series)
+                                    ->select(
+                                        'item_averages.item_id',
+                                        'item_averages.average_weight',
+                                        'item_averages.amount',
+                                        'item_averages.stock_date',
+                                        'manage_items.name as item_name',
+                                        'units.name as unit_name'
+                                    )
+                                    ->orderBy('stock_date', 'desc')
+                                    ->sum('amount');
+            $final_stock_value = $final_stock_value + $stock;
+            foreach ($item_ledger as $key => $value) {
+                if(count($stock_id)==0){
+                    $stock += $value['amount']; 
+                   
+                    $final_stock_value = $final_stock_value + $value['amount'];                  
+                    continue;
+                }
+                $exists = 0;
+                $exists = $stock_id->contains(function ($row)use ($value) {
+                    if ($row==$value['item_id']) {
+                        return 1;
+                    }              
+                });
+                if ($exists==0) {
+                    $stock += $value['amount'];
+                    $final_stock_value = $final_stock_value + $value['amount'];
+                }                
             }
-        }     
-        //print_r($stock);die;          
-        return $stock;
+        }  
+        
+        return $final_stock_value;
          
     }
     public static function RewriteItemAverageByItem($date,$item,$series=null)
