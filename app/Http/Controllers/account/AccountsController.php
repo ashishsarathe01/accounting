@@ -12,6 +12,7 @@ use App\Models\AccountGroups;
 use App\Models\AccountLedger;
 use App\Models\AccountHeading;
 use App\Models\Bank;
+use App\Models\AccountOtherAddress;
 use Session;
 use DB;
 
@@ -84,6 +85,7 @@ class AccountsController extends Controller{
       if($validator->fails()) {
          return response()->json($validator->errors(), 422);
       }
+      
       $com_id = Session::get('user_company_id');
       $check = Accounts::select('id')
                         ->where('account_name',$request->input('account_name'))
@@ -166,6 +168,26 @@ class AccountsController extends Controller{
             );
             return json_encode($res);
          }
+         //Other Address
+          
+         if(!empty($request->input('other_address'))  && !empty($request->input('other_pincode'))){
+            $other_address = $request->input('other_address');
+            $other_pincode = $request->input('other_pincode');
+            if(count($other_address)>0 && count($other_pincode)>0){
+               foreach($other_address as $key => $val){
+                  if(!empty($val) && !empty($other_pincode[$key])){
+                     DB::table('account_other_address')->insert([
+                        'account_id' => $account->id,
+                        'address' => $val,
+                        'pincode' => $other_pincode[$key],
+                        'created_at' => Carbon::now(),
+                        'company_id' => Session::get('user_company_id'),
+                     ]);
+                  }
+               }
+            }            
+         }
+         
          return redirect('account')->withSuccess('Account added successfully!');
       }else{
          return $this->failedMessage('Something went wrong, please try again after some time.');
@@ -182,8 +204,13 @@ class AccountsController extends Controller{
                      ->whereIn('company_id', [$com_id,0])
                      ->orderBy('name')
                      ->get();
-      $state_list = State::all();      
-      return view('account/add_account')->with('state_list', $state_list)->with('accountheading', $accountheading)->with('accountgroup', $accountgroup)->with('account', $account)->with('id', $id);
+      $state_list = State::all();  
+      $other_address = AccountOtherAddress::where('account_id',$id)
+         ->where('status','1')
+         ->where('company_id',Session::get('user_company_id'))
+         ->get();    
+      
+      return view('account/add_account')->with('state_list', $state_list)->with('accountheading', $accountheading)->with('accountgroup', $accountgroup)->with('account', $account)->with('id', $id)->with('other_address', $other_address);
    }
    /**
      * Update the specified resource in storage.
@@ -296,6 +323,27 @@ class AccountsController extends Controller{
             Bank::where('id',$account->bank_map_id)->delete();
          }
       }
+      //Other Address
+      AccountOtherAddress::where('account_id',$request->account_id)
+      ->where('company_id',Session::get('user_company_id'))
+      ->update(['status'=>'0','updated_at'=>Carbon::now()]); 
+      if(!empty($request->input('other_address'))  && !empty($request->input('other_pincode'))){
+         $other_address = $request->input('other_address');
+         $other_pincode = $request->input('other_pincode');
+         if(count($other_address)>0 && count($other_pincode)>0){
+            foreach($other_address as $key => $val){
+               if(!empty($val) && !empty($other_pincode[$key])){
+                  DB::table('account_other_addresses')->insert([
+                     'account_id' => $account->id,
+                     'address' => $val,
+                     'pincode' => $other_pincode[$key],
+                     'created_at' => Carbon::now(),
+                     'company_id' => Session::get('user_company_id'),
+                  ]);
+               }
+            }
+         }            
+      }
       if($incomplete_status==1){
          return redirect('account?filter=InComplete')->withSuccess('Account updated successfully!');
       }else{
@@ -315,6 +363,9 @@ class AccountsController extends Controller{
       $account->deleted_at = Carbon::now();
       $account->update();
       if($account) {
+         AccountOtherAddress::where('account_id',$id)
+         ->where('company_id',Session::get('user_company_id'))
+         ->update(['status'=>'0','updated_at'=>Carbon::now()]); 
          if(!empty($account->bank_map_id)){
             Bank::where('id',$account->bank_map_id)->update(['delete'=>'1','deleted_at'=>Carbon::now()]);
          }

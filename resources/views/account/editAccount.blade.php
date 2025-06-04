@@ -3,7 +3,7 @@
 <!-- header-section -->
 @include('layouts.header')
 <!-- list-view-company-section -->
-<div class="list-of-view-company ">
+<div class="list-of-view-company">
    <section class="list-of-view-company-section container-fluid">
       <div class="row vh-100">
          @include('layouts.leftnav')

@@ -26,6 +26,7 @@ use App\Models\SaleInvoiceTermCondition;
 use App\Models\EinvoiceToken;
 use App\Models\ItemAverage;
 use App\Models\ItemAverageDetail;
+use App\Models\AccountOtherAddress;
 use App\Helpers\CommonHelper;
 use Illuminate\Support\Facades\URL;
 use DB;
@@ -164,9 +165,7 @@ class SalesController extends Controller
                         ->where('financial_year','=',$financial_year)
                         ->where('series_no','=',$value->series)
                         ->where('delete','=','0')
-                        ->max("date");
-                                      
-         
+                        ->max("date");         
                         if(!$voucher_no){
                            if($series_configuration && $series_configuration->manual_numbering=="NO" && $series_configuration->invoice_start!=""){
                               $GstSettings[$key]->invoice_start_from =  sprintf("%'03d",$series_configuration->invoice_start);
@@ -269,14 +268,16 @@ class SalesController extends Controller
                         ->pluck('id');
       $groups->push(3);
       $groups->push(11);
-      $party_list = Accounts::leftjoin('states','accounts.state','=','states.id')
+      $party_list = Accounts::with('otherAddress')
+                              ->leftjoin('states','accounts.state','=','states.id')
                               ->where('delete', '=', '0')
                               ->where('status', '=', '1')
                               ->whereIn('company_id', [Session::get('user_company_id'),0])
                               ->whereIn('under_group',$groups)
                               ->select('accounts.id','accounts.gstin','accounts.address','accounts.pin_code','accounts.account_name','states.state_code')
                               ->orderBy('account_name')
-                              ->get();    
+                              ->get(); 
+                                 
       //Item List
       $item = DB::table('manage_items')->join('units', 'manage_items.u_name', '=', 'units.id')
             ->join('item_groups', 'item_groups.id', '=', 'manage_items.g_name')
@@ -293,8 +294,8 @@ class SalesController extends Controller
 
          $available_item = $item_in_weight-$item_out_weight;
          $item[$key]->available_item = $available_item;
-        
-      } 
+      }
+      
       return view('addSale')->with('party_list', $party_list)->with('billsundry', $billsundry)->with('bill_date', $bill_date)->with('GstSettings', $GstSettings)->with('item', $item);
    }   
    public function store(Request $request){
@@ -352,7 +353,15 @@ class SalesController extends Controller
          }
       }else{
          $voucher_no = $request->input('voucher_no');
-      }      
+      }
+
+      $billing_address = $account->address;
+      $billing_pincode = $account->pin_code;
+      if($request->input('address') && !empty($request->input('address'))){
+         $add = AccountOtherAddress::find($request->input('address'));
+         $billing_address = $add->address.",".$add->pincode;
+         $billing_pincode = $add->pincode;            
+      } 
       $sale = new Sales;
       $sale->series_no = $request->input('series_no');
       $sale->company_id = Session::get('user_company_id');
@@ -362,6 +371,7 @@ class SalesController extends Controller
       $sale->voucher_no = $voucher_no;
       $sale->party = $request->input('party_id');
       $sale->material_center = $request->input('material_center');
+      $sale->address_id = $request->input('address');
       $sale->taxable_amt = $request->input('taxable_amt');
       $sale->total = $request->input('total');
       $sale->self_vehicle = $request->input('self_vehicle');
@@ -373,8 +383,8 @@ class SalesController extends Controller
       $sale->station = $request->input('station');
       $sale->ewaybill_no = $request->input('ewaybill_no');
       $sale->billing_name = $account->print_name;
-      $sale->billing_address = $account->address;
-      $sale->billing_pincode = $account->pin_code;
+      $sale->billing_address = $billing_address;
+      $sale->billing_pincode = $billing_pincode;
       $sale->billing_gst = $account->gstin;
       $sale->billing_pan = $account->pan;
       $sale->billing_state = $account->state;
@@ -679,7 +689,7 @@ class SalesController extends Controller
                      ->pluck('id');
                      $groups->push(3);
                      $groups->push(11);
-      $party_list = Accounts::select('accounts.*','states.state_code')
+      $party_list = Accounts::with(['otherAddress'])->select('accounts.*','states.state_code')
                               ->leftjoin('states','accounts.state','=','states.id')
                               ->where('accounts.delete', '=', '0')
                               ->where('accounts.status', '=', '1')
@@ -982,198 +992,201 @@ class SalesController extends Controller
       // print_r($request->all());die;
       $account = Accounts::where('id',$request->input('party'))->first();
       $financial_year = Session::get('default_fy');      
-      $sale = Sales::find($request->input('sale_edit_id'));
-      if($sale->series_no!=$request->input('series_no')){
-         
-      }else{
-         //If Same Series Edit
-         $sale->series_no = $request->input('series_no');
-         $sale->date = $request->input('date');
-         $voucher_prefix = "";
-         if(!empty($request->input('voucher_prefix'))){
-            $voucher_prefix_arr = explode("/",$request->input('voucher_prefix'));
-            if(count($voucher_prefix_arr)>1){
-               $voucher_prefix = $voucher_prefix_arr[0]."/".$voucher_prefix_arr[1]."/";
-            }else if(count($voucher_prefix_arr)==1){
-               $voucher_prefix = "";
-            }
-         }
-         //$sale->voucher_no_prefix = $voucher_prefix;
-         //$sale->voucher_no = $request->input('voucher_no');
-         $sale->party = $request->input('party');
-         $sale->material_center = $request->input('material_center');
-         $sale->taxable_amt = $request->input('taxable_amt');
-         $sale->total = $request->input('total');
-         $sale->self_vehicle = $request->input('self_vehicle');
-         $sale->vehicle_no = $request->input('vehicle_no');
-         $sale->ewaybill_no = $request->input('ewaybill_no');
-         $sale->transport_name = $request->input('transport_name');
-         $sale->reverse_charge = $request->input('reverse_charge');
-         $sale->gr_pr_no = $request->input('gr_pr_no');
-         $sale->station = $request->input('station');
-         $sale->billing_name = $account->print_name;
-         $sale->billing_address = $account->address;
-         $sale->billing_pincode = $account->pin_code;
-         $sale->billing_gst = $account->gstin;
-         $sale->billing_pan = $account->pan;
-         $sale->billing_state = $account->state;
-         $sale->shipping_name = $request->input('shipping_name');
-         $sale->shipping_state = $request->input('shipping_state');
-         $sale->shipping_address = $request->input('shipping_address');
-         $sale->shipping_pincode = $request->input('shipping_pincode');
-         $sale->shipping_gst = $request->input('shipping_gst');
-         $sale->shipping_pan = $request->input('shipping_pan');
-         $sale->financial_year = $financial_year;
-         $sale->save();
-         if($sale->id){
-            $goods_discriptions = $request->input('goods_discription');
-            $qtys = $request->input('qty');
-            $units = $request->input('units');
-            $prices = $request->input('price');
-            $amounts = $request->input('amount');
-            $desc_item_arr = SaleDescription::where('sale_id',$sale->id)->pluck('goods_discription')->toArray();
-            SaleDescription::where('sale_id',$request->input('sale_edit_id'))->delete();
-            ItemLedger::where('source_id',$request->input('sale_edit_id'))->where('source',1)->delete();
-            ItemAverageDetail::where('sale_id',$sale->id)
-                           ->where('type','SALE')
-                           ->delete(); 
-            foreach($goods_discriptions as $key => $good){
-               if($good=="" || $qtys[$key]=="" || $units[$key]=="" || $prices[$key]=="" || $amounts[$key]==""){
-                  continue;
-               }
-               $desc = new SaleDescription;
-               $desc->sale_id = $sale->id;
-               $desc->goods_discription = $good;
-               $desc->qty = $qtys[$key];
-               $desc->unit = $units[$key];
-               $desc->price = $prices[$key];
-               $desc->amount = $amounts[$key];
-               $desc->status = '1';
-               $desc->save();
-               //ADD ITEM LEDGER
-               $item_ledger = new ItemLedger();
-               $item_ledger->item_id = $good;
-               $item_ledger->out_weight = $qtys[$key];
-               $item_ledger->series_no = $request->input('series_no');
-               $item_ledger->txn_date = $request->input('date');
-               $item_ledger->price = $prices[$key];
-               $item_ledger->total_price = $amounts[$key];
-               $item_ledger->company_id = Session::get('user_company_id');
-               $item_ledger->source = 1;
-               $item_ledger->source_id = $sale->id;
-               $item_ledger->created_by = Session::get('user_id');
-               $item_ledger->created_at = date('d-m-Y H:i:s');
-               $item_ledger->save();
-            }
-            $bill_sundrys = $request->input('bill_sundry');
-            $tax_amts = $request->input('tax_rate');
-            $bill_sundry_amounts = $request->input('bill_sundry_amount');
-            SaleSundry::where('sale_id',$sale->id)->delete();
-            AccountLedger::where('entry_type_id',$sale->id)->where('entry_type',1)->delete();
-            foreach($bill_sundrys as $key => $bill){
-               if($bill_sundry_amounts[$key]=="" || $bill==""){
-                  continue;
-               }
-               $sundry = new SaleSundry;
-               $sundry->sale_id = $sale->id;
-               $sundry->bill_sundry = $bill;
-               $sundry->rate = $tax_amts[$key];
-               $sundry->amount = $bill_sundry_amounts[$key];
-               $sundry->status = '1';
-               $sundry->save();
-               //ADD DATA IN CGST ACCOUNT
-               $billsundry = BillSundrys::where('id', $bill)->first();
-               if($billsundry->adjust_sale_amt=='No'){
-                  $ledger = new AccountLedger();
-                  $ledger->account_id = $billsundry->sale_amt_account;
-                  if($billsundry->bill_sundry_type=='subtractive'){
-                  $ledger->debit = $bill_sundry_amounts[$key];
-               }else{
-                  $ledger->credit = $bill_sundry_amounts[$key];
-               }   
-                  $ledger->txn_date = $request->input('date');
-                  $ledger->company_id = Session::get('user_company_id');
-                  $ledger->financial_year = Session::get('default_fy');
-                  $ledger->entry_type = 1;
-                  $ledger->entry_type_id = $sale->id;
-                  $ledger->map_account_id = $request->input('party');
-                  $ledger->created_by = Session::get('user_id');
-                  $ledger->created_at = date('d-m-Y H:i:s');
-                  $ledger->save();
-                  
-               }
-            }
-            //Average Calculation
-            $goods_discriptions = $request->input('goods_discription');
-            $qtys = $request->input('qty');
-            $sale_item_array = [];
-            foreach($goods_discriptions as $key => $good){
-               if($good=="" || $qtys[$key]==""){
-                  continue;
-               }
-               if(array_key_exists($good,$sale_item_array)){
-                  $sale_item_array[$good] = $sale_item_array[$good] + $qtys[$key];
-               }else{
-                  $sale_item_array[$good] = $qtys[$key];
-               }     
-            }
-            foreach ($sale_item_array as $key => $value) {
-               //Add Data In Average Details table
-               $average_detail = new ItemAverageDetail;
-               $average_detail->entry_date = $request->date;
-               $average_detail->series_no = $request->input('series_no');
-               $average_detail->item_id = $key;
-               $average_detail->type = 'SALE';
-               $average_detail->sale_id = $sale->id;
-               $average_detail->sale_weight = $value;
-               $average_detail->company_id = Session::get('user_company_id');
-               $average_detail->created_at = Carbon::now();
-               $average_detail->save();
-               CommonHelper::RewriteItemAverageByItem($request->date,$key,$request->input('series_no'));               
-            }
-            foreach ($desc_item_arr as $key => $value) {
-               if(!array_key_exists($value, $sale_item_array)){
-                  CommonHelper::RewriteItemAverageByItem($request->date,$value,$request->input('series_no'));
-               }
-            }
-            //ADD DATA IN Customer ACCOUNT
-            $ledger = new AccountLedger();
-            $ledger->account_id = $request->input('party');
-            $ledger->debit = $request->input('total');
-            $ledger->txn_date = $request->input('date');
-            $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
-            $ledger->entry_type = 1;
-            $ledger->entry_type_id = $sale->id;
-            $ledger->map_account_id = 35;//Sales Account
-            $ledger->created_by = Session::get('user_id');
-            $ledger->created_at = date('d-m-Y H:i:s');
-            $ledger->save();
-            //ADD DATA IN Sale ACCOUNT
-            $ledger = new AccountLedger();
-            $ledger->account_id = 35;//Sales Account
-            $ledger->credit = $request->input('taxable_amt');
-            $ledger->txn_date = $request->input('date');
-            $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
-            $ledger->entry_type = 1;
-            $ledger->entry_type_id = $sale->id;
-            $ledger->map_account_id = $request->input('party');
-            $ledger->created_by = Session::get('user_id');
-            $ledger->created_at = date('d-m-Y H:i:s');
-            $ledger->save();     
-            if(!empty(Session::get('redirect_url'))){
-               return redirect(Session::get('redirect_url'));
-            }else{
-               session(['previous_url_saleEdit' => URL::previous()]);
-               return redirect('sale-invoice/'.$sale->id)->withSuccess('Sale voucher updated successfully!');
-            }
-            
-         }else{
-            return $this->failedMessage('Something went wrong','sale/create');
-            exit();
+      $sale = Sales::find($request->input('sale_edit_id'));      
+      //If Same Series Edit
+      $sale->series_no = $request->input('series_no');
+      $sale->date = $request->input('date');
+      $voucher_prefix = "";
+      if(!empty($request->input('voucher_prefix'))){
+         $voucher_prefix_arr = explode("/",$request->input('voucher_prefix'));
+         if(count($voucher_prefix_arr)>1){
+            $voucher_prefix = $voucher_prefix_arr[0]."/".$voucher_prefix_arr[1]."/";
+         }else if(count($voucher_prefix_arr)==1){
+            $voucher_prefix = "";
          }
       }
+      $billing_address = $account->address;
+      $billing_pincode = $account->pin_code;
+      if($request->input('address') && !empty($request->input('address'))){
+         $add = AccountOtherAddress::find($request->input('address'));
+         $billing_address = $add->address.",".$add->pincode;
+         $billing_pincode = $add->pincode;            
+      } 
+      $sale->party = $request->input('party');
+      $sale->material_center = $request->input('material_center');
+      $sale->taxable_amt = $request->input('taxable_amt');
+      $sale->total = $request->input('total');
+      $sale->self_vehicle = $request->input('self_vehicle');
+      $sale->vehicle_no = $request->input('vehicle_no');
+      $sale->address_id = $request->input('address');
+      $sale->ewaybill_no = $request->input('ewaybill_no');
+      $sale->transport_name = $request->input('transport_name');
+      $sale->reverse_charge = $request->input('reverse_charge');
+      $sale->gr_pr_no = $request->input('gr_pr_no');
+      $sale->station = $request->input('station');
+      $sale->billing_name = $account->print_name;
+      $sale->billing_address = $billing_address;
+      $sale->billing_pincode = $billing_pincode;
+      $sale->billing_gst = $account->gstin;
+      $sale->billing_pan = $account->pan;
+      $sale->billing_state = $account->state;
+      $sale->shipping_name = $request->input('shipping_name');
+      $sale->shipping_state = $request->input('shipping_state');
+      $sale->shipping_address = $request->input('shipping_address');
+      $sale->shipping_pincode = $request->input('shipping_pincode');
+      $sale->shipping_gst = $request->input('shipping_gst');
+      $sale->shipping_pan = $request->input('shipping_pan');
+      $sale->financial_year = $financial_year;
+      $sale->save();
+      if($sale->id){
+         $goods_discriptions = $request->input('goods_discription');
+         $qtys = $request->input('qty');
+         $units = $request->input('units');
+         $prices = $request->input('price');
+         $amounts = $request->input('amount');
+         $desc_item_arr = SaleDescription::where('sale_id',$sale->id)->pluck('goods_discription')->toArray();
+         SaleDescription::where('sale_id',$request->input('sale_edit_id'))->delete();
+         ItemLedger::where('source_id',$request->input('sale_edit_id'))->where('source',1)->delete();
+         ItemAverageDetail::where('sale_id',$sale->id)
+                        ->where('type','SALE')
+                        ->delete(); 
+         foreach($goods_discriptions as $key => $good){
+            if($good=="" || $qtys[$key]=="" || $units[$key]=="" || $prices[$key]=="" || $amounts[$key]==""){
+               continue;
+            }
+            $desc = new SaleDescription;
+            $desc->sale_id = $sale->id;
+            $desc->goods_discription = $good;
+            $desc->qty = $qtys[$key];
+            $desc->unit = $units[$key];
+            $desc->price = $prices[$key];
+            $desc->amount = $amounts[$key];
+            $desc->status = '1';
+            $desc->save();
+            //ADD ITEM LEDGER
+            $item_ledger = new ItemLedger();
+            $item_ledger->item_id = $good;
+            $item_ledger->out_weight = $qtys[$key];
+            $item_ledger->series_no = $request->input('series_no');
+            $item_ledger->txn_date = $request->input('date');
+            $item_ledger->price = $prices[$key];
+            $item_ledger->total_price = $amounts[$key];
+            $item_ledger->company_id = Session::get('user_company_id');
+            $item_ledger->source = 1;
+            $item_ledger->source_id = $sale->id;
+            $item_ledger->created_by = Session::get('user_id');
+            $item_ledger->created_at = date('d-m-Y H:i:s');
+            $item_ledger->save();
+         }
+         $bill_sundrys = $request->input('bill_sundry');
+         $tax_amts = $request->input('tax_rate');
+         $bill_sundry_amounts = $request->input('bill_sundry_amount');
+         SaleSundry::where('sale_id',$sale->id)->delete();
+         AccountLedger::where('entry_type_id',$sale->id)->where('entry_type',1)->delete();
+         foreach($bill_sundrys as $key => $bill){
+            if($bill_sundry_amounts[$key]=="" || $bill==""){
+               continue;
+            }
+            $sundry = new SaleSundry;
+            $sundry->sale_id = $sale->id;
+            $sundry->bill_sundry = $bill;
+            $sundry->rate = $tax_amts[$key];
+            $sundry->amount = $bill_sundry_amounts[$key];
+            $sundry->status = '1';
+            $sundry->save();
+            //ADD DATA IN CGST ACCOUNT
+            $billsundry = BillSundrys::where('id', $bill)->first();
+            if($billsundry->adjust_sale_amt=='No'){
+               $ledger = new AccountLedger();
+               $ledger->account_id = $billsundry->sale_amt_account;
+               if($billsundry->bill_sundry_type=='subtractive'){
+               $ledger->debit = $bill_sundry_amounts[$key];
+            }else{
+               $ledger->credit = $bill_sundry_amounts[$key];
+            }   
+               $ledger->txn_date = $request->input('date');
+               $ledger->company_id = Session::get('user_company_id');
+               $ledger->financial_year = Session::get('default_fy');
+               $ledger->entry_type = 1;
+               $ledger->entry_type_id = $sale->id;
+               $ledger->map_account_id = $request->input('party');
+               $ledger->created_by = Session::get('user_id');
+               $ledger->created_at = date('d-m-Y H:i:s');
+               $ledger->save();
+               
+            }
+         }
+         //Average Calculation
+         $goods_discriptions = $request->input('goods_discription');
+         $qtys = $request->input('qty');
+         $sale_item_array = [];
+         foreach($goods_discriptions as $key => $good){
+            if($good=="" || $qtys[$key]==""){
+               continue;
+            }
+            if(array_key_exists($good,$sale_item_array)){
+               $sale_item_array[$good] = $sale_item_array[$good] + $qtys[$key];
+            }else{
+               $sale_item_array[$good] = $qtys[$key];
+            }     
+         }
+         foreach ($sale_item_array as $key => $value) {
+            //Add Data In Average Details table
+            $average_detail = new ItemAverageDetail;
+            $average_detail->entry_date = $request->date;
+            $average_detail->series_no = $request->input('series_no');
+            $average_detail->item_id = $key;
+            $average_detail->type = 'SALE';
+            $average_detail->sale_id = $sale->id;
+            $average_detail->sale_weight = $value;
+            $average_detail->company_id = Session::get('user_company_id');
+            $average_detail->created_at = Carbon::now();
+            $average_detail->save();
+            CommonHelper::RewriteItemAverageByItem($request->date,$key,$request->input('series_no'));               
+         }
+         foreach ($desc_item_arr as $key => $value) {
+            if(!array_key_exists($value, $sale_item_array)){
+               CommonHelper::RewriteItemAverageByItem($request->date,$value,$request->input('series_no'));
+            }
+         }
+         //ADD DATA IN Customer ACCOUNT
+         $ledger = new AccountLedger();
+         $ledger->account_id = $request->input('party');
+         $ledger->debit = $request->input('total');
+         $ledger->txn_date = $request->input('date');
+         $ledger->company_id = Session::get('user_company_id');
+         $ledger->financial_year = Session::get('default_fy');
+         $ledger->entry_type = 1;
+         $ledger->entry_type_id = $sale->id;
+         $ledger->map_account_id = 35;//Sales Account
+         $ledger->created_by = Session::get('user_id');
+         $ledger->created_at = date('d-m-Y H:i:s');
+         $ledger->save();
+         //ADD DATA IN Sale ACCOUNT
+         $ledger = new AccountLedger();
+         $ledger->account_id = 35;//Sales Account
+         $ledger->credit = $request->input('taxable_amt');
+         $ledger->txn_date = $request->input('date');
+         $ledger->company_id = Session::get('user_company_id');
+         $ledger->financial_year = Session::get('default_fy');
+         $ledger->entry_type = 1;
+         $ledger->entry_type_id = $sale->id;
+         $ledger->map_account_id = $request->input('party');
+         $ledger->created_by = Session::get('user_id');
+         $ledger->created_at = date('d-m-Y H:i:s');
+         $ledger->save();     
+         if(!empty(Session::get('redirect_url'))){
+            return redirect(Session::get('redirect_url'));
+         }else{
+            session(['previous_url_saleEdit' => URL::previous()]);
+            return redirect('sale-invoice/'.$sale->id)->withSuccess('Sale voucher updated successfully!');
+         }
+         
+      }else{
+         return $this->failedMessage('Something went wrong','sale/create');
+         exit();
+      }
+      
    }
    public function saleImportView(Request $request){      
       return view('sale_import')->with('upload_log',0)->with('total_count',5)->with('success_count',3)->with('failed_count',2)->with('error_message',array(0 => array(0=>'Voucher A41 already exists - Invoice No. A41'),1 => array(0=>'Voucher A42 already exists - Invoice No. A42')));
@@ -1893,7 +1906,7 @@ class SalesController extends Controller
          $shipp_pincode = $sale->shipping_pincode;        
       }else{
          $shipp_name = $sale->print_name;
-         $shipp_address = $sale->address;
+         $shipp_address = $sale->billing_address;
          $shipp_gst = $sale->billing_gst;
          $shipp_state = $sale->name;
          $shipp_pincode = $sale->billing_pincode;
@@ -1955,7 +1968,7 @@ class SalesController extends Controller
          "LglNm"=>$sale->print_name,
          "TrdNm"=>$sale->print_name,
          "Pos"=>substr($sale->billing_gst,0,2),
-         "Addr1"=>$sale->address,
+         "Addr1"=>$sale->billing_address,
          "Addr2"=>null,
          "Loc"=>$sale->name,
          "Pin"=>(int)$sale->billing_pincode,

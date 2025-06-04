@@ -118,13 +118,21 @@ foreach($manageitems as $value) {
                         <option value="">Select</option>
                         <?php
                         foreach ($party_list as $value) { ?>
-                           <option value="<?php echo $value->id; ?>" data-gstin="<?php echo $value->gstin; ?>" data-address="<?php echo $value->address.",".$value->pin_code; ?>" data-state_code="<?php echo $value->state_code; ?>" <?php if($value->id==$sale->party){ echo "selected";}?>><?php echo $value->account_name; ?></option>
+                           <option value="<?php echo $value->id; ?>" data-gstin="<?php echo $value->gstin; ?>" data-address="<?php echo $value->address.",".$value->pin_code; ?>" data-state_code="<?php echo $value->state_code; ?>" data-other_address='<?php echo $value->otherAddress; ?>' <?php if($value->id==$sale->party){ echo "selected";}?>><?php echo $value->account_name; ?></option>
                            <?php 
                         } ?>
                      </select>
                      <p id="partyaddress" style="font-size: 9px;"></p>
                      <ul style="color: red;">
                        @error('party'){{$message}}@enderror                        
+                     </ul>
+                  </div>
+                  <div class="mb-4 col-md-5 address_div" style="display: none;">
+                     <label for="name" class="form-label font-14 font-heading">Address</label><br>
+                     <select class="form-select" name="address" id="address">
+                     </select>
+                     <ul style="color: red;">
+                       @error('address'){{$message}}@enderror                        
                      </ul>
                   </div>
                   <div class="mb-4 col-md-4">
@@ -384,13 +392,40 @@ foreach($manageitems as $value) {
                               <tr id="billtr_cgst" class="font-14 font-heading bg-white bill_taxes_row sundry_tr" <?php if(!isset($return['CGST'])){?> style="display:none" <?php } ?> >
                                  <td class="w-min-50">
                                     <select id="bill_sundry_cgst" class="w-95-parsent  bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="cgst">
-                                       <?php
-                                       foreach ($billsundry as $value) { 
-                                          if($value->nature_of_sundry=='CGST'){?>
-                                          <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_cgst" id="sundry_option_cgst" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name;?></option>
-                                             <?php 
-                                          }
-                                       } ?>
+                                        <?php
+   $cgst_found = false;
+
+   foreach ($billsundry as $value) { 
+      if ($value->nature_of_sundry == 'CGST') {
+         $cgst_found = true;
+         ?>
+         <option value="<?php echo $value->id;?>" 
+                 data-type="<?php echo $value->bill_sundry_type;?>"
+                 data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>"
+                 data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>"
+                 data-sequence="<?php echo $value->sequence;?>"
+                 class="sundry_option_cgst" 
+                 id="sundry_option_cgst"
+                 data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>">
+            <?php echo $value->name; ?>
+         </option>
+         <?php
+         break;
+      }
+   }
+
+   if (!$cgst_found) {
+      ?>
+      <option value="" 
+              data-type="" 
+              data-adjust_sale_amt="" 
+              data-effect_gst_calculation="" 
+              data-sequence="" 
+              class="sundry_option_cgst" 
+              id="sundry_option_cgst" 
+              data-nature_of_sundry="">
+      </option>
+   <?php } ?>
                                     </select>
                                  </td>
                                  <td class="w-min-50 ">
@@ -403,14 +438,40 @@ foreach($manageitems as $value) {
                               <tr id="billtr_sgst" class="font-14 font-heading bg-white bill_taxes_row sundry_tr" <?php if(!isset($return['SGST'])){?> style="display:none" <?php } ?>>
                                  <td class="w-min-50">
                                     <select id="bill_sundry_sgst" class="w-95-parsent  bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="sgst">
-                                       <?php
-                                       foreach ($billsundry as $value) { 
-                                          if($value->nature_of_sundry=='SGST'){
-                                          ?>
-                                          <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_sgst" id="sundry_option_sgst" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
-                                          <?php 
-                                          }
-                                       } ?>
+                                      <?php
+   $sgst_found = false; // Flag to track SGST
+
+   foreach($billsundry as $value){ 
+      if($value->nature_of_sundry == 'SGST'){
+         $sgst_found = true;
+         ?>
+         <option value="<?php echo $value->id;?>" 
+                 data-type="<?php echo $value->bill_sundry_type;?>"
+                 data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>"
+                 data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>"
+                 data-sequence="<?php echo $value->sequence;?>"
+                 class="sundry_option_sgst" 
+                 id="sundry_option_sgst"
+                 data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>">
+            <?php echo $value->name; ?>
+         </option>
+         <?php 
+         break; // SGST mila to loop yahin break
+      }
+   }
+
+   // SGST nahi mila to default empty option
+   if (!$sgst_found) { ?>
+      <option value="" 
+              data-type="" 
+              data-adjust_sale_amt="" 
+              data-effect_gst_calculation="" 
+              data-sequence="" 
+              class="sundry_option_sgst" 
+              id="sundry_option_sgst" 
+              data-nature_of_sundry="">
+      </option>
+   <?php } ?>
                                     </select>
                                  </td>
                                  <td class="w-min-50 ">
@@ -425,13 +486,41 @@ foreach($manageitems as $value) {
                               <tr id="billtr_igst" class="font-14 font-heading bg-white bill_taxes_row sundry_tr" <?php if(!isset($return['IGST'])){?> style="display:none" <?php } ?>>
                                  <td class="w-min-50">
                                     <select id="bill_sundry_igst" class="w-95-parsent  bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="igst">
-                                       <?php
-                                       foreach ($billsundry as $value) { 
-                                          if($value->nature_of_sundry=='IGST'){?>
-                                             <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-sequence="<?php echo $value->sequence;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" class="sundry_option_igst" id="sundry_option_igst" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
-                                             <?php 
-                                          }
-                                       } ?>
+                                        <?php
+   $igst_found = false; // Track whether IGST found or not
+
+   foreach ($billsundry as $value) { 
+      if ($value->nature_of_sundry == 'IGST') {
+         $igst_found = true;
+         ?>
+         <option value="<?php echo $value->id;?>" 
+                 data-type="<?php echo $value->bill_sundry_type;?>"
+                 data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>"
+                 data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>"
+                 data-sequence="<?php echo $value->sequence;?>"
+                 class="sundry_option_igst" 
+                 id="sundry_option_igst"
+                 data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>">
+            <?php echo $value->name; ?>
+         </option>
+         <?php
+         break; // Stop loop after first IGST found
+      }
+   }
+
+   // If no IGST was found, print default option (like your else)
+   if (!$igst_found) {
+      ?>
+      <option value="" 
+              data-type="" 
+              data-adjust_sale_amt="" 
+              data-effect_gst_calculation="" 
+              data-sequence="" 
+              class="sundry_option_igst" 
+              id="sundry_option_igst" 
+              data-nature_of_sundry="">
+      </option>
+   <?php } ?>
                                     </select>
                                  </td>
                                  <td class="w-min-50 ">
@@ -759,7 +848,7 @@ foreach($manageitems as $value) {
    var percent_arr = [];
    var add_more_count = '<?php echo --$i;?>';
    var add_more_bill_sundry_up_count = '<?php echo --$index;?>';
-   
+   var address_id = "{{$sale->address_id}}";
    var page_load = 0;
    function addMoreItem() {
 
@@ -1103,7 +1192,7 @@ foreach($manageitems as $value) {
             taxSundryArray[id] = $("#bill_sundry_amount_"+id).val();
          }
       });    
-      console.log(billSundryArray)     
+          
       var result = [];         
       percent_arr.reduce(function(res, value){
          if (!res[value.percent]) {
@@ -1591,7 +1680,38 @@ foreach($manageitems as $value) {
       }
       $("#party-error").hide()
       $("#partyaddress").html("GSTIN : "+$('option:selected', this).attr('data-gstin')+"<br>Address : "+$('option:selected', this).attr('data-address'));
+      let other_address = JSON.parse($('option:selected', this).attr('data-other_address'));
+      $(".address_div").hide();
+      $("#address").html('');
+      if(other_address!=null && other_address.length>0){
+         address_html = "<option value=''>Select Other Address</option>";
+         let selecte_status = 0;
+         other_address.forEach(function(e){
+            let selected = "";
+            if(address_id==e.id){
+               selected = "selected";
+               selecte_status = 1;
+               $("#partyaddress").html("GSTIN : "+$("#party  option:selected").attr('data-gstin')+"<br>Address : "+e.address+","+e.pincode);
+            }
+            address_html += "<option value='"+e.id+"' "+selected+" data-address='"+e.address+"' data-pincode='"+e.pincode+"'>"+e.address+" ("+e.pincode+")</option>";
+         });
+         if(address_id!="" && selecte_status==0){
+            address_html += "<option value='"+address_id+"' selected data-address='{{$sale->billing_address}}' data-pincode='{{$sale->billing_pincode}}'>{{$sale->billing_address}}</option>";
+            $("#partyaddress").html("GSTIN : "+$("#party  option:selected").attr('data-gstin')+"<br>Address : {{$sale->billing_address}}");
+         }
+         $("#address").html(address_html);
+         $(".address_div").show();
+      }
       calculateAmount();
+   });
+   $("#address").change(function(){
+      if($(this).val()!=""){
+         let address = $('option:selected', this).attr('data-address');
+         let pincode = $('option:selected', this).attr('data-pincode');
+         $("#partyaddress").html("GSTIN : "+$("#party  option:selected").attr('data-gstin')+"<br>Address : "+address+","+pincode);
+      }else{
+         $("#partyaddress").html("GSTIN : "+$("#party  option:selected").attr('data-gstin')+"<br>Address : "+$('option:selected', '#party').attr('data-address'));
+      }
    });
    $('body').on('keydown', 'input, select', function(e){
       if (e.key === "Enter") {

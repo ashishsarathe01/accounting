@@ -110,7 +110,7 @@
                   </div>
                   <div class="mb-4 col-md-4 state_div common_div" style="display: none;">
                      <label for="state" class="form-label font-14 font-heading">STATE</label>
-                     <select class="form-select form-select-lg common_val" id="state" name="state" aria-label="form-select-lg example">
+                     <select class="form-select form-select-lg common_val select2-single " id="state" name="state" aria-label="form-select-lg example">
                         <option value="">SELECT STATE</option>
                         @foreach($state_list as $value)
                            <option value="{{$value->id}}" data-state_code="{{$value->state_code}}" @if(isset($id) && $account->state==$value->id) selected  @endif>{{$value->state_code}}-{{$value->name}}</option>
@@ -120,19 +120,51 @@
                   <div class="clearfix"></div>
                   <div class="mb-4 col-md-8 address_div common_div" style="display: none;">
                      <label for="address" class="form-label font-14 font-heading">ADDRESS</label>
-                     <input type="text" class="form-control common_val" id="address" name="address" placeholder="ENTER ADDRESS" value="@if(isset($id)){{$account->address}}@endif"/>
-                     <input type="text" class="form-control common_val" id="address2" name="address2" placeholder="ENTER ADDRESS" value="@if(isset($id)){{$account->address2}}@endif"/>
-                     <input type="text" class="form-control common_val" id="address3" name="address3" placeholder="ENTER ADDRESS" value="@if(isset($id)){{$account->address3}}@endif"/>
+                     <textarea class="form-control common_val" 
+                          id="address" 
+                          name="address" 
+                          placeholder="ENTER ADDRESS" 
+                          maxlength="100" 
+                  rows="2">@if(isset($id)){{$account->address}}@endif</textarea>
+                 </div>
+                  <div class="mb-2 col-md-2 pincode_div common_div" style="display: none;">
+                     <label for="pincode" class="form-label font-14 font-heading">PINCODE</label>
+                     <input type="number" class="form-control common_val" id="pincode" name="pincode" placeholder="ENTER PINCODE" value="@if(isset($id)){{$account->pin_code}}@endif"/>
+                  </div>
+                  <div class="mb-2 col-md-2 pincode_div common_div" style="display: none;">
+                     <svg style="color: green;cursor: pointer;margin-top: 42px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"tabindex="0" class="bg-primary rounded-circle add_address" data-id="" viewBox="0 0 24 24">
+                        <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/>
+                      </svg>
+                  </div>
+                  <div class="clearfix"></div>
+                  <div class="address-wrapper">
+                     @if(isset($other_address) && count($other_address)>0)
+                        @foreach($other_address as $address)
+                           <div class="clearfix added-address row">
+                              <div class="mb-4 col-md-8 address_div common_div">
+                                 <label class="form-label font-14 font-heading">ADDRESS</label>
+                                 <textarea class="form-control common_val" name="other_address[]" placeholder="ENTER ADDRESS" maxlength="100" rows="2">{{$address->address}}</textarea> 
+                              </div>
+                              <div class="mb-2 col-md-2 pincode_div common_div">
+                                 <label class="form-label font-14 font-heading">PINCODE</label>
+                                 <input type="number" class="form-control common_val" name="other_pincode[]" placeholder="ENTER PINCODE" value="{{$address->pincode}}"/> 
+                              </div>
+                              <div class="mb-2 col-md-2 pincode_div common_div">
+                                 <svg style="color: red;cursor: pointer;margin-top: 42px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bg-danger rounded-circle remove_address" viewBox="0 0 24 24">
+                                    <path d="M19 13H5V11H19V13Z" fill="white"/>
+                                 </svg>
+                              </div>
+                           </div>
+                           @endforeach
+                           @endif
+
                   </div>
                   <div class="clearfix"></div>
                   <div class="mb-4 col-md-4 pan_div common_div" style="display: none;">
                      <label for="pan" class="form-label font-14 font-heading">PAN</label>
                      <input type="text" class="form-control common_val" id="pan" name="pan" placeholder="Enter PAN" value="@if(isset($id)){{$account->pan}}@endif"/>
                   </div>
-                  <div class="mb-4 col-md-4 pincode_div common_div" style="display: none;">
-                     <label for="pincode" class="form-label font-14 font-heading">PINCODE</label>
-                     <input type="number" class="form-control common_val" id="pincode" name="pincode" placeholder="ENTER PINCODE" value="@if(isset($id)){{$account->pin_code}}@endif"/>
-                  </div>
+                  
                   <div class="clearfix"></div>
                   <div class="mb-4 col-md-4 due_day_div common_div" style="display: none;">
                      <label for="due_day" class="form-label font-14 font-heading">DUE DAYS</label>
@@ -240,8 +272,8 @@
 @include('layouts.footer')
 <script>
    var edit_id = "@if(isset($id)){{$id}} @endif";
-   $(document).ready(function(){    
-      $( ".select2-single, .select2-multiple" ).select2();   
+   $(document).ready(function(){ 
+        $( ".select2-single, .select2-multiple" ).select2();
       $("#under_group").change();
       $("#account_name").keyup(function(){
          $("#print_name").val($(this).val())
@@ -271,7 +303,11 @@
                if(data!=""){
                   if(data.status==1){
                      var GstateCode = inputvalues.substr(0, 2);
-                     $('#state [data-state_code = "'+GstateCode+'"]').prop('selected', true);           
+                     var matchedValue = $('#state option[data-state_code="' + GstateCode + '"]').val();
+
+                     // Set it in Select2
+                     $('#state').val(matchedValue).trigger('change');
+                     //$('#state [data-state_code = "'+GstateCode+'"]').prop('selected', true);
                      var GpanNum = inputvalues.substring(2, 12);
                      $("#pan").val(GpanNum);
                      $("#address").val(data.address.toUpperCase());
@@ -326,7 +362,6 @@
          $("#state").attr('required',true);
          $(".gstin_div").show();
          $(".state_div").show();
-         
          $(".address_div").show();
          $(".pan_div").show();
          $(".pincode_div").show();
@@ -376,5 +411,28 @@
          }
       });
    });
+   $(document).on('click', '.add_address', function() {
+      let newAddressBlock = `
+        <div class="clearfix added-address row">
+            <div class="mb-4 col-md-8 address_div common_div">
+                <label class="form-label font-14 font-heading">ADDRESS</label>
+                <textarea class="form-control common_val" name="other_address[]" placeholder="ENTER ADDRESS" maxlength="100" rows="2"></textarea>
+            </div>
+            <div class="mb-2 col-md-2 pincode_div common_div">
+                <label class="form-label font-14 font-heading">PINCODE</label>
+                <input type="number" class="form-control common_val" name="other_pincode[]" placeholder="ENTER PINCODE" />
+            </div>
+            <div class="mb-2 col-md-2 pincode_div common_div">
+                <svg style="color: red;cursor: pointer;margin-top: 42px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bg-danger rounded-circle remove_address" viewBox="0 0 24 24">
+                    <path d="M19 13H5V11H19V13Z" fill="white"/>
+                </svg>
+            </div>
+        </div>
+        `;
+        $('.address-wrapper').append(newAddressBlock);
+   });
+   $(document).on('click', '.remove_address', function() {
+        $(this).closest('.added-address').remove();
+    });
 </script>
 @endsection

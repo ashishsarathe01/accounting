@@ -11,4 +11,7 @@ class Accounts extends Model
     public function accountLedger(){
       return $this->hasMany('App\Models\AccountLedger','account_id','id');
     }
+    public function otherAddress(){
+      return $this->hasMany('App\Models\AccountOtherAddress','account_id','id')->where('status',1);
+    }
 }
