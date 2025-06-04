@@ -275,8 +275,6 @@ Route::Resource('payment', PaymentController::class);
    
    
    Route::Resource('stock-transfer', StockTransferController::class);
-   Route::get('/gstr1', [gstR1Controller::class, 'gstmain'])->name('gstr1');
-  Route::get('/gst/b2c-normal-statewise', [gstR1Controller::class, 'B2Cstatewise'])->name('gst.b2c.normal.statewise');
    //Route::get('login', [AuthController::class, 'index'])->name('otp.login');
    //Route::get('/', 'AuthController@index')->name('index');
    //Route::post('dashboard', [AuthController::class, 'dashboard']); 
@@ -312,5 +310,11 @@ Route::Resource('payment', PaymentController::class);
    Route::post('generate-ewaybill', [SalesController::class, 'generateEwayBill']);
    Route::post('cancel-einvoice', [SalesController::class, 'cancelEinvoice']);
    Route::post('cancel-ewaybill', [SalesController::class, 'cancelEwayBill']);
-   Route::post('get-item-average-details', [ItemLedgerController::class, 'itemAverageDetails']); 
+   Route::post('get-item-average-details', [ItemLedgerController::class, 'itemAverageDetails']);
+   Route::post('/gstr1', [gstR1Controller::class, 'gstmain'])->name('gstr1');
+  Route::get('/gst/b2c-normal-statewise', [gstR1Controller::class, 'B2Cstatewise'])->name('gst.b2c.normal.statewise');
+  Route::get('/gst/b2b-detailed-billwise', [gstR1Controller::class, 'B2Bdetailed'])->name('gst.b2b.detailed.billwise');
+  Route::get('/gst/b2c-large-detailed', [gstR1Controller::class, 'b2cLargedetailed'])->name('gst.b2c.large.detailed');
+  Route::get('/report/filter', [gstR1Controller::class, 'filterform'])->name('report.filter.data');
+    Route::get('/report/nilratedreginter', [gstR1Controller::class, 'nilRatedAndExemptedCombined'])->name('nilratedreginter');
 });

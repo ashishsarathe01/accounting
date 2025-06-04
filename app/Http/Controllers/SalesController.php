@@ -488,6 +488,7 @@ class SalesController extends Controller
                   $ledger->credit = $bill_sundry_amounts[$key];
                }              
                $ledger->txn_date = $request->input('date');
+               $ledger->series_no = $request->input('series_no');
                $ledger->company_id = Session::get('user_company_id');
                $ledger->financial_year = Session::get('default_fy');
                $ledger->entry_type = 1;
@@ -604,6 +605,7 @@ class SalesController extends Controller
          $ledger->account_id = $request->input('party_id');
          $ledger->debit = $request->input('total');
          $ledger->txn_date = $request->input('date');
+         $ledger->series_no = $request->input('series_no');
          $ledger->company_id = Session::get('user_company_id');
          $ledger->financial_year = Session::get('default_fy');
          $ledger->entry_type = 1;
@@ -655,6 +657,7 @@ class SalesController extends Controller
          $ledger->account_id = 35;//Sales Account
          $ledger->credit = $SaleLgr;
          $ledger->txn_date = $request->input('date');
+         $ledger->series_no = $request->input('series_no');
          $ledger->company_id = Session::get('user_company_id');
          $ledger->financial_year = Session::get('default_fy');
          $ledger->entry_type = 1;
@@ -1105,6 +1108,7 @@ class SalesController extends Controller
                $ledger->credit = $bill_sundry_amounts[$key];
             }   
                $ledger->txn_date = $request->input('date');
+               $ledger->series_no = $request->input('series_no');
                $ledger->company_id = Session::get('user_company_id');
                $ledger->financial_year = Session::get('default_fy');
                $ledger->entry_type = 1;
@@ -1154,6 +1158,7 @@ class SalesController extends Controller
          $ledger->account_id = $request->input('party');
          $ledger->debit = $request->input('total');
          $ledger->txn_date = $request->input('date');
+         $ledger->series_no = $request->input('series_no');
          $ledger->company_id = Session::get('user_company_id');
          $ledger->financial_year = Session::get('default_fy');
          $ledger->entry_type = 1;
@@ -1167,6 +1172,7 @@ class SalesController extends Controller
          $ledger->account_id = 35;//Sales Account
          $ledger->credit = $request->input('taxable_amt');
          $ledger->txn_date = $request->input('date');
+         $ledger->series_no = $request->input('series_no');
          $ledger->company_id = Session::get('user_company_id');
          $ledger->financial_year = Session::get('default_fy');
          $ledger->entry_type = 1;
@@ -1571,6 +1577,7 @@ class SalesController extends Controller
                            $ledger->account_id = $bill_sundrys->sale_amt_account;
                            $ledger->credit = str_replace(",","",$cgst_rate);                                    
                            $ledger->txn_date = $date;
+                           $ledger->series_no = $series_no;
                            $ledger->company_id = Session::get('user_company_id');
                            $ledger->financial_year = Session::get('default_fy');
                            $ledger->entry_type = 1;
@@ -1598,6 +1605,7 @@ class SalesController extends Controller
                            $ledger->account_id = $bill_sundrys->sale_amt_account;
                            $ledger->credit = str_replace(",","",$sgst_rate);                                    
                            $ledger->txn_date = $date;
+                           $ledger->series_no = $series_no;
                            $ledger->company_id = Session::get('user_company_id');
                            $ledger->financial_year = Session::get('default_fy');
                            $ledger->entry_type = 1;
@@ -1623,6 +1631,7 @@ class SalesController extends Controller
                         //ADD DATA IN IGST ACCOUNT     
                         if($bill_sundrys->adjust_sale_amt=='No'){
                            $ledger = new AccountLedger();
+                           $ledger->series_no = $series_no;
                            $ledger->account_id = $bill_sundrys->sale_amt_account;
                            $ledger->credit = str_replace(",","",$igst_rate);                                    
                            $ledger->txn_date = $date;
@@ -1713,6 +1722,7 @@ class SalesController extends Controller
                                     $ledger->credit = $v2;
                                  }               
                                  $ledger->txn_date = $date;
+                                 $ledger->series_no = $series_no;
                                  $ledger->company_id = Session::get('user_company_id');
                                  $ledger->financial_year = Session::get('default_fy');
                                  $ledger->entry_type = 1;
@@ -1762,6 +1772,7 @@ class SalesController extends Controller
                   $ledger = new AccountLedger();
                   $ledger->account_id = $account->id;
                   $ledger->debit = $grand_total;
+                  $ledger->series_no = $series_no;
                   $ledger->txn_date = $date;
                   $ledger->company_id = Session::get('user_company_id');
                   $ledger->financial_year = Session::get('default_fy');
@@ -1775,6 +1786,7 @@ class SalesController extends Controller
                   $ledger = new AccountLedger();
                   $ledger->account_id = 35;//Sales Account
                   $ledger->credit = $item_taxable_amount;
+                  $ledger->series_no = $series_no;
                   $ledger->txn_date = $date;
                   $ledger->company_id = Session::get('user_company_id');
                   $ledger->financial_year = Session::get('default_fy');

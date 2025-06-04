@@ -130,12 +130,12 @@
                      </li>
                      <li class="font-14  fw-500 m-0 py-12 px-2  ">
                         <a class=" text-decoration-none  d-flex   text-white" href="{{ route('sale-return.index') }}">
-                                    Sale Return/Credit Note
+                                    Credit Note
                         </a>
                      </li>
                      <li class="font-14  fw-500 m-0 py-12 px-2  ">
                         <a class=" text-decoration-none  d-flex   text-white" href="{{ route('purchase-return.index') }}">
-                                    Purchase Return/Debit Note
+                                    Debit Note
                         </a>
                      </li>
                      <li class="font-14  fw-500 m-0 py-12 px-2  ">
@@ -233,6 +233,11 @@
                      <li class="font-14  fw-500 m-0 py-12 px-2">
                         <a class=" text-decoration-none d-flex text-white" href="{{ route('itemledger.index') }}">
                                     Items Ledger
+                        </a>
+                     </li>
+                      <li class="font-14  fw-500 m-0 py-12 px-2">
+                        <a class=" text-decoration-none d-flex text-white" href="{{ route('report.filter.data') }}">
+                                    GSTR-1
                         </a>
                      </li>
                   </ul>

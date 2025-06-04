@@ -201,6 +201,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
             //Ledger Entry
             $ledger = new AccountLedger();
             $ledger->account_id = $request->input('vendor');
+            $ledger->series_no = $request->input('series_no');
             $ledger->credit = $request->input('total_amount');                       
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
@@ -229,6 +230,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
                $ledger->account_id = $item;
                $ledger->debit = $amount;                       
                $ledger->txn_date = $request->input('date');
+               $ledger->series_no = $request->input('series_no');
                $ledger->company_id = Session::get('user_company_id');
                $ledger->financial_year = Session::get('default_fy');
                $ledger->entry_type = 7;
@@ -259,6 +261,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
                //Ledger Entry
                $ledger = new AccountLedger();
                $ledger->account_id = $account_name;
+               $ledger->series_no = $request->input('series_no');
                $ledger->debit = $request->input('igst');                       
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
@@ -298,6 +301,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
                //Ledger Entry
                $ledger = new AccountLedger();
                $ledger->account_id = $cgst_account_name;
+               $ledger->series_no = $request->input('series_no');
                $ledger->debit = $request->input('cgst');                       
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
@@ -320,6 +324,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
                //Ledger Entry
                $ledger = new AccountLedger();
                $ledger->account_id = $sgst_account_name;
+               $ledger->series_no = $request->input('series_no');
                $ledger->debit = $request->input('sgst');                       
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
@@ -371,6 +376,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
                }else{
                   $ledger->credit = $credits[$key];
                }            
+               $ledger->series_no = $request->input('series_no');
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
                $ledger->financial_year = Session::get('default_fy');
@@ -526,7 +532,8 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
          //Ledger Entry
          $ledger = new AccountLedger();
          $ledger->account_id = $request->input('vendor');
-         $ledger->credit = $request->input('total_amount');                       
+         $ledger->credit = $request->input('total_amount');  
+         $ledger->series_no = $request->input('series_no');                     
          $ledger->txn_date = $request->input('date');
          $ledger->company_id = Session::get('user_company_id');
          $ledger->financial_year = Session::get('default_fy');
@@ -553,6 +560,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
             $ledger->account_id = $item;
             $ledger->debit = $amount;                       
             $ledger->txn_date = $request->input('date');
+            $ledger->series_no = $request->input('series_no');
             $ledger->company_id = Session::get('user_company_id');
             $ledger->financial_year = Session::get('default_fy');
             $ledger->entry_type = 7;
@@ -582,6 +590,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
             //Ledger Entry
             $ledger = new AccountLedger();
             $ledger->account_id = $account_name;
+            $ledger->series_no = $request->input('series_no');
             $ledger->debit = $request->input('igst');                       
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
@@ -620,6 +629,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
             //Ledger Entry
             $ledger = new AccountLedger();
             $ledger->account_id = $cgst_account_name;
+            $ledger->series_no = $request->input('series_no');
             $ledger->debit = $request->input('cgst');                       
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
@@ -641,6 +651,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
             //Ledger Entry
             $ledger = new AccountLedger();
             $ledger->account_id = $sgst_account_name;
+            $ledger->series_no = $request->input('series_no');
             $ledger->debit = $request->input('sgst');                       
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
@@ -691,6 +702,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
             }else{
                $ledger->credit = $credits[$key];
             }            
+            $ledger->series_no = $request->input('series_no');
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
             $ledger->financial_year = Session::get('default_fy');
@@ -954,6 +966,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
                      }else{
                         $ledger->credit = $data['credit'];
                      }
+                     $ledger->series_no = $series;
                      $ledger->account_id = $data['account'];                                 
                      $ledger->txn_date = date('Y-m-d',strtotime($bill_date));
                      $ledger->company_id = Session::get('user_company_id');

@@ -192,6 +192,7 @@ class PaymentController extends Controller
             }else{
                $ledger->credit = $credits[$key];
             }            
+            $ledger->series_no = $request->input('series_no');
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
             $ledger->financial_year = Session::get('default_fy');
@@ -321,7 +322,8 @@ class PaymentController extends Controller
             $ledger->debit = $debits[$key];
          }else{
             $ledger->credit = $credits[$key];
-         }            
+         }
+         $ledger->series_no = $request->input('series_no');
          $ledger->txn_date = $request->input('date');
          $ledger->company_id = Session::get('user_company_id');
          $ledger->financial_year = Session::get('default_fy');
@@ -506,9 +508,9 @@ class PaymentController extends Controller
                array_push($error_arr, 'Account Name '.$account.' Not Found - Row '.$index);
             }
             $debit = $data[5];
-            $debit = str_replace(",","",$debit);
+            $debit = trim(str_replace(",","",$debit));
             $credit = $data[6];
-            $credit = str_replace(",","",$credit);
+            $credit = trim(str_replace(",","",$credit));
             if($debit=="" && $credit==""){
                array_push($error_arr, 'Debit/Credit Cannot - Row '.$index);
             }
@@ -611,6 +613,7 @@ class PaymentController extends Controller
                      }else{
                         $ledger->credit = $data['credit'];
                      }
+                     $ledger->series_no = $series;
                      $ledger->account_id = $data['account'];                                 
                      $ledger->txn_date = date('Y-m-d',strtotime($bill_date));
                      $ledger->company_id = Session::get('user_company_id');

@@ -179,6 +179,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
                $ledger->credit = $credits[$key];
             }            
             $ledger->txn_date = $request->input('date');
+            $ledger->series_no = $request->input('series_no');
             $ledger->company_id = Session::get('user_company_id');
             $ledger->financial_year = Session::get('default_fy');
             $ledger->entry_type = 8;
@@ -309,6 +310,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
             $ledger->credit = $credits[$key];
          }            
          $ledger->txn_date = $request->input('date');
+         $ledger->series_no = $request->input('series_no');
          $ledger->company_id = Session::get('user_company_id');
          $ledger->financial_year = Session::get('default_fy');
          $ledger->entry_type = 8;
@@ -576,7 +578,8 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
                      }else{
                         $ledger->credit = $data['credit'];
                      }
-                     $ledger->account_id = $data['account'];                                 
+                     $ledger->account_id = $data['account'];
+                     $ledger->series_no = $series;
                      $ledger->txn_date = date('Y-m-d',strtotime($bill_date));
                      $ledger->company_id = Session::get('user_company_id');
                      $ledger->financial_year = Session::get('default_fy');

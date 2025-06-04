@@ -366,6 +366,7 @@ class PurchaseReturnController extends Controller
       }else{
          $purchase_return_no = $request->input('voucher_no');
       }
+      $account = Accounts::where('id',$request->input('party_id'))->first();
       $purchase = new PurchaseReturn;
       $purchase->date = $request->input('date');
       $purchase->company_id = Session::get('user_company_id');
@@ -390,6 +391,9 @@ class PurchaseReturnController extends Controller
       $purchase->gr_pr_no = $request->input('gr_pr_no');
       $purchase->transport_name = $request->input('transport_name');
       $purchase->station = $request->input('station');
+      $purchase->merchant_gst = $request->input('merchant_gst');
+       $purchase->billing_gst = $account->gstin;
+        $purchase->billing_state = $account->state;
       $purchase->tax_cgst = $request->input('cgst');
       $purchase->tax_sgst = $request->input('sgst');
       $purchase->tax_igst = $request->input('igst');
@@ -461,6 +465,7 @@ class PurchaseReturnController extends Controller
                   }else{
                      $ledger->credit = $bill_sundry_amounts[$key];
                   }
+                  $ledger->series_no = $request->input('series_no');
                   $ledger->txn_date = $request->input('date');
                   $ledger->company_id = Session::get('user_company_id');
                   $ledger->financial_year = Session::get('default_fy');
@@ -541,6 +546,7 @@ class PurchaseReturnController extends Controller
             //ADD DATA IN Customer ACCOUNT
             $ledger = new AccountLedger();
             $ledger->account_id = $request->input('party_id');
+            $ledger->series_no = $request->input('series_no');
             $ledger->debit = $request->input('total');
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
@@ -554,6 +560,7 @@ class PurchaseReturnController extends Controller
             //ADD DATA IN Sale ACCOUNT
             $ledger = new AccountLedger();
             $ledger->account_id = 36;//Purchase
+            $ledger->series_no = $request->input('series_no');
             $ledger->credit = $request->input('taxable_amt');
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
@@ -570,6 +577,7 @@ class PurchaseReturnController extends Controller
             $account_info = Accounts::select('under_group')->where('id',$request->input('party_id'))->first();
             $ledger = new AccountLedger();
             $ledger->account_id = $request->input('party_id');
+            $ledger->series_no = $request->input('series_no');
             $ledger->debit = $request->input('total_amount');                       
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
@@ -597,6 +605,7 @@ class PurchaseReturnController extends Controller
                //Ledger Entry
                $ledger = new AccountLedger();
                $ledger->account_id = $item;
+               $ledger->series_no = $request->input('series_no');
                $ledger->credit = $amount;                       
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
@@ -641,6 +650,7 @@ class PurchaseReturnController extends Controller
                //Ledger Entry
                $ledger = new AccountLedger();
                $ledger->account_id = $account_name;
+               $ledger->series_no = $request->input('series_no');
                $ledger->credit = $request->input('igst');                       
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
@@ -709,7 +719,8 @@ class PurchaseReturnController extends Controller
                //Ledger Entry
                $ledger = new AccountLedger();
                $ledger->account_id = $cgst_account_name;
-               $ledger->credit = $request->input('cgst');                       
+               $ledger->credit = $request->input('cgst');  
+               $ledger->series_no = $request->input('series_no');                     
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
                $ledger->financial_year = Session::get('default_fy');
@@ -723,7 +734,8 @@ class PurchaseReturnController extends Controller
                //Ledger Entry
                $ledger = new AccountLedger();
                $ledger->account_id = $sgst_account_name;
-               $ledger->credit = $request->input('sgst');                       
+               $ledger->credit = $request->input('sgst');
+               $ledger->series_no = $request->input('series_no');
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
                $ledger->financial_year = Session::get('default_fy');
@@ -753,7 +765,8 @@ class PurchaseReturnController extends Controller
                $map_account_id = $request->input('party_id');               
                $ledger = new AccountLedger();
                $ledger->account_id = $account_names[$key];
-               $ledger->credit = $debits[$key];                          
+               $ledger->credit = $debits[$key];
+               $ledger->series_no = $request->input('series_no');
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
                $ledger->financial_year = Session::get('default_fy');
@@ -768,7 +781,8 @@ class PurchaseReturnController extends Controller
             }
             $ledger = new AccountLedger();
             $ledger->account_id = $request->input('party_id');
-            $ledger->credit = $debit_total;                          
+            $ledger->credit = $debit_total;
+            $ledger->series_no = $request->input('series_no');
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
             $ledger->financial_year = Session::get('default_fy');
@@ -1097,6 +1111,7 @@ class PurchaseReturnController extends Controller
             return $this->failedMessage('Plases Select Item','sale-return/create');
          }
       }
+      $account = Accounts::where('id',$request->input('party_id'))->first();
       $financial_year = Session::get('default_fy');      
       $purchase = PurchaseReturn::find($request->input('purchase_return_edit_id'));
       $last_date = $purchase->date;
@@ -1121,6 +1136,8 @@ class PurchaseReturnController extends Controller
       $purchase->tax_cgst = $request->input('cgst');
       $purchase->tax_sgst = $request->input('sgst');
       $purchase->tax_igst = $request->input('igst');
+        $purchase->billing_gst = $account->gstin;
+        $purchase->billing_state = $account->state;
       $purchase->financial_year = $financial_year;
       $purchase->purchase_bill_id = $request->input('purchase_bill_id');
       $purchase->save();
@@ -1202,6 +1219,7 @@ class PurchaseReturnController extends Controller
                      $ledger->credit = $bill_sundry_amounts[$key];
                   }
                   $ledger->txn_date = $request->input('date');
+                  $ledger->series_no = $request->input('series_no');
                   $ledger->company_id = Session::get('user_company_id');
                   $ledger->financial_year = Session::get('default_fy');
                   $ledger->entry_type = 4;
@@ -1284,6 +1302,7 @@ class PurchaseReturnController extends Controller
             $ledger = new AccountLedger();
             $ledger->account_id = $request->input('party_id');
             $ledger->debit = $request->input('total');
+            $ledger->series_no = $request->input('series_no');
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
             $ledger->financial_year = Session::get('default_fy');
@@ -1297,6 +1316,7 @@ class PurchaseReturnController extends Controller
             $ledger = new AccountLedger();
             $ledger->account_id = 36;//Purchase
             $ledger->credit = $request->input('taxable_amt');
+            $ledger->series_no = $request->input('series_no');
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
             $ledger->financial_year = Session::get('default_fy');
@@ -1317,7 +1337,8 @@ class PurchaseReturnController extends Controller
             $account_info = Accounts::select('under_group')->where('id',$request->input('party_id'))->first();
             $ledger = new AccountLedger();
             $ledger->account_id = $request->input('party_id');
-            $ledger->debit = $request->input('total_amount');                       
+            $ledger->debit = $request->input('total_amount'); 
+            $ledger->series_no = $request->input('series_no');                      
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
             $ledger->financial_year = Session::get('default_fy');
@@ -1346,6 +1367,7 @@ class PurchaseReturnController extends Controller
                $ledger->account_id = $item;
                $ledger->credit = $amount;                       
                $ledger->txn_date = $request->input('date');
+               $ledger->series_no = $request->input('series_no');
                $ledger->company_id = Session::get('user_company_id');
                $ledger->financial_year = Session::get('default_fy');
                $ledger->entry_type = 13;
@@ -1388,7 +1410,8 @@ class PurchaseReturnController extends Controller
                //Ledger Entry
                $ledger = new AccountLedger();
                $ledger->account_id = $account_name;
-               $ledger->credit = $request->input('igst');                       
+               $ledger->credit = $request->input('igst');  
+               $ledger->series_no = $request->input('series_no');                     
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
                $ledger->financial_year = Session::get('default_fy');
@@ -1458,6 +1481,7 @@ class PurchaseReturnController extends Controller
                $ledger->account_id = $cgst_account_name;
                $ledger->credit = $request->input('cgst');                       
                $ledger->txn_date = $request->input('date');
+               $ledger->series_no = $request->input('series_no');
                $ledger->company_id = Session::get('user_company_id');
                $ledger->financial_year = Session::get('default_fy');
                $ledger->entry_type = 13;
@@ -1472,6 +1496,7 @@ class PurchaseReturnController extends Controller
                $ledger->account_id = $sgst_account_name;
                $ledger->credit = $request->input('sgst');                       
                $ledger->txn_date = $request->input('date');
+               $ledger->series_no = $request->input('series_no');
                $ledger->company_id = Session::get('user_company_id');
                $ledger->financial_year = Session::get('default_fy');
                $ledger->entry_type = 13;
@@ -1505,6 +1530,7 @@ class PurchaseReturnController extends Controller
                $map_account_id = $request->input('party_id');               
                $ledger = new AccountLedger();
                $ledger->account_id = $account_names[$key];
+               $ledger->series_no = $request->input('series_no');
                $ledger->credit = $debits[$key];                          
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
@@ -1522,6 +1548,7 @@ class PurchaseReturnController extends Controller
             $ledger->account_id = $request->input('party_id');
             $ledger->credit = $debit_total;                          
             $ledger->txn_date = $request->input('date');
+            $ledger->series_no = $request->input('series_no');
             $ledger->company_id = Session::get('user_company_id');
             $ledger->financial_year = Session::get('default_fy');
             $ledger->entry_type = 12;

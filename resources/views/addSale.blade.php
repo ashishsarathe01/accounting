@@ -118,7 +118,7 @@
                        @error('party'){{$message}}@enderror                        
                      </ul>
                   </div>
-                  <div class="mb-4 col-md-5 address_div" style="display: none;">
+                  <div class="mb-4 col-md-7 address_div" style="display: none;">
                      <label for="name" class="form-label font-14 font-heading">Address</label><br>
                      <select class="form-select" name="address" id="address">
                      </select>
@@ -1776,7 +1776,7 @@ function removeItem() {
       $(".address_div").hide();
       $("#address").html('');
       if(other_address!=null && other_address.length>0){
-         address_html = "<option value=''>Select Other Address</option>";
+         address_html = "<option value=''>"+$('option:selected', this).attr('data-address')+"</option>";
          other_address.forEach(function(e){
             address_html += "<option value='"+e.id+"' data-address='"+e.address+"' data-pincode='"+e.pincode+"'>"+e.address+" ("+e.pincode+")</option>";
          });
@@ -1790,7 +1790,7 @@ function removeItem() {
          let pincode = $('option:selected', this).attr('data-pincode');
          $("#partyaddress").html("GSTIN : "+$("#party_id  option:selected").attr('data-gstin')+"<br>Address : "+address+","+pincode);
       }else{
-         $("#partyaddress").html("GSTIN : "+$("#party_id  option:selected").attr('data-gstin')+"<br>Address : "+$('option:selected', '#party').attr('data-address'));
+         $("#partyaddress").html("GSTIN : "+$("#party_id  option:selected").attr('data-gstin')+"<br>Address : "+$('option:selected', '#party_id').attr('data-address'));
       }
    });
    $(document).on('keyup', '.goods_items', function(){

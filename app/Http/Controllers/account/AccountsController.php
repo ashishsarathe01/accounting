@@ -176,7 +176,7 @@ class AccountsController extends Controller{
             if(count($other_address)>0 && count($other_pincode)>0){
                foreach($other_address as $key => $val){
                   if(!empty($val) && !empty($other_pincode[$key])){
-                     DB::table('account_other_address')->insert([
+                     DB::table('account_other_addresses')->insert([
                         'account_id' => $account->id,
                         'address' => $val,
                         'pincode' => $other_pincode[$key],

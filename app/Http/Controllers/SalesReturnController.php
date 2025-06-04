@@ -434,7 +434,7 @@ class SalesReturnController extends Controller
       }else{
          $sale_return_no = $request->input('voucher_no');
       } 
-        
+      $account = Accounts::where('id',$request->input('party_id'))->first();
       $sale = new SalesReturn;
       $sale->date = $request->input('date');
       $sale->company_id = Session::get('user_company_id');
@@ -462,6 +462,8 @@ class SalesReturnController extends Controller
       $sale->tax_sgst = $request->input('sgst');
       $sale->tax_igst = $request->input('igst');
       $sale->merchant_gst = $request->input('merchant_gst');
+      $sale->billing_gst = $account->gstin;
+      $sale->billing_state = $account->state;
       $sale->remark = $request->input('remark');
       $sale->station = $request->input('station');
 
@@ -528,7 +530,7 @@ class SalesReturnController extends Controller
                if($billsundry->adjust_sale_amt=='No'){
                   $ledger = new AccountLedger();
                   $ledger->account_id = $billsundry->sale_amt_account;
-                  if($billsundry->nature_of_sundry=='ROUNDED OFF (-)'){
+                  if($billsundry->nature_of_sundry=='subtractive'){
                      $ledger->credit = $bill_sundry_amounts[$key];
                   }else{
                      $ledger->debit = $bill_sundry_amounts[$key];
@@ -828,6 +830,7 @@ class SalesReturnController extends Controller
    public function delete(Request $request){
       $sale_return =  SalesReturn::find($request->sale_return_id);
       $sale_return->delete = '1';
+      $sale_return->status = '0';
       $sale_return->deleted_at = Carbon::now();
       $sale_return->deleted_by = Session::get('user_id');
       $sale_return->update();
@@ -967,7 +970,7 @@ class SalesReturnController extends Controller
                            ->first();
          if(!$seller_info){
             $seller_info = GstBranch::select('gst_number as gst_no','branch_address as address','branch_pincode as pincode')
-                           ->where(['delete' => '0', 'company_id' => $sale_return->company_id,'gst_number'=>$sale_return->merchant_gst,'branch_series'=>$sale_return->series_no])
+                           ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_number'=>$sale_return->merchant_gst,'branch_series'=>$sale_return->series_no])
                            ->first();
             $state_info = DB::table('states')
                            ->where('id',$GstSettings->state)
@@ -1296,6 +1299,8 @@ class SalesReturnController extends Controller
       $sale->tax_cgst = $request->input('cgst');
       $sale->tax_sgst = $request->input('sgst');
       $sale->tax_igst = $request->input('igst');
+        $sale->billing_gst = $account->gstin;
+      $sale->billing_state = $account->state;
       $sale->financial_year = $financial_year;
       $sale->sale_bill_id = $request->input('sale_bill_id');
       $sale->save();
@@ -1371,7 +1376,7 @@ class SalesReturnController extends Controller
                if($billsundry->adjust_sale_amt=='No'){
                   $ledger = new AccountLedger();
                   $ledger->account_id = $billsundry->sale_amt_account;
-                  if($billsundry->nature_of_sundry=='ROUNDED OFF (-)'){
+                  if($billsundry->nature_of_sundry=='subtractive'){
                      $ledger->credit = $bill_sundry_amounts[$key];
                   }else{
                      $ledger->debit = $bill_sundry_amounts[$key];

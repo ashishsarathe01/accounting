@@ -43,6 +43,13 @@ input[type=number]::-webkit-outer-spin-button {
                <form class="" id="frm" method="GET" action="{{ route('profitloss.filter') }}">
                   @csrf
                   <div class="d-xxl-flex d-block  align-items-center">
+                     <p class="text-nowrap m-0 font-14 fw-500 font-heading my-2 my-xxl-0">Series</p>
+                     <select class="form-select w-min-120 ms-xxl-2" aria-label="Default select example" id="series" name="series" style="margin-right: 5px;">
+                        <option value="">ALL</option>
+                        @foreach ($mat_series as $series)
+                           <option value="{{$series->series}}">{{$series->series}}</option>                           
+                        @endforeach
+                     </select>
                      <p class="text-nowrap m-0 font-14 fw-500 font-heading my-2 my-xxl-0">FY</p>
                      <select class="form-select w-min-120 ms-xxl-2" aria-label="Default select example" id="financial_year" name="financial_year" required>
                         <option value="{{$data['financial_year']}}">{{$data['financial_year']}}</option>

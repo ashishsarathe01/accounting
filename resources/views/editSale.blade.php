@@ -127,7 +127,7 @@ foreach($manageitems as $value) {
                        @error('party'){{$message}}@enderror                        
                      </ul>
                   </div>
-                  <div class="mb-4 col-md-5 address_div" style="display: none;">
+                  <div class="mb-4 col-md-7 address_div" style="display: none;">
                      <label for="name" class="form-label font-14 font-heading">Address</label><br>
                      <select class="form-select" name="address" id="address">
                      </select>

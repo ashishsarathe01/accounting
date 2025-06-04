@@ -328,6 +328,7 @@ class PurchaseController extends Controller{
                }
                //debit
                $ledger->txn_date = $request->input('date');
+               $ledger->series_no = $request->input('series_no');
                $ledger->company_id = Session::get('user_company_id');
                $ledger->financial_year = Session::get('default_fy');
                $ledger->entry_type = 2;
@@ -342,6 +343,7 @@ class PurchaseController extends Controller{
          //ADD DATA IN Customer ACCOUNT
          $ledger = new AccountLedger();
          $ledger->account_id = $request->input('party_id');
+         $ledger->series_no = $request->input('series_no');
          $ledger->credit = $request->input('total');
          $ledger->txn_date = $request->input('date');
          $ledger->company_id = Session::get('user_company_id');
@@ -355,6 +357,7 @@ class PurchaseController extends Controller{
          //ADD DATA IN Purcahse ACCOUNT
          $ledger = new AccountLedger();
          $ledger->account_id = 36;//Purchase
+         $ledger->series_no = $request->input('series_no');
          $ledger->debit = $request->input('taxable_amt');
          $ledger->txn_date = $request->input('date');
          $ledger->company_id = Session::get('user_company_id');
@@ -883,6 +886,7 @@ class PurchaseController extends Controller{
                   $ledger->debit = $bill_sundry_amounts[$key];
                }
                $ledger->txn_date = $request->input('date');
+               $ledger->series_no = $request->input('series_no');
                $ledger->company_id = Session::get('user_company_id');
                $ledger->financial_year = Session::get('default_fy');
                $ledger->entry_type = 2;
@@ -967,6 +971,7 @@ class PurchaseController extends Controller{
          $ledger = new AccountLedger();
          $ledger->account_id = $request->input('party');
          $ledger->credit = $request->input('total');
+         $ledger->series_no = $request->input('series_no');
          $ledger->txn_date = $request->input('date');
          $ledger->company_id = Session::get('user_company_id');
          $ledger->financial_year = Session::get('default_fy');
@@ -980,6 +985,7 @@ class PurchaseController extends Controller{
          $ledger = new AccountLedger();
          $ledger->account_id = 36;//Purchase
          $ledger->debit = $request->input('taxable_amt');
+         $ledger->series_no = $request->input('series_no');
          $ledger->txn_date = $request->input('date');
          $ledger->company_id = Session::get('user_company_id');
          $ledger->financial_year = Session::get('default_fy');
@@ -1088,11 +1094,13 @@ class PurchaseController extends Controller{
             }
          }         
       }
+    
       foreach ($gst_data as $key => $value) {
          $series_arr[] = $value->series;
          $material_center_arr[] = $value->mat_center;
          $gst_no_arr[] = $value->gst_no;
       }      
+       
       $series_no = "";
       $file = $request->file('csv_file');  
       $filePath = $file->getRealPath();      
@@ -1112,7 +1120,7 @@ class PurchaseController extends Controller{
                $item_arr = [];
                $error_arr = [];
                $slicedData = [];
-               $series_no = $data[0];
+               $series_no = trim($data[0]);
                $date = $data[1];
                $voucher_no = $data[2];
                $party = $data[3];
@@ -1132,9 +1140,11 @@ class PurchaseController extends Controller{
                if(strtotime($from_date)>strtotime(date('Y-m-d',strtotime($date))) || strtotime($to_date)<strtotime(date('Y-m-d',strtotime($date)))){                  
                   array_push($error_arr, 'Date '.$date.' not in Financial Year - Invoice No. '.$voucher_no);                  
                }
-               if(!in_array($series_no, $series_arr)){
+              
+               if(!in_array(trim($series_no), $series_arr)){
                   array_push($error_arr, 'Series No. '.$series_no.' not found in GST Configuration - Invoice No. '.$voucher_no); 
                }
+                
                if(!in_array($material_center, $material_center_arr)){
                   array_push($error_arr, 'Material Center '.$material_center.' not found in GST Configuration - Invoice No. '.$voucher_no);
                }
@@ -1379,6 +1389,7 @@ class PurchaseController extends Controller{
                         //ADD DATA IN CGST ACCOUNT     
                         if($bill_sundrys->adjust_purchase_amt=='No'){
                            $ledger = new AccountLedger();
+                           $ledger->series_no = $series_no;
                            $ledger->account_id = $bill_sundrys->purchase_amt_account;
                            $ledger->debit = str_replace(",","",$cgst_rate);                                    
                            $ledger->txn_date = $date;
@@ -1409,6 +1420,7 @@ class PurchaseController extends Controller{
                            $ledger->account_id = $bill_sundrys->purchase_amt_account;
                            $ledger->debit = str_replace(",","",$sgst_rate);                                    
                            $ledger->txn_date = $date;
+                           $ledger->series_no = $series_no;
                            $ledger->company_id = Session::get('user_company_id');
                            $ledger->financial_year = Session::get('default_fy');
                            $ledger->entry_type = 2;
@@ -1437,6 +1449,7 @@ class PurchaseController extends Controller{
                            $ledger->account_id = $bill_sundrys->purchase_amt_account;
                            $ledger->debit = str_replace(",","",$igst_rate);                                    
                            $ledger->txn_date = $date;
+                           $ledger->series_no = $series_no;
                            $ledger->company_id = Session::get('user_company_id');
                            $ledger->financial_year = Session::get('default_fy');
                            $ledger->entry_type = 2;
@@ -1634,6 +1647,7 @@ class PurchaseController extends Controller{
                                  $ledger->debit  = $v2;
                               }               
                               $ledger->txn_date = $date;
+                              $ledger->series_no = $series_no;
                               $ledger->company_id = Session::get('user_company_id');
                               $ledger->financial_year = Session::get('default_fy');
                               $ledger->entry_type = 2;
@@ -1656,6 +1670,7 @@ class PurchaseController extends Controller{
                   $ledger = new AccountLedger();
                   $ledger->account_id = $account->id;
                   $ledger->credit = $grand_total;
+                  $ledger->series_no = $series_no;
                   $ledger->txn_date = $date;
                   $ledger->company_id = Session::get('user_company_id');
                   $ledger->financial_year = Session::get('default_fy');
@@ -1669,6 +1684,7 @@ class PurchaseController extends Controller{
                   $ledger = new AccountLedger();
                   $ledger->account_id = 36;//Sales Account
                   $ledger->debit = $item_taxable_amount;
+                  $ledger->series_no = $series_no;
                   $ledger->txn_date = $date;
                   $ledger->company_id = Session::get('user_company_id');
                   $ledger->financial_year = Session::get('default_fy');

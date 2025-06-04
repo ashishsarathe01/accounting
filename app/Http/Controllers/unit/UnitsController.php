@@ -53,6 +53,7 @@ class UnitsController extends Controller
         $unit->name = $request->input('name');
         $unit->company_id =  Session::get('user_company_id');
         $unit->s_name = $request->input('s_name');
+        $unit->unit_code = $request->input('unit_code');
         $unit->status = $request->input('status');
         $unit->save();
 
@@ -92,6 +93,7 @@ class UnitsController extends Controller
         $unit->name = $request->input('name');
         $unit->s_name = $request->input('s_name');
         $unit->status = $request->input('status');
+        $unit->unit_code = $request->input('unit_code');
         $unit->updated_at = Carbon::now();
         $unit->update();
 
