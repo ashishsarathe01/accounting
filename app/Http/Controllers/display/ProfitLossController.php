@@ -300,7 +300,7 @@ class ProfitLossController extends Controller{
                ->where('form_source','profitloss')
                ->select('journals.id','series_no','voucher_no','long_narration')
                ->get();
-      return  view('display/profitLoss')->with('data', ['tot_purchase_amt' => $tot_purchase_amt+$tot_purchase_sundry_amt, 'tot_sale_amt' => $tot_sale_amt+$tot_sale_sundry_amt, 'tot_purchase_return_amt' => $tot_purchase_return_amt, 'tot_sale_return_amt' => $tot_sale_return_amt, 'financial_year' => $financial_year,'direct_expenses' => $direct_expenses,'direct_income' => $direct_income,'opening_stock' => $opening_stock,'closing_stock' => $closing_stock,'indirect_expenses' => $indirect_expenses,'indirect_income' => $indirect_income])->with('from_date',$from_date)->with('to_date',$to_date)->with('opening_stock',$opening_stock)->with('indirect_expenses_credit',$indirect_expenses_credit)->with('direct_expenses_credit',$direct_expenses_credit)->with('debit_indirect_income',$debit_indirect_income)->with('debit_direct_income',$debit_direct_income)->with('current_year',$current_year)->with('mat_series',$mat_series)->with('party_list',$party_list)->with('journal',$journal);
+      return  view('display/profitLoss')->with('data', ['tot_purchase_amt' => $tot_purchase_amt+$tot_purchase_sundry_amt, 'tot_sale_amt' => $tot_sale_amt+$tot_sale_sundry_amt, 'tot_purchase_return_amt' => $tot_purchase_return_amt, 'tot_sale_return_amt' => $tot_sale_return_amt, 'financial_year' => $financial_year,'direct_expenses' => $direct_expenses,'direct_income' => $direct_income,'opening_stock' => $opening_stock,'closing_stock' => $closing_stock,'indirect_expenses' => $indirect_expenses,'indirect_income' => $indirect_income,'series'=>''])->with('from_date',$from_date)->with('to_date',$to_date)->with('opening_stock',$opening_stock)->with('indirect_expenses_credit',$indirect_expenses_credit)->with('direct_expenses_credit',$direct_expenses_credit)->with('debit_indirect_income',$debit_indirect_income)->with('debit_direct_income',$debit_direct_income)->with('current_year',$current_year)->with('mat_series',$mat_series)->with('party_list',$party_list)->with('journal',$journal);
    }
    public function filter(Request $request){
       $financial_year = $request->financial_year;
@@ -318,15 +318,20 @@ class ProfitLossController extends Controller{
       }else{
          $current_year = date('y') . '-' . (date('y') + 1);
       }
+      $req_series = $request->series;
       //Opening Stock 
       $opening_stock = 0;     
       $previous_date = Carbon::parse($from_date)->subDay();
-      $opening_stock = CommonHelper::ClosingStock($previous_date);  
+      $opening_stock = CommonHelper::ClosingStock($previous_date, $req_series);  
       //Purchase
+      
       $tot_purchase_amt = DB::table('purchases')
          ->join('purchase_descriptions','purchases.id','=','purchase_descriptions.purchase_id')
          ->where(['purchases.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
          ->whereBetween('date', [$from_date, $to_date])
+         ->when(!empty($req_series), function ($query) use ($req_series) {
+            return $query->where('purchases.series_no', $req_series);
+         })
          ->get()
          ->sum("amount");
       $tot_purchase_sundry_amt = 0;
@@ -335,6 +340,9 @@ class ProfitLossController extends Controller{
          ->join('bill_sundrys','purchase_sundries.bill_sundry','=','bill_sundrys.id')
          ->where(['purchases.delete' => '0', 'purchases.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
          ->whereBetween('date', [$from_date, $to_date])
+         ->when(!empty($req_series), function ($query) use ($req_series) {
+            return $query->where('purchases.series_no', $req_series);
+         })
          ->select('bill_sundry_type','amount')
          ->get();
       if(count($purchase_sundry)>0){
@@ -351,6 +359,9 @@ class ProfitLossController extends Controller{
          ->join('sale_descriptions','sales.id','=','sale_descriptions.sale_id')
          ->where(['sales.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
          ->whereBetween('date', [$from_date, $to_date])
+         ->when(!empty($req_series), function ($query) use ($req_series) {
+            return $query->where('sales.series_no', $req_series);
+         })
          ->get()
          ->sum("amount");
       $tot_sale_sundry_amt = 0;
@@ -359,6 +370,9 @@ class ProfitLossController extends Controller{
          ->join('bill_sundrys','sale_sundries.bill_sundry','=','bill_sundrys.id')
          ->where(['sales.delete' => '0', 'sales.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
          ->whereBetween('date', [$from_date, $to_date])
+         ->when(!empty($req_series), function ($query) use ($req_series) {
+            return $query->where('sales.series_no', $req_series);
+         })
          ->select('bill_sundry_type','amount')
          ->get();
       if(count($sale_sundry)>0){
@@ -375,6 +389,9 @@ class ProfitLossController extends Controller{
          ->join('purchase_return_descriptions','purchase_returns.id','=','purchase_return_descriptions.purchase_return_id')
          ->where(['purchase_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
          ->whereBetween('date', [$from_date, $to_date])
+         ->when(!empty($req_series), function ($query) use ($req_series) {
+            return $query->where('purchase_returns.series_no', $req_series);
+         })
          ->get()
          ->sum("amount");
       $purchase_return_sundry = DB::table('purchase_returns')
@@ -382,6 +399,9 @@ class ProfitLossController extends Controller{
          ->join('bill_sundrys','purchase_return_sundries.bill_sundry','=','bill_sundrys.id')
          ->where(['purchase_returns.delete' => '0', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
          ->whereBetween('date', [$from_date, $to_date])
+         ->when(!empty($req_series), function ($query) use ($req_series) {
+            return $query->where('purchase_returns.series_no', $req_series);
+         })
          ->select('bill_sundry_type','amount')
          ->get();
       if(count($purchase_return_sundry)>0){
@@ -398,6 +418,9 @@ class ProfitLossController extends Controller{
          ->join('sale_return_descriptions','sales_returns.id','=','sale_return_descriptions.sale_return_id')
          ->where(['sales_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
          ->whereBetween('date', [$from_date, $to_date])
+         ->when(!empty($req_series), function ($query) use ($req_series) {
+            return $query->where('sales_returns.series_no', $req_series);
+         })
          ->get()
          ->sum("amount");
       $sale_return_sundry = DB::table('sales_returns')
@@ -405,6 +428,9 @@ class ProfitLossController extends Controller{
          ->join('bill_sundrys','sale_return_sundries.bill_sundry','=','bill_sundrys.id')
          ->where(['sales_returns.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
          ->whereBetween('date', [$from_date, $to_date])
+         ->when(!empty($req_series), function ($query) use ($req_series) {
+            return $query->where('sales_returns.series_no', $req_series);
+         })
          ->select('bill_sundry_type','amount')
          ->get();
       if(count($sale_return_sundry)>0){
@@ -434,6 +460,9 @@ class ProfitLossController extends Controller{
                   ->whereBetween('txn_date', [$from_date, $to_date])
                   ->where('status','1')
                   ->where('financial_year',$financial_year)
+                  ->when(!empty($req_series), function ($query) use ($req_series) {
+                     return $query->where('account_ledger.series_no', $req_series);
+                  })
                   ->sum('debit');
       $direct_expenses_credit = AccountLedger::whereIn('account_id',$direct_expenses_account_id)
                   ->where('delete_status','0')
@@ -441,6 +470,9 @@ class ProfitLossController extends Controller{
                   ->whereBetween('txn_date', [$from_date, $to_date])
                   ->where('status','1')
                   ->where('financial_year',$financial_year)
+                  ->when(!empty($req_series), function ($query) use ($req_series) {
+                     return $query->where('account_ledger.series_no', $req_series);
+                  })
                   ->sum('credit');
       //InDirect Expensess
       $indirect_expenses_account_id = Accounts::where('under_group','15')
@@ -460,6 +492,9 @@ class ProfitLossController extends Controller{
                   ->whereBetween('txn_date', [$from_date, $to_date])
                   ->where('status','1')
                   ->where('financial_year',$financial_year)
+                  ->when(!empty($req_series), function ($query) use ($req_series) {
+                     return $query->where('account_ledger.series_no', $req_series);
+                  })
                   ->sum('debit');
       $indirect_expenses_credit = AccountLedger::whereIn('account_id',$indirect_expenses_account_id)
                   ->where('delete_status','0')
@@ -467,6 +502,9 @@ class ProfitLossController extends Controller{
                   ->whereBetween('txn_date', [$from_date, $to_date])
                   ->where('status','1')
                   ->where('financial_year',$financial_year)
+                  ->when(!empty($req_series), function ($query) use ($req_series) {
+                     return $query->where('account_ledger.series_no', $req_series);
+                  })
                   ->sum('credit');
       //Direct Income
       $direct_income_account_id = Accounts::where('under_group','13')
@@ -486,6 +524,9 @@ class ProfitLossController extends Controller{
                   ->whereBetween('txn_date', [$from_date, $to_date])
                   ->where('status','1')
                   ->where('financial_year',$financial_year)
+                  ->when(!empty($req_series), function ($query) use ($req_series) {
+                     return $query->where('account_ledger.series_no', $req_series);
+                  })
                   ->sum('credit');
       $debit_direct_income = AccountLedger::whereIn('account_id',$direct_income_account_id)
                   ->where('delete_status','0')
@@ -493,6 +534,9 @@ class ProfitLossController extends Controller{
                   ->whereBetween('txn_date', [$from_date, $to_date])
                   ->where('status','1')
                   ->where('financial_year',$financial_year)
+                  ->when(!empty($req_series), function ($query) use ($req_series) {
+                     return $query->where('account_ledger.series_no', $req_series);
+                  })
                   ->sum('debit');
       //InDirect Income
       $indirect_income_account_id = Accounts::where('under_group','14')
@@ -512,6 +556,9 @@ class ProfitLossController extends Controller{
                   ->whereBetween('txn_date', [$from_date, $to_date])
                   ->where('status','1')
                   ->where('financial_year',$financial_year)
+                  ->when(!empty($req_series), function ($query) use ($req_series) {
+                     return $query->where('account_ledger.series_no', $req_series);
+                  })
                   ->sum('credit');
       $debit_indirect_income = AccountLedger::whereIn('account_id',$indirect_income_account_id)
                   ->where('delete_status','0')
@@ -519,8 +566,11 @@ class ProfitLossController extends Controller{
                   ->whereBetween('txn_date', [$from_date, $to_date])
                   ->where('status','1')
                   ->where('financial_year',$financial_year)
+                  ->when(!empty($req_series), function ($query) use ($req_series) {
+                     return $query->where('account_ledger.series_no', $req_series);
+                  })
                   ->sum('debit');
-      $closing_stock = CommonHelper::ClosingStock($to_date);
+      $closing_stock = CommonHelper::ClosingStock($to_date,$req_series);
       $closing_stock = round($closing_stock,2);
 
       $companyData = Companies::where('id', Session::get('user_company_id'))->first();
@@ -569,7 +619,7 @@ class ProfitLossController extends Controller{
                   ->where('form_source','profitloss')
                   ->select('journals.id','series_no','voucher_no','long_narration')
                   ->get();
-      return  view('display/profitLoss')->with('data', ['tot_purchase_amt' => $tot_purchase_amt+$tot_purchase_sundry_amt, 'tot_sale_amt' => $tot_sale_amt+$tot_sale_sundry_amt, 'tot_purchase_return_amt' => $tot_purchase_return_amt, 'tot_sale_return_amt' => $tot_sale_return_amt, 'financial_year' => $financial_year,'direct_expenses' => $direct_expenses,'direct_income' => $direct_income,'opening_stock' => $opening_stock,'closing_stock' => $closing_stock,'indirect_expenses' => $indirect_expenses,'indirect_income' => $indirect_income])->with('from_date',$from_date)->with('to_date',$to_date)->with('opening_stock',$opening_stock)->with('indirect_expenses_credit',$indirect_expenses_credit)->with('direct_expenses_credit',$direct_expenses_credit)->with('debit_indirect_income',$debit_indirect_income)->with('debit_direct_income',$debit_direct_income)->with('current_year',$current_year)->with('mat_series',$mat_series)->with('party_list',$party_list)->with('journal',$journal);
+      return  view('display/profitLoss')->with('data', ['tot_purchase_amt' => $tot_purchase_amt+$tot_purchase_sundry_amt, 'tot_sale_amt' => $tot_sale_amt+$tot_sale_sundry_amt, 'tot_purchase_return_amt' => $tot_purchase_return_amt, 'tot_sale_return_amt' => $tot_sale_return_amt, 'financial_year' => $financial_year,'direct_expenses' => $direct_expenses,'direct_income' => $direct_income,'opening_stock' => $opening_stock,'closing_stock' => $closing_stock,'indirect_expenses' => $indirect_expenses,'indirect_income' => $indirect_income,'series'=>$req_series])->with('from_date',$from_date)->with('to_date',$to_date)->with('opening_stock',$opening_stock)->with('indirect_expenses_credit',$indirect_expenses_credit)->with('direct_expenses_credit',$direct_expenses_credit)->with('debit_indirect_income',$debit_indirect_income)->with('debit_direct_income',$debit_direct_income)->with('current_year',$current_year)->with('mat_series',$mat_series)->with('party_list',$party_list)->with('journal',$journal);
    }
    public function saleByMonth(Request $request,$financial_year){
       $y = explode("-",$financial_year);

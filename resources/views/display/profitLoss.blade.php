@@ -47,7 +47,7 @@ input[type=number]::-webkit-outer-spin-button {
                      <select class="form-select w-min-120 ms-xxl-2" aria-label="Default select example" id="series" name="series" style="margin-right: 5px;">
                         <option value="">ALL</option>
                         @foreach ($mat_series as $series)
-                           <option value="{{$series->series}}">{{$series->series}}</option>                           
+                           <option value="{{$series->series}}"  @if($series->series==$data['series']) selected @endif>{{$series->series}}</option>                           
                         @endforeach
                      </select>
                      <p class="text-nowrap m-0 font-14 fw-500 font-heading my-2 my-xxl-0">FY</p>

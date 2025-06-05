@@ -13,7 +13,7 @@ use DB;
 use Session;
 class CommonHelper
 {
-    public static function ClosingStock($date)
+    public static function ClosingStock($date,$req_series=null)
     {
         
         $companyData = Companies::where('id', Session::get('user_company_id'))->first();      
@@ -43,7 +43,12 @@ class CommonHelper
         }
         $final_stock_value = 0;
         
-        foreach ($series as $s1 => $s) {             
+        foreach ($series as $s1 => $s) {  
+            if($req_series!=null && $req_series!=''){
+                if($s->series != $req_series){
+                    continue;
+                }
+            }
             $item_ledger = ItemLedger::join('manage_items', 'item_ledger.item_id', '=', 'manage_items.id')
                                     ->join('units', 'manage_items.u_name', '=', 'units.id')
                                     ->select('item_id','in_weight as average_weight','txn_date as stock_date','total_price as amount','manage_items.name as item_name',
