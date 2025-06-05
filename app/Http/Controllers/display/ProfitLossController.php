@@ -778,6 +778,7 @@ class ProfitLossController extends Controller{
          
          $account_group[$key]->type = 1;
       }
+      
       $account = Accounts::withSum([
                             'accountLedger' => function ($query) use ($financial_year,$from_date,$to_date) { 
                               $query->where('financial_year', $financial_year);
@@ -788,7 +789,8 @@ class ProfitLossController extends Controller{
                                  $q1->Where('entry_type','-1');
                                  $q1->where('financial_year', $financial_year);
                                  $q1->whereBetween('txn_date', [$from_date, $to_date]);
-                                 $q1->where('delete_status','0');  
+                                 $q1->where('delete_status','0');
+                                 $q1->whereIn('company_id',[Session::get('user_company_id'),0]); 
                               });
                             }], 'debit')
                            ->withSum([
@@ -809,7 +811,10 @@ class ProfitLossController extends Controller{
                            ->whereIn('accounts.company_id',[Session::get('user_company_id'),0])
                            ->orderBy('account_name')
                            ->get();
-
+// echo "<pre>";
+//       print_r($account->toArray());
+//       echo "</pre>";
+//       exit;
       $account = $account->merge($account_group);
       
       

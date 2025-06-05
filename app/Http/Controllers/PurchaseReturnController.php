@@ -93,10 +93,14 @@ class PurchaseReturnController extends Controller
                   ->select('accounts.id','accounts.gstin','accounts.address','accounts.pin_code','accounts.account_name','states.state_code')
                   ->orderBy('account_name')
                   ->get(); 
-        $manageitems = DB::table('manage_items')->where('manage_items.company_id', Session::get('user_company_id'))
-            ->select('units.s_name as unit', 'manage_items.*')
-            ->join('units', 'manage_items.u_name', '=', 'units.id')
-            ->get();
+        $manageitems = DB::table('manage_items')
+                        ->where('manage_items.company_id', Session::get('user_company_id'))
+                        ->where('manage_items.delete', '0')
+                        ->where('manage_items.status', '1')
+                        ->where('manage_items.u_name', '!=', '')
+                        ->select('units.s_name as unit', 'manage_items.*')
+                        ->join('units', 'manage_items.u_name', '=', 'units.id')
+                        ->get();
 
         $companyData = Companies::where('id', Session::get('user_company_id'))->first();
 
@@ -392,8 +396,8 @@ class PurchaseReturnController extends Controller
       $purchase->transport_name = $request->input('transport_name');
       $purchase->station = $request->input('station');
       $purchase->merchant_gst = $request->input('merchant_gst');
-       $purchase->billing_gst = $account->gstin;
-        $purchase->billing_state = $account->state;
+      $purchase->billing_gst = $account->gstin;
+      $purchase->billing_state = $account->state;
       $purchase->tax_cgst = $request->input('cgst');
       $purchase->tax_sgst = $request->input('sgst');
       $purchase->tax_igst = $request->input('igst');
@@ -855,15 +859,21 @@ class PurchaseReturnController extends Controller
          $purchase_return = PurchaseReturn::join('sales','purchase_returns.purchase_bill_id','=','sales.id')
                                  ->leftjoin('states','sales.billing_state','=','states.id')
                                  ->where('purchase_returns.id',$id)
-                                 ->select(['purchase_returns.date','purchase_returns.invoice_no','purchase_returns.total','sales.billing_name','sales.billing_address','sales.billing_pincode','sales.billing_gst','states.name as sname','purchase_return_no','purchase_returns.vehicle_no','purchase_returns.gr_pr_no','purchase_returns.transport_name','purchase_returns.station','sales.voucher_no','sales.date as purchase_date','sales.series_no','sales.financial_year','purchase_returns.series_no as dr_series_no','purchase_returns.financial_year as dr_financial_year','sr_prefix','purchase_returns.id'])
+                                 ->select(['purchase_returns.date','purchase_returns.invoice_no','purchase_returns.total','sales.billing_name','sales.billing_address','sales.billing_pincode','sales.billing_gst','states.name as sname','purchase_return_no','purchase_returns.vehicle_no','purchase_returns.gr_pr_no','purchase_returns.transport_name','purchase_returns.station','sales.voucher_no','sales.date as purchase_date','sales.series_no','sales.financial_year','purchase_returns.series_no as dr_series_no','purchase_returns.financial_year as dr_financial_year','sr_prefix','purchase_returns.id','purchase_returns.voucher_type'])
                                  ->first();      
-         
-      }else{
+      }else if($purchase_ret->voucher_type=="SALE"){
+      
          $purchase_return = PurchaseReturn::join('purchases','purchase_returns.purchase_bill_id','=','purchases.id')
                                  ->leftjoin('states','purchases.billing_state','=','states.id')
                                  ->where('purchase_returns.id',$id)
-                                 ->select(['purchase_returns.date','purchase_returns.invoice_no','purchase_returns.total','purchases.billing_name','purchases.billing_address','purchases.billing_pincode','purchases.billing_gst','states.name as sname','purchase_return_no','purchase_returns.vehicle_no','purchase_returns.gr_pr_no','purchase_returns.transport_name','purchase_returns.station','purchases.voucher_no','purchases.date as purchase_date','purchases.series_no','purchases.financial_year','purchase_returns.series_no as dr_series_no','purchase_returns.financial_year as dr_financial_year'])
-                                 ->first();    
+                                 ->select(['purchase_returns.date','purchase_returns.invoice_no','purchase_returns.total','purchases.billing_name','purchases.billing_address','purchases.billing_pincode','purchases.billing_gst','states.name as sname','purchase_return_no','purchase_returns.vehicle_no','purchase_returns.gr_pr_no','purchase_returns.transport_name','purchase_returns.station','purchases.voucher_no','purchases.date as purchase_date','purchases.series_no','purchases.financial_year','purchase_returns.series_no as dr_series_no','purchase_returns.financial_year as dr_financial_year','sr_prefix','purchase_returns.id','purchase_returns.voucher_type'])
+                                 ->first();  
+      }else{
+           $purchase_return = PurchaseReturn::leftjoin('states','purchase_returns.billing_state','=','states.id')
+                                 ->join('accounts','purchase_returns.party','=','accounts.id')
+                                 ->where('purchase_returns.id',$id)
+                                 ->select(['purchase_returns.date','purchase_returns.invoice_no','purchase_returns.total','accounts.account_name as billing_name','accounts.address as billing_address','accounts.pin_code as billing_pincode','purchase_returns.billing_gst','states.name as sname','purchase_return_no','purchase_returns.vehicle_no','purchase_returns.gr_pr_no','purchase_returns.transport_name','purchase_returns.station','purchase_returns.series_no as dr_series_no','purchase_returns.financial_year as dr_financial_year','sr_prefix','purchase_returns.id','purchase_returns.voucher_type'])
+                                 ->first(); 
       }
       $items_detail = DB::table('purchase_return_descriptions')->where('purchase_return_id', $id)
                ->select('units.s_name as unit', 'units.id as unit_id', 'purchase_return_descriptions.qty', 'purchase_return_descriptions.price', 'purchase_return_descriptions.amount', 'manage_items.name as items_name', 'manage_items.id as item_id','manage_items.hsn_code','manage_items.gst_rate')
@@ -1094,7 +1104,15 @@ class PurchaseReturnController extends Controller
          $bill_date = $y[1]."-03-31";
          $bill_date = date('Y-m-d',strtotime($bill_date));
       }
-      return view('editPurchaseReturn')->with('party_list', $party_list)->with('billsundry', $billsundry)->with('purchase_return', $purchase_return)->with('purchase_return_description', $purchase_return_description)->with('purchase_return_sundry', $purchase_return_sundry)->with('without_gst', $without_gst)->with('vendors', $vendors)->with('items', $items)->with('all_account_list', $all_account_list)->with('merchant_gst',$merchant_gst);
+      $manageitems = DB::table('manage_items')
+                        ->where('manage_items.company_id', Session::get('user_company_id'))
+                        ->where('manage_items.delete', '0')
+                        ->where('manage_items.status', '1')
+                        ->where('manage_items.u_name', '!=', '')
+                        ->select('units.s_name as unit', 'manage_items.*')
+                        ->join('units', 'manage_items.u_name', '=', 'units.id')
+                        ->get();
+      return view('editPurchaseReturn')->with('party_list', $party_list)->with('billsundry', $billsundry)->with('purchase_return', $purchase_return)->with('purchase_return_description', $purchase_return_description)->with('purchase_return_sundry', $purchase_return_sundry)->with('without_gst', $without_gst)->with('vendors', $vendors)->with('items', $items)->with('all_account_list', $all_account_list)->with('merchant_gst',$merchant_gst)->with('manageitems',$manageitems);
    }
    public function update(Request $request){
       $validated = $request->validate([         

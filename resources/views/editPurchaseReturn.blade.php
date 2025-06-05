@@ -180,6 +180,9 @@
                               <td class="">
                                  <select onchange="call_fun('tr_@php echo $i; @endphp');" class="border-0 form-select  goods_items" id="goods_discription_tr_@php echo $i; @endphp" name="goods_discription[]"  data-id="@php echo $i; @endphp">
                                     <option value="">Select</option>
+                                    @foreach($manageitems as $item_info)
+                                       <option value="{{$item_info->id}}" unit_id="{{$item_info->u_name}}" data-val="{{$item_info->unit}}"  data-percent="12" @if($item_info->id==$item->goods_discription) selected @endif>{{$item_info->name}}</option>
+                                    @endforeach
                                  </select>
                               </td>                              
                               <td class=" w-min-50">
@@ -825,7 +828,7 @@
                }
                optionElements += '<option value="' + val.voucher_no + '" data-id="'+val.id+'" data-voucher_type="'+val.voucher_type+'" '+selected+'>' + val.voucher_no + '</option>';
             });
-            $("#voucher_no").append(optionElements);
+            $("#voucher_no").html(optionElements);
             $('#voucher_no').change();
          }
       });
@@ -854,6 +857,7 @@
             _token: '<?php echo csrf_token() ?>',
             voucher_no: invoice_id,
             voucher_type: $('option:selected', this).attr('data-voucher_type'),
+            id:$('option:selected', this).attr('data-id')
          },
          success: function(data) {
             var optionElements = '<option value="">Select</option>';
@@ -1276,7 +1280,7 @@
                      ignore: [], 
                      rules: {
                         series_no: "required",
-                        voucher_no: "required",
+                        //voucher_no: "required",
                         party_id: "required",
                         material_center: "required",
                         "goods_discription[]": "required",
@@ -1286,7 +1290,7 @@
                      },
                      messages: {
                         series_no: "Please select series no",
-                        voucher_no: "Please enter voucher no",
+                        //voucher_no: "Please enter voucher no",
                         party_id: "Please select party",
                         material_center: "Please select material center",
                         "goods_discription[]" : "Please select item",

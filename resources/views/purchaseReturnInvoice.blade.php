@@ -64,30 +64,24 @@
       }
    }
    @page { size: auto;  margin: 0mm; }
+   .importantRule { 
+   display: none !important;  /* Force hide anything with this class */
+}
 </style>
 <div class="list-of-view-company ">
    <section class="list-of-view-company-section container-fluid">
       <div class="row vh-100">
          @include('layouts.leftnav')
          <div class="col-md-12 ml-sm-auto  col-lg-9 px-md-4 bg-mint">
-            <div class="d-md-flex justify-content-between py-4 px-2 align-items-center noprint">
-               <nav aria-label="breadcrumb meri-breadcrumb ">
-                  <ol class="breadcrumb meri-breadcrumb m-0  ">
-                     <li class="breadcrumb-item">
-                        <a class="font-12 text-body text-decoration-none" href="#">Dashboard</a>
-                     </li>
-                     <li class="breadcrumb-item p-0">
-                        <a class="fw-bold font-heading font-12  text-decoration-none" href="#">Purchase Return</a>
-                     </li>
-                  </ol>
-               </nav>   
+            <div class="d-md-flex justify-content-between py-4 px-2 align-items-center noprint header-section">
+                 
                <div class="d-md-flex d-block ">
                   <div class="calender-administrator my-2 my-md-0  w-min-230">
-                     <button class="btn btn-info" onclick="window.print()">Print</button>
+                     <button class="btn btn-info" onclick="printpage();">Print</button>
                   </div>
                </div>            
             </div>
-            <table>
+            <table style="font-family: 'Source Sans Pro', sans-serif;letter-spacing: 0.05em;color: #404040;font-size: 12px;font-weight: 500;padding: 10px;">
                <tbody>
                   <tr>
                      <th colspan="8">
@@ -97,8 +91,8 @@
                         </div>
                         <div style="width:auto; float:right; text-align:right;"><small>O/D/T</small></div>
                         <div style="clear:both"></div>
-                        <p style="margin-top:0;" class="text-center">(Input TAX Credit is available to a taxable person against this copy)</p>
-                        <p style="margin-top:0;" class="text-center"><u>PURCHASE RETURN </u></p>
+                        
+                        <p style="margin-top:0;" class="text-center"><u>DEBIT NOTE</u></p>
                         <h1 style="margin:0px" class="text-center">{{$company_data->company_name}}</h1>
                         <p class="text-center"><small style="font-size: 13px;">{{$company_data->address}},{{$company_data->sname}},{{$company_data->pin_code}}</small></p>
                      </th>
@@ -124,8 +118,12 @@
                         <td colspan="4">
                            <p><span class="width25">Dr. Note No </span>: <span class="lft_mar15">{{$purchase_return->sr_prefix}}</span> </p>
                            <p><span class="width25">Dr. Note Date </span>: <span class="lft_mar15">{{date('d-m-Y',strtotime($purchase_return->date))}}</span> </p>
-                           <p><span class="width25">Org. Inv. No. </span>: <span class="lft_mar15">{{$purchase_return->voucher_no}}</span> </p>
-                           <p><span class="width25">Org. Inv. Date </span>: <span class="lft_mar15">{{date('d-m-Y',strtotime($purchase_return->purchase_date))}}</span> </p>
+                           {{$purchase_return->voucher_type}}
+                           @if($purchase_return->voucher_type!="")
+                              <p><span class="width25">Org. Inv. No. </span>: <span class="lft_mar15">{{$purchase_return->voucher_no}}</span> </p>
+                              <p><span class="width25">Org. Inv. Date </span>: <span class="lft_mar15">{{date('d-m-Y',strtotime($purchase_return->purchase_date))}}</span> </p>
+                           @endif
+                           
                            <p><span class="width25">Transport </span>: <span class="lft_mar15">{{$purchase_return->transport_name}}</span> </p>
                            <p><span class="width25">Vehicle No. </span>: <span class="lft_mar15">{{$purchase_return->vehicle_no}}</span> </p>
                            <p><span class="width25">Station </span>: <span class="lft_mar15">{{$purchase_return->station}}</span> </p>

@@ -15,6 +15,7 @@
                   @csrf
                   <div class="d-xxl-flex d-block  align-items-center">
                      <p class="text-nowrap m-0 font-14 fw-500 font-heading my-2 my-xxl-0">Items </p>
+                     <input type="hidden" name="series" value="<?php if(isset($_GET['series'])){ echo $_GET['series'];}else{ echo 'all';}?>">
                      <select class="form-select select2-single w-min-230 ms-xxl-2" aria-label="Default select example" id="items_id" name="items_id" required>
                         <option value="">Select</option>
                         <?php

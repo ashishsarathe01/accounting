@@ -111,9 +111,7 @@
                      <select class="form-select select2-single" id="voucher_no" name="voucher_no">
                         <option value="">Select</option>
                      </select>
-                     <ul style="color: red;">
-                        @error('voucher_no'){{$message}}@enderror                        
-                     </ul>
+                     
                      
                      <input type="hidden" name="voucher_type" id="voucher_type">
                      <input type="hidden" name="purchase_bill_id" id="purchase_bill_id">
@@ -160,6 +158,7 @@
                         <input type="text" class="form-control" id="voucher_prefix" name="voucher_prefix" placeholder="" value=""  readonly style="text-align: right;">
                         <input type="hidden" id="purchase_return_no" class="form-control" name="purchase_return_no"  readonly style="width: 30%;">
                         <input type="hidden" class="form-control" id="manual_enter_invoice_no" name="manual_enter_invoice_no">
+                        <input type="hidden" class="form-control" id="merchant_gst" name="merchant_gst">
                                          
                   </div>
                </div>
@@ -183,6 +182,9 @@
                            <td class="w-min-50">
                               <select onchange="call_fun('tr_1');" class="border-0  goods_items form-select" id="goods_discription_tr_1" name="goods_discription[]"  data-id="1">
                                  <option value="">Description of Goods</option>
+                                 @foreach($manageitems as $item)
+                                    <option value="{{$item->id}}" unit_id="{{$item->u_name}}" data-val="{{$item->unit}}"  data-percent="12">{{$item->name}}</option>
+                                 @endforeach
                               </select>
                            </td>                           
                            <td class="w-min-50">
@@ -1169,7 +1171,7 @@
                      ignore: [], 
                      rules: {
                         series_no: "required",
-                        voucher_no: "required",
+                        //voucher_no: "required",
                         party: "required",
                         material_center: "required",
                         "goods_discription[]": "required",
@@ -1179,7 +1181,7 @@
                      },
                      messages: {
                         series_no: "Please select series no",
-                        voucher_no: "Please enter voucher no",
+                        //voucher_no: "Please enter voucher no",
                         party: "Please select party",
                         material_center: "Please select material center",
                         "goods_discription[]" : "Please select item",
@@ -1438,6 +1440,7 @@
       let invoice_start_from = $('option:selected', this).attr('data-invoice_start_from');
       $("#material_center").val($('option:selected', this).attr('data-mat_center'));
       merchant_gstin = $('option:selected', this).attr('data-gst_no');
+      $("#merchant_gst").val(merchant_gstin);
       if(nature=="WITHOUT GST"){
          if(manual_enter_invoice_no==0){
             if(invoice_prefix_wt!=""){
