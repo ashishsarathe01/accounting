@@ -119,7 +119,7 @@
                      </ul>
                   </div>
                   <div class="mb-3 col-md-3 voucher_no_div">
-                     <label for="name" class="form-label font-14 font-heading">Purchase Invoice No. *</label>
+                     <label for="name" class="form-label font-14 font-heading">Invoice No. *</label>
                      <select class="form-select select2-single" id="voucher_no" name="voucher_no">
                         <option value="">Select</option>
                      </select>
@@ -128,6 +128,22 @@
                      </ul>
                      <input type="hidden" name="voucher_type" id="voucher_type" value="{{$purchase_return->voucher_type}}">
                      <input type="hidden" name="purchase_bill_id" id="purchase_bill_id" value="{{$purchase_return->purchase_bill_id}}">
+                  </div>
+                  <div class="mb-3 col-md-3 other_invoice_div" style="display:none">
+                     <label for="other_invoice_against" class="form-label font-14 font-heading">Invoice Against</label>
+                     <select class="form-select" id="other_invoice_against" name="other_invoice_against">
+                        <option value="Sale" @if($purchase_return->other_invoice_against=='Sale') selected @endif>Sale</option>Sale</option>
+                        <option value="Purchase" @if($purchase_return->other_invoice_against=='Purchase') selected
+                         @endif>Purchase</option>
+                     </select>  
+                  </div>
+                  <div class="mb-3 col-md-3 other_invoice_div" style="display:none">
+                     <label for="name" class="form-label font-14 font-heading">Invoice No</label>
+                     <input type="text" class="form-control" id="other_invoice_no" name="other_invoice_no" placeholder="Enter Invoice No." value="{{$purchase_return->other_invoice_no}}">
+                  </div>
+                  <div class="mb-3 col-md-2 other_invoice_div" style="display:none">
+                     <label for="other_invoice_date" class="form-label font-14 font-heading">Invoice Date</label>
+                     <input type="date" class="form-control" id="other_invoice_date" name="other_invoice_date" value="{{$purchase_return->other_invoice_date}}" >
                   </div>
                   <div class="mb-1 col-md-1 voucher_no_div">
                      <br>
@@ -181,7 +197,7 @@
                                  <select onchange="call_fun('tr_@php echo $i; @endphp');" class="border-0 form-select  goods_items" id="goods_discription_tr_@php echo $i; @endphp" name="goods_discription[]"  data-id="@php echo $i; @endphp">
                                     <option value="">Select</option>
                                     @foreach($manageitems as $item_info)
-                                       <option value="{{$item_info->id}}" unit_id="{{$item_info->u_name}}" data-val="{{$item_info->unit}}"  data-percent="12" @if($item_info->id==$item->goods_discription) selected @endif>{{$item_info->name}}</option>
+                                       <option value="{{$item_info->id}}" unit_id="{{$item_info->u_name}}" data-val="{{$item_info->unit}}"  data-percent="{{$item->gst_rate}}" @if($item_info->id==$item->goods_discription) selected @endif>{{$item_info->name}}</option>
                                     @endforeach
                                  </select>
                               </td>                              
@@ -820,7 +836,7 @@
             purchase_bill_id : purchase_bill_id
          },
          success: function(data) {
-            var optionElements = '';
+            var optionElements = '<option value="">Select</option>';
             $.each(data, function(key, val) {
                let selected = "";
                if(invoice_no==val.voucher_no){
@@ -828,6 +844,11 @@
                }
                optionElements += '<option value="' + val.voucher_no + '" data-id="'+val.id+'" data-voucher_type="'+val.voucher_type+'" '+selected+'>' + val.voucher_no + '</option>';
             });
+            let otherselect = "";
+            if(voucher_type=="OTHER"){
+               otherselect = "selected";
+            }
+            optionElements += '<option value="OTHER" '+otherselect+'>OTHER</option>';
             $("#voucher_no").html(optionElements);
             $('#voucher_no').change();
          }
@@ -835,7 +856,20 @@
    });
    $('#voucher_no').change(function() {
       // Get the selected value
-      
+      $("#invoice_id").show();
+      $(".other_invoice_div").hide();
+      //$("#other_invoice_no").val('');
+      //$("#other_invoice_date").val('');
+      if($(this).val()=='OTHER'){
+         $("#voucher_type").val('OTHER');
+         $("#invoice_id").hide();
+         $(".other_invoice_div").show();
+         $("#sale_bill_id").val('');
+         return;
+      }
+      $("#other_invoice_no").val('');
+      $("#other_invoice_date").val('');
+      $("#other_invoice_against").val('');
       $("#voucher_type").val($('option:selected', this).attr('data-voucher_type'));
       $("#purchase_bill_id").val($('option:selected', this).attr('data-id'));
 
@@ -1280,7 +1314,7 @@
                      ignore: [], 
                      rules: {
                         series_no: "required",
-                        //voucher_no: "required",
+                        voucher_no: "required",
                         party_id: "required",
                         material_center: "required",
                         "goods_discription[]": "required",
@@ -1290,7 +1324,7 @@
                      },
                      messages: {
                         series_no: "Please select series no",
-                        //voucher_no: "Please enter voucher no",
+                        voucher_no: "Please enter voucher no",
                         party_id: "Please select party",
                         material_center: "Please select material center",
                         "goods_discription[]" : "Please select item",
@@ -1432,6 +1466,8 @@
       calculateAmount();
    });
    $("#party_id").change(function(){
+      //$("#invoice_id").show();
+      //$(".other_invoice_div").hide();
       $("#partyaddress").html('');
       if($(this).val()==""){
          $("#party_id-error").show();

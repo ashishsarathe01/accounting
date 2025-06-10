@@ -244,6 +244,8 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
             if(!empty($request->input('igst'))){
                $sundry = BillSundrys::select('purchase_amt_account')
                                        ->where('nature_of_sundry','IGST')
+                                       ->where('delete','0')
+                                       ->where('status','1')
                                        ->where('company_id',Session::get('user_company_id'))
                                        ->first();
                $account_name = "";
@@ -277,6 +279,8 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
                $cgst_account_name = "";
                $cgst_sundry = BillSundrys::select('purchase_amt_account')
                         ->where('nature_of_sundry','CGST')
+                        ->where('delete','0')
+                        ->where('status','1')
                         ->where('company_id',Session::get('user_company_id'))
                         ->first();
                if($cgst_sundry){
@@ -284,6 +288,8 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
                }
                $sgst_sundry = BillSundrys::select('purchase_amt_account')
                            ->where('nature_of_sundry','SGST')
+                           ->where('delete','0')
+                           ->where('status','1')
                            ->where('company_id',Session::get('user_company_id'))
                            ->first();
                $sgst_account_name = "";
@@ -476,6 +482,8 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
       $sundry = BillSundrys::select('purchase_amt_account')
                            ->whereIn('nature_of_sundry',['IGST','CGST','SGST'])
                            ->where('company_id',Session::get('user_company_id'))
+                           ->where('delete','0')
+                           ->where('status','1')
                            ->pluck('purchase_amt_account');  
                            
       $sundry_arr = $sundry->toArray();
@@ -573,8 +581,11 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
          if(!empty($request->input('igst'))){
             $sundry = BillSundrys::select('purchase_amt_account')
                         ->where('nature_of_sundry','IGST')
+                        ->where('delete','0')
+                        ->where('status','1')
                         ->where('company_id',Session::get('user_company_id'))
                         ->first();
+            
             $account_name = "";
             if($sundry){
                $account_name = $sundry->purchase_amt_account;
@@ -604,6 +615,8 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
          }else{
             $cgst_sundry = BillSundrys::select('purchase_amt_account')
                         ->where('nature_of_sundry','CGST')
+                        ->where('delete','0')
+                        ->where('status','1')
                         ->where('company_id',Session::get('user_company_id'))
                         ->first();
             $cgst_account_name = "";
@@ -612,6 +625,8 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
             }
             $sgst_sundry = BillSundrys::select('purchase_amt_account')
                         ->where('nature_of_sundry','SGST')
+                        ->where('delete','0')
+                        ->where('status','1')
                         ->where('company_id',Session::get('user_company_id'))
                         ->first();
             $sgst_account_name = "";

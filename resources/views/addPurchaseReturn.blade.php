@@ -67,7 +67,7 @@
                @csrf
                <div class="row">
                   <div class="mb-4 col-md-4">
-                     <label for="name" class="form-label font-14 font-heading">NATURE</label>
+                     <label for="nature" class="form-label font-14 font-heading">NATURE</label>
                      <select id="nature" name="nature" class="form-select" required onChange="sectionHideShow();">
                         <option value="">Select</option>
                         <option value="WITH GST">WITH GST</option>
@@ -78,7 +78,7 @@
                      </ul> 
                   </div>
                   <div class="mb-4 col-md-4 type_div" style="display:none">
-                     <label for="name" class="form-label font-14 font-heading">TYPE</label>
+                     <label for="type" class="form-label font-14 font-heading">TYPE</label>
                      <select id="type" name="type" class="form-select" onChange="sectionHideShow()">
                         <option value="">Select</option>
                         <option value="WITH ITEM">WITH ITEM</option>
@@ -87,14 +87,14 @@
                      </select>
                   </div>
                   <div class="mb-4 col-md-4">
-                     <label for="name" class="form-label font-14 font-heading">Date</label>
+                     <label for="date" class="form-label font-14 font-heading">Date</label>
                      <input type="date" id="date" class="form-control calender-bg-icon calender-placeholder" name="date" value="{{$bill_date}}" placeholder="Select date" required min="{{Session::get('from_date')}}" max="{{Session::get('to_date')}}">
                      <ul style="color: red;">
                         @error('date'){{$message}}@enderror                        
                      </ul>
                   </div>
                   <div class="mb-4 col-md-4 account_div">
-                     <label for="name" class="form-label font-14 font-heading">Accounts</label>
+                     <label for="party_id" class="form-label font-14 font-heading">Accounts</label>
                      <select class="form-select select2-single" name="party_id" id="party_id">
                         <option value="">Select Account</option>
                         @foreach($party_list as $party)
@@ -107,21 +107,35 @@
                      </ul>
                   </div>
                   <div class="mb-3 col-md-3 voucher_no_div" style="display:none">
-                     <label for="name" class="form-label font-14 font-heading">Purchase Invoice No. *</label>
+                     <label for="voucher_no" class="form-label font-14 font-heading">Invoice No. *</label>
                      <select class="form-select select2-single" id="voucher_no" name="voucher_no">
                         <option value="">Select</option>
-                     </select>
-                     
-                     
+                     </select>                     
                      <input type="hidden" name="voucher_type" id="voucher_type">
                      <input type="hidden" name="purchase_bill_id" id="purchase_bill_id">
+                  </div>
+                  <div class="mb-3 col-md-3 other_invoice_div" style="display:none">
+                     <label for="other_invoice_against" class="form-label font-14 font-heading">Invoice Against</label>
+                     <select class="form-select" id="other_invoice_against" name="other_invoice_against">
+                        <option value="">Select</option>
+                        <option value="Sale">Sale</option>
+                        <option value="Purchase">Purchase</option>
+                     </select>  
+                  </div>
+                  <div class="mb-3 col-md-3 other_invoice_div" style="display:none">
+                     <label for="other_invoice_no" class="form-label font-14 font-heading">Invoice No</label>
+                     <input type="text" class="form-control" id="other_invoice_no" name="other_invoice_no" placeholder="Enter Invoice No.">
+                  </div>
+                  <div class="mb-3 col-md-2 other_invoice_div" style="display:none">
+                     <label for="other_invoice_date" class="form-label font-14 font-heading">Invoice Date</label>
+                     <input type="date" class="form-control" id="other_invoice_date" name="other_invoice_date">
                   </div>
                   <div class="mb-1 col-md-1 voucher_no_div" style="display:none">
                      <br>
                      <a href="" title="View Invoice" target="__blank" id="invoice_id"><img src="{{ URL::asset('public/assets/imgs/eye-icon.svg')}}" style="margin-top: 20px;"></a>
                   </div>
                   <div class="mb-4 col-md-4">
-                     <label for="name" class="form-label font-14 font-heading">Series No.</label>
+                     <label for="series_no" class="form-label font-14 font-heading">Series No.</label>
                      <select id="series_no" name="series_no" class="form-select" required>
                         <option value="">Select</option>
                         <?php
@@ -137,7 +151,7 @@
                      </ul> 
                   </div>
                   <div class="mb-4 col-md-4">
-                     <label for="name" class="form-label font-14 font-heading">Material Center</label>
+                     <label for="material_center" class="form-label font-14 font-heading">Material Center</label>
                      <select name="material_center" id="material_center" class="form-select" required>
                         <option value="">Select</option>
                         <?php
@@ -153,8 +167,7 @@
                      </ul>
                   </div>
                   <div class="mb-4 col-md-4">
-                     <label for="purchase_return_no" class="form-label font-14 font-heading">Debit Note No.</label>
-                     
+                     <label for="voucher_prefix" class="form-label font-14 font-heading">Debit Note No.</label>
                         <input type="text" class="form-control" id="voucher_prefix" name="voucher_prefix" placeholder="" value=""  readonly style="text-align: right;">
                         <input type="hidden" id="purchase_return_no" class="form-control" name="purchase_return_no"  readonly style="width: 30%;">
                         <input type="hidden" class="form-control" id="manual_enter_invoice_no" name="manual_enter_invoice_no">
@@ -183,7 +196,7 @@
                               <select onchange="call_fun('tr_1');" class="border-0  goods_items form-select" id="goods_discription_tr_1" name="goods_discription[]"  data-id="1">
                                  <option value="">Description of Goods</option>
                                  @foreach($manageitems as $item)
-                                    <option value="{{$item->id}}" unit_id="{{$item->u_name}}" data-val="{{$item->unit}}"  data-percent="12">{{$item->name}}</option>
+                                    <option value="{{$item->id}}" unit_id="{{$item->u_name}}" data-val="{{$item->unit}}"  data-percent="{{$item->gst_rate}}">{{$item->name}}</option>
                                  @endforeach
                               </select>
                            </td>                           
@@ -395,19 +408,19 @@
                                        <br>
                                        <div class="row">
                                           <div class="mb-6 col-md-6">
-                                             <label for="name" class="form-label font-14 font-heading">Vehicle No.</label>
-                                             <input type="text" name="vehicle_no" class="form-control" placeholder="Vehicle No." />
+                                             <label for="vehicle_no" class="form-label font-14 font-heading">Vehicle No.</label>
+                                             <input type="text" name="vehicle_no" id="vehicle_no" class="form-control" placeholder="Vehicle No." />
                                           </div>
                                           <div class="mb-6 col-md-6">
-                                             <label for="name" class="form-label font-14 font-heading">Transport Name</label>
+                                             <label for="transport_name" class="form-label font-14 font-heading">Transport Name</label>
                                              <input type="text" id="transport_name" name="transport_name" class="form-control" placeholder="Transport Name" />
                                           </div>
                                           <div class="mb-6 col-md-6">
-                                             <label for="name" class="form-label font-14 font-heading">GR/RR No.</label>
+                                             <label for="gr_pr_no" class="form-label font-14 font-heading">GR/RR No.</label>
                                              <input type="text" id="gr_pr_no" name="gr_pr_no" class="form-control" placeholder="GR/RR No"/>
                                           </div>
                                           <div class="mb-6 col-md-6">
-                                             <label for="name" class="form-label font-14 font-heading">Station</label>
+                                             <label for="station" class="form-label font-14 font-heading">Station</label>
                                              <input type="text" id="station" name="station" class="form-control" placeholder="Station"/>
                                           </div>
                                        </div>
@@ -707,6 +720,18 @@
    });
    $('#voucher_no').change(function() {
       // Get the selected value
+      $("#invoice_id").show();
+      $(".other_invoice_div").hide();
+      $("#other_invoice_no").val('');
+      $("#other_invoice_date").val('');
+      $("#other_invoice_against").attr('required', false);
+      if($(this).val()=='OTHER'){
+         $("#voucher_type").val('OTHER');
+         $("#invoice_id").hide();
+         $(".other_invoice_div").show();
+         $("#other_invoice_against").attr('required', true);
+         return;
+      }
       let voucher_type = $('option:selected', this).attr('data-voucher_type');
       $(".extra_taxes_row").remove();
       $("#bill_sundry_tr_1").val('');
@@ -1171,7 +1196,7 @@
                      ignore: [], 
                      rules: {
                         series_no: "required",
-                        //voucher_no: "required",
+                        voucher_no: "required",
                         party: "required",
                         material_center: "required",
                         "goods_discription[]": "required",
@@ -1181,7 +1206,7 @@
                      },
                      messages: {
                         series_no: "Please select series no",
-                        //voucher_no: "Please enter voucher no",
+                        voucher_no: "Please enter voucher no",
                         party: "Please select party",
                         material_center: "Please select material center",
                         "goods_discription[]" : "Please select item",
@@ -1388,6 +1413,11 @@
       }
    });
    $(document).on('change', '#party_id', function(){  
+      $("#invoice_id").show();
+      $(".other_invoice_div").hide();
+      $("#other_invoice_no").val('');
+      $("#other_invoice_date").val('');
+      $("#other_invoice_against").attr('required', false);
       $("#partyaddress").html('');
       $("#partyaddress").html("GSTIN : "+$('option:selected', this).attr('data-gstin')+"<br>Address : "+$('option:selected', this).attr('data-address'));     
       var account_id = $("#party_id").val();
@@ -1413,6 +1443,7 @@
                }
                optionElements += '<option value="' + voc_no + '" data-id="'+val.id+'" data-series_no="'+val.series_no+'" data-material_center="'+val.material_center+'" data-voucher_type="'+val.voucher_type+'">'+ voc_no + '</option>';
             });
+            optionElements += '<option value="OTHER">OTHER</option>';
             $("#voucher_no").append(optionElements);
          }
       });

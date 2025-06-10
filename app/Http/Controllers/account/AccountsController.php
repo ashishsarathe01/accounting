@@ -363,7 +363,7 @@ class AccountsController extends Controller{
       $account->deleted_at = Carbon::now();
       $account->update();
       if($account) {
-         AccountOtherAddress::where('account_id',$id)
+         AccountOtherAddress::where('account_id',$request->account_id)
          ->where('company_id',Session::get('user_company_id'))
          ->update(['status'=>'0','updated_at'=>Carbon::now()]); 
          if(!empty($account->bank_map_id)){

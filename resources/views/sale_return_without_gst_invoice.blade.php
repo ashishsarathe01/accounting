@@ -82,21 +82,40 @@
                 <table>
                     <tbody>
                         <tr>
-                            <th colspan="8">
-                                <div style="width:auto; float:left; text-align:left;"><h4 style="margin-top:0; margin-bottom: 0px;"> GSTIN : {{$company_data->gst}}</h4></div>
-                                <div class="bil_logo">
-                                    <img src="https://www.kraftpaperz.com/images/logo.png" alt="kraftpaperz">
-                                </div>
-                                <div style="width:auto; float:right; text-align:right;"><small>O/D/T</small></div>
-                                <div style="clear:both"></div>
-                                <p style="margin-top:0;" class="text-center">(Input TAX Credit is available to a taxable person against this copy)</p>
-                                <p style="margin-top:0;" class="text-center"><u>CREDIT NOTE</u></p>
-                                <h1 style="margin:0px" class="text-center">{{$company_data->company_name}}</h1>
-                                <p class="text-center"><small style="font-size: 13px;">{{$company_data->address}},{{$company_data->sname}},{{$company_data->pin_code}}</small></p>
-                            </th>
+                             <th colspan="8">
+    <div style="width:auto; float:left; text-align:left;">
+        <strong style="margin:0;">GSTIN: {{$seller_info->gst_no}}</strong>
+    </div>
+
+    <div class="bil_logo">
+        @if($configuration && $configuration->company_logo_status==1 && !empty($configuration->company_logo))
+            <img src="{{ URL::asset('public/images')}}/{{$configuration->company_logo}}" alt="My Logo">
+        @endif
+    </div>
+
+    <div style="width:auto; float:right; text-align:right;">
+        <strong style="margin:0;">PAN: {{substr($seller_info->gst_no, 2, 10)}}</strong><br>
+        <small>O/D/T</small>
+    </div>
+
+    <div style="clear:both;"></div>
+
+    <div style="text-align:center; line-height:1; margin:0; padding:0;">
+        <p style="margin:0;"><u>CREDIT NOTE</u></p>
+        <p style="margin:0; font-size: 24px; font-weight: bold;">{{$company_data->company_name}}</p>
+        <p style="margin:0;">
+            <small style="font-size: 12px; display:inline-block; max-width:50%; word-break:break-word;">
+                {{$seller_info->address}},{{$seller_info->pincode}}
+            </small>
+        </p>
+        <p style="margin:0;">
+            <small style="font-size: 12px;">Phone: {{$company_data->mobile_no}} &nbsp; Email: {{$company_data->email_id}}</small>
+        </p>
+    </div>
+</th>
                         </tr>                                          
                         <tr>
-                            <td colspan="4">
+                            <td colspan="4" style="width:50%;">
                                 <p><span class="width25">Party Details :  </span></p>
                                 <p><span class="width25">{{$sale_return->account_name}} </span></p>
                                 <p>{{$sale_return->address}},{{$sale_return->sname}}</p>
@@ -104,7 +123,7 @@
                                 <p>&nbsp;</p>
                                 <p>GSTIN / UIN : {{$sale_return->gstin}}</p>
                             </td>
-                        <td colspan="4">
+                        <td colspan="4" style="width:50%;">
                            <p><span class="width25">Cr. Note No </span>: <span class="lft_mar15">{{$sale_return->sr_prefix}}</span> </p>
                            <p><span class="width25">Cr. Note Date </span>: <span class="lft_mar15">{{date('d-m-Y',strtotime($sale_return->date))}}</span> </p>
                            <p>&nbsp;</p>
@@ -115,34 +134,34 @@
                         </td>
                      </tr>
                      <tr>
-                        <th style="width:5%;">S.N.</th>
-                        <th colspan="3" style="text-align:left;">Account</th>
-                        <th style="text-align:right">Amount(₹)</th>
+                        <th colspan="1"style="width:5%;">S.N.</th>
+                        <th colspan="4"colspan="3" style="text-align:left;width:85%;">Account</th>
+                        <th colspan="3"style="text-align:right;width:10%;;">Amount(₹)</th>
                      </tr>
                      @php $i=1;$item_total = 0; $percentage = 0;@endphp
                      @foreach($items as $item)
                         <tr>
-                           <td style="text-align:left">{{$i}}</td>
-                           <td colspan="3" style="text-align:left">{{$item->account_name}}</td>
-                           <td style="text-align:right;">{{number_format($item->debit,2)}}</td>
+                           <td colspan="1"style="text-align:left">{{$i}}</td>
+                           <td colspan="4" style="text-align:left">{{$item->account_name}}</td>
+                           <td colspan="3"style="text-align:right;">{{number_format($item->debit,2)}}</td>
                         </tr>
                         @php $i++;$item_total = $item_total + $item->debit;$percentage = $percentage + $item->percentage; @endphp
                      @endforeach 
-                     <tr style="height: 23px;"><td></td><td colspan="3"></td><td></td></tr>
-                     <tr style="height: 23px;"><td></td><td colspan="3"></td><td></td></tr>
-                     <tr style="height: 23px;"><td></td><td colspan="3"></td><td></td></tr>
-                     <tr style="height: 23px;"><td></td><td colspan="3"></td><td></td></tr> 
+                     <tr style="height: 23px;"><td colspan="1"></td><td colspan="4"></td><td colspan="3" ></td></tr>
+                     <tr style="height: 23px;"><td colspan="1"></td><td colspan="4"></td><td colspan="3" ></td></tr>
+                     <tr style="height: 23px;"><td colspan="1"></td><td colspan="4"></td><td colspan="3" ></td></tr>
+                     <tr style="height: 23px;"><td colspan="1"></td><td colspan="4"></td><td colspan="3" ></td></tr> 
                      <tr>
-                        <td colspan="3" style="border-bottom:0; border-right:0"></td>
-                        <td style="border-bottom:0; border-left:0"><strong>Total</strong></td>
-                        <td style="text-align:right; border-bottom:0;">{{number_format($item_total,2)}} </td>
+                        <td colspan="1" style="border-bottom:0; border-right:0"></td>
+                        <td colspan="4"style="border-bottom:0; border-left:0"><strong>Total</strong></td>
+                        <td colspan="3"style="text-align:right; border-bottom:0;">{{number_format($item_total,2)}} </td>
                      </tr>
                      
                      <tr>
-                        <td colspan="4" style="text-align:right; border-right: 0; border-bottom: 0">
+                        <td colspan="5" style="text-align:right; border-right: 0; border-bottom: 0">
                            <p><strong>Grand Total ₹</strong></p>
                         </td>                                     
-                        <td style="text-align:right">
+                        <td colspan="3"style="text-align:right">
                            <p><strong>{{number_format($sale_return->total,2)}}</strong></p>
                         </td>
                      </tr>
@@ -196,20 +215,34 @@
                             </strong>
                         </td>
                     </tr>                  
-                    <tr>
-                        <td colspan="4">
-                            <p><small>Terms &amp; Conditions</small></p>
-                            <p><small>E.&amp; O.E. </small></p>
-                            <p><small>1. Goods once sold will not be taken back. </small></p>
-                        </td>
-                        <td colspan="4">
-                            <p><small>Receiver's Signature :</small></p>
-                            <hr>
-                            <p style="text-align:right"><strong>for {{$company_data->company_name}}</strong></p><br>
-                            <br>
-                            <p style="text-align:right"><strong>Authorised Signatory</strong></p>
-                        </td>
-                    </tr>
+                   <tr>
+                  <td colspan="4" style="vertical-align: top; padding: 5px; ">
+    @if($configuration && $configuration->term_status==1 && $configuration->terms && count($configuration->terms)>0)
+        <p style="margin: 0;"><small><b>Terms &amp; Conditions</b></small></p>
+        <p style="margin: 0;"><small>E.&amp; O.E.</small></p>
+        @php $i = 1; @endphp
+        @foreach($configuration->terms as $k => $t)
+            <p style="margin: 0; line-height: 1;"><small>{{$i}}. {{$t->term}}</small></p>
+            @php $i++; @endphp
+        @endforeach
+    @endif
+</td>
+                     <td colspan="4">
+   <p style="height:40px; margin:0; padding:0;"><small>Receiver's Signature :</small></p>
+   <hr style="margin:0; padding:0;">
+   <p style="text-align:right; padding:0; margin:0;"><strong>for {{$company_data->company_name}}</strong></p>
+
+   @if($configuration && !empty($configuration->signature))
+      <p style="text-align:right; margin:0; padding:0;">
+         <img src="{{ URL::asset('public/images')}}/{{$configuration->signature}}" style="width: 145px; height:70px;">
+      </p>
+      @else
+      <p style="width: 145px; height:70px;"></p>
+   @endif
+
+   <p style="text-align:right; margin:0; padding:0;"><strong>Authorised Signatory</strong></p>
+</td>
+                  </tr>
                 </tbody>
             </table>
          </div>                     

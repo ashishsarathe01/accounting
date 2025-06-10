@@ -109,7 +109,7 @@
                      </ul>
                   </div>
                   <div class="mb-3 col-md-3 voucher_no_div" style="display:none">
-                     <label for="name" class="form-label font-14 font-heading">Sale Invoice No. </label><br>
+                     <label for="name" class="form-label font-14 font-heading">Invoice No. </label><br>
                      <select class="form-select select2-single" id="voucher_no" name="voucher_no">
                         <option value="">Select</option>
                      </select>
@@ -118,6 +118,22 @@
                      </ul>
                      <input type="hidden" name="voucher_type" id="voucher_type">
                      <input type="hidden" name="sale_bill_id" id="sale_bill_id">
+                  </div>
+                  <div class="mb-3 col-md-3 other_invoice_div" style="display:none">
+                     <label for="other_invoice_against" class="form-label font-14 font-heading">Invoice Against</label>
+                     <select class="form-select" id="other_invoice_against" name="other_invoice_against">
+                        <option value="">Select</option>
+                        <option value="Sale">Sale</option>
+                        <option value="Purchase">Purchase</option>
+                     </select>  
+                  </div>
+                  <div class="mb-3 col-md-3 other_invoice_div" style="display:none">
+                     <label for="other_invoice_no" class="form-label font-14 font-heading">Invoice No</label>
+                     <input type="text" class="form-control" id="other_invoice_no" name="other_invoice_no" placeholder="Enter Invoice No.">
+                  </div>
+                  <div class="mb-3 col-md-2 other_invoice_div" style="display:none">
+                     <label for="other_invoice_date" class="form-label font-14 font-heading">Invoice Date</label>
+                     <input type="date" class="form-control" id="other_invoice_date" name="other_invoice_date">
                   </div>
                   <div class="mb-1 col-md-1 voucher_no_div" style="display:none">
                      <br>
@@ -184,6 +200,9 @@
                            <td class="w-min-50">
                               <select onchange="call_fun('tr_1');" class="border-0  goods_items form-select" id="goods_discription_tr_1" name="goods_discription[]"  data-id="1">
                                  <option value="">Select</option>
+                                 @foreach($manageitems as $item_info)
+                                    <option value="{{$item_info->id}}" unit_id="{{$item_info->u_name}}" data-val="{{$item_info->unit}}"  data-percent="{{$item_info->gst_rate}}">{{$item_info->name}}</option>
+                                 @endforeach
                               </select>
                            </td>                           
                            <td class=" w-min-50">
@@ -443,6 +462,16 @@
                         </table>
                      </div>
                   </div>
+                   <div class="narration_withgst" style="display: none; margin: 0px 0px 10px 0px; align-items: center;">
+   <label for="narration_withgst" style="margin-right: 10px; min-width: 80px; font-weight: 500;"><strong>Narration</strong></label>
+   <input
+      id="narration_withgst"
+      name="narration_withgst"
+      class="form-control"
+      placeholder="Enter narration for the entry..."
+      style="color: #212529; padding-top: 2px; height: 40px; line-height: 1.5; text-align: left; width: 100%; margin-top: 0px !important;"
+   >
+</div>
                </div>
                <!-- With Gst WithOut Item Section Start -->
                <div class="transaction-table transaction-main-table bg-white table-view shadow-sm border-radius-8 mb-4 with_gst_without_item_section" style="display:none">
@@ -461,13 +490,63 @@
                               <input type="number" class="form-control hsn" id="hsn_1" name="hsn[]" placeholder="HSN/SAC">
                            </td>
                            <td style="width:15%">
-                              <select class="form-select percentage" id="percentage_1" data-index="1" name="percentage[]" onchange="gstCalculation()">
+                              <select class="form-select percentage select2-single" id="percentage_1" data-index="1" name="percentage[]" onchange="gstCalculation()">
                                  <option value="">GST(%)</option>
                                  <option value="5">5%</option>
                                  <option value="12">12%</option>
                                  <option value="18">18%</option>
                                  <option value="28">28%</option>
                               </select>
+                           </td>
+                           <td style="width:15%">
+                               <select class="form-control select2-single" name="unit_code[]" id="unit_code_1" >
+                                          <option value="">-- Select UQC --</option>
+                                          <option value="BAL - BALE">BAL - BALE</option>
+                                          <option value="BDL - BUNDLES">BDL - BUNDLES</option>
+                                          <option value="BKL - BUCKLES">BKL - BUCKLES</option>
+                                          <option value="BOU - BILLION OF UNITS">BOU - BILLION OF UNITS</option>
+                                          <option value="BOX - BOX">BOX - BOX</option>
+                                          <option value="BTL - BOTTLES">BTL - BOTTLES</option>
+                                          <option value="BUN - BUNCHES">BUN - BUNCHES</option>
+                                          <option value="CAN - CANS">CAN - CANS</option>
+                                          <option value="CBM - CUBIC METERS">CBM - CUBIC METERS</option>
+                                          <option value="CCM - CUBIC CENTIMETERS">CCM - CUBIC CENTIMETERS</option>
+                                          <option value="CMS - CENTIMETERS">CMS - CENTIMETERS</option>
+                                          <option value="CTN - CARTONS">CTN - CARTONS</option>
+                                          <option value="DOZ - DOZENS">DOZ - DOZENS</option>
+                                          <option value="DRM - DRUMS">DRM - DRUMS</option>
+                                          <option value="GGK - GREAT GROSS">GGK - GREAT GROSS</option>
+                                          <option value="GMS - GRAMMES">GMS - GRAMMES</option>
+                                          <option value="GRS - GROSS">GRS - GROSS</option>
+                                          <option value="GYD - GROSS YARDS">GYD - GROSS YARDS</option>
+                                          <option value="KGS - KILOGRAMS">KGS - KILOGRAMS</option>
+                                          <option value="KLR - KILOLITRE">KLR - KILOLITRE</option>
+                                          <option value="KME - KILOMETRE">KME - KILOMETRE</option>
+                                          <option value="LTR - LITRES">LTR - LITRES</option>
+                                          <option value="MLT - MILILITRE">MLT - MILILITRE</option>
+                                          <option value="MTR - METERS">MTR - METERS</option>
+                                          <option value="MTS - METRIC TON">MTS - METRIC TON</option>
+                                          <option value="NOS - NUMBERS">NOS - NUMBERS</option>
+                                          <option value="PAC - PACKS">PAC - PACKS</option>
+                                          <option value="PCS - PIECES">PCS - PIECES</option>
+                                          <option value="PRS - PAIRS">PRS - PAIRS</option>
+                                          <option value="QTL - QUINTAL">QTL - QUINTAL</option>
+                                          <option value="ROL - ROLLS">ROL - ROLLS</option>
+                                          <option value="SET - SETS">SET - SETS</option>
+                                          <option value="SQF - SQUARE FEET">SQF - SQUARE FEET</option>
+                                          <option value="SQM - SQUARE METERS">SQM - SQUARE METERS</option>
+                                          <option value="SQY - SQUARE YARDS">SQY - SQUARE YARDS</option>
+                                          <option value="TBS - TABLETS">TBS - TABLETS</option>
+                                          <option value="TGM - TEN GROSS">TGM - TEN GROSS</option>
+                                          <option value="THD - THOUSANDS">THD - THOUSANDS</option>
+                                          <option value="TON - TONNES">TON - TONNES</option>
+                                          <option value="TUB - TUBES">TUB - TUBES</option>
+                                          <option value="UGS - US GALLONS">UGS - US GALLONS</option>
+                                          <option value="UNT - UNITS">UNT - UNITS</option>
+                                          <option value="YDS - YARDS">YDS - YARDS</option>
+                                          <option value="OTH - OTHERS">OTH - OTHERS</option>
+                                          <option value="Test - ER Scenario">Test - ER Scenario</option>
+                                       </select>
                            </td>
                            <td>
                               <input type="text" class="form-control amount" id="amount_1" data-index="1" name="without_item_amount[]" placeholder="Enter Amount" onkeyup="gstCalculation()">
@@ -749,6 +828,18 @@
    });  
    $('#voucher_no').change(function() {
       // Get the selected value
+      $("#invoice_id").show();
+      $(".other_invoice_div").hide();
+      $("#other_invoice_no").val('');
+      $("#other_invoice_date").val('');
+      $("#other_invoice_against").attr('required', false);
+      if($(this).val()=='OTHER'){
+         $("#voucher_type").val('OTHER');
+         $("#invoice_id").hide();
+         $(".other_invoice_div").show();
+         $("#other_invoice_against").attr('required', true);
+         return;
+      }
       let voucher_type = $('option:selected', this).attr('data-voucher_type');
       $(".extra_taxes_row").remove();
       $("#bill_sundry_tr_1").val('');
@@ -781,13 +872,13 @@
             var itemQtyMap = {}; // to store item_id → max_qty
 
             $.each(data, function(key, val) {
-            optionElements += '<option unit_id="' + val.unit_id + '" ' +
+               optionElements += '<option unit_id="' + val.unit_id + '" ' +
                      'data-val="' + val.unit + '" ' +
                      'value="' + val.item_id + '" ' +
                      'data-percent="' + val.gst_rate + '" ' +
                      'data-qty="' + val.qty + '">' + val.items_name + '</option>';
 
-            itemQtyMap[val.item_id] = val.qty; // store item qty for JS access
+               itemQtyMap[val.item_id] = val.qty; // store item qty for JS access
             });
 
          $("#goods_discription_tr_1").html(optionElements);
@@ -1422,6 +1513,11 @@
       }
    });
    $(document).on('change', '#party_id', function(){
+      $("#invoice_id").show();
+      $(".other_invoice_div").hide();
+      $("#other_invoice_no").val('');
+      $("#other_invoice_date").val('');
+      $("#other_invoice_against").attr('required', false);
       $("#partyaddress").html('');
       $("#partyaddress").html("GSTIN : "+$('option:selected', this).attr('data-gstin')+"<br>Address : "+$('option:selected', this).attr('data-address'));      
       var account_id = $("#party_id").val();
@@ -1449,6 +1545,8 @@
                }
                optionElements += '<option value="' + val.voucher_no + '" data-id="'+val.id+'" data-series_no="'+val.series_no+'" data-material_center="'+val.material_center+'" data-voucher_no_prefix="'+val.voucher_no_prefix+'" data-voucher_type="'+val.voucher_type+'">' + voc_no + '</option>';
             });
+             optionElements += '<option value="OTHER">OTHER</option>';
+            $("#voucher_no").append(optionElements);
             $("#voucher_no").html(optionElements);
          }
       });
@@ -1565,6 +1663,7 @@
       if(nature=="WITH GST" && (type=="WITH ITEM" || type=="RATE DIFFERENCE")){
          $(".with_gst_with_item_section").show();
          $(".item").select2();
+         $(".narration_withgst").show();
       }
       if((nature=="WITH GST" && type=="WITHOUT ITEM")){
          $(".with_gst_without_item_section").show();
@@ -1636,12 +1735,96 @@
          alert("Please enter required fields");
          return;
       }
-      add_more_count_withgst++;
+     add_more_count_withgst++;
       var $curRow = $(this).closest('tr');
-      let newRow = '<tr id="withgst_tr_'+add_more_count_withgst+'" class="font-14 font-heading bg-white"><td style="width:50%"><select class="form-control item" id="item_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="item[]" onchange="gstCalculation()"><option value="">Select Item</option>@foreach($items as $item)<option value="{{$item->id}}">{{$item->account_name}}</option>@endforeach </select></td><td><input type="number" class="form-control hsn" id="hsn_1" name="hsn[]" placeholder="HSN/SAC"></td><td><select class="form-select percentage" id="percentage_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="percentage[]" onchange="gstCalculation()"><option value="">GST(%)</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option><option value="28">28%</option></select></td><td><input type="text" class="form-control amount" id="amount_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="without_item_amount[]" placeholder="Enter Amount" onkeyup="gstCalculation()"></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove_more_tr" data-id="'+add_more_count_withgst+'" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"></path></svg></td></tr>';
+      let newRow = `
+<tr id="withgst_tr_${add_more_count_withgst}" class="font-14 font-heading bg-white">
+    <td style="width:50%">
+        <select class="form-control item" id="item_${add_more_count_withgst}" data-index="${add_more_count_withgst}" name="item[]" onchange="gstCalculation()">
+            <option value="">Select Item</option>
+            @foreach($items as $item)
+                <option value="{{ $item->id }}">{{ $item->account_name }}</option>
+            @endforeach
+        </select>
+    </td>
+
+    <td>
+        <input type="number" class="form-control hsn" id="hsn_${add_more_count_withgst}" name="hsn[]" placeholder="HSN/SAC">
+    </td>
+
+    <td>
+        <select class="form-select percentage select2-single" id="percentage_${add_more_count_withgst}" data-index="${add_more_count_withgst}" name="percentage[]" onchange="gstCalculation()">
+            <option value="">GST(%)</option>
+            <option value="5">5%</option>
+            <option value="12">12%</option>
+            <option value="18">18%</option>
+            <option value="28">28%</option>
+        </select>
+    </td>
+<td> <select class="form-control select2-single" name="unit_code[]" id="unit_code_${add_more_count_withgst}" >
+    <option value="">-- Select UQC --</option>
+    <option value="BAL - BALE">BAL - BALE</option>
+    <option value="BDL - BUNDLES">BDL - BUNDLES</option>
+    <option value="BKL - BUCKLES">BKL - BUCKLES</option>
+    <option value="BOU - BILLION OF UNITS">BOU - BILLION OF UNITS</option>
+    <option value="BOX - BOX">BOX - BOX</option>
+    <option value="BTL - BOTTLES">BTL - BOTTLES</option>
+    <option value="BUN - BUNCHES">BUN - BUNCHES</option>
+    <option value="CAN - CANS">CAN - CANS</option>
+    <option value="CBM - CUBIC METERS">CBM - CUBIC METERS</option>
+    <option value="CCM - CUBIC CENTIMETERS">CCM - CUBIC CENTIMETERS</option>
+    <option value="CMS - CENTIMETERS">CMS - CENTIMETERS</option>
+    <option value="CTN - CARTONS">CTN - CARTONS</option>
+    <option value="DOZ - DOZENS">DOZ - DOZENS</option>
+    <option value="DRM - DRUMS">DRM - DRUMS</option>
+    <option value="GGK - GREAT GROSS">GGK - GREAT GROSS</option>
+    <option value="GMS - GRAMMES">GMS - GRAMMES</option>
+    <option value="GRS - GROSS">GRS - GROSS</option>
+    <option value="GYD - GROSS YARDS">GYD - GROSS YARDS</option>
+    <option value="KGS - KILOGRAMS">KGS - KILOGRAMS</option>
+    <option value="KLR - KILOLITRE">KLR - KILOLITRE</option>
+    <option value="KME - KILOMETRE">KME - KILOMETRE</option>
+    <option value="LTR - LITRES">LTR - LITRES</option>
+    <option value="MLT - MILILITRE">MLT - MILILITRE</option>
+    <option value="MTR - METERS">MTR - METERS</option>
+    <option value="MTS - METRIC TON">MTS - METRIC TON</option>
+    <option value="NOS - NUMBERS">NOS - NUMBERS</option>
+    <option value="PAC - PACKS">PAC - PACKS</option>
+    <option value="PCS - PIECES">PCS - PIECES</option>
+    <option value="PRS - PAIRS">PRS - PAIRS</option>
+    <option value="QTL - QUINTAL">QTL - QUINTAL</option>
+    <option value="ROL - ROLLS">ROL - ROLLS</option>
+    <option value="SET - SETS">SET - SETS</option>
+    <option value="SQF - SQUARE FEET">SQF - SQUARE FEET</option>
+    <option value="SQM - SQUARE METERS">SQM - SQUARE METERS</option>
+    <option value="SQY - SQUARE YARDS">SQY - SQUARE YARDS</option>
+    <option value="TBS - TABLETS">TBS - TABLETS</option>
+    <option value="TGM - TEN GROSS">TGM - TEN GROSS</option>
+    <option value="THD - THOUSANDS">THD - THOUSANDS</option>
+    <option value="TON - TONNES">TON - TONNES</option>
+    <option value="TUB - TUBES">TUB - TUBES</option>
+    <option value="UGS - US GALLONS">UGS - US GALLONS</option>
+    <option value="UNT - UNITS">UNT - UNITS</option>
+    <option value="YDS - YARDS">YDS - YARDS</option>
+    <option value="OTH - OTHERS">OTH - OTHERS</option>
+    <option value="Test - ER Scenario">Test - ER Scenario</option>
+</select></td>
+    <td>
+        <input type="text" class="form-control amount" id="amount_${add_more_count_withgst}" data-index="${add_more_count_withgst}" name="without_item_amount[]" placeholder="Enter Amount" onkeyup="gstCalculation()">
+    </td>
+
+    <td>
+        <svg style="color: red; cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+            class="bi bi-file-minus-fill remove_more_tr" data-id="${add_more_count_withgst}" viewBox="0 0 16 16">
+            <path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/>
+        </svg>
+    </td>
+</tr>
+`;
       $curRow.after(newRow);
       //$("#item_"+add_more_count_withgst).select2();
       $(".item").select2();
+       $(".select2-single").select2();
    });
    $(document).on("click", ".remove_more_tr", function() {
       let id = $(this).attr('data-id');
@@ -1747,5 +1930,44 @@
    });
    $("#material_center").val($('option:selected', this).attr('data-mat_center'));
    merchant_gstin = $('option:selected', this).attr('data-gst_no');
+   
+   function updateNarration() {
+   const type = $("#type").val();
+   const nature = $("#nature").val();
+
+   if (nature == "WITH GST" && type == "RATE DIFFERENCE") {
+      let parts = [];
+
+      $(".quantity").each(function () {
+         const rowId = $(this).attr("id").split("_")[2];
+         const qty = parseFloat($("#quantity_tr_" + rowId).val()) || 0;
+         const price = parseFloat($("#price_tr_" + rowId).val()) || 0;
+
+         if (qty > 0 && price > 0) {
+            const amount = qty * price;
+            parts.push(`${qty} x ${price} = ${amount.toFixed(2)}`);
+         }
+      });
+
+      const narration = parts.length > 0 ? parts.join(" | ") + "," : "";
+      $("#narration_withgst").val(narration);
+   } else {
+      $("#narration_withgst").val(""); // Clear if type doesn't match
+   }
+}
+
+$(document).ready(function () {
+   sectionHideShow(); // Initial setup
+
+   $("#type, #nature").on("change", function () {
+      sectionHideShow();
+      updateNarration(); // Always refresh narration on changes
+   });
+
+   $(document).on("input", ".quantity, .price", function () {
+      updateNarration();
+   });
+});
+
 </script>
 @endsection

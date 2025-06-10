@@ -16,6 +16,7 @@ use App\Models\ItemAverage;
 use App\Models\ItemAverageDetail;
 use App\Models\SalesReturn;
 use App\Models\PurchaseReturn;
+use App\Models\StockTransfer;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -297,6 +298,23 @@ class ItemLedgerController extends Controller
                   $item[$key]->type = "Purchase Return";
                } 
                $item[$key]->einvoice_status = 0; 
+            }else if($value->source==6){
+                $action = StockTransfer::find($value->source_id);
+                if($action){
+                  $item[$key]->bill_no = $action->voucher_no_prefix;
+                  if(!empty($value->in_weight)){
+                      $item[$key]->account_name = $action->material_center_to;
+                  }else if(!empty($value->out_weight)){
+                      $item[$key]->account_name = $action->material_center_from;
+                  }
+                  
+                  $item[$key]->type = "Stock Transfer";
+               }else{
+                  $item[$key]->bill_no = "";
+                  $item[$key]->account_name = "";
+                  $item[$key]->type = "Stock Transfer";
+               }
+               $item[$key]->einvoice_status = 0;
             }else{
                $item[$key]->bill_no = "";
                $item[$key]->account_name = "";

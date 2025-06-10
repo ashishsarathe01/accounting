@@ -162,8 +162,19 @@ p {
                      <td colspan="4" style="position: relative; vertical-align: top; padding: 0; height:120px;">
                         <p style="padding-left:5px;"style="padding-left:5px;"><span class="width25">Cr. Note No </span>: <span class="lft_mar15">{{$sale_return->sr_prefix}}</span> </p>
                         <p style="padding-left:5px;"><span class="width25">Cr. Note Date </span>: <span class="lft_mar15">{{date('d-m-Y',strtotime($sale_return->date))}}</span> </p>
-                        <p style="padding-left:5px;"><span class="width25">Org. Inv. No. </span>: <span class="lft_mar15">{{$sale_return->voucher_no}}</span> </p>
-                        <p style="padding-left:5px;"><span class="width25">Org. Inv. Date </span>: <span class="lft_mar15">{{date('d-m-Y',strtotime($sale_return->sale_date))}}</span> </p>
+                        @if($sale_return->voucher_type!="OTHER")
+                           <p style="padding-left:5px;"><span class="width25">Org. Inv. No. </span>: <span class="lft_mar15">{{$sale_return->voucher_no_prefix}}</span> </p>
+                           <p style="padding-left:5px;"><span class="width25">Org. Inv. Date </span>: <span class="lft_mar15">{{date('d-m-Y',strtotime($sale_return->sale_date))}}</span> </p>
+                        @elseif($sale_return->voucher_type=="OTHER")
+                           @if($sale_return->other_invoice_no!="")
+                              <p style="padding-left:5px;"><span class="width25">Org. Inv. No. </span>: <span class="lft_mar15">{{$sale_return->other_invoice_no}}</span> </p>
+                           @endif
+                           @if($sale_return->other_invoice_date!="")
+                              <p style="padding-left:5px;"><span class="width25">Org. Inv. Date </span>: <span class="lft_mar15">{{date('d-m-Y',strtotime($sale_return->other_invoice_date))}}</span> </p>
+                           @endif
+
+                        @endif
+                        
                         <p style="padding-left:5px;"><span class="width25">Transport </span>: <span class="lft_mar15">{{$sale_return->transport_name}}</span> </p>
                         <p style="padding-left:5px;"><span class="width25">Vehicle No. </span>: <span class="lft_mar15">{{$sale_return->vehicle_no}}</span> </p>
                         <p style="padding-left:5px;"><span class="width25">Station </span>: <span class="lft_mar15">{{$sale_return->station}}</span> </p>
@@ -258,6 +269,9 @@ p {
                            </span><br>
                         @endforeach
                      </td>
+                  </tr>
+                  <tr>
+                           <td colspan="8" style="border-top: 1px solid #dadada;"><strong>Narration : </strong>{{$sale_return->narration}}</td>
                   </tr>
                   <tr>
                      <td colspan="8" style="border-top:0">

@@ -402,6 +402,10 @@ class PurchaseReturnController extends Controller
       $purchase->tax_sgst = $request->input('sgst');
       $purchase->tax_igst = $request->input('igst');
       $purchase->remark = $request->input('remark');
+      $purchase->other_invoice_no = $request->input('other_invoice_no');
+      $purchase->other_invoice_date = $request->input('other_invoice_date');
+      $purchase->other_invoice_against = $request->input('other_invoice_against');
+      
       $purchase->purchase_return_no = $purchase_return_no;
       $purchase->financial_year = $financial_year;
       $purchase->purchase_bill_id = $request->input('purchase_bill_id');
@@ -861,18 +865,17 @@ class PurchaseReturnController extends Controller
                                  ->where('purchase_returns.id',$id)
                                  ->select(['purchase_returns.date','purchase_returns.invoice_no','purchase_returns.total','sales.billing_name','sales.billing_address','sales.billing_pincode','sales.billing_gst','states.name as sname','purchase_return_no','purchase_returns.vehicle_no','purchase_returns.gr_pr_no','purchase_returns.transport_name','purchase_returns.station','sales.voucher_no','sales.date as purchase_date','sales.series_no','sales.financial_year','purchase_returns.series_no as dr_series_no','purchase_returns.financial_year as dr_financial_year','sr_prefix','purchase_returns.id','purchase_returns.voucher_type'])
                                  ->first();      
-      }else if($purchase_ret->voucher_type=="SALE"){
-      
+      }else if($purchase_ret->voucher_type=="PURCHASE"){     
          $purchase_return = PurchaseReturn::join('purchases','purchase_returns.purchase_bill_id','=','purchases.id')
                                  ->leftjoin('states','purchases.billing_state','=','states.id')
                                  ->where('purchase_returns.id',$id)
                                  ->select(['purchase_returns.date','purchase_returns.invoice_no','purchase_returns.total','purchases.billing_name','purchases.billing_address','purchases.billing_pincode','purchases.billing_gst','states.name as sname','purchase_return_no','purchase_returns.vehicle_no','purchase_returns.gr_pr_no','purchase_returns.transport_name','purchase_returns.station','purchases.voucher_no','purchases.date as purchase_date','purchases.series_no','purchases.financial_year','purchase_returns.series_no as dr_series_no','purchase_returns.financial_year as dr_financial_year','sr_prefix','purchase_returns.id','purchase_returns.voucher_type'])
                                  ->first();  
-      }else{
+      }else if($purchase_ret->voucher_type=="OTHER"){
            $purchase_return = PurchaseReturn::leftjoin('states','purchase_returns.billing_state','=','states.id')
                                  ->join('accounts','purchase_returns.party','=','accounts.id')
                                  ->where('purchase_returns.id',$id)
-                                 ->select(['purchase_returns.date','purchase_returns.invoice_no','purchase_returns.total','accounts.account_name as billing_name','accounts.address as billing_address','accounts.pin_code as billing_pincode','purchase_returns.billing_gst','states.name as sname','purchase_return_no','purchase_returns.vehicle_no','purchase_returns.gr_pr_no','purchase_returns.transport_name','purchase_returns.station','purchase_returns.series_no as dr_series_no','purchase_returns.financial_year as dr_financial_year','sr_prefix','purchase_returns.id','purchase_returns.voucher_type'])
+                                 ->select(['purchase_returns.date','purchase_returns.invoice_no','purchase_returns.total','accounts.account_name as billing_name','accounts.address as billing_address','accounts.pin_code as billing_pincode','purchase_returns.billing_gst','states.name as sname','purchase_return_no','purchase_returns.vehicle_no','purchase_returns.gr_pr_no','purchase_returns.transport_name','purchase_returns.station','purchase_returns.series_no as dr_series_no','purchase_returns.financial_year as dr_financial_year','sr_prefix','purchase_returns.id','purchase_returns.voucher_type','other_invoice_no','other_invoice_date'])
                                  ->first(); 
       }
       $items_detail = DB::table('purchase_return_descriptions')->where('purchase_return_id', $id)
@@ -1154,9 +1157,12 @@ class PurchaseReturnController extends Controller
       $purchase->tax_cgst = $request->input('cgst');
       $purchase->tax_sgst = $request->input('sgst');
       $purchase->tax_igst = $request->input('igst');
-        $purchase->billing_gst = $account->gstin;
-        $purchase->billing_state = $account->state;
+      $purchase->billing_gst = $account->gstin;
+      $purchase->billing_state = $account->state;
       $purchase->financial_year = $financial_year;
+      $purchase->other_invoice_no = $request->input('other_invoice_no');
+      $purchase->other_invoice_date = $request->input('other_invoice_date');
+      $purchase->other_invoice_against = $request->input('other_invoice_against');
       $purchase->purchase_bill_id = $request->input('purchase_bill_id');
       $purchase->save();
       if($purchase->id){

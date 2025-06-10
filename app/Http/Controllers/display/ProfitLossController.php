@@ -784,7 +784,7 @@ class ProfitLossController extends Controller{
                               $query->where('financial_year', $financial_year);
                               $query->whereBetween('txn_date', [$from_date, $to_date]);
                               $query->where('delete_status','0');    
-                              $query->whereIn('accounts.company_id',[Session::get('user_company_id'),0]);                       
+                              $query->whereIn('company_id',[Session::get('user_company_id'),0]);                       
                               $query->orWhere(function($q1)use($financial_year,$from_date, $to_date) {
                                  $q1->Where('entry_type','-1');
                                  $q1->where('financial_year', $financial_year);
@@ -798,7 +798,7 @@ class ProfitLossController extends Controller{
                               $query->where('financial_year', $financial_year);
                               $query->whereBetween('txn_date', [$from_date, $to_date]);
                               $query->where('delete_status','0');
-                              $query->whereIn('accounts.company_id',[Session::get('user_company_id'),0]);  
+                              $query->whereIn('company_id',[Session::get('user_company_id'),0]);  
                               $query->orWhere(function($q1)use($financial_year,$from_date, $to_date) {
                                  $q1->Where('entry_type','-1');
                                  $q1->where('financial_year', $financial_year);
