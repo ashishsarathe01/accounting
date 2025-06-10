@@ -6,9 +6,12 @@ use Illuminate\Http\Request;
 use App\Models\MerchantEmployee;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
+use App\Models\PrivilegesModule;
+use App\Models\PrivilegesModuleMapping;
 use Validation;
 use Session;
 use Hash;
+use Carbon\Carbon;
 class MerchantEmployeeController extends Controller{
    /**
      * Display a listing of the resource.
@@ -117,4 +120,42 @@ class MerchantEmployeeController extends Controller{
    public function failedMessage($msg,$url){
       return redirect($url)->withError($msg);
    }
+   public function employeePrivileges($id){
+      $assign_privilege = PrivilegesModuleMapping::where('employee_id',$id)->pluck('module_id')->toArray();
+      $privileges = PrivilegesModule::select('id','module_name','parent_id')
+                                       ->where('status',1)
+                                       ->get()
+                                       ->toArray();
+      $tree = $this->buildTree($privileges);
+      return view('merchant_employee_privileges',["privileges"=>$tree,"employee_id"=>$id,"assign_privilege"=>$assign_privilege]);
+   }
+   function buildTree(array $elements, $parentId = null) {
+         $branch = [];
+
+         foreach ($elements as $element) {
+            if ($element['parent_id'] == $parentId) {
+                  $children = $this->buildTree($elements, $element['id']);
+                  if ($children) {
+                     $element['children'] = $children;
+                  }
+                  $branch[] = $element;
+            }
+         }
+
+         return $branch;
+      }
+      public function setEmployeePrivileges(Request $request){
+         
+         PrivilegesModuleMapping::where('employee_id',$request->employee_id)->delete();
+         foreach ($request->privileges as $key => $value) {
+            $pri = new PrivilegesModuleMapping;
+            $pri->module_id = $value;
+            $pri->employee_id = $request->employee_id;
+            $pri->created_at = Carbon::now();
+            $pri->save();
+         }
+         return redirect('merchant-employee-privileges/'.$request->employee_id)->withSuccess('Privileges Updated Successfully.');
+         //PrivilegesModuleMapping
+      }
+      
 }

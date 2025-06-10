@@ -263,6 +263,8 @@ Route::Resource('payment', PaymentController::class);
    Route::post('displaycgst-delete', [DisplayCgstController::class, 'delete'])->name('displaycgst.delete');
    //User Management
    Route::Resource('manage-merchant-employee', MerchantEmployeeController::class);
+   Route::get('merchant-employee-privileges/{id}',[MerchantEmployeeController::class,'employeePrivileges']);
+   Route::post('set-employee-privileges',[MerchantEmployeeController::class,'setEmployeePrivileges'])->name('set-employee-privileges');
    Route::get('parameterized-configuration',[ItemParameterizedController::class,'index'])->name('parameterized-configuration');
    Route::post('store-parameterized-configuration',[ItemParameterizedController::class,'storeParameterizedConfiguration'])->name('store-parameterized-configuration');
    Route::get('voucher-series-configuration',[VoucherSeriesConfigurationController::class,'index'])->name('voucher-series-configuration');
