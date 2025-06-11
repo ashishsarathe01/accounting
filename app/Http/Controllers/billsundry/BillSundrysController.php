@@ -9,7 +9,7 @@ use App\Models\Sales;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Session;
-
+use Gate;
 class BillSundrysController extends Controller
 {
      /**
@@ -19,6 +19,7 @@ class BillSundrysController extends Controller
      */
     public function index()
     {
+        Gate::authorize('view-module', 9);
         $com_id = Session::get('user_company_id');
         $billsundry = BillSundrys::where('company_id',$com_id)
                                    ->where('delete', '=', '0')

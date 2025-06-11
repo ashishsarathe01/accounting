@@ -19,6 +19,7 @@ use Carbon\Carbon;
 use Session;
 use DB;
 use DateTime;
+use Gate;
 class ManageItemsController extends Controller
 {
    /**
@@ -27,6 +28,7 @@ class ManageItemsController extends Controller
      * @return \Illuminate\Http\Response
      */
    public function index(Request $request){
+      Gate::authorize('view-module', 8);
       $com_id = Session::get('user_company_id');
       $status = ['1','0'];
       if($request->filter){

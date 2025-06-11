@@ -12,6 +12,7 @@ use Validation;
 use Session;
 use Hash;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Gate;
 class MerchantEmployeeController extends Controller{
    /**
      * Display a listing of the resource.

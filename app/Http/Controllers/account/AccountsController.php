@@ -15,7 +15,7 @@ use App\Models\Bank;
 use App\Models\AccountOtherAddress;
 use Session;
 use DB;
-
+use Gate;
 class AccountsController extends Controller{
     /**
      * Show the specified resources in storage.
@@ -23,6 +23,7 @@ class AccountsController extends Controller{
      * @return \Illuminate\Http\Response
      */
    public function index(Request $request){
+      Gate::authorize('view-module', 5);
       $incomplete_status = ['1','0'];
       $status = ['1','0'];
      if($request->filter && !empty($request->filter)){

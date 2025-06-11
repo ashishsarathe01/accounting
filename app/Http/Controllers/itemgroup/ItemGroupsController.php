@@ -9,7 +9,7 @@ use App\Models\ItemGroupParameterPredefinedValue;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Session;
-
+use Gate;
 class ItemGroupsController extends Controller
 {
    /**
@@ -18,6 +18,7 @@ class ItemGroupsController extends Controller
      * @return \Illuminate\Http\Response
      */
    public function index(){
+      Gate::authorize('view-module', 7);
       $com_id = Session::get('user_company_id');
       $itemgroups = ItemGroups::where('company_id', $com_id)->where('delete', '=', '0')->get();
       return view('itemgroup/accountItemGroup')->with('itemgroups', $itemgroups);
