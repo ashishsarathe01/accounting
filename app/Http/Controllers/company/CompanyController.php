@@ -12,6 +12,7 @@ use App\Models\Bank;
 use App\Models\Owner;
 use App\Models\Shareholder;
 use App\Models\User;
+use Illuminate\Support\Facades\Gate;
 use DB;
 class CompanyController extends Controller{
    public function companyListing(){
@@ -22,6 +23,7 @@ class CompanyController extends Controller{
       return redirect("password-login")->withSuccess('Please login again.');
    }
    public function viewCompany(){
+      Gate::authorize('view-module', 18);
       if(Auth::check()) {
          Session::put('inserted_company_id', "");
          $id = Session::get('user_company_id');
@@ -38,6 +40,7 @@ class CompanyController extends Controller{
       return redirect("password-login")->withSuccess('Please login again.');
    }
    public function addCompany(){
+      Gate::authorize('view-module', 17);
       if(Auth::check()) {
          $state_list = State::all();
          $company = "";
@@ -178,6 +181,7 @@ class CompanyController extends Controller{
       }
    }
    public function manageFinancialYear(Request $request){
+      Gate::authorize('view-module', 19);
       $comp = Companies::select('current_finacial_year','default_fy')
                         ->where('id',Session::get('user_company_id'))
                         ->first();

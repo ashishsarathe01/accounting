@@ -41,4 +41,12 @@ class User extends Authenticatable
     public function company(){
         return $this->hasMany('App\Models\Companies','user_id','id');
     }
+    public function hasPrivilege($module_id, $action)
+    {
+        $priv = \App\Models\PrivilegesModuleMapping::where('employee_id', $this->id)
+            ->where('module_id', $module_id)
+            ->first();
+
+        return $priv;
+    }
 }

@@ -6,7 +6,7 @@
     @endif
 
     <input type="checkbox" name="privileges[]" value="{{ $module['id'] }}" id="module-{{ $module['id'] }}" @if(in_array($module['id'],$assign_privilege)) checked @endif>
-    <label for="module-{{ $module['id'] }}">{{ $module['module_name'] }}</label>
+    <label for="module-{{ $module['id'] }}" style="font-size: 19px;">{{ $module['module_name'] }}</label>
 
     @if (!empty($module['children']))
         <ul class="hidden">

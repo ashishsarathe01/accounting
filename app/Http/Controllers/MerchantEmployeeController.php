@@ -19,6 +19,7 @@ class MerchantEmployeeController extends Controller{
      * @return \Illuminate\Http\Response
    */
    public function index(){
+      Gate::authorize('view-module', 20);
       $employee = User::where('delete_status','0')->where('type','EMPLOYEE')->where('company_id',Session::get('user_company_id'))->get();
       return view('merchant_employee')->with('employee', $employee);
    }
@@ -121,6 +122,8 @@ class MerchantEmployeeController extends Controller{
       return redirect($url)->withError($msg);
    }
    public function employeePrivileges($id){
+      
+      
       $assign_privilege = PrivilegesModuleMapping::where('employee_id',$id)->pluck('module_id')->toArray();
       $privileges = PrivilegesModule::select('id','module_name','parent_id')
                                        ->where('status',1)
