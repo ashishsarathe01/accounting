@@ -8,4 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 class PrivilegesModule extends Model
 {
     use HasFactory;
+    public function parent()
+    {
+        return $this->belongsTo(PrivilegesModule::class, 'parent_id');
+    }
 }

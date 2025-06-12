@@ -41,6 +41,7 @@ use App\Http\Controllers\DebitNoteWithoutItemController;
 use App\Http\Controllers\AdminModuleController\AccountHeadController;
 use App\Http\Controllers\AdminModuleController\AccountGroupController;
 use App\Http\Controllers\AdminModuleController\AccountController;
+use App\Http\Controllers\AdminModuleController\MerchantPrivilegesController;
 use App\Http\Controllers\VoucherSeriesConfigurationController;
 use App\Http\Controllers\StockTransfer\StockTransferController;
 use App\Http\Controllers\gstReturn\gstR1Controller;
@@ -71,6 +72,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
       Route::Resource('/account-group',AccountGroupController::class)->name('*','account-group');
       Route::Resource('/account',AccountController::class)->name('*','account');
       Route::post('/login-merchant', [MerchantController::class, 'loginMerchant']);
+      Route::Resource('/merchant-privilege',MerchantPrivilegesController::class)->name('*','merchant-privilege');
    });
    
 });

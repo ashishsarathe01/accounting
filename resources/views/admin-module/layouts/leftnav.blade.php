@@ -39,7 +39,11 @@
                   <li class="font-14  fw-500 m-0 py-12 px-2  ">
                      <a class=" text-decoration-none  d-flex   text-white" href="{{ route('admin.account.index') }}">Account
                      </a>
-                  </li>                  
+                  </li>
+                  <li class="font-14  fw-500 m-0 py-12 px-2  ">
+                     <a class=" text-decoration-none  d-flex   text-white" href="{{ route('admin.merchant-privilege.index') }}">Merchant Panel Privileges
+                     </a>
+                  </li>                 
                </ul>
             </div>
          </div>

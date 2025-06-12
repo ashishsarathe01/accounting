@@ -123,8 +123,6 @@ class MerchantEmployeeController extends Controller{
       return redirect($url)->withError($msg);
    }
    public function employeePrivileges($id){
-      
-      
       $assign_privilege = PrivilegesModuleMapping::where('employee_id',$id)->pluck('module_id')->toArray();
       $privileges = PrivilegesModule::select('id','module_name','parent_id')
                                        ->where('status',1)
