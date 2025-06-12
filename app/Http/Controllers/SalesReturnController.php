@@ -892,23 +892,23 @@ class SalesReturnController extends Controller
                                  ->leftjoin('accounts','sales_returns.party','=','accounts.id')
                                  ->leftjoin('states','purchases.billing_state','=','states.id')
                                  ->where('sales_returns.id',$id)
-                                 ->select(['sales_returns.date','sales_returns.id','sales_returns.invoice_no','sales_returns.remark as narration','sales_returns.total','sales_returns.remark as narration','purchases.billing_name','purchases.billing_address','purchases.billing_pincode','purchases.billing_gst','states.name as sname','sale_return_no','sales_returns.vehicle_no','sales_returns.gr_pr_no','sales_returns.transport_name','sales_returns.station','purchases.voucher_no as voucher_no_prefix','purchases.date as sale_date','purchases.series_no','purchases.financial_year','sales_returns.series_no as dr_series_no','sales_returns.financial_year as dr_financial_year','sales_returns.series_no as sr_series_no','sr_nature','sr_type','sr_prefix','accounts.address as party_address'])
+                                 ->select(['sales_returns.date','sales_returns.id','sales_returns.invoice_no','sales_returns.remark as narration','sales_returns.merchant_gst','sales_returns.total','sales_returns.remark as narration','purchases.billing_name','purchases.billing_address','purchases.billing_pincode','purchases.billing_gst','states.name as sname','sale_return_no','sales_returns.vehicle_no','sales_returns.billing_gst','sales_returns.gr_pr_no','sales_returns.transport_name','sales_returns.station','purchases.voucher_no as voucher_no_prefix','purchases.date as sale_date','purchases.series_no','purchases.financial_year','sales_returns.series_no as dr_series_no','sales_returns.financial_year as dr_financial_year','sales_returns.series_no as sr_series_no','sr_nature','sr_type','sr_prefix','accounts.address as party_address'])
                                  ->first();  
       }else if($sale_ret->voucher_type=="SALE"){
          $sale_return = SalesReturn::leftjoin('sales','sales_returns.sale_bill_id','=','sales.id')
                                  ->leftjoin('accounts','sales_returns.party','=','accounts.id')
                                  ->join('states','sales.billing_state','=','states.id')
                                  ->where('sales_returns.id',$id)
-                                 ->select(['sales_returns.date','sales_returns.id','sales_returns.invoice_no','sales_returns.remark as narration','sales_returns.total','sales.billing_name','sales.billing_address','sales.billing_pincode','sales.billing_gst','states.name as sname','sale_return_no','sales_returns.vehicle_no','sales_returns.gr_pr_no','sales_returns.transport_name','sales_returns.station','sales.voucher_no','sales.date as sale_date','sales.series_no','sales.financial_year','sales_returns.series_no as sr_series_no','sales_returns.financial_year as sr_financial_year','sr_nature','sr_type','sr_prefix','sales.merchant_gst','accounts.address as party_address','voucher_no_prefix'])
+                                 ->select(['sales_returns.date','sales_returns.id','sales_returns.invoice_no','sales_returns.remark as narration','sales_returns.merchant_gst','sales_returns.total','sales.billing_name','sales.billing_address','sales.billing_pincode','sales.billing_gst','states.name as sname','sale_return_no','sales_returns.vehicle_no','sales_returns.gr_pr_no','sales_returns.billing_gst','sales_returns.transport_name','sales_returns.station','sales.voucher_no','sales.date as sale_date','sales.series_no','sales.financial_year','sales_returns.series_no as sr_series_no','sales_returns.financial_year as sr_financial_year','sr_nature','sr_type','sr_prefix','sales.merchant_gst','accounts.address as party_address','voucher_no_prefix'])
                                  ->first();    
       }else if($sale_ret->voucher_type=="OTHER"){
          $sale_return = SalesReturn::leftjoin('states','sales_returns.billing_state','=','states.id')
                                  ->join('accounts','sales_returns.party','=','accounts.id')
                                  ->where('sales_returns.id',$id)
-                                 ->select(['sales_returns.date','sales_returns.invoice_no','sales_returns.total','sales_returns.remark as narration','accounts.account_name as billing_name','accounts.address as billing_address','accounts.pin_code as billing_pincode','sales_returns.billing_gst','states.name as sname','sale_return_no','sales_returns.vehicle_no','sales_returns.gr_pr_no','sales_returns.transport_name','sales_returns.station','sales_returns.series_no as sr_series_no','sales_returns.financial_year as sr_financial_year','sr_prefix','sales_returns.id','sales_returns.voucher_type','other_invoice_no','other_invoice_date','merchant_gst','sales_returns.series_no'])
+                                 ->select(['sales_returns.date','sales_returns.invoice_no','sales_returns.total','sales_returns.remark as narration','sales_returns.merchant_gst','accounts.account_name as billing_name','accounts.address as billing_address','accounts.pin_code as billing_pincode','sales_returns.billing_gst','states.name as sname','sale_return_no','sales_returns.vehicle_no','sales_returns.gr_pr_no','sales_returns.transport_name','sales_returns.station','sales_returns.series_no as sr_series_no','sales_returns.financial_year as sr_financial_year','sr_prefix','sales_returns.id','sales_returns.voucher_type','other_invoice_no','other_invoice_date','merchant_gst','sales_returns.series_no'])
                                  ->first();
       }
-       
+      
        $items_detail = DB::table('sale_return_descriptions')
     ->where('sale_return_descriptions.sale_return_id', $id)
     ->join('sales_returns', 'sale_return_descriptions.sale_return_id', '=', 'sales_returns.id')
@@ -1132,8 +1132,16 @@ $items_detail = $items_detail->merge($items_detail1);
       }
       
       
-      
-      
+        Session::put('redirect_url','');
+      $financial_year = Session::get('default_fy');      
+      $y =  explode("-",$financial_year);
+      $from = $y[0];
+      $from = DateTime::createFromFormat('y', $from);
+      $from = $from->format('Y');
+      $to = $y[1];
+      $to = DateTime::createFromFormat('y', $to);
+      $to = $to->format('Y');
+      $month_arr = array($from.'-04',$from.'-05',$from.'-06',$from.'-07',$from.'-08',$from.'-09',$from.'-10',$from.'-11',$from.'-12',$to.'-01',$to.'-02',$to.'-03');
       
       
       
@@ -1204,7 +1212,7 @@ $items_detail = $items_detail->merge($items_detail1);
           
       }
        $configuration = SaleInvoiceConfiguration::with(['terms','banks'])->where('company_id',Session::get('user_company_id'))->first();
-      return view('sale_return_without_item_invoice')->with(['company_data' => $company_data,'configuration'=>$configuration,'seller_info'=>$seller_info,'sale_return'=>$sale_return,'items'=>$items,'einvoice_status'=>$GstSettings->einvoice,'ewaybill_status'=>$GstSettings->ewaybill]);
+      return view('sale_return_without_item_invoice')->with(['company_data' => $company_data,'configuration'=>$configuration,'month_arr' => $month_arr,'seller_info'=>$seller_info,'sale_return'=>$sale_return,'items'=>$items,'einvoice_status'=>$GstSettings->einvoice,'ewaybill_status'=>$GstSettings->ewaybill]);
    }
    public function saleReturnWithoutGstInvoice($id){
       $company_data = Companies::join('states','companies.state','=','states.id')
@@ -1288,8 +1296,19 @@ $items_detail = $items_detail->merge($items_detail1);
          }
           
       }
+        Session::put('redirect_url','');
+      $financial_year = Session::get('default_fy');      
+      $y =  explode("-",$financial_year);
+      $from = $y[0];
+      $from = DateTime::createFromFormat('y', $from);
+      $from = $from->format('Y');
+      $to = $y[1];
+      $to = DateTime::createFromFormat('y', $to);
+      $to = $to->format('Y');
+      
+       $month_arr = array($from.'-04',$from.'-05',$from.'-06',$from.'-07',$from.'-08',$from.'-09',$from.'-10',$from.'-11',$from.'-12',$to.'-01',$to.'-02',$to.'-03');
        $configuration = SaleInvoiceConfiguration::with(['terms','banks'])->where('company_id',Session::get('user_company_id'))->first();
-      return view('sale_return_without_gst_invoice')->with(['items' => $items,'company_data' => $company_data,'seller_info'=>$seller_info,'configuration'=>$configuration,'sale_return'=>$sale_return]);
+      return view('sale_return_without_gst_invoice')->with(['items' => $items,'company_data' => $company_data,'month_arr' => $month_arr,'seller_info'=>$seller_info,'configuration'=>$configuration,'sale_return'=>$sale_return]);
    }
    public function failedMessage($msg,$url){
       return redirect($url)->withError($msg);

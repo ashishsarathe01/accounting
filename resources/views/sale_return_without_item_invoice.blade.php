@@ -70,16 +70,23 @@
     <section class="list-of-view-company-section container-fluid">
         <div class="row vh-100">
             @include('layouts.leftnav')
-            <div class="col-md-12 ml-sm-auto  col-lg-9 px-md-4 bg-mint">
-                <div class="d-md-flex justify-content-between py-4 px-2 align-items-center">
-                    <div class="d-md-flex d-block ">
-                        <div class="calender-administrator my-2 my-md-0  w-min-230 noprint">
-                            <a href="{{ route('sale-return.index') }}"><button type="button" class="btn btn-danger">QUIT</button></a>
-                            <button class="btn btn-info" onclick="printpage();">Print</button>
-                        </div>
-                    </div>            
-                </div>
-                <table>
+             <div class="col-md-12 ml-sm-auto  col-lg-9 px-md-4 bg-mint">
+            <div class="d-md-flex justify-content-between py-4 px-2 align-items-center header-section">
+               <div class="d-md-flex d-block noprint">
+                  <div class="calender-administrator my-2 my-md-0  w-min-230 noprint">
+                     <a href="{{ route('sale-return.index') }}"><button type="button" class="btn btn-danger">QUIT</button></a>
+                     <button class="btn btn-info" onclick="printpage();">Print</button>
+                     <?php 
+                     if (in_array(date('Y-m', strtotime($sale_return->date)), $month_arr) && $sale_return->e_invoice_status == 0 && $sale_return->e_waybill_status == 0) {?>
+                        <a href="{{ URL::to('sale-return-edit/'.$sale_return->id) }}" class="btn btn-primary text-white">
+                           <img src="{{ URL::asset('public/assets/imgs/edit-icon.svg') }}" alt="Edit" style="width: 16px; height: 16px; vertical-align: middle; filter: brightness(0) invert(1);">
+                           Edit
+                        </a><?php 
+                     } ?>
+                  </div>
+               </div>            
+            </div>
+               <table>
                     <tbody>
                         <tr>
                             <th colspan="8">
@@ -159,8 +166,8 @@
                         <td colspan="2"style="text-align:right; border-bottom:0;">{{number_format($item_total,2)}} </td>
                      </tr>
                      <tr>
-                        <td style="border-right:0; border-top:0;" colspan="1"></td>
-                        <td colspan="3" style="border-left:0; border-right:0; border-top:0;">
+                        <td style="border-right:0; border-top:0;width:5%" colspan="1"></td>
+                        <td colspan="4" style="border-left:0; border-right:0; border-top:0;text-align:right;">
                            @php 
                               
                               $return = array();
@@ -177,7 +184,7 @@
                                 @endif
                             @endforeach                                             
                         </td>
-                        <td colspan="1" style="border-left:0; border-top:0;">
+                        <td colspan="1" style="border-left:0; border-top:0;text-align:center;">
                               @foreach($return as $k=>$item)
                                 @if($sale_return->tax_cgst!='' && $sale_return->tax_sgst!='')
                                  <p>{{$k/2}}%</p>
@@ -204,10 +211,10 @@
                         </td>
                      </tr>
                      <tr>
-                        <td colspan="4" style="text-align:right; border-right: 0; border-bottom: 0">
+                        <td colspan="6" style="text-align:right; border-right: 0; border-bottom: 0">
                            <p><strong>Grand Total ₹</strong></p>
                         </td>                                     
-                        <td style="text-align:right">
+                        <td colspan="2" style="text-align:right">
                            <p><strong>{{number_format($sale_return->total,2)}}</strong></p>
                         </td>
                      </tr>
@@ -274,8 +281,11 @@
     @endif
 </td>
                      <td colspan="4">
+                     
    <p style="height:40px; margin:0; padding:0;"><small>Receiver's Signature :</small></p>
-   <hr style="margin:0; padding:0;">
+   
+   <hr style="margin:0px; padding:0px; border: none; height: 1px; background-color: #000000;">
+
    <p style="text-align:right; padding:0; margin:0;"><strong>for {{$company_data->company_name}}</strong></p>
 
    @if($configuration && !empty($configuration->signature))

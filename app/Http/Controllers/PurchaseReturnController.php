@@ -17,6 +17,7 @@ use App\Models\Companies;
 use App\Models\AccountLedger;
 use App\Models\ItemLedger;
 use App\Models\VoucherSeriesConfiguration;
+use App\Models\SaleInvoiceConfiguration;
 use App\Models\AccountGroups;
 use App\Models\PurchaseReturnEntry;
 use App\Models\ItemAverageDetail;
@@ -379,10 +380,12 @@ class PurchaseReturnController extends Controller
       $purchase->party = $request->input('party_id');
       if($request->input('nature')=="WITH GST" && ($request->input('type')=="WITH ITEM" || $request->input('type')=="RATE DIFFERENCE")){
          $purchase->taxable_amt = $request->input('taxable_amt');
-         $purchase->total = $request->input('total');         
+         $purchase->total = $request->input('total');   
+         $purchase->remark = $request->input('narration_withgst');      
       }else if($request->nature=="WITH GST" && $request->type=="WITHOUT ITEM"){
          $purchase->taxable_amt = $request->input('net_amount');
          $purchase->total = $request->input('total_amount');
+         $purchase->remark = $request->input('remark');
       }
       $purchase->sr_nature = $request->input('nature');
       $purchase->sr_type = $request->input('type');
@@ -401,7 +404,6 @@ class PurchaseReturnController extends Controller
       $purchase->tax_cgst = $request->input('cgst');
       $purchase->tax_sgst = $request->input('sgst');
       $purchase->tax_igst = $request->input('igst');
-      $purchase->remark = $request->input('remark');
       $purchase->other_invoice_no = $request->input('other_invoice_no');
       $purchase->other_invoice_date = $request->input('other_invoice_date');
       $purchase->other_invoice_against = $request->input('other_invoice_against');
@@ -878,11 +880,45 @@ class PurchaseReturnController extends Controller
                                  ->select(['purchase_returns.date','purchase_returns.invoice_no','purchase_returns.total','accounts.account_name as billing_name','accounts.address as billing_address','accounts.pin_code as billing_pincode','purchase_returns.billing_gst','states.name as sname','purchase_return_no','purchase_returns.vehicle_no','purchase_returns.gr_pr_no','purchase_returns.transport_name','purchase_returns.station','purchase_returns.series_no as dr_series_no','purchase_returns.financial_year as dr_financial_year','sr_prefix','purchase_returns.id','purchase_returns.voucher_type','other_invoice_no','other_invoice_date'])
                                  ->first(); 
       }
-      $items_detail = DB::table('purchase_return_descriptions')->where('purchase_return_id', $id)
-               ->select('units.s_name as unit', 'units.id as unit_id', 'purchase_return_descriptions.qty', 'purchase_return_descriptions.price', 'purchase_return_descriptions.amount', 'manage_items.name as items_name', 'manage_items.id as item_id','manage_items.hsn_code','manage_items.gst_rate')
-               ->join('units', 'purchase_return_descriptions.unit', '=', 'units.id')
-               ->join('manage_items', 'purchase_return_descriptions.goods_discription', '=', 'manage_items.id')
-               ->get();      
+    $items_detail = DB::table('purchase_return_descriptions')
+    ->where('purchase_return_id', $id)
+    ->join('units', 'purchase_return_descriptions.unit', '=', 'units.id')
+    ->join('manage_items', 'purchase_return_descriptions.goods_discription', '=', 'manage_items.id')
+    ->join('purchase_returns', 'purchase_return_descriptions.purchase_return_id', '=', 'purchase_returns.id')
+    ->where('purchase_returns.sr_type', 'WITH ITEM')
+    ->select(
+        'units.s_name as unit',
+        'units.id as unit_id',
+        'purchase_return_descriptions.qty',
+        'purchase_return_descriptions.price',
+        'purchase_return_descriptions.amount',
+        'manage_items.name as items_name',
+        'manage_items.id as item_id',
+        'manage_items.hsn_code',
+        'manage_items.gst_rate'
+    )
+    ->get();
+    
+    $items_detail1 = DB::table('purchase_return_descriptions')
+    ->where('purchase_return_id', $id)
+    ->join('units', 'purchase_return_descriptions.unit', '=', 'units.id')
+    ->join('manage_items', 'purchase_return_descriptions.goods_discription', '=', 'manage_items.id')
+    ->join('purchase_returns', 'purchase_return_descriptions.purchase_return_id', '=', 'purchase_returns.id')
+    ->where('purchase_returns.sr_type', 'RATE DIFFERENCE')
+    ->select(
+        DB::raw("''  as unit"),
+        'units.id as unit_id',
+         DB::raw("'' as qty"),
+        DB::raw("'' as price"),
+        'purchase_return_descriptions.amount',
+        'manage_items.name as items_name',
+        'manage_items.id as item_id',
+        'manage_items.hsn_code',
+        'manage_items.gst_rate'
+    )
+    ->get();
+    
+    $items_detail = $items_detail->merge($items_detail1);     
          $purchase_sundry = DB::table('purchase_return_sundries')
                            ->join('bill_sundrys','purchase_return_sundries.bill_sundry','=','bill_sundrys.id')
                            ->where('purchase_return_id', $id)
@@ -955,7 +991,69 @@ class PurchaseReturnController extends Controller
             $GstSettings->ewaybill = 0;
             $GstSettings->einvoice = 0;
          }
-      return view('purchaseReturnInvoice')->with(['items_detail' => $items_detail, 'purchase_sundry' => $purchase_sundry,'company_data' => $company_data,'gst_detail'=>$gst_detail,'purchase_return'=>$purchase_return,'einvoice_status'=>$GstSettings->einvoice,'ewaybill_status'=>$GstSettings->ewaybill]);
+
+          if($company_data->gst_config_type == "single_gst") {
+         $GstSettings1 = DB::table('gst_settings')->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])->first();
+         //Seller Info
+         // echo "<pre>";
+         // print_r($GstSettings);die;
+         $seller_info = DB::table('gst_settings')
+                           ->join('states','gst_settings.state','=','states.id')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst",'gst_no' => $purchase_return->merchant_gst,'series'=>$purchase_return->series_no])
+                           ->select(['gst_no','address','pincode','states.name as sname'])
+                           ->first();
+         if(!$seller_info){
+            $seller_info = GstBranch::select('gst_number as gst_no','branch_address as address','branch_pincode as pincode')
+                           ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_number'=>$purchase_return->merchant_gst,'branch_series'=>$purchase_return->series_no])
+                           ->first();
+            $state_info = DB::table('states')
+                           ->where('id',$GstSettings1->state)
+                           ->first();
+            $seller_info->sname = $state_info->name;
+         }
+      }else if($company_data->gst_config_type == "multiple_gst") {    
+        
+            $GstSettings1 = DB::table('gst_settings_multiple')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst",'gst_no' => $purchase_return->merchant_gst])
+                           ->first();
+                         
+            //Seller Info         
+                  $seller_info = DB::table('gst_settings_multiple')
+                  ->join('states','gst_settings_multiple.state','=','states.id')
+                  ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst",'gst_no' => $purchase_return->merchant_gst,'series'=>$purchase_return->series_no])
+                  ->select(['gst_no','address','pincode','states.name as sname'])
+                  ->first();
+               
+               if(!$seller_info){
+                  $seller_info = GstBranch::select('gst_number as gst_no','branch_address as address','branch_pincode as pincode')
+                           ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_number'=>$purchase_return->merchant_gst,'branch_series'=>$purchase_return->series_no])
+                           ->first();
+                           
+                          
+                  $state_info = DB::table('states')
+                                 ->where('id',$GstSettings1->state)
+                                 ->first();
+                                 
+                  $seller_info->sname = $state_info->name;                          
+              
+         }
+         }
+               $configuration = SaleInvoiceConfiguration::with(['terms','banks'])->where('company_id',Session::get('user_company_id'))->first();
+               $configuration = SaleInvoiceConfiguration::with(['terms','banks'])->where('company_id',Session::get('user_company_id'))->first();
+
+               
+          Session::put('redirect_url','');
+      $financial_year = Session::get('default_fy');      
+      $y =  explode("-",$financial_year);
+      $from = $y[0];
+      $from = DateTime::createFromFormat('y', $from);
+      $from = $from->format('Y');
+      $to = $y[1];
+      $to = DateTime::createFromFormat('y', $to);
+      $to = $to->format('Y');
+      $month_arr = array($from.'-04',$from.'-05',$from.'-06',$from.'-07',$from.'-08',$from.'-09',$from.'-10',$from.'-11',$from.'-12',$to.'-01',$to.'-02',$to.'-03');
+
+      return view('purchaseReturnInvoice')->with(['items_detail' => $items_detail,'month_arr' => $month_arr,'configuration'=>$configuration,'seller_info'=>$seller_info, 'purchase_sundry' => $purchase_sundry,'company_data' => $company_data,'gst_detail'=>$gst_detail,'purchase_return'=>$purchase_return,'einvoice_status'=>$GstSettings->einvoice,'ewaybill_status'=>$GstSettings->ewaybill]);
    }
    public function purchaseReturnWithoutItemInvoice($id){
       $company_data = Companies::join('states','companies.state','=','states.id')
@@ -971,7 +1069,66 @@ class PurchaseReturnController extends Controller
                                  ->where('purchase_return_id', $id)
                                  ->select('debit','percentage','purchase_return_entries.hsn_code','accounts.account_name')
                                  ->get();     
-      return view('purchase_return_without_item_invoice')->with(['company_data' => $company_data,'purchase_return'=>$purchase_return,'items'=>$items]);
+
+                                 Session::put('redirect_url','');
+      $financial_year = Session::get('default_fy');      
+      $y =  explode("-",$financial_year);
+      $from = $y[0];
+      $from = DateTime::createFromFormat('y', $from);
+      $from = $from->format('Y');
+      $to = $y[1];
+      $to = DateTime::createFromFormat('y', $to);
+      $to = $to->format('Y');
+      $month_arr = array($from.'-04',$from.'-05',$from.'-06',$from.'-07',$from.'-08',$from.'-09',$from.'-10',$from.'-11',$from.'-12',$to.'-01',$to.'-02',$to.'-03');
+      if($company_data->gst_config_type == "single_gst") {
+         $GstSettings1 = DB::table('gst_settings')->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])->first();
+         //Seller Info
+         // echo "<pre>";
+         // print_r($GstSettings);die;
+         $seller_info = DB::table('gst_settings')
+                           ->join('states','gst_settings.state','=','states.id')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst",'gst_no' => $purchase_return->merchant_gst,'series'=>$purchase_return->series_no])
+                           ->select(['gst_no','address','pincode','states.name as sname'])
+                           ->first();
+         if(!$seller_info){
+            $seller_info = GstBranch::select('gst_number as gst_no','branch_address as address','branch_pincode as pincode')
+                           ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_number'=>$purchase_return->merchant_gst,'branch_series'=>$purchase_return->series_no])
+                           ->first();
+            $state_info = DB::table('states')
+                           ->where('id',$GstSettings1->state)
+                           ->first();
+            $seller_info->sname = $state_info->name;
+         }
+      }else if($company_data->gst_config_type == "multiple_gst") {    
+        
+            $GstSettings1 = DB::table('gst_settings_multiple')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst",'gst_no' => $purchase_return->merchant_gst])
+                           ->first();
+                         
+            //Seller Info         
+                  $seller_info = DB::table('gst_settings_multiple')
+                  ->join('states','gst_settings_multiple.state','=','states.id')
+                  ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst",'gst_no' => $purchase_return->merchant_gst,'series'=>$purchase_return->series_no])
+                  ->select(['gst_no','address','pincode','states.name as sname'])
+                  ->first();
+               
+               if(!$seller_info){
+                  $seller_info = GstBranch::select('gst_number as gst_no','branch_address as address','branch_pincode as pincode')
+                           ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_number'=>$purchase_return->merchant_gst,'branch_series'=>$purchase_return->series_no])
+                           ->first();
+                           
+                          
+                  $state_info = DB::table('states')
+                                 ->where('id',$GstSettings1->state)
+                                 ->first();
+                                 
+                  $seller_info->sname = $state_info->name;                          
+              
+         }
+         }
+               $configuration = SaleInvoiceConfiguration::with(['terms','banks'])->where('company_id',Session::get('user_company_id'))->first();
+
+      return view('purchase_return_without_item_invoice')->with(['company_data' => $company_data,'month_arr' => $month_arr,'configuration'=>$configuration,'seller_info'=>$seller_info,'purchase_return'=>$purchase_return,'items'=>$items]);
    }
    public function purchaseReturnWithoutGstInvoice($id){
       $company_data = Companies::join('states','companies.state','=','states.id')
@@ -986,8 +1143,68 @@ class PurchaseReturnController extends Controller
       $items = PurchaseReturnEntry::join('accounts','purchase_return_entries.account_name','=','accounts.id')
                                  ->where('purchase_return_id', $id)
                                  ->select('credit','percentage','purchase_return_entries.hsn_code','accounts.account_name')
-                                 ->get();  
-      return view('purchase_return_without_gst_invoice')->with(['items' => $items,'company_data' => $company_data,'sale_return'=>$sale_return]);
+                                 ->get();
+                                 
+                                 Session::put('redirect_url','');
+      $financial_year = Session::get('default_fy');      
+      $y =  explode("-",$financial_year);
+      $from = $y[0];
+      $from = DateTime::createFromFormat('y', $from);
+      $from = $from->format('Y');
+      $to = $y[1];
+      $to = DateTime::createFromFormat('y', $to);
+      $to = $to->format('Y');
+      $month_arr = array($from.'-04',$from.'-05',$from.'-06',$from.'-07',$from.'-08',$from.'-09',$from.'-10',$from.'-11',$from.'-12',$to.'-01',$to.'-02',$to.'-03');
+
+ if($company_data->gst_config_type == "single_gst") {
+         $GstSettings1 = DB::table('gst_settings')->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])->first();
+         //Seller Info
+         // echo "<pre>";
+         // print_r($GstSettings);die;
+         $seller_info = DB::table('gst_settings')
+                           ->join('states','gst_settings.state','=','states.id')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst",'gst_no' => $purchase_return->merchant_gst,'series'=>$purchase_return->series_no])
+                           ->select(['gst_no','address','pincode','states.name as sname'])
+                           ->first();
+         if(!$seller_info){
+            $seller_info = GstBranch::select('gst_number as gst_no','branch_address as address','branch_pincode as pincode')
+                           ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_number'=>$purchase_return->merchant_gst,'branch_series'=>$purchase_return->series_no])
+                           ->first();
+            $state_info = DB::table('states')
+                           ->where('id',$GstSettings1->state)
+                           ->first();
+            $seller_info->sname = $state_info->name;
+         }
+      }else if($company_data->gst_config_type == "multiple_gst") {    
+        
+            $GstSettings1 = DB::table('gst_settings_multiple')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst",'gst_no' => $purchase_return->merchant_gst])
+                           ->first();
+                         
+            //Seller Info         
+                  $seller_info = DB::table('gst_settings_multiple')
+                  ->join('states','gst_settings_multiple.state','=','states.id')
+                  ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst",'gst_no' => $purchase_return->merchant_gst,'series'=>$purchase_return->series_no])
+                  ->select(['gst_no','address','pincode','states.name as sname'])
+                  ->first();
+               
+               if(!$seller_info){
+                  $seller_info = GstBranch::select('gst_number as gst_no','branch_address as address','branch_pincode as pincode')
+                           ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_number'=>$purchase_return->merchant_gst,'branch_series'=>$purchase_return->series_no])
+                           ->first();
+                           
+                          
+                  $state_info = DB::table('states')
+                                 ->where('id',$GstSettings1->state)
+                                 ->first();
+                                 
+                  $seller_info->sname = $state_info->name;                          
+              
+         }
+         }
+               $configuration = SaleInvoiceConfiguration::with(['terms','banks'])->where('company_id',Session::get('user_company_id'))->first();
+               $configuration = SaleInvoiceConfiguration::with(['terms','banks'])->where('company_id',Session::get('user_company_id'))->first();
+      return view('purchase_return_without_gst_invoice')->with(['items' => $items,'month_arr' => $month_arr,'configuration'=>$configuration,'seller_info'=>$seller_info,'company_data' => $company_data,'sale_return'=>$sale_return]);
    }
    public function failedMessage($msg,$url){
       return redirect($url)->withError($msg);
@@ -1141,10 +1358,12 @@ class PurchaseReturnController extends Controller
       $purchase->party = $request->input('party_id');
       if($request->input('nature')=="WITH GST" && ($request->input('type')=="WITH ITEM" || $request->input('type')=="RATE DIFFERENCE")){
          $purchase->taxable_amt = $request->input('taxable_amt');
-         $purchase->total = $request->input('total');         
+         $purchase->total = $request->input('total');
+          $purchase->remark = $request->input('narration_withgst');         
       }else if($request->nature=="WITH GST" && $request->type=="WITHOUT ITEM"){
          $purchase->taxable_amt = $request->input('net_amount');
          $purchase->total = $request->input('total_amount');
+         $purchase->remark = $request->input('remark');
       }
       //$purchase->series_no = $request->input('series_no');
       //$purchase->material_center = $request->input('material_center');

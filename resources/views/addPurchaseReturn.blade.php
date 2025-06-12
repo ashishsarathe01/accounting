@@ -530,14 +530,18 @@
                   <table id="without_gst_section" class="table-striped table m-0 shadow-sm table-bordered">
                      <thead>
                         <tr class=" font-12 text-body bg-light-pink ">
-                           <th class="w-min-120 border-none bg-light-pink text-body" style="width: 40%;">Account</th>
-                           <th class="w-min-120 border-none bg-light-pink text-body">Amount</th>
-                           <th class="w-min-120 border-none bg-light-pink text-body">Narration</th>
+                          <th class="w-min-120 border-none bg-light-pink text-body" style="width: 10%;text-align:left">S. NO. </th> 
+                           <th class="w-min-120 border-none bg-light-pink text-body" style="width: 60%;">Account</th>
+                           <th class="w-min-120 border-none bg-light-pink text-body" style="width: 30%;">Amount</th>
+                           
                         </tr>
                      </thead>
                      <tbody>
-                        <tr class="font-14 font-heading bg-white">
+                        <tr class="font-14 font-heading bg-white" id="tr_without_1">
+                           <td class="srn" id="srn_1" style="text-align:left;">1.</td>
+
                            <td class="">
+                              
                               <select class="form-select select2-single account" id="account_1" name="account_name[]" data-id="1">
                                  <option value="">Select</option>
                                  <?php
@@ -550,11 +554,16 @@
                            <td class="">
                               <input type="number" name="debit[]" class="form-control debit" data-id="1" id="debit_1" placeholder="Debit Amount" onkeyup="debitTotal();">
                            </td>
-                           <td class="">
-                              <input type="text" name="narration[]" class="form-control narration" data-id="1" id="narration_1" placeholder="Enter Narration" value="">
-                           </td>
-                           <td>
-                           <svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle add_more_without" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" />
+                           
+                           <td class="action-cell" style="display: flex;">
+                           <svg xmlns="http://www.w3.org/2000/svg" 
+                           class="bg-primary rounded-circle add_more_without"
+                           data-id="1"
+                            width="24" height="24"
+                             viewBox="0 0 24 24"
+                              fill="none" 
+                              style="cursor: pointer;">
+                              <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" />
                            </svg>
                            </td>
                         </tr>
@@ -1648,34 +1657,99 @@
       debitTotal();
       creditTotal();
    }   
-   var add_more_count = 2;
-   $(".add_more_without").click(function(){
-      let empty_status = 0;
-      $(".account").each(function(){
-         if($(this).val()=="" || $("#debit_"+$(this).attr('data-id')).val()==""){
-            empty_status = 1;
-         }
-      });
-      if(empty_status==1){
-         alert("Please enter required fields");
-         return;
-      }
+   add_more_count3 = $(".account").length; // Start count based on existing rows
 
-      add_more_count++;
-      var $curRow = $(this).closest('tr');
-      var optionElements = $('#account_1').html();
-      newRow = '<tr id="tr_without_' + add_more_count + '"><td><select class="form-control account select2-single" name="account_name[]" data-id="' + add_more_count + '" id="account_' + add_more_count + '">';
-      newRow += optionElements;
-      newRow += '</select></td><td><input type="number" name="debit[]" class="form-control debit" data-id="' + add_more_count + '" id="debit_' + add_more_count + '" placeholder="Debit Amount" onkeyup="debitTotal();"></td><td><input type="text" name="narration[]" class="form-control narration" data-id="' + add_more_count + '" id="narration_' + add_more_count + '" placeholder="Enter Narration"></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove_without" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
-      $curRow.before(newRow);
-      $('.select2-single').select2();
-   });
-   $(document).on("click", ".remove_without", function() {
-      let id = $(this).attr('data-id');
-      $("#tr_without_" + id).remove();
-      debitTotal();
-      creditTotal();
-   });
+$(document).on("click", ".add_more_without", function () {
+    let empty_status = 0;
+
+    $(".account").each(function () {
+        let id = $(this).attr("data-id");
+        if ($(this).val() == "" || $("#debit_" + id).val() == "") {
+            empty_status = 1;
+        }
+    });
+
+    if (empty_status == 1) {
+        alert("Please enter required fields");
+        return;
+    }
+
+    add_more_count3++;
+    var $curRow = $(this).closest('tr');
+    let tr_id = "tr_without_" + add_more_count3;
+    let optionElements = $("#account_1").html();
+
+    let newRow = `
+    <tr id="${tr_id}">
+        <td class="srn" id="srn_${add_more_count3}">${add_more_count3}</td>
+        <td>
+            <select class="form-control account select2-single" name="account_name[]" data-id="${add_more_count3}" id="account_${add_more_count3}">
+                ${optionElements}
+            </select>
+        </td>
+        <td>
+            <input type="number" name="debit[]" class="form-control debit" id="debit_${add_more_count3}" data-id="${add_more_count3}" placeholder="Debit Amount" onkeyup="debitTotal();">
+        </td>
+        <td class="action-cell" style="display: flex;"></td>
+    </tr>`;
+
+    $curRow.after(newRow);
+    $(".select2-single").select2();
+
+    refreshActionIcons();
+});
+
+  $(document).on("click", ".remove_without", function () {
+    let id = $(this).data("id");
+    $("#tr_without_" + id).remove();
+
+    refreshActionIcons();
+    debitTotal();
+});
+function refreshActionIcons() {
+    let totalRows = $(".account").length;
+
+    // Reindex SRNs
+    $(".account").each(function (index) {
+        let rowId = $(this).attr("data-id");
+        $("#srn_" + rowId).html(index + 1 + ".");
+    });
+
+    // Clear all action columns
+    $(".action-cell").html("");
+
+    // Apply action icons based on row positions
+    $(".account").each(function (index) {
+        let rowId = $(this).attr("data-id");
+        let $actionCell = $("#tr_without_" + rowId + " .action-cell");
+
+        let removeIcon = `
+            <svg style="color: red; cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                class="bi bi-file-minus-fill remove_without" data-id="${rowId}" viewBox="0 0 16 16">
+                <path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/>
+            </svg>`;
+
+        let addIcon = `
+            <svg style="color: green; cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                viewBox="0 0 24 24" fill="currentColor"
+                class="bg-primary rounded-circle add_more_without" data-id="${rowId}">
+                <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/>
+            </svg>`;
+
+        if (totalRows === 1) {
+            // Only 1 row → show Add only
+            $actionCell.html(addIcon);
+        } else if (index === totalRows - 1) {
+            // Last row → Remove + Add
+            $actionCell.html(removeIcon + addIcon);
+        } else {
+            // All other rows (including first) → Remove only
+            $actionCell.html(removeIcon);
+        }
+    });
+}
+
+
    function debitTotal() {
       let total_debit_amount = 0;
       $(".debit").each(function() {
