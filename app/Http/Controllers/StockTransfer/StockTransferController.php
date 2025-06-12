@@ -18,8 +18,10 @@ use App\Models\ItemAverageDetail;
 use App\Models\SaleInvoiceConfiguration;
 use Carbon\Carbon;
 use App\Helpers\CommonHelper;
+use Illuminate\Support\Facades\URL;
 use Session;
 use DB;
+use DateTime;
 class StockTransferController extends Controller
 {
     /**
@@ -167,7 +169,7 @@ class StockTransferController extends Controller
                                  ->where('status', '=', '1')
                                  ->where('adjust_sale_amt', '=', 'No')
                                  ->where('adjust_purchase_amt', '=', 'No')
-                                 ->where('nature_of_sundry', '=', 'other')
+                                // ->where('nature_of_sundry', '=', 'other')
                                  ->whereIn('company_id',[Session::get('user_company_id'),0])
                                  ->orderBy('name')
                                  ->get();
@@ -344,10 +346,28 @@ class StockTransferController extends Controller
                    $ledger->entry_type = 11;
                    $ledger->entry_type_id = $stock_transfer->id;
                    //$ledger->map_account_id = $request->input('party_id');
+                   $ledger->series_no = $request->input('from_series');
                    $ledger->created_by = Session::get('user_id');
                    $ledger->created_at = date('d-m-Y H:i:s');
                    $ledger->save();
                 }  
+
+                if($billsundry->adjust_sale_amt=='No'){
+                   $ledger = new AccountLedger();
+                   $ledger->account_id = $billsundry->sale_amt_account;
+                   $ledger->debit = $bill_sundry_amounts[$key];
+                   $ledger->txn_date = $request->input('date');
+                   $ledger->company_id = Session::get('user_company_id');
+                   $ledger->financial_year = Session::get('default_fy');
+                   $ledger->entry_type = 11;
+                   $ledger->entry_type_id = $stock_transfer->id;
+                   //$ledger->map_account_id = $request->input('party_id');
+                   $ledger->series_no = $request->input('to_series');
+                   $ledger->created_by = Session::get('user_id');
+                   $ledger->created_at = date('d-m-Y H:i:s');
+                   $ledger->save();
+                }  
+
                 if($billsundry->nature_of_sundry=="OTHER"){
                     if($billsundry->bill_sundry_type=="additive"){
                         $additive_sundry_amount_first = $additive_sundry_amount_first + $bill_sundry_amounts[$key];
@@ -400,7 +420,7 @@ class StockTransferController extends Controller
                 $average_detail->save();
                 CommonHelper::RewriteItemAverageByItem($request->date,$value['item']);
             }
-
+            session(['previous_url_stock_transfer' => URL::previous()]);
             return redirect('stock-transfer')->withSuccess('Stock Transfer Successfully!');
         }
     }
@@ -556,7 +576,17 @@ class StockTransferController extends Controller
                             ->select('banks.*')
                             ->first(); 
         $configuration = SaleInvoiceConfiguration::with(['terms','banks'])->where('company_id',Session::get('user_company_id'))->first();
-        return view('stockTransfer.stock_transfer_invoice')->with(['items_detail' => $items_detail, 'sundry' => $sundry, 'company_data' => $company_data, 'stock_transfer' => $stock_transfer,'bank_detail' => $bank_detail,'gst_detail'=>$gst_detail,'from_series_info'=>$from_series_info,'to_series_info'=>$to_series_info,'configuration'=>$configuration]);
+        Session::put('redirect_url','');
+                                                        $financial_year = Session::get('default_fy');      
+                                                        $y =  explode("-",$financial_year);
+                                                        $from = $y[0];
+                                                        $from = DateTime::createFromFormat('y', $from);
+                                                        $from = $from->format('Y');
+                                                        $to = $y[1];
+                                                        $to = DateTime::createFromFormat('y', $to);
+                                                        $to = $to->format('Y');
+                                                        $month_arr = array($from.'-04',$from.'-05',$from.'-06',$from.'-07',$from.'-08',$from.'-09',$from.'-10',$from.'-11',$from.'-12',$to.'-01',$to.'-02',$to.'-03');
+        return view('stockTransfer.stock_transfer_invoice')->with(['items_detail' => $items_detail,'month_arr' => $month_arr, 'sundry' => $sundry, 'company_data' => $company_data, 'stock_transfer' => $stock_transfer,'bank_detail' => $bank_detail,'gst_detail'=>$gst_detail,'from_series_info'=>$from_series_info,'to_series_info'=>$to_series_info,'configuration'=>$configuration]);
     }
 
     /**
@@ -630,6 +660,8 @@ class StockTransferController extends Controller
                                                         ->where('stock_transfer_sundries.status','1')
                                                     ->select(['bill_sundrys.effect_gst_calculation','bill_sundrys.nature_of_sundry','stock_transfer_sundries.*'])
                                                     ->get();
+
+                                                    
         return view('stockTransfer.edit_stock_transfer',['series_list'=>$series_list,'item_list'=>$item,"billsundry"=>$billsundry,"stock_transfer"=>$stock_transfer,"stock_transfer_desc"=>$stock_transfer_desc,"stock_transfer_sundry"=>$stock_transfer_sundry]);
     }
 
@@ -767,21 +799,38 @@ class StockTransferController extends Controller
                     $sundry->amount = $bill_sundry_amounts[$key];
                     $sundry->save();
                     //ADD DATA IN ACCOUNT
-                    $billsundry = BillSundrys::where('id', $bill)->first();    
-                    if($billsundry->adjust_sale_amt=='No'){
-                       $ledger = new AccountLedger();
-                       $ledger->account_id = $billsundry->sale_amt_account;
-                       $ledger->credit = $bill_sundry_amounts[$key];
-                       $ledger->txn_date = $request->input('date');
-                       $ledger->company_id = Session::get('user_company_id');
-                       $ledger->financial_year = Session::get('default_fy');
-                       $ledger->entry_type = 11;
-                       $ledger->entry_type_id = $stock_transfer->id;
-                       //$ledger->map_account_id = $request->input('party_id');
-                       $ledger->created_by = Session::get('user_id');
-                       $ledger->created_at = date('d-m-Y H:i:s');
-                       $ledger->save();
-                    }  
+                     $billsundry = BillSundrys::where('id', $bill)->first();    
+                if($billsundry->adjust_sale_amt=='No'){
+                   $ledger = new AccountLedger();
+                   $ledger->account_id = $billsundry->sale_amt_account;
+                   $ledger->credit = $bill_sundry_amounts[$key];
+                   $ledger->txn_date = $request->input('date');
+                   $ledger->company_id = Session::get('user_company_id');
+                   $ledger->financial_year = Session::get('default_fy');
+                   $ledger->entry_type = 11;
+                   $ledger->entry_type_id = $stock_transfer->id;
+                   //$ledger->map_account_id = $request->input('party_id');
+                   $ledger->series_no = $request->input('from_series');
+                   $ledger->created_by = Session::get('user_id');
+                   $ledger->created_at = date('d-m-Y H:i:s');
+                   $ledger->save();
+                }  
+
+                if($billsundry->adjust_sale_amt=='No'){
+                   $ledger = new AccountLedger();
+                   $ledger->account_id = $billsundry->sale_amt_account;
+                   $ledger->debit = $bill_sundry_amounts[$key];
+                   $ledger->txn_date = $request->input('date');
+                   $ledger->company_id = Session::get('user_company_id');
+                   $ledger->financial_year = Session::get('default_fy');
+                   $ledger->entry_type = 11;
+                   $ledger->entry_type_id = $stock_transfer->id;
+                   //$ledger->map_account_id = $request->input('party_id');
+                   $ledger->series_no = $request->input('to_series');
+                   $ledger->created_by = Session::get('user_id');
+                   $ledger->created_at = date('d-m-Y H:i:s');
+                   $ledger->save();
+                }  
                     if($billsundry->nature_of_sundry=="OTHER"){
                         if($billsundry->bill_sundry_type=="additive"){
                             $additive_sundry_amount_first = $additive_sundry_amount_first + $bill_sundry_amounts[$key];
@@ -841,6 +890,7 @@ class StockTransferController extends Controller
                    CommonHelper::RewriteItemAverageByItem($request->date,$value);
                 }
              }
+             session(['previous_url_stock_transfer_edit' => URL::previous()]);
             return redirect('stock-transfer')->withSuccess('Stock Transfer Successfully!');
         }
     }

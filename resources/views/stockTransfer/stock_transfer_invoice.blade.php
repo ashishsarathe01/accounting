@@ -90,7 +90,15 @@ p {
                <div class="d-md-flex justify-content-between py-4 px-2 align-items-center header-section">
                <div class="d-md-flex d-block noprint">
                   <div class="calender-administrator my-2 my-md-0  w-min-230 noprint">
+                       <button type="button" class="btn btn-danger" onclick="redirectBack()">QUIT</button>
                      <button class="btn btn-info" onclick="printpage();">Print</button>
+                      <?php 
+                    if ( in_array(date('Y-m', strtotime($stock_transfer->transfer_date)), $month_arr) && $stock_transfer->e_waybill_status == 0 ) {?>
+                        <a href="{{ URL::to('stock-transfer/'.$stock_transfer->id.'/edit') }}" class="btn btn-primary text-white">
+                           <img src="{{ URL::asset('public/assets/imgs/edit-icon.svg') }}" alt="Edit" style="width: 16px; height: 16px; vertical-align: middle; filter: brightness(0) invert(1);">
+                           Edit
+                        </a><?php 
+                     } ?>
                   </div>
                </div>            
          </div><br>
@@ -133,11 +141,11 @@ p {
                   </tr>                                                                      
                   <tr>
                      <td colspan="4">
-                           <p><span class="width25">Invoice No. </span>:  <span class="lft_mar15">{{$stock_transfer->voucher_no_prefix}}</span></p>
-                           <p><span class="width25">Date of Invoice </span>: <span class="lft_mar15">{{date('d-m-Y',strtotime($stock_transfer->transfer_date))}}</span></p>
+                           <p><span class="width25">Delivery Challan No. </span>:  <span class="lft_mar15">{{$stock_transfer->voucher_no_prefix}}</span></p>
+                           <p><span class="width25">Date of D.C. </span>: <span class="lft_mar15">{{date('d-m-Y',strtotime($stock_transfer->transfer_date))}}</span></p>
                            <p><span class="width25">Place of Supply </span>: <span class="lft_mar15">{{$stock_transfer->sname}}</span></p>
-                           <p><span class="width25">Reverse Charge </span>: <span class="lft_mar15"></span></p>
                            <p><span class="width25">GR/RR No. </span>: <span class="lft_mar15"></span></p>
+                           <p>&nbsp;</p>
                      </td>
                      <td colspan="4">
                            <p><span class="width25">Transport </span>: <span class="lft_mar15"></span> </p>
@@ -146,30 +154,33 @@ p {
                            <p><span class="width25">E-Way Bill No. </span>: <span class="lft_mar15">
                            </span> </p>
                            <p>&nbsp;</p>
+                        
                      </td>
                   </tr>
                   <tr>
                      <td colspan="4" style="position: relative; vertical-align: top; padding: 0; height:120px;">
                         <p style="margin: 0; position: absolute; top: 0; left: 5px; font-style: italic;">
-                           <strong>Billed to :</strong>
+                           <strong>Transfer from :</strong>
                         </p>
+                        <p style="height:3px;"></p>
                         <div style="padding-top: 16px; margin-left:5px; margin-right:5px; padding-bottom:30px; max-height:80px; overflow:hidden;">
                            <p style="margin: 2px 0 0 0; line-height: 13px;">
                               {{$companyName}}<br>
-                              {{$to_series_info->address }}, {{$to_series_info->sname}}, {{$to_series_info->pincode}}
+                              {{$from_series_info->address }}, {{$from_series_info->sname}}, {{$from_series_info->pincode}}
                            </p>
                         </div>
                         <div style="position: absolute; bottom: 0; left: 5px; right: 4px;">
                            <p style="margin: 2px 0 0 0;">
-                              GSTIN/UIN:{{$to_series_info->gst_no}} 
-                              <span style="float: right;">PAN:{{substr($to_series_info->gst_no, 2, 10)}}</span>
+                              GSTIN/UIN:{{$from_series_info->gst_no}} 
+                              <span style="float: right;">PAN:{{substr($from_series_info->gst_no, 2, 10)}}</span>
                            </p>
                         </div>
                      </td>
                      <td colspan="4" style="position: relative; vertical-align: top; padding: 0; height:120px;">
                         <p style="margin: 0; position: absolute; top: 0; left: 5px; font-style: italic;">
-                        <strong>Shipped to :</strong>
+                        <strong>Transfer to :</strong>
                         </p>
+                        <p style="height:3px;"></p>
                         <div style="padding-top: 16px; margin-left:5px; margin-right:5px; padding-bottom:30px; max-height:80px; overflow:hidden;">
                            <p style="margin: 2px 0 0 0; line-height: 13px;">
                               {{$companyName}}<br>
@@ -207,8 +218,8 @@ p {
                      @php $i++;$item_total = $item_total + $item->amount; @endphp
                   @endforeach
                   @php                       
-                  foreach($sundry as $sundry){
-                     if($sundry->nature_of_sundry=="OTHER"){
+                  foreach($sundry as $sundry1){
+                     if($sundry1->nature_of_sundry=="OTHER"){
                         $i++;
                      }
                   }
@@ -235,32 +246,41 @@ p {
                            @php
                            $addTypes = ['CGST', 'SGST', 'IGST', 'ROUNDED OFF (+)'];
                            $lessTypes = ['ROUNDED OFF (-)'];
+                            
+                           
                         @endphp
-                        @foreach($sundry as $sundry)
+                        @foreach($sundry as $sundrys)
                            @php
-                              $billsundry = \App\Models\BillSundrys::find($sundry->bill_sundry);  
+                           
+                               
                            @endphp
-                           @if($sundry->nature_of_sundry === 'OTHER')
-                              @if($sundry->bill_sundry_type === 'additive')
-                                 <p>Add : {{ $sundry->name }}</p>
-                              @elseif($sundry->bill_sundry_type === 'subtractive')
-                                 <p>Less : {{ $sundry->name }}</p>
+                           @if($sundrys->nature_of_sundry === 'OTHER')
+                              @if($sundrys->bill_sundry_type === 'additive')
+                                 <p>Add : {{ $sundrys->name }}</p>
+                              @elseif($sundrys->bill_sundry_type === 'subtractive')
+                                 <p>Less : {{ $sundrys->name }}</p>
                               @endif
-                           @elseif(in_array($sundry->nature_of_sundry, $addTypes))
-                              <p>Add : {{ $sundry->name }}</p>
-                           @elseif(in_array($sundry->nature_of_sundry, $lessTypes))
-                              <p>Less : {{ $sundry->name }}</p>
+                           @elseif(in_array($sundrys->nature_of_sundry, $addTypes))
+                              <p>Add : {{ $sundrys->name }}</p>
+                           @elseif(in_array($sundrys->nature_of_sundry, $lessTypes))
+                              <p>Less : {{ $sundrys->name }}</p>
                            @endif
                         @endforeach                           
                      </td>
                      <td style="border-left:0; border-top:0;">
-                        @foreach($sundry as $sundry)
-                           <p>@if($sundry->rate!=0) {{$sundry->rate}} % @else &nbsp; @endif</p>
+                        @foreach($sundry as $row)
+                        @php
+                              
+                           @endphp
+                           <p>@if($row->rate!=0) {{$row->rate}} % @else &nbsp; @endif</p>
                         @endforeach
                      </td>
                      <td style="text-align:right; border-top:0;">
-                        @foreach($sundry as $sundry)
-                        <p>{{number_format($sundry->amount,2)}}</p>
+                        @foreach($sundry as $row)
+                         @php
+                             
+                           @endphp
+                        <p>{{number_format($row->amount,2)}}</p>
                         @endforeach
                      </td>
                   </tr>                                
@@ -274,7 +294,7 @@ p {
                   </tr>
                   <tr>
                      <td colspan="8" style="border-top:0; border-bottom:0;">
-                        <strong>Branch Transfer</strong> 
+                        <strong>Stock Transfer</strong> 
                      </td>
                </tr>
                <tr>
@@ -371,6 +391,26 @@ p {
 </div>
 @include('layouts.footer')
 <script> 
+
+function redirectBack() {
+    const previousUrl = document.referrer;
+   const sessionPreviousUrl = "{{ session('previous_url_stock_transfer') }}";
+    const sessionPreviousSaleEditUrl = "{{ session('previous_url_stock_transfer_edit') }}";
+
+    // If referrer matches session URLs → redirect to /sale
+    if (previousUrl === sessionPreviousUrl || previousUrl === sessionPreviousSaleEditUrl) {
+        window.location.href = "{{ url('stock-transfer') }}";
+    } else {
+        // Try going back in history
+        if (window.history.length > 1) {
+            history.back();
+        } else {
+            // No history → redirect to /stock-transfer.index
+            window.location.href = "{{ url('stock-transfer') }}";
+        }
+    }
+}
+
    function printpage(){
       $('.header-section').addClass('importantRule');
       window.print();

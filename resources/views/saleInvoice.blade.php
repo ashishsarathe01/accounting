@@ -546,18 +546,25 @@ body {
 @include('layouts.footer')
 <script> 
 
-    function redirectBack(){
-      let previousUrl = document.referrer; // Get Previous URL
-      
-      const sessionPreviousUrl = "{{ session('previous_url') }}";
-       const sessionPreviousSaleEditUrl = "{{ session('previous_url_saleEdit') }}";
+    function redirectBack() {
+    const previousUrl = document.referrer;
+    const sessionPreviousUrl = "{{ session('previous_url') }}";
+    const sessionPreviousSaleEditUrl = "{{ session('previous_url_saleEdit') }}";
 
-      if(previousUrl === sessionPreviousUrl || previousUrl === sessionPreviousSaleEditUrl  ){
-         window.location.href = "{{ url('sale') }}"; // Fixed Redirect
-      }else{
-         history.back(); // Go Back to previous page
-      }
-   }
+    // If referrer matches session URLs → redirect to /sale
+    if (previousUrl === sessionPreviousUrl || previousUrl === sessionPreviousSaleEditUrl) {
+        window.location.href = "{{ url('sale') }}";
+    } else {
+        // Try going back in history
+        if (window.history.length > 1) {
+            history.back();
+        } else {
+            // No history → redirect to /sale
+            window.location.href = "{{ url('sale') }}";
+        }
+    }
+}
+
    
    $(document).ready(function(){
       $(".generate_einvoice").click(function(){

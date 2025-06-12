@@ -321,7 +321,7 @@
                     <div class=" d-flex">                  
                         <div class="ms-auto">
                             <input type="submit" value="SAVE" class="btn btn-xs-primary" id="saveBtn">
-                            <a href="{{ route('sale.index') }}" class="btn  btn-black ">QUIT</a>
+                           <a href="{{ route('stock-transfer.index') }}" class="btn  btn-black ">QUIT</a>
                     </div>
                 </div>
             </form>
