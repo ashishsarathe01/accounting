@@ -74,7 +74,6 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
       Route::post('/login-merchant', [MerchantController::class, 'loginMerchant']);
       Route::Resource('/merchant-privilege',MerchantPrivilegesController::class)->name('*','merchant-privilege');
    });
-   
 });
 
 Route::get('/', [AuthController::class, 'index'])->name('password.login');
