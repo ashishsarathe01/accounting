@@ -7,6 +7,7 @@ use App\Models\AccountHeading;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Session;
+use Gate;
 
 class AccountHeadingController extends Controller{
    /**
@@ -15,6 +16,7 @@ class AccountHeadingController extends Controller{
      * @return \Illuminate\Http\Response
    */
    public function index(){
+      Gate::authorize('action-module', 2);
       $com_id = Session::get('user_company_id');
       $accountheading = AccountHeading::whereIn('company_id', [$com_id,0])
                                        ->where('delete', '=', '0')
@@ -27,6 +29,7 @@ class AccountHeadingController extends Controller{
      * @return \Illuminate\Http\Response
    */
    public function create(){
+      Gate::authorize('action-module', 72);
       return view('heading/addAccountHeading');
    }
    /**
@@ -36,6 +39,7 @@ class AccountHeadingController extends Controller{
      * @return \Illuminate\Http\Response
    */
    public function store(Request $request){
+      Gate::authorize('action-module', 72);
       $validator = Validator::make($request->all(), [
          'name' => 'required|string',
          'bs_profile' => 'required|string',
@@ -77,6 +81,7 @@ class AccountHeadingController extends Controller{
       }
    }
    public function edit($id){
+      Gate::authorize('action-module', 37);
       $editheading = AccountHeading::find($id);
       return view('heading/editAccountHeading')->with('editheading', $editheading);
    }
@@ -88,6 +93,7 @@ class AccountHeadingController extends Controller{
      * @return \Illuminate\Http\Response
    */
    public function update(Request $request){
+      Gate::authorize('action-module', 37);
       $validator = Validator::make($request->all(), [
          'name' => 'required|string',
          'bs_profile' => 'required|string',
@@ -119,6 +125,7 @@ class AccountHeadingController extends Controller{
      * @return \Illuminate\Http\Response
    */
    public function delete(Request $request){
+      Gate::authorize('action-module', 38);
       $account =  AccountHeading::find($request->heading_id);
       $account->delete = '1';
       $account->deleted_at = Carbon::now();

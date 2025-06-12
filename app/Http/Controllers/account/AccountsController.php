@@ -63,6 +63,7 @@ class AccountsController extends Controller{
      * @return \Illuminate\Http\Response
    */
    public function create(){
+      Gate::authorize('view-module', 73);
       $com_id = Session::get('user_company_id');
       $accountgroup = AccountGroups::where('delete', '=', '0')
                      ->whereIn('company_id', [$com_id,0])
@@ -78,6 +79,7 @@ class AccountsController extends Controller{
      * @return \Illuminate\Http\Response
    */
    public function store(Request $request){
+      Gate::authorize('view-module', 73);
       $validator = Validator::make($request->all(), [
          'account_name' => 'required|string',
       ], [
@@ -195,6 +197,7 @@ class AccountsController extends Controller{
       }
    }
    public function edit($id){
+      Gate::authorize('view-module', 41);
       $account = Accounts::find($id);
       $com_id = Session::get('user_company_id');
       $accountgroup = AccountGroups::where('delete', '=', '0')
@@ -221,6 +224,7 @@ class AccountsController extends Controller{
      * @return \Illuminate\Http\Response
    */
    public function update(Request $request){
+      Gate::authorize('view-module', 41);
       $validator = Validator::make($request->all(), [
          'account_name' => 'required|string',
       ],[
@@ -359,6 +363,7 @@ class AccountsController extends Controller{
      * @return \Illuminate\Http\Response
    */
    public function delete(Request $request){
+      Gate::authorize('view-module', 42);
       $account =  Accounts::find($request->account_id);
       $account->delete = '1';
       $account->deleted_at = Carbon::now();
@@ -378,6 +383,7 @@ class AccountsController extends Controller{
       return redirect('account')->withError($msg);
    }
    public function addAccount(){
+      Gate::authorize('view-module', 73);
       $com_id = Session::get('user_company_id');
       $accountgroup = AccountGroups::where('delete', '=', '0')
                      ->whereIn('company_id', [$com_id,0])

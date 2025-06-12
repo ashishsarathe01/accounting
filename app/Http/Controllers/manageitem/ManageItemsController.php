@@ -85,7 +85,8 @@ class ManageItemsController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-   public function create(){      
+   public function create(){   
+      Gate::authorize('view-module', 79);   
       $com_id = Session::get('user_company_id');
       $companyData = Companies::where('id', Session::get('user_company_id'))->first();      
       if($companyData->gst_config_type == "single_gst"){
@@ -124,6 +125,7 @@ class ManageItemsController extends Controller
      * @return \Illuminate\Http\Response
      */
    public function store(Request $request){
+      Gate::authorize('view-module', 79);
       $validator = Validator::make($request->all(), [
          'name' => 'required|string',
       ], [
@@ -195,6 +197,7 @@ class ManageItemsController extends Controller
       }
    }
    public function edit($id){
+      Gate::authorize('view-module', 51);
       $companyData = Companies::where('id', Session::get('user_company_id'))->first();      
       if($companyData->gst_config_type == "single_gst"){
          $series = DB::table('gst_settings')
@@ -247,6 +250,7 @@ class ManageItemsController extends Controller
      * @return \Illuminate\Http\Response
      */
    public function update(Request $request){
+      Gate::authorize('view-module', 51);
       $validator = Validator::make($request->all(), [
          'name' => 'required|string',
       ], [
@@ -314,6 +318,7 @@ class ManageItemsController extends Controller
    }
    public function delete(Request $request)
    {
+      Gate::authorize('view-module', 52);
       $exist = ItemLedger::where('item_id', $request->heading_id)
       ->where('source', '!=', -1)
       ->where('delete_status', '=', '0')

@@ -39,12 +39,15 @@
                   
                   
                </form>
-               <a href="{{ url('add-account') }}" class="btn btn-xs-primary">
-                  ADD
-                  <svg class="position-relative ms-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
-                     <path d="M9.1665 15.8327V10.8327H4.1665V9.16602H9.1665V4.16602H10.8332V9.16602H15.8332V10.8327H10.8332V15.8327H9.1665Z" fill="white" />
-                  </svg>
-               </a>
+               @can('action-module',73)
+                  <a href="{{ url('add-account') }}" class="btn btn-xs-primary">
+                     ADD
+                     <svg class="position-relative ms-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M9.1665 15.8327V10.8327H4.1665V9.16602H9.1665V4.16602H10.8332V9.16602H15.8332V10.8327H10.8332V15.8327H9.1665Z" fill="white" />
+                     </svg>
+                  </a>
+               @endcan
+               
             </div>
             <div class="   bg-white table-view shadow-sm">
                <table id="example" class="table-striped table m-0 shadow-sm">
@@ -79,10 +82,14 @@
                            <td class="w-min-120 text-center">
                               <?php 
                               if($value->company_id!=0){ ?>
-                                 <a href="{{ URL::to('account/' . $value->id . '/edit') }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
-                                 <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $value->id; ?>">
-                                    <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
-                                 </button>
+                                 @can('action-module',41)
+                                    <a href="{{ URL::to('account/' . $value->id . '/edit') }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
+                                 @endcan
+                                 @can('action-module',42)
+                                    <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $value->id; ?>">
+                                       <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
+                                    </button>
+                                 @endcan
                                  <?php
                               }
                               ?>                              

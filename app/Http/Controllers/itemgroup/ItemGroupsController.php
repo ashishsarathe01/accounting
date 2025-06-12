@@ -31,6 +31,7 @@ class ItemGroupsController extends Controller
      */
     public function create()
     {
+         Gate::authorize('view-module', 78);
         return view('itemgroup/addAccountItemGroup');
     }
 
@@ -43,6 +44,7 @@ class ItemGroupsController extends Controller
    public function store(Request $request){
       // echo "<pre>";
       // print_r($request->all());die;
+      Gate::authorize('view-module', 78);
       $validator = Validator::make($request->all(), [
          'group_name' => 'required|string',
       ],[
@@ -102,6 +104,7 @@ class ItemGroupsController extends Controller
    }
 
    public function edit($id){
+      Gate::authorize('view-module', 49);
       $itemsgroup = ItemGroups::with(['parameters.predefinedValue'])->find($id);
       return view('itemgroup/editAccountItemsGroup')->with('itemsgroup', $itemsgroup);
    }
@@ -115,6 +118,7 @@ class ItemGroupsController extends Controller
    public function update(Request $request){
       // echo "<pre>";
       // print_r($request->all());die;
+      Gate::authorize('view-module', 49);
       $validator = Validator::make($request->all(), [
          'group_name' => 'required|string',
 
@@ -179,6 +183,7 @@ class ItemGroupsController extends Controller
      */
     public function delete(Request $request)
     {
+      Gate::authorize('view-module', 50);
         $items =  ItemGroups::find($request->item_id);
         $items->delete = '1';
         $items->deleted_at = Carbon::now();

@@ -25,6 +25,12 @@ class AuthServiceProvider extends ServiceProvider
     public function boot()
     {
         $this->registerPolicies();
+        Gate::define('action-module', function (User $user, $module_id) {
+            if ($user->type=="OWNER") {
+                return true;
+            }
+            return $user->hasPrivilege($module_id, 'delete');
+        });
         Gate::define('view-module', function (User $user, $module_id) {
             if ($user->type=="OWNER") {
                 return true;
@@ -33,17 +39,23 @@ class AuthServiceProvider extends ServiceProvider
         });
 
         Gate::define('create-module', function (User $user, $module_id) {
-            if ($user->is_admin) return true;
+            if ($user->type=="OWNER") {
+                return true;
+            }
             return $user->hasPrivilege($module_id, 'create');
         });
 
         Gate::define('update-module', function (User $user, $module_id) {
-            if ($user->is_admin) return true;
+            if ($user->type=="OWNER") {
+                return true;
+            }
             return $user->hasPrivilege($module_id, 'edit');
         });
 
         Gate::define('delete-module', function (User $user, $module_id) {
-            if ($user->is_admin) return true;
+            if ($user->type=="OWNER") {
+                return true;
+            }
             return $user->hasPrivilege($module_id, 'delete');
         });
         
