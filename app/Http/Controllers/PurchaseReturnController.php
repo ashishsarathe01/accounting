@@ -61,7 +61,7 @@ class PurchaseReturnController extends Controller
       $to = $to->format('Y');
       $month_arr = array($from.'-04',$from.'-05',$from.'-06',$from.'-07',$from.'-08',$from.'-09',$from.'-10',$from.'-11',$from.'-12',$to.'-01',$to.'-02',$to.'-03');
       $purchase = DB::table('purchase_returns')
-            ->select('purchase_returns.id as purchases_id', 'purchase_returns.date', 'purchase_returns.invoice_no', 'purchase_returns.total','purchase_return_no','purchase_returns.series_no','purchase_returns.financial_year','sr_nature','sr_type', DB::raw('(select account_name from accounts where accounts.id=purchase_returns.party limit 1) as account_name'))
+            ->select('purchase_returns.id as purchases_id', 'purchase_returns.date', 'purchase_returns.sr_prefix', 'purchase_returns.total','purchase_return_no','purchase_returns.series_no','purchase_returns.financial_year','sr_nature','sr_type', DB::raw('(select account_name from accounts where accounts.id=purchase_returns.party limit 1) as account_name'))
             ->whereRaw("STR_TO_DATE(purchase_returns.date,'%Y-%m-%d')>=STR_TO_DATE('".date('Y-m-d',strtotime($from_date))."','%Y-%m-%d') and STR_TO_DATE(purchase_returns.date,'%Y-%m-%d')<=STR_TO_DATE('".date('Y-m-d',strtotime($to_date))."','%Y-%m-%d')")
             ->where('company_id',Session::get('user_company_id'))
             ->where('delete','0')

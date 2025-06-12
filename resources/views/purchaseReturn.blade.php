@@ -42,10 +42,10 @@
                        @csrf
                        <div class="d-md-flex d-block">                  
                           <div class="calender-administrator my-2 my-md-0">
-                             <input type="date" id="customDate" class="form-control calender-bg-icon calender-placeholder" placeholder="From date" required name="from_date" value="{{date('Y-m-d',strtotime($from_date))}}">
+                             <input type="date" id="customDate" class="form-control calender-bg-icon calender-placeholder" placeholder="From date" required name="from_date" value="{{ !empty($from_date) ? date('Y-m-d', strtotime($from_date)) : '' }}">
                           </div>
                           <div class="calender-administrator ms-md-4">
-                             <input type="date" id="customDate" class="form-control calender-bg-icon calender-placeholder" placeholder="To date" required name="to_date" value="{{date('Y-m-d',strtotime($to_date))}}">
+                             <input type="date" id="customDate" class="form-control calender-bg-icon calender-placeholder" placeholder="To date" required name="to_date" value="{{ !empty($to_date) ? date('Y-m-d', strtotime($to_date)) : '' }}">
                           </div>
                           <button class="btn btn-info" style="margin-left: 5px;">Search</button>
                        </div>
@@ -65,11 +65,11 @@
                         <thead>
                             <tr class=" font-12 text-body bg-light-pink ">
                                 <th class="w-min-120 border-none bg-light-pink text-body">Date </th>
-                                <th class="w-min-120 border-none bg-light-pink text-body ">Purchase Return No </th>
+                                <th class="w-min-120 border-none bg-light-pink text-body ">Debit Note No </th>
                                 <!--<th class="w-min-120 border-none bg-light-pink text-body ">Particulars </th>-->
                                 <th class="w-min-120 border-none bg-light-pink text-body ">Party Name
                                 </th>
-                                <th class="w-min-120 border-none bg-light-pink text-body ">Amount </th>
+                                <th class="w-min-120 border-none bg-light-pink text-body " style="text-align: right;">Amount </th>
                                 <th class="w-min-120 border-none bg-light-pink text-body text-center">Action </th>
                             </tr>
                         </thead>
@@ -80,7 +80,7 @@
                             foreach ($purchase as $value) { ?>
                                 <tr class="font-14 font-heading bg-white">
                                     <td class="w-min-120 "><?php echo date('d-m-Y',strtotime($value->date)); ?></td>
-                                    <td class="w-min-120 " style="text-align: center;"><?php echo $value->series_no."/".$value->financial_year."/DR".$value->purchase_return_no ?></td>
+                                    <td class="w-min-120 " ><?php echo $value->sr_prefix ?></td>
                                     <td class="w-min-120 "><?php echo $value->account_name ?></td>
                                     <td class="w-min-120 " style="text-align: right;"> 
                                        <?php 
