@@ -63,17 +63,11 @@
                               @endif
                            </td>
                            <td class="w-min-120 text-center">
-                              @can('action-module','34')
-                                 <a href="{{ URL::to('manage-merchant-employee/' . $value->id . '/edit') }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
-                              @endcan
-                              @can('action-module','35')
-                                 <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $value->id; ?>">
-                                    <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
-                                 </button>
-                              @endcan
-                              @can('action-module','36') 
-                                 <a href="{{ URL::to('merchant-employee-privileges/' . $value->id) }}"><img src="{{ URL::asset('public/assets/imgs/permission.png')}}" class="px-1" alt="" style="width: 30px;"></a>
-                              @endcan
+                              <a href="{{ URL::to('manage-merchant-employee/' . $value->id . '/edit') }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
+                              <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $value->id; ?>">
+                                 <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
+                              </button>
+                              <a href="{{ URL::to('merchant-employee-privileges/' . $value->id) }}"><img src="{{ URL::asset('public/assets/imgs/permission.png')}}" class="px-1" alt="" style="width: 30px;"></a>
                            </td>
                         </tr>
                      @endforeach
