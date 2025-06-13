@@ -47,18 +47,29 @@
                 </svg>
             </button>
             <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton2">
-            <li class="dropdown-submenu">
-                    <a class="dropdown-item dropdown-toggle" href="#" id="tdsConfigMenu">Configuration</a>
-                    <ul class="dropdown-menu" aria-labelledby="tdsConfigMenu">
-                        <li><a class="dropdown-item" href="{{ route('parameterized-configuration') }}">Parameterized Configuration</a></li>
-                        <li><a class="dropdown-item" href="{{ route('gst-setting.index') }}">GST Configuration</a></li>
-                        <li><a class="dropdown-item" href="{{ route('voucher-series-configuration') }}">Voucher Series Configuration</a></li>
-                        <li><a class="dropdown-item" href="{{ route('sale-invoice-configuration') }}">Sale Invoice Configuration</a></li>
-                        <li><a class="dropdown-item" href="#">TDS Configuration</a></li>
-                        <li><a class="dropdown-item" href="#">ESI</a></li>
-                        <li><a class="dropdown-item" href="#">PF</a></li>
-                    </ul>
-                </li>
+                @can('action-module',89)
+                    <li class="dropdown-submenu">
+                        <a class="dropdown-item dropdown-toggle" href="#" id="tdsConfigMenu">Configuration</a>
+                        <ul class="dropdown-menu" aria-labelledby="tdsConfigMenu">
+                            @can('action-module',90)
+                                <li><a class="dropdown-item" href="{{ route('gst-setting.index') }}">GST Configuration</a></li>
+                            @endcan
+                            @can('action-module',91)
+                                <li><a class="dropdown-item" href="{{ route('voucher-series-configuration') }}">Voucher Series Configuration</a></li>
+                            @endcan
+                            @can('action-module',92)
+                                <li><a class="dropdown-item" href="{{ route('sale-invoice-configuration') }}">Sale Invoice Configuration</a></li>
+                            @endcan
+                            @can('action-module',93)
+                                <li><a class="dropdown-item" href="{{ route('parameterized-configuration') }}">Parameterized Configuration</a></li>
+                            @endcan
+                            {{-- <li><a class="dropdown-item" href="#">TDS Configuration</a></li>
+                            <li><a class="dropdown-item" href="#">ESI</a></li>
+                            <li><a class="dropdown-item" href="#">PF</a></li> --}}
+                        </ul>
+                    </li>
+                @endcan
+                
                
               
                <li><a class="dropdown-item" href="{{ route('change-password-view') }}">Change Password</a></li>
