@@ -132,6 +132,7 @@ class CompanyController extends Controller{
       }
    }
    public function companyEdit(){
+      Gate::authorize('action-module', 33);
       $company_id = Session::get('user_company_id');
       //Company Data
       $company = Companies::find($company_id);
@@ -181,7 +182,7 @@ class CompanyController extends Controller{
       }
    }
    public function manageFinancialYear(Request $request){
-      Gate::authorize('view-module', 19);
+      Gate::authorize('action-module', 19);
       $comp = Companies::select('current_finacial_year','default_fy')
                         ->where('id',Session::get('user_company_id'))
                         ->first();

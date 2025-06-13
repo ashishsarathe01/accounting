@@ -45,7 +45,7 @@ class MerchantPrivilegesController extends Controller
         $request->validate([
             "module_name"=>"required",
         ]);
-        print_r($request->all());die;
+        
         $privilege = new PrivilegesModule;
         $privilege->module_name = $request->module_name;
         $privilege->parent_id = $request->parent;

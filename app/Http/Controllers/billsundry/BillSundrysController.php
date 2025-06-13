@@ -37,6 +37,7 @@ class BillSundrysController extends Controller
      */
     public function create()
     {
+        Gate::authorize('action-module', 74);
         $com_id = Session::get('user_company_id');
         $account = Accounts::where('delete', '=', '0')
                            ->whereIn('accounts.company_id', [$com_id,0])
@@ -59,6 +60,7 @@ class BillSundrysController extends Controller
      */
     public function store(Request $request)
     {
+        Gate::authorize('action-module', 74);
         $validator = Validator::make($request->all(), [
             'name' => 'required|string',
         ], [
@@ -98,6 +100,7 @@ class BillSundrysController extends Controller
 
     public function edit($id)
     {
+        Gate::authorize('action-module', 43);
       $financial_year = Session::get('default_fy');
         $editbill = BillSundrys::find($id);
         $com_id = Session::get('user_company_id');
@@ -121,6 +124,7 @@ class BillSundrysController extends Controller
      */
     public function update(Request $request)
     {
+         Gate::authorize('action-module', 43);
         $validator = Validator::make($request->all(), [
             'name' => 'required|string',
 
@@ -156,6 +160,7 @@ class BillSundrysController extends Controller
      */
     public function delete(Request $request)
     {
+         Gate::authorize('action-module', 44);
         $bill =  BillSundrys::find($request->bill_id);
         $bill->delete = '1';
         $bill->deleted_at = Carbon::now();

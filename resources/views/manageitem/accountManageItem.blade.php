@@ -37,12 +37,15 @@
                             </select>
                         </div>
                     </form>
-                    <a href="{{ route('account-manage-item.create') }}" class="btn btn-xs-primary">
-                        ADD
-                        <svg class="position-relative ms-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
-                            <path d="M9.1665 15.8327V10.8327H4.1665V9.16602H9.1665V4.16602H10.8332V9.16602H15.8332V10.8327H10.8332V15.8327H9.1665Z" fill="white" />
-                        </svg>
-                    </a>
+                    @can('action-module',79)
+                        <a href="{{ route('account-manage-item.create') }}" class="btn btn-xs-primary">
+                            ADD
+                            <svg class="position-relative ms-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                <path d="M9.1665 15.8327V10.8327H4.1665V9.16602H9.1665V4.16602H10.8332V9.16602H15.8332V10.8327H10.8332V15.8327H9.1665Z" fill="white" />
+                            </svg>
+                        </a>
+                    @endcan
+                    
                 </div>
                 <div class="   bg-white table-view shadow-sm">
                     <table id="example" class="table-striped table m-0 shadow-sm">
@@ -98,12 +101,16 @@
                                                 echo 'Disable'; ?></span>
                                     </td>
                                     <td class="w-min-120 text-center">
-                                        <a href="{{ URL::to('account-manage-item/' . $value->id . '/edit') }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
-                                        @if($value->item_delete_btn_view==1)
-                                            <button type="button" class="border-0 bg-transparent delete_partner" data-id="<?php echo $value->id; ?>">
-                                                <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
-                                            </button>
-                                        @endif
+                                        @can('action-module',51)
+                                            <a href="{{ URL::to('account-manage-item/' . $value->id . '/edit') }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
+                                        @endcan
+                                        @can('action-module',52)
+                                            @if($value->item_delete_btn_view==1)
+                                                <button type="button" class="border-0 bg-transparent delete_partner" data-id="<?php echo $value->id; ?>">
+                                                    <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
+                                                </button>
+                                            @endif
+                                        @endcan
                                     </td>
                                 </tr>
                             <?php } ?>

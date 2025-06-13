@@ -30,6 +30,7 @@ class UnitsController extends Controller
      */
     public function create()
     {
+        Gate::authorize('view-module', 88);
         return view('unit/addAccountUnit');
     }
 
@@ -41,6 +42,7 @@ class UnitsController extends Controller
      */
     public function store(Request $request)
     {
+        Gate::authorize('view-module', 88);
         $validator = Validator::make($request->all(), [
             'name' => 'required|string',
         ], [
@@ -67,7 +69,7 @@ class UnitsController extends Controller
 
     public function edit($id)
     {
-
+        Gate::authorize('view-module', 67);
         $editunit = Units::find($id);
         return view('unit/editAccountUnit')->with('editunit', $editunit);
     }
@@ -80,6 +82,7 @@ class UnitsController extends Controller
      */
     public function update(Request $request)
     {
+        Gate::authorize('view-module', 67);
         $validator = Validator::make($request->all(), [
             'name' => 'required|string',
 
@@ -108,6 +111,7 @@ class UnitsController extends Controller
      */
     public function delete(Request $request)
     {
+        Gate::authorize('view-module', 68);
         $unit =  Units::find($request->unit_id);
         $unit->delete = '1';
         $unit->deleted_at = Carbon::now();

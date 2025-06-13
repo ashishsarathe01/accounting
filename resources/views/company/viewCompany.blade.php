@@ -20,9 +20,11 @@
                 @endif
                 
                 <div class=" title-border-redius shadow-sm position-relative  border-divider shadow-sm d-flex justify-content-between py-3  px-4 align-items-center bg-plum-viloet">
-                    <h5 class="table-title-bottom-line m-0">Company Info
-                    </h5>
-                    <a href="{{ route('company.company-edit') }}"><img src="public/assets/imgs/edit-blue.svg" alt=""></a>
+                    <h5 class="table-title-bottom-line m-0">Company Info</h5>
+                    @can('action-module','33')
+                        <a href="{{ route('company.company-edit') }}"><img src="public/assets/imgs/edit-blue.svg" alt=""></a>
+                    @endcan
+                    
                 </div>
                 <!-- company info - ------------------------------------------------>
                 <form class="bg-white px-4 py-3  shadow-sm border-divider rounded-bottom-8">

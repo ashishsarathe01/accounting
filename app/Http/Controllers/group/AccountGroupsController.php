@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Session;
 use DB;
+use Gate;
 
 class AccountGroupsController extends Controller{
    /**
@@ -17,6 +18,7 @@ class AccountGroupsController extends Controller{
      * @return \Illuminate\Http\Response
    */
    public function index(){
+      Gate::authorize('action-module',3);
       $com_id = Session::get('user_company_id');
       $accountgroup = AccountGroups::whereIn('company_id', [$com_id,0])
                                     ->where('delete', '=', '0')
@@ -30,6 +32,7 @@ class AccountGroupsController extends Controller{
      * @return \Illuminate\Http\Response
      */
    public function create(){
+      Gate::authorize('action-module',71);
       $com_id = Session::get('user_company_id');
       $heading = AccountHeading::whereIn('company_id', [$com_id,0])
                ->where('delete', '=', '0')
@@ -48,6 +51,7 @@ class AccountGroupsController extends Controller{
      * @return \Illuminate\Http\Response
      */
    public function store(Request $request){
+      Gate::authorize('action-module',71);
       $validator = Validator::make($request->all(), [
          'name' => 'required|string',
       ], [
@@ -88,6 +92,7 @@ class AccountGroupsController extends Controller{
    }
 
    public function edit($id){
+      Gate::authorize('action-module',39);
       $com_id = Session::get('user_company_id');
       $editGroup = AccountGroups::find($id);
       $heading = AccountHeading::where('delete', '=', '0')
@@ -106,6 +111,7 @@ class AccountGroupsController extends Controller{
      * @return \Illuminate\Http\Response
      */
    public function update(Request $request){
+      Gate::authorize('action-module',39);
       $validator = Validator::make($request->all(), [
          'name' => 'required|string',
       ], [
@@ -137,6 +143,7 @@ class AccountGroupsController extends Controller{
      * @return \Illuminate\Http\Response
      */
    public function delete(Request $request){
+      Gate::authorize('action-module',40);
       $account =  AccountGroups::find($request->group_id);
       $account->delete = '1';
       $account->deleted_at = Carbon::now();

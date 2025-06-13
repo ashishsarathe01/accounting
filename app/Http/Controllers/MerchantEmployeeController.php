@@ -31,6 +31,7 @@ class MerchantEmployeeController extends Controller{
      * @return \Illuminate\Http\Response
    */
    public function create(){
+      Gate::authorize('action-module', 81);
       return view('merchant_employee_add');
    }
    /**
@@ -40,6 +41,7 @@ class MerchantEmployeeController extends Controller{
      * @return \Illuminate\Http\Response
    */
    public function store(Request $request){
+      Gate::authorize('action-module', 81);
       $check = User::where('email',$request->input('email'))->first();
       if($check){
          return redirect('manage-merchant-employee')->withSuccess('Email already exists.');
@@ -79,6 +81,7 @@ class MerchantEmployeeController extends Controller{
      * @return \Illuminate\Http\Response
    */
    public function edit($id){
+      Gate::authorize('action-module', 34);
       $employee = User::find($id);
       return view('merchant_employee_edit',['employee'=>$employee]);
    }
@@ -91,6 +94,7 @@ class MerchantEmployeeController extends Controller{
      * @return \Illuminate\Http\Response
    */
    public function update(Request $request, $id){
+      Gate::authorize('action-module', 34);
       $employee = User::find($id);
       $employee->name = $request->input('name');
       $employee->mobile_no = $request->input('mobile');
@@ -112,6 +116,7 @@ class MerchantEmployeeController extends Controller{
      * @return \Illuminate\Http\Response
    */
    public function destroy($id){
+      Gate::authorize('action-module', 35);
       $delete = User::where('id',$id)->update(['status'=>'0','delete_status'=>'1','deleted_at'=>date('Y-m-d H:i:s'),"deleted_by"=>Session::get('user_id')]);
       if($delete){
          return redirect('manage-merchant-employee')->withSuccess('User deleted Successfully.');
@@ -123,6 +128,7 @@ class MerchantEmployeeController extends Controller{
       return redirect($url)->withError($msg);
    }
    public function employeePrivileges($id){
+      Gate::authorize('action-module', 36);
       $assign_privilege = PrivilegesModuleMapping::where('employee_id',$id)->pluck('module_id')->toArray();
       $privileges = PrivilegesModule::select('id','module_name','parent_id')
                                        ->where('status',1)
@@ -147,7 +153,7 @@ class MerchantEmployeeController extends Controller{
          return $branch;
       }
       public function setEmployeePrivileges(Request $request){
-         
+         Gate::authorize('action-module', 36);
          PrivilegesModuleMapping::where('employee_id',$request->employee_id)->delete();
          foreach ($request->privileges as $key => $value) {
             $pri = new PrivilegesModuleMapping;
