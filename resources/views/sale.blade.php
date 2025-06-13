@@ -22,7 +22,7 @@
                <form  action="{{ route('sale.index') }}" method="GET">
                   @csrf
                   <div class="d-md-flex d-block">                  
-                  <div class="calender-administrator my-2 my-md-0">
+                     <div class="calender-administrator my-2 my-md-0">
                         <input type="date" id="customDate" class="form-control calender-bg-icon calender-placeholder" placeholder="From date" required name="from_date" value="{{ !empty($from_date) ? date('Y-m-d', strtotime($from_date)) : '' }}">
                      </div>
                      <div class="calender-administrator ms-md-4">
@@ -34,10 +34,13 @@
                <div class="d-md-flex d-block"> 
                   <input type="text" id="search" class="form-control" placeholder="Search">
                </div>
-               <a href="{{ route('sale.create') }}" class="btn btn-xs-primary">
+               @can('action-module',85)
+                  <a href="{{ route('sale.create') }}" class="btn btn-xs-primary">
                   ADD
                   <svg class="position-relative ms-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M9.1665 15.8327V10.8327H4.1665V9.16602H9.1665V4.16602H10.8332V9.16602H15.8332V10.8327H10.8332V15.8327H9.1665Z" fill="white" /></svg>
                </a>
+               @endcan
+               
             </div>
             <div class="transaction-table bg-white table-view shadow-sm">
                <table class="table-striped table m-0 shadow-sm sale_table">
@@ -65,8 +68,7 @@
                               $tot_amt = $tot_amt + $value->total;?>
                            </td>
                            <td class="w-min-120 text-center">
-                              <?php 
-                             
+                              <?php
                               if(in_array(date('Y-m',strtotime($value->date)),$month_arr)){
                                 if($value->e_invoice_status==0 && $value->e_waybill_status==0 && $value->status=='1'){
                                  ?>
@@ -74,6 +76,15 @@
                                     <button type="button" class="border-0 bg-transparent delete"   data-id="<?php echo $value->sales_id;?>">
                                        <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
                                     </button>
+                                 if($value->e_invoice_status==0 && $value->e_waybill_status==0 && $value->status=='1'){?>
+                                    @can('action-module',61)
+                                       <a href="{{ URL::to('edit-sale/'.$value->sales_id) }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
+                                    @endcan
+                                    @can('action-module',62)
+                                       <button type="button" class="border-0 bg-transparent delete"   data-id="<?php echo $value->sales_id;?>">
+                                          <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
+                                       </button>
+                                    @endcan
                                  <?php 
                                  }
                               } 
@@ -81,6 +92,7 @@
                                   <a href="{{ url('sale-invoice/' . $value->sales_id) }}" >
                     <img src="{{ asset('public/assets/imgs/eye-icon.svg') }}" class="px-1" alt="View Invoice">
                 </a>
+                                 <button type="button" class="border-0 bg-transparent" onclick="location.href='{{ url('sale-invoice/' . $value->sales_id) }}'"><img src="{{ asset('public/assets/imgs/eye-icon.svg') }}" class="px-1" alt=""></button>
                                  <?php 
                               }
                               if($value->status=='2'){?>

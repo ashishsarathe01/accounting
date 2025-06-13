@@ -25,13 +25,15 @@ use App\Helpers\CommonHelper;
 use DB;
 use Session;
 use DateTime;
+use Gate;
 class PurchaseController extends Controller{
     /**
      * Show the specified resources in storage.
      *
      * @return \Illuminate\Http\Response
      */
-   public function index(Request $request){      
+   public function index(Request $request){
+      Gate::authorize('action-module',11);
       $input = $request->all();
       // Default date range (first day of current month to today)
       $from_date = session('purchase_from_date', "01-" . date('m-Y'));
@@ -87,6 +89,7 @@ class PurchaseController extends Controller{
      * @return \Illuminate\Http\Response
      */
    public function create(){
+      Gate::authorize('action-module',83);
       //Account List
       $groups = DB::table('account_groups')
                         ->whereIn('heading', [3,11])
@@ -172,6 +175,7 @@ class PurchaseController extends Controller{
      * @return \Illuminate\Http\Response
      */
    public function store(Request $request){
+      Gate::authorize('action-module',83);
       $validated = $request->validate([
          'series_no' => 'required',
          'date' => 'required',
@@ -652,6 +656,7 @@ class PurchaseController extends Controller{
       return view('purchaseInvoice')->with(['items_detail' => $items_detail, 'sale_sundry' => $sale_sundry, 'party_detail' => $party_detail, 'company_data' => $company_data, 'sale_detail' => $sale_detail,'gst_detail'=>$gst_detail]);
    }
    public function delete(Request $request){
+      Gate::authorize('action-module',58);
       $purchase =  Purchase::find($request->purchase_id);
       $purchase->delete = '1';
       $purchase->deleted_at = Carbon::now();
@@ -683,6 +688,7 @@ class PurchaseController extends Controller{
       return redirect($url)->withError($msg);
    }
    public function purchaseEdit($id){
+      Gate::authorize('action-module',57);
       $purchase = Purchase::where('id',$id)->first();
       $PurchaseDescription = PurchaseDescription::join('units','purchase_descriptions.unit','=','units.id')
                            ->where('purchase_id',$id)
@@ -772,7 +778,7 @@ class PurchaseController extends Controller{
    public function update(Request $request){
       // echo "<pre>";
       // print_r($request->all());
-      
+      Gate::authorize('action-module',57);
       $validated = $request->validate([
          'series_no' => 'required',
          'date' => 'required',

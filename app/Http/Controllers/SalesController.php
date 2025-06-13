@@ -32,6 +32,7 @@ use Illuminate\Support\Facades\URL;
 use DB;
 use Session;
 use DateTime;
+use Gate;
 
 class SalesController extends Controller
 {
@@ -41,7 +42,7 @@ class SalesController extends Controller
      * @return \Illuminate\Http\Response
      */
    public function index(Request $request){
-       
+       Gate::authorize('action-module',10);
     $input = $request->all();
 
     // Initialize dates
@@ -115,6 +116,7 @@ class SalesController extends Controller
      */
 
    public function create(){
+      Gate::authorize('action-module',85);
       $financial_year = Session::get('default_fy');    
       $companyData = Companies::where('id', Session::get('user_company_id'))->first();
       //Ashish Code Start Here
@@ -299,6 +301,7 @@ class SalesController extends Controller
       return view('addSale')->with('party_list', $party_list)->with('billsundry', $billsundry)->with('bill_date', $bill_date)->with('GstSettings', $GstSettings)->with('item', $item);
    }   
    public function store(Request $request){
+      Gate::authorize('action-module',85);
       $validated = $request->validate([
          'series_no' => 'required',
          'date' => 'required',
@@ -674,6 +677,7 @@ class SalesController extends Controller
       }
    }
    public function edit($id){
+      Gate::authorize('action-module',61);
       $sale = Sales::find($id);
       $SaleDescription = SaleDescription::join('units','sale_descriptions.unit','=','units.id')
                                           ->where('sale_id', $id)
@@ -947,6 +951,7 @@ class SalesController extends Controller
       return view('saleInvoice')->with(['items_detail' => $items_detail, 'sale_sundry' => $sale_sundry, 'party_detail' => $party_detail, 'company_data' => $company_data, 'sale_detail' => $sale_detail,'bank_detail' => $bank_detail,'gst_detail'=>$gst_detail,'einvoice_status'=>$GstSettings->einvoice,'ewaybill_status'=>$GstSettings->ewaybill,'configuration'=>$configuration,'seller_info'=>$seller_info]);
    }
    public function delete(Request $request){
+      Gate::authorize('action-module',62);
       $sale =  Sales::find($request->sale_id);
       $sale->delete = '1';
       $sale->deleted_at = Carbon::now();
@@ -977,7 +982,8 @@ class SalesController extends Controller
    public function failedMessage($msg,$url){
       return redirect($url)->withError($msg);
    }
-   public function update(Request $request){     
+   public function update(Request $request){
+      Gate::authorize('action-module',61);
       $validated = $request->validate([
          'series_no' => 'required',
          'date' => 'required',
