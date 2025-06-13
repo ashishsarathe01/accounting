@@ -354,7 +354,7 @@
          if($("#business_type").val() == 1){
             $("#dateofjoing_section").hide();
             $("#din_sectioon").hide();
-            $("#share_per_div").show();
+            $("#share_per_div").show(); 
             var html = '<option value="proprietor">Proprietor</option>';
             $("#designation").html('<option value="proprietor">Proprietor</option><option value="authorised_signatory">Authorised Signatory</option>');
          }else if($("#business_type").val() == 2) {

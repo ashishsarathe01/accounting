@@ -242,7 +242,7 @@
                            <span class="mar_lft10"><u><small>Total Tax</small></u><br>
                               @if(Str::limit($company_data->gst,2,'')==Str::limit($purchase_return->billing_gst,2,''))
                                  <small>{{number_format($val->amount+$val->amount,2)}}</small>
-                              @else
+                              @else 
                                  <small>{{number_format($val->amount,2)}}</small>
                               @endif
                            </span><br>

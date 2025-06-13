@@ -147,7 +147,7 @@ class StockTransferController extends Controller
             $series_list[$key]->manual_enter_invoice_no =  $manual_enter_invoice_no;
             $series_list[$key]->duplicate_voucher =  $duplicate_voucher;
             $series_list[$key]->blank_voucher =  $blank_voucher;
-            $series_list[$key]->invoice_prefix =  $invoice_prefix;
+            $series_list[$key]->invoice_prefix =  $invoice_prefix; 
         }
         //Item List
         $item = DB::table('manage_items')->join('units', 'manage_items.u_name', '=', 'units.id')

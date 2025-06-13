@@ -66,7 +66,7 @@
    @page { size: auto;  margin: 0mm; }
    .importantRule { display: none !important; }
 </style>
-<div class="list-of-view-company ">
+<div class="list-of-view-company "> 
     <section class="list-of-view-company-section container-fluid">
         <div class="row vh-100">
             @include('layouts.leftnav')

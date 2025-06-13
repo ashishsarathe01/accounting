@@ -321,7 +321,7 @@
                     <div class=" d-flex">                  
                         <div class="ms-auto">
                             <input type="submit" value="SAVE" class="btn btn-xs-primary" id="saveBtn">
-                           <a href="{{ route('stock-transfer.index') }}" class="btn  btn-black ">QUIT</a>
+                           <a href="{{ route('stock-transfer.index') }}" class="btn  btn-black ">QUIT</a> 
                     </div>
                 </div>
             </form>
@@ -490,7 +490,7 @@
     $(document).on("click", ".remove", function() {
         let id = $(this).attr('data-id');
         $("#tr_" + id).remove();
-        calculateAmount();
+        calculateAmount(); 
     });
     $(document).on('change', '.item_id', function(){
         $('#unit_tr_'+$(this).attr('data-id')).val($('option:selected', this).attr('data-unit_name'));

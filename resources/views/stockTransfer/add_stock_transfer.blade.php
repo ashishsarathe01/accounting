@@ -602,7 +602,7 @@
         });
         let total_amounts = parseFloat(total) + parseFloat(bill_sundry_amount);
          total_amounts = total_amounts.toFixed(2)
-        
+         
         let round_off_total_amount = Math.round(total_amounts);
          let roundoff = parseFloat(round_off_total_amount) - parseFloat(total_amounts);     
             

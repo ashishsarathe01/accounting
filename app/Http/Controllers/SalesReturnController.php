@@ -220,7 +220,7 @@ class SalesReturnController extends Controller
          $sale_return_no = SalesReturn::select('sale_return_no')                     
                         ->where('company_id',Session::get('user_company_id'))
                         ->where('financial_year','=',$financial_year)
-                        ->where('sr_nature','!=',"WITHOUT GST")
+                        ->where('sr_nature','!=',"WITHOUT GST") 
                         ->where('series_no','=',$value->series)
                         ->where('delete','=','0')
                         ->max(\DB::raw("cast(sale_return_no as SIGNED)"));

@@ -54,7 +54,7 @@
                      <?php
                      $tot_amt = 0;
                      $qty = 0;setlocale(LC_MONETARY, 'en_IN');
-                     foreach ($sale as $value) { ?>
+                     foreach ($sale as $value) { ?> 
                         <tr class="font-14 font-heading bg-white">
                            <td class=""><?php echo date('d-m-Y',strtotime($value->date)); ?></td>
                            <td style="text-align: center;"><?php echo $value->voucher_no_prefix ?></td>
