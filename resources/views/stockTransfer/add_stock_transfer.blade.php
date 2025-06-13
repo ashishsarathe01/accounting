@@ -208,12 +208,6 @@
                                             </td>
                                         </tr>
 
-
-                                          @php 
-                                          echo"<pre>";
-                                            print_r($billsundry->toArray());
-                                            echo"<pre>";
-                                             die; @endphp
                                          <tr id="billtr_round_plus" class="font-14 font-heading bg-white bill_taxes_row sundry_tr" style="display:none">
                                  <td class="w-min-50">
                                     <select id="bill_sundry_round_plus" class="w-95-parsent bill_sundry_tax_type  form-select" name="bill_sundry[]" data-id="round_plus">
