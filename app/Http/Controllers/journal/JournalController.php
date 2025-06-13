@@ -17,6 +17,7 @@ use DB;
 use Carbon\Carbon;
 use Session;
 use DateTime;
+use Gate;
 class JournalController extends Controller
 {
     /**
@@ -25,10 +26,11 @@ class JournalController extends Controller
      * @return \Illuminate\Http\Response
      */
    public function index(Request $request){
-    $input = $request->all();
+      Gate::authorize('action-module',14);
+     $input = $request->all();
       // Default date range (first day of current month to today)
-$from_date = session('journal_from_date', "01-" . date('m-Y'));
-$to_date = session('journal_to_date', date('d-m-Y'));
+      $from_date = session('journal_from_date', "01-" . date('m-Y'));
+      $to_date = session('journal_to_date', date('d-m-Y'));
 
 // Check if user has selected a date range
 if (!empty($input['from_date']) && !empty($input['to_date'])) {
@@ -67,6 +69,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
      * @return \Illuminate\Http\Response
      */
    public function create(){
+      Gate::authorize('action-module',80);
       $financial_year = Session::get('default_fy');
       $com_id = Session::get('user_company_id');
       $party_list = Accounts::whereIn('company_id', [$com_id,0])
@@ -162,6 +165,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
      * @return \Illuminate\Http\Response
      */
    public function store(Request $request){
+      Gate::authorize('action-module',80);
       // echo "<pre>";
       // print_r($request->all());die;
       $financial_year = Session::get('default_fy');
@@ -410,6 +414,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
    }
 
    public function edit($id){
+      Gate::authorize('action-module',53);
       $journal = Journal::find($id);
       $com_id = Session::get('user_company_id');
       $journal_detail = JournalDetails::where('journal_id', '=', $id)->where('delete', '=', '0')->get();
@@ -498,6 +503,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
      * @return \Illuminate\Http\Response
      */
    public function update(Request $request){
+      Gate::authorize('action-module',53);
       $validator = Validator::make($request->all(), [
          'date' => 'required|string',
         ], [
@@ -737,6 +743,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
       } 
    }
    public function delete(Request $request){
+      Gate::authorize('action-module',54);
       $journal =  Journal::find($request->journal_id);
       $journal->delete = '1';
       $journal->deleted_at = Carbon::now();

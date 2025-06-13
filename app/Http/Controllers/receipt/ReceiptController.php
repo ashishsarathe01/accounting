@@ -16,6 +16,7 @@ use DB;
 use Carbon\Carbon;
 use Session;
 use DateTime;
+use Gate;
 class ReceiptController extends Controller
 {
     /**
@@ -24,19 +25,20 @@ class ReceiptController extends Controller
      * @return \Illuminate\Http\Response
      */
    public function index(Request $request){
+      Gate::authorize('action-module',16);
        $input = $request->all();
       // Default date range (first day of current month to today)
-$from_date = session('receipt_from_date', "01-" . date('m-Y'));
-$to_date = session('receipt_to_date', date('d-m-Y'));
+      $from_date = session('receipt_from_date', "01-" . date('m-Y'));
+      $to_date = session('receipt_to_date', date('d-m-Y'));
 
-// Check if user has selected a date range
-if (!empty($input['from_date']) && !empty($input['to_date'])) {
-    $from_date = date('d-m-Y', strtotime($input['from_date']));
-    $to_date = date('d-m-Y', strtotime($input['to_date']));
-    
-    // Store in session so it persists after refresh
-    session(['receipt_from_date' => $from_date, 'receipt_to_date' => $to_date]);
-}
+      // Check if user has selected a date range
+      if (!empty($input['from_date']) && !empty($input['to_date'])) {
+         $from_date = date('d-m-Y', strtotime($input['from_date']));
+         $to_date = date('d-m-Y', strtotime($input['to_date']));
+         
+         // Store in session so it persists after refresh
+         session(['receipt_from_date' => $from_date, 'receipt_to_date' => $to_date]);
+      }
       Session::put('redirect_url','');
       $financial_year = Session::get('default_fy');      
       $y =  explode("-",$financial_year);
@@ -68,6 +70,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
      * @return \Illuminate\Http\Response
      */
    public function create(){
+      Gate::authorize('action-module',84);
       $financial_year = Session::get('default_fy');
       $com_id = Session::get('user_company_id');
       $party_list = Accounts::where('delete', '=', '0')
@@ -143,6 +146,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
      * @return \Illuminate\Http\Response
      */
    public function store(Request $request){  
+      Gate::authorize('action-module',84);
       $financial_year = Session::get('default_fy');      
       $receipt = new Receipt;
       $receipt->date = $request->input('date');
@@ -206,6 +210,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
    }
 
    public function edit($id){
+      Gate::authorize('action-module',59);
       $receipt = Receipt::find($id);
       $com_id = Session::get('user_company_id');
       $receipt_detail = ReceiptDetails::where('receipt_id', '=', $id)->where('delete', '=', '0')->get();
@@ -267,6 +272,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
      * @return \Illuminate\Http\Response
      */
    public function update(Request $request){
+      Gate::authorize('action-module',59);
       $validator = Validator::make($request->all(), [
          'date' => 'required|string',
 
@@ -337,6 +343,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
       }      
    }
     public function delete(Request $request){
+      Gate::authorize('action-module',60);
        $receipt =  Receipt::find($request->receipt_id);
        $receipt->delete = '1';
        $receipt->deleted_at = Carbon::now();

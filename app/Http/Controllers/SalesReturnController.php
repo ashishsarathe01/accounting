@@ -30,7 +30,7 @@ use App\Models\ItemAverageDetail;
 use App\Helpers\CommonHelper;
 use Session;
 use DateTime;
-
+use Gate;
 class SalesReturnController extends Controller
 {
 
@@ -40,6 +40,7 @@ class SalesReturnController extends Controller
      * @return \Illuminate\Http\Response
      */
     public function index(Request $request) {
+      Gate::authorize('action-module',12);
       $input = $request->all();
   
       // Default date range (first day of current month to today)
@@ -121,6 +122,7 @@ class SalesReturnController extends Controller
     // }
 
    public function create(){
+      Gate::authorize('action-module',76);
       $groups = DB::table('account_groups')
                         ->whereIn('heading', [3,11])
                         ->where('heading_type','group')
@@ -379,6 +381,7 @@ class SalesReturnController extends Controller
      * @return \Illuminate\Http\Response
      */
    public function store(Request $request){
+      Gate::authorize('action-module',76);
       $validated = $request->validate([         
          'date' => 'required',
          'nature' => 'required',     
@@ -836,6 +839,7 @@ class SalesReturnController extends Controller
       }
    }
    public function delete(Request $request){
+      Gate::authorize('action-module',70);
       $sale_return =  SalesReturn::find($request->sale_return_id);
       $sale_return->delete = '1';
       $sale_return->status = '0';
@@ -1314,6 +1318,7 @@ $items_detail = $items_detail->merge($items_detail1);
       return redirect($url)->withError($msg);
    }
    public function edit($id){
+      Gate::authorize('action-module',69);
       $sale_return =  SalesReturn::find($id);
       $sale_return_description =  SaleReturnDescription::join('units','sale_return_descriptions.unit','=','units.id')
                   ->select(['sale_return_descriptions.*','units.s_name'])
@@ -1476,6 +1481,7 @@ $items_detail = $items_detail->merge($items_detail1);
       return view('editSaleReturn')->with('party_list', $party_list)->with('billsundry', $billsundry)->with('mat_series', $mat_series)->with('sale_return', $sale_return)->with('sale_return_description', $sale_return_description)->with('sale_return_sundry', $sale_return_sundry)->with('vendors', $vendors)->with('items', $items)->with('all_account_list', $all_account_list)->with('without_gst', $without_gst)->with('merchant_gst', $sale_return->merchant_gst)->with('manageitems', $manageitems);
    }
    public function update(Request $request){
+      Gate::authorize('action-module',69);
       // echo "<pre>";
       // print_r($request->all());die;
       $validated = $request->validate([

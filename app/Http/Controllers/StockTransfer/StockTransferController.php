@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\URL;
 use Session;
 use DB;
 use DateTime;
+use Gate;
 class StockTransferController extends Controller
 {
     /**
@@ -31,6 +32,7 @@ class StockTransferController extends Controller
      */
     public function index()
     {
+        Gate::authorize('action-module',31);
         $stock_transfers = StockTransfer::where('company_id', Session::get('user_company_id'))
                                         ->where('status', '1')
                                         ->where('delete_status', '0')
@@ -47,6 +49,7 @@ class StockTransferController extends Controller
      */
     public function create()
     {
+        Gate::authorize('action-module',87);
         $companyData = Companies::where('id', Session::get('user_company_id'))->first();
         if($companyData->gst_config_type == "single_gst"){
             $series_list = DB::table('gst_settings')
@@ -184,6 +187,7 @@ class StockTransferController extends Controller
      */
     public function store(Request $request)
     {
+        Gate::authorize('action-module',87);
         // echo "<pre>";
         // print_r($request->all());die;
         //ashish  
@@ -597,6 +601,7 @@ class StockTransferController extends Controller
      */
     public function edit($id)
     {
+        Gate::authorize('action-module',65);
         $companyData = Companies::where('id', Session::get('user_company_id'))->first();
         if($companyData->gst_config_type == "single_gst"){
             $series_list = DB::table('gst_settings')
@@ -674,6 +679,7 @@ class StockTransferController extends Controller
      */
     public function update(Request $request, $id)
     {
+        Gate::authorize('action-module',65);
         // echo "<pre>";
         // print_r($request->all());die;
         $validatedData = $request->validate([
@@ -903,6 +909,7 @@ class StockTransferController extends Controller
      */
     public function destroy($id)
     {
+        Gate::authorize('action-module',66);
         $stock_transfer =  StockTransfer::find($id);
         $stock_transfer->delete_status = '1';
         $stock_transfer->deleted_at = Carbon::now();

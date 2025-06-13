@@ -16,7 +16,7 @@ use App\Models\Companies;
 use DB;
 use Session;
 use DateTime;
-
+use Gate;
 class PaymentController extends Controller
 {
     /**
@@ -25,6 +25,7 @@ class PaymentController extends Controller
      * @return \Illuminate\Http\Response
      */
    public function index(Request $request){
+      Gate::authorize('action-module',15);
     $input = $request->all();
           // Default date range (first day of current month to today)
     $from_date = session('payment_from_date', "01-" . date('m-Y'));
@@ -69,6 +70,7 @@ class PaymentController extends Controller
      * @return \Illuminate\Http\Response
      */
    public function create(){
+      Gate::authorize('action-module',82);
       $financial_year = Session::get('default_fy');
       $com_id = Session::get('user_company_id');
       $party_list = Accounts::where('delete', '=', '0')
@@ -147,6 +149,7 @@ class PaymentController extends Controller
      * @return \Illuminate\Http\Response
    */
    public function store(Request $request){
+      Gate::authorize('action-module',82);
       $com_id = Session::get('user_company_id');
       $financial_year = Session::get('default_fy');
       $payment = new Payment;
@@ -212,6 +215,7 @@ class PaymentController extends Controller
       }
    }
    public function edit($id){
+      Gate::authorize('action-module',55);
       $com_id = Session::get('user_company_id');
       $payment = Payment::find($id);
       $payment_detail = PaymentDetails::where('payment_id', '=', $id)->where('delete', '=', '0')->get();
@@ -272,6 +276,7 @@ class PaymentController extends Controller
      * @return \Illuminate\Http\Response
      */
    public function update(Request $request){
+      Gate::authorize('action-module',55);
       $validator = Validator::make($request->all(), [
          'date' => 'required|string',
 
@@ -350,6 +355,7 @@ class PaymentController extends Controller
      * @return \Illuminate\Http\Response
      */
    public function delete(Request $request){
+      Gate::authorize('action-module',56);
       $payment =  Payment::find($request->payment_id);
       $payment->delete = '1';
       $payment->deleted_at = Carbon::now();

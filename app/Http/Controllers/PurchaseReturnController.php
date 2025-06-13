@@ -28,7 +28,7 @@ use Carbon\Carbon;
 use DB;
 use Session;
 use DateTime;
-
+use Gate;
 class PurchaseReturnController extends Controller
 {
     /**
@@ -37,6 +37,7 @@ class PurchaseReturnController extends Controller
      * @return \Illuminate\Http\Response
      */
    public function index(Request $request){
+      Gate::authorize('action-module',13);
          $input = $request->all();
       // Default date range (first day of current month to today)
          $from_date = session('purchaseReturn_from_date', "01-" . date('m-Y'));
@@ -77,6 +78,7 @@ class PurchaseReturnController extends Controller
      * @return \Illuminate\Http\Response
      */
    public function create(){
+      Gate::authorize('action-module',77);
       $groups = DB::table('account_groups')
       ->whereIn('heading', [3,11])
       ->where('heading_type','group')
@@ -314,6 +316,7 @@ class PurchaseReturnController extends Controller
      * @return \Illuminate\Http\Response
      */
    public function store(Request $request){
+      Gate::authorize('action-module',77);
       $validated = $request->validate([         
          'date' => 'required',
          'nature' => 'required',  
@@ -811,6 +814,7 @@ class PurchaseReturnController extends Controller
       }
    }
    public function delete(Request $request){
+      Gate::authorize('action-module',48);   
       $purchase_return =  PurchaseReturn::find($request->purchase_return_id);
       $purchase_return->delete = '1';
       $purchase_return->deleted_at = Carbon::now();
@@ -1210,6 +1214,7 @@ class PurchaseReturnController extends Controller
       return redirect($url)->withError($msg);
    }
    public function edit($id){
+      Gate::authorize('action-module',47);  
       $purchase_return =  PurchaseReturn::find($id);
       $purchase_return_description =  PurchaseReturnDescription::join('units','purchase_return_descriptions.unit','=','units.id')
                                     ->where('purchase_return_id',$id)
@@ -1335,6 +1340,7 @@ class PurchaseReturnController extends Controller
       return view('editPurchaseReturn')->with('party_list', $party_list)->with('billsundry', $billsundry)->with('purchase_return', $purchase_return)->with('purchase_return_description', $purchase_return_description)->with('purchase_return_sundry', $purchase_return_sundry)->with('without_gst', $without_gst)->with('vendors', $vendors)->with('items', $items)->with('all_account_list', $all_account_list)->with('merchant_gst',$merchant_gst)->with('manageitems',$manageitems);
    }
    public function update(Request $request){
+      Gate::authorize('action-module',47); 
       $validated = $request->validate([         
          'date' => 'required',
          'party_id' => 'required', 

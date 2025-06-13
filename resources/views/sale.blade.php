@@ -70,28 +70,19 @@
                            <td class="w-min-120 text-center">
                               <?php
                               if(in_array(date('Y-m',strtotime($value->date)),$month_arr)){
-                                if($value->e_invoice_status==0 && $value->e_waybill_status==0 && $value->status=='1'){
-                                 ?>
-                                    <a href="{{ URL::to('edit-sale/'.$value->sales_id) }}" ><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
-                                    <button type="button" class="border-0 bg-transparent delete"   data-id="<?php echo $value->sales_id;?>">
-                                       <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
-                                    </button>
-                                 if($value->e_invoice_status==0 && $value->e_waybill_status==0 && $value->status=='1'){?>
-                                    @can('action-module',61)
-                                       <a href="{{ URL::to('edit-sale/'.$value->sales_id) }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
-                                    @endcan
-                                    @can('action-module',62)
-                                       <button type="button" class="border-0 bg-transparent delete"   data-id="<?php echo $value->sales_id;?>">
-                                          <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
-                                       </button>
-                                    @endcan
-                                 <?php 
-                                 }
+                                    if($value->e_invoice_status==0 && $value->e_waybill_status==0 && $value->status=='1'){?>
+                                       @can('action-module',61)
+                                          <a href="{{ URL::to('edit-sale/'.$value->sales_id) }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
+                                       @endcan
+                                       @can('action-module',62)
+                                          <button type="button" class="border-0 bg-transparent delete"   data-id="<?php echo $value->sales_id;?>">
+                                             <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
+                                          </button>
+                                       @endcan
+                                       <?php 
+                                    }
                               } 
                               if($value->status=='1'){?>
-                                  <a href="{{ url('sale-invoice/' . $value->sales_id) }}" >
-                    <img src="{{ asset('public/assets/imgs/eye-icon.svg') }}" class="px-1" alt="View Invoice">
-                </a>
                                  <button type="button" class="border-0 bg-transparent" onclick="location.href='{{ url('sale-invoice/' . $value->sales_id) }}'"><img src="{{ asset('public/assets/imgs/eye-icon.svg') }}" class="px-1" alt=""></button>
                                  <?php 
                               }

@@ -351,6 +351,7 @@ class ManageItemsController extends Controller
       ]);
    }
    public function stockJournal(Request $request){
+      Gate::authorize('view-module', 30);
       $input = $request->all();
       // Default date range (first day of current month to today)
       $from_date = session('stockJournal_from_date', date('Y-m')."-01");
@@ -377,6 +378,7 @@ class ManageItemsController extends Controller
       return view('manageitem/stock-journal')->with('journals', $journal)->with('month_arr', $month_arr)->with("from_date",$from_date)->with("to_date",$to_date);
    }
    public function addStockJournal(){
+      Gate::authorize('view-module', 86);
       $financial_year = Session::get('default_fy');
       $items = DB::table('manage_items')->join('units', 'manage_items.u_name', '=', 'units.id')
                         ->select(['manage_items.*','units.s_name as unit'])
@@ -501,6 +503,7 @@ class ManageItemsController extends Controller
       return view('manageitem/add-stock-journal')->with('items', $items)->with('date', $bill_date)->with('series_list', $series_list);
    }
    public function saveStockJournal(Request $request){
+      Gate::authorize('view-module', 86);
       // echo "<pre>";
       // print_r($request->all());
       // die;
@@ -601,6 +604,7 @@ class ManageItemsController extends Controller
       }
    }
    public function deleteStockJournal(Request $request){
+      Gate::authorize('view-module', 64);
       $id = $request->input('del_id');
       $delete = StockJournal::where('id',$id)
                   ->delete();
@@ -613,6 +617,7 @@ class ManageItemsController extends Controller
       }      
    }  
    public function editStockJournal(Request $request,$id){
+      Gate::authorize('view-module', 63);
       $journal = StockJournal::find($id); 
       $journal_details = StockJournalDetail::where('parent_id',$id)
                                              ->get();
@@ -652,6 +657,7 @@ class ManageItemsController extends Controller
       return view('manageitem/edit-stock-journal')->with('journal', $journal)->with('items', $items)->with('journal_details', $journal_details)->with('series_list', $series_list);     
    }
    public function updateStockJournal(Request $request){
+      Gate::authorize('view-module', 63);
       $date = $request->input('date');
       $narration = $request->input('narration');
       $series_no = $request->input('series_no');

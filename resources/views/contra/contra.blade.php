@@ -40,7 +40,8 @@
                     <div class="d-md-flex d-block"> 
                        <input type="text" id="search" class="form-control" placeholder="Search">
                     </div>
-                    <a href="{{ route('contra.create') }}" class="btn btn-xs-primary">
+                    @can('action-module',75)
+                        <a href="{{ route('contra.create') }}" class="btn btn-xs-primary">
                         ADD
                         <svg class="position-relative ms-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
                             viewBox="0 0 20 20" fill="none">
@@ -49,6 +50,8 @@
                                 fill="white" />
                         </svg>
                     </a>
+                    @endcan
+                    
                 </div>
                 <div class="transaction-table bg-white table-view shadow-sm">
                     <table class="table-striped table m-0 shadow-sm contra_table">
@@ -150,12 +153,16 @@ foreach ($contra as $value) {
         <?php 
         if ($value->con_id != $prev_con_id && in_array(date('Y-m',strtotime($value->date)),$month_arr)) {
         ?>
-            <a href="{{ URL::to('contra/' . $value->con_id . '/edit') }}">
-                <img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt="">
-            </a>
-            <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $value->con_id;?>">
-                <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
-            </button>
+            @can('action-module',45)
+                <a href="{{ URL::to('contra/' . $value->con_id . '/edit') }}">
+                    <img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt="">
+                </a>
+            @endcan
+            @can('action-module',46)
+                <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $value->con_id;?>">
+                    <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
+                </button>
+            @endcan
         <?php 
         }
         ?>

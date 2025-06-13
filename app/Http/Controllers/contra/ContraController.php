@@ -15,6 +15,7 @@ use DB;
 use Carbon\Carbon;
 use Session;
 use DateTime;
+use Gate;
 class ContraController extends Controller
 {
      /**
@@ -23,19 +24,20 @@ class ContraController extends Controller
      * @return \Illuminate\Http\Response
      */
    public function index(Request $request){
+      Gate::authorize('action-module',29);
         $input = $request->all();
       // Default date range (first day of current month to today)
-$from_date = session('contra_from_date', "01-" . date('m-Y'));
-$to_date = session('contra_to_date', date('d-m-Y'));
+      $from_date = session('contra_from_date', "01-" . date('m-Y'));
+      $to_date = session('contra_to_date', date('d-m-Y'));
 
-// Check if user has selected a date range
-if (!empty($input['from_date']) && !empty($input['to_date'])) {
-    $from_date = date('d-m-Y', strtotime($input['from_date']));
-    $to_date = date('d-m-Y', strtotime($input['to_date']));
-    
-    // Store in session so it persists after refresh
-    session(['contra_from_date' => $from_date, 'contra_to_date' => $to_date]);
-}
+      // Check if user has selected a date range
+      if (!empty($input['from_date']) && !empty($input['to_date'])) {
+         $from_date = date('d-m-Y', strtotime($input['from_date']));
+         $to_date = date('d-m-Y', strtotime($input['to_date']));
+         
+         // Store in session so it persists after refresh
+         session(['contra_from_date' => $from_date, 'contra_to_date' => $to_date]);
+      }
       Session::put('redirect_url','');
       $financial_year = Session::get('default_fy');      
       $y =  explode("-",$financial_year);
@@ -65,6 +67,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
      * @return \Illuminate\Http\Response
      */
    public function create(){
+      Gate::authorize('action-module',75);
       $financial_year = Session::get('default_fy');
       $com_id = Session::get('user_company_id');
       $party_list = Accounts::whereIn('company_id', [Session::get('user_company_id'),0])                   ->where('delete', '=', '0')
@@ -134,6 +137,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
      * @return \Illuminate\Http\Response
      */
    public function store(Request $request){
+      Gate::authorize('action-module',75);
       $financial_year = Session::get('default_fy');
       $con = new Contra;
       $con->date = $request->input('date');
@@ -198,6 +202,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
       }        
    }
    public function edit($id){
+      Gate::authorize('action-module',45);
       $com_id = Session::get('user_company_id');
       $contra = Contra::find($id);
       $contra_detail = ContraDetails::where('contra_id', '=', $id)->where('delete', '=', '0')->get();
@@ -243,6 +248,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
       return view('contra/editContra')->with('contra', $contra)->with('party_list', $party_list)->with('contra_detail', $contra_detail)->with('mat_series', $mat_series);
    }
    public function delete(Request $request){
+      Gate::authorize('action-module',46);
       $contra =  Contra::find($request->contra_id);
       $contra->delete = '1';
       $contra->deleted_at = Carbon::now();
@@ -258,6 +264,7 @@ if (!empty($input['from_date']) && !empty($input['to_date'])) {
       }
    }
    public function update(Request $request){
+      Gate::authorize('action-module',45);
       $validator = Validator::make($request->all(), [
          'date' => 'required|string',
 
