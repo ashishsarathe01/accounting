@@ -3,16 +3,15 @@
 @section('content')
 <div class="container">
     <h3 class="mb-4">B2C Normal Sales (State-wise)</h3>
-   
-    <table class="table table-bordered">
-    <thead>
-        <tr>
-            <th>State</th>
-            <th>GST Rate</th>
-            <th>Taxable Value</th>
-            <th>CGST</th>
-            <th>SGST</th>
-            <th>IGST</th>
+    <table class="table table-bordered table-striped">
+        <thead>
+        <tr style="background-color: #003366;">
+            <th style="color: white;">State</th>
+            <th style="color: white;">GST Rate</th>
+            <th style="color: white;">Taxable Value</th>
+            <th style="color: white;">CGST</th>
+            <th style="color: white;">SGST</th>
+            <th style="color: white;">IGST</th>
         </tr>
     </thead>
     <tbody>

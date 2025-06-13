@@ -72,7 +72,7 @@
                                  </button>
                               @endcan
                               @can('action-module','36')
-                                 <a href="{{ URL::to('merchant-employee-privileges/' . $value->id) }}"><img src="{{ URL::asset('public/assets/imgs/permission.png')}}" class="px-1" alt="" style="width: 30px;"></a>
+                                 <a href="{{ URL::to('merchant-employee-privileges/' . $value->id) }}"><img src="{{ URL::asset('public/assets/imgs/permission.png')}}" class="px-1" alt="fcfg" style="width: 30px;"></a>
                               @endcan
                            </td>
                         </tr>
