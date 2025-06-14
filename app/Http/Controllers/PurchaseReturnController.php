@@ -37,10 +37,12 @@ class PurchaseReturnController extends Controller
      * @return \Illuminate\Http\Response
      */
    public function index(Request $request){
-         $input = $request->all();
-      // Default date range (first day of current month to today)
-         $from_date = session('purchaseReturn_from_date', "01-" . date('m-Y'));
-         $to_date = session('purchaseReturn_to_date', date('d-m-Y'));
+      Gate::authorize('action-module',13);
+    $input = $request->all();
+
+    // Default date range (first day of current month to today)
+    $from_date = null;
+    $to_date = null;
 
     // Check if user has selected a date range
     if (!empty($input['from_date']) && !empty($input['to_date'])) {
@@ -107,6 +109,7 @@ class PurchaseReturnController extends Controller
         ->with("from_date", $from_date)
         ->with("to_date", $to_date);
 }
+
 
 
     /**
