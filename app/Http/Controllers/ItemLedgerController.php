@@ -303,9 +303,9 @@ class ItemLedgerController extends Controller
                 if($action){
                   $item[$key]->bill_no = $action->voucher_no_prefix;
                   if(!empty($value->in_weight)){
-                      $item[$key]->account_name = $action->material_center_to;
-                  }else if(!empty($value->out_weight)){
                       $item[$key]->account_name = $action->material_center_from;
+                  }else if(!empty($value->out_weight)){
+                      $item[$key]->account_name = $action->material_center_to;
                   }
                   
                   $item[$key]->type = "Stock Transfer";

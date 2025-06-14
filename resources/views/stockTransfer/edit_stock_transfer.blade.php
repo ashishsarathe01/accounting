@@ -244,6 +244,59 @@
                                                        </span>
                                                     </td>
                                                 </tr>
+
+                                                  <?php 
+
+                             $roundReturn = array();
+                              foreach($stock_transfer_sundry as $val) {
+                                 if($val['nature_of_sundry']=="ROUNDED OFF (+)" || $val['nature_of_sundry']=="ROUNDED OFF (-)"){
+                                    $roundReturn[$val['nature_of_sundry']][] = $val;
+                                 }
+                              }
+
+                             
+                              ?>
+                                                 <tr id="billtr_round_plus" class="font-14 font-heading bg-white bill_taxes_row sundry_tr" <?php if(!isset($roundReturn["ROUNDED OFF (+)"])){?> style="display:none" <?php } ?>>
+                                 <td class="w-min-50">
+                                    <select id="bill_sundry_round_plus" class="w-95-parsent bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="round_plus">
+                                       <?php
+                                       foreach ($billsundry as $value) { 
+                                          if($value->nature_of_sundry=='ROUNDED OFF (+)'){?>
+                                             <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_round_plus" id="sundry_option_round_plus" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
+                                             <?php 
+                                          }
+                                       } ?>
+                                    </select>
+                                 </td>
+                                 <td class="w-min-50 ">
+                                    <span name="tax_amt[]" class="tax_amount" id="tax_amt_round_plus"></span>
+                                    <input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_round_plus">
+                                 </td>
+                                 <td class="w-min-50 ">
+                                    <input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_round_plus" data-id="round_plus" <?php if(isset($roundReturn["ROUNDED OFF (+)"])){?> value="<?php echo $roundReturn["ROUNDED OFF (+)"][0]['amount'];?>" <?php } ?> style="text-align:right;"></td>
+                                 <td></td>
+                              </tr>
+                              <tr id="billtr_round_minus" class="font-14 font-heading bg-white bill_taxes_row sundry_tr" <?php if(!isset($roundReturn["ROUNDED OFF (-)"])){?> style="display:none" <?php }?>>
+                                 <td class="w-min-50">
+                                    <select id="bill_sundry_round_minus" class="w-95-parsent bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="round_minus">
+                                       <?php
+                                       foreach ($billsundry as $value) { 
+                                          if($value->nature_of_sundry=='ROUNDED OFF (-)'){?>
+                                             <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_round_minus" id="sundry_option_round_minus" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
+                                             <?php 
+                                          }
+                                       } ?>
+                                    </select>
+                                 </td>
+                                 <td class="w-min-50 ">
+                                    <span name="tax_amt[]" class="tax_amount" id="tax_amt_round_minus"></span>
+                                    <input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_round_minus">
+                                 </td>
+                                 <td class="w-min-50 ">
+                                    <input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_round_minus" data-id="round_minus" <?php if(isset($roundReturn["ROUNDED OFF (-)"])){?> value="<?php echo $roundReturn["ROUNDED OFF (-)"][0]['amount'];?>" <?php } ?> style="text-align:right;">
+                                 </td>
+                                 <td></td>
+                              </tr>
                                                 @php $index++;@endphp
                                             @endif
                                         @endforeach
@@ -539,19 +592,42 @@
         $(".bill_sundry_tax_type").each(function(){          
             let id = $(this).attr('data-id');
             let type = $('option:selected', this).attr('data-type');
+            let nature_of_sundry = $('option:selected', this).attr('data-nature_of_sundry');
             let adjust_sale_amt = $('option:selected', this).attr('data-adjust_sale_amt')
             if($("#bill_sundry_amount_"+id).val()!=''){
-                if(type=="additive"){
+                 if(type=="additive" && nature_of_sundry=="OTHER"){
                     bill_sundry_amount = parseFloat(bill_sundry_amount) + parseFloat($("#bill_sundry_amount_"+id).val());
-                }else if(type=="subtractive"){
+                  }else if(type=="subtractive" && nature_of_sundry=="OTHER"){
                     bill_sundry_amount = parseFloat(bill_sundry_amount) - parseFloat($("#bill_sundry_amount_"+id).val());
                 }                
             }
         });
-        let total_amounts = parseFloat(total) + parseFloat(bill_sundry_amount);
-        total_amounts = total_amounts.toFixed(2)
-        $("#bill_sundry_amt").html(total_amounts);
-        $("#total_amounts").val(total_amounts)
+         let total_amounts = parseFloat(total) + parseFloat(bill_sundry_amount);
+         total_amounts = total_amounts.toFixed(2)
+        
+        let round_off_total_amount = Math.round(total_amounts);
+        console.log(total_amounts);
+         let roundoff = parseFloat(round_off_total_amount) - parseFloat(total_amounts);     
+            
+         roundoff = roundoff.toFixed(2);
+         $("#billtr_round_plus").hide();
+         $("#billtr_round_minus").hide();
+         $("#bill_sundry_amount_round_minus").val('');
+         $("#bill_sundry_amount_round_plus").val('');
+         if(parseFloat(roundoff)<0){
+            $("#bill_sundry_amount_round_minus").val(Math.abs(roundoff));
+            $("#bill_sundry_amount_round_minus").attr('readonly',true); 
+            $("#billtr_round_minus").show();           
+         }else if(parseFloat(roundoff)>0){
+            $("#bill_sundry_amount_round_plus").val(Math.abs(roundoff));
+            $("#bill_sundry_amount_round_plus").attr('readonly',true); 
+            $("#billtr_round_plus").show(); 
+         }
+         total_amounts1 = parseFloat(total_amounts) + parseFloat(roundoff) ;
+         
+          total_amounts2 = total_amounts1.toFixed(2)
+         $("#bill_sundry_amt").html(total_amounts2);
+        $("#total_amounts").val(total_amounts2)
     }
     $(".add_more_bill_sundry_up").click(function() {
         let empty_status = 0;

@@ -120,7 +120,7 @@
                   </div>
                   <div class="mb-3 col-md-3 voucher_no_div">
                      <label for="name" class="form-label font-14 font-heading">Invoice No. *</label>
-                     <select class="form-select select2-single" id="voucher_no" name="voucher_no">
+                     <select class="form-select select2-single" id="voucher_no" value="{{$purchase_return->invoice_no}}" name="voucher_no">
                         <option value="">Select</option>
                      </select>
                      <ul style="color: red;">
@@ -132,18 +132,22 @@
                   <div class="mb-3 col-md-3 other_invoice_div" style="display:none">
                      <label for="other_invoice_against" class="form-label font-14 font-heading">Invoice Against</label>
                      <select class="form-select" id="other_invoice_against" name="other_invoice_against">
-                        <option value="Sale" @if($purchase_return->other_invoice_against=='Sale') selected @endif>Sale</option>Sale</option>
-                        <option value="Purchase" @if($purchase_return->other_invoice_against=='Purchase') selected
+                        <option value="Sale" @if($purchase_return->voucher_type=='SALE') selected @endif>Sale</option>Sale</option>
+                        <option value="Purchase" @if($purchase_return->voucher_type=='PURCHASE') selected
                          @endif>Purchase</option>
                      </select>  
                   </div>
                   <div class="mb-3 col-md-3 other_invoice_div" style="display:none">
                      <label for="name" class="form-label font-14 font-heading">Invoice No</label>
-                     <input type="text" class="form-control" id="other_invoice_no" name="other_invoice_no" placeholder="Enter Invoice No." value="{{$purchase_return->other_invoice_no}}">
+                     <input type="text" class="form-control" id="other_invoice_no" name="other_invoice_no" placeholder="Enter Invoice No." value="{{$purchase_return->invoice_no}}">
                   </div>
                   <div class="mb-3 col-md-2 other_invoice_div" style="display:none">
                      <label for="other_invoice_date" class="form-label font-14 font-heading">Invoice Date</label>
-                     <input type="date" class="form-control" id="other_invoice_date" name="other_invoice_date" value="{{$purchase_return->other_invoice_date}}" >
+                     <input type="date" class="form-control" id="other_invoice_date" name="other_invoice_date" value="{{$purchase_return->original_invoice_date}}" >
+                  </div>
+                  <div class="mb-3 col-md-2 other_invoice_div" style="display:none">
+                     <label for="other_invoice_date" class="form-label font-14 font-heading">Original Invoice Value</label>
+                     <input type="number" class="form-control" id="original_invoice_value" name="other_invoice_value" value="{{$purchase_return->original_invoice_value}}">
                   </div>
                   <div class="mb-1 col-md-1 voucher_no_div">
                      <br>
@@ -197,7 +201,7 @@
                                  <select onchange="call_fun('tr_@php echo $i; @endphp');" class="border-0 form-select  goods_items" id="goods_discription_tr_@php echo $i; @endphp" name="goods_discription[]"  data-id="@php echo $i; @endphp">
                                     <option value="">Select</option>
                                     @foreach($manageitems as $item_info)
-                                       <option value="{{$item_info->id}}" unit_id="{{$item_info->u_name}}" data-val="{{$item_info->unit}}"  data-percent="{{$item->gst_rate}}" @if($item_info->id==$item->goods_discription) selected @endif>{{$item_info->name}}</option>
+                                       <option value="{{$item_info->id}}" unit_id="{{$item_info->u_name}}" data-val="{{$item_info->unit}}"  data-percent="{{$item_info->gst_rate}}" @if($item_info->id==$item->goods_discription) selected @endif>{{$item_info->name}}</option>
                                     @endforeach
                                  </select>
                               </td>                              
@@ -517,6 +521,17 @@
                         </table>
                      </div>
                   </div>
+                   <div class="narration_withgst" style="display: none; margin: 0px 0px 10px 0px; align-items: center;">
+   <label for="narration_withgst" style="margin-right: 10px; min-width: 80px; font-weight: 500;"><strong>Narration</strong></label>
+   <input
+      id="narration_withgst"
+      name="narration_withgst"
+      class="form-control"
+      value="{{$purchase_return->remark}}"
+      placeholder="Enter narration for the entry..."
+      style="color: #212529; padding-top: 2px; height: 40px; line-height: 1.5; text-align: left; width: 100%; margin-top: 0px !important;"
+   >
+</div>
                </div>
                <!-- With Gst WithOut Item Section Start -->
                <div class="transaction-table transaction-main-table bg-white table-view shadow-sm border-radius-8 mb-4 with_gst_without_item_section" style="display:none">
@@ -621,9 +636,10 @@
                   <table id="without_gst_section" class="table-striped table m-0 shadow-sm table-bordered">
                      <thead>
                         <tr class=" font-12 text-body bg-light-pink ">
-                           <th class="w-min-120 border-none bg-light-pink text-body" style="width: 40%;">Account</th>
-                           <th class="w-min-120 border-none bg-light-pink text-body">Amount</th>
-                           <th class="w-min-120 border-none bg-light-pink text-body">Narration</th>
+                           <th class="w-min-120 border-none bg-light-pink text-body" style="width: 10%;text-align:left">S. NO. </th> 
+                           <th class="w-min-120 border-none bg-light-pink text-body" style="width: 60%;">Account</th>
+                           <th class="w-min-120 border-none bg-light-pink text-body" style="width: 30%;">Amount</th>
+                           
                         </tr>
                      </thead>
                      <tbody>
@@ -631,6 +647,7 @@
                      @if(count($without_gst)>0)
                         @foreach($without_gst as $k1=>$v)
                            <tr  id="tr_without_{{$k1}}" class="font-14 font-heading bg-white">
+                               <td class="srn" id="srn_1" style="text-align:left;">1.</td>
                               <td class="">
                                  <select class="form-select select2-single account" id="account_{{$k1}}" name="account_name[]" data-id="{{$k1}}">
                                     <option value="">Select</option>
@@ -644,23 +661,29 @@
                               <td class="">
                                  <input type="number" name="debit[]" class="form-control debit" data-id="{{$k1}}" id="debit_{{$k1}}" placeholder="Debit Amount" onkeyup="debitTotal();" value="{{$v->credit}}">
                               </td>
-                              <td class="">
-                                 <input type="text" name="narration[]" class="form-control narration" data-id="{{$k1}}" id="narration_{{$k1}}" placeholder="Enter Narration" value="{{$v->narration}}">
-                              </td>
-                              <td>
-                                 <svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove_without" data-id="{{$k1}}" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg>
-                              
+                             <td class="action-cell" style="display: flex;">
+                                 <svg xmlns="http://www.w3.org/2000/svg" 
+                           class="bg-primary rounded-circle add_more_without"
+                           data-id="1"
+                            width="24" height="24"
+                             viewBox="0 0 24 24"
+                              fill="none" 
+                              style="cursor: pointer;">
+                              <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" />
+                           </svg>
                               </td>
                            </tr>
                            @php $add_more_countts = $k1; @endphp
                         @endforeach
                      @endif
-                        <tr>
-                           <td style="text-align:right" colspan="5">
-                              <svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle add_more_without" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg>
-                           </td>
-                        </tr>
+                       
                      </tbody>
+                            <select id="account_template" style="display: none;">
+    <option value="">Select Account</option>
+    @foreach ($all_account_list as $acc)
+        <option value="{{ $acc->id }}">{{ $acc->account_name }}</option>
+    @endforeach
+</select>
                      
                      <div class="total">
                         <tr class="font-14 font-heading bg-white">
@@ -669,7 +692,7 @@
                            <td></td>
                         </tr>
                         <tr class="font-14 font-heading bg-white">
-                           <td colspan="3"><input type="text" class="form-control" placeholder="Enter Long Narration" name="long_narration"></td>
+                           <td colspan="3"><input type="text" class="form-control" value="{{$purchase_return->remark}}" placeholder="Enter Long Narration" name="long_narration"></td>
                         </tr>
                      </div>
                   </table>
@@ -864,7 +887,7 @@
          $("#voucher_type").val('OTHER');
          $("#invoice_id").hide();
          $(".other_invoice_div").show();
-         $("#sale_bill_id").val('');
+         $("#purchase_bill_id").val('');
          return;
       }
       $("#other_invoice_no").val('');
@@ -1531,6 +1554,7 @@
       }
       if(nature=="WITH GST" && (type=="WITH ITEM" || type=="RATE DIFFERENCE")){
          $(".with_gst_with_item_section").show();
+          $(".narration_withgst").show();
          $(".item").select2();
       }
       if((nature=="WITH GST" && type=="WITHOUT ITEM")){
@@ -1650,7 +1674,8 @@
       creditTotal();
    }   
    var add_more_count = {{$add_more_countts}};
-   $(".add_more_without").click(function(){
+   add_more_count3 = $(".account").length;
+   $(document).on("click", ".add_more_without", function () {
       let empty_status = 0;
       $(".account").each(function(){
          if($(this).val()=="" || $("#debit_"+$(this).attr('data-id')).val()==""){
@@ -1662,20 +1687,80 @@
          return;
       }
 
-      add_more_count++;
-      var $curRow = $(this).closest('tr');
-      var optionElements = $('#account_1').html();
-      newRow = '<tr id="tr_without_' + add_more_count + '">';
-      newRow += '<td class=""><select class="form-select select2-single account" id="account_' + add_more_count + '" name="account_name[]" data-id="' + add_more_count + '"><option value="">Select</option><?php foreach ($all_account_list as $value) { ?><option value="<?php echo $value->id; ?>"><?php echo $value->account_name; ?></option><?php } ?></select></td><td><input type="number" name="debit[]" class="form-control debit" data-id="' + add_more_count + '" id="debit_' + add_more_count + '" placeholder="Debit Amount" onkeyup="debitTotal();"></td><td><input type="text" name="narration[]" class="form-control narration" data-id="' + add_more_count + '" id="narration_' + add_more_count + '" placeholder="Enter Narration"></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove_without" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
-      $curRow.before(newRow);
-      $('.select2-single').select2();
-   });
-   $(document).on("click", ".remove_without", function() {
-      let id = $(this).attr('data-id');
-      $("#tr_without_" + id).remove();
-      debitTotal();
-      creditTotal();
-   });
+       add_more_count3++;
+    var $curRow = $(this).closest('tr');
+    let tr_id = "tr_without_" + add_more_count3;
+  let optionElements = $("#account_template").html(); // ✅ always reliable
+
+   let newRow = `
+    <tr id="${tr_id}">
+        <td class="srn" id="srn_${add_more_count3}">${add_more_count3}</td>
+        <td>
+            <select class="form-control account select2-single" name="account_name[]" data-id="${add_more_count3}" id="account_${add_more_count3}">
+                ${optionElements}
+            </select>
+        </td>
+        <td>
+            <input type="number" name="debit[]" class="form-control debit" id="debit_${add_more_count3}" data-id="${add_more_count3}" placeholder="Debit Amount" onkeyup="debitTotal();">
+        </td>
+        <td class="action-cell" style="display: flex;"></td>
+    </tr>`;
+
+    $curRow.after(newRow);
+    $(".select2-single").select2();
+
+    refreshActionIcons();
+});
+
+  $(document).on("click", ".remove_without", function () {
+    let id = $(this).data("id");
+    $("#tr_without_" + id).remove();
+
+    refreshActionIcons();
+    debitTotal();
+});
+function refreshActionIcons() {
+    let totalRows = $(".account").length;
+
+    // Reindex SRNs
+    $(".account").each(function (index) {
+        let rowId = $(this).attr("data-id");
+        $("#srn_" + rowId).html(index + 1 + ".");
+    });
+
+    // Clear all action columns
+    $(".action-cell").html("");
+
+    // Apply action icons based on row positions
+    $(".account").each(function (index) {
+        let rowId = $(this).attr("data-id");
+        let $actionCell = $("#tr_without_" + rowId + " .action-cell");
+
+        let removeIcon = `
+            <svg style="color: red; cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                class="bi bi-file-minus-fill remove_without" data-id="${rowId}" viewBox="0 0 16 16">
+                <path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/>
+            </svg>`;
+
+        let addIcon = `
+            <svg style="color: green; cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                viewBox="0 0 24 24" fill="currentColor"
+                class="bg-primary rounded-circle add_more_without" data-id="${rowId}">
+                <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/>
+            </svg>`;
+
+        if (totalRows === 1) {
+            // Only 1 row → show Add only
+            $actionCell.html(addIcon);
+        } else if (index === totalRows - 1) {
+            // Last row → Remove + Add
+            $actionCell.html(removeIcon + addIcon);
+        } else {
+            // All other rows (including first) → Remove only
+            $actionCell.html(removeIcon);
+        }
+    });
+}
    function debitTotal() {
       let total_debit_amount = 0;
       $(".debit").each(function() {
@@ -1709,7 +1794,61 @@
       debitTotal();
       creditTotal();
    });
-   
+    function updateNarration() {
+   const type = $("#type").val();
+   const nature = $("#nature").val();
+
+   if (nature == "WITH GST" && type == "RATE DIFFERENCE") {
+      let parts = [];
+
+      $(".quantity").each(function () {
+         const rowId = $(this).attr("id").split("_")[2];
+         const qty = parseFloat($("#quantity_tr_" + rowId).val()) || 0;
+         const price = parseFloat($("#price_tr_" + rowId).val()) || 0;
+
+         if (qty > 0 && price > 0) {
+            const amount = qty * price;
+            parts.push(`${qty} x ${price} = ${amount.toFixed(2)}`);
+         }
+      });
+
+      const leftNarration = parts.length > 0 ? parts.join(" | ") : "";
+
+      let existingNarration = $("#narration_withgst").val() || "";
+      let afterComma = "";
+
+      // If narration already has a comma, preserve the part after it
+      if (existingNarration.includes(",")) {
+         afterComma = existingNarration.substring(existingNarration.indexOf(",") + 1);
+         afterComma = afterComma.trim();
+      }
+
+      // Combine updated left part and preserved right part
+      let finalNarration = leftNarration;
+      if (afterComma !== "") {
+         finalNarration += ", " + afterComma;
+      } else if (leftNarration !== "") {
+         finalNarration += ","; // Add single trailing comma if only left part exists
+      }
+
+      $("#narration_withgst").val(finalNarration);
+   }
+}
+
+
+
+$(document).ready(function () {
+   sectionHideShow(); // Initial setup
+
+   $("#type, #nature").on("change", function () {
+      sectionHideShow();
+      updateNarration(); // Always refresh narration on changes
+   });
+
+   $(document).on("input", ".quantity, .price", function () {
+      updateNarration();
+   });
+});
    
 </script>
 @endsection

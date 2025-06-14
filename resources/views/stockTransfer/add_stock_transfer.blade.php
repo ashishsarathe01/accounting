@@ -191,7 +191,7 @@
                                                 <option value="">Select</option>
                                                 @foreach($billsundry as $key => $value)
                                                        @if($value->nature_of_sundry == 'OTHER')
-                                                    <option value="{{ $value->id }}" data-type="{{$value->bill_sundry_type}}" data-adjust_sale_amt="{{$value->adjust_sale_amt}}">{{ $value->name }}</option>   
+                                                    <option value="{{ $value->id }}" data-type="{{$value->bill_sundry_type}}" data-adjust_sale_amt="{{$value->adjust_sale_amt}}" data-nature_of_sundry="{{$value->nature_of_sundry}}">{{ $value->name }}</option>   
                                                     @endif
                                                     @endforeach
                                                 </select>
@@ -591,19 +591,21 @@
         $(".bill_sundry_tax_type").each(function(){          
             let id = $(this).attr('data-id');
             let type = $('option:selected', this).attr('data-type');
+            let nature_of_sundry = $('option:selected', this).attr('data-nature_of_sundry');
             let adjust_sale_amt = $('option:selected', this).attr('data-adjust_sale_amt')
             if($("#bill_sundry_amount_"+id).val()!=''){
-                if(type=="additive"){
+                if(type=="additive" && nature_of_sundry=="OTHER"){
                     bill_sundry_amount = parseFloat(bill_sundry_amount) + parseFloat($("#bill_sundry_amount_"+id).val());
-                }else if(type=="subtractive"){
+                }else if(type=="subtractive" && nature_of_sundry=="OTHER"){
                     bill_sundry_amount = parseFloat(bill_sundry_amount) - parseFloat($("#bill_sundry_amount_"+id).val());
                 }                
             }
         });
         let total_amounts = parseFloat(total) + parseFloat(bill_sundry_amount);
          total_amounts = total_amounts.toFixed(2)
-         
+        
         let round_off_total_amount = Math.round(total_amounts);
+        console.log(total_amounts);
          let roundoff = parseFloat(round_off_total_amount) - parseFloat(total_amounts);     
             
          roundoff = roundoff.toFixed(2);
@@ -622,9 +624,9 @@
          }
          total_amounts1 = parseFloat(total_amounts) + parseFloat(roundoff) ;
          
-          total_amounts = total_amounts1.toFixed(2)
-         $("#bill_sundry_amt").html(total_amounts);
-        $("#total_amounts").val(total_amounts)
+          total_amounts2 = total_amounts1.toFixed(2)
+         $("#bill_sundry_amt").html(total_amounts2);
+        $("#total_amounts").val(total_amounts2)
     }
        
 

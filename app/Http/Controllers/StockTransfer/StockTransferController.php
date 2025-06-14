@@ -648,7 +648,7 @@ class StockTransferController extends Controller
                                  ->where('status', '=', '1')
                                  ->where('adjust_sale_amt', '=', 'No')
                                  ->where('adjust_purchase_amt', '=', 'No')
-                                 ->where('nature_of_sundry', '=', 'other')
+                                // ->where('nature_of_sundry', '=', 'other')
                                  ->whereIn('company_id',[Session::get('user_company_id'),0])
                                  ->orderBy('name')
                                  ->get();
@@ -662,7 +662,7 @@ class StockTransferController extends Controller
         $stock_transfer_sundry = StockTransferSundry::join('bill_sundrys','stock_transfer_sundries.bill_sundry','=','bill_sundrys.id')
                                                     ->where('stock_transfer_id', $id)
                                                     ->where('stock_transfer_sundries.delete_status','0')
-                                                        ->where('stock_transfer_sundries.status','1')
+                                                     ->where('stock_transfer_sundries.status','1')
                                                     ->select(['bill_sundrys.effect_gst_calculation','bill_sundrys.nature_of_sundry','stock_transfer_sundries.*'])
                                                     ->get();
 

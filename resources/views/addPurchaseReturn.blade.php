@@ -118,23 +118,28 @@
                      <label for="other_invoice_against" class="form-label font-14 font-heading">Invoice Against</label>
                      <select class="form-select" id="other_invoice_against" name="other_invoice_against">
                         <option value="">Select</option>
-                        <option value="Sale">Sale</option>
-                        <option value="Purchase">Purchase</option>
+                        <option value="SALE">Sale</option>
+                        <option value="PURCHASE">Purchase</option>
                      </select>  
                   </div>
-                  <div class="mb-3 col-md-3 other_invoice_div" style="display:none">
-                     <label for="other_invoice_no" class="form-label font-14 font-heading">Invoice No</label>
+                  <div class="mb-3 col-md-2 other_invoice_div" style="display:none">
+                     <label for="other_invoice_no" class="form-label font-14 font-heading">Original Invoice No</label>
                      <input type="text" class="form-control" id="other_invoice_no" name="other_invoice_no" placeholder="Enter Invoice No.">
                   </div>
                   <div class="mb-3 col-md-2 other_invoice_div" style="display:none">
-                     <label for="other_invoice_date" class="form-label font-14 font-heading">Invoice Date</label>
+                     <label for="other_invoice_date" class="form-label font-14 font-heading">Original Invoice Date</label>
                      <input type="date" class="form-control" id="other_invoice_date" name="other_invoice_date">
                   </div>
+                  <div class="mb-3 col-md-2 other_invoice_div" style="display:none">
+                     <label for="other_invoice_date" class="form-label font-14 font-heading">Original Invoice Value</label>
+                     <input type="number" class="form-control" id="original_invoice_value" name="other_invoice_value" placeholder="Including taxes">
+                  </div>
+
                   <div class="mb-1 col-md-1 voucher_no_div" style="display:none">
                      <br>
                      <a href="" title="View Invoice" target="__blank" id="invoice_id"><img src="{{ URL::asset('public/assets/imgs/eye-icon.svg')}}" style="margin-top: 20px;"></a>
                   </div>
-                  <div class="mb-4 col-md-4">
+                  <div class="mb-4 col-md-3">
                      <label for="series_no" class="form-label font-14 font-heading">Series No.</label>
                      <select id="series_no" name="series_no" class="form-select" required>
                         <option value="">Select</option>
@@ -573,7 +578,7 @@
                      <div class="total">
                         <tr class="font-14 font-heading bg-white">
                            <td class="w-min-120 fw-bold">Total</td>
-                           <td class="w-min-120 fw-bold" id="total_debit"></td>
+                           <td class="w-min-120 fw-bold" id="total_debit" name="total_debit"></td>
                            <td></td>
                         </tr>
                         <tr class="font-14 font-heading bg-white">

@@ -44,8 +44,8 @@ class SalesReturnController extends Controller
       $input = $request->all();
   
       // Default date range (first day of current month to today)
-      $from_date = session('salesReturn_from_date', "01-" . date('m-Y'));
-      $to_date = session('salesReturn_to_date', date('d-m-Y'));
+      $from_date = null;
+      $to_date = null;
   
       // Check if user has selected a date range
       if (!empty($input['from_date']) && !empty($input['to_date'])) {

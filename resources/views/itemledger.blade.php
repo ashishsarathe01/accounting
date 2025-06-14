@@ -130,7 +130,7 @@
                            $tot_blance1 += $inWeight - $outWeight;
                            $in += $inWeight;
                            $out += $outWeight;
-                           $redStyle = $tot_blance1 < 0 ? 'background-color: red !important; color: white !important;' : '';
+                           $redStyle = $tot_blance1 < 0 ? 'background-color: white !important; color: red !important;' : '';
                            ?>
                            <tr class="font-14 font-heading bg-white account_tr" style="cursor: pointer; " data-type="{{$value['source']}}" data-id="{{$value['source_id']}}" data-einvoice_status="{{$value['einvoice_status']}}">
                               <td class="w-min-120 " style="<?= $redStyle ?>"><?php echo date("d-m-Y", strtotime($value['txn_date'])); ?></td>

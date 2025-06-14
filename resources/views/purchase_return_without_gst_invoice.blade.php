@@ -77,8 +77,8 @@
                             <a href="{{ route('purchase-return.index') }}"><button type="button" class="btn btn-danger">QUIT</button></a>
                             <button class="btn btn-info" onclick="printpage();">Print</button>
                              <?php 
-                     if ( in_array(date('Y-m', strtotime($purchase_return->date)), $month_arr) && $purchase_return->e_invoice_status == 0 && $purchase_return->e_waybill_status == 0) {?>
-                        <a href="{{ URL::to('purchase-return-edit/'.$purchase_return->id) }}" class="btn btn-primary text-white">
+                     if ( in_array(date('Y-m', strtotime($sale_return->date)), $month_arr) && $sale_return->e_invoice_status == 0 && $sale_return->e_waybill_status == 0) {?>
+                        <a href="{{ URL::to('purchase-return-edit/'.$sale_return->id) }}" class="btn btn-primary text-white">
                            <img src="{{ URL::asset('public/assets/imgs/edit-icon.svg') }}" alt="Edit" style="width: 16px; height: 16px; vertical-align: middle; filter: brightness(0) invert(1);">
                            Edit
                         </a><?php 
@@ -168,6 +168,9 @@
                            <p><strong>{{number_format($sale_return->total,2)}}</strong></p>
                         </td>
                      </tr>
+                     <tr>
+                          <td colspan="8" style="border-top: 1px solid #dadada;"><strong>Narration : </strong>{{$sale_return->remark}}</td> 
+                  </tr>
                      <tr>
                         <td colspan="8" style="border-top:0">
                             <strong>
