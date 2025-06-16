@@ -109,9 +109,9 @@
                               }else if($value['entry_type']==2){
                                  echo "SupI";
                               }else if($value['entry_type']==3){
-                                 echo "Sale Return/Credit Note";
+                                 echo "Credit Note";
                               }else if($value['entry_type']==4){
-                                 echo "Purchase Return";
+                                 echo "Debit Note";
                               }else if($value['entry_type']==5){
                                  echo "Payment";
                               }else if($value['entry_type']==6){
@@ -121,9 +121,15 @@
                               }else if($value['entry_type']==8){
                                  echo "Contra";
                               }else if($value['entry_type']==9){
-                                 echo "Sale Return/Credit Note";
+                                 echo "Credit Note";
                               }else if($value['entry_type']==10){
-                                 echo "Sale Return/Credit Note";
+                                 echo "Credit Note";
+                              }else if($value['entry_type']==11){
+                                 echo "Stock Transfer";
+                              }else if($value['entry_type']==12){
+                                 echo "Debit Note";
+                              }else if($value['entry_type']==13){
+                                 echo "Debit Note";
                               }
                               ?>
                            </td>

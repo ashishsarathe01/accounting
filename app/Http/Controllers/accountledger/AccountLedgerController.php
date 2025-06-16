@@ -106,9 +106,9 @@ class AccountLedgerController extends Controller
                if($action){
                   $ledger[$key]->bill_no = $action->sr_prefix.$action->sale_return_no;                  
                }
-            }else if($value->entry_type==4){
-               $action = PurchaseReturn::select('invoice_no','series_no','financial_year')->where('id',$value->entry_type_id)->first();
-               $ledger[$key]->bill_no = $action->series_no."/".$action->financial_year."/DR".$action->invoice_no;
+            }else if($value->entry_type==4 || $value->entry_type==12 || $value->entry_type==13){
+               $action = PurchaseReturn::select('sr_prefix','series_no','financial_year')->where('id',$value->entry_type_id)->first();
+               $ledger[$key]->bill_no = $action->series_no."/".$action->financial_year."/DR".$action->sr_prefix;
                $ledger[$key]->einvoice_status = 0;
             }else if($value->entry_type==5){
                $action = Payment::select('voucher_no', 'long_narration')->where('id', $value->entry_type_id)->first();
@@ -146,14 +146,14 @@ class AccountLedgerController extends Controller
                $ledger[$key]->bill_no = "";
                $ledger[$key]->einvoice_status = 0;
                if($action){
-                  $ledger[$key]->bill_no = $action->sr_prefix.$action->sale_return_no;
+                  $ledger[$key]->bill_no = $action->sr_prefix;
                } 
-            }else if($value->entry_type==10){
+            }else if($value->entry_type==10 ){
                $action = SalesReturn::select('sale_return_no','sr_prefix')->where('id',$value->entry_type_id)->first();
                $ledger[$key]->bill_no = "";
                $ledger[$key]->einvoice_status = 0;
                if($action){
-                  $ledger[$key]->bill_no = $action->sr_prefix.$action->sale_return_no;
+                  $ledger[$key]->bill_no = $action->sr_prefix;
                }
             }else{               
                $ledger[$key]->bill_no = '';

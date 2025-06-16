@@ -13,6 +13,7 @@ use App\Models\PaymentDetails;
 use App\Models\AccountLedger;
 use App\Models\GstBranch;
 use App\Models\Companies;
+use App\Models\AccountGroups;
 use DB;
 use Session;
 use DateTime;
@@ -78,13 +79,38 @@ class PaymentController extends Controller
                               ->whereIn('company_id', [Session::get('user_company_id'),0])                              
                               ->orderBy('account_name')
                               ->get();
-      $credit_accounts = Accounts::where('delete', '=', '0')
+
+                              $sub_group_ids_bank = AccountGroups::where('heading', 7)
+                                                                  ->where('heading_type', 'group')
+                                                                  ->pluck('id')->toArray();
+
+                     // Step 2: Combine group 8 and its sub-groups
+                     $group_ids_bank = array_merge([7], $sub_group_ids_bank);
+
+      $credit_bank_accounts = Accounts::where('delete', '=', '0')
                               ->where('status', '=', '1')
                               ->where('under_group_type','group')
                               ->whereIn('company_id', [Session::get('user_company_id'),0])
-                              ->whereIn('under_group', [7,8])//BANK ACCOUNTS,CASH-IN-HAND
+                              ->whereIn('under_group', $group_ids_bank)//BANK ACCOUNTS,CASH-IN-HAND
                               ->orderBy('account_name')
                               ->get();
+
+     // Step 1: Get sub-group IDs where parent is group 8
+                     $sub_group_ids = AccountGroups::where('heading', 8)
+                                                   ->where('heading_type', 'group')
+                                                   ->pluck('id')->toArray();
+
+                     // Step 2: Combine group 8 and its sub-groups
+                     $group_ids = array_merge([8], $sub_group_ids);
+
+                     // Step 3: Fetch accounts under those group IDs
+                     $credit_cash_accounts = Accounts::where('delete', '0')
+                        ->where('status', '1')
+                        ->where('under_group_type', 'group')
+                        ->whereIn('company_id', [Session::get('user_company_id'), 0])
+                        ->whereIn('under_group', $group_ids)
+                        ->orderBy('account_name')
+                        ->get();
 
       $bill_date = Payment::where('company_id',Session::get('user_company_id'))
                            ->where('delete','0')
@@ -140,7 +166,7 @@ class PaymentController extends Controller
       // if(!empty($GstSettings->series)) {
       //    $mat_series[] = array("branch_series" => $GstSettings->series);
       // }
-      return view('payment/addPayment')->with('party_list', $party_list)->with('credit_accounts', $credit_accounts)->with('date', $bill_date)->with('mat_series', $mat_series);
+      return view('payment/addPayment')->with('party_list', $party_list)->with('credit_bank_accounts', $credit_bank_accounts)->with('credit_cash_accounts', $credit_cash_accounts)->with('date', $bill_date)->with('mat_series', $mat_series);
    }
    /**
      * Store a newly created resource in storage.
@@ -224,13 +250,40 @@ class PaymentController extends Controller
                               ->whereIn('company_id', [Session::get('user_company_id'),0])                              
                               ->orderBy('account_name')
                               ->get();
-      $credit_accounts = Accounts::where('delete', '=', '0')
+                            
+
+      $sub_group_ids_bank = AccountGroups::where('heading', 7)
+                                                                  ->where('heading_type', 'group')
+                                                                  ->pluck('id')->toArray();
+
+                     // Step 2: Combine group 8 and its sub-groups
+                     $group_ids_bank = array_merge([7], $sub_group_ids_bank);
+
+      $credit_bank_accounts = Accounts::where('delete', '=', '0')
                               ->where('status', '=', '1')
                               ->where('under_group_type','group')
                               ->whereIn('company_id', [Session::get('user_company_id'),0])
-                              ->whereIn('under_group', [7,8])//BANK ACCOUNTS,CASH-IN-HAND
+                              ->whereIn('under_group', $group_ids_bank)//BANK ACCOUNTS,CASH-IN-HAND
                               ->orderBy('account_name')
                               ->get();
+
+     // Step 1: Get sub-group IDs where parent is group 8
+                     $sub_group_ids = AccountGroups::where('heading', 8)
+                                                   ->where('heading_type', 'group')
+                                                   ->pluck('id')->toArray();
+
+                     // Step 2: Combine group 8 and its sub-groups
+                     $group_ids = array_merge([8], $sub_group_ids);
+
+                     // Step 3: Fetch accounts under those group IDs
+                     $credit_cash_accounts = Accounts::where('delete', '0')
+                        ->where('status', '1')
+                        ->where('under_group_type', 'group')
+                        ->whereIn('company_id', [Session::get('user_company_id'), 0])
+                        ->whereIn('under_group', $group_ids)
+                        ->orderBy('account_name')
+                        ->get();
+
       $companyData = Companies::where('id', Session::get('user_company_id'))->first();
       $GstSettings = (object)NULL;
       $GstSettings->series = array();
@@ -261,12 +314,12 @@ class PaymentController extends Controller
             }
          }
       }
-      
+     
       // $mat_series = GstBranch::select('branch_series')->where(['delete' => '0', 'company_id' => Session::get('user_company_id')])->get()->toArray();
       // if(!empty($GstSettings->series)) {
       //    $mat_series[] = array("branch_series" => $GstSettings->series);
       // }
-      return view('payment/editPayment')->with('payment', $payment)->with('party_list', $party_list)->with('payment_detail', $payment_detail)->with('credit_accounts', $credit_accounts)->with('mat_series', $mat_series);
+      return view('payment/editPayment')->with('payment', $payment)->with('party_list', $party_list)->with('payment_detail', $payment_detail)->with('credit_bank_accounts', $credit_bank_accounts)->with('credit_cash_accounts', $credit_cash_accounts)->with('mat_series', $mat_series);
    }
     /**
      * Update the specified resource in storage.
