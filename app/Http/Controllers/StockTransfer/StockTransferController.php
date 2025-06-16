@@ -30,17 +30,64 @@ class StockTransferController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
-    {
-        Gate::authorize('action-module',31);
-        $stock_transfers = StockTransfer::where('company_id', Session::get('user_company_id'))
-                                        ->where('status', '1')
-                                        ->where('delete_status', '0')
-                                        ->orderBy('id', 'desc')
-                                        ->get();
-        // return view('stock_transfer.index', compact('stock_transfers'));
-        return view('stockTransfer.index',['stock_transfers'=>$stock_transfers]);
+   public function index(Request $request)
+{
+    Gate::authorize('action-module', 31); // Keep module ID as per stock transfer permission
+
+    $input = $request->all();
+    $from_date = null;
+    $to_date = null;
+
+    // Manage session + input dates
+    if (!empty($input['from_date']) && !empty($input['to_date'])) {
+        $from_date = date('d-m-Y', strtotime($input['from_date']));
+        $to_date = date('d-m-Y', strtotime($input['to_date']));
+        session(['stock_transfer_from_date' => $from_date, 'stock_transfer_to_date' => $to_date]);
+    } elseif (session()->has('stock_transfer_from_date') && session()->has('stock_transfer_to_date')) {
+        $from_date = session('stock_transfer_from_date');
+        $to_date = session('stock_transfer_to_date');
     }
+
+    Session::put('redirect_url', '');
+
+    // Financial year month array
+    $financial_year = Session::get('default_fy');
+    $y = explode("-", $financial_year);
+    $from = DateTime::createFromFormat('y', $y[0])->format('Y');
+    $to = DateTime::createFromFormat('y', $y[1])->format('Y');
+
+    $month_arr = [
+        $from . '-04', $from . '-05', $from . '-06', $from . '-07',
+        $from . '-08', $from . '-09', $from . '-10', $from . '-11',
+        $from . '-12', $to . '-01', $to . '-02', $to . '-03'
+    ];
+
+    $com_id = Session::get('user_company_id');
+
+    // Base query for stock transfers
+    $query = StockTransfer::where('company_id', $com_id)
+                ->where('status', '1')
+                ->where('delete_status', '0');
+
+    if ($from_date && $to_date) {
+        $query->whereRaw("STR_TO_DATE(transfer_date,'%Y-%m-%d') >= STR_TO_DATE('" . date('Y-m-d', strtotime($from_date)) . "', '%Y-%m-%d')")
+              ->whereRaw("STR_TO_DATE(transfer_date,'%Y-%m-%d') <= STR_TO_DATE('" . date('Y-m-d', strtotime($to_date)) . "', '%Y-%m-%d')")
+              ->orderBy('transfer_date', 'asc')
+              ->orderBy('voucher_no_prefix', 'asc');
+    } else {
+        $query->orderBy('id', 'desc')->limit(10);
+    }
+
+    $stock_transfers = $query->get()->reverse()->values();
+
+    return view('stockTransfer.index')
+        ->with('stock_transfers', $stock_transfers)
+        ->with('month_arr', $month_arr)
+        ->with('from_date', $from_date)
+        ->with('to_date', $to_date);
+}
+
+ 
 
     /**
      * Show the form for creating a new resource.

@@ -36,7 +36,8 @@ class PurchaseReturnController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-  public function index(Request $request){
+   public function index(Request $request){
+      Gate::authorize('action-module',13);
     $input = $request->all();
 
     // Default date range (first day of current month to today)
@@ -108,6 +109,7 @@ class PurchaseReturnController extends Controller
         ->with("from_date", $from_date)
         ->with("to_date", $to_date);
 }
+
 
 
     /**
@@ -414,10 +416,34 @@ class PurchaseReturnController extends Controller
       }
       $account = Accounts::where('id',$request->input('party_id'))->first();
       $purchase = new PurchaseReturn;
+       if ($request->input('purchase_bill_id')!=null && $request->input('voucher_type') == 'SALE' && $request->input('nature') != "WITHOUT GST") {
+    $original_invoice = Sales::find($request->input('purchase_bill_id'));
+    if ($original_invoice) {
+        $purchase->original_invoice_date = $original_invoice->date;
+        $purchase->original_invoice_value = $original_invoice->total;
+    }
+    $purchase->invoice_no = $request->input('voucher_no');
+    $purchase->voucher_type = $request->input('voucher_type');
+
+} elseif ($request->input('purchase_bill_id')!=null && $request->input('voucher_type') == 'PURCHASE' && $request->input('nature') != "WITHOUT GST") {
+    $original_invoice = Purchase::find($request->input('purchase_bill_id'));
+    if ($original_invoice) {
+        $purchase->original_invoice_date = $original_invoice->date;
+        $purchase->original_invoice_value = $original_invoice->total;
+    }
+    $purchase->invoice_no = $request->input('voucher_no');
+    $purchase->voucher_type = $request->input('voucher_type');
+
+} elseif ($request->input('purchase_bill_id')==null  && $request->input('nature') != "WITHOUT GST") {
+    $purchase->invoice_no = $request->input('other_invoice_no');
+    $purchase->original_invoice_date = $request->input('other_invoice_date');
+    $purchase->original_invoice_value = $request->input('other_invoice_value'); // ❗️fixed missing quote
+    $purchase->voucher_type = $request->input('other_invoice_against');
+}
       $purchase->date = $request->input('date');
       $purchase->company_id = Session::get('user_company_id');
-      $purchase->invoice_no = $request->input('voucher_no');
-      $purchase->voucher_type = $request->input('voucher_type');
+      //$purchase->invoice_no = $request->input('voucher_no');
+     // $purchase->voucher_type = $request->input('voucher_type');
       $purchase->party = $request->input('party_id');
       if($request->input('nature')=="WITH GST" && ($request->input('type')=="WITH ITEM" || $request->input('type')=="RATE DIFFERENCE")){
          $purchase->taxable_amt = $request->input('taxable_amt');
@@ -445,9 +471,9 @@ class PurchaseReturnController extends Controller
       $purchase->tax_cgst = $request->input('cgst');
       $purchase->tax_sgst = $request->input('sgst');
       $purchase->tax_igst = $request->input('igst');
-      $purchase->other_invoice_no = $request->input('other_invoice_no');
-      $purchase->other_invoice_date = $request->input('other_invoice_date');
-      $purchase->other_invoice_against = $request->input('other_invoice_against');
+      //$purchase->other_invoice_no = $request->input('other_invoice_no');
+      //$purchase->other_invoice_date = $request->input('other_invoice_date');
+      //$purchase->other_invoice_against = $request->input('other_invoice_against');
       
       $purchase->purchase_return_no = $purchase_return_no;
       $purchase->financial_year = $financial_year;
@@ -802,7 +828,7 @@ class PurchaseReturnController extends Controller
             $account_names = $request->input('account_name');
             $debits = $request->input('debit');        
             $narrations = $request->input('narration');
-            $narration_without_gst = $request->input('long_narration');
+              $narration_without_gst = $request->input('long_narration');
             $i = 0; $debit_total = 0;       
             foreach ($account_names as $key => $account){
                $purchase_return_without = new PurchaseReturnEntry;
@@ -904,25 +930,14 @@ class PurchaseReturnController extends Controller
                         ->select(['companies.*','states.name as sname'])
                         ->first();
       $purchase_ret = PurchaseReturn::where('id',$id)->first();
-      if($purchase_ret->voucher_type=="SALE"){
-         $purchase_return = PurchaseReturn::join('sales','purchase_returns.purchase_bill_id','=','sales.id')
-                                 ->leftjoin('states','sales.billing_state','=','states.id')
-                                 ->where('purchase_returns.id',$id)
-                                 ->select(['purchase_returns.date','purchase_returns.invoice_no','purchase_returns.total','sales.billing_name','sales.billing_address','sales.billing_pincode','sales.billing_gst','states.name as sname','purchase_return_no','purchase_returns.vehicle_no','purchase_returns.gr_pr_no','purchase_returns.transport_name','purchase_returns.station','sales.voucher_no','sales.date as purchase_date','sales.series_no','sales.financial_year','purchase_returns.series_no as dr_series_no','purchase_returns.financial_year as dr_financial_year','sr_prefix','purchase_returns.id','purchase_returns.voucher_type'])
-                                 ->first();      
-      }else if($purchase_ret->voucher_type=="PURCHASE"){     
-         $purchase_return = PurchaseReturn::join('purchases','purchase_returns.purchase_bill_id','=','purchases.id')
-                                 ->leftjoin('states','purchases.billing_state','=','states.id')
-                                 ->where('purchase_returns.id',$id)
-                                 ->select(['purchase_returns.date','purchase_returns.invoice_no','purchase_returns.total','purchases.billing_name','purchases.billing_address','purchases.billing_pincode','purchases.billing_gst','states.name as sname','purchase_return_no','purchase_returns.vehicle_no','purchase_returns.gr_pr_no','purchase_returns.transport_name','purchase_returns.station','purchases.voucher_no','purchases.date as purchase_date','purchases.series_no','purchases.financial_year','purchase_returns.series_no as dr_series_no','purchase_returns.financial_year as dr_financial_year','sr_prefix','purchase_returns.id','purchase_returns.voucher_type'])
+      
+         $purchase_return = PurchaseReturn::where('purchase_returns.id',$id)
+                                 //join('sales','purchase_returns.purchase_bill_id','=','sales.id')
+                                 ->leftjoin('states','purchase_returns.billing_state','=','states.id')
+                                 ->select(['purchase_returns.date','purchase_returns.invoice_no','purchase_returns.merchant_gst','purchase_returns.billing_gst','purchase_returns.series_no','purchase_returns.total','states.name as sname','purchase_return_no','purchase_returns.vehicle_no','purchase_returns.gr_pr_no','purchase_returns.transport_name','purchase_returns.station','purchase_returns.series_no as dr_series_no','purchase_returns.financial_year as dr_financial_year','sr_prefix','purchase_returns.id','purchase_returns.voucher_type'])
                                  ->first();  
-      }else if($purchase_ret->voucher_type=="OTHER"){
-           $purchase_return = PurchaseReturn::leftjoin('states','purchase_returns.billing_state','=','states.id')
-                                 ->join('accounts','purchase_returns.party','=','accounts.id')
-                                 ->where('purchase_returns.id',$id)
-                                 ->select(['purchase_returns.date','purchase_returns.invoice_no','purchase_returns.total','accounts.account_name as billing_name','accounts.address as billing_address','accounts.pin_code as billing_pincode','purchase_returns.billing_gst','states.name as sname','purchase_return_no','purchase_returns.vehicle_no','purchase_returns.gr_pr_no','purchase_returns.transport_name','purchase_returns.station','purchase_returns.series_no as dr_series_no','purchase_returns.financial_year as dr_financial_year','sr_prefix','purchase_returns.id','purchase_returns.voucher_type','other_invoice_no','other_invoice_date'])
-                                 ->first(); 
-      }
+                                    
+     
     $items_detail = DB::table('purchase_return_descriptions')
     ->where('purchase_return_id', $id)
     ->join('units', 'purchase_return_descriptions.unit', '=', 'units.id')
@@ -1082,7 +1097,7 @@ class PurchaseReturnController extends Controller
          }
          }
                $configuration = SaleInvoiceConfiguration::with(['terms','banks'])->where('company_id',Session::get('user_company_id'))->first();
-               $configuration = SaleInvoiceConfiguration::with(['terms','banks'])->where('company_id',Session::get('user_company_id'))->first();
+            
 
                
           Session::put('redirect_url','');
@@ -1211,7 +1226,7 @@ class PurchaseReturnController extends Controller
                            ->first();
          if(!$seller_info){
             $seller_info = GstBranch::select('gst_number as gst_no','branch_address as address','branch_pincode as pincode')
-                           ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_number'=>$sale_return->merchant_gst,'branch_series'=>$sale_return->series_no])
+                           ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_number'=>$sale->return->merchant_gst,'branch_series'=>$sale_return->series_no])
                            ->first();
             $state_info = DB::table('states')
                            ->where('id',$GstSettings1->state)
@@ -1227,7 +1242,7 @@ class PurchaseReturnController extends Controller
             //Seller Info         
                   $seller_info = DB::table('gst_settings_multiple')
                   ->join('states','gst_settings_multiple.state','=','states.id')
-                  ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst",'gst_no' => $sale_return->merchant_gst,'series'=>$sale_return->series_no])
+                  ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst",'gst_no' => $sale_return->merchant_gst,'series'=>$purchase_return->series_no])
                   ->select(['gst_no','address','pincode','states.name as sname'])
                   ->first();
                
@@ -1397,10 +1412,39 @@ class PurchaseReturnController extends Controller
       $account = Accounts::where('id',$request->input('party_id'))->first();
       $financial_year = Session::get('default_fy');      
       $purchase = PurchaseReturn::find($request->input('purchase_return_edit_id'));
+
+      
+     if ($request->input('purchase_bill_id')!=null && $request->input('voucher_type') == 'SALE' && $request->input('nature') != "WITHOUT GST") {
+    $original_invoice = Sales::find($request->input('purchase_bill_id'));
+    if ($original_invoice) {
+        $purchase->original_invoice_date = $original_invoice->date;
+        $purchase->original_invoice_value = $original_invoice->total;
+    }
+    $purchase->invoice_no = $request->input('voucher_no');
+    $purchase->voucher_type = $request->input('voucher_type');
+
+} elseif ($request->input('purchase_bill_id')!=null && $request->input('voucher_type') == 'PURCHASE' && $request->input('nature') != "WITHOUT GST") {
+    $original_invoice = Purchase::find($request->input('purchase_bill_id'));
+    if ($original_invoice) {
+        $purchase->original_invoice_date = $original_invoice->date;
+        $purchase->original_invoice_value = $original_invoice->total;
+    }
+    $purchase->invoice_no = $request->input('voucher_no');
+    $purchase->voucher_type = $request->input('voucher_type');
+
+} elseif ($request->input('purchase_bill_id')==null  && $request->input('nature') != "WITHOUT GST") {
+    $purchase->invoice_no = $request->input('other_invoice_no');
+    $purchase->original_invoice_date = $request->input('other_invoice_date');
+    $purchase->original_invoice_value = $request->input('other_invoice_value'); // ❗️fixed missing quote
+    $purchase->voucher_type = $request->input('other_invoice_against');
+}
+
       $last_date = $purchase->date;
+      
       $purchase->date = $request->input('date');
-      $purchase->invoice_no = $request->input('voucher_no');
+      
       $purchase->party = $request->input('party_id');
+       
       if($request->input('nature')=="WITH GST" && ($request->input('type')=="WITH ITEM" || $request->input('type')=="RATE DIFFERENCE")){
          $purchase->taxable_amt = $request->input('taxable_amt');
          $purchase->total = $request->input('total');
@@ -1424,9 +1468,9 @@ class PurchaseReturnController extends Controller
       $purchase->billing_gst = $account->gstin;
       $purchase->billing_state = $account->state;
       $purchase->financial_year = $financial_year;
-      $purchase->other_invoice_no = $request->input('other_invoice_no');
-      $purchase->other_invoice_date = $request->input('other_invoice_date');
-      $purchase->other_invoice_against = $request->input('other_invoice_against');
+     // $purchase->other_invoice_no = $request->input('other_invoice_no');
+      //$purchase->other_invoice_date = $request->input('other_invoice_date');
+      //$purchase->other_invoice_against = $request->input('other_invoice_against');
       $purchase->purchase_bill_id = $request->input('purchase_bill_id');
       $purchase->save();
       if($purchase->id){
@@ -1803,8 +1847,8 @@ class PurchaseReturnController extends Controller
          }else if($request->input('nature')=="WITHOUT GST"){
             $account_names = $request->input('account_name');
             $debits = $request->input('debit');        
-        //    $narrations = $request->input('narration');
-             $narration_without_gst = $request->input('long_narration');
+           // $narrations = $request->input('narration');
+            $narration_without_gst = $request->input('long_narration');
             $i = 0; $debit_total = 0;       
             foreach ($account_names as $key => $account){
                $purchase_return_without = new PurchaseReturnEntry;
@@ -1846,7 +1890,7 @@ class PurchaseReturnController extends Controller
             $ledger->created_by = Session::get('user_id');
             $ledger->created_at = date('d-m-Y H:i:s');
             $ledger->save();
-           PurchaseReturn::where('id',$purchase->id)->update(['total'=>$debit_total,'taxable_amt'=>$debit_total,'remark'=>$narration_without_gst]);
+            PurchaseReturn::where('id',$purchase->id)->update(['total'=>$debit_total,'taxable_amt'=>$debit_total,'remark'=>$narration_without_gst]);
             foreach ($desc_item_arr as $key => $value) {
                if(!in_array($value, $update_item_arr)){
                   CommonHelper::RewriteItemAverageByItem($last_date,$value,$request->input('series_no'));

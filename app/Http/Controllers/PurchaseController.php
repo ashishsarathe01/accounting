@@ -32,57 +32,82 @@ class PurchaseController extends Controller{
      *
      * @return \Illuminate\Http\Response
      */
-   public function index(Request $request){
-      Gate::authorize('action-module',11);
-      $input = $request->all();
-      // Default date range (first day of current month to today)
-      $from_date = session('purchase_from_date', "01-" . date('m-Y'));
-      $to_date = session('purchase_to_date', date('d-m-Y'));
+   public function index(Request $request)
+{
+    Gate::authorize('action-module', 11);
 
-      // Check if user has selected a date range
-      if (!empty($input['from_date']) && !empty($input['to_date'])) {
-         $from_date = date('d-m-Y', strtotime($input['from_date']));
-         $to_date = date('d-m-Y', strtotime($input['to_date']));    
-         // Store in session so it persists after refresh
-         session(['purchase_from_date' => $from_date, 'purchase_to_date' => $to_date]);
-      }
-      Session::put('redirect_url','');
-      $financial_year = Session::get('default_fy');      
-      $y =  explode("-",$financial_year);
-      $from = $y[0];
-      $from = DateTime::createFromFormat('y', $from);
-      $from = $from->format('Y');
-      $to = $y[1];
-      $to = DateTime::createFromFormat('y', $to);
-      $to = $to->format('Y');
-      $month_arr = array($from.'-04',$from.'-05',$from.'-06',$from.'-07',$from.'-08',$from.'-09',$from.'-10',$from.'-11',$from.'-12',$to.'-01',$to.'-02',$to.'-03');
-      $purchase = Purchase::with(['purchaseDescription'=> function ($query){
-                              $query->with(['item'=>function($q){
-                                 $q->select('name','id');
-                              },'units'=>function($q1){
-                                 $q1->select('id','name');
-                              },'parameterColumnInfo'=>function($q2){
-                                 $q2->with(['parameterColumnName'=>function($q3){
-                                    $q3->select('id','paremeter_name');
-                                 },'parameterColumnValues'=>function($q4){
-                                    $q4->select('parent_id','column_value');
-                                 }]);
-                                 $q2->select('id','purchase_desc_row_id','parameter_col_id');
-                              }]);
-                              $query->select('id', 'goods_discription','qty','purchase_id','unit');
-                           },'account'=>function($query){                              
-                              $query->select('id', 'account_name');
-                           }])
-                           ->select(['id','date','voucher_no','total','party'])
-                           ->where('company_id',Session::get('user_company_id'))
-                           ->where('delete','0')
-                           ->whereRaw("STR_TO_DATE(purchases.date,'%Y-%m-%d')>=STR_TO_DATE('".date('Y-m-d',strtotime($from_date))."','%Y-%m-%d') and STR_TO_DATE(purchases.date,'%Y-%m-%d')<=STR_TO_DATE('".date('Y-m-d',strtotime($to_date))."','%Y-%m-%d')")
-                           ->orderBy('purchases.created_at', 'ASC')
-                           ->get();
-         // echo "<pre>";
-         // print_r($purchase->toArray());die;
-      return view('purchase')->with('purchase', $purchase)->with('month_arr', $month_arr)->with("from_date",$from_date)->with("to_date",$to_date);
-   }
+    $input = $request->all();
+
+    // Initialize dates
+    $from_date = null;
+    $to_date = null;
+
+    // If user submitted new dates, update session
+    if (!empty($input['from_date']) && !empty($input['to_date'])) {
+        $from_date = date('d-m-Y', strtotime($input['from_date']));
+        $to_date = date('d-m-Y', strtotime($input['to_date']));
+        session(['purchase_from_date' => $from_date, 'purchase_to_date' => $to_date]);
+    } elseif (session()->has('purchase_from_date') && session()->has('purchase_to_date')) {
+        $from_date = session('purchase_from_date');
+        $to_date = session('purchase_to_date');
+    }
+
+    Session::put('redirect_url', '');
+
+    // Financial year processing
+    $financial_year = Session::get('default_fy');
+    $y = explode("-", $financial_year);
+    $from = DateTime::createFromFormat('y', $y[0])->format('Y');
+    $to = DateTime::createFromFormat('y', $y[1])->format('Y');
+    $month_arr = [
+        $from . '-04', $from . '-05', $from . '-06', $from . '-07', $from . '-08', $from . '-09',
+        $from . '-10', $from . '-11', $from . '-12', $to . '-01', $to . '-02', $to . '-03'
+    ];
+
+    $query = Purchase::with([
+            'purchaseDescription' => function ($query) {
+                $query->with([
+                    'item:id,name',
+                    'units:id,name',
+                    'parameterColumnInfo' => function ($q2) {
+                        $q2->with([
+                            'parameterColumnName:id,paremeter_name',
+                            'parameterColumnValues:parent_id,column_value'
+                        ]);
+                        $q2->select('id', 'purchase_desc_row_id', 'parameter_col_id');
+                    }
+                ]);
+                $query->select('id', 'goods_discription', 'qty', 'purchase_id', 'unit');
+            },
+            'account:id,account_name'
+        ])
+        ->select(['id', 'date', 'voucher_no', 'total', 'party'])
+        ->where('company_id', Session::get('user_company_id'))
+        ->where('delete', '0');
+
+    // If date range is provided, filter by date
+    if ($from_date && $to_date) {
+        $query->whereRaw("
+            STR_TO_DATE(purchases.date,'%Y-%m-%d') >= STR_TO_DATE('" . date('Y-m-d', strtotime($from_date)) . "','%Y-%m-%d')
+            AND STR_TO_DATE(purchases.date,'%Y-%m-%d') <= STR_TO_DATE('" . date('Y-m-d', strtotime($to_date)) . "','%Y-%m-%d')
+        ");
+        $query->orderBy('purchases.created_at', 'ASC');
+    } else {
+        // No date selected — fetch latest 10 records
+        $query->orderBy(DB::raw("cast(voucher_no as SIGNED)"), 'desc')
+              ->orderBy('date', 'desc')
+              ->limit(10);
+    }
+
+    $purchase = $query->get()->reverse()->values();
+
+    return view('purchase')
+        ->with('purchase', $purchase)
+        ->with('month_arr', $month_arr)
+        ->with('from_date', $from_date)
+        ->with('to_date', $to_date);
+}
+
     /**
      * Show the specified resources in storage.
      *

@@ -23,44 +23,80 @@ class ContraController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-   public function index(Request $request){
-      Gate::authorize('action-module',29);
-        $input = $request->all();
-      // Default date range (first day of current month to today)
-      $from_date = session('contra_from_date', "01-" . date('m-Y'));
-      $to_date = session('contra_to_date', date('d-m-Y'));
+   public function index(Request $request)
+{
+    Gate::authorize('action-module', 29);
 
-      // Check if user has selected a date range
-      if (!empty($input['from_date']) && !empty($input['to_date'])) {
-         $from_date = date('d-m-Y', strtotime($input['from_date']));
-         $to_date = date('d-m-Y', strtotime($input['to_date']));
-         
-         // Store in session so it persists after refresh
-         session(['contra_from_date' => $from_date, 'contra_to_date' => $to_date]);
-      }
-      Session::put('redirect_url','');
-      $financial_year = Session::get('default_fy');      
-      $y =  explode("-",$financial_year);
-      $from = $y[0];
-      $from = DateTime::createFromFormat('y', $from);
-      $from = $from->format('Y');
-      $to = $y[1];
-      $to = DateTime::createFromFormat('y', $to);
-      $to = $to->format('Y');
-      $month_arr = array($from.'-04',$from.'-05',$from.'-06',$from.'-07',$from.'-08',$from.'-09',$from.'-10',$from.'-11',$from.'-12',$to.'-01',$to.'-02',$to.'-03');
-      $com_id = Session::get('user_company_id');
-      $contra = DB::table('contra_details')
-            ->select('contras.series_no','contras.id as con_id', 'contras.date', 'accounts.account_name as acc_name', 'contra_details.*','contras.mode as m','contras.voucher_no')
-            ->join('contras', 'contra_details.contra_id', '=', 'contras.id')
-            ->join('accounts', 'contra_details.account_name', '=', 'accounts.id')
-            ->where('contra_details.company_id', $com_id)
-            ->where('contras.delete','0')
-            ->whereRaw("STR_TO_DATE(contras.date,'%Y-%m-%d')>=STR_TO_DATE('".date('Y-m-d',strtotime($from_date))."','%Y-%m-%d') and STR_TO_DATE(contras.date,'%Y-%m-%d')<=STR_TO_DATE('".date('Y-m-d',strtotime($to_date))."','%Y-%m-%d')")
-            ->orderBy('contras.date', 'asc')
-         ->orderBy('contras.voucher_no','asc')
-            ->get();
-      return view('contra/contra')->with('contra', $contra)->with('month_arr', $month_arr)->with("from_date",$from_date)->with("to_date",$to_date);
-   }
+    $input = $request->all();
+    $from_date = null;
+    $to_date = null;
+
+    // If user has selected a date range
+    if (!empty($input['from_date']) && !empty($input['to_date'])) {
+        $from_date = date('d-m-Y', strtotime($input['from_date']));
+        $to_date = date('d-m-Y', strtotime($input['to_date']));
+        session(['contra_from_date' => $from_date, 'contra_to_date' => $to_date]);
+    } elseif (session()->has('contra_from_date') && session()->has('contra_to_date')) {
+        $from_date = session('contra_from_date');
+        $to_date = session('contra_to_date');
+    }
+
+    Session::put('redirect_url', '');
+
+    // Prepare month array from financial year
+    $financial_year = Session::get('default_fy');
+    $y = explode("-", $financial_year);
+    $from = DateTime::createFromFormat('y', $y[0])->format('Y');
+    $to = DateTime::createFromFormat('y', $y[1])->format('Y');
+
+    $month_arr = [
+        $from . '-04', $from . '-05', $from . '-06', $from . '-07',
+        $from . '-08', $from . '-09', $from . '-10', $from . '-11',
+        $from . '-12', $to . '-01', $to . '-02', $to . '-03'
+    ];
+
+    $com_id = Session::get('user_company_id');
+
+    // Build base query
+    $query = DB::table('contra_details')
+        ->select(
+            'contras.series_no',
+            'contras.id as con_id',
+            'contras.date',
+            'accounts.account_name as acc_name',
+            'contra_details.*',
+            'contras.mode as m',
+            'contras.voucher_no'
+        )
+        ->join('contras', 'contra_details.contra_id', '=', 'contras.id')
+        ->join('accounts', 'contra_details.account_name', '=', 'accounts.id')
+        ->where('contra_details.company_id', $com_id)
+        ->where('contras.delete', '0');
+
+    // If filtered by date
+    if ($from_date && $to_date) {
+        $query->whereRaw("
+            STR_TO_DATE(contras.date,'%Y-%m-%d') >= STR_TO_DATE('" . date('Y-m-d', strtotime($from_date)) . "','%Y-%m-%d')
+            AND STR_TO_DATE(contras.date,'%Y-%m-%d') <= STR_TO_DATE('" . date('Y-m-d', strtotime($to_date)) . "','%Y-%m-%d')
+        ");
+        $query->orderBy('contras.date', 'asc')
+              ->orderBy('contras.voucher_no', 'asc');
+    } else {
+        // No filter - show last 10 contra entries
+        $query->orderBy(DB::raw("CAST(contras.voucher_no AS SIGNED)"), 'desc')
+              ->orderBy('contras.date', 'desc')
+              ->limit(10);
+    }
+
+    $contra = $query->get()->reverse()->values();
+
+    return view('contra/contra')
+        ->with('contra', $contra)
+        ->with('month_arr', $month_arr)
+        ->with('from_date', $from_date)
+        ->with('to_date', $to_date);
+}
+
     /**
      * Show the specified resources in storage.
      *

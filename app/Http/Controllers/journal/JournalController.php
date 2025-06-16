@@ -25,44 +25,77 @@ class JournalController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-   public function index(Request $request){
-      Gate::authorize('action-module',14);
-     $input = $request->all();
-      // Default date range (first day of current month to today)
-      $from_date = session('journal_from_date', "01-" . date('m-Y'));
-      $to_date = session('journal_to_date', date('d-m-Y'));
+public function index(Request $request)
+{
+    $input = $request->all();
 
-// Check if user has selected a date range
-if (!empty($input['from_date']) && !empty($input['to_date'])) {
-    $from_date = date('d-m-Y', strtotime($input['from_date']));
-    $to_date = date('d-m-Y', strtotime($input['to_date']));
-    
-    // Store in session so it persists after refresh
-    session(['journal_from_date' => $from_date, 'journal_to_date' => $to_date]);
+    $from_date = null;
+    $to_date = null;
+
+    // If user has selected a date range
+    if (!empty($input['from_date']) && !empty($input['to_date'])) {
+        $from_date = date('d-m-Y', strtotime($input['from_date']));
+        $to_date = date('d-m-Y', strtotime($input['to_date']));
+        session(['journal_from_date' => $from_date, 'journal_to_date' => $to_date]);
+    } elseif (session()->has('journal_from_date') && session()->has('journal_to_date')) {
+        $from_date = session('journal_from_date');
+        $to_date = session('journal_to_date');
+    }
+
+    Session::put('redirect_url', '');
+
+    // Financial year breakdown
+    $financial_year = Session::get('default_fy');
+    $y = explode("-", $financial_year);
+    $from = DateTime::createFromFormat('y', $y[0])->format('Y');
+    $to = DateTime::createFromFormat('y', $y[1])->format('Y');
+
+    $month_arr = [
+        $from . '-04', $from . '-05', $from . '-06', $from . '-07',
+        $from . '-08', $from . '-09', $from . '-10', $from . '-11',
+        $from . '-12', $to . '-01', $to . '-02', $to . '-03'
+    ];
+
+    $com_id = Session::get('user_company_id');
+
+    // Base query
+    $query = DB::table('journal_details')
+        ->select(
+            'journals.series_no',
+            'journals.id as jon_id',
+            'journals.date',
+            'accounts.account_name as acc_name',
+            'journal_details.*'
+        )
+        ->join('journals', 'journal_details.journal_id', '=', 'journals.id')
+        ->join('accounts', 'journal_details.account_name', '=', 'accounts.id')
+        ->where('journal_details.company_id', $com_id)
+        ->where('journals.delete', '0');
+
+    // Date filter if available
+    if ($from_date && $to_date) {
+        $query->whereRaw("
+            STR_TO_DATE(journals.date,'%Y-%m-%d') >= STR_TO_DATE('" . date('Y-m-d', strtotime($from_date)) . "','%Y-%m-%d')
+            AND STR_TO_DATE(journals.date,'%Y-%m-%d') <= STR_TO_DATE('" . date('Y-m-d', strtotime($to_date)) . "','%Y-%m-%d')
+        ");
+        $query->orderBy('journal_details.journal_id', 'asc')
+              ->orderBy('journals.date', 'asc');
+    } else {
+        // Show last 10 if no date range
+        $query->orderBy(DB::raw("cast(journals.voucher_no as SIGNED)"), 'desc')
+              ->orderBy('journals.date', 'desc')
+              ->limit(10);
+    }
+
+    $journal = $query->get()->reverse()->values();
+
+    return view('journal/journal')
+        ->with('journal', $journal)
+        ->with('month_arr', $month_arr)
+        ->with('from_date', $from_date)
+        ->with('to_date', $to_date);
 }
-      Session::put('redirect_url','');
-      $financial_year = Session::get('default_fy');      
-      $y =  explode("-",$financial_year);
-      $from = $y[0];
-      $from = DateTime::createFromFormat('y', $from);
-      $from = $from->format('Y');
-      $to = $y[1];
-      $to = DateTime::createFromFormat('y', $to);
-      $to = $to->format('Y');
-      $month_arr = array($from.'-04',$from.'-05',$from.'-06',$from.'-07',$from.'-08',$from.'-09',$from.'-10',$from.'-11',$from.'-12',$to.'-01',$to.'-02',$to.'-03');
-      $com_id = Session::get('user_company_id');
-      $journal = DB::table('journal_details')
-            ->select('journals.series_no','journals.id as jon_id', 'journals.date', 'accounts.account_name as acc_name', 'journal_details.*')
-            ->join('journals', 'journal_details.journal_id', '=', 'journals.id')
-            ->join('accounts', 'journal_details.account_name', '=', 'accounts.id')
-            ->where('journal_details.company_id', $com_id)
-            ->where('journals.delete','0')
-            ->whereRaw("STR_TO_DATE(journals.date,'%Y-%m-%d')>=STR_TO_DATE('".date('Y-m-d',strtotime($from_date))."','%Y-%m-%d') and STR_TO_DATE(journals.date,'%Y-%m-%d')<=STR_TO_DATE('".date('Y-m-d',strtotime($to_date))."','%Y-%m-%d')")
-            ->orderBy('journal_details.journal_id', 'asc')
-            ->orderBy('journals.date', 'asc')
-            ->get();
-      return view('journal/journal')->with('journal', $journal)->with('month_arr', $month_arr)->with("from_date",$from_date)->with("to_date",$to_date);
-   }
+
     /**
      * Show the specified resources in storage.
      *

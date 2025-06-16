@@ -22,6 +22,18 @@
                <h5 class="table-title m-0 py-2 ">
                   List of Stock Transfer
                </h5>
+                <form  action="{{ route('stock-transfer.index') }}" method="GET">
+                  @csrf
+                  <div class="d-md-flex d-block">                  
+                     <div class="calender-administrator my-2 my-md-0">
+                        <input type="date" id="customDate" class="form-control calender-bg-icon calender-placeholder" placeholder="From date" required name="from_date" value="{{ !empty($from_date) ? date('Y-m-d', strtotime($from_date)) : '' }}">
+                     </div>
+                     <div class="calender-administrator ms-md-4">
+                        <input type="date" id="customDate" class="form-control calender-bg-icon calender-placeholder" placeholder="To date" required name="to_date" value="{{ !empty($to_date) ? date('Y-m-d', strtotime($to_date)) : '' }}">
+                     </div>
+                     <button class="btn btn-info" style="margin-left: 5px;">Search</button>
+                  </div>
+               </form>
                @can('action-module',87)
                   <a href="{{ route('stock-transfer.create') }}" class="btn btn-xs-primary">ADD
                      <svg class="position-relative ms-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -31,7 +43,7 @@
                @endcan
                
             </div>
-            <div class="   bg-white table-view shadow-sm">
+            <div class="transaction-table bg-white table-view shadow-sm">
                <table id="example" class="table-striped table m-0 shadow-sm">
                   <thead>
                      <tr class=" font-12 text-body bg-light-pink ">

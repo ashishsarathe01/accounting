@@ -22,10 +22,10 @@
                   @csrf
                   <div class="d-md-flex d-block">
                      <div class="calender-administrator my-2 my-md-0">
-                        <input type="date" id="from_date" class="form-control calender-bg-icon calender-placeholder" placeholder="From date" required name="from_date" value="{{date('Y-m-d',strtotime($from_date))}}">
+                        <input type="date" id="customDate" class="form-control calender-bg-icon calender-placeholder" placeholder="From date" required name="from_date" value="{{!empty($from_date) ? date('Y-m-d', strtotime($from_date)) : ''}}">
                      </div>
-                     <div class="calender-administrator ms-md-2">
-                        <input type="date" id="to_date" class="form-control calender-bg-icon calender-placeholder" placeholder="To date" required name="to_date" value="{{date('Y-m-d',strtotime($to_date))}}">
+                     <div class="calender-administrator ms-md-4">
+                        <input type="date" id="customDate" class="form-control calender-bg-icon calender-placeholder" placeholder="To date" required name="to_date" value="{{!empty($to_date) ? date('Y-m-d', strtotime($to_date)) : ''}}">
                      </div>
                      <div class="calender-administrator ms-md-2">
                         <button type="submit" class="btn btn-info next">Next</button>

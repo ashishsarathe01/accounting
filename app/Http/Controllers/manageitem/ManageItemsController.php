@@ -350,33 +350,77 @@ class ManageItemsController extends Controller
          'message' => 'Something went wrong, please try again after some time.',
       ]);
    }
-   public function stockJournal(Request $request){
-      Gate::authorize('view-module', 30);
-      $input = $request->all();
-      // Default date range (first day of current month to today)
-      $from_date = session('stockJournal_from_date', date('Y-m')."-01");
-      $to_date = session('stockJournal_to_date', date('Y-m-d'));
-      // Check if user has selected a date range
-      if (!empty($input['from_date']) && !empty($input['to_date'])){
-         $from_date = date('Y-m-d', strtotime($input['from_date']));
-         $to_date = date('Y-m-d', strtotime($input['to_date']));    
-         // Store in session so it persists after refresh
-         session(['stockJournal_from_date' => $from_date, 'stockJournal_to_date' => $to_date]);
-      }
-      Session::put('redirect_url','');
-      $financial_year = Session::get('default_fy');      
-      $y =  explode("-",$financial_year);
-      $from = $y[0];
-      $from = DateTime::createFromFormat('y', $from);
-      $from = $from->format('Y');
-      $to = $y[1];
-      $to = DateTime::createFromFormat('y', $to);
-      $to = $to->format('Y');
-      $month_arr = array($from.'-04',$from.'-05',$from.'-06',$from.'-07',$from.'-08',$from.'-09',$from.'-10',$from.'-11',$from.'-12',$to.'-01',$to.'-02',$to.'-03');
-      $journal = DB::select(DB::raw("SELECT stock_journal_detail.parent_id as id,journal_date,consume_weight,new_weight,manage_items.name,new.name as new_item,consume_price,consume_amount,new_price,new_amount FROM stock_journal_detail left join manage_items on stock_journal_detail.consume_item=manage_items.id left join manage_items as new on stock_journal_detail.new_item=new.id WHERE stock_journal_detail.status=1 and stock_journal_detail.company_id='".Session::get('user_company_id')."' and STR_TO_DATE(journal_date, '%Y-%m-%d')>=STR_TO_DATE('".$from_date."', '%Y-%m-%d') and STR_TO_DATE(journal_date, '%Y-%m-%d')<=STR_TO_DATE('".$to_date."', '%Y-%m-%d')"));
+public function stockJournal(Request $request)
+{
+    Gate::authorize('view-module', 30);
 
-      return view('manageitem/stock-journal')->with('journals', $journal)->with('month_arr', $month_arr)->with("from_date",$from_date)->with("to_date",$to_date);
-   }
+    $input = $request->all();
+    $from_date = null;
+    $to_date = null;
+
+    // Handle date selection from input or session
+    if (!empty($input['from_date']) && !empty($input['to_date'])) {
+        $from_date = date('Y-m-d', strtotime($input['from_date']));
+        $to_date = date('Y-m-d', strtotime($input['to_date']));
+        session(['stockJournal_from_date' => $from_date, 'stockJournal_to_date' => $to_date]);
+    } elseif (session()->has('stockJournal_from_date') && session()->has('stockJournal_to_date')) {
+        $from_date = session('stockJournal_from_date');
+        $to_date = session('stockJournal_to_date');
+    }
+
+    Session::put('redirect_url', '');
+
+    // Financial Year Month Array
+    $financial_year = Session::get('default_fy');
+    $y = explode("-", $financial_year);
+    $from = DateTime::createFromFormat('y', $y[0])->format('Y');
+    $to = DateTime::createFromFormat('y', $y[1])->format('Y');
+
+    $month_arr = [
+        $from . '-04', $from . '-05', $from . '-06', $from . '-07',
+        $from . '-08', $from . '-09', $from . '-10', $from . '-11',
+        $from . '-12', $to . '-01', $to . '-02', $to . '-03'
+    ];
+
+    $company_id = Session::get('user_company_id');
+
+    // Start base query
+    $query = DB::table('stock_journal_detail')
+        ->leftJoin('manage_items', 'stock_journal_detail.consume_item', '=', 'manage_items.id')
+        ->leftJoin('manage_items as new', 'stock_journal_detail.new_item', '=', 'new.id')
+        ->select(
+            'stock_journal_detail.parent_id as id',
+            'journal_date',
+            'consume_weight',
+            'new_weight',
+            'manage_items.name',
+            'new.name as new_item',
+            'consume_price',
+            'consume_amount',
+            'new_price',
+            'new_amount'
+        )
+        ->where('stock_journal_detail.status', 1)
+        ->where('stock_journal_detail.company_id', $company_id);
+
+    // Apply date filter or limit to 10
+    if ($from_date && $to_date) {
+        $query->whereRaw("STR_TO_DATE(journal_date, '%Y-%m-%d') >= STR_TO_DATE(?, '%Y-%m-%d')", [$from_date])
+              ->whereRaw("STR_TO_DATE(journal_date, '%Y-%m-%d') <= STR_TO_DATE(?, '%Y-%m-%d')", [$to_date])
+              ->orderBy('journal_date', 'asc');
+    } else {
+        $query->orderByRaw("STR_TO_DATE(journal_date, '%Y-%m-%d') desc")->limit(10);
+    }
+
+    $journal = $query->get()->reverse()->values(); // Show oldest first
+
+    return view('manageitem/stock-journal')
+        ->with('journals', $journal)
+        ->with('month_arr', $month_arr)
+        ->with('from_date', $from_date)
+        ->with('to_date', $to_date);
+}
+
    public function addStockJournal(){
       Gate::authorize('view-module', 86);
       $financial_year = Session::get('default_fy');
