@@ -868,7 +868,7 @@
                optionElements += '<option value="' + val.voucher_no + '" data-id="'+val.id+'" data-voucher_type="'+val.voucher_type+'" '+selected+'>' + val.voucher_no + '</option>';
             });
             let otherselect = "";
-            if(voucher_type=="OTHER"){
+            if(purchase_bill_id==""){
                otherselect = "selected";
             }
             optionElements += '<option value="OTHER" '+otherselect+'>OTHER</option>';

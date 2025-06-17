@@ -849,7 +849,6 @@ class SalesController extends Controller
             }
             $gst_detail[$key]->rate = $rate;
             if($max_gst==$rate){
-
                $sun = SaleSundry::join('bill_sundrys','sale_sundries.bill_sundry','=','bill_sundrys.id')
                               ->select('amount','bill_sundry_type')
                               ->where('sale_id', $id)
@@ -860,7 +859,6 @@ class SalesController extends Controller
                      $taxable_amount = $taxable_amount + $v1->amount;
                   }else if($v1->bill_sundry_type=="subtractive"){
                      $taxable_amount = $taxable_amount - $v1->amount;
-
                   }
                }
                // $freight = SaleSundry::select('amount')

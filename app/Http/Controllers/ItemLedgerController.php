@@ -191,30 +191,24 @@ class ItemLedgerController extends Controller
                if ($exists==0) {
                   $item->push($value);
                }
-            }
-            
-           array_push($allArrays, $item->toArray());
-            // Initialize result array
-            
-            
-         }
-       
+            }            
+            array_push($allArrays, $item->toArray());
+            // Initialize result array            
+         }       
          $result = [];
-
-            foreach ($allArrays as $array) {
-               foreach ($array as $item) {
-                  $id = $item['item_id'];
-
-                  if (!isset($result[$id])) {
-                        // Initialize if not set
-                        $result[$id] = $item;
-                  } else {
-                        // Merge values
-                        $result[$id]['average_weight'] += $item['average_weight'];
-                        $result[$id]['amount'] += $item['amount'];
-                  }
+         foreach ($allArrays as $array) {
+            foreach ($array as $item) {
+               $id = $item['item_id'];
+               if (!isset($result[$id])) {
+                     // Initialize if not set
+                     $result[$id] = $item;
+               } else {
+                     // Merge values
+                     $result[$id]['average_weight'] += $item['average_weight'];
+                     $result[$id]['amount'] += $item['amount'];
                }
             }
+         }
          // Re-index array
          $result = array_values($result);
          
