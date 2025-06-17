@@ -132,8 +132,7 @@
                         <td colspan="4" style="width:50%;">
                            <p><span class="width25">Party Details :  </span></p>
                            <p><span class="width25">{{$purchase_return->billing_name}} </span></p>
-                           <p>{{$purchase_return->billing_address}},{{$purchase_return->sname}}</p>
-                           <p>{{$purchase_return->billing_pincode}}</p>
+                           <p>{{$purchase_return->party_address}}</p>
                            <p>&nbsp;</p>
                            <p>&nbsp;</p>
                            <p>GSTIN / UIN : {{$purchase_return->billing_gst}}</p>
@@ -141,18 +140,9 @@
                         <td colspan="4" style="width:50%;">
                            <p><span class="width25">Dr. Note No </span>: <span class="lft_mar15">{{$purchase_return->sr_prefix}}</span> </p>
                            <p><span class="width25">Dr. Note Date </span>: <span class="lft_mar15">{{date('d-m-Y',strtotime($purchase_return->date))}}</span> </p>
-                           @if($purchase_return->voucher_type!="OTHER")
-                              <p><span class="width25">Org. Inv. No. </span>: <span class="lft_mar15">{{$purchase_return->voucher_no}}</span> </p>
-                              <p><span class="width25">Org. Inv. Date </span>: <span class="lft_mar15">{{date('d-m-Y',strtotime($purchase_return->purchase_date))}}</span> </p>
-                           @elseif($purchase_return->voucher_type=="OTHER")
-                              @if($purchase_return->other_invoice_no!="")
-                                  <p><span class="width25">Org. Inv. No. </span>: <span class="lft_mar15">{{$purchase_return->other_invoice_no}}</span> </p>
-                              @endif
-                              @if($purchase_return->other_invoice_date!="")
-                                 <p><span class="width25">Org. Inv. Date </span>: <span class="lft_mar15">{{date('d-m-Y',strtotime($purchase_return->other_invoice_date))}}</span> </p>
-                              @endif
-                              
-                           @endif
+                           <p><span class="width25">Org. Inv. No. </span>: <span class="lft_mar15">{{$purchase_return->invoice_no}}</span> </p>
+                           <p><span class="width25">Org. Inv. Date </span>: <span class="lft_mar15">{{date('d-m-Y',strtotime($purchase_return->original_invoice_date))}}</span> </p>
+                           
                            
                            <p><span class="width25">Transport </span>: <span class="lft_mar15">{{$purchase_return->transport_name}}</span> </p>
                            <p><span class="width25">Vehicle No. </span>: <span class="lft_mar15">{{$purchase_return->vehicle_no}}</span> </p>

@@ -731,7 +731,7 @@ class ProfitLossController extends Controller{
                      ->get();  
                      
                      
-        $debit_note = PurchaseReturn::
+      $debit_note = PurchaseReturn::
       $bill_sundray = BillSundrys::where('company_id',Session::get('user_company_id'))->orderBy('sequence')->get();
       return view('display/purchase_by_month_detail')->with('purchase',$purchase)->with('from_date',$from_date)->with('to_date',$to_date)->with('selected_year',$financial_year)->with('bill_sundray',$bill_sundray);
    }

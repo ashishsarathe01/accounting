@@ -123,17 +123,21 @@
                      <label for="other_invoice_against" class="form-label font-14 font-heading">Invoice Against</label>
                      <select class="form-select" id="other_invoice_against" name="other_invoice_against">
                         <option value="">Select</option>
-                        <option value="Sale">Sale</option>
-                        <option value="Purchase">Purchase</option>
+                        <option value="SALE">Sale</option>
+                        <option value="PURCHASE">Purchase</option>
                      </select>  
                   </div>
                   <div class="mb-3 col-md-3 other_invoice_div" style="display:none">
-                     <label for="other_invoice_no" class="form-label font-14 font-heading">Invoice No</label>
+                     <label for="other_invoice_no" class="form-label font-14 font-heading">Original Invoice No</label>
                      <input type="text" class="form-control" id="other_invoice_no" name="other_invoice_no" placeholder="Enter Invoice No.">
                   </div>
                   <div class="mb-3 col-md-2 other_invoice_div" style="display:none">
-                     <label for="other_invoice_date" class="form-label font-14 font-heading">Invoice Date</label>
+                     <label for="other_invoice_date" class="form-label font-14 font-heading">Original Invoice Date</label>
                      <input type="date" class="form-control" id="other_invoice_date" name="other_invoice_date">
+                  </div>
+                  <div class="mb-3 col-md-2 other_invoice_div" style="display:none">
+                     <label for="other_invoice_date" class="form-label font-14 font-heading">Original Invoice Value</label>
+                     <input type="number" class="form-control" id="original_invoice_value" name="other_invoice_value" placeholder="Including taxes">
                   </div>
                   <div class="mb-1 col-md-1 voucher_no_div" style="display:none">
                      <br>
