@@ -840,6 +840,7 @@ foreach($manageitems as $value) {
 </body>
 @include('layouts.footer')
 <script>
+   var bill_sundry_array = @json($billsundry);
    var selected_series = "";
    var enter_gst_status = 0;
    var auto_gst_calculation = 0;
@@ -1283,8 +1284,8 @@ foreach($manageitems as $value) {
                   }
                   //CGST
                   let cgst_sundry_value = "";
-                  if(billSundryArray.length>0){
-                     billSundryArray.forEach(function(e){
+                  if(bill_sundry_array.length>0){
+                     bill_sundry_array.forEach(function(e){
                         if(e.nature_of_sundry=='CGST'){ 
                            cgst_sundry_value = e.id;
                         }
@@ -1298,8 +1299,8 @@ foreach($manageitems as $value) {
                   $("#tax_rate_tr_"+add_more_bill_sundry_up_count).val(e.percent/2);
                   //SGST
                   let sgst_sundry_value = "";
-                  if(billSundryArray.length>0){
-                     billSundryArray.forEach(function(e){
+                  if(bill_sundry_array.length>0){
+                     bill_sundry_array.forEach(function(e){
                         if(e.nature_of_sundry=='SGST'){ 
                            sgst_sundry_value = e.id;
                         }
@@ -1386,8 +1387,8 @@ foreach($manageitems as $value) {
                   }
                   
                   let sundry_value = "";
-                  if(billSundryArray.length>0){
-                     billSundryArray.forEach(function(e){
+                  if(bill_sundry_array.length>0){
+                     bill_sundry_array.forEach(function(e){
                         if(e.nature_of_sundry=='IGST'){ 
                            sundry_value = e.id;
                         }

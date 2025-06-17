@@ -767,6 +767,7 @@
 </body>
 @include('layouts.footer')
 <script>
+   var bill_sundry_array = @json($billsundry);
    var enter_gst_status = 0;
    var auto_gst_calculation = 0;
    var customer_gstin = "";
@@ -1041,8 +1042,8 @@
                      }
                      //CGST
                      let cgst_sundry_value = "";
-                     if(billSundryArray.length>0){
-                        billSundryArray.forEach(function(e){
+                     if(bill_sundry_array.length>0){
+                        bill_sundry_array.forEach(function(e){
                            if(e.nature_of_sundry=='CGST'){ 
                               cgst_sundry_value = e.id;
                            }
@@ -1056,8 +1057,8 @@
                      $("#tax_rate_tr_"+add_more_bill_sundry_up_count).val(e.percent/2);
                      //SGST
                      let sgst_sundry_value = "";
-                     if(billSundryArray.length>0){
-                        billSundryArray.forEach(function(e){
+                     if(bill_sundry_array.length>0){
+                        bill_sundry_array.forEach(function(e){
                            if(e.nature_of_sundry=='SGST'){ 
                               sgst_sundry_value = e.id;
                            }
@@ -1142,8 +1143,8 @@
                      }
                      $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(taxSundryArray['igst']);
                      let sundry_value = "";
-                     if(billSundryArray.length>0){
-                        billSundryArray.forEach(function(e){
+                     if(bill_sundry_array.length>0){
+                        bill_sundry_array.forEach(function(e){
                            if(e.nature_of_sundry=='IGST'){ 
                               sundry_value = e.id;
                            }
@@ -1550,6 +1551,7 @@
             $("#voucher_no").html(optionElements);
          }
       });
+      calculateAmount();
    });
    $("#voucher_no").change(function(){
       if($(this).val()==""){

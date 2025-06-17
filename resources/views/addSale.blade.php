@@ -862,7 +862,7 @@ function removeItem() {
         // Middle rows → Remove only
         $iconCell.html(removeIcon);
       }
-    });
+   });
 
     calculateAmount();
   });
@@ -1783,6 +1783,7 @@ function removeItem() {
          $("#address").html(address_html);
          $(".address_div").show();
       }
+      calculateAmount(); 
    }); 
    $("#address").change(function(){
       if($(this).val()!=""){

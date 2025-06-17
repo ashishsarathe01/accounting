@@ -670,7 +670,7 @@ foreach ($manageitems as $value) {
 </body>
 @include('layouts.footer')
 <script>
-
+   var bill_sundry_array = @json($billsundry);
    function redirectBack(){
       let previousUrl = document.referrer; // Get Previous URL
 
@@ -1141,8 +1141,8 @@ function add_more_bill_sundry_up() {
                      taxSundryArray['sgst'] = sundry_amount;
                   }
                   let cgst_sundry_value = "";
-                  if(billSundryArray.length>0){
-                     billSundryArray.forEach(function(e){
+                  if(bill_sundry_array.length>0){
+                     bill_sundry_array.forEach(function(e){
                         if(e.nature_of_sundry=='CGST'){ 
                            cgst_sundry_value = e.id;
                         }
@@ -1156,8 +1156,8 @@ function add_more_bill_sundry_up() {
                   $("#tax_rate_tr_"+add_more_bill_sundry_up_count).val(e.percent/2);
                   //SGST
                   let sgst_sundry_value = "";
-                  if(billSundryArray.length>0){
-                     billSundryArray.forEach(function(e){
+                  if(bill_sundry_array.length>0){
+                     bill_sundry_array.forEach(function(e){
                         if(e.nature_of_sundry=='SGST'){ 
                            sgst_sundry_value = e.id;
                         }
@@ -1245,8 +1245,8 @@ function add_more_bill_sundry_up() {
                   console.log(add_more_bill_sundry_up_count);
                   $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(taxSundryArray['igst']);
                   let sundry_value = "";
-                  if(billSundryArray.length>0){
-                     billSundryArray.forEach(function(e){
+                  if(bill_sundry_array.length>0){
+                     bill_sundry_array.forEach(function(e){
                         if(e.nature_of_sundry=='IGST'){ 
                            sundry_value = e.id;
                         }
@@ -1538,6 +1538,7 @@ function add_more_bill_sundry_up() {
       }
       $("#party-error").hide()
       $("#partyaddress").html("GSTIN : "+$('option:selected', this).attr('data-gstin')+"<br>Address : "+$('option:selected', this).attr('data-address'));
+      calculateAmount();
    });
    $('body').on('keydown', 'input, select', function(e){
       if (e.key === "Enter") {
