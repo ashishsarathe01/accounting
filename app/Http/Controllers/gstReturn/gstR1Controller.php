@@ -1160,18 +1160,9 @@ public function nilRatedAndExemptedCombined(Request $request)
         ->whereDate('sales_returns.date', '<=', $to_date)
         ->whereNotNull('sales_returns.billing_gst')
         ->where('billing_gst', '!=', '')
-         ->where(function($q) {
-                $q->where(function($sub) {
-                    $sub->where('voucher_type', 'SALE')
-                        ->where('sr_nature', 'WITH GST');
-                })
-                ->orWhere(function($sub) {
-                    $sub->where('voucher_type', 'OTHER')
-                        ->where('other_invoice_against', 'Sale')
-                        ->where('sr_nature', 'WITH GST');
-                });
-            })
-        ->where('sales_returns.delete', '0')
+        ->where('voucher_type', 'SALE')
+         ->where('sr_nature', 'WITH GST')
+         ->where('sales_returns.delete', '0')
         ->where('sales_returns.status', '1')
         ->select(
             'sales_returns.id',
@@ -1261,17 +1252,8 @@ public function nilRatedAndExemptedCombined(Request $request)
         ->whereDate('purchase_returns.date', '<=', $to_date)
         ->whereNotNull('purchase_returns.billing_gst')
         ->where('billing_gst', '!=', '')
-         ->where(function($q) {
-                $q->where(function($sub) {
-                    $sub->where('voucher_type', 'SALE')
-                        ->where('sr_nature', 'WITH GST');
-                })
-                ->orWhere(function($sub) {
-                    $sub->where('voucher_type', 'OTHER')
-                        ->where('other_invoice_against', 'Sale')
-                        ->where('sr_nature', 'WITH GST');
-                });
-            })
+        ->where('voucher_type', 'SALE')
+        ->where('sr_nature', 'WITH GST')
         ->where('purchase_returns.delete', '0')
         ->where('purchase_returns.status', '1')
         ->select(
@@ -1575,17 +1557,8 @@ public function combinedNoteUnreegister(Request $request)
         $q->whereNull('sales_returns.billing_gst')
           ->orWhere('sales_returns.billing_gst', '');
                 })
-         ->where(function($q) {
-                $q->where(function($sub) {
-                    $sub->where('voucher_type', 'SALE')
-                        ->where('sr_nature', 'WITH GST');
-                })
-                ->orWhere(function($sub) {
-                    $sub->where('voucher_type', 'OTHER')
-                        ->where('other_invoice_against', 'Sale')
-                        ->where('sr_nature', 'WITH GST');
-                });
-            })
+        ->where('voucher_type', 'SALE')
+        ->where('sr_nature', 'WITH GST')
         ->where('sales_returns.delete', '0')
         ->where('sales_returns.status', '1')
         ->select(
@@ -1679,17 +1652,9 @@ public function combinedNoteUnreegister(Request $request)
                             $q->whereNull('purchase_returns.billing_gst')
                             ->orWhere('purchase_returns.billing_gst', '');
                         })
-        ->where(function($q) {
-                $q->where(function($sub) {
-                    $sub->where('voucher_type', 'SALE')
-                        ->where('sr_nature', 'WITH GST');
-                })
-                ->orWhere(function($sub) {
-                    $sub->where('voucher_type', 'OTHER')
-                        ->where('other_invoice_against', 'Sale')
-                        ->where('sr_nature', 'WITH GST');
-                });
-            })
+       ->where('voucher_type', 'SALE')
+                        ->where('sr_nature', 'WITH GST')
+                
         ->where('purchase_returns.delete', '0')
         ->where('purchase_returns.status', '1')
         ->select(
@@ -2063,17 +2028,8 @@ public function B2Cstatewise(Request $request)
         })
          ->join('sales','sales.id','=','sales_returns.sale_bill_id')
         ->where('sales.total','<=', 250000)
-        ->where(function($q) {
-                $q->where(function($sub) {
-                    $sub->where('voucher_type', 'SALE')
-                        ->where('sr_nature', 'WITH GST');
-                })
-                ->orWhere(function($sub) {
-                    $sub->where('voucher_type', 'OTHER')
-                        ->where('other_invoice_against', 'Sale')
-                        ->where('sr_nature', 'WITH GST');
-                });
-            })
+        ->where('voucher_type', 'SALE')
+        ->where('sr_nature', 'WITH GST')
         ->where('sales_returns.delete', '0')
         ->where('sales_returns.status', '1')
         ->pluck('sales_returns.id');
@@ -2133,17 +2089,8 @@ public function B2Cstatewise(Request $request)
         })
          ->join('sales','sales.id','=','purchase_returns.purchase_bill_id')
         ->where('sales.total','<=', 250000)
-         ->where(function($q) {
-                $q->where(function($sub) {
-                    $sub->where('voucher_type', 'SALE')
-                        ->where('sr_nature', 'WITH GST');
-                })
-                ->orWhere(function($sub) {
-                    $sub->where('voucher_type', 'OTHER')
-                        ->where('other_invoice_against', 'Sale')
-                        ->where('sr_nature', 'WITH GST');
-                });
-            })
+        ->where('voucher_type', 'SALE')
+        ->where('sr_nature', 'WITH GST')
         ->where('purchase_returns.delete', '0')
         ->where('purchase_returns.status', '1')
         ->pluck('purchase_returns.id');
@@ -2502,19 +2449,9 @@ public function hsnSummary(Request $request){
         ->where('sales_returns.merchant_gst', $merchant_gst)
         ->where('sales_returns.company_id', $company_id)
         ->whereBetween('sales_returns.date', [$from_date, $to_date])
-         ->join('sales','sales.id','=','sales_returns.sale_bill_id')
-        ->where(function($q) {
-                $q->where(function($sub) {
-                    $sub->where('voucher_type', 'SALE')
-                        ->where('sr_nature', 'WITH GST');
-                })
-                ->orWhere(function($sub) {
-                    $sub->where('voucher_type', 'OTHER')
-                        ->where('other_invoice_against', 'Sale')
-                        ->where('sr_nature', 'WITH GST');
-                });
-            })
-        ->where('sr_type','WITH ITEM')
+         ->where('voucher_type', 'SALE')
+         ->where('sr_nature', 'WITH GST')
+          ->where('sr_type','WITH ITEM')
         ->where('sales_returns.delete', '0')
         ->where('sales_returns.status', '1')
         ->pluck('sales_returns.id');
@@ -2524,17 +2461,8 @@ public function hsnSummary(Request $request){
         ->where('sales_returns.merchant_gst', $merchant_gst)
         ->where('sales_returns.company_id', $company_id)
         ->whereBetween('sales_returns.date', [$from_date, $to_date])
-        ->where(function($q) {
-                $q->where(function($sub) {
-                    $sub->where('voucher_type', 'SALE')
-                        ->where('sr_nature', 'WITH GST');
-                })
-                ->orWhere(function($sub) {
-                    $sub->where('voucher_type', 'OTHER')
-                        ->where('other_invoice_against', 'Sale')
-                        ->where('sr_nature', 'WITH GST');
-                });
-            })
+        ->where('voucher_type', 'SALE')
+        ->where('sr_nature', 'WITH GST')
         ->where(function($q){
             $q->where('sr_type','WITHOUT ITEM')
               ->orWhere('sr_type','RATE DIFFERENCE');
@@ -2644,17 +2572,8 @@ public function hsnSummary(Request $request){
         ->where('purchase_returns.merchant_gst', $merchant_gst)
         ->where('purchase_returns.company_id', $company_id)
         ->whereBetween('purchase_returns.date', [$from_date, $to_date])
-         ->where(function($q) {
-                $q->where(function($sub) {
-                    $sub->where('voucher_type', 'SALE')
-                        ->where('sr_nature', 'WITH GST');
-                })
-                ->orWhere(function($sub) {
-                    $sub->where('voucher_type', 'OTHER')
-                        ->where('other_invoice_against', 'Sale')
-                        ->where('sr_nature', 'WITH GST');
-                });
-            })
+         ->where('voucher_type', 'SALE')
+         ->where('sr_nature', 'WITH GST')
          ->where('sr_type','WITH ITEM')
         ->where('purchase_returns.delete', '0')
         ->where('purchase_returns.status', '1')
@@ -2664,17 +2583,8 @@ public function hsnSummary(Request $request){
         ->where('purchase_returns.merchant_gst', $merchant_gst)
         ->where('purchase_returns.company_id', $company_id)
         ->whereBetween('purchase_returns.date', [$from_date, $to_date])
-        ->where(function($q) {
-                $q->where(function($sub) {
-                    $sub->where('voucher_type', 'SALE')
-                        ->where('sr_nature', 'WITH GST');
-                })
-                ->orWhere(function($sub) {
-                    $sub->where('voucher_type', 'OTHER')
-                        ->where('other_invoice_against', 'Sale')
-                        ->where('sr_nature', 'WITH GST');
-                });
-            })
+        ->where('voucher_type', 'SALE')
+        ->where('sr_nature', 'WITH GST')
            ->where(function($q){
             $q->where('sr_type','WITHOUT ITEM')
               ->orWhere('sr_type','RATE DIFFERENCE');
