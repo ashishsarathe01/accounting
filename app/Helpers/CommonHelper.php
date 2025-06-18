@@ -269,14 +269,14 @@ class CommonHelper
         //Purchase Return
         $tot_purchase_return_amt = DB::table('purchase_returns')
                                         ->join('purchase_return_descriptions','purchase_returns.id','=','purchase_return_descriptions.purchase_return_id')
-                                        ->where(['purchase_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
+                                        ->where(['purchase_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
                                         ->whereBetween('date', [$from_date, $to_date])
                                         ->get()
                                         ->sum("amount");
         $purchase_return_sundry = DB::table('purchase_returns')
                                         ->join('purchase_return_sundries','purchase_returns.id','=','purchase_return_sundries.purchase_return_id')
                                         ->join('bill_sundrys','purchase_return_sundries.bill_sundry','=','bill_sundrys.id')
-                                        ->where(['purchase_returns.delete' => '0', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
+                                        ->where(['purchase_returns.delete' => '0', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes','voucher_type'=>'PURCHASE'])
                                         ->whereBetween('date', [$from_date, $to_date])
                                         ->select('bill_sundry_type','amount')
                                         ->get();
@@ -289,17 +289,40 @@ class CommonHelper
                 }
             }
         }
+         //Sale Return With  PURCHASE
+        $tot_sale_return_amt_purchase = DB::table('sales_returns')
+         ->join('sale_return_descriptions','sales_returns.id','=','sale_return_descriptions.sale_return_id')
+         ->where(['sales_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
+         ->whereBetween('date', [$from_date, $to_date])
+         ->get()
+         ->sum("amount");
+        $sale_return_sundry_purchase = DB::table('sales_returns')
+            ->join('sale_return_sundries','sales_returns.id','=','sale_return_sundries.sale_return_id')
+            ->join('bill_sundrys','sale_return_sundries.bill_sundry','=','bill_sundrys.id')
+            ->where(['sales_returns.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes','voucher_type'=>'PURCHASE'])
+            ->whereBetween('date', [$from_date, $to_date])
+            ->select('bill_sundry_type','amount')
+            ->get();
+        if(count($sale_return_sundry_purchase)>0){
+            foreach ($sale_return_sundry_purchase as $key => $value) {
+                if($value->bill_sundry_type=="additive"){
+                $tot_sale_return_amt_purchase = $tot_sale_return_amt_purchase + $value->amount;
+                }else if($value->bill_sundry_type=="subtractive"){
+                $tot_sale_return_amt_purchase = $tot_sale_return_amt_purchase - $value->amount;
+                }
+            }
+        }
         //Sale Return
         $tot_sale_return_amt = DB::table('sales_returns')
                                     ->join('sale_return_descriptions','sales_returns.id','=','sale_return_descriptions.sale_return_id')
-                                    ->where(['sales_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
+                                    ->where(['sales_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE'])
                                     ->whereBetween('date', [$from_date, $to_date])
                                     ->get()
                                     ->sum("amount");
         $sale_return_sundry = DB::table('sales_returns')
                                     ->join('sale_return_sundries','sales_returns.id','=','sale_return_sundries.sale_return_id')
                                     ->join('bill_sundrys','sale_return_sundries.bill_sundry','=','bill_sundrys.id')
-                                    ->where(['sales_returns.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
+                                    ->where(['sales_returns.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes','voucher_type'=>'SALE'])
                                     ->whereBetween('date', [$from_date, $to_date])
                                     ->select('bill_sundry_type','amount')
                                     ->get();
@@ -309,6 +332,29 @@ class CommonHelper
                     $tot_sale_return_amt = $tot_sale_return_amt + $value->amount;
                 }else if($value->bill_sundry_type=="subtractive"){
                     $tot_sale_return_amt = $tot_sale_return_amt - $value->amount;
+                }
+            }
+        }
+        //Purchase Return With Sale
+        $tot_purchase_return_amt_sale = DB::table('purchase_returns')
+            ->join('purchase_return_descriptions','purchase_returns.id','=','purchase_return_descriptions.purchase_return_id')
+            ->where(['purchase_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE'])
+            ->whereBetween('date', [$from_date, $to_date])
+            ->get()
+            ->sum("amount");
+        $purchase_return_sundry_sale = DB::table('purchase_returns')
+            ->join('purchase_return_sundries','purchase_returns.id','=','purchase_return_sundries.purchase_return_id')
+            ->join('bill_sundrys','purchase_return_sundries.bill_sundry','=','bill_sundrys.id')
+            ->where(['purchase_returns.delete' => '0', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE','adjust_purchase_amt'=>'Yes'])
+            ->whereBetween('date', [$from_date, $to_date])
+            ->select('bill_sundry_type','amount')
+            ->get();
+        if(count($purchase_return_sundry_sale)>0){
+            foreach ($purchase_return_sundry_sale as $key => $value) {
+                if($value->bill_sundry_type=="additive"){
+                $tot_purchase_return_amt_sale = $tot_purchase_return_amt_sale + $value->amount;
+                }else if($value->bill_sundry_type=="subtractive"){
+                $tot_purchase_return_amt_sale = $tot_purchase_return_amt_sale - $value->amount;
                 }
             }
         }
@@ -417,8 +463,8 @@ class CommonHelper
                   ->where('status','1')
                   ->where('financial_year',$financial_year)
                   ->sum('debit');
-        $total_net_sale = $stock_in_hand + $tot_sale_amt - $tot_sale_return_amt + $direct_income - $debit_direct_income + $indirect_income - $debit_indirect_income;
-        $total_net_purchase = $opening_stock + $tot_purchase_amt - $tot_purchase_return_amt + $direct_expenses - $direct_expenses_credit + $indirect_expenses - $indirect_expenses_credit;
+        $total_net_sale = $stock_in_hand + $tot_sale_amt - $tot_sale_return_amt+ $tot_purchase_return_amt_sale + $direct_income - $debit_direct_income + $indirect_income - $debit_indirect_income;
+        $total_net_purchase = $opening_stock + $tot_purchase_amt - $tot_purchase_return_amt + $tot_sale_return_amt_purchase + $direct_expenses - $direct_expenses_credit + $indirect_expenses - $indirect_expenses_credit;
         $profitloss = $total_net_purchase - $total_net_sale;
         $profitloss = round($profitloss,2);
         return $profitloss;

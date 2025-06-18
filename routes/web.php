@@ -177,7 +177,7 @@ Route::get('account-group-import-view', [AccountGroupsController::class, 'accoun
 Route::post('account-group-import-process', [AccountGroupsController::class, 'accountGroupImportProcess'])->name('account-group-import-process');
 
 Route::Resource('sale-return', SalesReturnController::class);
-Route::get('sale-return-invoice/{id}', [SalesReturnController::class, 'saleReturnInvoice']);
+Route::get('sale-return-invoice/{id:?}', [SalesReturnController::class, 'saleReturnInvoice'])->name('sale-return-invoice');
 Route::get('sale-return-without-item-invoice/{id}', [SalesReturnController::class, 'saleReturnWithoutItemInvoice']);
 Route::get('sale-return-without-gst-invoice/{id}', [SalesReturnController::class, 'saleReturnWithoutGstInvoice']);
 Route::get('sale-return-edit/{id}', [SalesReturnController::class, 'edit']);
@@ -191,7 +191,7 @@ Route::post('cancel-ewaybill-sale-return', [SalesReturnController::class, 'cance
 Route::Resource('purchase-return', PurchaseReturnController::class);
 Route::post('purchase-return-update', [PurchaseReturnController::class, 'update'])->name('purchase-return-update');
 Route::post('purchase-return-delete', [PurchaseReturnController::class, 'delete'])->name('purchase-return.delete');
-Route::get('purchase-return-invoice/{id}', [PurchaseReturnController::class, 'purchaseReturnInvoice']);
+Route::get('purchase-return-invoice/{id:?}', [PurchaseReturnController::class, 'purchaseReturnInvoice'])->name('purchase-return-invoice');
 Route::get('purchase-return-without-item-invoice/{id}', [PurchaseReturnController::class, 'purchaseReturnWithoutItemInvoice']);
 Route::get('purchase-return-without-gst-invoice/{id}', [PurchaseReturnController::class, 'purchaseReturnWithoutGstInvoice']);
 Route::get('purchase-return-edit/{id}', [PurchaseReturnController::class, 'edit']);

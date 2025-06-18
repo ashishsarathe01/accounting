@@ -90,11 +90,11 @@ input[type=number]::-webkit-outer-spin-button {
                            <p class="d-flex m-0">Purchase
                               <span class="ms-auto">
                                  @php
-                                    echo formatIndianNumber($data['tot_purchase_amt'],2);
+                                    echo formatIndianNumber($data['tot_purchase_amt']-$data['tot_purchase_return_amt']+$data['tot_sale_return_amt_purchase'],2);
                                  @endphp
                               </span>
                            </p>
-                           <p class="d-flex m-0 py-12">
+                           {{-- <p class="d-flex m-0 py-12">
                               Purchase Return
                               <span class="ms-auto">
                                  @php
@@ -105,12 +105,12 @@ input[type=number]::-webkit-outer-spin-button {
                            <p class="d-flex m-0 py-12 align-items-center">
                               Net Purchase
                               <span class="ms-auto h-1-divider">----------</span>
-                           </p>
+                           </p> --}}
                            <p class="d-flex m-0 ">
                               <span class="ms-auto">
                                  @php
-                                    $total_net_purchase = $data['tot_purchase_amt'] - $data['tot_purchase_return_amt'];
-                                    echo formatIndianNumber(round($total_net_purchase,2));
+                                    //$total_net_purchase = $data['tot_purchase_amt'] - $data['tot_purchase_return_amt']+$data['tot_sale_return_amt_purchase'];
+                                    //echo formatIndianNumber(round($total_net_purchase,2));
                                  @endphp
                               </span>
                            </p>
@@ -129,8 +129,8 @@ input[type=number]::-webkit-outer-spin-button {
                      </div>
                      <?php
                      $gross_profit = 0;$gross_loss = 0;
-                     $total_net_sale = $data['closing_stock'] + $data['tot_sale_amt'] - $data['tot_sale_return_amt'] + $data['direct_income']  - $debit_direct_income;
-                     $total_net_purchase = $data['opening_stock'] + $data['tot_purchase_amt'] - $data['tot_purchase_return_amt'] + $data['direct_expenses'] - $direct_expenses_credit;
+                     $total_net_sale = $data['closing_stock'] + $data['tot_sale_amt'] - $data['tot_sale_return_amt'] + $data['tot_purchase_return_amt_sale'] + $data['direct_income']  - $debit_direct_income;
+                     $total_net_purchase = $data['opening_stock'] + $data['tot_purchase_amt'] - $data['tot_purchase_return_amt'] + $data['tot_sale_return_amt_purchase'] + $data['direct_expenses'] - $direct_expenses_credit;
                      $balance = $total_net_purchase - $total_net_sale;
                      if($balance < 0) {
                         $gross_profit = str_replace("-","",$balance);
@@ -312,11 +312,11 @@ input[type=number]::-webkit-outer-spin-button {
                            Sale
                            <span class="ms-auto">
                            @php
-                              echo formatIndianNumber(round($data['tot_sale_amt'], 2));
+                              echo formatIndianNumber(round($data['tot_sale_amt'] - $data['tot_sale_return_amt']+ $data['tot_purchase_return_amt_sale'], 2));
                            @endphp
                            </span>
                            </p>                        
-                           <p class="d-flex m-0 py-12">Sale Return
+                           {{-- <p class="d-flex m-0 py-12">Sale Return
                               <span class="ms-auto">
                                  @php
                                     echo formatIndianNumber(round($data['tot_sale_return_amt'], 2));
@@ -326,8 +326,8 @@ input[type=number]::-webkit-outer-spin-button {
                            <p class="d-flex m-0 py-12 align-items-center">
                               Net Sale
                               <span class="ms-auto h-1-divider">----------</span>
-                           </p>
-                           <p class="d-flex m-0 ">
+                           </p> --}}
+                           {{-- <p class="d-flex m-0 ">
                               <span class="ms-auto">
                                  @php
                                     $total_net_sale = $data['tot_sale_amt'] - $data['tot_sale_return_amt'];
@@ -335,7 +335,7 @@ input[type=number]::-webkit-outer-spin-button {
                                  @endphp
                                  
                               </span>
-                           </p>
+                           </p> --}}
                         </a>
                      </div>
                      <div class="col-md-12 fw-500 font-14 d-flex px-3 py-12 border-bottom-divider">

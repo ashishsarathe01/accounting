@@ -17,24 +17,7 @@
                   {{ session('success') }}
                </div>
             @endif
-            <div class="d-xxl-flex justify-content-between py-4 px-2 align-items-center">
-               <nav aria-label="breadcrumb meri-breadcrumb ">
-                  <ol class="breadcrumb meri-breadcrumb m-0  ">
-                     <li class="breadcrumb-item">
-                        <a class="font-12 text-body text-decoration-none" href="#">Dashboard</a>
-                     </li>
-                     <li class="breadcrumb-item p-0">
-                        <a class="fw-bold font-heading font-12  text-decoration-none" href="{{url('profitloss-filter')}}?financial_year={{$selected_year}}&from_date={{$from_date}}&to_date={{$to_date}}">Profit & Loss</a>
-                     </li>
-                     <!-- <li class="breadcrumb-item p-0">
-                        <a class="fw-bold font-heading font-12  text-decoration-none" href="{{url('purchase-by-month/')}}/{{$selected_year}}">Purchase By Month</a>
-                     </li> -->
-                     <li class="breadcrumb-item p-0">
-                        <a class="fw-bold font-heading font-12 text-decoration-none" href="#">Purchase Detail</a>
-                     </li>
-                  </ol>
-               </nav>
-            </div>
+            
             <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
                <h5 class="master-table-title m-0 py-2">Purchase Detail</h5>
                <p><input type="checkbox" class="custom-checkbox-input detailed"> Detailed</p>
@@ -55,44 +38,89 @@
                      </tr>                     
                   </thead>
                   <tbody>
-                     @php $net_total = 0;$sundry_sum_arr = [];$grand_total = 0;$purchase_total = 0; @endphp
-                     @foreach($purchase as $key => $value)  
-
-                        <tr class="view_invoice" data-id="{{$value['id']}}" style="cursor:pointer;">
-                           <td style="text-align:center;">{{date('d-m-Y',strtotime($value['date']))}}</td>
-                           <td style="text-align:left;">{{$value['account']['account_name']}}</td>
-                           <td style="text-align:right;">{{$value['voucher_no']}}</td>
-                           
-                           @php $adjust_sundry_amount = 0; @endphp
-                           @foreach($value['purchaseSundry'] as $v1)
-                              @if($v1->adjust_sale_amt=="Yes")
-                                 @if($v1->bill_sundry_type=="subtractive")
-                                    @php $adjust_sundry_amount = $adjust_sundry_amount - $v1->amount; @endphp
-                                 @elseif($v1->bill_sundry_type=="additive")
-                                    @php $adjust_sundry_amount = $adjust_sundry_amount + $v1->amount; @endphp
-                                 @endif
+                     @php $net_total = 0;$sundry_sum_arr = [];$grand_total = 0;$purchase_total = 0; $merge_arr = [];@endphp
+                     @foreach($purchase as $key => $value)
+                        @php $adjust_sundry_amount = 0; @endphp
+                        @foreach($value['purchaseSundry'] as $v1)
+                           @if($v1->adjust_sale_amt=="Yes")
+                              @if($v1->bill_sundry_type=="subtractive")
+                                 @php $adjust_sundry_amount = $adjust_sundry_amount - $v1->amount; @endphp
+                              @elseif($v1->bill_sundry_type=="additive")
+                                 @php $adjust_sundry_amount = $adjust_sundry_amount + $v1->amount; @endphp
                               @endif
-                           @endforeach
-                           <td style="text-align:right;">
-                              {{number_format($value['purchase_description_sum_amount'] + $adjust_sundry_amount,2)}}
+                           @endif
+                        @endforeach
+                        @php 
+                           array_push($merge_arr,array('id'=>$value['id'],'date'=>$value['date'],'account_name'=>$value['account']['account_name'],'voucher_no'=>$value['voucher_no'],"net_total"=>$value['purchase_description_sum_amount'] + $adjust_sundry_amount,'purchase_total'=>$value['purchase_description_sum_amount'],'sundry'=>$value['purchaseSundry']->toArray(),'grand_total'=>$value['total'],'voucher_type'=>'','type'=>'purchase'));
+                        @endphp
+                     @endforeach  
+                     @foreach($purchase_return as $key => $value)                           
+                        @php $adjust_sundry_amount = 0; @endphp
+                        @foreach($value['purchaseReturnSundry'] as $v1)
+                           @if($v1->adjust_sale_amt=="Yes")
+                              @if($v1->bill_sundry_type=="subtractive")
+                                 @php $adjust_sundry_amount = $adjust_sundry_amount - $v1->amount; @endphp
+                              @elseif($v1->bill_sundry_type=="additive")
+                                 @php $adjust_sundry_amount = $adjust_sundry_amount + $v1->amount; @endphp
+                              @endif
+                           @endif
+                        @endforeach
+                        @php 
+                           array_push($merge_arr,array('id'=>$value['id'],'date'=>$value['date'],'account_name'=>$value['account']['account_name'],'voucher_no'=>$value['sr_prefix'],"net_total"=>$value['purchase_return_description_sum_amount'] + $adjust_sundry_amount,'purchase_total'=>$value['purchase_retuen_description_sum_amount'],'sundry'=>$value['purchaseReturnSundry']->toArray(),'grand_total'=>$value['total'],'voucher_type'=>$value['voucher_type'],'type'=>'purchase_return'));
+                        @endphp
+                     @endforeach
+                     @foreach($sale_return as $key => $value)                           
+                        @php $adjust_sundry_amount = 0; @endphp
+                        @foreach($value['saleReturnSundry'] as $v1)
+                           @if($v1->adjust_sale_amt=="Yes")
+                              @if($v1->bill_sundry_type=="subtractive")
+                                 @php $adjust_sundry_amount = $adjust_sundry_amount - $v1->amount; @endphp
+                              @elseif($v1->bill_sundry_type=="additive")
+                                 @php $adjust_sundry_amount = $adjust_sundry_amount + $v1->amount; @endphp
+                              @endif
+                           @endif
+                        @endforeach
+                        @php 
+                           array_push($merge_arr,array('id'=>$value['id'],'date'=>$value['date'],'account_name'=>$value['account']['account_name'],'voucher_no'=>$value['sr_prefix'],"net_total"=>$value['sale_return_descriptions_sum_amount'] + $adjust_sundry_amount,'purchase_total'=>$value['sale_return_descriptions_sum_amount'],'sundry'=>$value['saleReturnSundry']->toArray(),'grand_total'=>$value['total'],'voucher_type'=>$value['voucher_type'],'type'=>'sale_return'));
+                        @endphp
+                     @endforeach                     
+                     @php 
+                        usort($merge_arr, function ($a, $b) {
+                           return strtotime($a['date']) <=> strtotime($b['date']);
+                        });
+                     @endphp
+                     @foreach($merge_arr as $key => $value)
+                        <tr class="view_invoice" data-id="{{$value['id']}}" data-type="{{$value['type']}}" style="cursor:pointer;">
+                           <td style="text-align:center;">{{date('d-m-Y',strtotime($value['date']))}}</td>
+                           <td style="text-align:left;">{{$value['account_name']}}</td>
+                           <td style="text-align:right;">{{$value['voucher_no']}}</td>
+                          <td style="text-align:right;">
+                              {{number_format($value['net_total'],2)}}
                               @php 
-                                 $net_total = $net_total + $value['purchase_description_sum_amount'] + $adjust_sundry_amount; 
+                                 if($value['type']=="purchase_return"){
+                                    $net_total = $net_total - $value['net_total']; 
+                                 }else{
+                                    $net_total = $net_total + $value['net_total']; 
+                                 }                                 
                               @endphp
                            </td>
                            <td class="td_detail" style="text-align:right;display: none;">
-                              {{number_format($value['purchase_description_sum_amount'],2)}}
+                              {{number_format($value['purchase_total'],2)}}
                               @php 
-                                 $purchase_total = $purchase_total + $value['purchase_description_sum_amount']; 
+                                 if($value['type']=="purchase_return"){
+                                    $purchase_total = $purchase_total - $value['purchase_total'];  
+                                 }else{
+                                    $purchase_total = $purchase_total + $value['purchase_total'];  
+                                 }
                               @endphp
                            </td>
-
                            @foreach($bill_sundray as $bsundry)
                               <td class="td_detail" style="text-align:right;display: none;">
                                  @php $freight = '0.00'; @endphp
-                                 @foreach($value['purchaseSundry'] as $v1)
-                                    @if($v1->bill_sundry==$bsundry->id)
+                                 @foreach($value['sundry'] as $v1)
+                                    @if($v1['bill_sundry']==$bsundry->id)
                                        @php 
-                                          $freight = $v1->amount;
+                                          $freight = $v1['amount'];
                                        @endphp
                                     @endif
                                  @endforeach
@@ -105,15 +133,20 @@
                                     }
                                  @endphp
                               </td>
-                           @endforeach
-                           
+                           @endforeach                           
                            <td class="td_detail" style="text-align:right;display: none;">
-                              {{number_format($value['total'],2)}}
-                              @php $grand_total = $grand_total + $value['total']; @endphp
+                              {{number_format($value['grand_total'],2)}}
+                              @php 
+                                 if($value['type']=="purchase_return"){
+                                    $grand_total = $grand_total - $value['grand_total']; 
+                                 }else{
+                                    $grand_total = $grand_total + $value['grand_total'];  
+                                 }
+                              @endphp
                            </td>                           
                         </tr>
-                         @php $balance = $value['balance']; @endphp
-                     @endforeach  
+                     @endforeach
+
                      <tr>
                         <th style="text-align:center;"></th>
                         <th style="text-align:center;"></th>
@@ -150,7 +183,14 @@
          }
       });
       $(".view_invoice").click(function(){
-         window.location = "{{route('purchase-invoice')}}/"+$(this).attr('data-id');
+         if($(this).attr('data-type')=="purchase"){
+            window.location = "{{route('purchase-invoice')}}/"+$(this).attr('data-id');
+         }else if($(this).attr('data-type')=="purchase_return"){
+            window.location = "{{route('purchase-return-invoice')}}/"+$(this).attr('data-id');
+         }else if($(this).attr('data-type')=="sale_return"){
+            window.location = "{{route('sale-return-invoice')}}/"+$(this).attr('data-id');
+         }
+         
       });
    })
 </script>
