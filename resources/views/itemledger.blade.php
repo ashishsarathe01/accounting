@@ -79,7 +79,7 @@
                         @if(isset($item_id) && $item_id=='all')
                            <th class="w-min-120 border-none bg-light-pink text-body">Group</th>
                            <th class="w-min-120 border-none bg-light-pink text-body">Type</th>
-                           <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Qty(Kg)</th>
+                           <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Qty</th>
                            <th class="w-min-120 border-none bg-light-pink text-body">Unit</th>
                            <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Amount</th>
                         @else
@@ -87,9 +87,9 @@
                            <th class="w-min-120 border-none bg-light-pink text-body">Type</th>
                            <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: center;">Vch/Bill No.</th>
                            <th class="w-min-120 border-none bg-light-pink text-body">Particulars</th>
-                           <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Qty. In (Kg)</th>
-                           <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Qty. Out (Kg)</th>
-                           <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Balance(Kg)</th>
+                           <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Qty. In</th>
+                           <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Qty. Out</th>
+                           <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Balance</th>
                         @endif                        
                      </tr>
                   </thead>

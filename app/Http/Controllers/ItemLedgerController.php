@@ -149,7 +149,7 @@ class ItemLedgerController extends Controller
          foreach ($series_list as $s1 => $s) {           
             $item_ledger = ItemLedger::join('manage_items', 'item_ledger.item_id', '=', 'manage_items.id')
                                        ->join('units', 'manage_items.u_name', '=', 'units.id')
-                                       ->select('item_id','in_weight as average_weight','txn_date as stock_date','total_price as amount','manage_items.name as item_name','units.name as unit_name')
+                                       ->select('item_id','in_weight as average_weight','txn_date as stock_date','total_price as amount','manage_items.name as item_name','units.s_name as unit_name')
                               ->where('item_ledger.company_id',Session::get('user_company_id'))
                               ->where('source','-1')
                               ->where('series_no',$s->series)
@@ -173,7 +173,7 @@ class ItemLedgerController extends Controller
                   'item_averages.amount',
                   'item_averages.stock_date',
                   'manage_items.name as item_name',
-                  'units.name as unit_name'
+                  'units.s_name as unit_name'
                   )
                   ->orderBy('stock_date', 'desc')
                   ->get();
