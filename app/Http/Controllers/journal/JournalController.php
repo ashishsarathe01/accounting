@@ -28,11 +28,14 @@ class JournalController extends Controller
 public function index(Request $request)
 {
     $input = $request->all();
-
     $from_date = null;
     $to_date = null;
 
-    // If user has selected a date range
+    // Default: first of current month to today
+    $default_from = "01-" . date('m-Y');
+    $default_to = date('d-m-Y');
+
+    // Check if user submitted a date range
     if (!empty($input['from_date']) && !empty($input['to_date'])) {
         $from_date = date('d-m-Y', strtotime($input['from_date']));
         $to_date = date('d-m-Y', strtotime($input['to_date']));
@@ -44,7 +47,7 @@ public function index(Request $request)
 
     Session::put('redirect_url', '');
 
-    // Financial year breakdown
+    // Financial year month array
     $financial_year = Session::get('default_fy');
     $y = explode("-", $financial_year);
     $from = DateTime::createFromFormat('y', $y[0])->format('Y');
@@ -60,34 +63,38 @@ public function index(Request $request)
 
     // Base query
     $query = DB::table('journal_details')
-        ->select(
-            'journals.series_no',
-            'journals.id as jon_id',
-            'journals.date',
-            'accounts.account_name as acc_name',
-            'journal_details.*'
-        )
+        ->select('journals.series_no', 'journals.id as jon_id', 'journals.date', 'accounts.account_name as acc_name', 'journal_details.*')
         ->join('journals', 'journal_details.journal_id', '=', 'journals.id')
         ->join('accounts', 'journal_details.account_name', '=', 'accounts.id')
         ->where('journal_details.company_id', $com_id)
         ->where('journals.delete', '0');
 
-    // Date filter if available
+    // Apply date filter if set
     if ($from_date && $to_date) {
         $query->whereRaw("
-            STR_TO_DATE(journals.date,'%Y-%m-%d') >= STR_TO_DATE('" . date('Y-m-d', strtotime($from_date)) . "','%Y-%m-%d')
-            AND STR_TO_DATE(journals.date,'%Y-%m-%d') <= STR_TO_DATE('" . date('Y-m-d', strtotime($to_date)) . "','%Y-%m-%d')
-        ");
-        $query->orderBy('journal_details.journal_id', 'asc')
-              ->orderBy('journals.date', 'asc');
+            STR_TO_DATE(journals.date,'%Y-%m-%d') >= STR_TO_DATE(?, '%Y-%m-%d')
+            AND STR_TO_DATE(journals.date,'%Y-%m-%d') <= STR_TO_DATE(?, '%Y-%m-%d')
+        ", [date('Y-m-d', strtotime($from_date)), date('Y-m-d', strtotime($to_date))]);
     } else {
-        // Show last 10 if no date range
-        $query->orderBy(DB::raw("cast(journals.voucher_no as SIGNED)"), 'desc')
-              ->orderBy('journals.date', 'desc')
-              ->limit(10);
+        // Show last 10 distinct journal entries
+        $last10Ids = DB::table('journals')
+            ->where('company_id', $com_id)
+            ->where('delete', '0')
+            ->orderByRaw("STR_TO_DATE(date,'%Y-%m-%d') DESC")
+            ->limit(10)
+            ->pluck('id');
+
+        $query->whereIn('journal_details.journal_id', $last10Ids);
     }
 
-    $journal = $query->get()->reverse()->values();
+    $journal = $query
+        ->orderBy('journal_details.journal_id', 'asc')
+        ->orderBy('journals.date', 'asc')
+        ->get();
+
+    // Fallback values if not set
+    $from_date = $from_date ;
+    $to_date = $to_date ;
 
     return view('journal/journal')
         ->with('journal', $journal)

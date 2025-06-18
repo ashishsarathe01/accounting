@@ -722,6 +722,7 @@
 <script>
    var bill_sundry_array = @json($billsundry);//New Changes By Ashish
    var mat_series = "<?php echo count($GstSettings);?>";
+   console.log(mat_series);
    var enter_gst_status = 0;
    var auto_gst_calculation = 0;
    var customer_gstin = "";
