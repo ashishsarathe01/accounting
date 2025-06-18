@@ -59,11 +59,7 @@
             foreach ($party_list as $value) {
                $credit_html.="<option value='".$value->id."'>".$value->account_name."</option>";
             } 
-            $debit_html = "<option value=''>Select</option>";
-            
-            foreach ($debit_accounts as $value) {
-               $debit_html.="<option value='".$value->id."'>".$value->account_name."</option>";
-            }
+           
             ?>
             <form id="frm" class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('receipt.store') }}">
                @csrf
@@ -154,11 +150,19 @@
                            <td class="">
                               <select class="form-select" id="account_2" name="account_name[]" required>
                                  <option value="">Select</option>
-                                 <?php
-                                 foreach ($debit_accounts as $value) { ?>
-                                    <option value="<?php echo $value->id; ?>"><?php echo $value->account_name; ?></option>
-                                    <?php 
-                                 } ?>
+        <!-- Cash Accounts -->
+        @foreach($debit_cash_accounts as $cash)
+            <option value="{{ $cash->id }}" class="account-option mode-cash" >
+                {{ $cash->account_name }}
+            </option>
+        @endforeach
+
+        <!-- Bank Accounts -->
+        @foreach($debit_bank_accounts as $bank)
+            <option value="{{ $bank->id }}" class="account-option mode-bank" >
+                {{ $bank->account_name }}
+            </option>
+        @endforeach
                               </select>
                            </td>
                            <td class="">
@@ -335,7 +339,7 @@
          if(amount>0){
             $("#debit_"+id).val(amount);
          }
-         $("#account_"+id).html("<?php echo $debit_html;?>");
+        
       }
       debitTotal();
       creditTotal();
@@ -471,5 +475,58 @@
       debitTotal();
       creditTotal();
    });
+
+    $(document).ready(function () {
+
+    // Function to show/hide account options based on mode
+    function updateAccountOptions(selectedMode) {
+        // Hide all account options first
+        $('.account-option').hide();
+
+        if (selectedMode === "1") { // CASH
+            $('.mode-cash').show();
+        } else if (selectedMode === "0" || selectedMode === "2") { // BANK or CHEQUE
+            $('.mode-bank').show();
+        }
+
+        // Reset all account dropdowns
+        $('.account-dropdown').val('').trigger('change');
+    }
+
+    // On change of Mode dropdown
+    $('#mode').change(function () {
+        var modeValue = $(this).val();
+        console.log("Mode dropdown changed to:", modeValue);
+        updateAccountOptions(modeValue);
+    });
+
+});
+
+$(document).ready(function () {
+    let currentMode = $('#mode').val();
+
+    function isOptionAllowed(data) {
+        if (!data.id) return true; // For "Select" placeholder
+        if (currentMode === "1") return $(data.element).hasClass('mode-cash');
+        if (currentMode === "0" || currentMode === "2") return $(data.element).hasClass('mode-bank');
+        return false;
+    }
+
+    $('.account-dropdown').select2({
+        placeholder: "Select",
+        templateResult: function (data) {
+            return isOptionAllowed(data) ? data.text : null;
+        },
+        templateSelection: function (data) {
+            return isOptionAllowed(data) ? data.text : '';
+        }
+    });
+
+    $('#mode').on('change', function () {
+        currentMode = $(this).val();
+        $('.account-dropdown').val('').trigger('change.select2'); // Clear selection
+        $('.account-dropdown').select2('close'); // Force close dropdown to refresh filtered list
+    });
+});
 </script>
 @endsection

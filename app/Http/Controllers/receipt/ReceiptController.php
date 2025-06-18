@@ -10,6 +10,7 @@ use App\Models\Accounts;
 use App\Models\Receipt;
 use App\Models\ReceiptDetails;
 use App\Models\AccountLedger;
+use App\Models\AccountGroups;
 use App\Models\Companies;
 use App\Models\GstBranch;
 use DB;
@@ -114,13 +115,39 @@ class ReceiptController extends Controller
                               ->whereIn('company_id', [Session::get('user_company_id'),0])                              
                               ->orderBy('account_name')
                               ->get();
-      $debit_accounts = Accounts::where('delete', '=', '0')
+
+                               $sub_group_ids_bank = AccountGroups::where('heading', 7)
+                                                                  ->where('heading_type', 'group')
+                                                                  ->pluck('id')->toArray();
+
+                     // Step 2: Combine group 8 and its sub-groups
+                     $group_ids_bank = array_merge([7], $sub_group_ids_bank);
+
+      $debit_bank_accounts = Accounts::where('delete', '=', '0')
                               ->where('status', '=', '1')
                               ->where('under_group_type','group')
                               ->whereIn('company_id', [Session::get('user_company_id'),0])
-                              ->whereIn('under_group', [7,8])//BANK ACCOUNTS,CASH-IN-HAND
+                              ->whereIn('under_group', $group_ids_bank)//BANK ACCOUNTS,CASH-IN-HAND
                               ->orderBy('account_name')
                               ->get();
+
+        // Step 1: Get sub-group IDs where parent is group 8
+                     $sub_group_ids = AccountGroups::where('heading', 8)
+                                                   ->where('heading_type', 'group')
+                                                   ->pluck('id')->toArray();
+
+                     // Step 2: Combine group 8 and its sub-groups
+                     $group_ids = array_merge([8], $sub_group_ids);
+
+                     $debit_cash_accounts = Accounts::where('delete', '=', '0')
+                              ->where('status', '=', '1')
+                              ->where('under_group_type','group')
+                              ->whereIn('company_id', [Session::get('user_company_id'),0])
+                              ->whereIn('under_group', $group_ids)//BANK ACCOUNTS,CASH-IN-HAND
+                              ->orderBy('account_name')
+                              ->get();
+
+
       $bill_date = Receipt::where('company_id',Session::get('user_company_id'))
                            ->where('delete','0')
                            ->where('financial_year',$financial_year)
@@ -173,7 +200,7 @@ class ReceiptController extends Controller
       // if(!empty($GstSettings->series)) {
       //    $mat_series[] = array("branch_series" => $GstSettings->series);
       // }
-      return view('receipt/addReceipt')->with('party_list', $party_list)->with('debit_accounts', $debit_accounts)->with('date', $bill_date)->with('mat_series', $mat_series);
+      return view('receipt/addReceipt')->with('party_list', $party_list)->with('debit_bank_accounts', $debit_bank_accounts)->with('debit_cash_accounts', $debit_cash_accounts)->with('date', $bill_date)->with('mat_series', $mat_series);
    }
     /**
      * Store a newly created resource in storage.
@@ -255,13 +282,37 @@ class ReceiptController extends Controller
                               ->whereIn('company_id', [Session::get('user_company_id'),0])                              
                               ->orderBy('account_name')
                               ->get();
-      $debit_accounts = Accounts::where('delete', '=', '0')
+        $sub_group_ids_bank = AccountGroups::where('heading', 7)
+                                                                  ->where('heading_type', 'group')
+                                                                  ->pluck('id')->toArray();
+
+                     // Step 2: Combine group 8 and its sub-groups
+                     $group_ids_bank = array_merge([7], $sub_group_ids_bank);
+
+      $debit_bank_accounts = Accounts::where('delete', '=', '0')
                               ->where('status', '=', '1')
                               ->where('under_group_type','group')
                               ->whereIn('company_id', [Session::get('user_company_id'),0])
-                              ->whereIn('under_group', [7,8])//BANK ACCOUNTS,CASH-IN-HAND
+                              ->whereIn('under_group', $group_ids_bank)//BANK ACCOUNTS,CASH-IN-HAND
                               ->orderBy('account_name')
                               ->get();
+
+        // Step 1: Get sub-group IDs where parent is group 8
+                     $sub_group_ids = AccountGroups::where('heading', 8)
+                                                   ->where('heading_type', 'group')
+                                                   ->pluck('id')->toArray();
+
+                     // Step 2: Combine group 8 and its sub-groups
+                     $group_ids = array_merge([8], $sub_group_ids);
+
+                     $debit_cash_accounts = Accounts::where('delete', '=', '0')
+                              ->where('status', '=', '1')
+                              ->where('under_group_type','group')
+                              ->whereIn('company_id', [Session::get('user_company_id'),0])
+                              ->whereIn('under_group', $group_ids)//BANK ACCOUNTS,CASH-IN-HAND
+                              ->orderBy('account_name')
+                              ->get();
+
       $companyData = Companies::where('id', Session::get('user_company_id'))->first();
       $GstSettings = (object)NULL;
       $GstSettings->series = array();
@@ -297,7 +348,7 @@ class ReceiptController extends Controller
       // if(!empty($GstSettings->series)) {
       //    $mat_series[] = array("branch_series" => $GstSettings->series);
       // }
-      return view('receipt/editReceipt')->with('receipt', $receipt)->with('party_list', $party_list)->with('receipt_detail', $receipt_detail)->with('debit_accounts', $debit_accounts)->with('mat_series', $mat_series);
+      return view('receipt/editReceipt')->with('receipt', $receipt)->with('party_list', $party_list)->with('receipt_detail', $receipt_detail)->with('debit_bank_accounts', $debit_bank_accounts)->with('debit_cash_accounts', $debit_cash_accounts)->with('mat_series', $mat_series);
    }
 
     /**
