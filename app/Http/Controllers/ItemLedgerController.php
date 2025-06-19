@@ -420,5 +420,93 @@ class ItemLedgerController extends Controller
       );
       return json_encode($response);
    }
+   public function itemLedgerAverageByGodown(Request $request){
+      $item = ManageItems::find($request->items_id);
+      $companyData = Companies::where('id', Session::get('user_company_id'))->first();      
+      if($companyData->gst_config_type == "single_gst"){
+         $series = DB::table('gst_settings')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])
+                           ->get();
+         $branch = GstBranch::select('id','branch_series as series')
+                           ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_id'=>$series[0]->id])
+                           ->get();
+         if(count($branch)>0){
+            $series = $series->merge($branch);
+         }         
+      }else if($companyData->gst_config_type == "multiple_gst"){
+         $series = DB::table('gst_settings_multiple')
+                           ->select('id','series')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst"])
+                           ->get();
+         foreach ($series as $key => $value) {
+            $branch = GstBranch::select('id','branch_series as series')
+                        ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_multiple_id'=>$value->id])
+                        ->get();
+            if(count($branch)>0){
+               $series = $series->merge($branch);
+            }
+         }
+      }
+      $allArrays = [];
+      foreach ($series as $s1 => $s) {           
+         $item_ledger = ItemLedger::join('manage_items', 'item_ledger.item_id', '=', 'manage_items.id')
+                                    ->join('units', 'manage_items.u_name', '=', 'units.id')
+                                    ->select('item_id','in_weight as average_weight','txn_date as stock_date','total_price as amount','manage_items.name as item_name','units.s_name as unit_name')
+                           ->where('item_ledger.company_id',Session::get('user_company_id'))
+                           ->where('source','-1')
+                           ->where('item_id',$request->items_id)
+                           ->where('series_no',$s->series)
+                           ->where('delete_status','0')
+                           ->get();
+         $sub = DB::table('item_averages')
+               ->select(DB::raw('MAX(id) as latest_id'))
+               ->where('stock_date', '<=', $request->to_date)
+               ->where('series_no',$s->series)
+               ->where('company_id',Session::get('user_company_id'))
+               ->where('item_id',$request->items_id)
+               ->pluck('latest_id');
+         $item1 = ItemAverage::join('manage_items', 'item_averages.item_id', '=', 'manage_items.id')
+               ->join('units', 'manage_items.u_name', '=', 'units.id')
+               ->whereIn('item_averages.id', $sub)
+               ->where('series_no',$s->series)
+               ->select(
+               'item_averages.item_id',
+               'item_averages.average_weight',
+               'item_averages.amount',
+               'item_averages.stock_date',
+               'manage_items.name as item_name',
+               'units.s_name as unit_name'
+               )
+               ->orderBy('stock_date', 'desc')
+               ->get();
+         foreach ($item_ledger as $key => $value) {  
+            if(count($item1)==0){
+               $item1->push($value);
+               continue;
+            }    
+            $exists = 0;  
+            $exists = $item1->contains(function ($row)use ($value,$item1) {
+               if ($row['item_id']==$value['item_id']) {
+                  return 1;
+               }               
+            });            
+            if ($exists==0) {
+               $item1->push($value);
+            }
+         } 
+         if(count($item1)>0){
+            $series[$s1]->weight = $item1[0]->average_weight;
+            $series[$s1]->amount = $item1[0]->amount;
+            $series[$s1]->unit = $item1[0]->unit_name;
+            $series[$s1]->price = round($item1[0]->amount/$item1[0]->average_weight,6);
+         }else{
+            $series[$s1]->weight = "";
+            $series[$s1]->amount = "";
+            $series[$s1]->unit = "";
+            $series[$s1]->price = "";
+         }
+      }
+      return view('item_average_by_godown',['item'=>$item,"series"=>$series]);
+   }
    
 }

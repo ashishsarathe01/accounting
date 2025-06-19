@@ -253,6 +253,7 @@ Route::Resource('payment', PaymentController::class);
    Route::post('itemledger-delete', [ItemLedgerController::class, 'delete'])->name('itemledger.delete');
    Route::get('itemledger-filter', [ItemLedgerController::class, 'filter'])->name('itemledger.filter');
    Route::get('item-ledger-average', [ItemLedgerController::class, 'itemLedgerAverage'])->name('item-ledger-average');
+   Route::get('item-ledger-average-by-godown', [ItemLedgerController::class, 'itemLedgerAverageByGodown'])->name('item-ledger-average-by-godown');
    Route::Resource('currentliabilities', CurrentLiabilitiesController::class);
    Route::post('currentliabilities-update', [CurrentLiabilitiesController::class, 'update'])->name('currentliabilities.update');
    Route::post('currentliabilities-delete', [CurrentLiabilitiesController::class, 'delete'])->name('currentliabilities.delete');

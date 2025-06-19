@@ -22,7 +22,6 @@
                <form class="" id="frm" method="GET" action="{{ route('itemledger.filter') }}">
                   @csrf
                   <div class="d-xxl-flex d-block  align-items-center">
-                    
                      <select class="form-select select2-single w-min-230 ms-xxl-2" aria-label="Default select example" id="items_id" name="items_id" required>
                         <option value="">Select Item</option>
                         <option value="all" <?php if(isset($item_id) && $item_id != '' && $item_id=='all'){ echo "selected";}?>>All Item</option>
@@ -97,13 +96,9 @@
                      <?php
                      $tot_blance = $opening;
                      $in = 0; $out = 0;setlocale(LC_MONETARY, 'en_IN');$qty = 0;
-                     
                      $tot_blance1 = $opening;
-                     
-                     
                      foreach($items as $value){
                         if(isset($item_id) && $item_id=='all'){
-                           
                            ?>
                            <tr class="font-14 font-heading bg-white redirect_average_page"  data-item_id="{{$value['item_id']}}" data-from_date="{{$fdate}}" data-to_date="{{$_GET['to_date']}}" style="cursor: pointer;">
                               <td class="w-min-120"><?php echo $value['item_name']; ?></td>
@@ -123,8 +118,7 @@
                            <?php
                            $qty = $qty + $value['average_weight'];
                            $tot_blance = $tot_blance + $value['amount'];
-                        }else{     
-
+                        }else{
                            $inWeight = isset($value['in_weight']) ? $value['in_weight'] : 0;
                            $outWeight = isset($value['out_weight']) ? $value['out_weight'] : 0;
                            $tot_blance1 += $inWeight - $outWeight;
@@ -295,7 +289,12 @@
       let item_id = $(this).attr('data-item_id');
       let from_date = $(this).attr('data-from_date');
       let to_date = $(this).attr('data-to_date');
-      window.location = "{{url('item-ledger-average')}}/?items_id="+item_id+"&from_date="+from_date+"&to_date="+to_date+"&series="+$("#selected_series").val();
+      if($("#selected_series").val()=="all"){
+         window.location = "{{url('item-ledger-average-by-godown')}}/?items_id="+item_id+"&from_date="+from_date+"&to_date="+to_date;
+      }else{
+         window.location = "{{url('item-ledger-average')}}/?items_id="+item_id+"&from_date="+from_date+"&to_date="+to_date+"&series="+$("#selected_series").val();
+      }
+      
    })
 </script>
 @endsection
