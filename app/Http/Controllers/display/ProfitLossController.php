@@ -770,7 +770,7 @@ class ProfitLossController extends Controller{
       }
       return  view('display/sale-by-month')->with('data',$data)->with('total_debit',number_format($total_debit,2))->with('total_credit',number_format($total_credit,2));
    }
-   public function saleByMonthDetail(Request $request,$financial_year,$from_date,$to_date){
+   public function saleByMonthDetail(Request $request,$financial_year,$from_date,$to_date,$search_type=null){
       //Sale Data
       $sale = Sales::with(['saleSundry','account' => function($q) {
                                  $q->select('id', 'account_name');
@@ -809,8 +809,12 @@ class ProfitLossController extends Controller{
                         ->whereBetween('purchase_returns.date', [$from_date, $to_date])
                         ->get();
       
-      $bill_sundray = BillSundrys::where('company_id',Session::get('user_company_id'))->orderBy('sequence')->get();
-      return view('display/sale-by-month-detail')->with('sale',$sale)->with('from_date',$from_date)->with('to_date',$to_date)->with('selected_year',$financial_year)->with('bill_sundray',$bill_sundray)->with('purchase_return',$purchase_return)->with('sale_return',$sale_return);
+      $bill_sundray = BillSundrys::where('company_id',Session::get('user_company_id'))
+                                       ->where('delete','0')
+                                       ->where('status','1')
+                                       ->orderBy('sequence')
+                                       ->get();
+      return view('display/sale-by-month-detail')->with('sale',$sale)->with('from_date',$from_date)->with('to_date',$to_date)->with('selected_year',$financial_year)->with('bill_sundray',$bill_sundray)->with('purchase_return',$purchase_return)->with('sale_return',$sale_return)->with("search_type",$search_type);
    }
    public function purchaseByMonth(Request $request,$financial_year){
       $y = explode("-",$financial_year);
@@ -854,7 +858,7 @@ class ProfitLossController extends Controller{
       }
       return  view('display/purchase_by_month')->with('data',$data)->with('total_debit',number_format($total_debit,2))->with('total_credit',number_format($total_credit,2));
    }
-   public function purchaseByMonthDetail(Request $request,$financial_year,$from_date,$to_date){     
+   public function purchaseByMonthDetail(Request $request,$financial_year,$from_date,$to_date,$search_type=null){     
       //Purchase Data
       $purchase = Purchase::with([
                            'purchaseSundry',
@@ -893,11 +897,13 @@ class ProfitLossController extends Controller{
                         ->whereBetween('sales_returns.date', [$from_date, $to_date])
                         ->get();
       $bill_sundray = BillSundrys::where('company_id',Session::get('user_company_id'))
+                                       ->where('delete','0')
+                                       ->where('status','1')
                                     ->orderBy('sequence')
                                     ->get();
      
         
-      return view('display/purchase_by_month_detail')->with('purchase',$purchase)->with('from_date',$from_date)->with('to_date',$to_date)->with('selected_year',$financial_year)->with('bill_sundray',$bill_sundray)->with('purchase_return',$purchase_return)->with('sale_return',$sale_return);
+      return view('display/purchase_by_month_detail')->with('purchase',$purchase)->with('from_date',$from_date)->with('to_date',$to_date)->with('selected_year',$financial_year)->with('bill_sundray',$bill_sundray)->with('purchase_return',$purchase_return)->with('sale_return',$sale_return)->with("search_type",$search_type);
    }
    public function accountBalanceByGroup(Request $request,$id,$financial_year,$from_date,$to_date){
       $type = 'debit';

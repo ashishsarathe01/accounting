@@ -1649,6 +1649,7 @@
       $(".type_div").hide();
       $(".voucher_no_div").show();
       $('#voucher_no').select2();
+      $(".other_invoice_div").hide();
       let nature = $("#nature").val();
       let type = $("#type").val();
       if(nature=="WITHOUT GST"){
@@ -1669,10 +1670,14 @@
          $(".with_gst_with_item_section").show();
          $(".narration_withgst").show();
          $(".item").select2();
+         if($("#voucher_no").val()=="OTHER"){
+            $(".other_invoice_div").show();
+         }
       }
       if((nature=="WITH GST" && type=="WITHOUT ITEM")){
          $(".with_gst_without_item_section").show();
          $(".item").select2();
+         
       }
    }
    $(".transport_info").click(function(){

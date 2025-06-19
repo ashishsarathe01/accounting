@@ -20,13 +20,31 @@
             
             <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
                <h5 class="master-table-title m-0 py-2">Purchase Detail</h5>
+               <div class="d-md-flex d-block">   
+                     <div class="calender-administrator my-2 my-md-0">
+                        <select class="form-select" id="search_type">
+                           <option value="">All</option>
+                           <option value="PURCHASE" @if($search_type=="PURCHASE") selected @endif>PURCHASE</option>
+                           <option value="DEBIT NOTE" @if($search_type=="DEBIT NOTE") selected @endif>DEBIT NOTE</option>
+                           <option value="CREDIT NOTE" @if($search_type=="CREDIT NOTE") selected @endif>CREDIT NOTE</option>
+                        </select>
+                     </div>               
+                     <div class="calender-administrator my-2 my-md-0">
+                        <input type="date" class="form-control calender-bg-icon calender-placeholder" placeholder="From date" required id="from_date" value="{{date('Y-m-d',strtotime($from_date))}}">
+                     </div>
+                     <div class="calender-administrator ms-md-4">
+                        <input type="date" class="form-control calender-bg-icon calender-placeholder" placeholder="To date" required id="to_date" value="{{date('Y-m-d',strtotime($to_date))}}">
+                     </div>
+                     <button type="button" class="btn btn-info searchByDate" style="margin-left: 5px;">Search</button>
+                  </div>
                <p><input type="checkbox" class="custom-checkbox-input detailed"> Detailed</p>
             </div>
-            <div class="row display-profit-loss  p-0 m-0 font-heading border-divider shadow-sm rounded-bottom-8">
+            <div class="row display-profit-loss  p-0 m-0 font-heading border-divider shadow-sm rounded-bottom-8" style="overflow: scroll;">
                <table class="table table-bordered">
                   <thead>
                      <tr>
                         <th style="width: 8%">Date</th>
+                        <th>Type</th>
                         <th>Particular</th>
                         <th style="text-align:right;">Invoice No.</th>
                         <th style="text-align:right;">Net Total</th>
@@ -51,7 +69,7 @@
                            @endif
                         @endforeach
                         @php 
-                           array_push($merge_arr,array('id'=>$value['id'],'date'=>$value['date'],'account_name'=>$value['account']['account_name'],'voucher_no'=>$value['voucher_no'],"net_total"=>$value['purchase_description_sum_amount'] + $adjust_sundry_amount,'purchase_total'=>$value['purchase_description_sum_amount'],'sundry'=>$value['purchaseSundry']->toArray(),'grand_total'=>$value['total'],'voucher_type'=>'','type'=>'purchase'));
+                           array_push($merge_arr,array('id'=>$value['id'],'date'=>$value['date'],'account_name'=>$value['account']['account_name'],'voucher_no'=>$value['voucher_no'],"net_total"=>$value['purchase_description_sum_amount'] + $adjust_sundry_amount,'purchase_total'=>$value['purchase_description_sum_amount'],'sundry'=>$value['purchaseSundry']->toArray(),'grand_total'=>$value['total'],'voucher_type'=>'','type'=>'PURCHASE'));
                         @endphp
                      @endforeach  
                      @foreach($purchase_return as $key => $value)                           
@@ -66,7 +84,7 @@
                            @endif
                         @endforeach
                         @php 
-                           array_push($merge_arr,array('id'=>$value['id'],'date'=>$value['date'],'account_name'=>$value['account']['account_name'],'voucher_no'=>$value['sr_prefix'],"net_total"=>$value['purchase_return_description_sum_amount'] + $adjust_sundry_amount,'purchase_total'=>$value['purchase_retuen_description_sum_amount'],'sundry'=>$value['purchaseReturnSundry']->toArray(),'grand_total'=>$value['total'],'voucher_type'=>$value['voucher_type'],'type'=>'purchase_return'));
+                           array_push($merge_arr,array('id'=>$value['id'],'date'=>$value['date'],'account_name'=>$value['account']['account_name'],'voucher_no'=>$value['sr_prefix'],"net_total"=>$value['purchase_return_description_sum_amount'] + $adjust_sundry_amount,'purchase_total'=>$value['purchase_retuen_description_sum_amount'],'sundry'=>$value['purchaseReturnSundry']->toArray(),'grand_total'=>$value['total'],'voucher_type'=>$value['voucher_type'],'type'=>'DEBIT NOTE'));
                         @endphp
                      @endforeach
                      @foreach($sale_return as $key => $value)                           
@@ -81,7 +99,7 @@
                            @endif
                         @endforeach
                         @php 
-                           array_push($merge_arr,array('id'=>$value['id'],'date'=>$value['date'],'account_name'=>$value['account']['account_name'],'voucher_no'=>$value['sr_prefix'],"net_total"=>$value['sale_return_descriptions_sum_amount'] + $adjust_sundry_amount,'purchase_total'=>$value['sale_return_descriptions_sum_amount'],'sundry'=>$value['saleReturnSundry']->toArray(),'grand_total'=>$value['total'],'voucher_type'=>$value['voucher_type'],'type'=>'sale_return'));
+                           array_push($merge_arr,array('id'=>$value['id'],'date'=>$value['date'],'account_name'=>$value['account']['account_name'],'voucher_no'=>$value['sr_prefix'],"net_total"=>$value['sale_return_descriptions_sum_amount'] + $adjust_sundry_amount,'purchase_total'=>$value['sale_return_descriptions_sum_amount'],'sundry'=>$value['saleReturnSundry']->toArray(),'grand_total'=>$value['total'],'voucher_type'=>$value['voucher_type'],'type'=>'CREDIT NOTE'));
                         @endphp
                      @endforeach                     
                      @php 
@@ -90,14 +108,19 @@
                         });
                      @endphp
                      @foreach($merge_arr as $key => $value)
+                        @if(!empty($search_type) && $search_type!=$value['type'])
+                           @continue;
+                        @endif
                         <tr class="view_invoice" data-id="{{$value['id']}}" data-type="{{$value['type']}}" style="cursor:pointer;">
                            <td style="text-align:center;">{{date('d-m-Y',strtotime($value['date']))}}</td>
+                           <td style="text-align:left;">{{$value['type']}}</td>
                            <td style="text-align:left;">{{$value['account_name']}}</td>
                            <td style="text-align:right;">{{$value['voucher_no']}}</td>
-                          <td style="text-align:right;">
+                           
+                           <td style="text-align:right;">
                               {{number_format($value['net_total'],2)}}
                               @php 
-                                 if($value['type']=="purchase_return"){
+                                 if($value['type']=="DEBIT NOTE"){
                                     $net_total = $net_total - $value['net_total']; 
                                  }else{
                                     $net_total = $net_total + $value['net_total']; 
@@ -107,7 +130,7 @@
                            <td class="td_detail" style="text-align:right;display: none;">
                               {{number_format($value['purchase_total'],2)}}
                               @php 
-                                 if($value['type']=="purchase_return"){
+                                 if($value['type']=="DEBIT NOTE"){
                                     $purchase_total = $purchase_total - $value['purchase_total'];  
                                  }else{
                                     $purchase_total = $purchase_total + $value['purchase_total'];  
@@ -137,7 +160,7 @@
                            <td class="td_detail" style="text-align:right;display: none;">
                               {{number_format($value['grand_total'],2)}}
                               @php 
-                                 if($value['type']=="purchase_return"){
+                                 if($value['type']=="DEBIT NOTE"){
                                     $grand_total = $grand_total - $value['grand_total']; 
                                  }else{
                                     $grand_total = $grand_total + $value['grand_total'];  
@@ -146,8 +169,8 @@
                            </td>                           
                         </tr>
                      @endforeach
-
                      <tr>
+                        <th style="text-align:center;"></th>
                         <th style="text-align:center;"></th>
                         <th style="text-align:center;"></th>
                         <th style="text-align:right;">Total</th>
@@ -183,14 +206,21 @@
          }
       });
       $(".view_invoice").click(function(){
-         if($(this).attr('data-type')=="purchase"){
+         if($(this).attr('data-type')=="PURCHASE"){
             window.location = "{{route('purchase-invoice')}}/"+$(this).attr('data-id');
-         }else if($(this).attr('data-type')=="purchase_return"){
+         }else if($(this).attr('data-type')=="DEBIT NOTE"){
             window.location = "{{route('purchase-return-invoice')}}/"+$(this).attr('data-id');
-         }else if($(this).attr('data-type')=="sale_return"){
+         }else if($(this).attr('data-type')=="CREDIT NOTE"){
             window.location = "{{route('sale-return-invoice')}}/"+$(this).attr('data-id');
          }
-         
+      });
+      $(".searchByDate").click(function(){
+         let from_date = $("#from_date").val();
+         let to_date = $("#to_date").val();
+         let search_type = $("#search_type").val();
+         if(from_date!="" && to_date!=""){
+            window.location = "{{url('purchase-by-month-detail')}}/{{$selected_year}}/"+from_date+"/"+to_date+"/"+search_type;
+         }
       });
    })
 </script>

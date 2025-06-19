@@ -132,22 +132,22 @@
                   <div class="mb-3 col-md-3 other_invoice_div" style="display:none">
                      <label for="other_invoice_against" class="form-label font-14 font-heading">Invoice Against</label>
                      <select class="form-select" id="other_invoice_against" name="other_invoice_against">
-                        <option value="Sale" @if($purchase_return->voucher_type=='SALE') selected @endif>Sale</option>Sale</option>
-                        <option value="Purchase" @if($purchase_return->voucher_type=='PURCHASE') selected
+                        <option value="SALE" @if($purchase_return->voucher_type=='SALE') selected @endif>Sale</option>Sale</option>
+                        <option value="PURCHASE" @if($purchase_return->voucher_type=='PURCHASE') selected
                          @endif>Purchase</option>
                      </select>  
                   </div>
                   <div class="mb-3 col-md-3 other_invoice_div" style="display:none">
-                     <label for="name" class="form-label font-14 font-heading">Invoice No</label>
+                     <label for="name" class="form-label font-14 font-heading">Original Invoice No</label>
                      <input type="text" class="form-control" id="other_invoice_no" name="other_invoice_no" placeholder="Enter Invoice No." value="{{$purchase_return->invoice_no}}">
                   </div>
                   <div class="mb-3 col-md-2 other_invoice_div" style="display:none">
-                     <label for="other_invoice_date" class="form-label font-14 font-heading">Invoice Date</label>
+                     <label for="other_invoice_date" class="form-label font-14 font-heading">Original Invoice Date</label>
                      <input type="date" class="form-control" id="other_invoice_date" name="other_invoice_date" value="{{$purchase_return->original_invoice_date}}" >
                   </div>
                   <div class="mb-3 col-md-2 other_invoice_div" style="display:none">
                      <label for="other_invoice_date" class="form-label font-14 font-heading">Original Invoice Value</label>
-                     <input type="number" class="form-control" id="original_invoice_value" name="other_invoice_value" value="{{$purchase_return->original_invoice_value}}">
+                     <input type="number" class="form-control" id="original_invoice_value" name="other_invoice_value" value="{{$purchase_return->original_invoice_value}}" placeholder="Invoice Value">
                   </div>
                   <div class="mb-1 col-md-1 voucher_no_div">
                      <br>
@@ -1576,6 +1576,7 @@
       $(".without_gst_section").hide();
       $(".account_div").show();
       $(".type_div").hide();
+      $(".other_invoice_div").hide();
       $(".voucher_no_div").show();
       $('#voucher_no').select2();
       let nature = $("#nature").val();
@@ -1598,6 +1599,9 @@
          $(".with_gst_with_item_section").show();
           $(".narration_withgst").show();
          $(".item").select2();
+         if($("#voucher_no").val()=="OTHER"){
+            $(".other_invoice_div").show();
+         }
       }
       if((nature=="WITH GST" && type=="WITHOUT ITEM")){
          $(".with_gst_without_item_section").show();

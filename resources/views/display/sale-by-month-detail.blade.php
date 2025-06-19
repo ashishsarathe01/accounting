@@ -17,27 +17,19 @@
                   {{ session('success') }}
                </div>
             @endif
-            <div class="d-xxl-flex justify-content-between py-4 px-2 align-items-center">
-               <nav aria-label="breadcrumb meri-breadcrumb ">
-                  <ol class="breadcrumb meri-breadcrumb m-0  ">
-                     <li class="breadcrumb-item">
-                        <a class="font-12 text-body text-decoration-none" href="#">Dashboard</a>
-                     </li>
-                     <li class="breadcrumb-item p-0">
-                        <a class="fw-bold font-heading font-12  text-decoration-none" href="{{url('profitloss-filter')}}?financial_year={{$selected_year}}&from_date={{$from_date}}&to_date={{$to_date}}">Profit & Loss</a>
-                     </li>
-                     <!-- <li class="breadcrumb-item p-0">
-                        <a class="fw-bold font-heading font-12  text-decoration-none" href="{{url('sale-by-month/')}}/{{$selected_year}}">Sale By Month</a>
-                     </li> -->
-                     <li class="breadcrumb-item p-0">
-                        <a class="fw-bold font-heading font-12 text-decoration-none" href="#">Sale Detail</a>
-                     </li>
-                  </ol>
-               </nav>
-            </div>
+            
             <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
                <h5 class="master-table-title m-0 py-2">Sale Detail</h5>
-                  <div class="d-md-flex d-block">                  
+                  <div class="d-md-flex d-block">
+                     <div class="calender-administrator my-2 my-md-0">
+                        <select class="form-select" id="search_type">
+                           <option value="">All</option>
+                           <option value="SALE" @if($search_type=="SALE") selected @endif>SALE</option>
+                           <option value="CREDIT NOTE" @if($search_type=="CREDIT NOTE") selected @endif>CREDIT NOTE</option>
+                           <option value="DEBIT NOTE" @if($search_type=="DEBIT NOTE") selected @endif>DEBIT NOTE</option>
+                           
+                        </select>
+                     </div>  
                      <div class="calender-administrator my-2 my-md-0">
                         <input type="date" class="form-control calender-bg-icon calender-placeholder" placeholder="From date" required id="from_date" value="{{date('Y-m-d',strtotime($from_date))}}">
                      </div>
@@ -48,11 +40,12 @@
                   </div>
                <p><input type="checkbox" class="custom-checkbox-input detailed"> Detailed</p>
             </div>
-            <div class="row display-profit-loss  p-0 m-0 font-heading border-divider shadow-sm rounded-bottom-8">
+            <div class="row display-profit-loss  p-0 m-0 font-heading border-divider shadow-sm rounded-bottom-8" style="overflow: scroll;">
                <table class="table table-bordered">
                   <thead>
                      <tr>
                         <th style="width: 8%">Date</th>
+                        <th>Type</th>
                         <th>Particular</th>
                         <th style="text-align:right;">Invoice No.</th>
                         <th style="text-align:right;">Net Total</th>
@@ -79,7 +72,7 @@
                               @endif
                            @endforeach
                         @php 
-                         array_push($merge_arr,array('id'=>$value['id'],'date'=>$value['date'],'account_name'=>$value['account']['account_name'],'voucher_no'=>$value['voucher_no_prefix'],"net_total"=>$value['sale_description_sum_amount'] + $adjust_sundry_amount,'sale_total'=>$value['sale_description_sum_amount'],'sundry'=>$value['saleSundry']->toArray(),'grand_total'=>$value['total'],'voucher_type'=>'','type'=>'sale'));
+                         array_push($merge_arr,array('id'=>$value['id'],'date'=>$value['date'],'account_name'=>$value['account']['account_name'],'voucher_no'=>$value['voucher_no_prefix'],"net_total"=>$value['sale_description_sum_amount'] + $adjust_sundry_amount,'sale_total'=>$value['sale_description_sum_amount'],'sundry'=>$value['saleSundry']->toArray(),'grand_total'=>$value['total'],'voucher_type'=>'','type'=>'SALE'));
                          @endphp
                      @endforeach  
                      @foreach($purchase_return as $key => $value)                           
@@ -94,7 +87,7 @@
                            @endif
                         @endforeach
                         @php 
-                           array_push($merge_arr,array('id'=>$value['id'],'date'=>$value['date'],'account_name'=>$value['account']['account_name'],'voucher_no'=>$value['sr_prefix'],"net_total"=>$value['purchase_return_description_sum_amount'] + $adjust_sundry_amount,'sale_total'=>$value['purchase_retuen_description_sum_amount'],'sundry'=>$value['purchaseReturnSundry']->toArray(),'grand_total'=>$value['total'],'voucher_type'=>$value['voucher_type'],'type'=>'purchase_return'));
+                           array_push($merge_arr,array('id'=>$value['id'],'date'=>$value['date'],'account_name'=>$value['account']['account_name'],'voucher_no'=>$value['sr_prefix'],"net_total"=>$value['purchase_return_description_sum_amount'] + $adjust_sundry_amount,'sale_total'=>$value['purchase_retuen_description_sum_amount'],'sundry'=>$value['purchaseReturnSundry']->toArray(),'grand_total'=>$value['total'],'voucher_type'=>$value['voucher_type'],'type'=>'DEBIT NOTE'));
                         @endphp
                      @endforeach
                      @foreach($sale_return as $key => $value)                           
@@ -109,7 +102,7 @@
                            @endif
                         @endforeach
                         @php 
-                           array_push($merge_arr,array('id'=>$value['id'],'date'=>$value['date'],'account_name'=>$value['account']['account_name'],'voucher_no'=>$value['sr_prefix'],"net_total"=>$value['sale_return_descriptions_sum_amount'] + $adjust_sundry_amount,'sale_total'=>$value['sale_return_descriptions_sum_amount'],'sundry'=>$value['saleReturnSundry']->toArray(),'grand_total'=>$value['total'],'voucher_type'=>$value['voucher_type'],'type'=>'sale_return'));
+                           array_push($merge_arr,array('id'=>$value['id'],'date'=>$value['date'],'account_name'=>$value['account']['account_name'],'voucher_no'=>$value['sr_prefix'],"net_total"=>$value['sale_return_descriptions_sum_amount'] + $adjust_sundry_amount,'sale_total'=>$value['sale_return_descriptions_sum_amount'],'sundry'=>$value['saleReturnSundry']->toArray(),'grand_total'=>$value['total'],'voucher_type'=>$value['voucher_type'],'type'=>'CREDIT NOTE'));
                         @endphp
                      @endforeach
                      @php 
@@ -118,14 +111,18 @@
                         });
                      @endphp
                      @foreach($merge_arr as $key => $value)
+                        @if(!empty($search_type) && $search_type!=$value['type'])
+                           @continue;
+                        @endif
                         <tr class="view_invoice" data-id="{{$value['id']}}" data-type="{{$value['type']}}" style="cursor:pointer;">
                            <td style="text-align:center;">{{date('d-m-Y',strtotime($value['date']))}}</td>
+                           <td style="text-align:left;">{{$value['type']}}</td>
                            <td style="text-align:left;">{{$value['account_name']}}</td>
                            <td style="text-align:right;">{{$value['voucher_no']}}</td>
-                          <td style="text-align:right;">
+                           <td style="text-align:right;">
                               {{number_format($value['net_total'],2)}}
                               @php 
-                                 if($value['type']=="sale_return"){
+                                 if($value['type']=="CREDIT NOTE"){
                                     $net_total = $net_total - $value['net_total']; 
                                  }else{
                                     $net_total = $net_total + $value['net_total']; 
@@ -135,7 +132,7 @@
                            <td class="td_detail" style="text-align:right;display: none;">
                               {{number_format($value['sale_total'],2)}}
                               @php 
-                                 if($value['type']=="sale_return"){
+                                 if($value['type']=="CREDIT NOTE"){
                                     $sale_total = $sale_total - $value['sale_total'];  
                                  }else{
                                     $sale_total = $sale_total + $value['sale_total'];  
@@ -165,7 +162,7 @@
                            <td class="td_detail" style="text-align:right;display: none;">
                               {{number_format($value['grand_total'],2)}}
                               @php 
-                                 if($value['type']=="sale_return"){
+                                 if($value['type']=="CREDIT NOTE"){
                                     $grand_total = $grand_total - $value['grand_total']; 
                                  }else{
                                     $grand_total = $grand_total + $value['grand_total'];  
@@ -175,6 +172,7 @@
                         </tr>
                      @endforeach
                      <tr>
+                        <th style="text-align:center;"></th>
                         <th style="text-align:center;"></th>
                         <th style="text-align:center;"></th>
                         <th style="text-align:right;">Total</th>
@@ -212,19 +210,20 @@
       });
       $(".view_invoice").click(function(){
          
-         if($(this).attr('data-type')=="sale"){
+         if($(this).attr('data-type')=="SALE"){
             window.location = "{{route('sale-invoice')}}/"+$(this).attr('data-id');
-         }else if($(this).attr('data-type')=="purchase_return"){
+         }else if($(this).attr('data-type')=="DEBIT NOTE"){
             window.location = "{{route('purchase-return-invoice')}}/"+$(this).attr('data-id');
-         }else if($(this).attr('data-type')=="sale_return"){
+         }else if($(this).attr('data-type')=="CREDIT NOTE"){
             window.location = "{{route('sale-return-invoice')}}/"+$(this).attr('data-id');
          }
       });
       $(".searchByDate").click(function(){
          let from_date = $("#from_date").val();
          let to_date = $("#to_date").val();
+         let search_type = $("#search_type").val();
          if(from_date!="" && to_date!=""){
-            window.location = "{{url('sale-by-month-detail')}}/{{$selected_year}}/"+from_date+"/"+to_date;
+            window.location = "{{url('sale-by-month-detail')}}/{{$selected_year}}/"+from_date+"/"+to_date+"/"+search_type;
          }
       });
    })
