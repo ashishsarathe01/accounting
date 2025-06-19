@@ -1,4 +1,6 @@
 <!-- accordion -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
 <aside class="col-lg-2 d-none d-lg-block bg-blue sidebar p-0">
    <div class="sidebar-sticky ">
       <div id="accordion">
@@ -10,17 +12,13 @@
          </div>
          
          @can('view-module', 1)
-            <div class="card bg-blue py-20 px-2 rounded-0 border-bottom-divider">
-               <div class="card-header p-0 border-0 rounded-0 d-flex" id="companyHeading">
-                  <img src="{{ URL::asset('public/assets/imgs/company.svg')}}" alt="">
-                  <a class="nav-link text-white font-14 fw-500 ms-2 p-0" href="#" data-bs-toggle="collapse" data-bs-target="#companyCollapse" aria-expanded="true" aria-controls="companyCollapse">Company</a>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="ms-auto img-fluid " viewBox="0 0 18 18" fill="none">
-                     <path d="M12.4425 12L9 8.5575L5.5575 12L4.5 10.935L9 6.435L13.5 10.935L12.4425 12Z" fill="#E4E4E4" />
-                  </svg>
-               </div>
-               <div id="companyCollapse" class="collapse" aria-labelledby="companyHeading" data-bs-parent="#accordion">
-                  <ul class="nav flex-column">
-                     @can('view-module', 17)
+            <div class="card bg-blue pt-2 px-2 rounded-0 aside-bottom-divider">
+                  <div class="card-header py-12 px-2 border-0 d-flex rounded-0" id="companyHeading">
+                     <a class="nav-link text-white font-14 dropdown-icon-img d-flex fw-500  p-0 collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#companyCollapse" aria-expanded="true" aria-controls="companyCollapse"><img src="{{ URL::asset('public/assets/imgs/administrator.svg')}}" class="me-2" alt="">Company</a>
+                  </div>
+                  <div id="companyCollapse" class="collapse" aria-labelledby="companyHeading" data-bs-parent="#accordion">
+                     <ul class="nav flex-column">
+                        @can('view-module', 17)
                         <a href="{{ route('add-company') }}">
                            <li class="font-14 text-blue fw-500 m-0 py-12 px-2 text-blue bg-white border-radius-4">Add Company</li>
                         </a>
@@ -44,18 +42,16 @@
                         @endcan
                         <?php 
                      } ?>
-                  </ul>
+                     </ul>
+                  </div>
                </div>
-            </div>
          @endcan
          <?php
          if(Session::get('user_company_id') != ''){?>
-            <!-- Administrator ------------>
             @can('view-module', 21)
-               <div class="card  bg-blue pt-2 px-2 rounded-0 aside-bottom-divider">
+               <div class="card bg-blue pt-2 px-2 rounded-0 aside-bottom-divider">
                   <div class="card-header py-12 px-2 border-0 d-flex rounded-0" id="administratorHeading">
-                     <a class="nav-link text-white font-14 dropdown-icon-img d-flex fw-500  p-0 collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#adminCollapse" aria-expanded="true" aria-controls="adminCollapse">
-                     <img src="{{ URL::asset('public/assets/imgs/administrator.svg')}}" class="me-2" alt="">Master</a>
+                     <a class="nav-link text-white font-14 dropdown-icon-img d-flex fw-500  p-0 collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#adminCollapse" aria-expanded="true" aria-controls="adminCollapse"><img src="{{ URL::asset('public/assets/imgs/administrator.svg')}}" class="me-2" alt="">Master</a>
                   </div>
                   <div id="adminCollapse" class="collapse" aria-labelledby="administratorHeading" data-bs-parent="#accordion">
                      <ul class="nav flex-column">
@@ -260,54 +256,193 @@
                   </div>
                   <div id="displayCollapse" class="collapse" aria-labelledby="displayHeading" data-bs-parent="#accordion">
                      <ul class="nav flex-column">
-                        @can('view-module', 24)
-                           <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4">
-                              <a class=" text-decoration-none d-flex text-blue" href="{{ route('balancesheet.index') }}">
-                                          Balance Sheet
-                              </a>
-                           </li>
-                        @endcan
-                        @can('view-module', 25)
-                           <li class="font-14  fw-500 m-0 py-12 px-2 ">
-                              <a class=" text-decoration-none d-flex text-white" href="{{ route('profitloss.index') }}">
-                                          Profit & Loss
-                              </a>
-                           </li>
-                        @endcan
-                        @can('view-module', 32)
-                           <li class="font-14  fw-500 m-0 py-12 px-2">
-                              <a class=" text-decoration-none d-flex text-white" href="{{ route('trialbalance.index') }}">
-                                          Trial Balance
-                              </a>
-                           </li>
-                        @endcan
-                        @can('view-module', 26)
-                           <li class="font-14  fw-500 m-0 py-12 px-2">
-                              <a class=" text-decoration-none d-flex text-white" href="{{ route('accountledger.index') }}">
-                                          Account Ledger
-                              </a>
-                           </li>
-                        @endcan
-                        @can('view-module', 27)
-                           <li class="font-14  fw-500 m-0 py-12 px-2">
-                              <a class=" text-decoration-none d-flex text-white" href="{{ route('itemledger.index') }}">
-                                          Items Ledger
-                              </a>
-                           </li>
-                        @endcan
-                        @can('view-module', 28)
-                           <li class="font-14  fw-500 m-0 py-12 px-2">
-                              <a class=" text-decoration-none d-flex text-white" href="{{ route('report.filter.data') }}">
-                                          GSTR-1
-                              </a>
-                           </li>
-                        @endcan
+                        <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4" style="border: 1px solid #007bff;">
+                           <!-- Toggle for Balance Sheet submenu -->
+                           <a class="text-decoration-none d-flex text-blue collapsed"
+                              href="#"
+                              data-bs-toggle="collapse"
+                              data-bs-target="#financialSubmenu"
+                              aria-expanded="false"
+                              aria-controls="financialSubmenu"> 
+                              Financial Reports
+                              <i class="arrow-icon fa fa-chevron-down ms-auto"></i>
+                           </a>
+                           <!-- Submenu under Balance Sheet -->
+                           <div class="collapse ps-3" id="financialSubmenu">
+                              <ul class="nav flex-column">
+                                 @can('view-module', 24)
+                                    <li class="py-1">
+                                       <a href="{{ route('balancesheet.index') }}" class="text-blue">Balance Sheet</a>
+                                    </li>
+                                 @endcan
+                                 @can('view-module', 25)
+                                    <li class="py-1">
+                                       <a href="{{ route('profitloss.index') }}" class="text-blue">Profit & Loss</a>
+                                    </li>
+                                 @endcan
+                                 @can('view-module', 32)
+                                    <li class="py-1">
+                                       <a href="{{ route('trialbalance.index') }}" class="text-blue">Trial Balance</a>
+                                    </li>
+                                 @endcan
+                              </ul>
+                           </div>
+                        </li>
+                        <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4" style="border: 1px solid #007bff;">
+                           <!-- Toggle for Balance Sheet submenu -->
+                           <a class="text-decoration-none d-flex text-blue collapsed"
+                              href="#"
+                              data-bs-toggle="collapse"
+                              data-bs-target="#statutorySubmenu"
+                              aria-expanded="false"
+                              aria-controls="statutorySubmenu">
+                              Statutory Reports
+                              <i class="arrow-icon fa fa-chevron-down ms-auto"></i>
+                           </a>
+                           <!-- Submenu under Balance Sheet -->
+                           <div class="collapse ps-3" id="statutorySubmenu">
+                              <ul class="nav flex-column">
+                                 @can('view-module', 28)
+                                    <li class="py-1">
+                                       <a href="{{ route('report.filter.data') }}" class="text-blue">GSTR-1</a>
+                                    </li>
+                                 @endcan
+                                 
+                              </ul>
+                           </div>
+                        </li>
+                        <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4" style="border: 1px solid #007bff;">
+                           <!-- Toggle for Balance Sheet submenu -->
+                           <a class="text-decoration-none d-flex text-blue collapsed"
+                              href="#"
+                              data-bs-toggle="collapse"
+                              data-bs-target="#accountBookSubmenu"
+                              aria-expanded="false"
+                              aria-controls="accountBookSubmenu">
+                              Account Book
+                              <i class="arrow-icon fa fa-chevron-down ms-auto"></i>
+                           </a>
+                           <!-- Submenu under Balance Sheet -->
+                           <div class="collapse ps-3" id="accountBookSubmenu">
+                              <ul class="nav flex-column">
+                                 @can('view-module', 26)
+                                    <li class="py-1">
+                                       <a href="{{ route('accountledger.index') }}" class="text-blue">Account Ledger</a>
+                                    </li>
+                                 @endcan
+                                 
+                              </ul>
+                           </div>
+                        </li>
+                        <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4" style="border: 1px solid #007bff;">
+                           <!-- Toggle for Balance Sheet submenu -->
+                           <a class="text-decoration-none d-flex text-blue collapsed"
+                              href="#"
+                              data-bs-toggle="collapse"
+                              data-bs-target="#inventorySubmenu"
+                              aria-expanded="false"
+                              aria-controls="inventorySubmenu">
+                              Inventory Reports
+                              <i class="arrow-icon fa fa-chevron-down ms-auto"></i>
+                           </a>
+                           <!-- Submenu under Balance Sheet -->
+                           <div class="collapse ps-3" id="inventorySubmenu">
+                              <ul class="nav flex-column">
+                                 @can('view-module', 27)
+                                    <li class="py-1">
+                                       <a href="{{ route('itemledger.index') }}" class="text-blue">Items Ledger</a>
+                                    </li>
+                                 @endcan
+                                 
+                              </ul>
+                           </div>
+                        </li>
+                        <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4" style="border: 1px solid #007bff;">
+                           <!-- Toggle for Balance Sheet submenu -->
+                           <a class="text-decoration-none d-flex text-blue collapsed"
+                              href="#"
+                              data-bs-toggle="collapse"
+                              data-bs-target="#receivablesPayablesSubmenu"
+                              aria-expanded="false"
+                              aria-controls="receivablesPayablesSubmenu">
+                              Receivables & Payables
+                              <i class="arrow-icon fa fa-chevron-down ms-auto"></i>
+                           </a>
+                           <!-- Submenu under Balance Sheet -->
+                           <div class="collapse ps-3" id="receivablesPayablesSubmenu">
+                              <ul class="nav flex-column">
+                                 
+                              </ul>
+                           </div>
+                        </li>
+                        <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4" style="border: 1px solid #007bff;">
+                           <!-- Toggle for Balance Sheet submenu -->
+                           <a class="text-decoration-none d-flex text-blue collapsed"
+                              href="#"
+                              data-bs-toggle="collapse"
+                              data-bs-target="#auditControlSubmenu"
+                              aria-expanded="false"
+                              aria-controls="auditControlSubmenu">
+                              Audit & Control Reports
+                              <i class="arrow-icon fa fa-chevron-down ms-auto"></i>
+                           </a>
+                           <!-- Submenu under Balance Sheet -->
+                           <div class="collapse ps-3" id="auditControlSubmenu">
+                              <ul class="nav flex-column">
+                                 
+                              </ul>
+                           </div>
+                        </li>
+                        <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4" style="border: 1px solid #007bff;">
+                           <!-- Toggle for Balance Sheet submenu -->
+                           <a class="text-decoration-none d-flex text-blue collapsed"
+                              href="#"
+                              data-bs-toggle="collapse"
+                              data-bs-target="#hrpayrollSubmenu"
+                              aria-expanded="false"
+                              aria-controls="hrpayrollSubmenu">
+                              HR & Payroll
+                              <i class="arrow-icon fa fa-chevron-down ms-auto"></i>
+                           </a>
+                           <!-- Submenu under Balance Sheet -->
+                           <div class="collapse ps-3" id="hrpayrollSubmenu">
+                              <ul class="nav flex-column">
+                                 
+                              </ul>
+                           </div>
+                        </li>
                      </ul>
                   </div>
                </div>
+               
             @endcan
             <?php 
          } ?>
       </div>
    </div>
 </aside>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const collapses = document.querySelectorAll('[data-bs-toggle="collapse"]');
+
+    collapses.forEach(toggle => {
+        const icon = toggle.querySelector('.arrow-icon');
+        const targetId = toggle.getAttribute('data-bs-target');
+        const collapseEl = document.querySelector(targetId);
+
+        collapseEl.addEventListener('show.bs.collapse', () => {
+            if (icon) {
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-up');
+            }
+        });
+
+        collapseEl.addEventListener('hide.bs.collapse', () => {
+            if (icon) {
+                icon.classList.remove('fa-chevron-up');
+                icon.classList.add('fa-chevron-down');
+            }
+        });
+    });
+});
+</script>
