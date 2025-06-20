@@ -794,7 +794,7 @@ public function b2cLargedetailed(Request $request){
 
         
     if ($b2cSaleIds->isEmpty()) {
-        return view('gstReturn.b2c_statewise', ['data' => []]);
+        return view('gstReturn.b2c_large_detailed', ['data' => []]);
     }
 
     // Step 3: Get sale item details
@@ -2363,6 +2363,7 @@ public function B2Cstatewise(Request $request)
 
 
 public function hsnSummary(Request $request){
+     $type = $request->input('type');
 
 
 
@@ -2376,16 +2377,24 @@ public function hsnSummary(Request $request){
     $sundries = BillSundrys::where('company_id', $user_company_id)->get()->keyBy('id');
 
     // -------- STEP 1: Get B2C Sale IDs --------
-    $b2cSaleIds = DB::table('sales')
-        ->where('merchant_gst', $merchant_gst)
-        ->where('company_id', $company_id)
-        ->whereBetween('date', [$from_date, $to_date])
-        ->where('delete', '0')
-        ->where('status', '1')
-        ->pluck('id');
+$b2cSaleIds = DB::table('sales')
+    ->where('merchant_gst', $merchant_gst)
+    ->where('company_id', $company_id)
+    ->whereBetween('date', [$from_date, $to_date])
+    ->where('delete', '0')
+    ->where('status', '1')
+    ->where(function($q) use ($type) {
+        if ($type === 'B2B') {
+            $q->whereNotNull('billing_gst')->where('billing_gst', '!=', '');
+        } else {
+            $q->whereNull('billing_gst')->orWhere('billing_gst', '');
+        }
+    })
+    ->pluck('id');
+
 
     if ($b2cSaleIds->isEmpty()) {
-        return view('gstReturn.b2c_statewise', ['data' => []]);
+        return view('gstReturn.hsnSummary', ['data' => []]);
     }
 
     // ----- SALES ITEMS -----
@@ -2452,6 +2461,14 @@ public function hsnSummary(Request $request){
          ->where('voucher_type', 'SALE')
          ->where('sr_nature', 'WITH GST')
           ->where('sr_type','WITH ITEM')
+          ->where(function($q) use ($type) {
+    if ($type === 'B2B') {
+        $q->whereNotNull('billing_gst')->where('billing_gst', '!=', '');
+    } else {
+        $q->whereNull('billing_gst')->orWhere('billing_gst', '');
+    }
+})
+
         ->where('sales_returns.delete', '0')
         ->where('sales_returns.status', '1')
         ->pluck('sales_returns.id');
@@ -2463,6 +2480,13 @@ public function hsnSummary(Request $request){
         ->whereBetween('sales_returns.date', [$from_date, $to_date])
         ->where('voucher_type', 'SALE')
         ->where('sr_nature', 'WITH GST')
+        ->where(function($q) use ($type) {
+         if ($type === 'B2B') {
+        $q->whereNotNull('billing_gst')->where('billing_gst', '!=', '');
+         } else {
+        $q->whereNull('billing_gst')->orWhere('billing_gst', '');
+          }
+          })
         ->where(function($q){
             $q->where('sr_type','WITHOUT ITEM')
               ->orWhere('sr_type','RATE DIFFERENCE');
@@ -2497,6 +2521,13 @@ public function hsnSummary(Request $request){
                         ->join('states', 'sales_returns.billing_state', '=', 'states.id')
                         ->join('manage_items', 'sale_return_descriptions.goods_discription', '=', 'manage_items.id')
                          ->join('units','manage_items.u_name','=','units.id')
+                         ->where(function($q) use ($type) {
+                                if ($type === 'B2B') {
+                                    $q->whereNotNull('billing_gst')->where('billing_gst', '!=', '');
+                                } else {
+                                    $q->whereNull('billing_gst')->orWhere('billing_gst', '');
+                                }
+                            })
                         ->whereIn('sale_return_id', $creditSales1)
                         ->where('sale_return_descriptions.status','1')
                         ->where('sale_return_descriptions.delete','0')
@@ -2575,6 +2606,13 @@ public function hsnSummary(Request $request){
          ->where('voucher_type', 'SALE')
          ->where('sr_nature', 'WITH GST')
          ->where('sr_type','WITH ITEM')
+         ->where(function($q) use ($type) {
+                if ($type === 'B2B') {
+                    $q->whereNotNull('billing_gst')->where('billing_gst', '!=', '');
+                } else {
+                    $q->whereNull('billing_gst')->orWhere('billing_gst', '');
+                }
+            })
         ->where('purchase_returns.delete', '0')
         ->where('purchase_returns.status', '1')
         ->pluck('purchase_returns.id');
@@ -2589,6 +2627,13 @@ public function hsnSummary(Request $request){
             $q->where('sr_type','WITHOUT ITEM')
               ->orWhere('sr_type','RATE DIFFERENCE');
         })
+          ->where(function($q) use ($type) {
+                if ($type === 'B2B') {
+                    $q->whereNotNull('billing_gst')->where('billing_gst', '!=', '');
+                } else {
+                    $q->whereNull('billing_gst')->orWhere('billing_gst', '');
+                }
+            })
         ->where('purchase_returns.delete', '0')
         ->where('purchase_returns.status', '1')
         ->pluck('purchase_returns.id');
