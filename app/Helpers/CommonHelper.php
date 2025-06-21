@@ -8,6 +8,7 @@ use App\Models\AccountGroups;
 use App\Models\AccountLedger;
 use App\Models\Companies;
 use App\Models\GstBranch;
+use App\Models\gstToken;
 use Carbon\Carbon;
 use DB;
 use Session;
@@ -468,5 +469,47 @@ class CommonHelper
         $profitloss = $total_net_purchase - $total_net_sale;
         $profitloss = round($profitloss,2);
         return $profitloss;
+    }
+    public static function gstTokenOtpRequest($state_code,$gst_username,$gstin){
+        $curl = curl_init();
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => 'https://api.mastergst.com/authentication/otprequest?email=pram92500@gmail.com',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'GET',
+            CURLOPT_HTTPHEADER => array(
+                'gst_username:'.$gst_username,
+                'state_cd: '.$state_code,
+                'ip_address: 162.215.254.201',
+                'client_id: GSPdea8d6fb-aed1-431a-b589-f1c541424580',
+                'client_secret: GSP4c44b790-ef11-4725-81d9-5f8504279d67'
+            ),
+        ));
+        $response = curl_exec($curl);
+        curl_close($curl);
+        $result = json_decode($response);
+         
+        if(isset($result->status_cd) && $result->status_cd=='1'){
+            if(isset($result->header->txn) && !empty($result->header->txn)){
+                $gstToken = new gstToken;
+                $gstToken->txn = $result->header->txn;
+                $gstToken->created_at = Carbon::now();
+                $gstToken->status = 0;
+                $gstToken->company_id = Session::get('user_company_id');
+                $gstToken->company_gstin = $gstin;
+                $gstToken->save();
+                return $result->header->txn;
+            }else{
+                return 0;
+            }         
+        }else{
+            if(isset($result->error)){
+                return 0;
+            }
+        }       
     }
 }

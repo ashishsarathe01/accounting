@@ -323,6 +323,8 @@ Route::Resource('payment', PaymentController::class);
   Route::get('/report/filter', [gstR1Controller::class, 'filterform'])->name('report.filter.data');
   Route::get('gst-detail', [GstDetailController::class, 'index'])->name('gst-detail');
   Route::post('gst-detail-by-type', [GstDetailController::class, 'gstDetailByType'])->name('gst-detail-by-type');
+  Route::post('verify-gst-token-otp', [GstDetailController::class, 'verifyGstTokenOtp'])->name('verify-gst-token-otp');
+ 
   Route::get('/report/nilratedreginter', [gstR1Controller::class, 'nilRatedAndExemptedCombined'])->name('nilratedreginter');
   Route::get('/report/debitnote', [gstR1Controller::class, 'combinedNoteRegister'])->name('debitNote');
     Route::get('/report/debitnote/Unreg', [gstR1Controller::class, 'combinedNoteUnreegister'])->name('debitNoteUnreg');

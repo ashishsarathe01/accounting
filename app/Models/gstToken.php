@@ -8,4 +8,5 @@ use Illuminate\Database\Eloquent\Model;
 class gstToken extends Model
 {
     use HasFactory;
+    protected $table = "gst_token";
 }

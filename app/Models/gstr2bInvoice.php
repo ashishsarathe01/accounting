@@ -8,4 +8,5 @@ use Illuminate\Database\Eloquent\Model;
 class gstr2bInvoice extends Model
 {
     use HasFactory;
+    protected $table = "gstr2b_invoice";
 }

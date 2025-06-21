@@ -90,6 +90,21 @@
                   </div>
                </div>
             </form>
+            <div id="gst_div" style="display: none">
+               <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm gst_head"></h5>
+               <table class="table table-ordered bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm gst_table">
+                  <thead>
+                     <tr>
+                        <th>Account Name</th>
+                        <th>Amount</th>
+                     </tr>
+                  </thead>
+                  <tbody>
+                     
+                  </tbody>
+               </table>
+            </div>
+            
          </div>
          <div class="col-lg-1 d-none d-lg-flex justify-content-center px-1">
             <div class="shortcut-key w-100">
@@ -184,7 +199,26 @@
       </div>
    </section>
 </div>
-
+<div class="modal fade" id="otpModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+   <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content p-4 border-divider border-radius-8">
+         <div class="modal-header border-0 p-0">
+            <p><h5 class="modal-title">OTP Verification</h5></p>
+            <button type="button" class="btn-close close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div>
+         <div class="modal-body">
+            <div class="form-group">
+               <input type="text" class="form-control" id="otp" placeholder="Enter OTP">
+               <input type="hidden" id="fgstin">
+            </div>
+         </div>
+         <div class="modal-footer border-0 mx-auto p-0">
+            <button type="button" class="btn btn-border-body close" data-bs-dismiss="modal">CANCEL</button>
+            <button type="button" class="ms-3 btn btn-red verify_otp">SUBMIT</button>
+         </div>
+      </div>
+   </div>
+</div>
 </body>
 @include('layouts.footer')
 <script>
@@ -193,20 +227,85 @@
          let month = $("#month").val();
          let type = $("#type").val();
          let gstin = $("#gstin").val();
+         getGstData(month,type,gstin);
+      });
+      $(".verify_otp").click(function(){
+         let otp = $("#otp").val();
+         let fgstin = $("#fgstin").val();
+         let month = $("#month").val();
+         let type = $("#type").val();
+         let gstin = $("#gstin").val();
+         if(otp==""){
+            alert("Please Enter Otp");
+            return;
+         }
          $.ajax({
-            url : "{{route('gst-detail-by-type')}}",
+            url : "{{route('verify-gst-token-otp')}}",
             method : 'post',
             data : {
                _token : '{{ csrf_token() }}',
-               type : type,
-               month : month,
-               gstin : gstin
+               otp : otp,
+               gstin : fgstin
             },
             success : function(res){
-                
+               if(res!=""){
+                  let obj = JSON.parse(res);
+                  if(obj.status==true){
+                     getGstData(month,type,gstin)
+                  }else{
+                     alert(obj.message);
+                  }
+               }else{
+                  alert("Something Went Wrong.Please Try Again.");
+               }
             }
          });
       });
    });
+   function getGstData(month,type,gstin){
+      $.ajax({
+         url : "{{route('gst-detail-by-type')}}",
+         method : 'post',
+         data : {
+            _token : '{{ csrf_token() }}',
+            type : type,
+            month : month,
+            gstin : gstin
+         },
+         success : function(res){
+            if(res!=""){
+               let obj = JSON.parse(res);
+               if(obj.status==true){
+                  if(obj.message=="TOKEN-OTP"){
+                     $("#fgstin").val(gstin);
+                     $("#otpModal").modal('toggle');
+                  }else if(obj.message=="SUCCESS"){
+                     $("#otpModal").modal('toggle');
+                     getGstData(month,type,gstin);
+                  }else if(obj.message=="GSTR2B"){
+                     $(".gst_head").html('GSTR2B');
+                     let html = "";let total_amount = 0;
+                     obj.data.forEach(element => {
+                        html+="<tr><td>"+element.account_name+" ("+element.ctin+")</td><td>"+element.amount+"</td></tr>";
+                        total_amount = parseFloat(total_amount) + parseFloat(element.amount);
+                     });
+                     html+="<tr><th></th><th>"+total_amount+"</th></tr>";
+                     $(".gst_table tbody").html(html);
+                     $("#gst_div").show();
+                  }else if(obj.message=="GSTR2A"){
+                     $(".gst_head").html('GSTR2A');
+                     
+                     $(".gst_table tbody").html(obj.data);
+                     $("#gst_div").show();
+                  }
+               }else{
+                  alert(obj.message);
+               }
+            }else{
+               alert("Something Went Wrong.Please Try Again.");
+            }
+         }
+      });
+   }
 </script>
 @endsection

@@ -142,6 +142,7 @@ class GstSettingController extends Controller
       //$invoice_prefix = $request->invoice_prefix;
       $einvoice = $request->e_invoice;
       $einvoice_username = $request->einvoice_username;
+      $gst_username = $request->gst_username;
       $einvoice_password = $request->einvoice_password;
       $ewaybill = $request->e_way_bill;
       $ewaybill_username = $request->ewaybill_username;
@@ -183,6 +184,7 @@ class GstSettingController extends Controller
                //'invoice_prefix'=>$invoice_prefix[$index][0], 
                'einvoice'=>$einvoice[$index][0], 
                'einvoice_username'=>$einvoice_username[$index][0], 
+               'gst_username'=>$gst_username[$index][0],
                'einvoice_password'=>encrypt($einvoice_password[$index][0]), 
                'ewaybill'=> $ewaybill[$index][0], 
                'ewaybill_username'=>$ewaybill_username[$index][0], 
@@ -232,6 +234,7 @@ class GstSettingController extends Controller
                //'invoice_prefix'=>$invoice_prefix[$index][0],
                'einvoice'=>$einvoice[$index][0], 
                'einvoice_username'=>$einvoice_username[$index][0], 
+               'gst_username'=>$gst_username[$index][0],
                'einvoice_password'=>encrypt($einvoice_password[$index][0]), 
                'ewaybill'=> $ewaybill[$index][0], 
                'ewaybill_username'=>$ewaybill_username[$index][0], 
@@ -292,6 +295,7 @@ class GstSettingController extends Controller
       //$invoice_prefix = $request->invoice_prefix;
       $einvoice = $request->e_invoice;
       $einvoice_username = $request->einvoice_username;
+      $gst_username = $request->gst_username;
       $einvoice_password = $request->einvoice_password;
       $ewaybill = $request->e_way_bill;
       $ewaybill_username = $request->ewaybill_username;
@@ -353,6 +357,7 @@ class GstSettingController extends Controller
                   //'invoice_prefix'=>$invoice_prefix[$index][0], 
                   'einvoice'=>$einvoice[$index][0], 
                   'einvoice_username'=>$einvoice_username1, 
+                  'gst_username'=>$gst_username[$index][0],
                   'einvoice_password'=>$einvoice_password1, 
                   'ewaybill'=> $ewaybill[$index][0], 
                   'ewaybill_username'=>$ewaybill_username1, 
@@ -420,6 +425,7 @@ class GstSettingController extends Controller
                //'invoice_prefix'=>$invoice_prefix[$index][0],
                'einvoice'=>$einvoice[$index][0], 
                'einvoice_username'=>$einvoice_username1, 
+               'gst_username'=>$gst_username[$index][0],
                'einvoice_password'=>$einvoice_password1, 
                'ewaybill'=> $ewaybill[$index][0], 
                'ewaybill_username'=>$ewaybill_username1, 
