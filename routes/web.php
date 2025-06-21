@@ -45,6 +45,7 @@ use App\Http\Controllers\AdminModuleController\MerchantPrivilegesController;
 use App\Http\Controllers\VoucherSeriesConfigurationController;
 use App\Http\Controllers\StockTransfer\StockTransferController;
 use App\Http\Controllers\gstReturn\gstR1Controller;
+use App\Http\Controllers\gstReturn\GstDetailController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -320,6 +321,8 @@ Route::Resource('payment', PaymentController::class);
   Route::get('/gst/b2b-detailed-billwise', [gstR1Controller::class, 'B2Bdetailed'])->name('gst.b2b.detailed.billwise');
   Route::get('/gst/b2c-large-detailed', [gstR1Controller::class, 'b2cLargedetailed'])->name('gst.b2c.large.detailed');
   Route::get('/report/filter', [gstR1Controller::class, 'filterform'])->name('report.filter.data');
+  Route::get('gst-detail', [GstDetailController::class, 'index'])->name('gst-detail');
+  Route::post('gst-detail-by-type', [GstDetailController::class, 'gstDetailByType'])->name('gst-detail-by-type');
   Route::get('/report/nilratedreginter', [gstR1Controller::class, 'nilRatedAndExemptedCombined'])->name('nilratedreginter');
   Route::get('/report/debitnote', [gstR1Controller::class, 'combinedNoteRegister'])->name('debitNote');
     Route::get('/report/debitnote/Unreg', [gstR1Controller::class, 'combinedNoteUnreegister'])->name('debitNoteUnreg');

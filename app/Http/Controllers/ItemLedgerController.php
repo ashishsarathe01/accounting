@@ -177,6 +177,8 @@ class ItemLedgerController extends Controller
                   )
                   ->orderBy('stock_date', 'desc')
                   ->get();
+         //          echo "<pre>";
+         // print_r($item->toArray());
             foreach ($item_ledger as $key => $value) {  
                if(count($item)==0){
                   $item->push($value);
@@ -196,6 +198,7 @@ class ItemLedgerController extends Controller
             // Initialize result array            
          }       
          $result = [];
+         
          foreach ($allArrays as $array) {
             foreach ($array as $item) {
                $id = $item['item_id'];
@@ -209,6 +212,7 @@ class ItemLedgerController extends Controller
                }
             }
          }
+         //die;
          // Re-index array
          $result = array_values($result);
          

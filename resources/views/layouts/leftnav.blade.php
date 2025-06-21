@@ -307,7 +307,9 @@
                                        <a href="{{ route('report.filter.data') }}" class="text-blue">GSTR-1</a>
                                     </li>
                                  @endcan
-                                 
+                                 <li class="py-1">
+                                    <a href="{{ route('gst-detail') }}" class="text-blue">GST Detail</a>
+                                 </li>
                               </ul>
                            </div>
                         </li>
