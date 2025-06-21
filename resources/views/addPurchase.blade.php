@@ -1118,9 +1118,9 @@
          }
          calculateAmount($("#bill_sundry_"+$(this).attr('data-id')).val());
       });
-      $("#saveBtn").click(function(){
+      $("#purchaseBtn").click(function(){
          if(confirm("Are you sure to submit?")==true){            
-            $("#saleForm").validate({
+            $("#purchaseForm").validate({
                ignore: [], 
                rules: {
                   series_no: "required",

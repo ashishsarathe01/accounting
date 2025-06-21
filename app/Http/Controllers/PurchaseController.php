@@ -1029,6 +1029,7 @@ class PurchaseController extends Controller{
          if(!empty(Session::get('redirect_url'))){
             return redirect(Session::get('redirect_url'));
          }else{
+            session(['previous_url_purchaseEdit' => URL::previous()]);
             return redirect('purchase')->withSuccess('Purchase voucher updated successfully!');
          }      
          

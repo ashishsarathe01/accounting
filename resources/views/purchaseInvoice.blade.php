@@ -75,7 +75,9 @@
                 
                <div class="d-md-flex d-block noprint">
                   <div class="calender-administrator my-2 my-md-0  w-min-230 noprint">
+                     <button type="button" class="btn btn-danger" onclick="redirectBack()">QUIT</button>
                   <button class="btn btn-info" onclick="printpage();">Print</button>
+                  <a href="{{ route('purchase.create') }}"><button class="btn btn-primary">Add Purchase</button></a>
                   </div>
                </div>            
             </div>
@@ -306,6 +308,25 @@
 @include('layouts.footer')
 
 <script>
+    function redirectBack() {
+    const previousUrl = document.referrer;
+    const sessionPreviousUrl = "{{ session('previous_url_purchase') }}";
+    const sessionPreviousSaleEditUrl = "{{ session('previous_url_purchaseEdit') }}";
+
+    // If referrer matches session URLs → redirect to /sale
+    if (previousUrl === sessionPreviousUrl || previousUrl === sessionPreviousSaleEditUrl) {
+        window.location.href = "{{ url('purchase') }}";
+    } else {
+        // Try going back in history
+        if (window.history.length > 1) {
+            history.back();
+        } else {
+            // No history → redirect to /sale
+            window.location.href = "{{ url('purchase') }}";
+        }
+    }
+}
+
    function printpage(){
       $('.header-section').addClass('importantRule');
       window.print();

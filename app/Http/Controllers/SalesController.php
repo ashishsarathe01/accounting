@@ -946,7 +946,18 @@ class SalesController extends Controller
       $configuration = SaleInvoiceConfiguration::with(['terms','banks'])->where('company_id',Session::get('user_company_id'))->first();
       // echo "<pre>";
       // print_r($seller_info);die;
-      return view('saleInvoice')->with(['items_detail' => $items_detail, 'sale_sundry' => $sale_sundry, 'party_detail' => $party_detail, 'company_data' => $company_data, 'sale_detail' => $sale_detail,'bank_detail' => $bank_detail,'gst_detail'=>$gst_detail,'einvoice_status'=>$GstSettings->einvoice,'ewaybill_status'=>$GstSettings->ewaybill,'configuration'=>$configuration,'seller_info'=>$seller_info]);
+       Session::put('redirect_url', '');
+    
+        // Financial year processing
+        $financial_year = Session::get('default_fy');      
+        $y = explode("-", $financial_year);
+        $from = DateTime::createFromFormat('y', $y[0])->format('Y');
+        $to = DateTime::createFromFormat('y', $y[1])->format('Y');
+        $month_arr = [
+            $from.'-04', $from.'-05', $from.'-06', $from.'-07', $from.'-08', $from.'-09',
+            $from.'-10', $from.'-11', $from.'-12', $to.'-01', $to.'-02', $to.'-03'
+        ];
+      return view('saleInvoice')->with(['items_detail' => $items_detail, 'sale_sundry' => $sale_sundry,'month_arr' => $month_arr, 'party_detail' => $party_detail, 'company_data' => $company_data, 'sale_detail' => $sale_detail,'bank_detail' => $bank_detail,'gst_detail'=>$gst_detail,'einvoice_status'=>$GstSettings->einvoice,'ewaybill_status'=>$GstSettings->ewaybill,'configuration'=>$configuration,'seller_info'=>$seller_info]);
    }
    public function delete(Request $request){
       Gate::authorize('action-module',62);

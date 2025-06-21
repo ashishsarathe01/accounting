@@ -496,6 +496,7 @@
                            <td style="width:15%">
                               <select class="form-select percentage select2-single" id="percentage_1" data-index="1" name="percentage[]" onchange="gstCalculation()">
                                  <option value="">GST(%)</option>
+                                 <option value="0">0%</option>
                                  <option value="5">5%</option>
                                  <option value="12">12%</option>
                                  <option value="18">18%</option>
@@ -1775,6 +1776,7 @@
     <td>
         <select class="form-select percentage select2-single" id="percentage_${add_more_count_withgst}" data-index="${add_more_count_withgst}" name="percentage[]" onchange="gstCalculation()">
             <option value="">GST(%)</option>
+            <option value="0">0%</option>
             <option value="5">5%</option>
             <option value="12">12%</option>
             <option value="18">18%</option>

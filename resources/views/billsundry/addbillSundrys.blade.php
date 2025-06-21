@@ -60,7 +60,7 @@
                      </select>
                   </div>
                   <div class="mb-4 col-md-4">
-                     <label class="form-label font-14 font-heading">List Of Account</label>
+                     <label class="form-label font-14 font-heading">List Of Account <span id="sale_required_star" class="text-danger" style="display:none;">*</span></label>
                      <select class="form-select form-select-lg select2-single" name="sale_amt_account" id="sale_amt_account" aria-label="form-select-lg example" disabled>
                         <option selected>Select </option>
                         <?php
@@ -73,7 +73,7 @@
                </div>
                <div class="row">
                   <div class="mb-4 col-md-4">
-                     <label for="name" class="form-label font-14 font-heading">Adjust in Purchase Amount</label>
+                     <label for="name" class="form-label font-14 font-heading">Adjust in Purchase Amount </label>
                      <select class="form-select form-select-lg select2-single" name="adjust_purchase_amt" id="adjust_purchase_amt" aria-label="form-select-lg example" required>
                         <option value="">Select </option>
                         <option value="Yes">Yes</option>
@@ -81,7 +81,7 @@
                      </select>
                   </div>
                   <div class="mb-4 col-md-4">
-                     <label class="form-label font-14 font-heading">List Of Account</label>
+                     <label class="form-label font-14 font-heading">List Of Account  <span id="purchase_required_star" class="text-danger" style="display:none;">*</span></label>
                      <select class="form-select form-select-lg select2-single"  name="purchase_amt_account" id="purchase_amt_account" aria-label="form-select-lg example" disabled>
                         <option value="">Select </option>
                         <?php
@@ -251,7 +251,34 @@
     });
 });
 
+$(document).ready(function () {
+    function toggleSaleAccountRequirement() {
+        if ($('#adjust_sale_amt').val() === 'No') {
+            $('#sale_amt_account').prop('disabled', false).prop('required', true);
+            $('#sale_required_star').show(); // Show red star
+        } else {
+            $('#sale_amt_account').prop('disabled', true).prop('required', false).val('');
+            $('#sale_required_star').hide(); // Hide red star
+        }
+    }
 
+    function togglePurchaseAccountRequirement() {
+        if ($('#adjust_purchase_amt').val() === 'No') {
+            $('#purchase_amt_account').prop('disabled', false).prop('required', true);
+            $('#purchase_required_star').show(); // Show red star
+        } else {
+            $('#purchase_amt_account').prop('disabled', true).prop('required', false).val('');
+            $('#purchase_required_star').hide(); // Hide red star
+        }
+    }
+
+    $('#adjust_sale_amt').change(toggleSaleAccountRequirement);
+    $('#adjust_purchase_amt').change(togglePurchaseAccountRequirement);
+
+    // Run initially (e.g., on edit form load)
+    toggleSaleAccountRequirement();
+    togglePurchaseAccountRequirement();
+});
 
 </script>
 @endsection
