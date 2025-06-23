@@ -3,8 +3,6 @@
 @section('content')
 <div class="container">
     <h2 class="mb-4">GST B2C Large Invoice - Detailed Summary</h2>
-    <p><strong>Merchant GST:</strong> {{ $merchant_gst }} &nbsp; | &nbsp; <strong>Company ID:</strong> {{ $company_id }}</p>
-    <p><strong>Period:</strong> {{ \Carbon\Carbon::parse($from_date)->format('d-m-Y') }} to {{ \Carbon\Carbon::parse($to_date)->format('d-m-Y') }}</p>
 
     @if(count($data) > 0)
     <table class="table table-bordered table-striped">

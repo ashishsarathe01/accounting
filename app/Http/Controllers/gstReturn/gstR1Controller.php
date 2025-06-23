@@ -89,7 +89,11 @@ public function filterform()
         $from_date = $request->from_date;
         $to_date = $request->to_date;
         $company_id = Session::get('user_company_id');
-
+        $fy = Session::get('default_fy');
+        
+        $comp_details = DB::table('companies')
+          ->where('id', $company_id)
+          ->first();
 
         // Validate required fields
         if (!$merchant_gst || !$company_id || !$from_date || !$to_date) {
@@ -351,6 +355,8 @@ if ($b2cNormalStateSaleIds->isNotEmpty()) {
             'company_id' => $company_id,
             'from_date' => $from_date,
             'to_date' => $to_date,
+            'fy' => $fy,
+            'comp_details' => $comp_details,
 
             'b2c_statewise_taxable' => $b2cTaxableTotal,
 'b2c_statewise_cgst' => $b2cCGST,
@@ -2995,6 +3001,177 @@ $b2cSaleIds = DB::table('sales')
     // Pass final adjusted data to view
     return view('gstReturn.hsnSummary', ['data' => array_values($finalData)]);
 
+
+}
+
+public function documentIssuedSummary(REQUEST $request){
+
+    $merchant_gst = $request->merchant_gst;
+    $company_id = $request->company_id;
+    $from_date = $request->from_date;
+    $to_date = $request->to_date;
+
+ $salesGrouped = DB::table('sales')
+        ->where('company_id', $company_id)
+        ->whereBetween('date', [$from_date, $to_date])
+        ->where('delete', '0') // Exclude soft-deleted records
+        ->whereNotNull('voucher_no_prefix') // Ensure voucher_no_prefix is present
+        ->select('voucher_no_prefix', 'series_no', 'status')
+        ->orderBy('series_no')
+        ->orderBy('voucher_no_prefix')
+        ->get()
+        ->groupBy('series_no');
+
+    $SalesdocumentSummary = [];
+
+    foreach ($salesGrouped as $series => $records) {
+        $total = $records->count();
+        $cancelled = $records->where('status', 2)->count();
+        $from = $records->first()->voucher_no_prefix ?? '-';
+        $to = $records->last()->voucher_no_prefix ?? '-';
+
+        $SalesdocumentSummary[] = [
+            'series_no' => $series ?? '-',
+            'from' => $from,
+            'to' => $to,
+            'total' => $total,
+            'cancelled' => $cancelled,
+            'net_issued' => $total - $cancelled,
+        ];
+    }
+
+
+    $allCreditNotes = DB::table('sales_returns')
+    ->where('company_id', $company_id)
+    ->whereBetween('date', [$from_date, $to_date])
+    ->where('delete', '0')
+    ->whereNotNull('sr_prefix')
+    ->select('sr_prefix', 'series_no', 'status', 'voucher_type','sr_nature')
+    ->orderBy('series_no')
+    ->orderBy('sr_prefix')
+    ->get()
+    ->groupBy('series_no');
+
+$CreditNotedocumentSummary = [];
+
+foreach ($allCreditNotes as $series => $records) {
+    $from = $records->first()->sr_prefix ?? '-';
+    $to = $records->last()->sr_prefix ?? '-';
+
+    // Filter only SALE voucher_type for total and cancelled
+    $saleRecords = $records->where('voucher_type', 'SALE')
+                           ->where('sr_nature', 'WITH GST');
+                   
+
+    $total = $saleRecords->count();
+    $cancelled = $saleRecords->where('status', 2)->count();
+
+    $CreditNotedocumentSummary[] = [
+        'series_no'   => $series ?? '-',
+        'from'        => $from,
+        'to'          => $to,
+        'total'       => $total,
+        'cancelled'   => $cancelled,
+        'net_issued'  => $total - $cancelled,
+    ];
+}
+
+
+
+
+ $allDebitNotes = DB::table('purchase_returns')
+    ->where('company_id', $company_id)
+    ->whereBetween('date', [$from_date, $to_date])
+    ->where('delete', '0')
+    ->whereNotNull('sr_prefix')
+    ->select('sr_prefix', 'series_no', 'status', 'voucher_type','sr_nature')
+    ->orderBy('series_no')
+    ->orderBy('sr_prefix')
+    ->get()
+    ->groupBy('series_no');
+
+    $DebitNotedocumentSummary = [];
+
+foreach ($allDebitNotes as $series => $records) {
+    $from = $records->first()->sr_prefix ?? '-';
+    $to = $records->last()->sr_prefix ?? '-';
+
+    // Filter only SALE voucher_type for total and cancelled
+    $saleRecords = $records->where('voucher_type', 'SALE')
+                           ->where('sr_nature', 'WITH GST');
+
+    $total = $saleRecords->count();
+    $cancelled = $saleRecords->where('status', 2)->count();
+
+    $DebitNotedocumentSummary[] = [
+        'series_no'   => $series ?? '-',
+        'from'        => $from,
+        'to'          => $to,
+        'total'       => $total,
+        'cancelled'   => $cancelled,
+        'net_issued'  => $total - $cancelled,
+    ];
+}
+
+$payments = DB::table('payments')
+    ->where('company_id', $company_id)
+    ->whereBetween('date', [$from_date, $to_date])
+    ->where('delete', '0')
+    ->whereNotNull('voucher_no')
+    ->select('voucher_no', 'series_no', 'status')
+    ->orderBy('series_no')
+    ->orderBy('voucher_no')
+    ->get()
+    ->groupBy('series_no');
+
+      $paymentsDocumentSummary = [];
+
+    foreach ($payments as $series => $records) {
+        $total = $records->count();
+        $cancelled = $records->where('status', 2)->count();
+        $from = $records->first()->voucher_no ?? '-';
+        $to = $records->last()->voucher_no ?? '-';
+
+        $paymentsDocumentSummary[] = [
+            'series_no' => $series ?? '-',
+            'from' => $from,
+            'to' => $to,
+            'total' => $total,
+            'cancelled' => $cancelled,
+            'net_issued' => $total - $cancelled,
+        ];
+    }
+
+    $receipts = DB::table('receipts')
+    ->where('company_id', $company_id)
+    ->whereBetween('date', [$from_date, $to_date])
+    ->where('delete', '0')
+    ->whereNotNull('voucher_no')
+    ->select('voucher_no', 'series_no', 'status')
+    ->orderBy('series_no')
+    ->orderBy('voucher_no')
+    ->get()
+    ->groupBy('series_no');
+
+      $receiptsDocumentSummary = [];
+
+    foreach ($receipts as $series => $records) {
+        $total = $records->count();
+        $cancelled = $records->where('status', 2)->count();
+        $from = $records->first()->voucher_no ?? '-';
+        $to = $records->last()->voucher_no ?? '-';
+
+        $receiptsDocumentSummary[] = [
+            'series_no' => $series ?? '-',
+            'from' => $from,
+            'to' => $to,
+            'total' => $total,
+            'cancelled' => $cancelled,
+            'net_issued' => $total - $cancelled,
+        ];
+    }
+
+    return view('gstReturn.documentIssuedSummary', compact('SalesdocumentSummary','DebitNotedocumentSummary','CreditNotedocumentSummary','paymentsDocumentSummary','receiptsDocumentSummary', 'from_date', 'to_date'));
 
 }
 }

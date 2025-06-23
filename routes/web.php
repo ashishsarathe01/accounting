@@ -330,5 +330,6 @@ Route::Resource('payment', PaymentController::class);
     Route::get('/report/debitnote/Unreg', [gstR1Controller::class, 'combinedNoteUnreegister'])->name('debitNoteUnreg');
    //  Route::get('/report/debitnote/state', [gstR1Controller::class, 'B2Cstatewise1'])->name('state');
  Route::get('/report/hsn', [gstR1Controller::class, 'hsnSummary'])->name('hsnSummary');
+ Route::get('/document-summary/{company_id}/{from_date}/{to_date}', [gstR1Controller::class, 'documentIssuedSummary'])->name('docIssued');
  Route::get('/settings', [SettingsController::class, 'index'])->name('viewSettings');
 });
