@@ -321,10 +321,10 @@ Route::Resource('payment', PaymentController::class);
   Route::get('/gst/b2b-detailed-billwise', [gstR1Controller::class, 'B2Bdetailed'])->name('gst.b2b.detailed.billwise');
   Route::get('/gst/b2c-large-detailed', [gstR1Controller::class, 'b2cLargedetailed'])->name('gst.b2c.large.detailed');
   Route::get('/report/filter', [gstR1Controller::class, 'filterform'])->name('report.filter.data');
-  Route::get('gst-detail', [GstDetailController::class, 'index'])->name('gst-detail');
+  Route::get('gst2a', [GstDetailController::class, 'gstr2A'])->name('gst2a');
+  Route::get('gst2b', [GstDetailController::class, 'gstr2B'])->name('gst2b');
   Route::post('gst-detail-by-type', [GstDetailController::class, 'gstDetailByType'])->name('gst-detail-by-type');
-  Route::post('verify-gst-token-otp', [GstDetailController::class, 'verifyGstTokenOtp'])->name('verify-gst-token-otp');
- 
+  Route::post('verify-gst-token-otp', [GstDetailController::class, 'verifyGstTokenOtp'])->name('verify-gst-token-otp'); 
   Route::get('/report/nilratedreginter', [gstR1Controller::class, 'nilRatedAndExemptedCombined'])->name('nilratedreginter');
   Route::get('/report/debitnote', [gstR1Controller::class, 'combinedNoteRegister'])->name('debitNote');
     Route::get('/report/debitnote/Unreg', [gstR1Controller::class, 'combinedNoteUnreegister'])->name('debitNoteUnreg');

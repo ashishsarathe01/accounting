@@ -21,6 +21,9 @@ use App\Helpers\CommonHelper;
 class GstDetailController extends Controller
 {
     public function index(){
+        
+    }
+    public function gstr2A(){
         $company = Companies::select('gst_config_type')
                                 ->where('id', Session::get('user_company_id'))
                                 ->first();
@@ -36,7 +39,25 @@ class GstDetailController extends Controller
                             ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst",'delete'=>'0','status'=>'1'])
                             ->get();
         }
-        return view('gstReturn.gst_detail',['gst'=>$gst]);
+        return view('gstReturn.gstr2a',['gst'=>$gst]);
+    }
+    public function gstr2B(){
+        $company = Companies::select('gst_config_type')
+                                ->where('id', Session::get('user_company_id'))
+                                ->first();
+        if($company->gst_config_type == "single_gst"){
+            $gst = DB::table('gst_settings')
+                            ->select('gst_no')
+                            ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst",'delete'=>'0','status'=>'1'])
+                            ->get();
+        }else if($company->gst_config_type == "multiple_gst"){
+            
+            $gst = DB::table('gst_settings_multiple')
+                            ->select('gst_no')
+                            ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst",'delete'=>'0','status'=>'1'])
+                            ->get();
+        }
+        return view('gstReturn.gstr2b',['gst'=>$gst]);
     }
     public function gstDetailByType(Request $request){
         $month = date('mY',strtotime($request->month));

@@ -359,10 +359,10 @@
                                                       </li>
                                                    @endcan
                                                    <li class="py-1" style="">
-                                                      <a href="{{ route('gst-detail') }}" class="text-blue">GSTR-2A</a>
+                                                      <a href="{{ route('gst2a') }}" class="text-blue">GSTR-2A</a>
                                                    </li>
                                                    <li class="py-1" style="">
-                                                      <a href="{{ route('gst-detail') }}" class="text-blue">GSTR-2B</a>
+                                                      <a href="{{ route('gst2b') }}" class="text-blue">GSTR-2B</a>
                                                    </li>
                                                    <li class="py-1" style="">
                                                       <a href="javascript:void(0)" class="text-blue">GSTR-3B</a>
