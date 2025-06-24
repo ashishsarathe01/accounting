@@ -10,6 +10,7 @@ use DateTime;
 use App\Models\BillSundrys;
 use App\Models\SaleSundry;
 use App\Models\State;
+use App\Helpers\CommonHelper;
 use App\Models\GstBranch;
 use App\Models\Companies;
 
@@ -588,6 +589,15 @@ public function B2Bdetailed(Request $request)
         return response()->json(['error' => 'Missing required filters'], 400);
     }
 
+    $groupIds = CommonHelper::getAllGroupIds([3, 11]);
+
+$accountDropdown = DB::table('accounts')
+    ->where('company_id', $company_id)
+    ->whereIn('under_group', $groupIds)
+    ->select('account_name', 'gstin')
+    ->orderBy('account_name')
+    ->get();
+
     $user_company_id = Session::get('user_company_id');
 
     // Step 1: Fetch all Bill Sundries for the company
@@ -739,6 +749,7 @@ if (!isset($grouped[$key])) {
         'voucher_no_prefix' => $sale->voucher_no_prefix,
         'rate' => $rate,
         'invoice_date' => $sale->date,
+        'sales_id' => $sale->id,
         'billing_gst' => $sale->billing_gst,
         'name' => $sale->name,
         'total' => $sale->total,
@@ -760,9 +771,25 @@ if (!isset($grouped[$key])) {
     }
 }
 
+// At the bottom of controller, before return:
+$billing_gst_filter = $request->billing_gst;
+$name_filter = $request->name;
+$invoice_date_filter = $request->invoice_date;
+$rate_filter = $request->rate;
+
+// Filter grouped array by these values
+if ($billing_gst_filter || $name_filter || $invoice_date_filter || $rate_filter) {
+    $grouped = collect($grouped)->filter(function ($row) use ($billing_gst_filter, $name_filter, $invoice_date_filter, $rate_filter) {
+        return (!$billing_gst_filter || str_contains($row['billing_gst'], $billing_gst_filter)) &&
+               (!$name_filter || str_contains(strtolower($row['name']), strtolower($name_filter))) &&
+               (!$invoice_date_filter || \Carbon\Carbon::parse($row['invoice_date'])->format('Y-m-d') === $invoice_date_filter) &&
+               (!$rate_filter || $row['rate'] == $rate_filter);
+    })->all(); // return as array again
+}
+
     // Return the grouped data to the view
     
-    return view('gstReturn.b2bDetailed', ['grouped' => $grouped]);
+    return view('gstReturn.b2bDetailed', ['grouped' => $grouped, 'accountDropdown' => $accountDropdown]);
 
 }
 

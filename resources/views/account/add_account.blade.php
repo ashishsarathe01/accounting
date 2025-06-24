@@ -108,15 +108,30 @@
                      <label for="gstin" class="form-label font-14 font-heading">GST NO.</label>
                      <input type="text" class="form-control common_val" id="gstin" name="gstin" placeholder="ENTER GST NO."  value="@if(isset($id)){{$account->gstin}}@endif"/>
                   </div>
-                  <div class="mb-4 col-md-4 state_div common_div" style="display: none;">
-                     <label for="state" class="form-label font-14 font-heading">STATE</label>
-                     <select class="form-select form-select-lg common_val select2-single " id="state" name="state" aria-label="form-select-lg example">
-                        <option value="">SELECT STATE</option>
-                        @foreach($state_list as $value)
-                           <option value="{{$value->id}}" data-state_code="{{$value->state_code}}" @if(isset($id) && $account->state==$value->id) selected  @endif>{{$value->state_code}}-{{$value->name}}</option>
-                        @endforeach
-                     </select>
-                  </div>
+                  @php
+                     $hasGstin = isset($account) && !empty($account->gstin);
+                  @endphp
+                 <div class="mb-4 col-md-4 state_div common_div" style="display: none;">
+                           <label for="state" class="form-label font-14 font-heading">STATE</label>
+
+                           <select class="form-select form-select-lg common_val select2-single" 
+                                    id="state"
+                                    name="state_visible"
+                                    aria-label="form-select-lg example">
+                              <option value="">SELECT STATE</option>
+                              @foreach($state_list as $value)
+                                    <option value="{{ $value->id }}" 
+                                          data-state_code="{{ $value->state_code }}" 
+                                          @if(isset($id) && $account->state == $value->id) selected @endif>
+                                       {{ $value->state_code }} - {{ $value->name }}
+                                    </option>
+                              @endforeach
+                           </select>
+
+                           <!-- Hidden field to store actual submitted value -->
+                           <input type="hidden" name="state" id="state_hidden" value="@if(isset($id)){{ $account->state }}@endif">
+                 </div>
+
                   <div class="clearfix"></div>
                   <div class="mb-4 col-md-8 address_div common_div" style="display: none;">
                      <label for="address" class="form-label font-14 font-heading">ADDRESS</label>
@@ -272,54 +287,106 @@
 @include('layouts.footer')
 <script>
    var edit_id = "@if(isset($id)){{$id}} @endif";
-   $(document).ready(function(){ 
-        $( ".select2-single, .select2-multiple" ).select2();
-      $("#under_group").change();
-      $("#account_name").keyup(function(){
-         $("#print_name").val($(this).val())
-      });
-      $("#opening_balance").keyup(function(){
-         $("#opening_balance_type").attr('required',false);
-         if($(this).val()!=""){
-            $("#opening_balance_type").attr('required',true);
-         }
-      });
-      $("#gstin").change(function(){
-         var inputvalues = $(this).val();
-         $("#pan").val("");
-         $("#address").val("");
-         $("#pincode").val("");
-         $("#state").val("");
-         $.ajax({
-            url: '{{url("check-gstin")}}',
+    window.hasGstinOnLoad = {{ $hasGstin ? 'true' : 'false' }};
+
+    function syncStateValue() {
+    $("#state_hidden").val($("#state").val());
+}
+
+$(document).ready(function() {
+    // Initialize Select2
+    $(".select2-single, .select2-multiple").select2();
+
+    // Trigger change on page load for under_group
+    $("#under_group").change();
+
+    // Sync account_name to print_name
+    $("#account_name").keyup(function() {
+        $("#print_name").val($(this).val());
+    });
+
+    // Make opening_balance_type required only if opening_balance has value
+    $("#opening_balance").keyup(function() {
+        $("#opening_balance_type").attr('required', false);
+        if ($(this).val() !== "") {
+            $("#opening_balance_type").attr('required', true);
+        }
+    });
+
+
+       syncStateValue();
+
+    // Sync when state changes (user or JS)
+    $("#state").on("change", function() {
+        syncStateValue();
+    });
+
+    if (window.hasGstinOnLoad) {
+        $('#state').on('select2:opening', function(e) {
+            e.preventDefault(); // prevents dropdown from opening
+        }).css({
+            'pointer-events': 'none',
+            'background-color': '#e9ecef' // Bootstrap gray
+        });
+    }
+
+    // GSTIN input event to enable/disable state
+      $("#gstin").on('input', function () {
+        let gstin = $(this).val().trim();
+        if (gstin === "") {
+            // Re-enable dropdown
+            $("#state").off('select2:opening').css('pointer-events', 'auto');
+        }
+    });
+
+    $("#gstin").change(function () {
+        var inputvalues = $(this).val().trim();
+        $("#pan").val("");
+        $("#address").val("");
+        $("#pincode").val("");
+        $("#state").val("").trigger('change');
+        $("#state").css('pointer-events', 'auto');
+
+        if (inputvalues === "") return;
+
+        $.ajax({
+            url: '{{ url("check-gstin") }}',
             async: false,
             type: 'POST',
             dataType: 'JSON',
             data: {
-               _token: '<?php echo csrf_token() ?>',
-               gstin: inputvalues
+                _token: '{{ csrf_token() }}',
+                gstin: inputvalues
             },
-            success: function(data) {
-               if(data!=""){
-                  if(data.status==1){
-                     var GstateCode = inputvalues.substr(0, 2);
-                     var matchedValue = $('#state option[data-state_code="' + GstateCode + '"]').val();
+            success: function (data) {
+                if (data && data.status == 1) {
+                    var GstateCode = inputvalues.substr(0, 2);
+                    var matchedValue = $('#state option[data-state_code="' + GstateCode + '"]').val();
+                    if (matchedValue) {
+                        $('#state').val(matchedValue).trigger('change');
+                        $('#state').on('select2:opening', function(e) {
+                            e.preventDefault();
+                        }).css({
+                            'pointer-events': 'none',
+                            'background-color': '#e9ecef'
+                        });
+                    }
 
-                     // Set it in Select2
-                     $('#state').val(matchedValue).trigger('change');
-                     //$('#state [data-state_code = "'+GstateCode+'"]').prop('selected', true);
-                     var GpanNum = inputvalues.substring(2, 12);
-                     $("#pan").val(GpanNum);
-                     $("#address").val(data.address.toUpperCase());
-                     $("#pincode").val(data.pinCode);
-                  }else if(data.status==0){
-                     alert(data.message)
-                  }
-               }               
+                    var GpanNum = inputvalues.substring(2, 12);
+                    $("#pan").val(GpanNum);
+                    $("#address").val(data.address.toUpperCase());
+                    $("#pincode").val(data.pinCode);
+
+                    syncStateValue(); // update hidden input
+                } else if (data.status == 0) {
+                    alert(data.message);
+                }
             }
-         });         
-      });
-   });
+        });
+    });
+});
+
+
    $("#under_group").change(function(){
       $(".common_div").hide();
       $("#state").attr('required',false);

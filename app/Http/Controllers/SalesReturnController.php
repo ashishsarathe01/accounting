@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\SalesReturn;
+use App\Models\Purchase;
 use App\Models\SaleReturnDescription;
 use App\Models\SaleReturnSundry;
 use Illuminate\Support\Facades\Validator;

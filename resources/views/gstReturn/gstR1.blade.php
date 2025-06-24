@@ -1,9 +1,6 @@
 @extends('layouts.app')
 @section('content')
 
-
-
-
     @php
         $cards = [
             ['title' => '4A, 4B, 6B, 6C - B2B, SEZ, DE Invoices', 'route' => route('gst.b2b.detailed.billwise', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
@@ -50,7 +47,7 @@
                     <div class="col-md-4"><strong>Tax Period -</strong> {{$from_date}} to {{$to_date}}</div>
                     <div class="col-md-4"><strong>Status -</strong> Not Filed</div>
                     <div class="col-md-4 text-danger">
-                        <i class="fas fa-circle text-danger me-1" style="font-size: 8px;"></i> Indicates Mandatory Fields
+                        <i class="fas fa-circle text-danger me-1" style="font-size: 8px;"></i> * Indicates Mandatory Fields
                     </div>
                     <div class="col-md-4"><strong>Due Date -</strong> 11/07/2025</div>
                 </div>
