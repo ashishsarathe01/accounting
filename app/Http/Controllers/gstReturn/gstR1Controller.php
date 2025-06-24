@@ -24,6 +24,7 @@ public function filterform()
 {
     $companyId = Session::get('user_company_id');
     $companyData = Companies::where('id', $companyId)->first();
+    $fy = Session::get('default_fy');
     $seriesList = [];
 
     if ($companyData->gst_config_type == "single_gst") {
@@ -76,7 +77,7 @@ public function filterform()
         }
     }
 
-    return view('gstReturn.filterIndex', compact('seriesList'));
+    return view('gstReturn.filterIndex', compact('seriesList','fy'));
 }
 
 

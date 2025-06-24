@@ -15,6 +15,17 @@
     border-radius: 5px;
     padding: 12px 8px;
 }
+.clickable-row:hover {
+    background-color:rgb(255, 255, 255) !important; /* Light blue */
+    cursor: pointer;
+}
+.clickable-row:hover a {
+    color: rgb(0, 14, 79) !important;
+}
+.clickable-row-blue:hover {
+    background-color: #cce5ff !important; /* Light blue */
+    cursor: pointer;
+}
 </style>
 <aside class="col-lg-2 d-none d-lg-block bg-blue sidebar p-0">
    <div class="sidebar-sticky ">
@@ -35,24 +46,24 @@
                      <ul class="nav flex-column">
                         @can('view-module', 17)
                         <a href="{{ route('add-company') }}">
-                           <li class="font-14 text-blue fw-500 m-0 py-12 px-2 text-blue bg-white border-radius-4 clickable-row">Add Company</li>
+                           <li class="font-14 text-blue fw-500 m-0 py-12 px-2 text-blue bg-white border-radius-4">Add Company</li>
                         </a>
                      @endcan
                      <?php
                      if (Session::get('user_company_id') != '') { ?>
                         @can('view-module', 18)
                            <a href="{{ route('view-company') }}">
-                              <li class="font-14 text-white fw-500 m-0 py-12 px-2 clickable-row"> View Company</li>
+                              <li class="font-14 text-white fw-500 m-0 py-12 px-2 "> View Company</li>
                            </a>
                         @endcan
                         @can('view-module', 19)
                            <a href="{{ route('manage-financial-year') }}">
-                              <li class="font-14 text-white fw-500 m-0 py-12 px-2 clickable-row"> Manage Financial Year</li>
+                              <li class="font-14 text-white fw-500 m-0 py-12 px-2 "> Manage Financial Year</li>
                            </a>
                         @endcan
                         @can('view-module', 20)
                            <a href="{{ route('manage-merchant-employee.index') }}">
-                              <li class="font-14 text-white fw-500 m-0 py-12 px-2 clickable-row"> Manage User</li>
+                              <li class="font-14 text-white fw-500 m-0 py-12 px-2 "> Manage User</li>
                            </a>
                         @endcan
                         <?php 
@@ -65,7 +76,7 @@
          if(Session::get('user_company_id') != ''){?>
             @can('view-module', 21)
                <div class="card bg-blue pt-2 px-2 rounded-0 aside-bottom-divider">
-                  <div class="card-header py-12 px-2 border-0 d-flex rounded-0" id="administratorHeading">
+                  <div class="card-header py-12 px-2 border-0 d-flex rounded-0 clickable-row" id="administratorHeading">
                      <a class="nav-link text-white font-14 dropdown-icon-img d-flex fw-500  p-0 collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#adminCollapse" aria-expanded="true" aria-controls="adminCollapse"><img src="{{ URL::asset('public/assets/imgs/administrator.svg')}}" class="me-2" alt="">Master</a>
                   </div>
                   <div id="adminCollapse" class="collapse" aria-labelledby="administratorHeading" data-bs-parent="#accordion">
@@ -78,65 +89,65 @@
                            </li>
                         @endcan
                         @can('view-module', 3)
-                           <li class="font-14  fw-500 m-0 py-12 px-2  ">
+                           <li class="font-14  fw-500 m-0 py-12 px-2 clickable-row ">
                               <a class=" text-decoration-none  d-flex   text-white" href="{{ route('account-group.index') }}">
                                           Account Group
                               </a>
                            </li>
                         @endcan
                         @can('view-module', 5)
-                           <li class="font-14  fw-500 m-0 py-12 px-2  ">
+                           <li class="font-14  fw-500 m-0 py-12 px-2 clickable-row ">
                               <a class=" text-decoration-none  d-flex   text-white" href="{{ route('account.index') }}">
                                  Account
                               </a>
                            </li>
                         @endcan
                         @can('view-module', 6)
-                           <li class="font-14  fw-500 m-0 py-12 px-2  ">
+                           <li class="font-14  fw-500 m-0 py-12 px-2 clickable-row ">
                               <a class=" text-decoration-none  d-flex  text-white  " href="{{ route('account-unit.index') }}">
                                           Manage Unit
                               </a>
                            </li>
                         @endcan
                         @can('view-module', 7)
-                           <li class="font-14  fw-500 m-0 py-12 px-2  ">
+                           <li class="font-14  fw-500 m-0 py-12 px-2 clickable-row ">
                               <a class=" text-decoration-none  d-flex   text-white" href="{{ route('account-item-group.index') }}">
                                           Item Group
                               </a>
                            </li>
                         @endcan
                         @can('view-module', 8)
-                           <li class="font-14  fw-500 m-0 py-12 px-2  ">
+                           <li class="font-14  fw-500 m-0 py-12 px-2 clickable-row ">
                               <a class=" text-decoration-none  d-flex   text-white" href="{{ route('account-manage-item.index') }}">
                                           Manage Item
                               </a>
                            </li>
                         @endcan
                         @can('view-module', 9)
-                           <li class="font-14  fw-500 m-0 py-12 px-2  ">
+                           <li class="font-14  fw-500 m-0 py-12 px-2 clickable-row ">
                               <a class=" text-decoration-none  d-flex    text-white" href="{{ route('account-bill-sundry.index') }}">
                                           Bill Sundry
                               </a>
                            </li>
                         @endcan
                         <div class="card bg-blue pt-2 px-2 rounded-0 aside-bottom-divider">
-                           <div class="card-header py-12 px-2 border-0 rounded-0 d-flex" id="importMasterDataHeading">
-                              <a class="nav-link text-white font-14 fw-500 dropdown-icon-img p-0 collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#importMasterDataCollapse" aria-expanded="true" aria-controls="importMasterDataCollapse">
+                           <div class="card-header py-12 px-2 border-0 rounded-0 d-flex " id="importMasterDataHeading">
+                              <a class="nav-link text-white font-14 fw-500 dropdown-icon-img p-0 collapsed  " href="#" data-bs-toggle="collapse" data-bs-target="#importMasterDataCollapse" aria-expanded="true" aria-controls="importMasterDataCollapse">
                               <img src="{{ URL::asset('public/assets/imgs/display.svg')}}" class="me-2" alt="">Import Master Data
                               </a>
                            </div>
                            <div id="importMasterDataCollapse" class="collapse" aria-labelledby="importMasterDataHeading" data-bs-parent="#importMasterDataHeading">
                               <ul class="nav flex-column">
-                                 <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4">
+                                 <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4 clickable-row-blue">
                                     <a class=" text-decoration-none d-flex text-blue" href="{{ route('account-group-import-view') }}">Import Account Group</a>
                                  </li>
-                                 <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4">
+                                 <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4 clickable-row-blue">
                                     <a class=" text-decoration-none d-flex text-blue" href="{{ route('import-account-view') }}">Import Account</a>
                                  </li>
                                  <!-- <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4">
                                     <a class=" text-decoration-none d-flex text-blue" href="{{ route('import-account-view') }}">Import Item Group</a>
                                  </li> -->
-                                 <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4">
+                                 <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4 clickable-row-blue">
                                     <a class=" text-decoration-none d-flex text-blue" href="{{ route('item-import-view') }}">Import Item</a>
                                  </li>
                               </ul>
@@ -158,70 +169,70 @@
                   <div id="transactonCollapse" class="collapse" aria-labelledby="transactionsHeading" data-bs-parent="#accordion">
                      <ul class="nav flex-column">
                         @can('view-module', 10)
-                           <li class="font-14  fw-500 m-0 py-12 px-2   border-radius-4 clickable-row">
-                              <a class=" text-decoration-none  d-flex  text-white " href="{{ route('sale.index') }}">
+                           <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4">
+                              <a class=" text-decoration-none  d-flex  text-blue " href="{{ route('sale.index') }}">
                                           Sales
                               </a>
                            </li>
                         @endcan
                         @can('view-module', 11)
-                           <li class="font-14  fw-500 m-0 py-12 px-2 clickable-row ">
+                           <li class="font-14  fw-500 m-0 py-12 px-2  ">
                               <a class=" text-decoration-none  d-flex   text-white" href="{{ route('purchase.index') }}">
                                           Purchase
                               </a>
                            </li>
                         @endcan
                         @can('view-module', 12)
-                           <li class="font-14  fw-500 m-0 py-12 px-2 clickable-row ">
+                           <li class="font-14  fw-500 m-0 py-12 px-2  ">
                               <a class=" text-decoration-none  d-flex   text-white" href="{{ route('sale-return.index') }}">
                                           Credit Note
                               </a>
                            </li>
                         @endcan
                         @can('view-module', 13)
-                           <li class="font-14  fw-500 m-0 py-12 px-2 clickable-row ">
+                           <li class="font-14  fw-500 m-0 py-12 px-2  ">
                               <a class=" text-decoration-none  d-flex   text-white" href="{{ route('purchase-return.index') }}">
                                           Debit Note
                               </a>
                            </li>
                         @endcan
                         @can('view-module', 15)
-                           <li class="font-14  fw-500 m-0 py-12 px-2 clickable-row ">
+                           <li class="font-14  fw-500 m-0 py-12 px-2  ">
                               <a class=" text-decoration-none  d-flex   text-white" href="{{ route('payment.index') }}">
                                           Payment
                               </a>
                            </li>
                         @endcan
                         @can('view-module', 16)
-                           <li class="font-14  fw-500 m-0 py-12 px-2 clickable-row ">
+                           <li class="font-14  fw-500 m-0 py-12 px-2  ">
                               <a class=" text-decoration-none  d-flex   text-white" href="{{ route('receipt.index') }}">
                                           Receipt
                               </a>
                            </li>
                         @endcan
                         @can('view-module', 14)
-                           <li class="font-14  fw-500 m-0 py-12 px-2 clickable-row ">
+                           <li class="font-14  fw-500 m-0 py-12 px-2  ">
                               <a class=" text-decoration-none  d-flex   text-white" href="{{ route('journal.index') }}">
                                           Journal
                               </a>
                            </li>
                         @endcan
                         @can('view-module', 29)
-                           <li class="font-14  fw-500 m-0 py-12 px-2 clickable-row ">
+                           <li class="font-14  fw-500 m-0 py-12 px-2  ">
                               <a class=" text-decoration-none  d-flex   text-white" href="{{ route('contra.index') }}">
                                           Contra
                               </a>
                            </li>
                         @endcan
                         @can('view-module', 30)
-                           <li class="font-14  fw-500 m-0 py-12 px-2 clickable-row ">
+                           <li class="font-14  fw-500 m-0 py-12 px-2  ">
                               <a class=" text-decoration-none  d-flex   text-white" href="{{ route('stock-journal') }}">
                                           Stock Journal
                               </a>
                            </li>
                         @endcan
                         @can('view-module', 31)
-                           <li class="font-14  fw-500 m-0 py-12 px-2 clickable-row ">
+                           <li class="font-14  fw-500 m-0 py-12 px-2  ">
                               <a class=" text-decoration-none  d-flex   text-white" href="{{ route('stock-transfer.index') }}">
                                  Stock Transfer
                               </a>
@@ -272,7 +283,10 @@
                   <div id="displayCollapse" class="collapse" aria-labelledby="displayHeading" data-bs-parent="#accordion">
                      <ul class="nav flex-column">
                         <li class="report-menu-item">
+<<<<<<< Updated upstream
                         <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue" style="border: 1px solid #007bff;">
+=======
+>>>>>>> Stashed changes
                            <!-- Toggle for Balance Sheet submenu -->
                            <a class="text-decoration-none d-flex text-blue collapsed"
                               href="#"
@@ -287,17 +301,17 @@
                            <div class="collapse ps-3" id="financialSubmenu">
                               <ul class="nav flex-column">
                                  @can('view-module', 24)
-                                    <li class="py-1 clickable-row-blue">
+                                    <li class="py-1">
                                        <a href="{{ route('balancesheet.index') }}" class="text-blue">Balance Sheet</a>
                                     </li>
                                  @endcan
                                  @can('view-module', 25)
-                                    <li class="py-1 clickable-row-blue">
+                                    <li class="py-1">
                                        <a href="{{ route('profitloss.index') }}" class="text-blue">Profit & Loss</a>
                                     </li>
                                  @endcan
                                  @can('view-module', 32)
-                                    <li class="py-1 clickable-row-blue">
+                                    <li class="py-1">
                                        <a href="{{ route('trialbalance.index') }}" class="text-blue">Trial Balance</a>
                                     </li>
                                  @endcan
@@ -305,9 +319,12 @@
                            </div>
                         </li>
                         <li class="report-menu-item">
+<<<<<<< Updated upstream
                         <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue " style="border: 1px solid #007bff;">
+=======
+>>>>>>> Stashed changes
                            <!-- Toggle for Balance Sheet submenu -->
-                           <a class="text-decoration-none d-flex text-blue collapsed "
+                           <a class="text-decoration-none d-flex text-blue collapsed"
                               href="#"
                               role="button"
                               tabindex="0"
@@ -376,19 +393,19 @@
                                                 data-bs-target="#reconsiliationSubmenu"
                                                 aria-expanded="false"
                                                 aria-controls="reconsiliationSubmenu">
-                                                Reconciliation
+                                                Reconsiliation
                                                 <i class="arrow-icon fa fa-chevron-down ms-auto"></i>
                                              </a>
                                              <div class="collapse ps-3" id="reconsiliationSubmenu">
                                                 <ul class="nav flex-column">
                                                    <li class="py-1" style="">
-                                                      <a href="javascript:void(0)" class="text-blue">GSTR-1 Reconciliation</a>
+                                                      <a href="javascript:void(0)" class="text-blue">GSTR-1 Reconsiliation</a>
                                                    </li>
                                                    <li class="py-1" style="">
-                                                      <a href="javascript:void(0)" class="text-blue">GSTR-2A Reconciliation</a>
+                                                      <a href="javascript:void(0)" class="text-blue">GSTR-2A Reconsiliation</a>
                                                    </li>
                                                    <li class="py-1" style="">
-                                                      <a href="javascript:void(0)" class="text-blue">GSTR-2B Reconciliation</a>
+                                                      <a href="javascript:void(0)" class="text-blue">GSTR-2B Reconsiliation</a>
                                                    </li>
                                                 </ul>
                                              </div>
@@ -476,12 +493,19 @@
                                           
                                        </ul>
                                     </div>
+<<<<<<< Updated upstream
                                  
+=======
+                                 </li>
+>>>>>>> Stashed changes
                               </ul>
                            </div>
                         </li>
                         <li class="report-menu-item">
+<<<<<<< Updated upstream
                         <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue" style="border: 1px solid #007bff;">
+=======
+>>>>>>> Stashed changes
                            <!-- Toggle for Balance Sheet submenu -->
                            <a class="text-decoration-none d-flex text-blue collapsed"
                               href="#"
@@ -496,7 +520,7 @@
                            <div class="collapse ps-3" id="accountBookSubmenu">
                               <ul class="nav flex-column">
                                  @can('view-module', 26)
-                                    <li class="py-1 clickable-row-blue">
+                                    <li class="py-1">
                                        <a href="{{ route('accountledger.index') }}" class="text-blue">Account Ledger</a>
                                     </li>
                                  @endcan
@@ -505,7 +529,10 @@
                            </div>
                         </li>
                         <li class="report-menu-item">
+<<<<<<< Updated upstream
                         <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue" style="border: 1px solid #007bff;">
+=======
+>>>>>>> Stashed changes
                            <!-- Toggle for Balance Sheet submenu -->
                            <a class="text-decoration-none d-flex text-blue collapsed"
                               href="#"
@@ -520,7 +547,7 @@
                            <div class="collapse ps-3" id="inventorySubmenu">
                               <ul class="nav flex-column">
                                  @can('view-module', 27)
-                                    <li class="py-1 clickable-row-blue">
+                                    <li class="py-1">
                                        <a href="{{ route('itemledger.index') }}" class="text-blue">Items Ledger</a>
                                     </li>
                                  @endcan
@@ -529,7 +556,10 @@
                            </div>
                         </li>
                         <li class="report-menu-item">
+<<<<<<< Updated upstream
                         <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue" style="border: 1px solid #007bff;">
+=======
+>>>>>>> Stashed changes
                            <!-- Toggle for Balance Sheet submenu -->
                            <a class="text-decoration-none d-flex text-blue collapsed"
                               href="#"
@@ -548,7 +578,10 @@
                            </div>
                         </li>
                         <li class="report-menu-item">
+<<<<<<< Updated upstream
                         <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue" style="border: 1px solid #007bff;">
+=======
+>>>>>>> Stashed changes
                            <!-- Toggle for Balance Sheet submenu -->
                            <a class="text-decoration-none d-flex text-blue collapsed"
                               href="#"
@@ -567,7 +600,10 @@
                            </div>
                         </li>
                         <li class="report-menu-item">
+<<<<<<< Updated upstream
                         <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue" style="border: 1px solid #007bff;">
+=======
+>>>>>>> Stashed changes
                            <!-- Toggle for Balance Sheet submenu -->
                            <a class="text-decoration-none d-flex text-blue collapsed"
                               href="#"
@@ -621,22 +657,3 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 </script>
-
-@section('styles')
-<style>
-      /* 👇 Hover effect on table rows */
-.clickable-row:hover {
-    background-color: rgb(254, 254, 254) !important;
-    cursor: pointer;
-}
-
-.clickable-row:hover a {
-    color: rgb(0, 14, 79) !important;
-}
-
-.clickable-row-blue:hover {
-    background-color: #cce5ff !important; /* Light blue */
-    cursor: pointer;
-}
-</style>
-@endsection

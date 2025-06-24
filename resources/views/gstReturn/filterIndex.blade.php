@@ -37,16 +37,36 @@
     </div>
 
     <!-- From Date -->
-    <div class="mb-3 col-md-2">
-        <label for="from_date" class="form-label" style="font-size: 1.05rem">From Date</label>
-        <input type="date" name="from_date" id="from_date" class="form-control" value="{{ old('from_date') }}" min="{{Session::get('from_date')}}" max="{{Session::get('to_date')}}" required>
-    </div>
+  @php
+    $fy = Session::get('from_date'); // Format: Y-m-d
+    $fyYear = \Carbon\Carbon::parse($fy)->format('Y'); // Start year
+    $fyNextYear = \Carbon\Carbon::parse($fy)->addYear()->format('Y'); // Next year
+@endphp
 
-    <!-- To Date -->
-    <div class="mb-3 col-md-2">
-        <label for="to_date" class="form-label" style="font-size: 1.05rem">To Date</label>
-        <input type="date" name="to_date" id="to_date" class="form-control" value="{{ old('to_date') }}" min="{{Session::get('from_date')}}" max="{{Session::get('to_date')}}" required>
-    </div>
+<!-- Month Selector -->
+<div class="mb-3 col-md-3">
+    <label for="month_select" class="form-label" style="font-size: 1.05rem">Select Month</label>
+    <select id="month_select" class="form-select" required>
+        <option value="">-- Select Month --</option>
+        <option value="04">April</option>
+        <option value="05">May</option>
+        <option value="06">June</option>
+        <option value="07">July</option>
+        <option value="08">August</option>
+        <option value="09">September</option>
+        <option value="10">October</option>
+        <option value="11">November</option>
+        <option value="12">December</option>
+        <option value="01">January</option>
+        <option value="02">February</option>
+        <option value="03">March</option>
+    </select>
+</div>
+
+<!-- Hidden Inputs to submit -->
+<input type="hidden" name="from_date" id="from_date">
+<input type="hidden" name="to_date" id="to_date">
+
 
     <!-- Button -->
    <div class="mb-3 text-start">
@@ -132,6 +152,39 @@ $(document).ready(function () {
     }); 
 
 });
+
+document.addEventListener("DOMContentLoaded", function () {
+    const monthSelect = document.getElementById("month_select");
+    const fromDateInput = document.getElementById("from_date");
+    const toDateInput = document.getElementById("to_date");
+
+    const fyStartYear = {{ \Carbon\Carbon::parse($fy)->format('Y') }};
+    const fyEndYear = {{ \Carbon\Carbon::parse($fy)->addYear()->format('Y') }};
+
+    monthSelect.addEventListener("change", function () {
+        const month = this.value;
+
+        if (!month) {
+            fromDateInput.value = '';
+            toDateInput.value = '';
+            return;
+        }
+
+        // Determine year for the month
+        const year = parseInt(month) >= 4 ? fyStartYear : fyEndYear;
+
+        // Determine last day of month (handle leap year for Feb)
+        const lastDay = new Date(year, month, 0).getDate(); // 0th day of next month = last day of selected month
+
+        // Format YYYY-MM-DD
+        const from_date = `${year}-${month}-01`;
+        const to_date = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+
+        fromDateInput.value = from_date;
+        toDateInput.value = to_date;
+    });
+});
+
 </script>
 
 
