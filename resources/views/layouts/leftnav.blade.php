@@ -10,6 +10,11 @@
   font-size: 14px;
   font-weight: 500;
 }
+.py-1{
+   border: 1px solid #007bff;
+    border-radius: 5px;
+    padding: 12px 8px;
+}
 </style>
 <aside class="col-lg-2 d-none d-lg-block bg-blue sidebar p-0">
    <div class="sidebar-sticky ">
@@ -327,13 +332,94 @@
                                     <!-- Submenu under Balance Sheet -->
                                     <div class="collapse ps-3" id="gstReportSubmenu">
                                        <ul class="nav flex-column">
-                                          @can('view-module', 28)
-                                             <li class="py-1">
-                                                <a href="{{ route('report.filter.data') }}" class="text-blue">GSTR-1</a>
-                                             </li>
-                                          @endcan
-                                          <li class="py-1">
-                                             <a href="{{ route('gst-detail') }}" class="text-blue">GST Detail</a>
+                                          <li class="report-menu-item">
+                                             <a class="text-decoration-none d-flex text-blue collapsed"
+                                                href="#"
+                                                data-bs-toggle="collapse"
+                                                data-bs-target="#returnsSubmenu"
+                                                aria-expanded="false"
+                                                aria-controls="returnsSubmenu">
+                                                Returns
+                                                <i class="arrow-icon fa fa-chevron-down ms-auto"></i>
+                                             </a>
+                                             <div class="collapse ps-3" id="returnsSubmenu">
+                                                <ul class="nav flex-column">
+                                                   @can('view-module', 28)
+                                                      <li class="py-1" style="">
+                                                         <a href="{{ route('report.filter.data') }}" class="text-blue">GSTR-1</a>
+                                                      </li>
+                                                   @endcan
+                                                   <li class="py-1" style="">
+                                                      <a href="{{ route('gst-detail') }}" class="text-blue">GSTR-2A</a>
+                                                   </li>
+                                                   <li class="py-1" style="">
+                                                      <a href="{{ route('gst-detail') }}" class="text-blue">GSTR-2B</a>
+                                                   </li>
+                                                   <li class="py-1" style="">
+                                                      <a href="javascript:void(0)" class="text-blue">GSTR-3B</a>
+                                                   </li>
+                                                   <li class="py-1" style="">
+                                                      <a href="javascript:void(0)" class="text-blue">GSTR-9</a>
+                                                   </li>
+                                                   <li class="py-1" style="">
+                                                      <a href="javascript:void(0)" class="text-blue">GSTR-9C</a>
+                                                   </li>
+                                                </ul>
+                                             </div>
+                                          </li>
+                                          <li class="report-menu-item">
+                                             <a class="text-decoration-none d-flex text-blue collapsed"
+                                                href="#"
+                                                data-bs-toggle="collapse"
+                                                data-bs-target="#reconsiliationSubmenu"
+                                                aria-expanded="false"
+                                                aria-controls="reconsiliationSubmenu">
+                                                Reconsiliation
+                                                <i class="arrow-icon fa fa-chevron-down ms-auto"></i>
+                                             </a>
+                                             <div class="collapse ps-3" id="reconsiliationSubmenu">
+                                                <ul class="nav flex-column">
+                                                   <li class="py-1" style="">
+                                                      <a href="javascript:void(0)" class="text-blue">GSTR-1 Reconsiliation</a>
+                                                   </li>
+                                                   <li class="py-1" style="">
+                                                      <a href="javascript:void(0)" class="text-blue">GSTR-2A Reconsiliation</a>
+                                                   </li>
+                                                   <li class="py-1" style="">
+                                                      <a href="javascript:void(0)" class="text-blue">GSTR-2B Reconsiliation</a>
+                                                   </li>
+                                                </ul>
+                                             </div>
+                                          </li>
+                                          <li class="report-menu-item">
+                                             <a href="javascript:void(0)" class="text-blue">Credit Ledger Balance</a>
+                                          </li>
+                                          <li class="report-menu-item">
+                                             <a href="javascript:void(0)" class="text-blue">Challan</a>
+                                          </li>
+                                          <li class="report-menu-item">
+                                             <a class="text-decoration-none d-flex text-blue collapsed"
+                                                href="#"
+                                                data-bs-toggle="collapse"
+                                                data-bs-target="#otherReportsSubmenu"
+                                                aria-expanded="false"
+                                                aria-controls="otherReportsSubmenu">
+                                                Other Reports
+                                                <i class="arrow-icon fa fa-chevron-down ms-auto"></i>
+                                             </a>
+                                             <div class="collapse ps-3" id="otherReportsSubmenu">
+                                                <ul class="nav flex-column">
+                                                   <li class="py-1" style="">
+                                                      <a href="javascript:void(0)" class="text-blue">Track Return Activities</a>
+                                                   </li>
+                                                   <li class="py-1" style="">
+                                                      <a href="javascript:void(0)" class="text-blue">Interest On Late Payment Of GST</a>
+                                                   </li>
+                                                   <li class="py-1" style="">
+                                                      <a href="javascript:void(0)" class="text-blue">Late Return Filling Fee</a>
+                                                   </li>
+                                                </ul>
+                                             </div>
                                           </li>
                                        </ul>
                                     </div>
