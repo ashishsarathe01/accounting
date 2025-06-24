@@ -1,6 +1,16 @@
 <!-- accordion -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-
+<style>
+   .report-menu-item {
+  border: 1px solid #007bff;
+  border-radius: 4px;
+  padding: 12px 8px;
+  margin: 0;
+  background-color: white;
+  font-size: 14px;
+  font-weight: 500;
+}
+</style>
 <aside class="col-lg-2 d-none d-lg-block bg-blue sidebar p-0">
    <div class="sidebar-sticky ">
       <div id="accordion">
@@ -256,7 +266,7 @@
                   </div>
                   <div id="displayCollapse" class="collapse" aria-labelledby="displayHeading" data-bs-parent="#accordion">
                      <ul class="nav flex-column">
-                        <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4" style="border: 1px solid #007bff;">
+                        <li class="report-menu-item">
                            <!-- Toggle for Balance Sheet submenu -->
                            <a class="text-decoration-none d-flex text-blue collapsed"
                               href="#"
@@ -288,10 +298,12 @@
                               </ul>
                            </div>
                         </li>
-                        <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4" style="border: 1px solid #007bff;">
+                        <li class="report-menu-item">
                            <!-- Toggle for Balance Sheet submenu -->
                            <a class="text-decoration-none d-flex text-blue collapsed"
                               href="#"
+                              role="button"
+                              tabindex="0"
                               data-bs-toggle="collapse"
                               data-bs-target="#statutorySubmenu"
                               aria-expanded="false"
@@ -302,18 +314,85 @@
                            <!-- Submenu under Balance Sheet -->
                            <div class="collapse ps-3" id="statutorySubmenu">
                               <ul class="nav flex-column">
-                                 @can('view-module', 28)
-                                    <li class="py-1">
-                                       <a href="{{ route('report.filter.data') }}" class="text-blue">GSTR-1</a>
-                                    </li>
-                                 @endcan
-                                 <li class="py-1">
-                                    <a href="{{ route('gst-detail') }}" class="text-blue">GST Detail</a>
+                                 <li class="report-menu-item">
+                                    <a class="text-decoration-none d-flex text-blue collapsed"
+                                       href="#"
+                                       data-bs-toggle="collapse"
+                                       data-bs-target="#gstReportSubmenu"
+                                       aria-expanded="false"
+                                       aria-controls="gstReportSubmenu">
+                                       GST Reports
+                                       <i class="arrow-icon fa fa-chevron-down ms-auto"></i>
+                                    </a>
+                                    <!-- Submenu under Balance Sheet -->
+                                    <div class="collapse ps-3" id="gstReportSubmenu">
+                                       <ul class="nav flex-column">
+                                          @can('view-module', 28)
+                                             <li class="py-1">
+                                                <a href="{{ route('report.filter.data') }}" class="text-blue">GSTR-1</a>
+                                             </li>
+                                          @endcan
+                                          <li class="py-1">
+                                             <a href="{{ route('gst-detail') }}" class="text-blue">GST Detail</a>
+                                          </li>
+                                       </ul>
+                                    </div>
+                                 </li>
+                                 <li class="report-menu-item">
+                                    <a class="text-decoration-none d-flex text-blue collapsed"
+                                       href="#"
+                                       data-bs-toggle="collapse"
+                                       data-bs-target="#tdsTcsSubmenu"
+                                       aria-expanded="false"
+                                       aria-controls="tdsTcsSubmenu">
+                                       TDS/TCS Reports
+                                       <i class="arrow-icon fa fa-chevron-down ms-auto"></i>
+                                    </a>
+                                    <!-- Submenu under Balance Sheet -->
+                                    <div class="collapse ps-3" id="tdsTcsSubmenu">
+                                       <ul class="nav flex-column">
+                                          
+                                       </ul>
+                                    </div>
+                                 </li>
+                                 <li class="report-menu-item">
+                                    <a class="text-decoration-none d-flex text-blue collapsed"
+                                       href="#"
+                                       data-bs-toggle="collapse"
+                                       data-bs-target="#esicSubmenu"
+                                       aria-expanded="false"
+                                       aria-controls="esicSubmenu">
+                                       ESIC Reports
+                                       <i class="arrow-icon fa fa-chevron-down ms-auto"></i>
+                                    </a>
+                                    <!-- Submenu under Balance Sheet -->
+                                    <div class="collapse ps-3" id="esicSubmenu">
+                                       <ul class="nav flex-column">
+                                          
+                                       </ul>
+                                    </div>
+                                 </li>
+                                 <li class="report-menu-item">
+                                    <a class="text-decoration-none d-flex text-blue collapsed"
+                                       href="#"
+                                       data-bs-toggle="collapse"
+                                       data-bs-target="#pfSubmenu"
+                                       aria-expanded="false"
+                                       aria-controls="pfSubmenu">
+                                       PF Reports
+                                       <i class="arrow-icon fa fa-chevron-down ms-auto"></i>
+                                    </a>
+                                    <!-- Submenu under Balance Sheet -->
+                                    <div class="collapse ps-3" id="pfSubmenu">
+                                       <ul class="nav flex-column">
+                                          
+                                       </ul>
+                                    </div>
                                  </li>
                               </ul>
                            </div>
                         </li>
-                        <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4" style="border: 1px solid #007bff;">
+                        <li class="report-menu-item">
                            <!-- Toggle for Balance Sheet submenu -->
                            <a class="text-decoration-none d-flex text-blue collapsed"
                               href="#"
@@ -336,7 +415,7 @@
                               </ul>
                            </div>
                         </li>
-                        <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4" style="border: 1px solid #007bff;">
+                        <li class="report-menu-item">
                            <!-- Toggle for Balance Sheet submenu -->
                            <a class="text-decoration-none d-flex text-blue collapsed"
                               href="#"
@@ -359,7 +438,7 @@
                               </ul>
                            </div>
                         </li>
-                        <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4" style="border: 1px solid #007bff;">
+                        <li class="report-menu-item">
                            <!-- Toggle for Balance Sheet submenu -->
                            <a class="text-decoration-none d-flex text-blue collapsed"
                               href="#"
@@ -377,7 +456,7 @@
                               </ul>
                            </div>
                         </li>
-                        <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4" style="border: 1px solid #007bff;">
+                        <li class="report-menu-item">
                            <!-- Toggle for Balance Sheet submenu -->
                            <a class="text-decoration-none d-flex text-blue collapsed"
                               href="#"
@@ -395,7 +474,7 @@
                               </ul>
                            </div>
                         </li>
-                        <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4" style="border: 1px solid #007bff;">
+                        <li class="report-menu-item">
                            <!-- Toggle for Balance Sheet submenu -->
                            <a class="text-decoration-none d-flex text-blue collapsed"
                               href="#"
@@ -447,4 +526,5 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 });
+
 </script>

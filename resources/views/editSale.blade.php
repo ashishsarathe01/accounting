@@ -1351,6 +1351,7 @@ foreach($manageitems as $value) {
             }))    
 
             if(result.length>0){
+               $(".extra_gst").remove();
                let index = 1;
                let item_total_amount = 0;
                let bill_sundry_total = 0;

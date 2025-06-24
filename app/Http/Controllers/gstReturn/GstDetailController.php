@@ -13,6 +13,7 @@ use App\Models\gstr2bInvoiceItem;
 use App\Models\gstToken;
 use App\Models\Companies;
 use App\Models\Accounts;
+use App\Models\Purchase;
 use Session;
 use DB;
 use Carbon\Carbon;
@@ -63,6 +64,13 @@ class GstDetailController extends Controller
                             ])
                             ->first();
             $gst_user_name = $gst->gst_username;
+        }
+        if($gst_user_name==""){
+            $response = array(
+                    'status' => false,
+                    'message' => 'Please Enter GST User Name In GST Configuration.'
+                );
+            return json_encode($response);
         }
         //Check and generate token
         $gst_token = gstToken::select('txn','created_at')
@@ -283,7 +291,14 @@ class GstDetailController extends Controller
                                     ->where('company_id',Session::get('user_company_id'))
                                     ->where('idate','like','%'.$idate)
                                     ->sum('amount');
-                    $gstr2b[$key]->amount =  round($gstr2bInvoice,2);             
+                    $gstr2b[$key]->amount =  round($gstr2bInvoice,2);
+                    // $purchase = Purchase::where('billing_gst',$value->ctin)
+                    //             ->where('date','like',$idate.'%')
+                    //             ->where('merchant_gstin',$request->gstin)
+                    //             ->where('company_id',Session::get('user_company_id'))
+                    //             ->sum('total');
+                    // $gstr2b[$key]->book_amount =  round($purchase,2);
+
                 }
                 $response = array(
                     'status' => true,

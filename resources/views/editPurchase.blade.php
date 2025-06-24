@@ -693,7 +693,7 @@ foreach ($manageitems as $value) {
    var add_more_count = '<?php echo --$i;?>';
    var add_more_counts = 1;
    var add_more_bill_sundry_up_count = '<?php echo --$index;?>';
-   console.log(add_more_bill_sundry_up_count+"hhh");
+   
    function addMoreItem() {   
       let empty_status = 0;
       $('.goods_items').each(function(){   
@@ -1049,7 +1049,7 @@ foreach ($manageitems as $value) {
                res[value.percent].amount += parseFloat(value.amount); 
                return res;
             }, {});
-            console.log(result);
+            
             $("#totalSum").html(total.toFixed(2));
             let taxable_amount = total;
             final_total = total;
@@ -1192,6 +1192,7 @@ foreach ($manageitems as $value) {
                
                if(result.length>0){
                   let index = 1;
+                  $(".extra_gst").remove();
                   let item_total_amount = 0;
                   let bill_sundry_total = 0;
                   
@@ -1269,8 +1270,8 @@ foreach ($manageitems as $value) {
                               }
                            });
                         }
-                        console.log(add_more_bill_sundry_up_count);
-                        //$(".add_more_bill_sundry_gst").click();
+                        
+                        $(".add_more_bill_sundry_gst").click();
                         $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(taxSundryArray['igst']);
                         
                         $("#bill_sundry_"+add_more_bill_sundry_up_count).val(sundry_value);
@@ -1547,7 +1548,7 @@ foreach ($manageitems as $value) {
          $lastCell.html(removeIcon);
       }
    });
-   calculateAmount();
+   
    });
    $("#party").change(function(){
       if($('option:selected', this).attr('data-state_code')==merchant_gstin.substring(0,2)){  
