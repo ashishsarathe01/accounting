@@ -271,11 +271,8 @@
                   </div>
                   <div id="displayCollapse" class="collapse" aria-labelledby="displayHeading" data-bs-parent="#accordion">
                      <ul class="nav flex-column">
-<<<<<<< Updated upstream
                         <li class="report-menu-item">
-=======
                         <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue" style="border: 1px solid #007bff;">
->>>>>>> Stashed changes
                            <!-- Toggle for Balance Sheet submenu -->
                            <a class="text-decoration-none d-flex text-blue collapsed"
                               href="#"
@@ -307,11 +304,8 @@
                               </ul>
                            </div>
                         </li>
-<<<<<<< Updated upstream
                         <li class="report-menu-item">
-=======
                         <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue " style="border: 1px solid #007bff;">
->>>>>>> Stashed changes
                            <!-- Toggle for Balance Sheet submenu -->
                            <a class="text-decoration-none d-flex text-blue collapsed "
                               href="#"
@@ -327,7 +321,6 @@
                            <!-- Submenu under Balance Sheet -->
                            <div class="collapse ps-3" id="statutorySubmenu">
                               <ul class="nav flex-column">
-<<<<<<< Updated upstream
                                  <li class="report-menu-item">
                                     <a class="text-decoration-none d-flex text-blue collapsed"
                                        href="#"
@@ -483,24 +476,12 @@
                                           
                                        </ul>
                                     </div>
-=======
-                                 @can('view-module', 28)
-                                    <li class="py-1 clickable-row">
-                                       <a href="{{ route('report.filter.data') }}" class="text-blue">GSTR-1</a>
-                                    </li>
-                                 @endcan
-                                 <li class="py-1 clickable-row">
-                                    <a href="{{ route('gst-detail') }}" class="text-blue">GST Detail</a>
->>>>>>> Stashed changes
-                                 </li>
+                                 
                               </ul>
                            </div>
                         </li>
-<<<<<<< Updated upstream
                         <li class="report-menu-item">
-=======
                         <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue" style="border: 1px solid #007bff;">
->>>>>>> Stashed changes
                            <!-- Toggle for Balance Sheet submenu -->
                            <a class="text-decoration-none d-flex text-blue collapsed"
                               href="#"
@@ -523,11 +504,8 @@
                               </ul>
                            </div>
                         </li>
-<<<<<<< Updated upstream
                         <li class="report-menu-item">
-=======
                         <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue" style="border: 1px solid #007bff;">
->>>>>>> Stashed changes
                            <!-- Toggle for Balance Sheet submenu -->
                            <a class="text-decoration-none d-flex text-blue collapsed"
                               href="#"
@@ -550,11 +528,8 @@
                               </ul>
                            </div>
                         </li>
-<<<<<<< Updated upstream
                         <li class="report-menu-item">
-=======
                         <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue" style="border: 1px solid #007bff;">
->>>>>>> Stashed changes
                            <!-- Toggle for Balance Sheet submenu -->
                            <a class="text-decoration-none d-flex text-blue collapsed"
                               href="#"
@@ -572,11 +547,8 @@
                               </ul>
                            </div>
                         </li>
-<<<<<<< Updated upstream
                         <li class="report-menu-item">
-=======
                         <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue" style="border: 1px solid #007bff;">
->>>>>>> Stashed changes
                            <!-- Toggle for Balance Sheet submenu -->
                            <a class="text-decoration-none d-flex text-blue collapsed"
                               href="#"
@@ -594,11 +566,8 @@
                               </ul>
                            </div>
                         </li>
-<<<<<<< Updated upstream
                         <li class="report-menu-item">
-=======
                         <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue" style="border: 1px solid #007bff;">
->>>>>>> Stashed changes
                            <!-- Toggle for Balance Sheet submenu -->
                            <a class="text-decoration-none d-flex text-blue collapsed"
                               href="#"
