@@ -518,7 +518,7 @@ class CommonHelper
     public static function getAllGroupIds($parentIds)
 {
     $allGroups = DB::table('account_groups')->get();
-    $groupMap = $allGroups->groupBy('under_group');
+    $groupMap = $allGroups->groupBy('heading');
 
     $result = collect($parentIds);
     $queue = $parentIds;

@@ -19,10 +19,10 @@
             <tr>
                 <td>{{ $row['state'] }}</td>
                 <td>{{ $row['rate'] }}%</td>
-                <td>{{ number_format($row['taxable_value'], 2) }}</td>
-                <td>{{ number_format($row['cgst'], 2) }}</td>
-                <td>{{ number_format($row['sgst'], 2) }}</td>
-                <td>{{ number_format($row['igst'], 2) }}</td>
+                <td>{{ formatIndianNumber($row['taxable_value'], 2) }}</td>
+                <td>{{ formatIndianNumber($row['cgst'], 2) }}</td>
+                <td>{{ formatIndianNumber($row['sgst'], 2) }}</td>
+                <td>{{ formatIndianNumber($row['igst'], 2) }}</td>
             </tr>
         @empty
             <tr><td colspan="6" class="text-center">No Data Available</td></tr>

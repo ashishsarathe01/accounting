@@ -961,7 +961,8 @@ public function b2cLargedetailed(Request $request){
             $grouped[$key] = [
                 'voucher_no_prefix' =>  $item->voucher_no_prefix,
                 'rate' => $rate,
-             'total' => $item->total,
+                'total' => $item->total,
+                'sales_id' => $item->sale_id,
                 'date'=> $item->date,
                 'POS' => $item->POS,
                 'taxable_value' => 0,
@@ -985,6 +986,427 @@ public function b2cLargedetailed(Request $request){
 
 }
 
+public function B2Cstatewise(Request $request)
+{
+    $merchant_gst = $request->merchant_gst;
+    $company_id = $request->company_id;
+    $from_date = $request->from_date;
+    $to_date = $request->to_date;
+
+    $user_company_id = Session::get('user_company_id');
+
+    $sundries = BillSundrys::where('company_id', $user_company_id)->get()->keyBy('id');
+
+    // -------- STEP 1: Get B2C Sale IDs --------
+    $b2cSaleIds = DB::table('sales')
+        ->where('merchant_gst', $merchant_gst)
+        ->where('company_id', $company_id)
+        ->whereBetween('date', [$from_date, $to_date])
+        ->where('delete', '0')
+        ->where('status', '1')
+        ->where(function($query) {
+            $query->whereNull('billing_gst')
+                  ->orWhere('billing_gst', '');
+        })
+        ->where('total', '<=', 250000)
+        ->pluck('id');
+
+    if ($b2cSaleIds->isEmpty()) {
+        return view('gstReturn.b2c_statewise', ['data' => []]);
+    }
+
+    // ----- SALES ITEMS -----
+    $items_sale = DB::table('sale_descriptions')
+        ->join('sales', 'sale_descriptions.sale_id', '=', 'sales.id')
+        ->join('accounts', 'sales.party', '=', 'accounts.id')
+        ->join('states', 'accounts.state', '=', 'states.id')
+        ->join('manage_items', 'sale_descriptions.goods_discription', '=', 'manage_items.id')
+        ->where('manage_items.item_type', 'taxable')
+        ->whereIn('sale_id', $b2cSaleIds)
+        ->select(
+            'sale_descriptions.sale_id',
+            'states.name as state_name',
+            'manage_items.gst_rate',
+            'manage_items.item_type',
+            'sale_descriptions.amount'
+        )
+        ->get();
+
+        
+
+    // Sundrys and ledger adjustments for sales
+    $sundryDetails_sales = DB::table('sale_sundries')
+        ->whereIn('sale_id', $b2cSaleIds)
+        ->select('sale_id', 'bill_sundry', 'amount')
+        ->get()
+        ->groupBy('sale_id');
+
+        
+    $ledgerAdjustments_sales = [];
+
+    foreach ($sundryDetails_sales as $saleId => $entries) {
+        foreach ($entries as $entry) {
+            $bs = $sundries[$entry->bill_sundry] ?? null;
+
+            if (!$bs) continue;
+
+            if ($bs->adjust_sale_amt == 'No' && $bs->nature_of_sundry == 'OTHER') {
+                $ledger_amount = DB::table('account_ledger')
+                    ->where('company_id', $user_company_id)
+                    ->where('entry_type', 1)
+                    ->where('entry_type_id', $saleId)
+                    ->where('account_id', $bs->sale_amt_account)
+                    ->sum($bs->bill_sundry_type == 'subtractive' ? 'debit' : 'credit');
+
+                $ledgerAdjustments_sales[$saleId][] = [
+                    'amount' => $ledger_amount,
+                    'type' => $bs->bill_sundry_type
+                ];
+            }
+        }
+    }
+
+    // --------- CREDIT NOTES (Sales returns) -----------
+    $creditSales = DB::table('sales_returns')
+        ->where('sales_returns.merchant_gst', $merchant_gst)
+        ->where('sales_returns.company_id', $company_id)
+        ->whereBetween('sales_returns.date', [$from_date, $to_date])
+        ->where(function($query) {
+            $query->whereNull('sales_returns.billing_gst')
+                ->orWhere('sales_returns.billing_gst', '');
+        })
+        ->where('sales_returns.original_invoice_value','<=', 250000)
+        ->where('voucher_type', 'SALE')
+        ->where('sr_nature', 'WITH GST')
+        ->where('sales_returns.delete', '0')
+        ->where('sales_returns.status', '1')
+        ->pluck('sales_returns.id');
+
+    $creditItems = DB::table('sale_return_descriptions')
+        ->join('sales_returns', 'sale_return_descriptions.sale_return_id', '=', 'sales_returns.id')
+        ->join('states', 'sales_returns.billing_state', '=', 'states.id')
+        ->join('manage_items', 'sale_return_descriptions.goods_discription', '=', 'manage_items.id')
+        ->whereIn('sale_return_id', $creditSales)
+        ->where('manage_items.item_type', 'taxable')
+        ->select(
+            'sale_return_descriptions.sale_return_id',
+            'states.name as state_name',
+            'manage_items.gst_rate',
+            'sale_return_descriptions.amount'
+        )
+        ->get();
+
+    $creditSundryDetails = DB::table('sale_return_sundries')
+        ->whereIn('sale_return_id', $creditSales)
+        ->select('sale_return_id', 'bill_sundry', 'amount')
+        ->get()
+        ->groupBy('sale_return_id');
+
+    $ledgerAdjustments_credit = [];
+
+    foreach ($creditSundryDetails as $return_id => $entries) {
+        foreach ($entries as $entry) {
+            $bs = $sundries[$entry->bill_sundry] ?? null;
+
+            if (!$bs) continue;
+
+            if ($bs->adjust_sale_amt == 'No' && $bs->nature_of_sundry == 'OTHER') {
+                $ledger_amount = DB::table('account_ledger')
+                    ->where('company_id', $user_company_id)
+                    ->where('entry_type', 1)
+                    ->where('entry_type_id', $return_id)
+                    ->where('account_id', $bs->sale_amt_account)
+                    ->sum($bs->bill_sundry_type == 'subtractive' ? 'debit' : 'credit');
+
+                $ledgerAdjustments_credit[$return_id][] = [
+                    'amount' => $ledger_amount,
+                    'type' => $bs->bill_sundry_type
+                ];
+            }
+        }
+    }
+
+    // ---------- DEBIT NOTES (Purchase returns) -----------
+    $debitSales = DB::table('purchase_returns')
+        ->where('purchase_returns.merchant_gst', $merchant_gst)
+        ->where('purchase_returns.company_id', $company_id)
+        ->whereBetween('purchase_returns.date', [$from_date, $to_date])
+        ->where(function($query) {
+            $query->whereNull('purchase_returns.billing_gst')
+                  ->orWhere('purchase_returns.billing_gst', '');
+        })
+        ->where('purchase_returns.original_invoice_value','<=', 250000)
+        ->where('voucher_type', 'SALE')
+        ->where('sr_nature', 'WITH GST')
+        ->where('purchase_returns.delete', '0')
+        ->where('purchase_returns.status', '1')
+        ->pluck('purchase_returns.id');
+
+    $debitItems = DB::table('purchase_return_descriptions')
+        ->join('purchase_returns', 'purchase_return_descriptions.purchase_return_id', '=', 'purchase_returns.id')
+        ->join('states', 'purchase_returns.billing_state', '=', 'states.id')
+        ->join('manage_items', 'purchase_return_descriptions.goods_discription', '=', 'manage_items.id')
+        ->whereIn('purchase_return_id', $debitSales)
+        ->where('manage_items.item_type', 'taxable')
+        ->select(
+            'purchase_return_descriptions.purchase_return_id',
+            'states.name as state_name',
+            'manage_items.gst_rate',
+            'purchase_return_descriptions.amount'
+        )
+        ->get();
+
+    $debitSundryDetails = DB::table('purchase_return_sundries')
+        ->whereIn('purchase_return_id', $debitSales)
+        ->select('purchase_return_id', 'bill_sundry', 'amount')
+        ->get()
+        ->groupBy('purchase_return_id');
+
+    $ledgerAdjustments_debit = [];
+
+    foreach ($debitSundryDetails as $return_id => $entries) {
+        foreach ($entries as $entry) {
+            $bs = $sundries[$entry->bill_sundry] ?? null;
+
+            if (!$bs) continue;
+
+            if ($bs->adjust_sale_amt == 'No' && $bs->nature_of_sundry == 'OTHER') {
+                $ledger_amount = DB::table('account_ledger')
+                    ->where('company_id', $user_company_id)
+                    ->where('entry_type', 1)
+                    ->where('entry_type_id', $return_id)
+                    ->where('account_id', $bs->sale_amt_account)
+                    ->sum($bs->bill_sundry_type == 'subtractive' ? 'debit' : 'credit');
+
+                $ledgerAdjustments_debit[$return_id][] = [
+                    'amount' => $ledger_amount,
+                    'type' => $bs->bill_sundry_type
+                ];
+            }
+        }
+    }
+
+    // --------- Group and calculate for sales --------
+    $grouped_sale = [];
+    foreach ($items_sale as $item) {
+        $sale_id = $item->sale_id;
+        $state = $item->state_name;
+        $rate = $item->gst_rate;
+        $amount = $item->amount;
+        $total_sale_amount = $items_sale->where('sale_id', $sale_id)->sum('amount');
+
+        if ($total_sale_amount == 0) continue;
+
+        $adjusted_value = 0;
+
+        // Adjust sundry
+        if (isset($sundryDetails_sales[$sale_id])) {
+            foreach ($sundryDetails_sales[$sale_id] as $sundryEntry) {
+                $bs = $sundries[$sundryEntry->bill_sundry] ?? null;
+                if (!$bs || $bs->adjust_sale_amt != 'Yes' || $bs->nature_of_sundry != 'OTHER') continue;
+                $share = ($amount / $total_sale_amount) * $sundryEntry->amount;
+                $adjusted_value += ($bs->bill_sundry_type == 'subtractive') ? -$share : $share;
+            }
+        }
+
+        // Adjust ledger
+        if (isset($ledgerAdjustments_sales[$sale_id])) {
+            foreach ($ledgerAdjustments_sales[$sale_id] as $adj) {
+                $share = ($amount / $total_sale_amount) * $adj['amount'];
+                $adjusted_value += ($adj['type'] == 'subtractive') ? -$share : $share;
+            }
+        }
+
+        $taxable_value = $amount + $adjusted_value;
+
+        // Tax calculation
+        $igst = 0; $cgst = 0; $sgst = 0;
+        $merchant_state_code = substr($merchant_gst, 0, 2);
+        $customer_state_code = State::where('name', $state)->value('state_code');
+
+        if ($merchant_state_code == $customer_state_code) {
+            $cgst = $sgst = ($rate / 2 / 100) * $taxable_value;
+        } else {
+            $igst = ($rate / 100) * $taxable_value;
+        }
+
+        $key = $state . '|' . $rate;
+        if (!isset($grouped_sale[$key])) {
+            $grouped_sale[$key] = [
+                'state' => $state,
+                'rate' => $rate,
+                'taxable_value' => 0,
+                'igst' => 0,
+                'cgst' => 0,
+                'sgst' => 0,
+            ];
+        }
+
+        $grouped_sale[$key]['taxable_value'] += $taxable_value;
+        $grouped_sale[$key]['igst'] += $igst;
+        $grouped_sale[$key]['cgst'] += $cgst;
+        $grouped_sale[$key]['sgst'] += $sgst;
+    }
+
+    // ---------- Group and calculate for credit notes (subtract) ----------
+    $grouped_credit = [];
+    foreach ($creditItems as $item) {
+        $return_id = $item->sale_return_id;
+        $state = $item->state_name;
+        $rate = $item->gst_rate;
+        $amount = $item->amount;
+
+        $total_credit_amount = $creditItems->where('sale_return_id', $return_id)->sum('amount');
+        if ($total_credit_amount == 0) continue;
+
+        $adjusted_value = 0;
+
+        if (isset($creditSundryDetails[$return_id])) {
+            foreach ($creditSundryDetails[$return_id] as $sundryEntry) {
+                $bs = $sundries[$sundryEntry->bill_sundry] ?? null;
+                if (!$bs || $bs->adjust_sale_amt != 'Yes' || $bs->nature_of_sundry != 'OTHER') continue;
+
+                $share = ($amount / $total_credit_amount) * $sundryEntry->amount;
+                $adjusted_value += ($bs->bill_sundry_type == 'subtractive') ? -$share : $share;
+            }
+        }
+
+        // Adjust ledger
+        if (isset($ledgerAdjustments_credit[$return_id])) {
+            foreach ($ledgerAdjustments_credit[$return_id] as $adj) {
+                $share = ($amount / $total_credit_amount) * $adj['amount'];
+                $adjusted_value += ($adj['type'] == 'subtractive') ? -$share : $share;
+            }
+        }
+
+        $taxable_value = $amount + $adjusted_value;
+
+        $igst = 0; $cgst = 0; $sgst = 0;
+        $merchant_state_code = substr($merchant_gst, 0, 2);
+        $customer_state_code = State::where('name', $state)->value('state_code');
+
+        if ($merchant_state_code == $customer_state_code) {
+            $cgst = $sgst = ($rate / 2 / 100) * $taxable_value;
+        } else {
+            $igst = ($rate / 100) * $taxable_value;
+        }
+
+        $key = $state . '|' . $rate;
+        if (!isset($grouped_credit[$key])) {
+            $grouped_credit[$key] = [
+                'state' => $state,
+                'rate' => $rate,
+                'taxable_value' => 0,
+                'igst' => 0,
+                'cgst' => 0,
+                'sgst' => 0,
+            ];
+        }
+
+        $grouped_credit[$key]['taxable_value'] += $taxable_value;
+        $grouped_credit[$key]['igst'] += $igst;
+        $grouped_credit[$key]['cgst'] += $cgst;
+        $grouped_credit[$key]['sgst'] += $sgst;
+    }
+
+    // --------- Group and calculate for debit notes (add) -----------
+    $grouped_debit = [];
+    foreach ($debitItems as $item) {
+        $return_id = $item->purchase_return_id;
+        $state = $item->state_name;
+        $rate = $item->gst_rate;
+        $amount = $item->amount;
+
+        $total_debit_amount = $debitItems->where('purchase_return_id', $return_id)->sum('amount');
+        if ($total_debit_amount == 0) continue;
+
+        $adjusted_value = 0;
+
+        if (isset($debitSundryDetails[$return_id])) {
+            foreach ($debitSundryDetails[$return_id] as $sundryEntry) {
+                $bs = $sundries[$sundryEntry->bill_sundry] ?? null;
+                if (!$bs || $bs->adjust_sale_amt != 'Yes' || $bs->nature_of_sundry != 'OTHER') continue;
+
+                $share = ($amount / $total_debit_amount) * $sundryEntry->amount;
+                $adjusted_value += ($bs->bill_sundry_type == 'subtractive') ? -$share : $share;
+            }
+        }
+
+        // Adjust ledger
+        if (isset($ledgerAdjustments_debit[$return_id])) {
+            foreach ($ledgerAdjustments_debit[$return_id] as $adj) {
+                $share = ($amount / $total_debit_amount) * $adj['amount'];
+                $adjusted_value += ($adj['type'] == 'subtractive') ? -$share : $share;
+            }
+        }
+
+        $taxable_value = $amount + $adjusted_value;
+
+        $igst = 0; $cgst = 0; $sgst = 0;
+        $merchant_state_code = substr($merchant_gst, 0, 2);
+        $customer_state_code = State::where('name', $state)->value('state_code');
+
+        if ($merchant_state_code == $customer_state_code) {
+            $cgst = $sgst = ($rate / 2 / 100) * $taxable_value;
+        } else {
+            $igst = ($rate / 100) * $taxable_value;
+        }
+
+        $key = $state . '|' . $rate;
+        if (!isset($grouped_debit[$key])) {
+            $grouped_debit[$key] = [
+                'state' => $state,
+                'rate' => $rate,
+                'taxable_value' => 0,
+                'igst' => 0,
+                'cgst' => 0,
+                'sgst' => 0,
+            ];
+        }
+
+        $grouped_debit[$key]['taxable_value'] += $taxable_value;
+        $grouped_debit[$key]['igst'] += $igst;
+        $grouped_debit[$key]['cgst'] += $cgst;
+        $grouped_debit[$key]['sgst'] += $sgst;
+    }
+
+    // -------- Combine final adjusted data: sales + debit - credit -------
+    $finalData = [];
+
+    $allKeys = collect(array_unique(array_merge(array_keys($grouped_sale), array_keys($grouped_credit), array_keys($grouped_debit))));
+
+    foreach ($allKeys as $key) {
+        $state = $grouped_sale[$key]['state'] ?? $grouped_credit[$key]['state'] ?? $grouped_debit[$key]['state'] ?? null;
+        $rate = $grouped_sale[$key]['rate'] ?? $grouped_credit[$key]['rate'] ?? $grouped_debit[$key]['rate'] ?? null;
+
+        $salesTaxable = $grouped_sale[$key]['taxable_value'] ?? 0;
+        $salesIGST = $grouped_sale[$key]['igst'] ?? 0;
+        $salesCGST = $grouped_sale[$key]['cgst'] ?? 0;
+        $salesSGST = $grouped_sale[$key]['sgst'] ?? 0;
+
+        $creditTaxable = $grouped_credit[$key]['taxable_value'] ?? 0;
+        $creditIGST = $grouped_credit[$key]['igst'] ?? 0;
+        $creditCGST = $grouped_credit[$key]['cgst'] ?? 0;
+        $creditSGST = $grouped_credit[$key]['sgst'] ?? 0;
+
+        $debitTaxable = $grouped_debit[$key]['taxable_value'] ?? 0;
+        $debitIGST = $grouped_debit[$key]['igst'] ?? 0;
+        $debitCGST = $grouped_debit[$key]['cgst'] ?? 0;
+        $debitSGST = $grouped_debit[$key]['sgst'] ?? 0;
+
+        $finalData[$key] = [
+            'state' => $state,
+            'rate' => $rate,
+            'taxable_value' => $salesTaxable + $debitTaxable - $creditTaxable,
+            'igst' => $salesIGST + $debitIGST - $creditIGST,
+            'cgst' => $salesCGST + $debitCGST - $creditCGST,
+            'sgst' => $salesSGST + $debitSGST - $creditSGST,
+        ];
+    }
+
+    // Pass final adjusted data to view
+    return view('gstReturn.b2c_statewise', ['data' => array_values($finalData)]);
+}
 
 public function nilRatedAndExemptedCombined(Request $request)
 {
@@ -1969,439 +2391,6 @@ $sortedGrouped = collect($grouped)->sortBy(function ($item) {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-public function B2Cstatewise(Request $request)
-{
-    $merchant_gst = $request->merchant_gst;
-    $company_id = $request->company_id;
-    $from_date = $request->from_date;
-    $to_date = $request->to_date;
-
-    $user_company_id = Session::get('user_company_id');
-
-    $sundries = BillSundrys::where('company_id', $user_company_id)->get()->keyBy('id');
-
-    // -------- STEP 1: Get B2C Sale IDs --------
-    $b2cSaleIds = DB::table('sales')
-        ->where('merchant_gst', $merchant_gst)
-        ->where('company_id', $company_id)
-        ->whereBetween('date', [$from_date, $to_date])
-        ->where('delete', '0')
-        ->where('status', '1')
-        ->where(function($query) {
-            $query->whereNull('billing_gst')
-                  ->orWhere('billing_gst', '');
-        })
-        ->where('total', '<=', 250000)
-        ->pluck('id');
-
-    if ($b2cSaleIds->isEmpty()) {
-        return view('gstReturn.b2c_statewise', ['data' => []]);
-    }
-
-    // ----- SALES ITEMS -----
-    $items_sale = DB::table('sale_descriptions')
-        ->join('sales', 'sale_descriptions.sale_id', '=', 'sales.id')
-        ->join('accounts', 'sales.party', '=', 'accounts.id')
-        ->join('states', 'accounts.state', '=', 'states.id')
-        ->join('manage_items', 'sale_descriptions.goods_discription', '=', 'manage_items.id')
-        ->where('manage_items.item_type', 'taxable')
-        ->whereIn('sale_id', $b2cSaleIds)
-        ->select(
-            'sale_descriptions.sale_id',
-            'states.name as state_name',
-            'manage_items.gst_rate',
-            'manage_items.item_type',
-            'sale_descriptions.amount'
-        )
-        ->get();
-
-        
-
-    // Sundrys and ledger adjustments for sales
-    $sundryDetails_sales = DB::table('sale_sundries')
-        ->whereIn('sale_id', $b2cSaleIds)
-        ->select('sale_id', 'bill_sundry', 'amount')
-        ->get()
-        ->groupBy('sale_id');
-
-        
-    $ledgerAdjustments_sales = [];
-
-    foreach ($sundryDetails_sales as $saleId => $entries) {
-        foreach ($entries as $entry) {
-            $bs = $sundries[$entry->bill_sundry] ?? null;
-
-            if (!$bs) continue;
-
-            if ($bs->adjust_sale_amt == 'No' && $bs->nature_of_sundry == 'OTHER') {
-                $ledger_amount = DB::table('account_ledger')
-                    ->where('company_id', $user_company_id)
-                    ->where('entry_type', 1)
-                    ->where('entry_type_id', $saleId)
-                    ->where('account_id', $bs->sale_amt_account)
-                    ->sum($bs->bill_sundry_type == 'subtractive' ? 'debit' : 'credit');
-
-                $ledgerAdjustments_sales[$saleId][] = [
-                    'amount' => $ledger_amount,
-                    'type' => $bs->bill_sundry_type
-                ];
-            }
-        }
-    }
-
-    // --------- CREDIT NOTES (Sales returns) -----------
-    $creditSales = DB::table('sales_returns')
-        ->where('sales_returns.merchant_gst', $merchant_gst)
-        ->where('sales_returns.company_id', $company_id)
-        ->whereBetween('sales_returns.date', [$from_date, $to_date])
-        ->where(function($query) {
-            $query->whereNull('sales_returns.billing_gst')
-                ->orWhere('sales_returns.billing_gst', '');
-        })
-         ->join('sales','sales.id','=','sales_returns.sale_bill_id')
-        ->where('sales.total','<=', 250000)
-        ->where('voucher_type', 'SALE')
-        ->where('sr_nature', 'WITH GST')
-        ->where('sales_returns.delete', '0')
-        ->where('sales_returns.status', '1')
-        ->pluck('sales_returns.id');
-
-    $creditItems = DB::table('sale_return_descriptions')
-        ->join('sales_returns', 'sale_return_descriptions.sale_return_id', '=', 'sales_returns.id')
-        ->join('states', 'sales_returns.billing_state', '=', 'states.id')
-        ->join('manage_items', 'sale_return_descriptions.goods_discription', '=', 'manage_items.id')
-        ->whereIn('sale_return_id', $creditSales)
-        ->where('manage_items.item_type', 'taxable')
-        ->select(
-            'sale_return_descriptions.sale_return_id',
-            'states.name as state_name',
-            'manage_items.gst_rate',
-            'sale_return_descriptions.amount'
-        )
-        ->get();
-
-    $creditSundryDetails = DB::table('sale_return_sundries')
-        ->whereIn('sale_return_id', $creditSales)
-        ->select('sale_return_id', 'bill_sundry', 'amount')
-        ->get()
-        ->groupBy('sale_return_id');
-
-    $ledgerAdjustments_credit = [];
-
-    foreach ($creditSundryDetails as $return_id => $entries) {
-        foreach ($entries as $entry) {
-            $bs = $sundries[$entry->bill_sundry] ?? null;
-
-            if (!$bs) continue;
-
-            if ($bs->adjust_sale_amt == 'No' && $bs->nature_of_sundry == 'OTHER') {
-                $ledger_amount = DB::table('account_ledger')
-                    ->where('company_id', $user_company_id)
-                    ->where('entry_type', 1)
-                    ->where('entry_type_id', $return_id)
-                    ->where('account_id', $bs->sale_amt_account)
-                    ->sum($bs->bill_sundry_type == 'subtractive' ? 'debit' : 'credit');
-
-                $ledgerAdjustments_credit[$return_id][] = [
-                    'amount' => $ledger_amount,
-                    'type' => $bs->bill_sundry_type
-                ];
-            }
-        }
-    }
-
-    // ---------- DEBIT NOTES (Purchase returns) -----------
-    $debitSales = DB::table('purchase_returns')
-        ->where('purchase_returns.merchant_gst', $merchant_gst)
-        ->where('purchase_returns.company_id', $company_id)
-        ->whereBetween('purchase_returns.date', [$from_date, $to_date])
-        ->where(function($query) {
-            $query->whereNull('purchase_returns.billing_gst')
-                  ->orWhere('purchase_returns.billing_gst', '');
-        })
-         ->join('sales','sales.id','=','purchase_returns.purchase_bill_id')
-        ->where('sales.total','<=', 250000)
-        ->where('voucher_type', 'SALE')
-        ->where('sr_nature', 'WITH GST')
-        ->where('purchase_returns.delete', '0')
-        ->where('purchase_returns.status', '1')
-        ->pluck('purchase_returns.id');
-
-    $debitItems = DB::table('purchase_return_descriptions')
-        ->join('purchase_returns', 'purchase_return_descriptions.purchase_return_id', '=', 'purchase_returns.id')
-        ->join('states', 'purchase_returns.billing_state', '=', 'states.id')
-        ->join('manage_items', 'purchase_return_descriptions.goods_discription', '=', 'manage_items.id')
-        ->whereIn('purchase_return_id', $debitSales)
-        ->where('manage_items.item_type', 'taxable')
-        ->select(
-            'purchase_return_descriptions.purchase_return_id',
-            'states.name as state_name',
-            'manage_items.gst_rate',
-            'purchase_return_descriptions.amount'
-        )
-        ->get();
-
-    $debitSundryDetails = DB::table('purchase_return_sundries')
-        ->whereIn('purchase_return_id', $debitSales)
-        ->select('purchase_return_id', 'bill_sundry', 'amount')
-        ->get()
-        ->groupBy('purchase_return_id');
-
-    $ledgerAdjustments_debit = [];
-
-    foreach ($debitSundryDetails as $return_id => $entries) {
-        foreach ($entries as $entry) {
-            $bs = $sundries[$entry->bill_sundry] ?? null;
-
-            if (!$bs) continue;
-
-            if ($bs->adjust_sale_amt == 'No' && $bs->nature_of_sundry == 'OTHER') {
-                $ledger_amount = DB::table('account_ledger')
-                    ->where('company_id', $user_company_id)
-                    ->where('entry_type', 1)
-                    ->where('entry_type_id', $return_id)
-                    ->where('account_id', $bs->sale_amt_account)
-                    ->sum($bs->bill_sundry_type == 'subtractive' ? 'debit' : 'credit');
-
-                $ledgerAdjustments_debit[$return_id][] = [
-                    'amount' => $ledger_amount,
-                    'type' => $bs->bill_sundry_type
-                ];
-            }
-        }
-    }
-
-    // --------- Group and calculate for sales --------
-    $grouped_sale = [];
-    foreach ($items_sale as $item) {
-        $sale_id = $item->sale_id;
-        $state = $item->state_name;
-        $rate = $item->gst_rate;
-        $amount = $item->amount;
-        $total_sale_amount = $items_sale->where('sale_id', $sale_id)->sum('amount');
-
-        if ($total_sale_amount == 0) continue;
-
-        $adjusted_value = 0;
-
-        // Adjust sundry
-        if (isset($sundryDetails_sales[$sale_id])) {
-            foreach ($sundryDetails_sales[$sale_id] as $sundryEntry) {
-                $bs = $sundries[$sundryEntry->bill_sundry] ?? null;
-                if (!$bs || $bs->adjust_sale_amt != 'Yes' || $bs->nature_of_sundry != 'OTHER') continue;
-                $share = ($amount / $total_sale_amount) * $sundryEntry->amount;
-                $adjusted_value += ($bs->bill_sundry_type == 'subtractive') ? -$share : $share;
-            }
-        }
-
-        // Adjust ledger
-        if (isset($ledgerAdjustments_sales[$sale_id])) {
-            foreach ($ledgerAdjustments_sales[$sale_id] as $adj) {
-                $share = ($amount / $total_sale_amount) * $adj['amount'];
-                $adjusted_value += ($adj['type'] == 'subtractive') ? -$share : $share;
-            }
-        }
-
-        $taxable_value = $amount + $adjusted_value;
-
-        // Tax calculation
-        $igst = 0; $cgst = 0; $sgst = 0;
-        $merchant_state_code = substr($merchant_gst, 0, 2);
-        $customer_state_code = State::where('name', $state)->value('state_code');
-
-        if ($merchant_state_code == $customer_state_code) {
-            $cgst = $sgst = ($rate / 2 / 100) * $taxable_value;
-        } else {
-            $igst = ($rate / 100) * $taxable_value;
-        }
-
-        $key = $state . '|' . $rate;
-        if (!isset($grouped_sale[$key])) {
-            $grouped_sale[$key] = [
-                'state' => $state,
-                'rate' => $rate,
-                'taxable_value' => 0,
-                'igst' => 0,
-                'cgst' => 0,
-                'sgst' => 0,
-            ];
-        }
-
-        $grouped_sale[$key]['taxable_value'] += $taxable_value;
-        $grouped_sale[$key]['igst'] += $igst;
-        $grouped_sale[$key]['cgst'] += $cgst;
-        $grouped_sale[$key]['sgst'] += $sgst;
-    }
-
-    // ---------- Group and calculate for credit notes (subtract) ----------
-    $grouped_credit = [];
-    foreach ($creditItems as $item) {
-        $return_id = $item->sale_return_id;
-        $state = $item->state_name;
-        $rate = $item->gst_rate;
-        $amount = $item->amount;
-
-        $total_credit_amount = $creditItems->where('sale_return_id', $return_id)->sum('amount');
-        if ($total_credit_amount == 0) continue;
-
-        $adjusted_value = 0;
-
-        if (isset($creditSundryDetails[$return_id])) {
-            foreach ($creditSundryDetails[$return_id] as $sundryEntry) {
-                $bs = $sundries[$sundryEntry->bill_sundry] ?? null;
-                if (!$bs || $bs->adjust_sale_amt != 'Yes' || $bs->nature_of_sundry != 'OTHER') continue;
-
-                $share = ($amount / $total_credit_amount) * $sundryEntry->amount;
-                $adjusted_value += ($bs->bill_sundry_type == 'subtractive') ? -$share : $share;
-            }
-        }
-
-        // Adjust ledger
-        if (isset($ledgerAdjustments_credit[$return_id])) {
-            foreach ($ledgerAdjustments_credit[$return_id] as $adj) {
-                $share = ($amount / $total_credit_amount) * $adj['amount'];
-                $adjusted_value += ($adj['type'] == 'subtractive') ? -$share : $share;
-            }
-        }
-
-        $taxable_value = $amount + $adjusted_value;
-
-        $igst = 0; $cgst = 0; $sgst = 0;
-        $merchant_state_code = substr($merchant_gst, 0, 2);
-        $customer_state_code = State::where('name', $state)->value('state_code');
-
-        if ($merchant_state_code == $customer_state_code) {
-            $cgst = $sgst = ($rate / 2 / 100) * $taxable_value;
-        } else {
-            $igst = ($rate / 100) * $taxable_value;
-        }
-
-        $key = $state . '|' . $rate;
-        if (!isset($grouped_credit[$key])) {
-            $grouped_credit[$key] = [
-                'state' => $state,
-                'rate' => $rate,
-                'taxable_value' => 0,
-                'igst' => 0,
-                'cgst' => 0,
-                'sgst' => 0,
-            ];
-        }
-
-        $grouped_credit[$key]['taxable_value'] += $taxable_value;
-        $grouped_credit[$key]['igst'] += $igst;
-        $grouped_credit[$key]['cgst'] += $cgst;
-        $grouped_credit[$key]['sgst'] += $sgst;
-    }
-
-    // --------- Group and calculate for debit notes (add) -----------
-    $grouped_debit = [];
-    foreach ($debitItems as $item) {
-        $return_id = $item->purchase_return_id;
-        $state = $item->state_name;
-        $rate = $item->gst_rate;
-        $amount = $item->amount;
-
-        $total_debit_amount = $debitItems->where('purchase_return_id', $return_id)->sum('amount');
-        if ($total_debit_amount == 0) continue;
-
-        $adjusted_value = 0;
-
-        if (isset($debitSundryDetails[$return_id])) {
-            foreach ($debitSundryDetails[$return_id] as $sundryEntry) {
-                $bs = $sundries[$sundryEntry->bill_sundry] ?? null;
-                if (!$bs || $bs->adjust_sale_amt != 'Yes' || $bs->nature_of_sundry != 'OTHER') continue;
-
-                $share = ($amount / $total_debit_amount) * $sundryEntry->amount;
-                $adjusted_value += ($bs->bill_sundry_type == 'subtractive') ? -$share : $share;
-            }
-        }
-
-        // Adjust ledger
-        if (isset($ledgerAdjustments_debit[$return_id])) {
-            foreach ($ledgerAdjustments_debit[$return_id] as $adj) {
-                $share = ($amount / $total_debit_amount) * $adj['amount'];
-                $adjusted_value += ($adj['type'] == 'subtractive') ? -$share : $share;
-            }
-        }
-
-        $taxable_value = $amount + $adjusted_value;
-
-        $igst = 0; $cgst = 0; $sgst = 0;
-        $merchant_state_code = substr($merchant_gst, 0, 2);
-        $customer_state_code = State::where('name', $state)->value('state_code');
-
-        if ($merchant_state_code == $customer_state_code) {
-            $cgst = $sgst = ($rate / 2 / 100) * $taxable_value;
-        } else {
-            $igst = ($rate / 100) * $taxable_value;
-        }
-
-        $key = $state . '|' . $rate;
-        if (!isset($grouped_debit[$key])) {
-            $grouped_debit[$key] = [
-                'state' => $state,
-                'rate' => $rate,
-                'taxable_value' => 0,
-                'igst' => 0,
-                'cgst' => 0,
-                'sgst' => 0,
-            ];
-        }
-
-        $grouped_debit[$key]['taxable_value'] += $taxable_value;
-        $grouped_debit[$key]['igst'] += $igst;
-        $grouped_debit[$key]['cgst'] += $cgst;
-        $grouped_debit[$key]['sgst'] += $sgst;
-    }
-
-    // -------- Combine final adjusted data: sales + debit - credit -------
-    $finalData = [];
-
-    $allKeys = collect(array_unique(array_merge(array_keys($grouped_sale), array_keys($grouped_credit), array_keys($grouped_debit))));
-
-    foreach ($allKeys as $key) {
-        $state = $grouped_sale[$key]['state'] ?? $grouped_credit[$key]['state'] ?? $grouped_debit[$key]['state'] ?? null;
-        $rate = $grouped_sale[$key]['rate'] ?? $grouped_credit[$key]['rate'] ?? $grouped_debit[$key]['rate'] ?? null;
-
-        $salesTaxable = $grouped_sale[$key]['taxable_value'] ?? 0;
-        $salesIGST = $grouped_sale[$key]['igst'] ?? 0;
-        $salesCGST = $grouped_sale[$key]['cgst'] ?? 0;
-        $salesSGST = $grouped_sale[$key]['sgst'] ?? 0;
-
-        $creditTaxable = $grouped_credit[$key]['taxable_value'] ?? 0;
-        $creditIGST = $grouped_credit[$key]['igst'] ?? 0;
-        $creditCGST = $grouped_credit[$key]['cgst'] ?? 0;
-        $creditSGST = $grouped_credit[$key]['sgst'] ?? 0;
-
-        $debitTaxable = $grouped_debit[$key]['taxable_value'] ?? 0;
-        $debitIGST = $grouped_debit[$key]['igst'] ?? 0;
-        $debitCGST = $grouped_debit[$key]['cgst'] ?? 0;
-        $debitSGST = $grouped_debit[$key]['sgst'] ?? 0;
-
-        $finalData[$key] = [
-            'state' => $state,
-            'rate' => $rate,
-            'taxable_value' => $salesTaxable + $debitTaxable - $creditTaxable,
-            'igst' => $salesIGST + $debitIGST - $creditIGST,
-            'cgst' => $salesCGST + $debitCGST - $creditCGST,
-            'sgst' => $salesSGST + $debitSGST - $creditSGST,
-        ];
-    }
-
-    // Pass final adjusted data to view
-    return view('gstReturn.b2c_statewise', ['data' => array_values($finalData)]);
-}
 
 
 public function hsnSummary(Request $request){
