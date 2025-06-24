@@ -374,19 +374,19 @@
                                                 data-bs-target="#reconsiliationSubmenu"
                                                 aria-expanded="false"
                                                 aria-controls="reconsiliationSubmenu">
-                                                Reconsiliation
+                                                Reconciliation
                                                 <i class="arrow-icon fa fa-chevron-down ms-auto"></i>
                                              </a>
                                              <div class="collapse ps-3" id="reconsiliationSubmenu">
                                                 <ul class="nav flex-column">
                                                    <li class="py-1" style="">
-                                                      <a href="javascript:void(0)" class="text-blue">GSTR-1 Reconsiliation</a>
+                                                      <a href="javascript:void(0)" class="text-blue">GSTR-1 Reconciliation</a>
                                                    </li>
                                                    <li class="py-1" style="">
-                                                      <a href="javascript:void(0)" class="text-blue">GSTR-2A Reconsiliation</a>
+                                                      <a href="javascript:void(0)" class="text-blue">GSTR-2A Reconciliation</a>
                                                    </li>
                                                    <li class="py-1" style="">
-                                                      <a href="javascript:void(0)" class="text-blue">GSTR-2B Reconsiliation</a>
+                                                      <a href="javascript:void(0)" class="text-blue">GSTR-2B Reconciliation</a>
                                                    </li>
                                                 </ul>
                                              </div>
