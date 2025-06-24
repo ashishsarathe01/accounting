@@ -504,6 +504,7 @@ class PurchaseReturnController extends Controller
                      $item_ledger = new ItemLedger();
                      $item_ledger->item_id = $good;
                      $item_ledger->out_weight = $qtys[$key];
+                     $item_ledger->series_no = $request->input('series_no');
                      $item_ledger->txn_date = $request->input('date');
                      $item_ledger->price = $prices[$key];
                      $item_ledger->total_price = $amounts[$key];
