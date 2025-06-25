@@ -63,41 +63,76 @@
                   {{ session('success') }}
                </div>
             @endif
-            <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">GSTR2B</h5>
-            <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm">
-               <div class="row">
-                  <div class="mb-3 col-md-3">
-                     <label for="month" class="form-label font-14 font-heading">Month</label>
-                     <input type="month" class="form-control" name="month" id="month" required value="{{date('Y-m', strtotime('-1 month'))}}"/>
-                  </div>
-                  <div class="mb-3 col-md-3">
-                     <label for="gstin" class="form-label font-14 font-heading">GSTIN</label>
-                     <select class="form-select" id="gstin">
-                        @foreach ($gst as $value)
-                           <option value="{{$value->gst_no}}">{{$value->gst_no}}</option>
-                        @endforeach
-                     </select>
-                  </div>
-                  <div class="mb-3 col-md-3">
-                     <button type="button" class="btn btn-xs-primary submit_btn" style="margin-top: 20px;">SUBMIT</button>
-                  </div>
+            <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">GSTR2B Details ({{$ctin}}) - {{$account_name}}</h5>
+            <ul class="nav nav-fill nav-tabs" role="tablist">
+               <li class="nav-item" role="presentation">
+                  <a class="nav-link active" id="fill-tab-0" data-bs-toggle="tab" href="#fill-tabpanel-0" role="tab" aria-controls="fill-tabpanel-0" aria-selected="true"><h5 class="px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius" style="text-align: center;">B2B</h5></a>
+               </li>
+               <li class="nav-item" role="presentation">
+                  <a class="nav-link" id="fill-tab-1" data-bs-toggle="tab" href="#fill-tabpanel-1" role="tab" aria-controls="fill-tabpanel-1" aria-selected="false"><h5 class="px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius" style="text-align: center;">B2BA</h5></a>
+               </li>
+            </ul>
+            <div class="tab-content pt-5" id="tab-content">
+                <div class="tab-pane active" id="fill-tabpanel-0" role="tabpanel" aria-labelledby="fill-tab-0">
+                    <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm" style="text-align: center;">B2B-Invoices</h5>
+                    <div class="table-responsive">
+                         <table class="table table-bordered table-striped table-hover" id="gstr2b_b2b_table">
+                            <thead>
+                             <tr>
+                                <th>Invoice No.</th>
+                                <th>Invoice Date</th>
+                                <th style="text-align: right">Invoice Value</th>
+                                <th style="text-align: right">Taxable Value</th>
+                                <th style="text-align: right">IGST</th>
+                                <th style="text-align: right">CGST</th>
+                                <th style="text-align: right">SGST</th>
+                                <th style="text-align: right">Cess</th>
+                             </tr>
+                            </thead>
+                            <tbody>{!!$b2b_invoices!!}</tbody>
+                         </table>
+                    </div>
+                    <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm" style="text-align: center;">B2B-Debit notes</h5>
+                    <div class="table-responsive">
+                         <table class="table table-bordered table-striped table-hover" id="gstr2b_b2b_table">
+                            <thead>
+                             <tr>
+                                <th>Invoice No.</th>
+                                <th>Invoice Date</th>
+                                <th style="text-align: right">Invoice Value</th>
+                                <th style="text-align: right">Taxable Value</th>
+                                <th style="text-align: right">IGST</th>
+                                <th style="text-align: right">CGST</th>
+                                <th style="text-align: right">SGST</th>
+                                <th style="text-align: right">Cess</th>
+                             </tr>
+                            </thead>
+                            <tbody>{!!$b2b_debit_note!!}</tbody>
+                         </table>
+                    </div>
+                    <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm" style="text-align: center;">B2B-Credit Notes</h5>
+                    <div class="table-responsive">
+                         <table class="table table-bordered table-striped table-hover" id="gstr2b_b2b_table">
+                            <thead>
+                             <tr>
+                                <th>Invoice No.</th>
+                                <th>Invoice Date</th>
+                                <th style="text-align: right">Invoice Value</th>
+                                <th style="text-align: right">Taxable Value</th>
+                                <th style="text-align: right">IGST</th>
+                                <th style="text-align: right">CGST</th>
+                                <th style="text-align: right">SGST</th>
+                                <th style="text-align: right">Cess</th>
+                             </tr>
+                            </thead>
+                            <tbody>{!!$b2b_credit_note!!}</tbody>
+                         </table>
+                    </div>
                </div>
-            </form>
-            <div id="gst_div" style="display: none">
-               <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm gst_head"></h5>
-               <table class="table table-ordered bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm gst_table">
-                  <thead>
-                     <tr>
-                        <th>Account Name</th>
-                        <th>Amount</th>
-                     </tr>
-                  </thead>
-                  <tbody>
-                     
-                  </tbody>
-               </table>
-            </div>
-            
+               <div class="tab-pane" id="fill-tabpanel-1" role="tabpanel" aria-labelledby="fill-tab-1">
+                  ccc                                   
+               </div>
+            </div>             
          </div>
          <div class="col-lg-1 d-none d-lg-flex justify-content-center px-1">
             <div class="shortcut-key w-100">
@@ -215,84 +250,6 @@
 </body>
 @include('layouts.footer')
 <script>
-   $(document).ready(function(){
-      $(".submit_btn").click(function(){
-         let month = $("#month").val();
-         let gstin = $("#gstin").val();
-         getGSTR2BData(month,gstin);
-      });
-      $(".verify_otp").click(function(){
-         let otp = $("#otp").val();
-         let fgstin = $("#fgstin").val();
-         let month = $("#month").val();
-         let gstin = $("#gstin").val();
-         if(otp==""){
-            alert("Please Enter Otp");
-            return;
-         }
-         $.ajax({
-            url : "{{route('verify-gst-token-otp')}}",
-            method : 'post',
-            data : {
-               _token : '{{ csrf_token() }}',
-               otp : otp,
-               gstin : fgstin
-            },
-            success : function(res){
-               if(res!=""){
-                  let obj = JSON.parse(res);
-                  if(obj.status==true){
-                     getGSTR2BData(month,gstin)
-                  }else{
-                     alert(obj.message);
-                  }
-               }else{
-                  alert("Something Went Wrong.Please Try Again.");
-               }
-            }
-         });
-      });
-   });
-   function getGSTR2BData(month,gstin){
-      $.ajax({
-         url : "{{route('gstr2b-detail')}}",
-         method : 'post',
-         data : {
-            _token : '{{ csrf_token() }}',
-            month : month,
-            gstin : gstin
-         },
-         success : function(res){
-            if(res!=""){
-               let obj = JSON.parse(res);
-               if(obj.status==true){
-                  if(obj.message=="TOKEN-OTP"){
-                     $("#fgstin").val(gstin);
-                     $("#otpModal").modal('toggle');
-                  }else if(obj.message=="SUCCESS"){
-                     // $("#otpModal").modal('toggle');
-                     alert("OTP Verified Successfully");
-                     getGSTR2BData(month,gstin);
-                  }else if(obj.message=="GSTR2B"){
-                     $(".gst_head").html('GSTR2B');
-                     let html = "";let total_amount = 0;
-                     obj.data.forEach(element => {
-                        let baseUrl = "{{ url('/gstr2b-all-info') }}";
-                        let fullUrl = `${baseUrl}/${month}/${gstin}/${element.ctin}`;
-                        html+="<tr style='cursor:pointer'><td><a href='"+fullUrl+"'>"+element.trdnm+" ("+element.ctin+")</a></td><td></td></tr>";
-                     });
-                     html+="<tr><th></th><th>"+total_amount+"</th></tr>";
-                     $(".gst_table tbody").html(html);
-                     $("#gst_div").show();
-                  }
-               }else{
-                  alert(obj.message);
-               }
-            }else{
-               alert("Something Went Wrong.Please Try Again.");
-            }
-         }
-      });
-   }
+   
 </script>
 @endsection

@@ -502,7 +502,7 @@ class CommonHelper
                 $gstToken->company_id = Session::get('user_company_id');
                 $gstToken->company_gstin = $gstin;
                 $gstToken->save();
-                return $result->header->txn;
+                return 1;
             }else{
                 return 0;
             }         
