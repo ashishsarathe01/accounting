@@ -170,11 +170,50 @@ class GSTR2BController extends Controller
                                 ->where('res_month',$request->month)
                                 ->first(); 
             
-            $gstr2b = json_decode($gstr2b->res_data);               
+            $gstr2b = json_decode($gstr2b->res_data);  
+            foreach ($gstr2b->data->docdata->b2b as $record) {
+                //$record->ctin
+                //$record->trdnm
+            }
+            foreach ($gstr2b->data->docdata->cdnr as $record) {
+                //$record->ctin
+                //$record->trdnm
+            }
+            foreach ($gstr2b->data->docdata->b2ba as $record) {
+                //$record->ctin
+                //$record->trdnm
+            }
+            foreach ($gstr2b->data->docdata->cdnra as $record) {
+                //$record->ctin
+                //$record->trdnm
+            }
+            $uniqueSuppliers = [];
+            $sections = ['b2b', 'cdnr', 'b2ba', 'cdnra'];
+            foreach ($sections as $section) {
+                if (!empty($gstr2b->data->docdata->$section)) {
+                    foreach ($gstr2b->data->docdata->$section as $record) {
+                        if (!isset($uniqueSuppliers[$record->ctin])) {
+                            $uniqueSuppliers[$record->ctin] = $record->trdnm;
+                        }
+                    }
+                }
+            }
+            // Convert to array of objects if needed
+            $suppliers = [];
+            foreach ($uniqueSuppliers as $ctin => $trdnm) {
+                $suppliers[] = (object)[
+                    'ctin' => $ctin,
+                    'trdnm' => $trdnm,
+                ];
+            }
+            // Sort by trdnm (case-insensitive)
+            usort($suppliers, function ($a, $b) {
+                return strcasecmp($a->trdnm, $b->trdnm);
+            });
             $response = array(
                 'status' => true,
                 'message' => 'GSTR2B',
-                'data' => $gstr2b->data->docdata->b2b
+                'data' => $suppliers
             );
             return json_encode($response);
         }
@@ -234,7 +273,7 @@ class GSTR2BController extends Controller
         foreach ($gstr2b->data->docdata->cdnr as $record) {
             if($record->ctin === $request->ctin) {
                 foreach ($record->nt as $invoice) {
-                    if($invoice->typ = "C"){
+                    if($invoice->typ == "C"){
                         $total_val += $invoice->val;
                         $total_txval += $invoice->txval;
                         $total_igst += $invoice->igst;
@@ -251,7 +290,7 @@ class GSTR2BController extends Controller
                             <td style='text-align: right'>".formatIndianNumber($invoice->sgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->cess)."</td>
                         </tr>";
-                    }else if($invoice->typ = "D"){
+                    }else if($invoice->typ == "D"){
                         $debit_total_val += $invoice->val;
                         $debit_total_txval += $invoice->txval;
                         $debit_total_igst += $invoice->igst;
@@ -291,6 +330,107 @@ class GSTR2BController extends Controller
                 break; // Stop after first match
             }
         }
+        //Get B2BA Invoices
+        $b2ba_invoices = "";
+        $total_val = 0; $total_txval = 0; $total_igst = 0; $total_cgst = 0; $total_sgst = 0; $total_cess = 0;
+        foreach ($gstr2b->data->docdata->b2ba as $record) {
+            if($record->ctin === $request->ctin) {
+                foreach ($record->inv as $invoice) {
+                    $total_val += $invoice->val;
+                    $total_txval += $invoice->txval;
+                    $total_igst += $invoice->igst;
+                    $total_cgst += $invoice->cgst;
+                    $total_sgst += $invoice->sgst;
+                    $total_cess += $invoice->cess;
+                    $b2ba_invoices.="<tr>
+                        <td>".$invoice->inum."</td>
+                        <td>".$invoice->dt."</td>
+                        <td style='text-align: right'>".formatIndianNumber($invoice->val)."</td>
+                        <td style='text-align: right'>".formatIndianNumber($invoice->txval)."</td>
+                        <td style='text-align: right'>".formatIndianNumber($invoice->igst)."</td>
+                        <td style='text-align: right'>".formatIndianNumber($invoice->cgst)."</td>
+                        <td style='text-align: right'>".formatIndianNumber($invoice->sgst)."</td>
+                        <td style='text-align: right'>".formatIndianNumber($invoice->cess)."</td>
+                    </tr>";
+                }
+                $b2ba_invoices .= "<tr>
+                    <th colspan='2' style='text-align: right'><strong>Total</strong></th>
+                    <th style='text-align: right'>".formatIndianNumber($total_val)."</th>
+                    <th style='text-align: right'>".formatIndianNumber($total_txval)."</th>
+                    <th style='text-align: right'>".formatIndianNumber($total_igst)."</th>
+                    <th style='text-align: right'>".formatIndianNumber($total_cgst)."</th>
+                    <th style='text-align: right'>".formatIndianNumber($total_sgst)."</th>
+                    <th style='text-align: right'>".formatIndianNumber($total_cess)."</th>
+                </tr>";
+                break; // Stop after first match
+            }
+        }
+        //Get B2BA Credit Note
+        $b2ba_credit_note = "";$b2ba_debit_note = "";
+        $total_val = 0; $total_txval = 0; $total_igst = 0; $total_cgst = 0; $total_sgst = 0; $total_cess = 0;
+        $debit_total_val = 0; $debit_total_txval = 0; $debit_total_igst = 0; $debit_total_cgst = 0; $debit_total_sgst = 0; $debit_total_cess = 0;
+        foreach ($gstr2b->data->docdata->cdnra as $record) {
+            if($record->ctin === $request->ctin) {
+                foreach ($record->nt as $invoice) {
+                    if($invoice->typ == "C"){
+                        $total_val += $invoice->val;
+                        $total_txval += $invoice->txval;
+                        $total_igst += $invoice->igst;
+                        $total_cgst += $invoice->cgst;
+                        $total_sgst += $invoice->sgst;
+                        $total_cess += $invoice->cess;
+                        $b2ba_credit_note.="<tr>
+                            <td>".$invoice->ntnum."</td>
+                            <td>".$invoice->dt."</td>
+                            <td style='text-align: right'>".formatIndianNumber($invoice->val)."</td>
+                            <td style='text-align: right'>".formatIndianNumber($invoice->txval)."</td>
+                            <td style='text-align: right'>".formatIndianNumber($invoice->igst)."</td>
+                            <td style='text-align: right'>".formatIndianNumber($invoice->cgst)."</td>
+                            <td style='text-align: right'>".formatIndianNumber($invoice->sgst)."</td>
+                            <td style='text-align: right'>".formatIndianNumber($invoice->cess)."</td>
+                        </tr>";
+                    }else if($invoice->typ == "D"){
+                        $debit_total_val += $invoice->val;
+                        $debit_total_txval += $invoice->txval;
+                        $debit_total_igst += $invoice->igst;
+                        $debit_total_cgst += $invoice->cgst;
+                        $debit_total_sgst += $invoice->sgst;
+                        $debit_total_cess += $invoice->cess;
+                        $b2ba_debit_note.="<tr>
+                            <td>".$invoice->ntnum."</td>
+                            <td>".$invoice->dt."</td>
+                            <td style='text-align: right'>".formatIndianNumber($invoice->val)."</td>
+                            <td style='text-align: right'>".formatIndianNumber($invoice->txval)."</td>
+                            <td style='text-align: right'>".formatIndianNumber($invoice->igst)."</td>
+                            <td style='text-align: right'>".formatIndianNumber($invoice->cgst)."</td>
+                            <td style='text-align: right'>".formatIndianNumber($invoice->sgst)."</td>
+                            <td style='text-align: right'>".formatIndianNumber($invoice->cess)."</td>
+                        </tr>";
+                    }
+                }
+                $b2ba_credit_note .= "<tr>
+                    <th colspan='2' style='text-align: right'><strong>Total</strong></th>
+                    <th style='text-align: right'>".formatIndianNumber($total_val)."</th>
+                    <th style='text-align: right'>".formatIndianNumber($total_txval)."</th>
+                    <th style='text-align: right'>".formatIndianNumber($total_igst)."</th>
+                    <th style='text-align: right'>".formatIndianNumber($total_cgst)."</th>
+                    <th style='text-align: right'>".formatIndianNumber($total_sgst)."</th>
+                    <th style='text-align: right'>".formatIndianNumber($total_cess)."</th>
+                </tr>";
+                $b2ba_debit_note .= "<tr>
+                    <th colspan='2' style='text-align: right'><strong>Total</strong></th>
+                    <th style='text-align: right'>".formatIndianNumber($debit_total_val)."</th>
+                    <th style='text-align: right'>".formatIndianNumber($debit_total_txval)."</th>
+                    <th style='text-align: right'>".formatIndianNumber($debit_total_igst)."</th>
+                    <th style='text-align: right'>".formatIndianNumber($debit_total_cgst)."</th>
+                    <th style='text-align: right'>".formatIndianNumber($debit_total_sgst)."</th>
+                    <th style='text-align: right'>".formatIndianNumber($debit_total_cess)."</th>
+                </tr>";
+                break; // Stop after first match
+            }
+        }
+        // echo "<pre>";
+        // print_r($b2b_invoices);
         return view('gstReturn.gstr2b_all_info',[
             'account_name' => $account_name,
             'ctin' => $request->ctin,
@@ -298,7 +438,10 @@ class GSTR2BController extends Controller
             'gstin' => $request->gstin,
             'b2b_invoices' => $b2b_invoices,
             'b2b_credit_note' => $b2b_credit_note,
-            'b2b_debit_note' => $b2b_debit_note
+            'b2b_debit_note' => $b2b_debit_note,
+            'b2ba_invoices' => $b2ba_invoices,
+            'b2ba_credit_note' => $b2ba_credit_note,
+            'b2ba_debit_note' => $b2ba_debit_note
         ]);
         
     }

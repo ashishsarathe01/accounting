@@ -255,7 +255,7 @@
    });
    function getGstData(month,gstin){
       $.ajax({
-         url : "{{route('gst-detail-by-type')}}",
+         url : "{{route('gstr2a-detail')}}",
          method : 'post',
          data : {
             _token : '{{ csrf_token() }}',

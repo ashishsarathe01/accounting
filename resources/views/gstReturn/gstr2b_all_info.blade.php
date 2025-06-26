@@ -76,7 +76,7 @@
                 <div class="tab-pane active" id="fill-tabpanel-0" role="tabpanel" aria-labelledby="fill-tab-0">
                     <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm" style="text-align: center;">B2B-Invoices</h5>
                     <div class="table-responsive">
-                         <table class="table table-bordered table-striped table-hover" id="gstr2b_b2b_table">
+                         <table class="table table-bordered table-striped table-hover">
                             <thead>
                              <tr>
                                 <th>Invoice No.</th>
@@ -94,7 +94,7 @@
                     </div>
                     <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm" style="text-align: center;">B2B-Debit notes</h5>
                     <div class="table-responsive">
-                         <table class="table table-bordered table-striped table-hover" id="gstr2b_b2b_table">
+                         <table class="table table-bordered table-striped table-hover">
                             <thead>
                              <tr>
                                 <th>Invoice No.</th>
@@ -112,7 +112,7 @@
                     </div>
                     <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm" style="text-align: center;">B2B-Credit Notes</h5>
                     <div class="table-responsive">
-                         <table class="table table-bordered table-striped table-hover" id="gstr2b_b2b_table">
+                         <table class="table table-bordered table-striped table-hover">
                             <thead>
                              <tr>
                                 <th>Invoice No.</th>
@@ -130,7 +130,60 @@
                     </div>
                </div>
                <div class="tab-pane" id="fill-tabpanel-1" role="tabpanel" aria-labelledby="fill-tab-1">
-                  ccc                                   
+                    <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm" style="text-align: center;">B2BA-Invoices</h5>
+                    <div class="table-responsive">
+                         <table class="table table-bordered table-striped table-hover">
+                            <thead>
+                             <tr>
+                                <th>Invoice No.</th>
+                                <th>Invoice Date</th>
+                                <th style="text-align: right">Invoice Value</th>
+                                <th style="text-align: right">Taxable Value</th>
+                                <th style="text-align: right">IGST</th>
+                                <th style="text-align: right">CGST</th>
+                                <th style="text-align: right">SGST</th>
+                                <th style="text-align: right">Cess</th>
+                             </tr>
+                            </thead>
+                            <tbody>{!!$b2ba_invoices!!}</tbody>
+                         </table>
+                    </div>
+                    <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm" style="text-align: center;">B2BA-Debit notes</h5>
+                    <div class="table-responsive">
+                         <table class="table table-bordered table-striped table-hover">
+                            <thead>
+                             <tr>
+                                <th>Invoice No.</th>
+                                <th>Invoice Date</th>
+                                <th style="text-align: right">Invoice Value</th>
+                                <th style="text-align: right">Taxable Value</th>
+                                <th style="text-align: right">IGST</th>
+                                <th style="text-align: right">CGST</th>
+                                <th style="text-align: right">SGST</th>
+                                <th style="text-align: right">Cess</th>
+                             </tr>
+                            </thead>
+                            <tbody>{!!$b2ba_debit_note!!}</tbody>
+                         </table>
+                    </div>
+                    <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm" style="text-align: center;">B2BA-Credit Notes</h5>
+                    <div class="table-responsive">
+                         <table class="table table-bordered table-striped table-hover">
+                            <thead>
+                             <tr>
+                                <th>Invoice No.</th>
+                                <th>Invoice Date</th>
+                                <th style="text-align: right">Invoice Value</th>
+                                <th style="text-align: right">Taxable Value</th>
+                                <th style="text-align: right">IGST</th>
+                                <th style="text-align: right">CGST</th>
+                                <th style="text-align: right">SGST</th>
+                                <th style="text-align: right">Cess</th>
+                             </tr>
+                            </thead>
+                            <tbody>{!!$b2ba_credit_note!!}</tbody>
+                         </table>
+                    </div>                                 
                </div>
             </div>             
          </div>
