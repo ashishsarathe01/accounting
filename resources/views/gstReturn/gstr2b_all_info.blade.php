@@ -79,6 +79,7 @@
                          <table class="table table-bordered table-striped table-hover">
                             <thead>
                              <tr>
+                                <th></th>
                                 <th>Invoice No.</th>
                                 <th>Invoice Date</th>
                                 <th style="text-align: right">Invoice Value</th>
@@ -87,6 +88,7 @@
                                 <th style="text-align: right">CGST</th>
                                 <th style="text-align: right">SGST</th>
                                 <th style="text-align: right">Cess</th>
+                                <th>Action</th>
                              </tr>
                             </thead>
                             <tbody>{!!$b2b_invoices!!}</tbody>
@@ -97,6 +99,7 @@
                          <table class="table table-bordered table-striped table-hover">
                             <thead>
                              <tr>
+                                <th></th>
                                 <th>Invoice No.</th>
                                 <th>Invoice Date</th>
                                 <th style="text-align: right">Invoice Value</th>
@@ -105,6 +108,7 @@
                                 <th style="text-align: right">CGST</th>
                                 <th style="text-align: right">SGST</th>
                                 <th style="text-align: right">Cess</th>
+                                <th>Action</th>
                              </tr>
                             </thead>
                             <tbody>{!!$b2b_debit_note!!}</tbody>
@@ -115,6 +119,7 @@
                          <table class="table table-bordered table-striped table-hover">
                             <thead>
                              <tr>
+                                <th></th>
                                 <th>Invoice No.</th>
                                 <th>Invoice Date</th>
                                 <th style="text-align: right">Invoice Value</th>
@@ -123,6 +128,7 @@
                                 <th style="text-align: right">CGST</th>
                                 <th style="text-align: right">SGST</th>
                                 <th style="text-align: right">Cess</th>
+                                <th>Action</th>
                              </tr>
                             </thead>
                             <tbody>{!!$b2b_credit_note!!}</tbody>
@@ -135,6 +141,7 @@
                          <table class="table table-bordered table-striped table-hover">
                             <thead>
                              <tr>
+                                <th></th>
                                 <th>Invoice No.</th>
                                 <th>Invoice Date</th>
                                 <th style="text-align: right">Invoice Value</th>
@@ -143,6 +150,7 @@
                                 <th style="text-align: right">CGST</th>
                                 <th style="text-align: right">SGST</th>
                                 <th style="text-align: right">Cess</th>
+                                <th>Action</th>
                              </tr>
                             </thead>
                             <tbody>{!!$b2ba_invoices!!}</tbody>
@@ -153,6 +161,7 @@
                          <table class="table table-bordered table-striped table-hover">
                             <thead>
                              <tr>
+                                <th></th>
                                 <th>Invoice No.</th>
                                 <th>Invoice Date</th>
                                 <th style="text-align: right">Invoice Value</th>
@@ -161,6 +170,7 @@
                                 <th style="text-align: right">CGST</th>
                                 <th style="text-align: right">SGST</th>
                                 <th style="text-align: right">Cess</th>
+                                <th>Action</th>
                              </tr>
                             </thead>
                             <tbody>{!!$b2ba_debit_note!!}</tbody>
@@ -171,6 +181,7 @@
                          <table class="table table-bordered table-striped table-hover">
                             <thead>
                              <tr>
+                                <th></th>
                                 <th>Invoice No.</th>
                                 <th>Invoice Date</th>
                                 <th style="text-align: right">Invoice Value</th>
@@ -179,6 +190,7 @@
                                 <th style="text-align: right">CGST</th>
                                 <th style="text-align: right">SGST</th>
                                 <th style="text-align: right">Cess</th>
+                                <th>Action</th>
                              </tr>
                             </thead>
                             <tbody>{!!$b2ba_credit_note!!}</tbody>
@@ -300,9 +312,87 @@
       </div>
    </div>
 </div>
+<div class="modal fade" id="remarkModal" tabindex="-1" aria-labelledby="remarkModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="remarkModalLabel">Enter Remark</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="remarkForm">
+          <input type="hidden" name="invoice" id="invoice">
+          <input type="hidden" name="date" id="date">
+          <input type="hidden" name="total_amount" id="total_amount">
+          <input type="hidden" name="taxable_amount" id="taxable_amount">
+          <input type="hidden" name="igst" id="igst">
+          <input type="hidden" name="cgst" id="cgst">
+          <input type="hidden" name="sgst" id="sgst">
+          <input type="hidden" name="cess" id="cess">
+          <input type="hidden" name="irn" id="irn">
+          <input type="hidden" name="type" id="type">
+          <input type="hidden" name="gstin" id="gstin" value="{{ $gstin }}">
+          <input type="hidden" name="ctin" id="ctin" value="{{ $ctin }}">
+          <div class="mb-3">
+            <label for="remark" class="form-label">Remark</label>
+            <textarea name="remark" id="remark" class="form-control" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-danger">Reject</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 @include('layouts.footer')
 <script>
-   
+   $(document).on('click','.check_action',function(){
+      let id = $(this).data('key');
+      if($(this).is(':checked')){
+         $("#b2b_invoices_rej_btn_"+id).hide();
+      }else{
+         $("#b2b_invoices_rej_btn_"+id).show();
+      }
+   });
+   $(document).on('click','.reject_btn',function(){
+      $('#invoice').val($(this).data('invoice'));
+      $('#date').val($(this).data('date'));
+      $('#total_amount').val($(this).data('total_amount'));
+      $('#taxable_amount').val($(this).data('taxable_amount'));
+      $('#igst').val($(this).data('igst'));
+      $('#cgst').val($(this).data('cgst'));
+      $('#sgst').val($(this).data('sgst'));
+      $('#cess').val($(this).data('cess'));
+      $('#irn').val($(this).data('irn'));
+      $('#type').val($(this).data('type'));
+      $('#remarkModal').modal('show');
+   });
+   $('#remarkForm').on('submit', function (e) {
+      e.preventDefault();
+      $.ajax({
+         url: "{{ route('reject-gstr2b-entry') }}", // Replace with your actual route
+         method: 'POST',
+         data: $(this).serialize(),
+         headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') // Add this if CSRF token is needed
+         },
+         success: function (response) {
+            let res = JSON.parse(response);
+            if(res.status==true) {
+               alert('Invoice rejected successfully.');
+               $('#remarkModal').modal('hide'); 
+               location.reload(); // Reload the page to reflect changes
+            } else {
+               alert('Failed to reject invoice');
+            }
+            
+            //alert('Invoice rejected successfully.');
+            //location.reload(); // Reload the page to reflect changes
+         },
+         error: function (xhr) {
+            alert('An error occurred while rejecting the invoice.');
+         }
+      });
+   });
 </script>
 @endsection

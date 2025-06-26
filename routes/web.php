@@ -329,6 +329,8 @@ Route::Resource('payment', PaymentController::class);
   Route::get('gst2b', [GSTR2BController::class, 'index'])->name('gst2b');  
   Route::post('gstr2b-detail', [GSTR2BController::class, 'gstr2bDetail'])->name('gstr2b-detail');
   Route::get('gstr2b-all-info/{month}/{gstin}/{ctin}', [GSTR2BController::class, 'gstr2bAllInfo'])->name('gstr2b-all-info');
+  Route::post('reject-gstr2b-entry', [GSTR2BController::class, 'rejectEntry'])->name('reject-gstr2b-entry');
+
   Route::post('verify-gst-token-otp', [AjaxController::class, 'verifyGstTokenOtp'])->name('verify-gst-token-otp');
   Route::get('/report/nilratedreginter', [gstR1Controller::class, 'nilRatedAndExemptedCombined'])->name('nilratedreginter');
   Route::get('/report/debitnote', [gstR1Controller::class, 'combinedNoteRegister'])->name('debitNote');
