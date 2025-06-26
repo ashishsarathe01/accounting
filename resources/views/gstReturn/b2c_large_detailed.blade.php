@@ -1,6 +1,15 @@
 @extends('layouts.app')
-
 @section('content')
+@include('layouts.header')
+<div class="list-of-view-company ">
+   <section class="list-of-view-company-section container-fluid">
+      <div class="row vh-100">
+   @include('layouts.leftnav')
+
+   <!-- Add a column for the main content -->
+   <div class="col-md-10 col-sm-12 px-4 bg-mint">
+      <div class="container-fluid">
+         <!-- Header section -->
 <div class="container">
     <div class="d-flex justify-content-between align-items-center px-2 py-0.1 mb-4 mt-4" style=" background-color: #1ac6c6;
       border-top-left-radius: 0.375rem;
@@ -71,6 +80,11 @@
         </tbody>
     </table>
    
+</div>
+
+</div>
+</div>
+   </section>
 </div>
 @include('layouts.footer')
 <script>

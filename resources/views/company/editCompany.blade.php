@@ -69,6 +69,7 @@
                            <label for="name" class="form-label font-14 font-heading">Firm’s Name</label>
                            <input type="text" class="form-control" id="company_name" name="company_name" value="<?php echo $company->company_name;?>" placeholder="Enter firm’s name" required />
                         </div>
+                        <input type="hidden" class="form-control" id="legal_name" name="legal_name" placeholder="Enter firm’s name" required value=""/>
                         <div class="mb-8 col-md-8">
                            <label for="name" class="form-label font-14 font-heading">Address</label>
                            <input type="text" class="form-control" id="address" name="address" value="{{ $company->address;}}" placeholder="Enter address" />
@@ -78,10 +79,9 @@
                            <select class="form-select" id="state" name="state" required>
                               <option value="">Select</option>
                               <?php
-                              foreach ($state_list as $val) { ?>
-                                 <option value="<?= $val->id; ?>" <?php echo $company->state ==$val->id ? 'selected':'';?>><?= $val->name; ?></option>
-                                 <?php 
-                              } ?>
+                                foreach ($state_list as $val) { ?>
+                                <option value="<?= $val->id;?>" data-state_code="{{$val->state_code}}" <?php echo $company->state ==$val->id ? 'selected':'';?>><?= $val->name;?></option>
+                                <?php }?>
                            </select>
                         </div>
                         <div class="mb-4 col-md-4">
@@ -738,7 +738,7 @@
         if (gstinformat.test(inputvalues)) {
             var GstateCode = inputvalues.substr(0, 2); 
             //$('#state').val(GstateCode);
-            $('#country_name').val('india');
+            $('#country_name').val('INDIA');
             var GpanNum = inputvalues.substring(2, 12);
             $("#pan").val(GpanNum);
             var GEnd = inputvalues.substring(12,14);
@@ -759,12 +759,13 @@
                     if(data!=""){
                         if(data.status==1){
                             var GstateCode = inputvalues.substr(0, 2);
-                            $('#state [data-state_code = "'+GstateCode+'"]').prop('selected', true);           
+                            $('#state [data-state_code = "'+GstateCode+'"]').prop('selected', true); 
                             var GpanNum = inputvalues.substring(2, 12);
                             $("#pan").val(GpanNum);
                             $("#address").val(data.address.toUpperCase());
                             $("#pin_code").val(data.pinCode);
                             $("#company_name").val(data.tradeName);
+                             $("#legal_name").val(data.legalName);
                             $("#date_of_incorporation").val(data.DtReg);
                         }else if(data.status==0){
                             alert(data.message)

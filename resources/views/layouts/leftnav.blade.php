@@ -15,6 +15,25 @@
     border-radius: 5px;
     padding: 12px 8px;
 }
+
+      /* ðŸ‘‡ Hover effect on table rows */
+.clickable-row:hover {
+    background-color: rgb(254, 254, 254) !important;
+    cursor: pointer;
+}
+
+.clickable-row:hover {
+    color: rgb(0, 14, 79) !important;
+}
+
+.clickable-row:hover a {
+    color: rgb(0, 14, 79) !important;
+}
+
+.clickable-row-blue:hover {
+    background-color: #cce5ff !important; /* Light blue */
+    cursor: pointer;
+}
 </style>
 <aside class="col-lg-2 d-none d-lg-block bg-blue sidebar p-0">
    <div class="sidebar-sticky ">
@@ -35,7 +54,7 @@
                      <ul class="nav flex-column">
                         @can('view-module', 17)
                         <a href="{{ route('add-company') }}">
-                           <li class="font-14 text-blue fw-500 m-0 py-12 px-2 text-blue bg-white border-radius-4 clickable-row">Add Company</li>
+                           <li class="font-14  fw-500 m-0 py-12 px-2 text-white  border-radius-4 clickable-row">Add Company</li>
                         </a>
                      @endcan
                      <?php
@@ -620,21 +639,3 @@ document.addEventListener("DOMContentLoaded", function () {
 
 </script>
 
-@section('styles')
-<style>
-      /* ðŸ‘‡ Hover effect on table rows */
-.clickable-row:hover {
-    background-color: rgb(254, 254, 254) !important;
-    cursor: pointer;
-}
-
-.clickable-row:hover a {
-    color: rgb(0, 14, 79) !important;
-}
-
-.clickable-row-blue:hover {
-    background-color: #cce5ff !important; /* Light blue */
-    cursor: pointer;
-}
-</style>
-@endsection

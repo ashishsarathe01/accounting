@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('content')
 @include('layouts.header')
-<style>
+<style type="text/css">
 .select2-container--default .select2-selection--single {
     height: 48px !important; /* Increase this value as needed */
     padding: 8px 12px;
@@ -22,7 +22,7 @@
     top: 0px !important;
 }
    /* 👇 Hover effect on table rows */
-.clickable-row:hover {
+.clickable-row:hover td {
     background-color: #cce5ff !important; /* Light blue */
     cursor: pointer;
 }
@@ -31,9 +31,10 @@
    <section class="list-of-view-company-section container-fluid">
       <div class="row vh-100">
    @include('layouts.leftnav')
+   
 
    <!-- Add a column for the main content -->
-   <div class="col-md-10 col-sm-12 px-4">
+   <div class="col-md-10 col-sm-12 px-4 bg-mint">
       <div class="container-fluid">
          <!-- Header section -->
          <div class="d-flex justify-content-between align-items-center px-3 py-2 mb-4 mt-4"
@@ -41,6 +42,14 @@
                      border-top-left-radius: 0.375rem;
                      border-top-right-radius: 0.375rem;">
             <h2 class="mb-0" style="color:white; font-size:18px;">B2B Detailed Summary</h2>
+            <form id="quitForm" method="POST" action="{{ url('gstr1') }}">
+    @csrf
+     <input type="hidden" name="series" value="{{ $merchant_gst }}">
+            <input type="hidden" name="from_date" value="{{ $from_date }}">
+            <input type="hidden" name="to_date" value="{{ $to_date }}">
+    <button type="submit" class="btn btn-danger">QUIT</button>
+</form>
+
          </div>
 
          <!-- Filter Form -->
@@ -203,5 +212,14 @@ $(document).ready(function() {
  $(".clickable-row").click(function() {
         window.location = $(this).data("href");
     });
+
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === "Escape") {
+            event.preventDefault(); // Prevent default ESC behavior
+            document.getElementById('quitForm').submit();
+        }
+    });
 </script>
 @endsection
+

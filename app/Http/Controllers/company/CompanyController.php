@@ -72,6 +72,7 @@ class CompanyController extends Controller{
       $company->user_id = Auth::id();
       $company->business_type = $request->business_type;
       $company->company_name = $request->company_name;
+      $company->legal_name = $request->legal_name;
       $company->cin = $request->cin;
       $company->gst_applicable = $request->gst_applicable;
       $company->gst = $request->gst;
@@ -111,6 +112,7 @@ class CompanyController extends Controller{
       $company = Companies::find(Session::get('user_company_id'));
       $company->business_type = $request->business_type;
       $company->company_name = $request->company_name;
+       $company->legal_name = $request->legal_name;
       $company->gst_applicable = $request->gst_applicable;
       $company->gst = $request->gst;
       $company->pan = $request->pan;

@@ -60,6 +60,10 @@
                             <label for="name" class="form-label font-14 font-heading">Firm’s Name</label>
                             <input type="text" class="form-control" id="company_name" name="company_name" placeholder="Enter firm’s name" required value="<?php if(!empty($company_info) && $company_info->company_name){ echo $company_info->company_name;} ?>"/>
                         </div>
+                    
+                            
+                            <input type="hidden" class="form-control" id="legal_name" name="legal_name" placeholder="Enter firm’s name" required value=""/>
+                       
                         <div class="mb-8 col-md-8">
                             <label for="name" class="form-label font-14 font-heading">Address</label>
                             <input type="text" class="form-control" id="address" name="address" placeholder="Enter address" value="<?php if(!empty($company_info) && $company_info->address){ echo $company_info->address;} ?>"/>
@@ -190,6 +194,7 @@
                             $("#address").val(data.address.toUpperCase());
                             $("#pin_code").val(data.pinCode);
                             $("#company_name").val(data.tradeName);
+                            $("#legal_name").val(data.legalName);
                             $("#date_of_incorporation").val(data.DtReg);
                         }else if(data.status==0){
                             alert(data.message)

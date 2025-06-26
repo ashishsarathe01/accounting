@@ -1,101 +1,6 @@
 @extends('layouts.app')
 @section('content')
-
-    @php
-        $cards = [
-            ['title' => '4A, 4B, 6B, 6C - B2B, SEZ, DE Invoices', 'route' => route('gst.b2b.detailed.billwise', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
-            ['title' => '5 - B2C (Large) Invoices', 'route' => route('gst.b2c.large.detailed', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
-            ['title' => '6A - Exports Invoices', 'route' => '#'],
-            ['title' => '7 - B2C (Others)', 'route' => route('gst.b2c.normal.statewise', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
-            ['title' => '8A, 8B, 8C, 8D - Nil Rated Supplies', 'route' => route('nilratedreginter', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
-            ['title' => '9B - Credit / Debit Notes (Registered)', 'route' => route('debitNote', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
-            ['title' => '9B - Credit / Debit Notes (Unregistered)', 'route' => route('debitNoteUnreg', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
-            ['title' => '11A(1), 11A(2) - Tax Liability (Advances Received)', 'route' => '#'],
-            ['title' => '11B(1), 11B(2) - Adjustment of Advances', 'route' => '#'],
-            ['title' => '12 - HSN-wise summary of outward supplies', 'route' => route('hsnSummary', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
-            ['title' => '13 - Documents Issued', 'route' => route('docIssued', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
-            ['title' => '14 - Supplies made through ECO', 'route' => '#'],
-            ['title' => '15 - Supplies U/s 9(5)', 'route' => '#'],
-        ];
-    @endphp
-
-<div class="container mt-4">
-    <div class="card mb-3 shadow-sm border-0">
-        <!-- Combined Header and Info in One Card -->
-        <div class="card-body p-0">
-            <!-- Header Banner -->
-            <div class="gstr-header d-flex justify-content-between align-items-center px-3 py-2">
-                <h5 class="mb-0 text-white fw-bold">GSTR-1 - Details of outward supplies of goods or services</h5>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-sm btn-primary">E-INVOICE ADVISORY</button>
-                    <button class="btn btn-sm btn-primary">
-                        HELP <i class="fas fa-question-circle ms-1"></i>
-                    </button>
-                    <button class="btn btn-sm btn-primary">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- White Info Row -->
-            <div class="bg-white px-3 py-3">
-                <div class="row g-2">
-                    <div class="col-md-4"><strong>GSTIN -</strong> {{$merchant_gst}}</div>
-                    <div class="col-md-4"><strong>Legal Name -</strong> Gopal Dutt</div>
-                    <div class="col-md-4"><strong>Trade Name -</strong>  {{$comp_details->company_name}}</div>
-                    <div class="col-md-4"><strong>FY -</strong> 20{{$fy}}</div>
-                    <div class="col-md-4"><strong>Tax Period -</strong> {{$from_date}} to {{$to_date}}</div>
-                    <div class="col-md-4"><strong>Status -</strong> Not Filed</div>
-                    <div class="col-md-4 text-danger">
-                        <i class="fas fa-circle text-danger me-1" style="font-size: 8px;"></i> * Indicates Mandatory Fields
-                    </div>
-                    <div class="col-md-4"><strong>Due Date -</strong> 11/07/2025</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- File Nil GSTR-1 -->
-    <div class="bg-white py-2 px-3 border mb-3">
-        <div class="form-check">
-            <input type="checkbox" class="form-check-input" id="fileNil">
-            <label class="form-check-label fw-semibold" for="fileNil">File Nil GSTR-1</label>
-        </div>
-    </div>
-
-    <!-- Section Header -->
-    <div class="bg-primary text-white px-3 py-2 fw-bold rounded-top">
-        ADD RECORD DETAILS
-    </div>
-
-    <!-- Cards -->
-    <div class="row bg-white py-3 px-2 rounded-bottom justify-content-start">
-        @foreach ($cards as $card)
-            <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
-                <a href="{{ $card['route'] }}" class="text-decoration-none">
-                    <div class="card gst-dashboard-card shadow-sm border-0 h-100 text-center">
-                        <div class="gst-dashboard-header d-flex align-items-center justify-content-center">
-                            <h6 class="gst-dashboard-title m-0">{{ $card['title'] }}</h6>
-                        </div>
-                        <div class="gst-dashboard-body d-flex flex-column justify-content-center align-items-center py-3">
-  <div class="gst-dashboard-count d-flex align-items-center">
-    <img src="//static.gst.gov.in/uiassets/images/processed.png" 
-         class="check-icon me-2" 
-         alt="check icon" >
-    <span class="count-value">0</span>
-  </div>
-</div>
-                    </div>
-                </a>
-            </div>
-        @endforeach
-    </div>
-</div>
-
-@endsection
-
-
-@section('styles')
+@include('layouts.header')
 <style>
 
      .check-icon {
@@ -201,11 +106,212 @@
           margin-right: 0;
       }
   }
+    /* Your existing styles... */
+    
+    /* Add these new styles for toggle buttons */
+    .view-toggle {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 20px;
+    }
+    
+    .toggle-btn {
+        padding: 8px 20px;
+        background-color: #e9ecef;
+        border: 1px solid #ced4da;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-weight: 600;
+    }
+    
+    .toggle-btn:first-child {
+        border-top-left-radius: 5px;
+        border-bottom-left-radius: 5px;
+        border-right: none;
+    }
+    
+    .toggle-btn:last-child {
+        border-top-right-radius: 5px;
+        border-bottom-right-radius: 5px;
+        border-left: none;
+    }
+    
+    .toggle-btn.active {
+        background-color: #1e4486;
+        color: white;
+        border-color: #1e4486;
+    }
+    
+    .view-content {
+        display: none;
+    }
+    
+    .view-content.active {
+        display: block;
+    }
 </style>
 
+<div class="list-of-view-company">
+   <section class="list-of-view-company-section container-fluid">
+      <div class="row">
+         @include('layouts.leftnav')
+
+           @php
+        $cards = [
+            ['title' => '4A, 4B, 6B, 6C - B2B, SEZ, DE Invoices', 'route' => route('gst.b2b.detailed.billwise', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
+            ['title' => '5 - B2C (Large) Invoices', 'route' => route('gst.b2c.large.detailed', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
+            ['title' => '6A - Exports Invoices', 'route' => '#'],
+            ['title' => '7 - B2C (Others)', 'route' => route('gst.b2c.normal.statewise', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
+            ['title' => '8A, 8B, 8C, 8D - Nil Rated Supplies', 'route' => route('nilratedreginter', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
+            ['title' => '9B - Credit / Debit Notes (Registered)', 'route' => route('debitNote', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
+            ['title' => '9B - Credit / Debit Notes (Unregistered)', 'route' => route('debitNoteUnreg', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
+            ['title' => '11A(1), 11A(2) - Tax Liability (Advances Received)', 'route' => '#'],
+            ['title' => '11B(1), 11B(2) - Adjustment of Advances', 'route' => '#'],
+            ['title' => '12 - HSN-wise summary of outward supplies', 'route' => route('hsnSummary', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
+            ['title' => '13 - Documents Issued', 'route' => route('docIssued', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
+            ['title' => '14 - Supplies made through ECO', 'route' => '#'],
+            ['title' => '15 - Supplies U/s 9(5)', 'route' => '#'],
+        ];
+    @endphp
+
+         <!-- Main content column -->
+         <div class="col-md-10 col-sm-12 px-4">
+            <div class="container-fluid">
+               <!-- Header section -->
+               <div class="container mt-4">
+                            <div class="card mb-3 shadow-sm border-0">
+                                <div class="card-body p-0">
+                                    <!-- Header Banner -->
+                                    <div class="gstr-header d-flex justify-content-between align-items-center px-3 py-2">
+                                    <h5 class="mb-0 text-white fw-bold">GSTR-1 - Details of outward supplies of goods or services</h5>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-primary">E-INVOICE ADVISORY</button>
+                                        <button class="btn btn-sm btn-primary">
+                                            HELP <i class="fas fa-question-circle ms-1"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-primary">
+                                            <i class="fas fa-sync-alt"></i>
+                                        </button>
+                                    </div>
+                                    </div>
+
+                                    <!-- White Info Row -->
+                                    <div class="bg-white px-3 py-3">
+                                    <div class="row g-2">
+                                        <div class="col-md-4"><strong>GSTIN -</strong> {{$merchant_gst}}</div>
+                                        <div class="col-md-4"><strong>Legal Name -</strong> {{$comp_details->legal_name}}</div>
+                                        <div class="col-md-4"><strong>Trade Name -</strong>  {{$comp_details->company_name}}</div>
+                                        <div class="col-md-4"><strong>FY -</strong> 20{{$fy}}</div>
+                                        @php
+                                            use Carbon\Carbon;
+                                            $from = Carbon::parse($from_date);
+                                            $to = Carbon::parse($to_date);
+                                        @endphp
+                                        <div class="col-md-4">
+                                            <strong>Tax Period -</strong>
+                                            @if($from->format('F Y') === $to->format('F Y'))
+                                                {{ $from->format('F Y') }}
+                                            @else
+                                                {{ $from->format('F Y') }} to {{ $to->format('F Y') }}
+                                            @endif
+                                        </div>
+                                        <div class="col-md-4"><strong>Status -</strong> Not Filed</div>
+                                        <div class="col-md-4 text-danger">
+                                            <i class="fas fa-circle text-danger me-1" style="font-size: 8px;"></i> * Indicates Mandatory Fields
+                                        </div>
+                                        @php
+                                            $from = Carbon::parse($from_date);
+                                            $dueDate = $from->copy()->addMonth()->day(11); // 11th of next month
+                                        @endphp
+                                        <div class="col-md-4">
+                                            <strong>Due Date -</strong> {{ $dueDate->format('d/m/Y') }}
+                                        </div>
+                                    </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                  <!-- Toggle buttons -->
+                            <div class="view-toggle mt-3">
+                                <button class="toggle-btn active" data-view="view1">GSTR-1</button>
+                                <button class="toggle-btn" data-view="view2">GSTR-1 Reco.</button>
+                            </div>
+
+                  <!-- File Nil GSTR-1 -->
+                                <div class="bg-white py-2 px-3 border mb-3">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="fileNil">
+                                        <label class="form-check-label fw-semibold" for="fileNil">File Nil GSTR-1</label>
+                                    </div>
+                                </div>
+
+                  <!-- First view (Detailed) -->
+                            <div id="view1" class="view-content active">
+                                <div class="bg-primary text-white px-3 py-2 fw-bold rounded-top">
+                                    ADD RECORD DETAILS
+                                </div>
+
+                                <!-- Cards -->
+                                                <div class="row bg-white py-3 px-2 rounded-bottom justify-content-start">
+                                                    @foreach ($cards as $card)
+                                                    <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                                                        <a href="{{ $card['route'] }}" class="text-decoration-none">
+                                                            <div class="card gst-dashboard-card shadow-sm border-0 h-100 text-center">
+                                                                <div class="gst-dashboard-header d-flex align-items-center justify-content-center">
+                                                                <h6 class="gst-dashboard-title m-0">{{ $card['title'] }}</h6>
+                                                                </div>
+                                                                <div class="gst-dashboard-body d-flex flex-column justify-content-center align-items-center py-3">
+                                                                <div class="gst-dashboard-count d-flex align-items-center">
+                                                                    <img src="//static.gst.gov.in/uiassets/images/processed.png" class="check-icon me-2" alt="check icon">
+                                                                    <span class="count-value">0</span>
+                                                                </div>
+                                                                </div>
+                                                            </div>
+                                                        </a>
+                                                    </div>
+                                                    @endforeach
+                                                </div>
+                            </div>
+
+                  <!-- Second view (Summary) -->
+                                    <div id="view2" class="view-content" style="height:100vh;">
+                                        <!-- Section Header -->
+                                        <div class="bg-primary text-white px-3 py-2 fw-bold rounded-top">
+                                            GSTR-1 Books Reconciliation With GSTR-1 Portal
+                                        </div>
+                                        
+                                        <!-- Summary content will go here -->
+                                        <div class="row bg-white py-3 px-2 rounded-bottom justify-content-center">
+                                        
+                                        </div>
+                                    </div>
+               </div>
+            </div>
+         </div>
+      </div>
+   </section>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleButtons = document.querySelectorAll('.toggle-btn');
+    
+    toggleButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Remove active class from all buttons and views
+            toggleButtons.forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.view-content').forEach(view => {
+                view.classList.remove('active');
+            });
+            
+            // Add active class to clicked button
+            this.classList.add('active');
+            
+            // Show corresponding view
+            const viewId = this.getAttribute('data-view');
+            document.getElementById(viewId).classList.add('active');
+        });
+    });
+});
+</script>
 @endsection
-
-
-
-
-

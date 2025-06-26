@@ -790,7 +790,7 @@ if ($billing_gst_filter || $name_filter || $invoice_date_filter || $rate_filter)
 
     // Return the grouped data to the view
     
-    return view('gstReturn.b2bDetailed', ['grouped' => $grouped, 'accountDropdown' => $accountDropdown]);
+    return view('gstReturn.b2bDetailed', ['grouped' => $grouped, 'accountDropdown' => $accountDropdown, 'merchant_gst' => $merchant_gst , 'from_date' => $from_date , 'to_date' => $to_date ,'$company_id' => $company_id ]);
 
 }
 
@@ -1406,7 +1406,7 @@ public function B2Cstatewise(Request $request)
     }
 
     // Pass final adjusted data to view
-    return view('gstReturn.b2c_statewise', ['data' => array_values($finalData)]);
+    return view('gstReturn.b2c_statewise', ['data' => array_values($finalData), 'merchant_gst' => $merchant_gst , 'from_date' => $from_date , 'to_date' => $to_date ,'$company_id' => $company_id]);
 }
 
 public function nilRatedAndExemptedCombined(Request $request)
@@ -1987,7 +1987,7 @@ $sortedGrouped = collect($grouped)->sortBy(function ($item) {
 })->values()->all();
 
 
-    return view('gstReturn.debitcreditnote', ['grouped' => $sortedGrouped]);
+    return view('gstReturn.debitcreditnote', ['grouped' => $sortedGrouped , 'merchant_gst' => $merchant_gst,'company_id' => $company_id,'from_date' => $from_date,'to_date' => $to_date]);
 }
 
 
@@ -2388,7 +2388,7 @@ $sortedGrouped = collect($grouped)->sortBy(function ($item) {
 })->values()->all();
 
 
-    return view('gstReturn.debitcreditnoteunreg', ['grouped' => $sortedGrouped]);
+    return view('gstReturn.debitcreditnoteunreg', ['grouped' => $sortedGrouped ,'merchant_gst' => $merchant_gst,'company_id' => $company_id,'from_date' => $from_date,'to_date' => $to_date,]);
 }
 
 
@@ -3016,7 +3016,7 @@ $b2cSaleIds = DB::table('sales')
     }
 
     // Pass final adjusted data to view
-    return view('gstReturn.hsnSummary', ['data' => array_values($finalData)]);
+    return view('gstReturn.hsnSummary', ['data' => array_values($finalData) ,'merchant_gst' => $merchant_gst, 'company_id' => $company_id,'from_date' => $from_date,'to_date' => $to_date]);
 
 
 }
@@ -3188,9 +3188,11 @@ $payments = DB::table('payments')
         ];
     }
 
-    return view('gstReturn.documentIssuedSummary', compact('SalesdocumentSummary','DebitNotedocumentSummary','CreditNotedocumentSummary','paymentsDocumentSummary','receiptsDocumentSummary', 'from_date', 'to_date'));
+    return view('gstReturn.documentIssuedSummary', compact('SalesdocumentSummary','DebitNotedocumentSummary','CreditNotedocumentSummary','paymentsDocumentSummary','receiptsDocumentSummary', 'from_date', 'to_date','merchant_gst'));
 
 }
+
+
 }
 
 
