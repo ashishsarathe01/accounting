@@ -23,6 +23,7 @@ use App\Models\ItemGroupParameterList;
 use App\Models\ItemGroupParameterPredefinedValue;
 use App\Models\ParameterInfo;
 use App\Models\ParameterInfoValue;
+use App\Models\gstToken;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use DB;
@@ -963,5 +964,86 @@ class AjaxController extends Controller
       //                ->where('status',1)
       //                ->get();      
    }
-   
+   public function verifyGstTokenOtp(Request $request){
+      $state_code = substr($request->gstin,0,2);
+      $gst_token = gstToken::select('txn','created_at','id')
+                            ->where('company_gstin',$request->gstin)
+                            ->where('company_id',Session::get('user_company_id'))
+                            ->orderBy('id','desc')
+                            ->first();
+      $txn = $gst_token->txn;
+      $company = Companies::select('gst_config_type')
+                                ->where('id', Session::get('user_company_id'))
+                                ->first();
+      if($company->gst_config_type == "single_gst"){
+         $gst = DB::table('gst_settings')
+                           ->select('gst_username')
+                           ->where([
+                              'company_id' => Session::get('user_company_id'),
+                              'gst_no' => $request->gstin
+                           ])
+                           ->first();
+                     
+         $gst_user_name = $gst->gst_username;
+      }else if($company->gst_config_type == "multiple_gst"){            
+         $gst = DB::table('gst_settings_multiple')
+                           ->select('gst_username')
+                           ->where([
+                              'company_id' => Session::get('user_company_id'),
+                              'gst_no' => $request->gstin
+                           ])
+                           ->first();
+         $gst_user_name = $gst->gst_username;
+      }
+      $curl = curl_init();
+      curl_setopt_array($curl, array(
+         CURLOPT_URL => 'https://api.mastergst.com/authentication/authtoken?email=pram92500@gmail.com&otp='.$request->otp,
+         CURLOPT_RETURNTRANSFER => true,
+         CURLOPT_ENCODING => '',
+         CURLOPT_MAXREDIRS => 10,
+         CURLOPT_TIMEOUT => 0,
+         CURLOPT_FOLLOWLOCATION => true,
+         CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+         CURLOPT_CUSTOMREQUEST => 'GET',
+         CURLOPT_HTTPHEADER => array(
+               'gst_username:'.$gst_user_name,
+               'state_cd: '.$state_code,
+               'txn:'.$txn,
+               'ip_address: 162.215.254.201',
+               'client_id: GSPdea8d6fb-aed1-431a-b589-f1c541424580',
+               'client_secret: GSP4c44b790-ef11-4725-81d9-5f8504279d67'
+         ),
+      ));
+      $response = curl_exec($curl);
+      curl_close($curl);
+      $result = json_decode($response);
+      if(isset($result->status_cd) && $result->status_cd=='1'){
+         $gst_token = gstToken::find($gst_token->id);
+         $gst_token->status = 1;
+         $gst_token->updated_at = Carbon::now();
+         $gst_token->update();
+         $response = array(
+                     'status' => true,
+                     'message' => '',
+                     'data' => ""
+         );
+         return json_encode($response);        
+      }else{
+         if(isset($result->error)){
+               $response = array(
+                     'status' => false,
+                     'message' => $result->error->message,
+                     'data' => ""
+               );
+               return json_encode($response);
+         }else{
+               $response = array(
+                     'status' => false,
+                     'message' => 'Something Went Wrong.',
+                     'data' => ""
+               );
+               return json_encode($response);
+         }
+      }
+   }
 }

@@ -46,6 +46,9 @@ use App\Http\Controllers\VoucherSeriesConfigurationController;
 use App\Http\Controllers\StockTransfer\StockTransferController;
 use App\Http\Controllers\gstReturn\gstR1Controller;
 use App\Http\Controllers\gstReturn\GstDetailController;
+use App\Http\Controllers\gstReturn\GSTR2BController;
+use App\Http\Controllers\gstReturn\GSTR2AController;
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -321,10 +324,12 @@ Route::Resource('payment', PaymentController::class);
   Route::get('/gst/b2b-detailed-billwise', [gstR1Controller::class, 'B2Bdetailed'])->name('gst.b2b.detailed.billwise');
   Route::get('/gst/b2c-large-detailed', [gstR1Controller::class, 'b2cLargedetailed'])->name('gst.b2c.large.detailed');
   Route::get('/report/filter', [gstR1Controller::class, 'filterform'])->name('report.filter.data');
-  Route::get('gst2a', [GstDetailController::class, 'gstr2A'])->name('gst2a');
-  Route::get('gst2b', [GstDetailController::class, 'gstr2B'])->name('gst2b');
-  Route::post('gst-detail-by-type', [GstDetailController::class, 'gstDetailByType'])->name('gst-detail-by-type');
-  Route::post('verify-gst-token-otp', [GstDetailController::class, 'verifyGstTokenOtp'])->name('verify-gst-token-otp'); 
+  Route::get('gst2a', [GSTR2AController::class, 'index'])->name('gst2a');
+  Route::post('gstr2a-detail', [GSTR2AController::class, 'gstr2aDetail'])->name('gstr2a-detail');
+  Route::get('gst2b', [GSTR2BController::class, 'index'])->name('gst2b');  
+  Route::post('gstr2b-detail', [GSTR2BController::class, 'gstr2bDetail'])->name('gstr2b-detail');
+  Route::get('gstr2b-all-info/{month}/{gstin}/{ctin}', [GSTR2BController::class, 'gstr2bAllInfo'])->name('gstr2b-all-info');
+  Route::post('verify-gst-token-otp', [AjaxController::class, 'verifyGstTokenOtp'])->name('verify-gst-token-otp');
   Route::get('/report/nilratedreginter', [gstR1Controller::class, 'nilRatedAndExemptedCombined'])->name('nilratedreginter');
   Route::get('/report/debitnote', [gstR1Controller::class, 'combinedNoteRegister'])->name('debitNote');
     Route::get('/report/debitnote/Unreg', [gstR1Controller::class, 'combinedNoteUnreegister'])->name('debitNoteUnreg');
