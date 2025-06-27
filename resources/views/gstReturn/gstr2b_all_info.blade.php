@@ -344,6 +344,37 @@
     </div>
   </div>
 </div>
+<div class="modal fade" id="linkCDNRModal" tabindex="-1" aria-labelledby="remarkModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="linkModalLabel"></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+         <table class="table table-bordered table-striped table-hover">
+            <thead>
+               <tr>
+                  <th></th>
+                  <th>Invoice No.</th>
+                  <th>Invoice Date</th>
+                  <th style="text-align: right">Series</th>
+                  <th style="text-align: right">Amount</th>
+               </tr>
+            </thead>
+            <tbody id="cdnr_table_body">
+               <!-- Content will be populated via AJAX -->
+            </tbody>
+         </table>
+         
+            <div class="modal-footer border-0 mx-auto p-0">
+            <button type="button" class="btn btn-border-body close" data-bs-dismiss="modal">CANCEL</button>
+            <button type="button" class="ms-3 btn btn-red link_btn_action">SUBMIT</button>
+         </div>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 @include('layouts.footer')
 <script>
@@ -396,5 +427,93 @@
          }
       });
    });
+   $(document).on('click','.link_btn',function(){
+      let type = $(this).data('type');
+      let invoice_no = $(this).data('invoice_no');
+      $.ajax({
+         url: "{{ route('get-unlinked-cdnr') }}", // Replace with your actual route
+         method: 'POST',
+         data: {'type': type, 'gstin': '{{ $gstin }}', 'ctin': '{{ $ctin }}', 'month': '{{ $month }}' },
+         headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') // Add this if CSRF token is needed
+         },
+         success: function (response) {
+            if(response){
+               let res = JSON.parse(response);
+               if(res.status==true) {
+                  if(type=="credit_note"){
+                     $("#linkModalLabel").html('Link Debit Note');
+                     $("#cdnr_table_body").html('');
+                     $.each(res.debit_note, function(index, value) {
+                        $("#cdnr_table_body").append('<tr><td><input type="checkbox" class="link_check" data-id="'+value.id+'"></td><td>'+value.sr_prefix+'</td><td>'+value.date+'</td><td style="text-align: right">'+value.series_no+'</td><td style="text-align: right">'+value.total+'</td></tr>');
+                     });
+                     if(res.debit_note.length==0){
+                        $("#cdnr_table_body").append('<tr><td colspan="5" class="text-center">No Debit Notes available to link.</td></tr>');
+                     }
+                     $(".link_btn_action").data('type', 'debit_note');
+                     $(".link_btn_action").data('invoice_no',invoice_no);
+                     $('#linkCDNRModal').modal('show');
+                  }else if(type=="debit_note"){
+                     $("#linkModalLabel").html('Link Credit Note');
+                     $("#cdnr_table_body").html('');
+                     $.each(res.credit_note, function(index, value) {
+                        $("#cdnr_table_body").append('<tr><td><input type="checkbox" class="link_check" data-id="'+value.id+'"></td><td>'+value.sr_prefix+'</td><td>'+value.date+'</td><td style="text-align: right">'+value.series_no+'</td><td style="text-align: right">'+value.total+'</td></tr>');
+                     });
+                     if(res.credit_note.length==0){
+                        $("#cdnr_table_body").append('<tr><td colspan="5" class="text-center">No Credit Notes available to link.</td></tr>');
+                     }
+                     $(".link_btn_action").data('type', 'credit_note');
+                     $(".link_btn_action").data('invoice_no',invoice_no);
+                     $('#linkCDNRModal').modal('show');
+                  }
+                  // $('#otpModal').modal('show');
+               }
+            }else{
+               alert('Something Went Wrong.');
+            }
+            
+         },
+         error: function (xhr) {
+            alert('An error occurred while rejecting the invoice.');
+         }
+      });
+   });
+   link_btn_action = function() {
+      let type = $('.link_btn_action').data('type');
+      let invoice_no = $('.link_btn_action').data('invoice_no');
+      let selected_ids = [];
+      $('.link_check:checked').each(function() {
+         selected_ids.push($(this).data('id'));
+      });
+      if(selected_ids.length==0) {
+         alert('Please select at least one entry to link.');
+         return;
+      }
+         $.ajax({
+            url: "{{ route('link-cdnr') }}", // Replace with your actual route
+            method: 'POST',
+            data: {'type': type, 'ids': selected_ids, 'gstin': '{{ $gstin }}', 'ctin': '{{ $ctin }}', 'month': '{{ $month }}', 'invoice_no': invoice_no },
+            headers: {
+               'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') // Add this if CSRF token is needed
+            },
+            success: function (response) {
+               let res = JSON.parse(response);
+               if(res.status==true) {
+                  alert('linked successfully.');
+                  $('#linkCDNRModal').modal('hide'); 
+                  location.reload(); // Reload the page to reflect changes
+               } else {
+                  alert('Failed to link CDNR');
+               }
+            },
+            error: function (xhr) {
+               alert('An error occurred while linking the CDNR.');
+            }
+         });      
+   };
+   $(document).on('click','.link_btn_action',function(){
+      link_btn_action();
+   });
+
 </script>
 @endsection

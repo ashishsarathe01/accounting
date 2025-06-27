@@ -9,6 +9,8 @@ use App\Models\Companies;
 use App\Models\gstToken;
 use App\Models\Accounts;
 use App\Models\RejectedGstr2b;
+use App\Models\SalesReturn;
+use App\Models\PurchaseReturn;
 use Session;
 use DB;
 use Carbon\Carbon;
@@ -376,7 +378,7 @@ class GSTR2BController extends Controller
                             <td style='text-align: right'>".formatIndianNumber($invoice->cgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->sgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->cess)."</td>
-                            <td><button class='btn btn-info reject_btn' data-type='b2b_credit_note' data-invoice='".$invoice->ntnum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='' id='b2b_credit_rej_btn_".$key."' style='display:none'>Reject</button></td>
+                            <td><button class='btn btn-info reject_btn' data-type='b2b_credit_note' data-invoice='".$invoice->ntnum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='' id='b2b_credit_rej_btn_".$key."' style='display:none'>Reject</button> <button class='btn btn-primary link_btn' data-type='credit_note' data-invoice_no='".$invoice->ntnum."'>Link</button></td>
                         </tr>";
                     }else if($invoice->typ == "D"){
                         $debit_total_val += $invoice->val;
@@ -395,7 +397,7 @@ class GSTR2BController extends Controller
                             <td style='text-align: right'>".formatIndianNumber($invoice->cgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->sgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->cess)."</td>
-                            <td><button class='btn btn-info reject_btn' data-type='b2b_debit_note' data-invoice='".$invoice->ntnum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='' id='b2b_debit_rej_btn_".$key."' style='display:none'>Reject</button></td>
+                            <td><button class='btn btn-info reject_btn' data-type='b2b_debit_note' data-invoice='".$invoice->ntnum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='' id='b2b_debit_rej_btn_".$key."' style='display:none'>Reject</button> <button class='btn btn-primary link_btn' data-type='debit_note' data-invoice_no='".$invoice->ntnum."'>Link</button></td>
                         </tr>";
                     }                    
                 }
@@ -764,6 +766,50 @@ class GSTR2BController extends Controller
         $response = array(
             'status' => true,
             'message' => 'Rejected Successfully'
+        );
+        return json_encode($response);
+    }
+    public function getUnlinkedCdnr(Request $request){
+        $credit_note = SalesReturn::select('sr_prefix','series_no','total','date','id')
+            ->where('company_id', Session::get('user_company_id'))
+            ->where('merchant_gst', $request->gstin)
+            //->where('billing_gst', $request->ctin)
+            ->where('voucher_type','PURCHASE')
+            ->whereNull('gstr2b_invoice_id')
+            ->orderBy('id', 'desc')
+            ->get();
+        $debit_note = PurchaseReturn::select('sr_prefix','series_no','total','date','id')
+            ->where('company_id', Session::get('user_company_id'))
+            ->where('merchant_gst', $request->gstin)
+            //->where('billing_gst', $request->ctin)
+            ->where('voucher_type','PURCHASE')
+            ->whereNull('gstr2b_invoice_id')
+            ->orderBy('id', 'desc')
+            ->get();
+        $response = array(
+            'status' => true,
+            'message' => 'Unlinked CDNRA fetched successfully',
+            'credit_note' => $credit_note,
+            'debit_note' => $debit_note
+        );
+        return json_encode($response);
+    }
+    public function linkCdnr(Request $request){
+        if($request->type == "credit_note"){
+            SalesReturn::whereIn('id', $request->ids)
+                ->update(['gstr2b_invoice_id' => $request->invoice_no]);
+        }else if($request->type == "debit_note"){
+            PurchaseReturn::whereIn('id', $request->ids)
+                ->update(['gstr2b_invoice_id' => $request->invoice_no]);
+        }else{
+            return response()->json([
+                'status' => false,
+                'message' => 'Invalid type'
+            ]);
+        }
+        $response = array(
+            'status' => true,
+            'message' => 'Linked Successfully',
         );
         return json_encode($response);
     }
