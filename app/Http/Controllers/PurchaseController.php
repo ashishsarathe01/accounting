@@ -989,7 +989,7 @@ class PurchaseController extends Controller{
             $average_detail->company_id = Session::get('user_company_id');
             $average_detail->created_at = Carbon::now();
             $average_detail->save();
-            CommonHelper::RewriteItemAverageByItem($request->date,$value['item'],$request->input('series_no'));
+            CommonHelper::RewriteItemAverageByItem($last_date,$value['item'],$request->input('series_no'));
 
          }
          foreach ($desc_item_arr as $key => $value) {

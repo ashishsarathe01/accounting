@@ -348,10 +348,11 @@
 <script>
    $(document).on('click','.check_action',function(){
       let id = $(this).data('key');
+      let type = $(this).data('type');
       if($(this).is(':checked')){
-         $("#b2b_invoices_rej_btn_"+id).hide();
+         $("#"+type+''+id).hide();
       }else{
-         $("#b2b_invoices_rej_btn_"+id).show();
+         $("#"+type+''+id).show();
       }
    });
    $(document).on('click','.reject_btn',function(){

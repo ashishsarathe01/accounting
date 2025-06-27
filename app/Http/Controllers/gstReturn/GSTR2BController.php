@@ -260,7 +260,7 @@ class GSTR2BController extends Controller
                     $total_sgst += $invoice->sgst;
                     $total_cess += $invoice->cess;
                     $b2b_invoices.="<tr>
-                        <td><input type='checkbox' checked class='check_action' data-key='".$key."'></td>
+                        <td><input type='checkbox' checked class='check_action' data-key='".$key."' data-type='b2b_invoices_rej_btn_'></td>
                         <td>".$invoice->inum."</td>
                         <td>".$invoice->dt."</td>
                         <td style='text-align: right'>".formatIndianNumber($invoice->val)."</td>
@@ -336,7 +336,7 @@ class GSTR2BController extends Controller
                         $total_sgst += $invoice->sgst;
                         $total_cess += $invoice->cess;
                         $b2b_credit_note.="<tr>
-                            <td><input type='checkbox' checked class='check_action' data-key='".$key."'></td>
+                            <td><input type='checkbox' checked class='check_action' data-key='".$key."' data-type='b2b_credit_rej_btn_'></td>
                             <td>".$invoice->ntnum."</td>
                             <td>".$invoice->dt."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->val)."</td>
@@ -345,7 +345,7 @@ class GSTR2BController extends Controller
                             <td style='text-align: right'>".formatIndianNumber($invoice->cgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->sgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->cess)."</td>
-                            <td><button class='btn btn-info reject_btn' data-type='b2b_credit_note' data-invoice='".$invoice->ntnum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='' id='b2b_invoices_rej_btn_".$key."' style='display:none'>Reject</button></td>
+                            <td><button class='btn btn-info reject_btn' data-type='b2b_credit_note' data-invoice='".$invoice->ntnum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='' id='b2b_credit_rej_btn_".$key."' style='display:none'>Reject</button></td>
                         </tr>";
                     }else if($invoice->typ == "D"){
                         $debit_total_val += $invoice->val;
@@ -355,7 +355,7 @@ class GSTR2BController extends Controller
                         $debit_total_sgst += $invoice->sgst;
                         $debit_total_cess += $invoice->cess;
                         $b2b_debit_note.="<tr>
-                            <td><input type='checkbox' checked class='check_action' data-key='".$key."'></td>
+                            <td><input type='checkbox' checked class='check_action' data-key='".$key."' data-type='b2b_debit_rej_btn_' ></td>
                             <td>".$invoice->ntnum."</td>
                             <td>".$invoice->dt."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->val)."</td>
@@ -364,7 +364,7 @@ class GSTR2BController extends Controller
                             <td style='text-align: right'>".formatIndianNumber($invoice->cgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->sgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->cess)."</td>
-                            <td><button class='btn btn-info reject_btn' data-type='b2b_debit_note' data-invoice='".$invoice->ntnum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='' id='b2b_invoices_rej_btn_".$key."' style='display:none'>Reject</button></td>
+                            <td><button class='btn btn-info reject_btn' data-type='b2b_debit_note' data-invoice='".$invoice->ntnum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='' id='b2b_debit_rej_btn_".$key."' style='display:none'>Reject</button></td>
                         </tr>";
                     }                    
                 }
