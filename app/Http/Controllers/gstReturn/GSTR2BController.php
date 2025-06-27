@@ -180,13 +180,25 @@ class GSTR2BController extends Controller
                         if (!isset($uniqueSuppliers[$record->ctin])) {
                             $uniqueSuppliers[$record->ctin] = $record->trdnm;
                         }
-                        if($section=="b2b" || $section=="cdnr"){
+                        if($section=="b2b" || $section=="cdnr" || $section=="b2ba" || $section=="cdnra"){
                             $invoice_amount = 0;
                             if($section=="b2b"){
                                 foreach ($record->inv as $invoice) {
                                     $invoice_amount += $invoice->val;
                                 }
                             }else if($section=="cdnr"){
+                                foreach ($record->nt as $invoice) {
+                                    if($invoice->typ == "C"){
+                                        $invoice_amount -= $invoice->val;
+                                    }else if($invoice->typ == "D"){
+                                        $invoice_amount += $invoice->val;
+                                    }
+                                }
+                            }else if($section=="b2ba"){
+                                foreach ($record->inv as $invoice) {
+                                    $invoice_amount += $invoice->val;
+                                }
+                            }else if($section=="cdnra"){
                                 foreach ($record->nt as $invoice) {
                                     if($invoice->typ == "C"){
                                         $invoice_amount -= $invoice->val;
@@ -208,6 +220,22 @@ class GSTR2BController extends Controller
             // Convert to array of objects if needed
             $suppliers = [];
             foreach ($uniqueSuppliers as $ctin => $trdnm) {
+                $rejected_invoice_debit_note = RejectedGstr2b::where('company_gstin',$request->gstin)
+                            ->where('company_id',Session::get('user_company_id'))
+                            ->where('ctin',$ctin)
+                            ->whereIn('type',['b2b_invoices','b2b_debit_note','b2ba_invoices','b2ba_debit_note'])
+                            ->where('gstr2b_month',$request->month)
+                            ->sum('total_amount');
+                $rejected_credit_note = RejectedGstr2b::where('company_gstin',$request->gstin)
+                ->where('company_id',Session::get('user_company_id'))
+                ->where('ctin',$ctin)
+                ->whereIn('type',['b2b_credit_note','b2ba_credit_note'])
+                ->where('gstr2b_month',$request->month)
+                ->sum('total_amount');
+                if(!isset($supplier_amount[$ctin])){
+                    $supplier_amount[$ctin] = 0;
+                }
+                $supplier_amount[$ctin] = $supplier_amount[$ctin]- $rejected_invoice_debit_note + $rejected_credit_note;
                 $suppliers[] = (object)[
                     'ctin' => $ctin,
                     'trdnm' => $trdnm,
@@ -238,7 +266,7 @@ class GSTR2BController extends Controller
         $RejectedGstr2b = RejectedGstr2b::where('company_gstin',$request->gstin)
                             ->where('company_id',Session::get('user_company_id'))
                             ->where('ctin',$request->ctin)
-                            ->where('invoice_date','like',$request->month."%")
+                            ->where('gstr2b_month',$request->month)
                             ->get();
         $rejectedIrns = $RejectedGstr2b->pluck('invoice_number')->toArray();
         $gstr2b = GSTR2B::where('company_gstin',$request->gstin)
@@ -259,6 +287,9 @@ class GSTR2BController extends Controller
                     $total_cgst += $invoice->cgst;
                     $total_sgst += $invoice->sgst;
                     $total_cess += $invoice->cess;
+                    if(!isset($invoice->irn)){
+                        $invoice->irn = "";
+                    }
                     $b2b_invoices.="<tr>
                         <td><input type='checkbox' checked class='check_action' data-key='".$key."' data-type='b2b_invoices_rej_btn_'></td>
                         <td>".$invoice->inum."</td>
@@ -469,14 +500,21 @@ class GSTR2BController extends Controller
         }
         foreach ($gstr2b->data->docdata->b2ba as $record) {
             if($record->ctin === $request->ctin) {
-                foreach ($record->inv as $invoice) {
+                foreach ($record->inv as $key=>$invoice) {
+                    if (in_array($invoice->inum, $rejectedIrns)) {
+                       continue; // Skip rejected invoices
+                    }
                     $total_val += $invoice->val;
                     $total_txval += $invoice->txval;
                     $total_igst += $invoice->igst;
                     $total_cgst += $invoice->cgst;
                     $total_sgst += $invoice->sgst;
                     $total_cess += $invoice->cess;
+                    if(!isset($invoice->irn)){
+                        $invoice->irn = "";
+                    }
                     $b2ba_invoices.="<tr>
+                        <td><input type='checkbox' checked class='check_action' data-key='".$key."' data-type='b2ba_invoices_rej_btn_'></td>
                         <td>".$invoice->inum."</td>
                         <td>".$invoice->dt."</td>
                         <td style='text-align: right'>".formatIndianNumber($invoice->val)."</td>
@@ -485,9 +523,11 @@ class GSTR2BController extends Controller
                         <td style='text-align: right'>".formatIndianNumber($invoice->cgst)."</td>
                         <td style='text-align: right'>".formatIndianNumber($invoice->sgst)."</td>
                         <td style='text-align: right'>".formatIndianNumber($invoice->cess)."</td>
+                        <td><button class='btn btn-info reject_btn' data-type='b2ba_invoices' data-invoice='".$invoice->inum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='".$invoice->irn."' id='b2ba_invoices_rej_btn_".$key."' style='display:none'>Reject</button></td>
                     </tr>";
                 }
                 $b2ba_invoices .= "<tr>
+                    <td></td>
                     <th colspan='2' style='text-align: right'><strong>Total</strong></th>
                     <th style='text-align: right'>".formatIndianNumber($total_val)."</th>
                     <th style='text-align: right'>".formatIndianNumber($total_txval)."</th>
@@ -495,7 +535,41 @@ class GSTR2BController extends Controller
                     <th style='text-align: right'>".formatIndianNumber($total_cgst)."</th>
                     <th style='text-align: right'>".formatIndianNumber($total_sgst)."</th>
                     <th style='text-align: right'>".formatIndianNumber($total_cess)."</th>
+                    <td></td>
                 </tr>";
+                //Rejected GSTR2B
+                $rejected_total = 0;
+                foreach ($RejectedGstr2b as $k => $v) {
+                    if($v->type == "b2ba_invoices"){
+                        $rejected_total = $rejected_total + $v->total_amount;
+                        $b2ba_invoices.="<tr style='background-color: red;'>
+                            <td></td>
+                            <td>".$v->invoice_number."</td>
+                            <td>".date('d-m-Y',strtotime($v->invoice_date))."</td>
+                            <td style='text-align: right'>".formatIndianNumber($v->total_amount)."</td>
+                            <td style='text-align: right'>".formatIndianNumber($v->taxable_amount)."</td>
+                            <td style='text-align: right'>".formatIndianNumber($v->igst)."</td>
+                            <td style='text-align: right'>".formatIndianNumber($v->cgst)."</td>
+                            <td style='text-align: right'>".formatIndianNumber($v->sgst)."</td>
+                            <td style='text-align: right'>".formatIndianNumber($v->cess)."</td>
+                            <td><strong>Rejected - ".($v->remark)."</strong></td>
+                        </tr>";
+                    }
+                }
+                if($rejected_total>0){
+                    $b2ba_invoices.="<tr style='background-color: red;'>
+                            <td></td>
+                            <td></td>
+                            <th style='text-align: right'>Total</th>
+                            <th style='text-align: right'>".formatIndianNumber($rejected_total)."</th>
+                            <td style='text-align: right'></td>
+                            <td style='text-align: right'></td>
+                            <td style='text-align: right'></td>
+                            <td style='text-align: right'></td>
+                            <td style='text-align: right'></td>
+                            <td></td>
+                        </tr>";
+                }
                 break; // Stop after first match
             }
         }
@@ -505,7 +579,10 @@ class GSTR2BController extends Controller
         $debit_total_val = 0; $debit_total_txval = 0; $debit_total_igst = 0; $debit_total_cgst = 0; $debit_total_sgst = 0; $debit_total_cess = 0;
         foreach ($gstr2b->data->docdata->cdnra as $record) {
             if($record->ctin === $request->ctin) {
-                foreach ($record->nt as $invoice) {
+                foreach ($record->nt as $key=>$invoice) {
+                    if (in_array($invoice->ntnum, $rejectedIrns)) {
+                       continue; // Skip rejected invoices
+                    }
                     if($invoice->typ == "C"){
                         $total_val += $invoice->val;
                         $total_txval += $invoice->txval;
@@ -514,6 +591,7 @@ class GSTR2BController extends Controller
                         $total_sgst += $invoice->sgst;
                         $total_cess += $invoice->cess;
                         $b2ba_credit_note.="<tr>
+                            <td><input type='checkbox' checked class='check_action' data-key='".$key."' data-type='b2ba_credit_rej_btn_'></td>
                             <td>".$invoice->ntnum."</td>
                             <td>".$invoice->dt."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->val)."</td>
@@ -522,6 +600,7 @@ class GSTR2BController extends Controller
                             <td style='text-align: right'>".formatIndianNumber($invoice->cgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->sgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->cess)."</td>
+                            <td><button class='btn btn-info reject_btn' data-type='b2ba_credit_note' data-invoice='".$invoice->ntnum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='' id='b2ba_credit_rej_btn_".$key."' style='display:none'>Reject</button></td>
                         </tr>";
                     }else if($invoice->typ == "D"){
                         $debit_total_val += $invoice->val;
@@ -531,6 +610,7 @@ class GSTR2BController extends Controller
                         $debit_total_sgst += $invoice->sgst;
                         $debit_total_cess += $invoice->cess;
                         $b2ba_debit_note.="<tr>
+                            <td><input type='checkbox' checked class='check_action' data-key='".$key."' data-type='b2ba_debit_rej_btn_'></td>
                             <td>".$invoice->ntnum."</td>
                             <td>".$invoice->dt."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->val)."</td>
@@ -539,10 +619,12 @@ class GSTR2BController extends Controller
                             <td style='text-align: right'>".formatIndianNumber($invoice->cgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->sgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->cess)."</td>
+                            <td><button class='btn btn-info reject_btn' data-type='b2ba_credit_note' data-invoice='".$invoice->ntnum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='' id='b2ba_debit_rej_btn_".$key."' style='display:none'>Reject</button></td>
                         </tr>";
                     }
                 }
                 $b2ba_credit_note .= "<tr>
+                    <td></td>
                     <th colspan='2' style='text-align: right'><strong>Total</strong></th>
                     <th style='text-align: right'>".formatIndianNumber($total_val)."</th>
                     <th style='text-align: right'>".formatIndianNumber($total_txval)."</th>
@@ -550,8 +632,10 @@ class GSTR2BController extends Controller
                     <th style='text-align: right'>".formatIndianNumber($total_cgst)."</th>
                     <th style='text-align: right'>".formatIndianNumber($total_sgst)."</th>
                     <th style='text-align: right'>".formatIndianNumber($total_cess)."</th>
+                    <td></td>
                 </tr>";
                 $b2ba_debit_note .= "<tr>
+                    <td></td>
                     <th colspan='2' style='text-align: right'><strong>Total</strong></th>
                     <th style='text-align: right'>".formatIndianNumber($debit_total_val)."</th>
                     <th style='text-align: right'>".formatIndianNumber($debit_total_txval)."</th>
@@ -559,7 +643,73 @@ class GSTR2BController extends Controller
                     <th style='text-align: right'>".formatIndianNumber($debit_total_cgst)."</th>
                     <th style='text-align: right'>".formatIndianNumber($debit_total_sgst)."</th>
                     <th style='text-align: right'>".formatIndianNumber($debit_total_cess)."</th>
+                    <td></td>
                 </tr>";
+                //Rejected GSTR2B
+                $rejected_debit_total = 0;
+                foreach ($RejectedGstr2b as $k => $v) {
+                    if($v->type == "b2ba_debit_note"){
+                        $rejected_debit_total = $rejected_debit_total + $v->total_amount;
+                        $b2ba_debit_note.="<tr style='background-color: red;'>
+                            <td></td>
+                            <td>".$v->invoice_number."</td>
+                            <td>".date('d-m-Y',strtotime($v->invoice_date))."</td>
+                            <td style='text-align: right'>".formatIndianNumber($v->total_amount)."</td>
+                            <td style='text-align: right'>".formatIndianNumber($v->taxable_amount)."</td>
+                            <td style='text-align: right'>".formatIndianNumber($v->igst)."</td>
+                            <td style='text-align: right'>".formatIndianNumber($v->cgst)."</td>
+                            <td style='text-align: right'>".formatIndianNumber($v->sgst)."</td>
+                            <td style='text-align: right'>".formatIndianNumber($v->cess)."</td>
+                            <td><strong>Rejected - ".($v->remark)."</strong></td>
+                        </tr>";
+                    }
+                }
+                $rejected_credit_total = 0;
+                foreach ($RejectedGstr2b as $k => $v) {
+                    if($v->type == "b2ba_credit_note"){
+                        $rejected_credit_total = $rejected_credit_total + $v->total_amount;
+                        $b2ba_credit_note.="<tr style='background-color: red;'>
+                            <td></td>
+                            <td>".$v->invoice_number."</td>
+                            <td>".date('d-m-Y',strtotime($v->invoice_date))."</td>
+                            <td style='text-align: right'>".formatIndianNumber($v->total_amount)."</td>
+                            <td style='text-align: right'>".formatIndianNumber($v->taxable_amount)."</td>
+                            <td style='text-align: right'>".formatIndianNumber($v->igst)."</td>
+                            <td style='text-align: right'>".formatIndianNumber($v->cgst)."</td>
+                            <td style='text-align: right'>".formatIndianNumber($v->sgst)."</td>
+                            <td style='text-align: right'>".formatIndianNumber($v->cess)."</td>
+                            <td><strong>Rejected - ".($v->remark)."</strong></td>
+                        </tr>";
+                    }
+                }
+                if($rejected_debit_total>0){
+                    $b2ba_debit_note.="<tr style='background-color: red;'>
+                            <td></td>
+                            <td></td>
+                            <th style='text-align: right'>Total</th>
+                            <th style='text-align: right'>".formatIndianNumber($rejected_debit_total)."</th>
+                            <td style='text-align: right'></td>
+                            <td style='text-align: right'></td>
+                            <td style='text-align: right'></td>
+                            <td style='text-align: right'></td>
+                            <td style='text-align: right'></td>
+                            <td></td>
+                        </tr>";
+                }
+                if($rejected_credit_total>0){
+                    $b2ba_credit_note.="<tr style='background-color: red;'>
+                            <td></td>
+                            <td></td>
+                            <th style='text-align: right'>Total</th>
+                            <th style='text-align: right'>".formatIndianNumber($rejected_credit_total)."</th>
+                            <td style='text-align: right'></td>
+                            <td style='text-align: right'></td>
+                            <td style='text-align: right'></td>
+                            <td style='text-align: right'></td>
+                            <td style='text-align: right'></td>
+                            <td></td>
+                        </tr>";
+                }
                 break; // Stop after first match
             }
         }
@@ -608,7 +758,8 @@ class GSTR2BController extends Controller
             'sgst' => $request->sgst,
             'cess' => $request->cess,
             'irn' => $request->irn,
-            'remark' => $request->remark
+            'remark' => $request->remark,
+            'gstr2b_month' => $request->gstr2b_month,
         ]);
         $response = array(
             'status' => true,

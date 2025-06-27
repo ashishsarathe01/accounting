@@ -333,6 +333,7 @@
           <input type="hidden" name="type" id="type">
           <input type="hidden" name="gstin" id="gstin" value="{{ $gstin }}">
           <input type="hidden" name="ctin" id="ctin" value="{{ $ctin }}">
+          <input type="hidden" name="gstr2b_month" id="gstr2b_month" value="{{ $month }}">
           <div class="mb-3">
             <label for="remark" class="form-label">Remark</label>
             <textarea name="remark" id="remark" class="form-control" required></textarea>
