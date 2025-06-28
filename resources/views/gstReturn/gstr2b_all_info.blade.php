@@ -50,7 +50,7 @@
        margin: 0; 
    }
 </style>
-<div class="list-of-view-company ">
+<div class="list-of-view-company">
    <section class="list-of-view-company-section container-fluid">
       <div class="row vh-100">
          @include('layouts.leftnav')
@@ -148,6 +148,7 @@
                                 <th>Invoice No.</th>
                                 <th>Invoice Date</th>
                                 <th style="text-align: right">Invoice Value</th>
+                                <th style="text-align: right">Book Value</th>
                                 <th style="text-align: right">Taxable Value</th>
                                 <th style="text-align: right">IGST</th>
                                 <th style="text-align: right">CGST</th>
@@ -168,6 +169,7 @@
                                 <th>Invoice No.</th>
                                 <th>Invoice Date</th>
                                 <th style="text-align: right">Invoice Value</th>
+                                <th style="text-align: right">Book Value</th>
                                 <th style="text-align: right">Taxable Value</th>
                                 <th style="text-align: right">IGST</th>
                                 <th style="text-align: right">CGST</th>
@@ -188,6 +190,7 @@
                                 <th>Invoice No.</th>
                                 <th>Invoice Date</th>
                                 <th style="text-align: right">Invoice Value</th>
+                                <th style="text-align: right">Book Value</th>
                                 <th style="text-align: right">Taxable Value</th>
                                 <th style="text-align: right">IGST</th>
                                 <th style="text-align: right">CGST</th>
