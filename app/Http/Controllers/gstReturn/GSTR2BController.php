@@ -11,6 +11,7 @@ use App\Models\Accounts;
 use App\Models\RejectedGstr2b;
 use App\Models\SalesReturn;
 use App\Models\PurchaseReturn;
+use App\Models\Purchase;
 use Session;
 use DB;
 use Carbon\Carbon;
@@ -276,12 +277,22 @@ class GSTR2BController extends Controller
                             ->where('res_month',$request->month)
                             ->first();        
         $gstr2b = json_decode($gstr2b->res_data);
-        $b2b_invoices = "";$total_val = 0; $total_txval = 0; $total_igst = 0; $total_cgst = 0; $total_sgst = 0; $total_cess = 0;
+        $b2b_invoices = "";$total_val = 0; $total_txval = 0; $total_igst = 0; $total_cgst = 0; $total_sgst = 0; $total_cess = 0; $total_book_value = 0;
         foreach ($gstr2b->data->docdata->b2b as $record) {
             if($record->ctin === $request->ctin) {
                 foreach ($record->inv as $key=>$invoice) {
                     if (in_array($invoice->inum, $rejectedIrns)) {
                        continue; // Skip rejected invoices
+                    }
+                    $book_data = Purchase::select('total')
+                                            ->where('billing_gst',$request->ctin)
+                                            ->where('company_id',Session::get('user_company_id'))
+                                            ->where('merchant_gst',$request->gstin)
+                                            ->where('voucher_no',$invoice->inum)
+                                            ->first();
+                    $book_value = 0;
+                    if($book_data){
+                        $book_value = $book_data->total;
                     }
                     $total_val += $invoice->val;
                     $total_txval += $invoice->txval;
@@ -289,26 +300,33 @@ class GSTR2BController extends Controller
                     $total_cgst += $invoice->cgst;
                     $total_sgst += $invoice->sgst;
                     $total_cess += $invoice->cess;
+                    $total_book_value += $book_value;
                     if(!isset($invoice->irn)){
                         $invoice->irn = "";
+                    }                    
+                    $style = "";
+                    if($book_value!=$invoice->val){
+                        $style = "color: red;";
                     }
                     $b2b_invoices.="<tr>
                         <td><input type='checkbox' checked class='check_action' data-key='".$key."' data-type='b2b_invoices_rej_btn_'></td>
                         <td>".$invoice->inum."</td>
                         <td>".$invoice->dt."</td>
-                        <td style='text-align: right'>".formatIndianNumber($invoice->val)."</td>
+                        <td style='text-align: right;".$style."'>".formatIndianNumber($invoice->val)."</td>
+                        <td style='text-align: right;".$style."'>".formatIndianNumber($book_value)."</td>
                         <td style='text-align: right'>".formatIndianNumber($invoice->txval)."</td>
                         <td style='text-align: right'>".formatIndianNumber($invoice->igst)."</td>
                         <td style='text-align: right'>".formatIndianNumber($invoice->cgst)."</td>
                         <td style='text-align: right'>".formatIndianNumber($invoice->sgst)."</td>
                         <td style='text-align: right'>".formatIndianNumber($invoice->cess)."</td>
-                        <td><button class='btn btn-info reject_btn' data-type='b2b_invoices' data-invoice='".$invoice->inum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='".$invoice->irn."' id='b2b_invoices_rej_btn_".$key."' style='display:none'>Reject</button></td>
+                        <td><button class='btn btn-danger reject_btn' data-type='b2b_invoices' data-invoice='".$invoice->inum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='".$invoice->irn."' id='b2b_invoices_rej_btn_".$key."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;display:none'>Reject</button></td>
                     </tr>";
                 }
                 $b2b_invoices .= "<tr>
                     <td></td>
                     <th colspan='2' style='text-align: right'><strong>Total</strong></th>
                     <th style='text-align: right'>".formatIndianNumber($total_val)."</th>
+                    <th style='text-align: right'>".formatIndianNumber($total_book_value)."</th>
                     <th style='text-align: right'>".formatIndianNumber($total_txval)."</th>
                     <th style='text-align: right'>".formatIndianNumber($total_igst)."</th>
                     <th style='text-align: right'>".formatIndianNumber($total_cgst)."</th>
@@ -320,27 +338,32 @@ class GSTR2BController extends Controller
                 $rejected_total = 0;
                 foreach ($RejectedGstr2b as $k => $v) {
                     if($v->type == "b2b_invoices"){
+                        if($rejected_total==0){
+                            $b2b_invoices.="<tr><td colspan='11' style='text-align:center;color:red'><strong>Rejected Invoice</strong></td></tr>";
+                        }
                         $rejected_total = $rejected_total + $v->total_amount;
-                        $b2b_invoices.="<tr style='background-color: red;'>
+                        $b2b_invoices.="<tr>
                             <td></td>
                             <td>".$v->invoice_number."</td>
                             <td>".date('d-m-Y',strtotime($v->invoice_date))."</td>
                             <td style='text-align: right'>".formatIndianNumber($v->total_amount)."</td>
+                            <td></td>
                             <td style='text-align: right'>".formatIndianNumber($v->taxable_amount)."</td>
                             <td style='text-align: right'>".formatIndianNumber($v->igst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($v->cgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($v->sgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($v->cess)."</td>
-                            <td><strong>Rejected - ".($v->remark)."</strong></td>
+                            <td><strong>Rejected - ".($v->remark)."</strong> <br> <button class='btn btn-success accept' data-id='".$v->id."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;'>Accept</button></td>
                         </tr>";
                     }
                 }
                 if($rejected_total>0){
-                    $b2b_invoices.="<tr style='background-color: red;'>
+                    $b2b_invoices.="<tr >
                             <td></td>
                             <td></td>
                             <th style='text-align: right'>Total</th>
                             <th style='text-align: right'>".formatIndianNumber($rejected_total)."</th>
+                            <td style='text-align: right'></td>
                             <td style='text-align: right'></td>
                             <td style='text-align: right'></td>
                             <td style='text-align: right'></td>
@@ -353,8 +376,8 @@ class GSTR2BController extends Controller
             }
         }
         $b2b_debit_note = "";$b2b_credit_note = "";
-        $total_val = 0; $total_txval = 0; $total_igst = 0; $total_cgst = 0; $total_sgst = 0; $total_cess = 0;
-        $debit_total_val = 0; $debit_total_txval = 0; $debit_total_igst = 0; $debit_total_cgst = 0; $debit_total_sgst = 0; $debit_total_cess = 0;
+        $total_val = 0; $total_txval = 0; $total_igst = 0; $total_cgst = 0; $total_sgst = 0; $total_cess = 0;$total_book_value = 0;
+        $debit_total_val = 0; $debit_total_txval = 0; $debit_total_igst = 0; $debit_total_cgst = 0; $debit_total_sgst = 0; $debit_total_cess = 0; $total_debit_book_value = 0;
         foreach ($gstr2b->data->docdata->cdnr as $record) {
             if($record->ctin === $request->ctin) {
                 foreach ($record->nt as $key=>$invoice) {
@@ -362,42 +385,77 @@ class GSTR2BController extends Controller
                        continue; // Skip rejected invoices
                     }
                     if($invoice->typ == "C"){
+                        $bookData = PurchaseReturn::where('gstr2b_invoice_id',$invoice->ntnum)
+                                        ->where('company_id',Session::get('user_company_id'))
+                                        ->where('merchant_gst',$request->gstin)
+                                        ->selectRaw('COUNT(*) as count, SUM(total) as total')
+                                        ->first();
+                        $book_value = 0;
+                        if($bookData->total!=''){
+                            $book_value = $bookData->total;
+                        }                  
                         $total_val += $invoice->val;
                         $total_txval += $invoice->txval;
                         $total_igst += $invoice->igst;
                         $total_cgst += $invoice->cgst;
                         $total_sgst += $invoice->sgst;
                         $total_cess += $invoice->cess;
+                        $total_book_value += $book_value;
+                        $style = "";
+                        if($book_value!=$invoice->val){
+                            $style = "color: red;";
+                        }
+                        $link_btn = "<button class='btn btn-primary link_btn' data-type='credit_note' data-action_type='link' data-invoice_no='".$invoice->ntnum."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;'>Link</button>";
+                        if($bookData->count>0){
+                            $link_btn = "<button class='btn btn-primary link_btn' data-type='credit_note' data-action_type='unlink' data-invoice_no='".$invoice->ntnum."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;'>UnLink</button>";
+                        }
                         $b2b_credit_note.="<tr>
                             <td><input type='checkbox' checked class='check_action' data-key='".$key."' data-type='b2b_credit_rej_btn_'></td>
                             <td>".$invoice->ntnum."</td>
                             <td>".$invoice->dt."</td>
-                            <td style='text-align: right'>".formatIndianNumber($invoice->val)."</td>
+                            <td style='text-align: right;".$style."'>".formatIndianNumber($invoice->val)."</td>
+                            <td style='text-align: right;".$style."'>".formatIndianNumber($book_value)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->txval)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->igst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->cgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->sgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->cess)."</td>
-                            <td><button class='btn btn-info reject_btn' data-type='b2b_credit_note' data-invoice='".$invoice->ntnum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='' id='b2b_credit_rej_btn_".$key."' style='display:none'>Reject</button> <button class='btn btn-primary link_btn' data-type='credit_note' data-invoice_no='".$invoice->ntnum."'>Link</button></td>
+                            <td><button class='btn btn-danger reject_btn' data-type='b2b_credit_note' data-invoice='".$invoice->ntnum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='' id='b2b_credit_rej_btn_".$key."'  style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;display:none'>Reject</button> ".$link_btn."</td>
                         </tr>";
                     }else if($invoice->typ == "D"){
+                        $bookData = SalesReturn::where('gstr2b_invoice_id',$invoice->ntnum)
+                                        ->where('company_id',Session::get('user_company_id'))
+                                        ->where('merchant_gst',$request->gstin)
+                                        ->selectRaw('COUNT(*) as count, SUM(total) as total')
+                                        ->first();
+                        $book_value = $bookData->total;
                         $debit_total_val += $invoice->val;
                         $debit_total_txval += $invoice->txval;
                         $debit_total_igst += $invoice->igst;
                         $debit_total_cgst += $invoice->cgst;
                         $debit_total_sgst += $invoice->sgst;
                         $debit_total_cess += $invoice->cess;
+                        $total_debit_book_value += $book_value;
+                        $style = "";
+                        if($book_value!=$invoice->val){
+                            $style = "color: red;";
+                        }
+                        $link_btn = "<button class='btn btn-primary link_btn' data-type='debit_note' data-action_type='link' data-invoice_no='".$invoice->ntnum."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;'>Link</button>";
+                        if($bookData->count>0){
+                            $link_btn = "<button class='btn btn-primary link_btn' data-type='debit_note' data-action_type='unlink' data-invoice_no='".$invoice->ntnum."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;'>UnLink</button>";
+                        }
                         $b2b_debit_note.="<tr>
                             <td><input type='checkbox' checked class='check_action' data-key='".$key."' data-type='b2b_debit_rej_btn_' ></td>
                             <td>".$invoice->ntnum."</td>
                             <td>".$invoice->dt."</td>
-                            <td style='text-align: right'>".formatIndianNumber($invoice->val)."</td>
+                            <td style='text-align: right;".$style."'>".formatIndianNumber($invoice->val)."</td>
+                            <td style='text-align: right;".$style."'>".formatIndianNumber($book_value)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->txval)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->igst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->cgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->sgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->cess)."</td>
-                            <td><button class='btn btn-info reject_btn' data-type='b2b_debit_note' data-invoice='".$invoice->ntnum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='' id='b2b_debit_rej_btn_".$key."' style='display:none'>Reject</button> <button class='btn btn-primary link_btn' data-type='debit_note' data-invoice_no='".$invoice->ntnum."'>Link</button></td>
+                            <td><button class='btn btn-danger reject_btn' data-type='b2b_debit_note' data-invoice='".$invoice->ntnum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='' id='b2b_debit_rej_btn_".$key."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;display:none'>Reject</button> ".$link_btn."</td>
                         </tr>";
                     }                    
                 }
@@ -405,6 +463,7 @@ class GSTR2BController extends Controller
                     <td></td>
                     <th colspan='2' style='text-align: right'><strong>Total</strong></th>
                     <th style='text-align: right'>".formatIndianNumber($total_val)."</th>
+                    <th style='text-align: right'>".formatIndianNumber($total_book_value)."</th>
                     <th style='text-align: right'>".formatIndianNumber($total_txval)."</th>
                     <th style='text-align: right'>".formatIndianNumber($total_igst)."</th>
                     <th style='text-align: right'>".formatIndianNumber($total_cgst)."</th>
@@ -416,6 +475,7 @@ class GSTR2BController extends Controller
                     <td></td>
                     <th colspan='2' style='text-align: right'><strong>Total</strong></th>
                     <th style='text-align: right'>".formatIndianNumber($debit_total_val)."</th>
+                    <th style='text-align: right'>".formatIndianNumber($total_debit_book_value)."</th>
                     <th style='text-align: right'>".formatIndianNumber($debit_total_txval)."</th>
                     <th style='text-align: right'>".formatIndianNumber($debit_total_igst)."</th>
                     <th style='text-align: right'>".formatIndianNumber($debit_total_cgst)."</th>
@@ -427,45 +487,54 @@ class GSTR2BController extends Controller
                 $rejected_debit_total = 0;
                 foreach ($RejectedGstr2b as $k => $v) {
                     if($v->type == "b2b_debit_note"){
-                        $rejected_debit_total = $rejected_debit_total + $v->total_amount;
-                        $b2b_debit_note.="<tr style='background-color: red;'>
+                        if($rejected_debit_total==0){
+                            $b2b_debit_note.="<tr><td colspan='11' style='text-align:center;color:red'><strong>Rejected Debit Note</strong></td></tr>";
+                        }
+                        $rejected_debit_total = $rejected_debit_total + $v->total_amount;                        
+                        $b2b_debit_note.="<tr>
                             <td></td>
                             <td>".$v->invoice_number."</td>
                             <td>".date('d-m-Y',strtotime($v->invoice_date))."</td>
                             <td style='text-align: right'>".formatIndianNumber($v->total_amount)."</td>
+                            <td style='text-align: right'></td>
                             <td style='text-align: right'>".formatIndianNumber($v->taxable_amount)."</td>
                             <td style='text-align: right'>".formatIndianNumber($v->igst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($v->cgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($v->sgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($v->cess)."</td>
-                            <td><strong>Rejected - ".($v->remark)."</strong></td>
+                            <td><strong>Rejected - ".($v->remark)."</strong> <br> <button class='btn btn-success accept' data-id='".$v->id."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;'>Accept</button></td>
                         </tr>";
                     }
                 }
                 $rejected_credit_total = 0;
                 foreach ($RejectedGstr2b as $k => $v) {
                     if($v->type == "b2b_credit_note"){
+                        if($rejected_credit_total==0){
+                            $b2b_credit_note.="<tr><td colspan='11' style='text-align:center;color:red'><strong>Rejected Credit Note</strong></td></tr>";
+                        }                        
                         $rejected_credit_total = $rejected_credit_total + $v->total_amount;
-                        $b2b_credit_note.="<tr style='background-color: red;'>
+                        $b2b_credit_note.="<tr>
                             <td></td>
                             <td>".$v->invoice_number."</td>
                             <td>".date('d-m-Y',strtotime($v->invoice_date))."</td>
                             <td style='text-align: right'>".formatIndianNumber($v->total_amount)."</td>
+                            <td></td>
                             <td style='text-align: right'>".formatIndianNumber($v->taxable_amount)."</td>
                             <td style='text-align: right'>".formatIndianNumber($v->igst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($v->cgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($v->sgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($v->cess)."</td>
-                            <td><strong>Rejected - ".($v->remark)."</strong></td>
+                            <td><strong>Rejected - ".($v->remark)."  <br> <button class='btn btn-success accept' data-id='".$v->id."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;'>Accept</button></strong></td>
                         </tr>";
                     }
                 }
                 if($rejected_debit_total>0){
-                    $b2b_debit_note.="<tr style='background-color: red;'>
+                    $b2b_debit_note.="<tr>
                             <td></td>
                             <td></td>
                             <th style='text-align: right'>Total</th>
                             <th style='text-align: right'>".formatIndianNumber($rejected_debit_total)."</th>
+                            <td></td>
                             <td style='text-align: right'></td>
                             <td style='text-align: right'></td>
                             <td style='text-align: right'></td>
@@ -475,11 +544,12 @@ class GSTR2BController extends Controller
                         </tr>";
                 }
                 if($rejected_credit_total>0){
-                    $b2b_credit_note.="<tr style='background-color: red;'>
+                    $b2b_credit_note.="<tr>
                             <td></td>
                             <td></td>
                             <th style='text-align: right'>Total</th>
                             <th style='text-align: right'>".formatIndianNumber($rejected_credit_total)."</th>
+                            <td></td>
                             <td style='text-align: right'></td>
                             <td style='text-align: right'></td>
                             <td style='text-align: right'></td>
@@ -525,7 +595,7 @@ class GSTR2BController extends Controller
                         <td style='text-align: right'>".formatIndianNumber($invoice->cgst)."</td>
                         <td style='text-align: right'>".formatIndianNumber($invoice->sgst)."</td>
                         <td style='text-align: right'>".formatIndianNumber($invoice->cess)."</td>
-                        <td><button class='btn btn-info reject_btn' data-type='b2ba_invoices' data-invoice='".$invoice->inum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='".$invoice->irn."' id='b2ba_invoices_rej_btn_".$key."' style='display:none'>Reject</button></td>
+                        <td><button class='btn btn-danger reject_btn' data-type='b2ba_invoices' data-invoice='".$invoice->inum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='".$invoice->irn."' id='b2ba_invoices_rej_btn_".$key."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;display:none'>Reject</button></td>
                     </tr>";
                 }
                 $b2ba_invoices .= "<tr>
@@ -602,7 +672,7 @@ class GSTR2BController extends Controller
                             <td style='text-align: right'>".formatIndianNumber($invoice->cgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->sgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->cess)."</td>
-                            <td><button class='btn btn-info reject_btn' data-type='b2ba_credit_note' data-invoice='".$invoice->ntnum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='' id='b2ba_credit_rej_btn_".$key."' style='display:none'>Reject</button></td>
+                            <td><button class='btn btn-danger reject_btn' data-type='b2ba_credit_note' data-invoice='".$invoice->ntnum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='' id='b2ba_credit_rej_btn_".$key."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;display:none'>Reject</button></td>
                         </tr>";
                     }else if($invoice->typ == "D"){
                         $debit_total_val += $invoice->val;
@@ -621,7 +691,7 @@ class GSTR2BController extends Controller
                             <td style='text-align: right'>".formatIndianNumber($invoice->cgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->sgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->cess)."</td>
-                            <td><button class='btn btn-info reject_btn' data-type='b2ba_credit_note' data-invoice='".$invoice->ntnum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='' id='b2ba_debit_rej_btn_".$key."' style='display:none'>Reject</button></td>
+                            <td><button class='btn btn-danger reject_btn' data-type='b2ba_credit_note' data-invoice='".$invoice->ntnum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='' id='b2ba_debit_rej_btn_".$key."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;display:none'>Reject</button></td>
                         </tr>";
                     }
                 }
@@ -770,20 +840,22 @@ class GSTR2BController extends Controller
         return json_encode($response);
     }
     public function getUnlinkedCdnr(Request $request){
-        $credit_note = SalesReturn::select('sr_prefix','series_no','total','date','id')
+        $credit_note = SalesReturn::select('sr_prefix','series_no','total','date','id','gstr2b_invoice_id')
             ->where('company_id', Session::get('user_company_id'))
             ->where('merchant_gst', $request->gstin)
-            //->where('billing_gst', $request->ctin)
+            ->where('billing_gst', $request->ctin)
             ->where('voucher_type','PURCHASE')
             ->whereNull('gstr2b_invoice_id')
+            ->orWhere('gstr2b_invoice_id',$request->invoice_no)
             ->orderBy('id', 'desc')
             ->get();
-        $debit_note = PurchaseReturn::select('sr_prefix','series_no','total','date','id')
+        $debit_note = PurchaseReturn::select('sr_prefix','series_no','total','date','id','gstr2b_invoice_id')
             ->where('company_id', Session::get('user_company_id'))
             ->where('merchant_gst', $request->gstin)
-            //->where('billing_gst', $request->ctin)
+            ->where('billing_gst', $request->ctin)
             ->where('voucher_type','PURCHASE')
             ->whereNull('gstr2b_invoice_id')
+            ->orWhere('gstr2b_invoice_id',$request->invoice_no)
             ->orderBy('id', 'desc')
             ->get();
         $response = array(
@@ -796,9 +868,13 @@ class GSTR2BController extends Controller
     }
     public function linkCdnr(Request $request){
         if($request->type == "credit_note"){
+            SalesReturn::where('gstr2b_invoice_id', $request->invoice_no)
+                ->update(['gstr2b_invoice_id' =>null]);
             SalesReturn::whereIn('id', $request->ids)
                 ->update(['gstr2b_invoice_id' => $request->invoice_no]);
         }else if($request->type == "debit_note"){
+            PurchaseReturn::where('gstr2b_invoice_id', $request->invoice_no)
+                ->update(['gstr2b_invoice_id' => null]);
             PurchaseReturn::whereIn('id', $request->ids)
                 ->update(['gstr2b_invoice_id' => $request->invoice_no]);
         }else{
@@ -811,6 +887,22 @@ class GSTR2BController extends Controller
             'status' => true,
             'message' => 'Linked Successfully',
         );
+        return json_encode($response);
+    }
+    public function acceptGstr2bEntry(Request $request){        
+        $rejectedEntry = RejectedGstr2b::find($request->id);
+        if($rejectedEntry){
+            $rejectedEntry->delete();
+            $response = array(
+                'status' => true,
+                'message' => 'Accepted Successfully'
+            );
+        }else{
+            $response = array(
+                'status' => false,
+                'message' => 'Entry not found'
+            );
+        }
         return json_encode($response);
     }
     

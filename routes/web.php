@@ -332,7 +332,7 @@ Route::Resource('payment', PaymentController::class);
   Route::post('reject-gstr2b-entry', [GSTR2BController::class, 'rejectEntry'])->name('reject-gstr2b-entry');
  Route::post('get-unlinked-cdnr', [GSTR2BController::class, 'getUnlinkedCdnr'])->name('get-unlinked-cdnr');
  Route::post('link-cdnr', [GSTR2BController::class, 'linkCdnr'])->name('link-cdnr');
- 
+ Route::post('accept-gstr2b-entry', [GSTR2BController::class, 'acceptGstr2bEntry'])->name('accept-gstr2b-entry');
   Route::post('verify-gst-token-otp', [AjaxController::class, 'verifyGstTokenOtp'])->name('verify-gst-token-otp');
   Route::get('/report/nilratedreginter', [gstR1Controller::class, 'nilRatedAndExemptedCombined'])->name('nilratedreginter');
   Route::get('/report/debitnote', [gstR1Controller::class, 'combinedNoteRegister'])->name('debitNote');

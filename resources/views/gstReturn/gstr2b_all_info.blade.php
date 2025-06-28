@@ -83,6 +83,7 @@
                                 <th>Invoice No.</th>
                                 <th>Invoice Date</th>
                                 <th style="text-align: right">Invoice Value</th>
+                                <th style="text-align: right">Book Value</th>
                                 <th style="text-align: right">Taxable Value</th>
                                 <th style="text-align: right">IGST</th>
                                 <th style="text-align: right">CGST</th>
@@ -103,6 +104,7 @@
                                 <th>Invoice No.</th>
                                 <th>Invoice Date</th>
                                 <th style="text-align: right">Invoice Value</th>
+                                <th style="text-align: right">Book Value</th>
                                 <th style="text-align: right">Taxable Value</th>
                                 <th style="text-align: right">IGST</th>
                                 <th style="text-align: right">CGST</th>
@@ -123,6 +125,7 @@
                                 <th>Invoice No.</th>
                                 <th>Invoice Date</th>
                                 <th style="text-align: right">Invoice Value</th>
+                                <th style="text-align: right">Book Value</th>
                                 <th style="text-align: right">Taxable Value</th>
                                 <th style="text-align: right">IGST</th>
                                 <th style="text-align: right">CGST</th>
@@ -430,10 +433,11 @@
    $(document).on('click','.link_btn',function(){
       let type = $(this).data('type');
       let invoice_no = $(this).data('invoice_no');
+      let action_type = $(this).data('action_type');
       $.ajax({
          url: "{{ route('get-unlinked-cdnr') }}", // Replace with your actual route
          method: 'POST',
-         data: {'type': type, 'gstin': '{{ $gstin }}', 'ctin': '{{ $ctin }}', 'month': '{{ $month }}' },
+         data: {'type': type, 'gstin': '{{ $gstin }}', 'ctin': '{{ $ctin }}', 'month': '{{ $month }}','action_type':action_type, 'invoice_no': invoice_no },
          headers: {
             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') // Add this if CSRF token is needed
          },
@@ -445,7 +449,11 @@
                      $("#linkModalLabel").html('Link Debit Note');
                      $("#cdnr_table_body").html('');
                      $.each(res.debit_note, function(index, value) {
-                        $("#cdnr_table_body").append('<tr><td><input type="checkbox" class="link_check" data-id="'+value.id+'"></td><td>'+value.sr_prefix+'</td><td>'+value.date+'</td><td style="text-align: right">'+value.series_no+'</td><td style="text-align: right">'+value.total+'</td></tr>');
+                        $checked = '';
+                        if(value.gstr2b_invoice_id!=""){
+                           $checked = 'checked';
+                        }
+                        $("#cdnr_table_body").append('<tr><td><input type="checkbox" class="link_check" data-id="'+value.id+'" '+$checked+'></td><td>'+value.sr_prefix+'</td><td>'+value.date+'</td><td style="text-align: right">'+value.series_no+'</td><td style="text-align: right">'+value.total+'</td></tr>');
                      });
                      if(res.debit_note.length==0){
                         $("#cdnr_table_body").append('<tr><td colspan="5" class="text-center">No Debit Notes available to link.</td></tr>');
@@ -457,7 +465,11 @@
                      $("#linkModalLabel").html('Link Credit Note');
                      $("#cdnr_table_body").html('');
                      $.each(res.credit_note, function(index, value) {
-                        $("#cdnr_table_body").append('<tr><td><input type="checkbox" class="link_check" data-id="'+value.id+'"></td><td>'+value.sr_prefix+'</td><td>'+value.date+'</td><td style="text-align: right">'+value.series_no+'</td><td style="text-align: right">'+value.total+'</td></tr>');
+                        $checked = '';
+                        if(value.gstr2b_invoice_id!=""){
+                           $checked = 'checked';
+                        }
+                        $("#cdnr_table_body").append('<tr><td><input type="checkbox" class="link_check" data-id="'+value.id+'" '+$checked+'></td><td>'+value.sr_prefix+'</td><td>'+value.date+'</td><td style="text-align: right">'+value.series_no+'</td><td style="text-align: right">'+value.total+'</td></tr>');
                      });
                      if(res.credit_note.length==0){
                         $("#cdnr_table_body").append('<tr><td colspan="5" class="text-center">No Credit Notes available to link.</td></tr>');
@@ -513,6 +525,31 @@
    };
    $(document).on('click','.link_btn_action',function(){
       link_btn_action();
+   });
+   $(document).on('click','.accept',function(){
+      let id = $(this).data('id');
+      if(confirm('Are you sure you want to accept this entry?')) {
+         $.ajax({
+            url: "{{ route('accept-gstr2b-entry') }}", // Replace with your actual route
+            method: 'POST',
+            data: {'id': id},
+            headers: {
+               'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') // Add this if CSRF token is needed
+            },
+            success: function (response) {
+               let res = JSON.parse(response);
+               if(res.status==true) {
+                  alert('Entry accepted successfully.');
+                  location.reload(); // Reload the page to reflect changes
+               } else {
+                  alert('Failed to accept entry');
+               }
+            },
+            error: function (xhr) {
+               alert('An error occurred while accepting the entry.');
+            }
+         });
+      }
    });
 
 </script>
