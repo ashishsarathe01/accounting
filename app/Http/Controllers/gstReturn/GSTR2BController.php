@@ -355,7 +355,7 @@ class GSTR2BController extends Controller
                             <td style='text-align: right'>".formatIndianNumber($v->cgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($v->sgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($v->cess)."</td>
-                            <td><strong>Rejected - ".($v->remark)."</strong> <br> <button class='btn btn-success accept' data-id='".$v->id."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;'>Accept</button></td>
+                            <td><strong style='color:red'>Rejected - ".($v->remark)."</strong> <br> <button class='btn btn-success accept' data-id='".$v->id."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;'>Accept</button></td>
                         </tr>";
                     }
                 }
@@ -504,7 +504,7 @@ class GSTR2BController extends Controller
                             <td style='text-align: right'>".formatIndianNumber($v->cgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($v->sgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($v->cess)."</td>
-                            <td><strong>Rejected - ".($v->remark)."</strong> <br> <button class='btn btn-success accept' data-id='".$v->id."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;'>Accept</button></td>
+                            <td><strong style='color:red'>Rejected - ".($v->remark)."</strong> <br> <button class='btn btn-success accept' data-id='".$v->id."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;'>Accept</button></td>
                         </tr>";
                     }
                 }
@@ -526,7 +526,7 @@ class GSTR2BController extends Controller
                             <td style='text-align: right'>".formatIndianNumber($v->cgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($v->sgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($v->cess)."</td>
-                            <td><strong>Rejected - ".($v->remark)."  <br> <button class='btn btn-success accept' data-id='".$v->id."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;'>Accept</button></strong></td>
+                            <td><strong style='color:red'>Rejected - ".($v->remark)." </strong> <br> <button class='btn btn-success accept' data-id='".$v->id."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;'>Accept</button></td>
                         </tr>";
                     }
                 }
@@ -649,7 +649,7 @@ class GSTR2BController extends Controller
                             <td style='text-align: right'>".formatIndianNumber($v->cgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($v->sgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($v->cess)."</td>
-                            <td><strong>Rejected - ".($v->remark)."</strong> <br> <button class='btn btn-success accept' data-id='".$v->id."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;'>Accept</button></td>
+                            <td><strong style='color:red'>Rejected - ".($v->remark)."</strong> <br> <button class='btn btn-success accept' data-id='".$v->id."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;'>Accept</button></td>
                         </tr>";
                     }
                 }
@@ -803,7 +803,7 @@ class GSTR2BController extends Controller
                             <td style='text-align: right'>".formatIndianNumber($v->cgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($v->sgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($v->cess)."</td>
-                            <td><strong>Rejected - ".($v->remark)."</strong> <br> <button class='btn btn-success accept' data-id='".$v->id."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;'>Accept</button></td>
+                            <td><strong style='color:red'>Rejected - ".($v->remark)."</strong> <br> <button class='btn btn-success accept' data-id='".$v->id."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;'>Accept</button></td>
                         </tr>";
                     }
                 }
@@ -825,7 +825,7 @@ class GSTR2BController extends Controller
                             <td style='text-align: right'>".formatIndianNumber($v->cgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($v->sgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($v->cess)."</td>
-                            <td><strong>Rejected - ".($v->remark)."</strong> <br> <button class='btn btn-success accept' data-id='".$v->id."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;'>Accept</button></td>
+                            <td><strong style='color:red'>Rejected - ".($v->remark)."</strong> <br> <button class='btn btn-success accept' data-id='".$v->id."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;'>Accept</button></td>
                         </tr>";
                     }
                 }
