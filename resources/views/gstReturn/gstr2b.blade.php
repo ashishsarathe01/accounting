@@ -89,10 +89,10 @@
                   <thead>
                      <tr>
                         <th>Account Name</th>
-                        <th>Amount</th>
+                        <th style='text-align:right'>Amount</th>
                      </tr>
                   </thead>
-                  <tbody>
+                  <tbody style="font-size: 15px;">
                      
                   </tbody>
                </table>
@@ -279,9 +279,16 @@
                      obj.data.forEach(element => {
                         let baseUrl = "{{ url('/gstr2b-all-info') }}";
                         let fullUrl = `${baseUrl}/${month}/${gstin}/${element.ctin}`;
-                        html+="<tr style='cursor:pointer'><td><a href='"+fullUrl+"'>"+element.trdnm+" ("+element.ctin+")</a></td><td></td></tr>";
+                        html+="<tr style='cursor:pointer'><td><a href='"+fullUrl+"'>"+element.trdnm+" ("+element.ctin+")</a></td><td style='text-align:right'><a href='"+fullUrl+"'>"+Number(element.amount).toLocaleString('en-IN', {
+                                       minimumFractionDigits: 2,
+                                       maximumFractionDigits: 2
+                                       })+"</a></td></tr>";
+                        total_amount += parseFloat(element.amount);
                      });
-                     html+="<tr><th></th><th>"+total_amount+"</th></tr>";
+                     html+="<tr><th>Total</th><th style='text-align:right'>"+Number(total_amount).toLocaleString('en-IN', {
+                           minimumFractionDigits: 2,
+                           maximumFractionDigits: 2
+                           })+"</th></tr>";
                      $(".gst_table tbody").html(html);
                      $("#gst_div").show();
                   }

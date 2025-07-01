@@ -89,7 +89,7 @@
                   <thead>
                      <tr>
                         <th>Account Name</th>
-                        <th>Amount</th>
+                        <th style="text-align: right">Amount</th>
                      </tr>
                   </thead>
                   <tbody>
@@ -259,7 +259,6 @@
          method : 'post',
          data : {
             _token : '{{ csrf_token() }}',
-            type : 'GSTR-2A',
             month : month,
             gstin : gstin
          },
@@ -271,20 +270,10 @@
                      $("#fgstin").val(gstin);
                      $("#otpModal").modal('toggle');
                   }else if(obj.message=="SUCCESS"){
-                     $("#otpModal").modal('toggle');
+                     alert("OTP Verified Successfully");
                      getGstData(month,gstin);
-                  }else if(obj.message=="GSTR2B"){
-                     $(".gst_head").html('GSTR2B');
-                     let html = "";let total_amount = 0;
-                     obj.data.forEach(element => {
-                        html+="<tr><td>"+element.account_name+" ("+element.ctin+")</td><td>"+element.amount+"</td></tr>";
-                        total_amount = parseFloat(total_amount) + parseFloat(element.amount);
-                     });
-                     html+="<tr><th></th><th>"+total_amount+"</th></tr>";
-                     $(".gst_table tbody").html(html);
-                     $("#gst_div").show();
                   }else if(obj.message=="GSTR2A"){
-                     $(".gst_head").html('GSTR2A');                     
+                     $(".gst_head").html('GSTR2A');
                      $(".gst_table tbody").html(obj.data);
                      $("#gst_div").show();
                   }

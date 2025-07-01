@@ -50,7 +50,7 @@
        margin: 0; 
    }
 </style>
-<div class="list-of-view-company ">
+<div class="list-of-view-company">
    <section class="list-of-view-company-section container-fluid">
       <div class="row vh-100">
          @include('layouts.leftnav')
@@ -79,14 +79,17 @@
                          <table class="table table-bordered table-striped table-hover">
                             <thead>
                              <tr>
+                                <th></th>
                                 <th>Invoice No.</th>
                                 <th>Invoice Date</th>
                                 <th style="text-align: right">Invoice Value</th>
+                                <th style="text-align: right">Book Value</th>
                                 <th style="text-align: right">Taxable Value</th>
                                 <th style="text-align: right">IGST</th>
                                 <th style="text-align: right">CGST</th>
                                 <th style="text-align: right">SGST</th>
                                 <th style="text-align: right">Cess</th>
+                                <th>Action</th>
                              </tr>
                             </thead>
                             <tbody>{!!$b2b_invoices!!}</tbody>
@@ -97,14 +100,17 @@
                          <table class="table table-bordered table-striped table-hover">
                             <thead>
                              <tr>
+                                <th></th>
                                 <th>Invoice No.</th>
                                 <th>Invoice Date</th>
                                 <th style="text-align: right">Invoice Value</th>
+                                <th style="text-align: right">Book Value</th>
                                 <th style="text-align: right">Taxable Value</th>
                                 <th style="text-align: right">IGST</th>
                                 <th style="text-align: right">CGST</th>
                                 <th style="text-align: right">SGST</th>
                                 <th style="text-align: right">Cess</th>
+                                <th>Action</th>
                              </tr>
                             </thead>
                             <tbody>{!!$b2b_debit_note!!}</tbody>
@@ -115,14 +121,17 @@
                          <table class="table table-bordered table-striped table-hover">
                             <thead>
                              <tr>
+                                <th></th>
                                 <th>Invoice No.</th>
                                 <th>Invoice Date</th>
                                 <th style="text-align: right">Invoice Value</th>
+                                <th style="text-align: right">Book Value</th>
                                 <th style="text-align: right">Taxable Value</th>
                                 <th style="text-align: right">IGST</th>
                                 <th style="text-align: right">CGST</th>
                                 <th style="text-align: right">SGST</th>
                                 <th style="text-align: right">Cess</th>
+                                <th>Action</th>
                              </tr>
                             </thead>
                             <tbody>{!!$b2b_credit_note!!}</tbody>
@@ -135,14 +144,17 @@
                          <table class="table table-bordered table-striped table-hover">
                             <thead>
                              <tr>
+                                <th></th>
                                 <th>Invoice No.</th>
                                 <th>Invoice Date</th>
                                 <th style="text-align: right">Invoice Value</th>
+                                <th style="text-align: right">Book Value</th>
                                 <th style="text-align: right">Taxable Value</th>
                                 <th style="text-align: right">IGST</th>
                                 <th style="text-align: right">CGST</th>
                                 <th style="text-align: right">SGST</th>
                                 <th style="text-align: right">Cess</th>
+                                <th>Action</th>
                              </tr>
                             </thead>
                             <tbody>{!!$b2ba_invoices!!}</tbody>
@@ -153,14 +165,17 @@
                          <table class="table table-bordered table-striped table-hover">
                             <thead>
                              <tr>
+                                <th></th>
                                 <th>Invoice No.</th>
                                 <th>Invoice Date</th>
                                 <th style="text-align: right">Invoice Value</th>
+                                <th style="text-align: right">Book Value</th>
                                 <th style="text-align: right">Taxable Value</th>
                                 <th style="text-align: right">IGST</th>
                                 <th style="text-align: right">CGST</th>
                                 <th style="text-align: right">SGST</th>
                                 <th style="text-align: right">Cess</th>
+                                <th>Action</th>
                              </tr>
                             </thead>
                             <tbody>{!!$b2ba_debit_note!!}</tbody>
@@ -171,14 +186,17 @@
                          <table class="table table-bordered table-striped table-hover">
                             <thead>
                              <tr>
+                                <th></th>
                                 <th>Invoice No.</th>
                                 <th>Invoice Date</th>
                                 <th style="text-align: right">Invoice Value</th>
+                                <th style="text-align: right">Book Value</th>
                                 <th style="text-align: right">Taxable Value</th>
                                 <th style="text-align: right">IGST</th>
                                 <th style="text-align: right">CGST</th>
                                 <th style="text-align: right">SGST</th>
                                 <th style="text-align: right">Cess</th>
+                                <th>Action</th>
                              </tr>
                             </thead>
                             <tbody>{!!$b2ba_credit_note!!}</tbody>
@@ -300,9 +318,242 @@
       </div>
    </div>
 </div>
+<div class="modal fade" id="remarkModal" tabindex="-1" aria-labelledby="remarkModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="remarkModalLabel">Enter Remark</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="remarkForm">
+          <input type="hidden" name="invoice" id="invoice">
+          <input type="hidden" name="date" id="date">
+          <input type="hidden" name="total_amount" id="total_amount">
+          <input type="hidden" name="taxable_amount" id="taxable_amount">
+          <input type="hidden" name="igst" id="igst">
+          <input type="hidden" name="cgst" id="cgst">
+          <input type="hidden" name="sgst" id="sgst">
+          <input type="hidden" name="cess" id="cess">
+          <input type="hidden" name="irn" id="irn">
+          <input type="hidden" name="type" id="type">
+          <input type="hidden" name="gstin" id="gstin" value="{{ $gstin }}">
+          <input type="hidden" name="ctin" id="ctin" value="{{ $ctin }}">
+          <input type="hidden" name="gstr2b_month" id="gstr2b_month" value="{{ $month }}">
+          <div class="mb-3">
+            <label for="remark" class="form-label">Remark</label>
+            <textarea name="remark" id="remark" class="form-control" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-danger">Reject</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="linkCDNRModal" tabindex="-1" aria-labelledby="remarkModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="linkModalLabel"></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+         <table class="table table-bordered table-striped table-hover">
+            <thead>
+               <tr>
+                  <th></th>
+                  <th>Invoice No.</th>
+                  <th>Invoice Date</th>
+                  <th style="text-align: right">Series</th>
+                  <th style="text-align: right">Amount</th>
+               </tr>
+            </thead>
+            <tbody id="cdnr_table_body">
+               <!-- Content will be populated via AJAX -->
+            </tbody>
+         </table>
+         
+            <div class="modal-footer border-0 mx-auto p-0">
+            <button type="button" class="btn btn-border-body close" data-bs-dismiss="modal">CANCEL</button>
+            <button type="button" class="ms-3 btn btn-red link_btn_action">SUBMIT</button>
+         </div>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 @include('layouts.footer')
 <script>
-   
+   $(document).on('click','.check_action',function(){
+      let id = $(this).data('key');
+      let type = $(this).data('type');
+      if($(this).is(':checked')){
+         $("#"+type+''+id).hide();
+      }else{
+         $("#"+type+''+id).show();
+      }
+   });
+   $(document).on('click','.reject_btn',function(){
+      $('#invoice').val($(this).data('invoice'));
+      $('#date').val($(this).data('date'));
+      $('#total_amount').val($(this).data('total_amount'));
+      $('#taxable_amount').val($(this).data('taxable_amount'));
+      $('#igst').val($(this).data('igst'));
+      $('#cgst').val($(this).data('cgst'));
+      $('#sgst').val($(this).data('sgst'));
+      $('#cess').val($(this).data('cess'));
+      $('#irn').val($(this).data('irn'));
+      $('#type').val($(this).data('type'));
+      $('#remarkModal').modal('show');
+   });
+   $('#remarkForm').on('submit', function (e) {
+      e.preventDefault();
+      $.ajax({
+         url: "{{ route('reject-gstr2b-entry') }}", // Replace with your actual route
+         method: 'POST',
+         data: $(this).serialize(),
+         headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') // Add this if CSRF token is needed
+         },
+         success: function (response) {
+            let res = JSON.parse(response);
+            if(res.status==true) {
+               alert('Invoice rejected successfully.');
+               $('#remarkModal').modal('hide'); 
+               location.reload(); // Reload the page to reflect changes
+            } else {
+               alert('Failed to reject invoice');
+            }
+            
+            //alert('Invoice rejected successfully.');
+            //location.reload(); // Reload the page to reflect changes
+         },
+         error: function (xhr) {
+            alert('An error occurred while rejecting the invoice.');
+         }
+      });
+   });
+   $(document).on('click','.link_btn',function(){
+      let type = $(this).data('type');
+      let invoice_no = $(this).data('invoice_no');
+      let action_type = $(this).data('action_type');
+      $.ajax({
+         url: "{{ route('get-unlinked-cdnr') }}", // Replace with your actual route
+         method: 'POST',
+         data: {'type': type, 'gstin': '{{ $gstin }}', 'ctin': '{{ $ctin }}', 'month': '{{ $month }}','action_type':action_type, 'invoice_no': invoice_no },
+         headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') // Add this if CSRF token is needed
+         },
+         success: function (response) {
+            if(response){
+               let res = JSON.parse(response);
+               if(res.status==true) {
+                  if(type=="credit_note"){
+                     $("#linkModalLabel").html('Link Debit Note');
+                     $("#cdnr_table_body").html('');
+                     $.each(res.debit_note, function(index, value) {
+                        $checked = '';
+                        if(value.gstr2b_invoice_id!=""){
+                           $checked = 'checked';
+                        }
+                        $("#cdnr_table_body").append('<tr><td><input type="checkbox" class="link_check" data-id="'+value.id+'" '+$checked+'></td><td>'+value.sr_prefix+'</td><td>'+value.date+'</td><td style="text-align: right">'+value.series_no+'</td><td style="text-align: right">'+value.total+'</td></tr>');
+                     });
+                     if(res.debit_note.length==0){
+                        $("#cdnr_table_body").append('<tr><td colspan="5" class="text-center">No Debit Notes available to link.</td></tr>');
+                     }
+                     $(".link_btn_action").data('type', 'debit_note');
+                     $(".link_btn_action").data('invoice_no',invoice_no);
+                     $('#linkCDNRModal').modal('show');
+                  }else if(type=="debit_note"){
+                     $("#linkModalLabel").html('Link Credit Note');
+                     $("#cdnr_table_body").html('');
+                     $.each(res.credit_note, function(index, value) {
+                        $checked = '';
+                        if(value.gstr2b_invoice_id!=""){
+                           $checked = 'checked';
+                        }
+                        $("#cdnr_table_body").append('<tr><td><input type="checkbox" class="link_check" data-id="'+value.id+'" '+$checked+'></td><td>'+value.sr_prefix+'</td><td>'+value.date+'</td><td style="text-align: right">'+value.series_no+'</td><td style="text-align: right">'+value.total+'</td></tr>');
+                     });
+                     if(res.credit_note.length==0){
+                        $("#cdnr_table_body").append('<tr><td colspan="5" class="text-center">No Credit Notes available to link.</td></tr>');
+                     }
+                     $(".link_btn_action").data('type', 'credit_note');
+                     $(".link_btn_action").data('invoice_no',invoice_no);
+                     $('#linkCDNRModal').modal('show');
+                  }
+                  // $('#otpModal').modal('show');
+               }
+            }else{
+               alert('Something Went Wrong.');
+            }
+            
+         },
+         error: function (xhr) {
+            alert('An error occurred while rejecting the invoice.');
+         }
+      });
+   });
+   link_btn_action = function() {
+      let type = $('.link_btn_action').data('type');
+      let invoice_no = $('.link_btn_action').data('invoice_no');
+      let selected_ids = [];
+      $('.link_check:checked').each(function() {
+         selected_ids.push($(this).data('id'));
+      });
+      if(selected_ids.length==0) {
+         alert('Please select at least one entry to link.');
+         return;
+      }
+         $.ajax({
+            url: "{{ route('link-cdnr') }}", // Replace with your actual route
+            method: 'POST',
+            data: {'type': type, 'ids': selected_ids, 'gstin': '{{ $gstin }}', 'ctin': '{{ $ctin }}', 'month': '{{ $month }}', 'invoice_no': invoice_no },
+            headers: {
+               'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') // Add this if CSRF token is needed
+            },
+            success: function (response) {
+               let res = JSON.parse(response);
+               if(res.status==true) {
+                  alert('linked successfully.');
+                  $('#linkCDNRModal').modal('hide'); 
+                  location.reload(); // Reload the page to reflect changes
+               } else {
+                  alert('Failed to link CDNR');
+               }
+            },
+            error: function (xhr) {
+               alert('An error occurred while linking the CDNR.');
+            }
+         });      
+   };
+   $(document).on('click','.link_btn_action',function(){
+      link_btn_action();
+   });
+   $(document).on('click','.accept',function(){
+      let id = $(this).data('id');
+      if(confirm('Are you sure you want to accept this entry?')) {
+         $.ajax({
+            url: "{{ route('accept-gstr2b-entry') }}", // Replace with your actual route
+            method: 'POST',
+            data: {'id': id},
+            headers: {
+               'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') // Add this if CSRF token is needed
+            },
+            success: function (response) {
+               let res = JSON.parse(response);
+               if(res.status==true) {
+                  alert('Entry accepted successfully.');
+                  location.reload(); // Reload the page to reflect changes
+               } else {
+                  alert('Failed to accept entry');
+               }
+            },
+            error: function (xhr) {
+               alert('An error occurred while accepting the entry.');
+            }
+         });
+      }
+   });
+
 </script>
 @endsection

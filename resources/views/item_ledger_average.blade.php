@@ -79,9 +79,9 @@
                      @foreach($average_data as $purchase)                        
                         <tr class="average_details" data-date="{{$purchase->stock_date}}" style="cursor: pointer;">
                            <td>{{date('d-m-Y',strtotime($purchase->stock_date))}}</td>
-                           <td style="text-align: right;">{{$purchase->purchase_weight}}</td>
-                           <td style="text-align: right;">{{$purchase->sale_weight}}</td>
-                           <td style="text-align: right;">{{$purchase->average_weight}}</td>
+                           <td style="text-align: right;">{{formatIndianNumber($purchase->purchase_weight)}}</td>
+                           <td style="text-align: right;">{{formatIndianNumber($purchase->sale_weight)}}</td>
+                           <td style="text-align: right;">{{formatIndianNumber($purchase->average_weight)}}</td>
                            <td style="text-align: right;">{{$purchase->price}}</td>
                            <td style="text-align: right;">{{formatIndianNumber($purchase->amount,2)}}</td>
                         </tr>
@@ -106,11 +106,12 @@
          <div class="modal-body text-center p-0">
             <table class="table table-striped table-bordered table-sm m-0 shadow-sm">
                <thead>
-                  <tr class=" font-12 text-body bg-light-pink">                        
-                     <th class="w-min-120 border-none bg-light-pink text-body">Date </th>
-                     <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Purchase Quantity</th>
-                     <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Purchase Amount</th>
-                     <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Sale Quantity</th>      
+                  <tr class=" font-12 text-body bg-light-pink">
+                     <th class="w-min-120 border-none bg-light-pink text-body">Type</th>
+                     <th class="w-min-120 border-none bg-light-pink text-body">Invoice No.</th>
+                     <th class="w-min-120 border-none bg-light-pink text-body">Account Name</th>
+                     <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Quantity</th>
+                     <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Amount</th>
                   </tr>
                </thead>
                <tbody>
@@ -188,38 +189,92 @@
             success: function(res){
                if(res.status == true){
                   let html = "";
-                  let purchase_weight = 0;
-                  let purchase_total_amount = 0;
-                  let sale_weight = 0;
-                  res.data.forEach(function(item) {
-                     if(item.purchase_weight == null){
-                        item.purchase_weight = '-';
-                     }else{
-                        purchase_weight += parseFloat(item.purchase_weight);
-                     }
-                     if(item.purchase_total_amount == null){
-                        item.purchase_total_amount = '-';
-                     }else{
-                        purchase_total_amount += parseFloat(item.purchase_total_amount);
-                     }
-                     if(item.sale_weight == null){
-                        item.sale_weight = '-';
-                     }else{
-                        sale_weight += parseFloat(item.sale_weight);
-                     }
-                    
+                  let total_weight = 0;
+                  let total_amount = 0;
+                  res.data.forEach(function(item) {                                        
                      html += "<tr>";
-                     html += "<td>"+item.entry_date+"</td>";
-                     html += "<td style='text-align: right;'>"+item.purchase_weight+"</td>";
-                     html += "<td style='text-align: right;'>"+item.purchase_total_amount+"</td>";
-                     html += "<td style='text-align: right;'>"+item.sale_weight+"</td>";                     
+                     html += "<td>"+item.type+"</td>";
+                     if(item.type=="PURCHASE"){
+                        total_weight += parseFloat(item.purchase_weight);
+                        total_amount += parseFloat(item.purchase_total_amount);
+                        html += "<td>"+item.purchase_voucher+"</td>";
+                        html += "<td>"+item.purchase_account+"</td>";
+                        html += "<td style='text-align: right;'>"+Number(item.purchase_weight).toLocaleString('en-IN', {
+                                       minimumFractionDigits: 2,
+                                       maximumFractionDigits: 2
+                                       })+"</td>";
+                        html += "<td style='text-align: right;'>"+Number(item.purchase_total_amount).toLocaleString('en-IN', {
+                                       minimumFractionDigits: 2,
+                                       maximumFractionDigits: 2
+                                       })+"</td>";
+                     }else if(item.type=="SALE"){
+                        total_weight -= parseFloat(item.sale_weight);
+                        html += "<td>"+item.sale_voucher+"</td>";
+                        html += "<td>"+item.sale_account+"</td>";
+                        html += "<td style='text-align: right;'>"+Number(item.sale_weight).toLocaleString('en-IN', {
+                                       minimumFractionDigits: 2,
+                                       maximumFractionDigits: 2
+                                       })+"</td>";
+                        html += "<td style='text-align: right;'></td>";
+                     }else if(item.type=="PURCHASE RETURN"){
+                        total_weight -= parseFloat(item.purchase_return_weight);
+                        total_amount -= parseFloat(item.purchase_return_amount);
+                        html += "<td>"+item.pr_voucher+"</td>";
+                        html += "<td>"+item.pr_account+"</td>";
+                        html += "<td style='text-align: right;'>"+Number(item.purchase_return_weight).toLocaleString('en-IN', {
+                                       minimumFractionDigits: 2,
+                                       maximumFractionDigits: 2
+                                       })+"</td>";
+                        html += "<td style='text-align: right;'>"+Number(item.purchase_return_amount).toLocaleString('en-IN', {
+                                       minimumFractionDigits: 2,
+                                       maximumFractionDigits: 2
+                                       })+"</td>";
+                     }else if(item.type=="SALE RETURN"){
+                        total_weight += parseFloat(item.sale_return_weight);
+                        html += "<td>"+item.sr_voucher+"</td>";
+                        html += "<td>"+item.sr_account+"</td>";
+                        html += "<td style='text-align: right;'>"+Number(item.sale_return_weight).toLocaleString('en-IN', {
+                                       minimumFractionDigits: 2,
+                                       maximumFractionDigits: 2
+                                       })+"</td>";
+                        html += "<td style='text-align: right;'></td>";
+                     }else if(item.type=="STOCK TRANSFER IN"){
+                        total_weight += parseFloat(item.stock_transfer_in_weight);
+                        total_amount += parseFloat(item.stock_transfer_in_amount);
+                        html += "<td>"+item.st_in_voucher+"</td>";
+                        html += "<td>"+item.st_in_account+"</td>";
+                        html += "<td style='text-align: right;'>"+Number(item.stock_transfer_in_weight).toLocaleString('en-IN', {
+                                       minimumFractionDigits: 2,
+                                       maximumFractionDigits: 2
+                                       })+"</td>";
+                        html += "<td style='text-align: right;'>"+Number(item.stock_transfer_in_amount).toLocaleString('en-IN', {
+                                       minimumFractionDigits: 2,
+                                       maximumFractionDigits: 2
+                                       })+"</td>";
+                     }else if(item.type=="STOCK TRANSFER OUT"){
+                        total_weight -= parseFloat(item.stock_transfer_weight);
+                        html += "<td>"+item.st_out_voucher+"</td>";
+                        html += "<td>"+item.st_ot_account+"</td>";
+                        html += "<td style='text-align: right;'>"+Number(item.stock_transfer_weight).toLocaleString('en-IN', {
+                                       minimumFractionDigits: 2,
+                                       maximumFractionDigits: 2
+                                       })+"</td>";
+                        html += "<td style='text-align: right;'></td>";
+                     }
                      html += "</tr>";
                   });
                   html += "<tr>";
+                  html += "<th></th>";
+                  html += "<th></th>";
                   html += "<th>Total</th>";
-                  html += "<th style='text-align: right;'>"+purchase_weight+"</th>";
-                  html += "<th style='text-align: right;'>"+purchase_total_amount+"</th>";
-                  html += "<th style='text-align: right;'>"+sale_weight+"</th>";                     
+                  html += "<th style='text-align: right;'>"+Number(total_weight).toLocaleString('en-IN', {
+                                       minimumFractionDigits: 2,
+                                       maximumFractionDigits: 2
+                                       })+"</th>";
+                  html += "<th style='text-align: right;'>"+Number(total_amount).toLocaleString('en-IN', {
+                                       minimumFractionDigits: 2,
+                                       maximumFractionDigits: 2
+                                       })+"</th>";         
                   html += "</tr>";
                   html += "<tr>";
                   
