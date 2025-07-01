@@ -16,6 +16,7 @@ use App\Models\AccountOtherAddress;
 use Session;
 use DB;
 use Gate;
+use Illuminate\Validation\Rule;
 class AccountsController extends Controller{
     /**
      * Show the specified resources in storage.
@@ -79,16 +80,15 @@ class AccountsController extends Controller{
      * @return \Illuminate\Http\Response
    */
    public function store(Request $request){
+
       Gate::authorize('view-module', 73);
-      $validator = Validator::make($request->all(), [
+      $request->validate([
+         'gstin' => ['nullable',Rule::unique('accounts')
+            ->where(fn($query) => $query->where('company_id', Session::get('user_company_id')))],
          'account_name' => 'required|string',
-      ], [
-         'account_name.required' => 'Name is required.',
-      ]);
-      if($validator->fails()) {
-         return response()->json($validator->errors(), 422);
-      }
+      ]); 
       
+      die("dd");
       $com_id = Session::get('user_company_id');
       $check = Accounts::select('id')
                         ->where('account_name',$request->input('account_name'))

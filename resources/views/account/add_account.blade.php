@@ -34,6 +34,9 @@
                   <div class="mb-4 col-md-4">
                      <label for="name" class="form-label font-14 font-heading">ACCOUNT NAME</label>
                      <input type="text" class="form-control" id="account_name" name="account_name" placeholder="ENTER ACCOUNT NAME" required value="@if(isset($id)){{$account->account_name}}@endif"/>
+                     <ul style="color: red;">
+                       @error('account_name'){{$message}}@enderror                        
+                     </ul>
                   </div>
                   <div class="clearfix"></div>
                   <div class="mb-4 col-md-4">
@@ -107,7 +110,11 @@
                   <div class="mb-4 col-md-4 gstin_div common_div" style="display: none;">
                      <label for="gstin" class="form-label font-14 font-heading">GST NO.</label>
                      <input type="text" class="form-control common_val" id="gstin" name="gstin" placeholder="ENTER GST NO."  value="@if(isset($id)){{$account->gstin}}@endif"/>
+                     <ul style="color: red;">
+                       @error('gstin'){{$message}}@enderror                        
+                     </ul>
                   </div>
+                  
                   @php
                      $hasGstin = isset($account) && !empty($account->gstin);
                   @endphp

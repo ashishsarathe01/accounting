@@ -8,4 +8,5 @@ use Illuminate\Database\Eloquent\Model;
 class GSTR2A extends Model
 {
     use HasFactory;
+    protected $table = "gstr2a";
 }

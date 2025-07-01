@@ -92,7 +92,7 @@
                         <th style="text-align: right">Amount</th>
                      </tr>
                   </thead>
-                  <tbody>
+                  <tbody style="font-size: 15px;">
                      
                   </tbody>
                </table>
@@ -274,7 +274,19 @@
                      getGstData(month,gstin);
                   }else if(obj.message=="GSTR2A"){
                      $(".gst_head").html('GSTR2A');
-                     $(".gst_table tbody").html(obj.data);
+                     let html = "";let total_amount = 0;
+                     for (let key in obj.data) {
+                        html+="<tr><td>"+obj.data[key].name+" ("+key+")</td><td style='text-align:right'>"+Number(obj.data[key].amount).toLocaleString('en-IN', {
+                                       minimumFractionDigits: 2,
+                                       maximumFractionDigits: 2
+                                       })+"</td></tr>";
+                        total_amount += parseFloat(obj.data[key].amount);
+                     }
+                     html+="<tr><th>Total</th><th style='text-align:right'>"+Number(total_amount).toLocaleString('en-IN', {
+                           minimumFractionDigits: 2,
+                           maximumFractionDigits: 2
+                           })+"</th></tr>";
+                     $(".gst_table tbody").html(html);
                      $("#gst_div").show();
                   }
                }else{
