@@ -208,8 +208,26 @@
                   let html = "";
                   let total_weight = 0;
                   let total_amount = 0;
-                  res.data.forEach(function(item) {                                        
-                     html += "<tr>";
+                  res.data.forEach(function(item) {
+                     let redirect_url = "";
+                     if(item.type=="PURCHASE"){
+                        const saleInvoiceBaseUrl = "{{ route('purchase-invoice', 'ID') }}";
+                        redirect_url = saleInvoiceBaseUrl.replace('ID', item.purchase_id);
+                     }else if(item.type=="SALE"){                        
+                        const saleInvoiceBaseUrl = "{{ route('sale-invoice', 'ID') }}";
+                        redirect_url = saleInvoiceBaseUrl.replace('ID', item.sale_id);
+                     }else if(item.type=="PURCHASE RETURN"){
+                        const saleInvoiceBaseUrl = "{{ route('purchase-return-invoice', 'ID') }}";
+                        redirect_url = saleInvoiceBaseUrl.replace('ID', item.purchase_return_id);
+                     }else if(item.type=="SALE RETURN"){
+                        const saleInvoiceBaseUrl = "{{ route('sale-return-invoice', 'ID') }}";
+                        redirect_url = saleInvoiceBaseUrl.replace('ID', item.sale_return_id);
+                     }else if(item.type=="STOCK TRANSFER IN"){
+                        redirect_url = "";
+                     }else if(item.type=="STOCK TRANSFER OUT"){
+                        redirect_url = "";
+                     }
+                     html += "<tr style='cursor:pointer' onclick='reDirectFun(\"" + redirect_url + "\")'>";
                      html += "<td>"+item.type+"</td>";
                      if(item.type=="PURCHASE"){
                         total_weight += parseFloat(item.purchase_weight);
@@ -308,5 +326,8 @@
    $(".cancel").click(function() {
        $("#item_ledger_details").modal("hide");
    });
+   function reDirectFun(url){
+      window.open(url, '_blank');
+   }
 </script>
 @endsection

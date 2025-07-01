@@ -453,7 +453,7 @@
                      $("#cdnr_table_body").html('');
                      $.each(res.debit_note, function(index, value) {
                         $checked = '';
-                        if(value.gstr2b_invoice_id!=""){
+                        if(value.gstr2b_invoice_id!="" && value.gstr2b_invoice_id!=null){
                            $checked = 'checked';
                         }
                         $("#cdnr_table_body").append('<tr><td><input type="checkbox" class="link_check" data-id="'+value.id+'" '+$checked+'></td><td>'+value.sr_prefix+'</td><td>'+value.date+'</td><td style="text-align: right">'+value.series_no+'</td><td style="text-align: right">'+value.total+'</td></tr>');
@@ -469,7 +469,7 @@
                      $("#cdnr_table_body").html('');
                      $.each(res.credit_note, function(index, value) {
                         $checked = '';
-                        if(value.gstr2b_invoice_id!=""){
+                        if(value.gstr2b_invoice_id!="" && value.gstr2b_invoice_id!=null){
                            $checked = 'checked';
                         }
                         $("#cdnr_table_body").append('<tr><td><input type="checkbox" class="link_check" data-id="'+value.id+'" '+$checked+'></td><td>'+value.sr_prefix+'</td><td>'+value.date+'</td><td style="text-align: right">'+value.series_no+'</td><td style="text-align: right">'+value.total+'</td></tr>');
