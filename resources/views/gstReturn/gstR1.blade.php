@@ -142,9 +142,7 @@
         border-color: #1e4486;
     }
     
-    .view-content {
-        display: none;
-    }
+  
     
     .view-content.active {
         display: block;
@@ -153,7 +151,7 @@
 
 <div class="list-of-view-company">
    <section class="list-of-view-company-section container-fluid">
-      <div class="row">
+        <div class="row">
          @include('layouts.leftnav')
 
            @php
@@ -175,25 +173,42 @@
     @endphp
 
          <!-- Main content column -->
-         <div class="col-md-10 col-sm-12 px-4">
-            <div class="container-fluid">
-               <!-- Header section -->
-               <div class="container mt-4">
-                            <div class="card mb-3 shadow-sm border-0">
-                                <div class="card-body p-0">
-                                    <!-- Header Banner -->
-                                    <div class="gstr-header d-flex justify-content-between align-items-center px-3 py-2">
-                                    <h5 class="mb-0 text-white fw-bold">GSTR-1 - Details of outward supplies of goods or services</h5>
-                                    <div class="d-flex gap-2">
-                                        <button class="btn btn-sm btn-primary">E-INVOICE ADVISORY</button>
-                                        <button class="btn btn-sm btn-primary">
-                                            HELP <i class="fas fa-question-circle ms-1"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-primary">
-                                            <i class="fas fa-sync-alt"></i>
-                                        </button>
-                                    </div>
-                                    </div>
+            <div class="col-md-10 col-sm-12 px-4">
+                <div class="container-fluid">
+                                <ul class="nav nav-fill nav-tabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link active" id="fill-tab-0" data-bs-toggle="tab" href="#fill-tabpanel-0" role="tab" aria-controls="fill-tabpanel-0" aria-selected="true"> GSTR-1 BOOK</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link" id="fill-tab-1" data-bs-toggle="tab" href="#fill-tabpanel-1" role="tab" aria-controls="fill-tabpanel-1" aria-selected="false">GSTR-1 PORTAL</a>
+                            </li>
+                              <li class="nav-item" role="presentation">
+                                <a class="nav-link" id="fill-tab-2" data-bs-toggle="tab" href="#fill-tabpanel-2" role="tab" aria-controls="fill-tabpanel-2" aria-selected="false">GSTR-1 FILING</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link" id="fill-tab-3" data-bs-toggle="tab" href="#fill-tabpanel-3" role="tab" aria-controls="fill-tabpanel-2" aria-selected="false">RECONCILIATION</a>
+                            </li>
+                          
+                            </ul>
+                           <!-- Header section -->
+                    <div class="container mt-4">
+                        <div class="tab-content mt-4">
+                                    <div class="tab-pane active" id="fill-tabpanel-0" role="tabpanel" aria-labelledby="fill-tab-0">
+                                            <div class="card mb-3 shadow-sm border-0">
+                                                <div class="card-body p-0">
+                                                    <!-- Header Banner -->
+                                                    <div class="gstr-header d-flex justify-content-between align-items-center px-3 py-2">
+                                                    <h5 class="mb-0 text-white fw-bold">GSTR-1 - Details of outward supplies of goods or services</h5>
+                                                    <div class="d-flex gap-2">
+                                                        <button class="btn btn-sm btn-primary">E-INVOICE ADVISORY</button>
+                                                        <button class="btn btn-sm btn-primary">
+                                                            HELP <i class="fas fa-question-circle ms-1"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-primary">
+                                                            <i class="fas fa-sync-alt"></i>
+                                                        </button>
+                                                    </div>
+                                                    </div>
 
                                     <!-- White Info Row -->
                                     <div class="bg-white px-3 py-3">
@@ -232,10 +247,7 @@
                             </div>
 
                   <!-- Toggle buttons -->
-                            <div class="view-toggle mt-3">
-                                <button class="toggle-btn active" data-view="view1">GSTR-1</button>
-                                <button class="toggle-btn" data-view="view2">GSTR-1 Reco.</button>
-                            </div>
+                         
 
                   <!-- File Nil GSTR-1 -->
                                 <div class="bg-white py-2 px-3 border mb-3">
@@ -272,46 +284,62 @@
                                                     @endforeach
                                                 </div>
                             </div>
+                            </div>
 
-                  <!-- Second view (Summary) -->
-                                    <div id="view2" class="view-content" style="height:100vh;">
-                                        <!-- Section Header -->
-                                        <div class="bg-primary text-white px-3 py-2 fw-bold rounded-top">
-                                            GSTR-1 Books Reconciliation With GSTR-1 Portal
-                                        </div>
-                                        
-                                        <!-- Summary content will go here -->
-                                        <div class="row bg-white py-3 px-2 rounded-bottom justify-content-center">
-                                        
-                                        </div>
-                                    </div>
-               </div>
+                                    <!-- second view -->
+                                    <div class="tab-pane" id="fill-tabpanel-1" role="tabpanel" aria-labelledby="fill-tab-1">
+                                                                    <div id="view2" class="view-content" style="height:100vh;">
+                                                                        <!-- Section Header -->
+                                                                        <div class="bg-primary text-white px-3 py-2 fw-bold rounded-top">
+                                                                            GSTR-1  Portal
+                                                                        </div>
+                                                                        
+                                                                        <!-- Summary content will go here -->
+                                                                        <div class="row bg-white py-3 px-2 rounded-bottom justify-content-center">
+                                                                        
+                                                                        </div>
+                                                                    </div>
+                                                                    </div>
+<!-- view third -->
+                                                                    <div class="tab-pane" id="fill-tabpanel-2" role="tabpanel" aria-labelledby="fill-tab-2">
+                                                                    <div id="view2" class="view-content" style="height:100vh;">
+                                                                        <!-- Section Header -->
+                                                                        <div class="bg-primary text-white px-3 py-2 fw-bold rounded-top">
+                                                                            GSTR-1  Filing
+                                                                        </div>
+                                                                        
+                                                                        <!-- Summary content will go here -->
+                                                                        <div class="row bg-white py-3 px-2 rounded-bottom justify-content-center">
+                                                                        
+                                                                        </div>
+                                                                    </div>
+                                                                    </div>
+
+
+
+                            <!-- third view  view (Summary) -->
+                                <div class="tab-pane" id="fill-tabpanel-3" role="tabpanel" aria-labelledby="fill-tab-3">
+                                                <div id="view2" class="view-content" style="height:100vh;">
+                                                    <!-- Section Header -->
+                                                    <div class="bg-primary text-white px-3 py-2 fw-bold rounded-top">
+                                                        GSTR-1 Books Reconciliation With GSTR-1 Portal
+                                                    </div>
+                                                    
+                                                    <!-- Summary content will go here -->
+                                                    <div class="row bg-white py-3 px-2 rounded-bottom justify-content-center">
+                                                    
+                                                    </div>
+                                                </div>
+                                                </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-         </div>
-      </div>
-   </section>
+        </div>
+    </section>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const toggleButtons = document.querySelectorAll('.toggle-btn');
-    
-    toggleButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            // Remove active class from all buttons and views
-            toggleButtons.forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.view-content').forEach(view => {
-                view.classList.remove('active');
-            });
-            
-            // Add active class to clicked button
-            this.classList.add('active');
-            
-            // Show corresponding view
-            const viewId = this.getAttribute('data-view');
-            document.getElementById(viewId).classList.add('active');
-        });
-    });
-});
+
 </script>
 @endsection

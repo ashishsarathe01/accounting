@@ -48,6 +48,7 @@ use App\Http\Controllers\gstReturn\gstR1Controller;
 use App\Http\Controllers\gstReturn\GstDetailController;
 use App\Http\Controllers\gstReturn\GSTR2BController;
 use App\Http\Controllers\gstReturn\GSTR2AController;
+use App\Http\Controllers\gstReturn\GSTR3BController;
 
 /*
 |--------------------------------------------------------------------------
@@ -341,6 +342,6 @@ Route::Resource('payment', PaymentController::class);
  Route::get('/report/hsn', [gstR1Controller::class, 'hsnSummary'])->name('hsnSummary');
  Route::get('/document-summary', [gstR1Controller::class, 'documentIssuedSummary'])->name('docIssued');
  Route::get('/gstr1/view', [GstR1Controller::class, 'showView'])->name('gstr1.view');
-
+ Route::get('/gstr3b/view', [GstR3BController::class, 'index'])->name('gstr3B.view');
  Route::get('/settings', [SettingsController::class, 'index'])->name('viewSettings');
 });

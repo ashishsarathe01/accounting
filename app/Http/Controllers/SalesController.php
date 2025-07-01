@@ -1010,7 +1010,8 @@ class SalesController extends Controller
       // print_r($request->all());die;
       $account = Accounts::where('id',$request->input('party'))->first();
       $financial_year = Session::get('default_fy');      
-      $sale = Sales::find($request->input('sale_edit_id'));      
+      $sale = Sales::find($request->input('sale_edit_id')); 
+      $last_date = $sale->date;     
       //If Same Series Edit
       $sale->series_no = $request->input('series_no');
       $sale->date = $request->input('date');
@@ -1161,7 +1162,8 @@ class SalesController extends Controller
             $average_detail->company_id = Session::get('user_company_id');
             $average_detail->created_at = Carbon::now();
             $average_detail->save();
-            CommonHelper::RewriteItemAverageByItem($request->date,$key,$request->input('series_no'));               
+             $lower_date = (strtotime($last_date) < strtotime($request->date)) ? $last_date : $request->date;
+            CommonHelper::RewriteItemAverageByItem($lower_date,$key,$request->input('series_no'));               
          }
          foreach ($desc_item_arr as $key => $value) {
             if(!array_key_exists($value, $sale_item_array)){

@@ -751,6 +751,7 @@ class StockTransferController extends Controller
             'amount' => 'required',
         ]);
         $stock_transfer = StockTransfer::find($id);
+        $last_date =  $stock_transfer->transfer_date;
         $stock_transfer->transfer_date = $request->input('date');
         $stock_transfer->vehicle_no = $request->input('vehicle_no');
         $stock_transfer->transport_id = $request->input('transport_id');
@@ -905,7 +906,8 @@ class StockTransferController extends Controller
                 $average_detail->company_id = Session::get('user_company_id');
                 $average_detail->created_at = Carbon::now();
                 $average_detail->save();
-                CommonHelper::RewriteItemAverageByItem($request->date,$key);
+                 $lower_date = (strtotime($last_date) < strtotime($request->date)) ? $last_date : $request->date;
+                CommonHelper::RewriteItemAverageByItem($$lower_date,$key);
             }
             //Add Add Data In Average Details table
             foreach ($item_average_arr as $key => $value) {
@@ -936,7 +938,8 @@ class StockTransferController extends Controller
                 $average_detail->company_id = Session::get('user_company_id');
                 $average_detail->created_at = Carbon::now();
                 $average_detail->save();
-                CommonHelper::RewriteItemAverageByItem($request->date,$value['item']);
+                 $lower_date = (strtotime($last_date) < strtotime($request->date)) ? $last_date : $request->date;
+                CommonHelper::RewriteItemAverageByItem($lower_date,$value['item']);
             }
             foreach ($desc_item_arr as $key => $value) {
                 if(!array_key_exists($value, $sale_item_array)){

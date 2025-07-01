@@ -11,12 +11,28 @@
          <div class="col-md-12 ml-sm-auto  col-lg-10 px-md-4 bg-mint">           
             <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
                <h5 class="master-table-title m-0 py-2">Items Ledger</h5> 
+                  <div class="d-flex align-items-center gap-2">
+       
+      
+    </div>
                <form class="" id="frm" method="GET" action="{{ route('item-ledger-average') }}">
                   @csrf
                   <div class="d-xxl-flex d-block  align-items-center">
-                     <p class="text-nowrap m-0 font-14 fw-500 font-heading my-2 my-xxl-0">Items </p>
-                     <input type="hidden" name="series" value="<?php if(isset($_GET['series'])){ echo $_GET['series'];}else{ echo 'all';}?>">
-                     <select class="form-select select2-single w-min-230 ms-xxl-2" aria-label="Default select example" id="items_id" name="items_id" required>
+                     <!-- Series Dropdown -->
+<p class="text-nowrap m-0 font-14 fw-semibold font-heading">Series:</p>
+<select class="form-select select2-single w-min-230 ms-xxl-2 w-25" aria-label="Select Series" id="series" name="series" required>
+    <option value="">Select Series</option>
+    @foreach($series as $value)
+        <option 
+            value="{{ $value->series }}" 
+            {{ ($selected_series == $value->series) ? 'selected' : '' }}>
+            {{ $value->series }}
+        </option>
+    @endforeach
+</select>
+                     <p class="text-nowrap font-14 fw-500 font-heading my-2 my-xxl-0" style="margin-left:10px;">Items </p>
+                     
+                     <select class="form-select select2-single w-min-200 ms-xxl-2 w-25" aria-label="Default select example" id="items_id" name="items_id" required>
                         <option value="">Select</option>
                         <?php
                         foreach($item_list as $value){
@@ -106,12 +122,13 @@
          <div class="modal-body text-center p-0">
             <table class="table table-striped table-bordered table-sm m-0 shadow-sm">
                <thead>
-                  <tr class=" font-12 text-body bg-light-pink">
-                     <th class="w-min-120 border-none bg-light-pink text-body">Type</th>
-                     <th class="w-min-120 border-none bg-light-pink text-body">Invoice No.</th>
-                     <th class="w-min-120 border-none bg-light-pink text-body">Account Name</th>
-                     <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Quantity</th>
-                     <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Amount</th>
+                  <tr class=" font-12 text-body bg-light-pink">                        
+                     <th class="w-min-120 border-none bg-light-pink text-body">Date </th>
+                     <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Party</th>
+                     <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Invoice No.</th>
+                     <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Purchase Quantity</th>
+                     <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Purchase Amount</th>
+                     <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Sale Quantity</th>      
                   </tr>
                </thead>
                <tbody>

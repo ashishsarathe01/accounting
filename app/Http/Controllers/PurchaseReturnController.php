@@ -1596,8 +1596,9 @@ class PurchaseReturnController extends Controller
                   $average_detail->purchase_total_amount = $average_amount;
                   $average_detail->company_id = Session::get('user_company_id');
                   $average_detail->created_at = Carbon::now();
-                  $average_detail->save();
-                  CommonHelper::RewriteItemAverageByItem($request->date,$value['item'],$request->input('series_no'));                  
+                  $average_detail->save(); 
+                  $lower_date = (strtotime($last_date) < strtotime($request->date)) ? $last_date : $request->date;
+                  CommonHelper::RewriteItemAverageByItem($lower_date,$value['item'],$request->input('series_no'));                  
                }
             }            
             //ADD DATA IN Customer ACCOUNT

@@ -1677,7 +1677,8 @@ class SalesReturnController extends Controller
                   $average_detail->company_id = Session::get('user_company_id');
                   $average_detail->created_at = Carbon::now();
                   $average_detail->save();
-                  CommonHelper::RewriteItemAverageByItem($request->date,$key,$request->input('series_no'));               
+                   $lower_date = (strtotime($last_date) < strtotime($request->date)) ? $last_date : $request->date;
+                  CommonHelper::RewriteItemAverageByItem($lower_date,$key,$request->input('series_no'));               
                }
             }
            

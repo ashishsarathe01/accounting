@@ -223,7 +223,7 @@ class CommonHelper
         //Purchase
         $tot_purchase_amt = DB::table('purchases')
                             ->join('purchase_descriptions','purchases.id','=','purchase_descriptions.purchase_id')
-                            ->where(['purchases.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
+                            ->where(['purchases.delete' => '0', 'purchases.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
                             ->whereBetween('date', [$from_date, $to_date])
                             ->get()
                             ->sum("amount");

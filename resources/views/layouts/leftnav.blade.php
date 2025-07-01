@@ -375,7 +375,7 @@
                                                       <a href="{{ route('gst2b') }}" class="text-blue">GSTR-2B</a>
                                                    </li>
                                                    <li class="py-1" style="">
-                                                      <a href="javascript:void(0)" class="text-blue">GSTR-3B</a>
+                                                      <a href="{{ route('gstr3B.view') }}" class="text-blue">GSTR-3B</a>
                                                    </li>
                                                    <li class="py-1" style="">
                                                       <a href="javascript:void(0)" class="text-blue">GSTR-9</a>

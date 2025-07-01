@@ -439,54 +439,59 @@ class ItemLedgerController extends Controller
       $selected_series = $request->series;
       return view('item_ledger_average')->with('item_list', $item_list)->with('fdate', $fdate)->with('tdate',$tdate)->with('item_id', $item_id)->with('opening_amount', $opening_amount)->with('opening_weight', $opening_weight)->with('average_data', $average_data)->with('selected_series', $selected_series)->with('series', $series);
    }
+
+
+
    public function itemAverageDetails(Request $request){
-      // $average_detail = ItemAverageDetail::where('item_id',$request->items_id)
-                  
-      //                ->where('entry_date',$request->date)
-      //                ->where('series_no',$request->series)                     
-      //                ->get();
-      $average_detail = ItemAverageDetail::where('item_average_details.item_id', $request->items_id)
-                                          ->where('item_average_details.entry_date', $request->date)
-                                          ->where('item_average_details.series_no', $request->series)
-                                             // Join with Sales
-                                          ->leftJoin('sales', 'item_average_details.sale_id', '=', 'sales.id')
-                                          ->leftJoin('accounts as sales_account', 'sales.party', '=', 'sales_account.id')
-                                             // Join with Purchases
-                                          ->leftJoin('purchases', 'item_average_details.purchase_id', '=', 'purchases.id')
-                                          ->leftJoin('accounts as purchase_account', 'purchases.party', '=', 'purchase_account.id')
-                                             // Join with Sales Returns
-                                          ->leftJoin('sales_returns', 'item_average_details.sale_return_id', '=', 'sales_returns.id')
-                                          ->leftJoin('accounts as sr_account', 'sales_returns.party', '=', 'sr_account.id')
-                                             // Join with Purchase Returns
-                                          ->leftJoin('purchase_returns', 'item_average_details.purchase_return_id', '=', 'purchase_returns.id')
-                                          ->leftJoin('accounts as pr_account', 'purchase_returns.party', '=', 'pr_account.id')
-                                             // Join with Stock Transfers (out)
-                                          ->leftJoin('stock_transfers as st_out', 'item_average_details.stock_transfer_id', '=', 'st_out.id')
-                                             // Join with Stock Transfers (in)
-                                          ->leftJoin('stock_transfers as st_in', 'item_average_details.stock_transfer_in_id', '=', 'st_in.id')
-                                             // Select all fields
-                                          ->select(
-                                             'item_average_details.*',
-                                             'sales.voucher_no_prefix as sale_voucher',
-                                             'sales_account.account_name as sale_account',
+     $average_detail = ItemAverageDetail::where('item_average_details.item_id', $request->items_id)
+    ->where('item_average_details.entry_date', $request->date)
+    ->where('item_average_details.series_no', $request->series)
 
-                                             'purchases.voucher_no as purchase_voucher',
-                                             'purchase_account.account_name as purchase_account',
+    // Join with Sales
+    ->leftJoin('sales', 'item_average_details.sale_id', '=', 'sales.id')
+    ->leftJoin('accounts as sales_account', 'sales.party', '=', 'sales_account.id')
 
-                                             'sales_returns.sr_prefix as sr_voucher',
-                                             'sr_account.account_name as sr_account',
+    // Join with Purchases
+    ->leftJoin('purchases', 'item_average_details.purchase_id', '=', 'purchases.id')
+    ->leftJoin('accounts as purchase_account', 'purchases.party', '=', 'purchase_account.id')
 
-                                             'purchase_returns.sr_prefix as pr_voucher',
-                                             'pr_account.account_name as pr_account',
+    // Join with Sales Returns
+    ->leftJoin('sales_returns', 'item_average_details.sale_return_id', '=', 'sales_returns.id')
+    ->leftJoin('accounts as sr_account', 'sales_returns.party', '=', 'sr_account.id')
 
-                                             'st_out.voucher_no_prefix as st_out_voucher',
-                                             'st_out.material_center_from as st_ot_account',
+    // Join with Purchase Returns
+    ->leftJoin('purchase_returns', 'item_average_details.purchase_return_id', '=', 'purchase_returns.id')
+    ->leftJoin('accounts as pr_account', 'purchase_returns.party', '=', 'pr_account.id')
 
-                                             'st_in.voucher_no_prefix as st_in_voucher',
-                                             'st_in.material_center_to as st_in_account'
-                                             
-                                          )
-                                          ->get();
+    // Join with Stock Transfers (Note: Use alias to avoid duplicate table)
+    ->leftJoin('share_transfers as st_out', 'item_average_details.stock_transfer_id', '=', 'st_out.id')
+    ->leftJoin('share_transfers as st_in', 'item_average_details.stock_transfer_in_id', '=', 'st_in.id')
+
+    // Select all fields
+    ->select(
+        'item_average_details.*',
+        'sales.voucher_no_prefix as sale_voucher',
+        'sales_account.account_name as sale_account',
+
+        'purchases.voucher_no_prefix as purchase_voucher',
+        'purchase_account.account_name as purchase_account',
+
+        'sales_returns.sr_prefix as sr_voucher',
+        'sr_account.account_name as sr_account',
+
+        'purchase_returns.sr_prefix as pr_voucher',
+        'pr_account.account_name as pr_account',
+
+        'st_out.voucher_no_prefix as st_out_voucher',
+        'st_out.material_center_to as st_ot_account',
+
+        'st_in.material_center_from as st_in_account',
+        'st_in.voucher_no_prefix as st_in_voucher'
+    )
+
+    ->get();
+
+    
       $opening_amount = 0;$opening_weight = 0;
       $average_opening = ItemAverage::where('item_id',$request->items_id)
                      ->where('stock_date','<',$request->date)

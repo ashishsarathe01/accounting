@@ -93,6 +93,7 @@
                   <div class="mb-3 col-md-3">
                      <label for="name" class="form-label font-14 font-heading">Voucher No. *</label>
                      <input type="text" class="form-control" name="voucher_no" placeholder="Enter Invoice No.">
+                      <input type="hidden" class="form-control" id="merchant_gst" name="merchant_gst">
                      <ul style="color: red;">
                        @error('voucher_no'){{$message}}@enderror                        
                      </ul> 
@@ -1639,6 +1640,7 @@ $( ".select2-single, .select2-multiple" ).select2();
       let series = $(this).val();      
       $("#material_center").val($('option:selected', this).attr('data-mat_center'));
       merchant_gstin = $('option:selected', this).attr('data-gst_no');
+       $("#merchant_gst").val(merchant_gstin);
       if($("#party_id").val()!=""){
          if($('#party_id option:selected').attr('data-state_code')==merchant_gstin.substring(0,2)){  
             $("#purchase_type").val('LOCAL');
@@ -1649,6 +1651,8 @@ $( ".select2-single, .select2-multiple" ).select2();
       calculateAmount();
           
    });
+   
+     
    $(".transport_info").click(function(){
       $("#transport_info_modal").modal('toggle');
    });

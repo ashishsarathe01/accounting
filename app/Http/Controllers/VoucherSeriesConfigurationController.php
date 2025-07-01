@@ -82,6 +82,9 @@ class VoucherSeriesConfigurationController extends Controller
             return $this->failedMessage('Something went wrong','voucher-series-configuration');
         }
     }
+
+
+    
     public function seriesConfigurationBySeries(Request $request)
     {  
         $series = $request->series;

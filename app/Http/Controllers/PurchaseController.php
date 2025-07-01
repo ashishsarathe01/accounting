@@ -237,6 +237,7 @@ class PurchaseController extends Controller{
       $purchase->billing_address = $account->address;
       $purchase->billing_pincode = $account->pin_code;
       $purchase->billing_gst = $account->gstin;
+      $purchase->merchant_gst =  $request->input('merchant_gst');
       $purchase->billing_state = $account->state;
       $purchase->shipping_name = $request->input('shipping_name');
       $purchase->shipping_state = $request->input('shipping_state');
@@ -989,7 +990,8 @@ class PurchaseController extends Controller{
             $average_detail->company_id = Session::get('user_company_id');
             $average_detail->created_at = Carbon::now();
             $average_detail->save();
-            CommonHelper::RewriteItemAverageByItem($last_date,$value['item'],$request->input('series_no'));
+            $lower_date = (strtotime($last_date) < strtotime($request->date)) ? $last_date : $request->date;
+            CommonHelper::RewriteItemAverageByItem($lower_date,$value['item'],$request->input('series_no'));
 
          }
          foreach ($desc_item_arr as $key => $value) {
@@ -1208,6 +1210,8 @@ class PurchaseController extends Controller{
                            if(!$bill_sundry){
                               array_push($error_arr, 'Bill Sundry '.$value.' not found - Invoice No. '.$voucher_no);
                            }
+
+
                         }
                         
                      }                     
@@ -1416,6 +1420,7 @@ class PurchaseController extends Controller{
                         $sundry->bill_sundry = $bill_sundrys->id;
                         $sundry->rate = $tx_rate/2;
                         $sundry->amount = str_replace(",","",$cgst_rate);
+                        $sundry->company_id = Session::get('user_company_id');
                         $sundry->status = '1';
                         $sundry->save();
                         //ADD DATA IN CGST ACCOUNT     
@@ -1473,6 +1478,7 @@ class PurchaseController extends Controller{
                         $sundry->bill_sundry = $bill_sundrys->id;
                         $sundry->rate = $tx_rate;
                         $sundry->amount = str_replace(",","",$igst_rate);
+                        $sundry->company_id = Session::get('user_company_id');
                         $sundry->status = '1';
                         $sundry->save();
                         //ADD DATA IN CGST ACCOUNT     
@@ -1509,6 +1515,7 @@ class PurchaseController extends Controller{
                          $desc = new PurchaseDescription;
                          $desc->purchase_id = $purchase->id;
                          $desc->goods_discription = $item->id;
+                         $desc->company_id = Session::get('user_company_id');
                          $desc->qty = $v1['item_weight'];
                          $desc->unit = $item->uid;
                          $desc->price = $v1['price'];
