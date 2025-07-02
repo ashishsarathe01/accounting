@@ -261,6 +261,7 @@ class PurchaseController extends Controller{
             }
             $desc = new PurchaseDescription;
             $desc->purchase_id = $purchase->id;
+            $desc->company_id = Session::get('user_company_id');
             $desc->goods_discription = $good;
             $desc->qty = $qtys[$key];
             $desc->unit = $units[$key];
@@ -344,6 +345,7 @@ class PurchaseController extends Controller{
             $sundry->bill_sundry = $bill;
             $sundry->rate = $tax_amts[$key];
             $sundry->amount = $bill_sundry_amounts[$key];
+            $sundry->company_id = Session::get('user_company_id');
             $sundry->status = '1';
             $sundry->save();
             //ADD DATA IN CGST ACCOUNT
@@ -598,13 +600,13 @@ class PurchaseController extends Controller{
             ->join('manage_items', 'purchase_descriptions.goods_discription', '=', 'manage_items.id')
             ->join('accounts', 'accounts.id', '=', 'purchases.party')
             ->get();
-      $sale_detail = purchase::join('states','purchases.billing_state','=','states.id')
+      $sale_detail = purchase::leftjoin('states','purchases.billing_state','=','states.id')
                            ->leftjoin('accounts','purchases.shipping_name','=','accounts.id')
                            ->where('purchases.id', $id)
                            ->select(['purchases.*','states.name as sname','accounts.account_name as shipp_name'])
                            ->first();
-      // echo "<pre>";
-      // print_r($sale_detail);die;
+    //   echo "<pre>";
+    //   print_r($sale_detail);die;
       $party_detail = Accounts::join('states','accounts.state','=','states.id')
                                  ->where('accounts.id',$sale_detail->party)
                                  ->select(['accounts.*','states.name as sname'])
@@ -679,7 +681,18 @@ class PurchaseController extends Controller{
             $gst_detail[$key]->taxable_amount = $taxable_amount;
          }
       }
-      return view('purchaseInvoice')->with(['items_detail' => $items_detail, 'sale_sundry' => $sale_sundry, 'party_detail' => $party_detail, 'company_data' => $company_data, 'sale_detail' => $sale_detail,'gst_detail'=>$gst_detail]);
+       Session::put('redirect_url', '');
+    
+        // Financial year processing
+        $financial_year = Session::get('default_fy');      
+        $y = explode("-", $financial_year);
+        $from = DateTime::createFromFormat('y', $y[0])->format('Y');
+        $to = DateTime::createFromFormat('y', $y[1])->format('Y');
+        $month_arr = [
+            $from.'-04', $from.'-05', $from.'-06', $from.'-07', $from.'-08', $from.'-09',
+            $from.'-10', $from.'-11', $from.'-12', $to.'-01', $to.'-02', $to.'-03'
+        ];
+      return view('purchaseInvoice')->with(['items_detail' => $items_detail, 'sale_sundry' => $sale_sundry, 'party_detail' => $party_detail,'month_arr' => $month_arr, 'company_data' => $company_data, 'sale_detail' => $sale_detail,'gst_detail'=>$gst_detail]);
    }
    public function delete(Request $request){
       Gate::authorize('action-module',58);
@@ -868,6 +881,7 @@ class PurchaseController extends Controller{
 
             $desc = new PurchaseDescription;
             $desc->purchase_id = $purchase->id;
+            $desc->company_id = Session::get('user_company_id');
             $desc->goods_discription = $good;
             $desc->qty = $qtys[$key];
             $desc->unit = $units[$key];
@@ -905,6 +919,7 @@ class PurchaseController extends Controller{
             $sundry->bill_sundry = $bill;
             $sundry->rate = $tax_amts[$key];
             $sundry->amount = $bill_sundry_amounts[$key];
+            $sundry->company_id = Session::get('user_company_id');
             $sundry->status = '1';
             $sundry->save();
             //ADD DATA IN CGST ACCOUNT
@@ -1031,7 +1046,7 @@ class PurchaseController extends Controller{
          if(!empty(Session::get('redirect_url'))){
             return redirect(Session::get('redirect_url'));
          }else{
-            session(['previous_url_purchaseEdit' => URL::previous()]);
+             session(['previous_url_purchaseEdit' => URL::previous()]);
             return redirect('purchase')->withSuccess('Purchase voucher updated successfully!');
          }      
          
@@ -1042,7 +1057,8 @@ class PurchaseController extends Controller{
    public function purchaseImportView(Request $request){      
       return view('purchase_import');
    }
-   public function purchaseImportProcess(Request $request) {       
+   public function purchaseImportProcess(Request $request) {    
+       ini_set('max_execution_time', 600);
       $validator = Validator::make($request->all(), [
          'csv_file' => 'required|file|mimes:csv,txt|max:2048', // Max 2MB, CSV or TXT file
       ]); 
@@ -1069,6 +1085,7 @@ class PurchaseController extends Controller{
             $index = 1;
             $series_no = "";
             while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+                $data = array_map('trim', $data);
                if($data[0]!="" && $data[2]!=""){
                   $series_no = $data[0];
                   $voucher_no = $data[2]; 
@@ -1147,6 +1164,7 @@ class PurchaseController extends Controller{
          $success_row = 0;
          $index = 1;
          while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+             $data = array_map('trim', $data);
             if($data[0]!="" && $data[2]!=""){
                if($series_no!=""){
                   array_push($data_arr,array("series_no"=>$series_no,"date"=>$date,"voucher_no"=>$voucher_no,"party"=>$party,"material_center"=>$material_center,"grand_total"=>$grand_total,"self_vehicle"=>$self_vehicle,"vehicle_no"=>$vehicle_no,"transport_name"=>$transport_name,"reverse_charge"=>$reverse_charge,"gr_pr_no"=>$gr_pr_no,"station"=>$station,"ewaybill_no"=>$ewaybill_no,"shipping_name"=>$shipping_name,"item_arr"=>$item_arr,"slicedData"=>$slicedData,"error_arr"=>$error_arr));
@@ -1210,8 +1228,6 @@ class PurchaseController extends Controller{
                            if(!$bill_sundry){
                               array_push($error_arr, 'Bill Sundry '.$value.' not found - Invoice No. '.$voucher_no);
                            }
-
-
                         }
                         
                      }                     
@@ -1449,6 +1465,7 @@ class PurchaseController extends Controller{
                         $sundry->bill_sundry = $bill_sundrys->id;
                         $sundry->rate = $tx_rate/2;
                         $sundry->amount = str_replace(",","",$sgst_rate);
+                        $sundry->company_id = Session::get('user_company_id');
                         $sundry->status = '1';
                         $sundry->save();
                         //ADD DATA IN CGST ACCOUNT     
@@ -1514,8 +1531,8 @@ class PurchaseController extends Controller{
                          // Save item in purchase description
                          $desc = new PurchaseDescription;
                          $desc->purchase_id = $purchase->id;
-                         $desc->goods_discription = $item->id;
                          $desc->company_id = Session::get('user_company_id');
+                         $desc->goods_discription = $item->id;
                          $desc->qty = $v1['item_weight'];
                          $desc->unit = $item->uid;
                          $desc->price = $v1['price'];
@@ -1674,6 +1691,7 @@ class PurchaseController extends Controller{
                            $sundry->bill_sundry = $sundry_id   ;
                            $sundry->rate = 0;
                            $sundry->amount = str_replace(",","",$v2);
+                           $sundry->company_id = Session::get('user_company_id');
                            $sundry->status = '1';
                            $sundry->save();
                            //ADD DATA IN CGST ACCOUNT     

@@ -350,4 +350,62 @@ class GSTR2AController extends Controller
             
         }
     }
+    public function gstr2aAllInfo(Request $request){
+        $account = Accounts::select('account_name')
+                            ->where('company_id',Session::get('user_company_id'))
+                            ->where('gstin',$request->ctin)
+                            ->first();
+        $account_name = "";
+        if($account){
+            $account_name = $account->account_name;
+        }
+        $b2b_invoices = "";$b2b_credit_note = "";$b2b_debit_note = "";$b2ba_invoices = "";$b2ba_credit_note = "";$b2ba_debit_note = "";
+        $gstr2a = GSTR2A::where('company_gstin',$request->gstin)
+                                ->where('company_id',Session::get('user_company_id'))
+                                ->where('res_month',$request->month)
+                                ->get();            
+        foreach($gstr2a as $key=>$value){                
+            if($value->res_type=="B2B" || $value->res_type=="B2BA"){
+                if($value->res_type=="B2B"){
+                    $res_type = "b2b";
+                }else if($value->res_type=="B2BA"){
+                    $res_type = "b2ba";
+                }
+                $b2b_data = json_decode($value->res_data);
+                foreach ($b2b_data->$res_type as $k => $b2b) {
+                    if($value->res_type=="B2B"){
+                        foreach ($b2b->inv as $k => $inv) {
+                            $iamt = 0;$camt = 0;$samt = 0;$csamt = 0;
+                            if(isset($inv->itms[0]->itm_det->iamt)){
+                                $iamt = $inv->itms[0]->itm_det->iamt;
+                            }
+                            if(isset($inv->itms[0]->itm_det->camt)){
+                                $camt = $inv->itms[0]->itm_det->camt;
+                            }
+                            if(isset($inv->itms[0]->itm_det->samt)){
+                                $samt = $inv->itms[0]->itm_det->samt;
+                            }
+                            if(isset($inv->itms[0]->itm_det->csamt)){
+                                $csamt = $inv->itms[0]->itm_det->csamt;
+                            }
+                            $b2b_invoices.="<tr><td>".$inv->inum."</td><td>".$inv->idt."</td><td>".$inv->val."</td><td></td><td>".$inv->itms[0]->itm_det->txval."</td><td>".$iamt."</td><td>".$camt."</td><td>".$samt."</td><td>".$csamt."</td></tr>";
+                        }
+                    }
+                    
+                }
+            }
+        }
+        return view('gstReturn.gstr2a_all_info',[
+            'account_name' => $account_name,
+            'ctin' => $request->ctin,
+            'month' => $request->month,
+            'gstin' => $request->gstin,
+            'b2b_invoices' => $b2b_invoices,
+            'b2b_credit_note' => $b2b_credit_note,
+            'b2b_debit_note' => $b2b_debit_note,
+            'b2ba_invoices' => $b2ba_invoices,
+            'b2ba_credit_note' => $b2ba_credit_note,
+            'b2ba_debit_note' => $b2ba_debit_note
+        ]);
+    }
 }

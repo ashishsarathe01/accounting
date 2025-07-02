@@ -1217,7 +1217,6 @@ class SalesController extends Controller
    }
    public function saleImportProcess(Request $request) { 
         ini_set('max_execution_time', 600);
-      
       $validator = Validator::make($request->all(), [
          'csv_file' => 'required|file|mimes:csv,txt|max:2048', // Max 2MB, CSV or TXT file
       ]); 
