@@ -294,12 +294,31 @@
                                                                             GSTR-1  Portal
                                                                         </div>
                                                                         
+
                                                                         <!-- Summary content will go here -->
-                                                                        <div class="row bg-white py-3 px-2 rounded-bottom justify-content-center">
-                                                                        
-                                                                        </div>
-                                                                    </div>
-                                                                    </div>
+                                                                       <table border="1" cellpadding="8" cellspacing="0">
+                                                                                        <thead>
+                                                                                            <tr>
+                                                                                                <th>GSTIN (CTIN)</th>
+                                                                                                <th>Total Invoice Value (₹)</th>
+                                                                                            </tr>
+                                                                                        </thead>
+                                                                                        <tbody>
+                                                                                            @forelse($invoiceSummaries as $summary)
+                                                                                                <tr>
+                                                                                                    <td>{{ $summary['ctin'] }}</td>
+                                                                                                    <td>{{ number_format($summary['total_value'], 2) }}</td>
+                                                                                                </tr>
+                                                                                            @empty
+                                                                                                <tr>
+                                                                                                    <td colspan="2">No invoice data found.</td>
+                                                                                                </tr>
+                                                                                            @endforelse
+                                                                                        </tbody>
+                                                                                    </table>
+                                                </div>
+    </div>
+
 <!-- view third -->
                                                                     <div class="tab-pane" id="fill-tabpanel-2" role="tabpanel" aria-labelledby="fill-tab-2">
                                                                     <div id="view2" class="view-content" style="height:100vh;">

@@ -10,9 +10,11 @@ use DateTime;
 use App\Models\BillSundrys;
 use App\Models\SaleSundry;
 use App\Models\State;
+use App\Models\Accounts;
 use App\Helpers\CommonHelper;
 use App\Models\GstBranch;
 use App\Models\Companies;
+use App\Models\gstToken;
 
 
 
@@ -328,6 +330,123 @@ if ($b2cNormalStateSaleIds->isNotEmpty()) {
 }
 
 
+
+$from = \DateTime::createFromFormat('Y-m-d', $from_date);
+$month = $from->format('mY'); // MMYYYY => 042025
+
+$gst_user_name = 'KRAFTPAPER1991';
+$state_code = substr(trim($request->series), 0, 2); // e.g., "07"
+$gst_token = gstToken::select('txn','created_at')
+                                ->where('company_gstin',$request->series)
+                                ->where('company_id',Session::get('user_company_id'))
+                                ->where('status',1)
+                                ->orderBy('id','desc')
+                                ->first();
+            if($gst_token){
+                $token_expiry = date('d-m-Y H:i:s',strtotime('+6 hour',strtotime($gst_token->created_at)));
+                $current_time = date('d-m-Y H:i:s');
+                if(strtotime($token_expiry)<strtotime($current_time)){
+                    $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
+                    if($token_res==0){
+                        $response = array(
+                            'status' => false,
+                            'message' => 'Something Went Wrong In Token Generation'
+                        );
+                        return json_encode($response);
+                    }
+                    $response = array(
+                        'status' => true,
+                        'message' => 'TOKEN-OTP'
+                    );
+                    return json_encode($response);
+                }
+                $txn = $gst_token->txn;
+            }else{
+                $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
+                if($token_res==0){
+                        $response = array(
+                            'status' => false,
+                            'message' => 'Something Went Wrong In Token Generation'
+                        );
+                        return json_encode($response);
+                    }
+                $response = array(
+                        'status' => true,
+                        'message' => 'TOKEN-OTP'
+                );
+                return json_encode($response);
+            }       
+
+$email = 'pram92500@gmail.com'; // ✅ Registered MasterGST email
+
+$curl = curl_init();
+curl_setopt_array($curl, [
+    CURLOPT_URL => 'https://api.mastergst.com/gstr1/b2b?' . http_build_query([
+        'email'     => $email,
+        'gstin'     => $request->series,
+        'retperiod' => $month,
+        // 'smrytyp' => 'L' // Optional for long summary
+    ]),
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_ENCODING       => '',
+    CURLOPT_MAXREDIRS      => 10,
+    CURLOPT_TIMEOUT        => 0,
+    CURLOPT_FOLLOWLOCATION => true,
+    CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
+    CURLOPT_CUSTOMREQUEST  => 'GET',
+    CURLOPT_HTTPHEADER     => [
+        'Accept: application/json',
+        'gst_username: ' . $gst_user_name,
+        'state_cd: ' . $state_code,
+        'ip_address: 152.59.25.138', // Use your public server IP
+        'txn: ' . $txn,
+        'client_id: GSPdea8d6fb-aed1-431a-b589-f1c541424580',
+        'client_secret: GSP4c44b790-ef11-4725-81d9-5f8504279d67'
+    ],
+]);
+
+$response = curl_exec($curl);
+curl_close($curl);
+$result = json_decode($response, true); // Convert to array
+
+
+
+// Debug response
+if (isset($result['status_cd']) && $result['status_cd'] == 0) {
+    return response()->json(["status" => 0, "message" => $result['error']['message']]);
+}
+
+// Example: extract invoice summaries
+$invoiceSummaries = [];
+
+if (isset($result['data']['b2b']) && is_array($result['data']['b2b'])) {
+    foreach ($result['data']['b2b'] as $party) {
+        $accountName = Accounts::where('gstin', $party['ctin'])
+                                ->where('company_id',Session::get('user_company_id'))
+                                ->value('account_name');
+        $ctin = $accountName ?? 'NOT FOUND (' . $party['ctin'] . ')';
+
+        if (isset($party['inv']) && is_array($party['inv'])) {
+            $totalValue = 0;
+
+            foreach ($party['inv'] as $invoice) {
+                $totalValue += $invoice['val'] ?? 0;
+            }
+
+            $invoiceSummaries[] = [
+                'ctin' => $ctin,
+                'total_value' => $totalValue
+            ];
+        }
+    }
+}
+
+
+
+// Return data to Blade or frontend
+
+
+
     
         // Return result
         return view('gstReturn.gstR1', [
@@ -359,6 +478,7 @@ if ($b2cNormalStateSaleIds->isNotEmpty()) {
             'to_date' => $to_date,
             'fy' => $fy,
             'comp_details' => $comp_details,
+             'invoiceSummaries' => $invoiceSummaries,
 
             'b2c_statewise_taxable' => $b2cTaxableTotal,
 'b2c_statewise_cgst' => $b2cCGST,
@@ -3190,6 +3310,15 @@ $payments = DB::table('payments')
 
     return view('gstReturn.documentIssuedSummary', compact('SalesdocumentSummary','DebitNotedocumentSummary','CreditNotedocumentSummary','paymentsDocumentSummary','receiptsDocumentSummary', 'from_date', 'to_date','merchant_gst'));
 
+}
+
+Public function apiB2B(Request $request){
+
+    
+
+
+    
+    
 }
 
 
