@@ -215,8 +215,10 @@
 </body>
 @include('layouts.footer')
 <script>
+   var refresh = 0;
    $(document).ready(function(){
       $(".submit_btn").click(function(){
+         refresh = 0;
          let month = $("#month").val();
          let gstin = $("#gstin").val();
          getGstData(month,gstin);
@@ -260,7 +262,8 @@
          data : {
             _token : '{{ csrf_token() }}',
             month : month,
-            gstin : gstin
+            gstin : gstin,
+            refresh : refresh
          },
          success : function(res){
             if(res!=""){
@@ -273,7 +276,7 @@
                      alert("OTP Verified Successfully");
                      getGstData(month,gstin);
                   }else if(obj.message=="GSTR2A"){
-                     $(".gst_head").html('GSTR2A');
+                     $(".gst_head").html('GSTR2A - Last Created Date : '+obj.last_created_date+' - <button type="button" class="btn btn-xs-primary new_data_btn">Refresh</button>');
                      let html = "";let total_amount = 0;
                      for (let key in obj.data) {
                         let baseUrl = "{{ url('/gstr2a-all-info') }}";
@@ -300,5 +303,13 @@
          }
       });
    }
+   $(document).on('click','.new_data_btn',function(){
+      if(confirm("Do you want to refresh data?")==true){
+         let month = $("#month").val();
+         let gstin = $("#gstin").val();
+         refresh = 1;
+         getGstData(month,gstin);
+      }
+   });
 </script>
 @endsection

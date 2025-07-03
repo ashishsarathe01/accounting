@@ -89,11 +89,12 @@ class SalesController extends Controller
                 STR_TO_DATE(sales.date,'%Y-%m-%d') >= STR_TO_DATE('" . date('Y-m-d', strtotime($from_date)) . "','%Y-%m-%d')
                 AND STR_TO_DATE(sales.date,'%Y-%m-%d') <= STR_TO_DATE('" . date('Y-m-d', strtotime($to_date)) . "','%Y-%m-%d')
             ");
-            $query->orderBy(DB::raw("cast(voucher_no as SIGNED)"), 'ASC');
             $query->orderBy('sales.date','asc');
+            $query->orderBy(DB::raw("cast(voucher_no as SIGNED)"), 'ASC');
+            
         } else {
             // No date filter: show last 10 transactions
-           $query->orderBy('financial_year','desc')->orderBy(DB::raw("cast(voucher_no as SIGNED)"), 'desc')->limit(10);
+           $query->orderBy('financial_year','desc')->orderBy(DB::raw("cast(date as SIGNED)"), 'desc')->limit(10);
         }
     
         // Default ordering
@@ -849,6 +850,7 @@ class SalesController extends Controller
             }
             $gst_detail[$key]->rate = $rate;
             if($max_gst==$rate){
+
                $sun = SaleSundry::join('bill_sundrys','sale_sundries.bill_sundry','=','bill_sundrys.id')
                               ->select('amount','bill_sundry_type')
                               ->where('sale_id', $id)
@@ -859,6 +861,7 @@ class SalesController extends Controller
                      $taxable_amount = $taxable_amount + $v1->amount;
                   }else if($v1->bill_sundry_type=="subtractive"){
                      $taxable_amount = $taxable_amount - $v1->amount;
+
                   }
                }
                // $freight = SaleSundry::select('amount')
@@ -957,7 +960,7 @@ class SalesController extends Controller
             $from.'-04', $from.'-05', $from.'-06', $from.'-07', $from.'-08', $from.'-09',
             $from.'-10', $from.'-11', $from.'-12', $to.'-01', $to.'-02', $to.'-03'
         ];
-      return view('saleInvoice')->with(['items_detail' => $items_detail, 'sale_sundry' => $sale_sundry,'month_arr' => $month_arr, 'party_detail' => $party_detail, 'company_data' => $company_data, 'sale_detail' => $sale_detail,'bank_detail' => $bank_detail,'gst_detail'=>$gst_detail,'einvoice_status'=>$GstSettings->einvoice,'ewaybill_status'=>$GstSettings->ewaybill,'configuration'=>$configuration,'seller_info'=>$seller_info]);
+      return view('saleInvoice')->with(['items_detail' => $items_detail, 'sale_sundry' => $sale_sundry, 'party_detail' => $party_detail,'month_arr' => $month_arr, 'company_data' => $company_data, 'sale_detail' => $sale_detail,'bank_detail' => $bank_detail,'gst_detail'=>$gst_detail,'einvoice_status'=>$GstSettings->einvoice,'ewaybill_status'=>$GstSettings->ewaybill,'configuration'=>$configuration,'seller_info'=>$seller_info]);
    }
    public function delete(Request $request){
       Gate::authorize('action-module',62);
@@ -1010,8 +1013,8 @@ class SalesController extends Controller
       // print_r($request->all());die;
       $account = Accounts::where('id',$request->input('party'))->first();
       $financial_year = Session::get('default_fy');      
-      $sale = Sales::find($request->input('sale_edit_id')); 
-      $last_date = $sale->date;     
+      $sale = Sales::find($request->input('sale_edit_id'));
+      $last_date = $sale->date; 
       //If Same Series Edit
       $sale->series_no = $request->input('series_no');
       $sale->date = $request->input('date');
@@ -1167,7 +1170,7 @@ class SalesController extends Controller
          }
          foreach ($desc_item_arr as $key => $value) {
             if(!array_key_exists($value, $sale_item_array)){
-               CommonHelper::RewriteItemAverageByItem($request->date,$value,$request->input('series_no'));
+               CommonHelper::RewriteItemAverageByItem($last_date,$value,$request->input('series_no'));
             }
          }
          //ADD DATA IN Customer ACCOUNT
@@ -1217,6 +1220,7 @@ class SalesController extends Controller
    }
    public function saleImportProcess(Request $request) { 
         ini_set('max_execution_time', 600);
+      
       $validator = Validator::make($request->all(), [
          'csv_file' => 'required|file|mimes:csv,txt|max:2048', // Max 2MB, CSV or TXT file
       ]); 
@@ -2902,9 +2906,10 @@ class SalesController extends Controller
          );
          return json_encode($res);
       }
+      
       $curl = curl_init();
       curl_setopt_array($curl, array(
-         CURLOPT_URL => 'https://api.mastergst.com/ewaybillapi/v1.03/authenticate?email=pram92500@gmail.com&username='.$einvoice_username.'&password='.$einvoice_password,
+         CURLOPT_URL => 'https://api.mastergst.com/ewaybillapi/v1.03/authenticate?email=pram92500@gmail.com&username='.$einvoice_username.'&password='.decrypt($einvoice_password),
          CURLOPT_RETURNTRANSFER => true,
          CURLOPT_ENCODING => '',
          CURLOPT_MAXREDIRS => 10,
@@ -2920,7 +2925,8 @@ class SalesController extends Controller
             'Content-Type: application/json'
          ),
       ));
-      curl_exec($curl);
+      $ress = curl_exec($curl);
+      
       curl_close($curl);
       $ewaybill_data = json_decode($sale->eway_bill_response);
       $ewayBillNo = $ewaybill_data->ewayBillNo;
