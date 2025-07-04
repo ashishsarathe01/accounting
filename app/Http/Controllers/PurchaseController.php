@@ -1607,17 +1607,22 @@ class PurchaseController extends Controller{
                              // Odd index: Bill Sundry Amount
                              $bill_sundry_amounts[] = str_replace(",", "", $v2);
                          }
+                     }else{
+                        if ($k2 % 2 != 0) {
+                           $bill_sundry_amounts[] = 0;
+                        }
                      }
                  }
                  
                  // Match bill sundry amounts with their types
+                 
                  foreach ($bill_sundry_ids as $i => $bill_id) {
                      if ($bill_id === null || !isset($bill_sundry_amounts[$i])) continue;
                  
                      $billsundry = BillSundrys::find($bill_id);
-                     $amount = $bill_sundry_amounts[$i];
-                 
+                     $amount = $bill_sundry_amounts[$i];                 
                      if ($billsundry && $billsundry->nature_of_sundry == "OTHER") {
+                        //print_r($bill_id."**".$amount);
                          if ($billsundry->bill_sundry_type == "additive") {
                              $additive_sundry_amount_first += $amount;
                          } elseif ($billsundry->bill_sundry_type == "subtractive") {

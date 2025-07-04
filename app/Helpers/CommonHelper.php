@@ -225,7 +225,7 @@ class CommonHelper
                             ->join('purchase_descriptions','purchases.id','=','purchase_descriptions.purchase_id')
                             ->where(['purchases.delete' => '0', 'purchases.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
                             ->whereBetween('date', [$from_date, $to_date])
-                            ->get()
+                            //->get()
                             ->sum("amount");
         $purchase_sundry = DB::table('purchases')
                             ->join('purchase_sundries','purchases.id','=','purchase_sundries.purchase_id')
@@ -249,7 +249,7 @@ class CommonHelper
                             ->where(['sales.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
                             ->whereRaw("STR_TO_DATE(sales.date,'%Y-%m-%d')>=STR_TO_DATE('".$from_date."','%Y-%m-%d')")
                             ->whereRaw("STR_TO_DATE(sales.date,'%Y-%m-%d')<=STR_TO_DATE('".$to_date."','%Y-%m-%d')")
-                            ->get()
+                            //->get()
                             ->sum("amount");
         $sale_sundry = DB::table('sales')
                             ->join('sale_sundries','sales.id','=','sale_sundries.sale_id')
@@ -272,7 +272,7 @@ class CommonHelper
                                         ->join('purchase_return_descriptions','purchase_returns.id','=','purchase_return_descriptions.purchase_return_id')
                                         ->where(['purchase_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
                                         ->whereBetween('date', [$from_date, $to_date])
-                                        ->get()
+                                        //->get()
                                         ->sum("amount");
         $purchase_return_sundry = DB::table('purchase_returns')
                                         ->join('purchase_return_sundries','purchase_returns.id','=','purchase_return_sundries.purchase_return_id')
@@ -295,7 +295,7 @@ class CommonHelper
          ->join('sale_return_descriptions','sales_returns.id','=','sale_return_descriptions.sale_return_id')
          ->where(['sales_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
          ->whereBetween('date', [$from_date, $to_date])
-         ->get()
+         //->get()
          ->sum("amount");
         $sale_return_sundry_purchase = DB::table('sales_returns')
             ->join('sale_return_sundries','sales_returns.id','=','sale_return_sundries.sale_return_id')
@@ -318,7 +318,7 @@ class CommonHelper
                                     ->join('sale_return_descriptions','sales_returns.id','=','sale_return_descriptions.sale_return_id')
                                     ->where(['sales_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE'])
                                     ->whereBetween('date', [$from_date, $to_date])
-                                    ->get()
+                                    //->get()
                                     ->sum("amount");
         $sale_return_sundry = DB::table('sales_returns')
                                     ->join('sale_return_sundries','sales_returns.id','=','sale_return_sundries.sale_return_id')
@@ -341,7 +341,7 @@ class CommonHelper
             ->join('purchase_return_descriptions','purchase_returns.id','=','purchase_return_descriptions.purchase_return_id')
             ->where(['purchase_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE'])
             ->whereBetween('date', [$from_date, $to_date])
-            ->get()
+            //->get()
             ->sum("amount");
         $purchase_return_sundry_sale = DB::table('purchase_returns')
             ->join('purchase_return_sundries','purchase_returns.id','=','purchase_return_sundries.purchase_return_id')
@@ -502,7 +502,7 @@ class CommonHelper
                 $gstToken->company_id = Session::get('user_company_id');
                 $gstToken->company_gstin = $gstin;
                 $gstToken->save();
-                return 1;
+                return $result->header->txn;
             }else{
                 return 0;
             }         
