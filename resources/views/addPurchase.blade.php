@@ -731,10 +731,13 @@
                var amount = $(this).find('.amount').val();
             }else{
                var amount = (price && quantity) ? (price * quantity) : 0;
-               if(amount!=0){
+               if(price==0 && quantity==0){
+                  amount = $(this).find('.amount').val();
+               }
+               //if(amount!=0){
                   $(this).find('.amount').val(parseFloat(amount).toFixed(2));
                   $(this).find('.amount').keyup();
-               } 
+               //} 
             }
             if(amount!=undefined){
                total += parseFloat(amount);
@@ -1044,6 +1047,9 @@
                }
             }
          }); 
+         if (isNaN(final_total)) {
+            final_total = 0;
+         }
          final_total = Math.round(final_total);
          var formattedNumber = final_total.toLocaleString('en-IN', {
             style: 'currency',
@@ -1087,6 +1093,13 @@
       });
       $(document).on('input', '.amount',function(){
          let id = $(this).attr('data-id');
+         let qty = $("#quantity_tr_"+id).val();
+         let price = $("#price_tr_"+id).val();
+         if(qty!=0 || qty!=0 || price!=0 || price!=0){
+            alert("Not Allowed")
+            $(this).val('');
+            retutn;
+         }
          if($(this).val()==""){
             $("#price_tr_"+id).focus();
          }

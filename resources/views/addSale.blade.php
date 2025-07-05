@@ -909,7 +909,11 @@ function removeItem() {
             if(key=="A"){
                var amount = $(this).find('.amount').val();
             }else{
+               
                var amount = (price && quantity) ? (price * quantity) : 0;
+               if(price==0 && quantity==0){
+                     amount = $(this).find('.amount').val();
+                  }
                if(amount!=0){
                   $(this).find('.amount').val(parseFloat(amount).toFixed(2));
                   $(this).find('.amount').keyup();
@@ -1266,6 +1270,13 @@ function removeItem() {
       });
       $(document).on('input', '.amount',function(){
          let id = $(this).attr('data-id');
+         let qty = $("#quantity_tr_"+id).val();
+         let price = $("#price_tr_"+id).val();
+         if(qty!=0 || qty!=0 || price!=0 || price!=0){
+            alert("Not Allowed")
+            $(this).val('');
+            retutn;
+         }
          if($(this).val()==""){
             $("#price_tr_"+id).focus();
          }

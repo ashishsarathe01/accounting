@@ -872,7 +872,7 @@ class SalesReturnController extends Controller
       if($sale_return) {
          if($sale_return->sr_nature=="WITH GST" && ($sale_return->sr_type=="WITH ITEM" || $sale_return->sr_type=="RATE DIFFERENCE")){
 
-            if($sale_return->sr_type=="WITH ITEM"){
+            //if($sale_return->sr_type=="WITH ITEM"){
                ItemAverageDetail::where('sale_return_id',$request->sale_return_id)
                            ->where('type','SALE RETURN')
                            ->delete();         
@@ -881,7 +881,7 @@ class SalesReturnController extends Controller
                foreach ($desc as $key => $value) {
                   CommonHelper::RewriteItemAverageByItem($sale_return->date,$value->goods_discription,$sale_return->series_no);
                }
-            }
+            //}
             SaleReturnDescription::where('sale_return_id',$request->sale_return_id)
                         ->update(['delete'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
             AccountLedger::where('entry_type',3)

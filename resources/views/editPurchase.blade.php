@@ -1009,6 +1009,9 @@ foreach ($manageitems as $value) {
                   var amount = $(this).find('.amount').val();
                }else{
                   var amount = (price && quantity) ? (price * quantity) : 0;
+                  if(price==0 && quantity==0){
+                     amount = $(this).find('.amount').val();
+                  }
                   if(amount!=0){
                      $(this).find('.amount').val(parseFloat(amount).toFixed(2));
                      $(this).find('.amount').keyup();
@@ -1336,7 +1339,8 @@ foreach ($manageitems as $value) {
                minimumFractionDigits: 2
             });
             $("#bill_sundry_amt").html(formattedNumber);
-            $("#total_amounts").val(final_total);         
+            $("#total_amounts").val(final_total);   
+                 
             let roundoff = parseFloat(final_total) - parseFloat($("#total_taxable_amounts").val()) - parseFloat(gstamount);     
                
             roundoff = roundoff.toFixed(2);

@@ -442,8 +442,12 @@ class PurchaseController extends Controller{
             $subtractive_sundry_amount = round($subtractive_sundry_amount,2);
             $average_amount = $value['amount'] + $additive_sundry_amount - $subtractive_sundry_amount;
             $average_amount =  round($average_amount,2);
-            $average_price = $average_amount/$value['quantity'];
-            $average_price =  round($average_price,6);
+            if($value['quantity']!="" && $value['quantity']!=0){
+               $average_price = $average_amount/$value['quantity'];
+               $average_price =  round($average_price,6);
+            }else{
+               $average_price = 0;
+            }            
             //Add Data In Average Details table
             $average_detail = new ItemAverageDetail;
             $average_detail->entry_date = $request->date;
@@ -988,8 +992,13 @@ class PurchaseController extends Controller{
             $subtractive_sundry_amount = round($subtractive_sundry_amount,2);
             $average_amount = $value['amount'] + $additive_sundry_amount - $subtractive_sundry_amount;
             $average_amount =  round($average_amount,2);
-            $average_price = $average_amount/$value['quantity'];
-            $average_price =  round($average_price,6);
+            if(!empty($value['quantity']) && $value['quantity']!=0){
+               $average_price = $average_amount/$value['quantity'];
+               $average_price =  round($average_price,6);
+            }else{
+               $average_price = 0;
+            }
+            
             //Add Data In Average Details table
             $average_detail = new ItemAverageDetail;
             $average_detail->entry_date = $request->date;

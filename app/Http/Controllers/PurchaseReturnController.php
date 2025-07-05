@@ -1578,7 +1578,12 @@ class PurchaseReturnController extends Controller
                   $subtractive_sundry_amount = round($subtractive_sundry_amount,2);
                   $average_amount = $value['amount'] + $additive_sundry_amount - $subtractive_sundry_amount;
                   $average_amount =  round($average_amount,2);
-                  $average_price = $average_amount/$value['quantity'];
+                  if($value['quantity']!=0 && $value['quantity']!=""){
+                     $average_price = $average_amount/$value['quantity'];
+                  }else{
+                     $average_price = 0;
+                  }
+                  
                   $average_price =  round($average_price,6);
                   //Add Data In Average Details table
                   $average_detail = new ItemAverageDetail;

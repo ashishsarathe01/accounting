@@ -464,8 +464,8 @@ class ItemLedgerController extends Controller
     ->leftJoin('accounts as pr_account', 'purchase_returns.party', '=', 'pr_account.id')
 
     // Join with Stock Transfers (Note: Use alias to avoid duplicate table)
-    ->leftJoin('share_transfers as st_out', 'item_average_details.stock_transfer_id', '=', 'st_out.id')
-    ->leftJoin('share_transfers as st_in', 'item_average_details.stock_transfer_in_id', '=', 'st_in.id')
+   //  ->leftJoin('share_transfers as st_out', 'item_average_details.stock_transfer_id', '=', 'st_out.id')
+   //  ->leftJoin('share_transfers as st_in', 'item_average_details.stock_transfer_in_id', '=', 'st_in.id')
 
     // Select all fields
     ->select(
@@ -473,7 +473,7 @@ class ItemLedgerController extends Controller
         'sales.voucher_no_prefix as sale_voucher',
         'sales_account.account_name as sale_account',
 
-        'purchases.voucher_no_prefix as purchase_voucher',
+        'purchases.voucher_no as purchase_voucher',
         'purchase_account.account_name as purchase_account',
 
         'sales_returns.sr_prefix as sr_voucher',
@@ -482,11 +482,11 @@ class ItemLedgerController extends Controller
         'purchase_returns.sr_prefix as pr_voucher',
         'pr_account.account_name as pr_account',
 
-        'st_out.voucher_no_prefix as st_out_voucher',
-        'st_out.material_center_to as st_ot_account',
+      //   'st_out.voucher_no_prefix as st_out_voucher',
+      //   'st_out.material_center_to as st_ot_account',
 
-        'st_in.material_center_from as st_in_account',
-        'st_in.voucher_no_prefix as st_in_voucher'
+      //   'st_in.material_center_from as st_in_account',
+      //   'st_in.voucher_no_prefix as st_in_voucher'
     )
 
     ->get();
@@ -506,8 +506,14 @@ class ItemLedgerController extends Controller
                                     ->where('series_no',$request->series)  
                                     ->where('delete_status','0')
                                     ->first();
-         $opening_amount = $opening->total_price;
-         $opening_weight = $opening->in_weight;
+         if($opening){
+            $opening_amount = $opening->total_price;
+            $opening_weight = $opening->in_weight;
+         }else{
+            $opening_amount = 0;
+            $opening_weight = 0;
+         }
+         
       }
       $response = array(
          'status' => true,

@@ -163,6 +163,9 @@ class CommonHelper
                     if($opening){
                         $purchase_weight = $purchase_weight - $purchase_return_weight + $opening->in_weight;
                         $purchase_amount = $purchase_amount - $purchase_return_amount + $opening->total_price;                        
+                    }else{
+                        $purchase_weight = $purchase_weight - $purchase_return_weight;
+                        $purchase_amount = $purchase_amount - $purchase_return_amount; 
                     }
                 }        
                 if($purchase_amount != 0 && $purchase_amount != "" && $purchase_weight != 0 && $purchase_weight != ""){

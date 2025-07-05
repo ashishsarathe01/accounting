@@ -123,12 +123,11 @@
             <table class="table table-striped table-bordered table-sm m-0 shadow-sm">
                <thead>
                   <tr class=" font-12 text-body bg-light-pink">                        
-                     <th class="w-min-120 border-none bg-light-pink text-body">Date </th>
-                     <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Party</th>
-                     <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Invoice No.</th>
-                     <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Purchase Quantity</th>
-                     <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Purchase Amount</th>
-                     <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Sale Quantity</th>      
+                     <th class="w-min-120 border-none bg-light-pink text-body">Type </th>
+                     <th class="w-min-120 border-none bg-light-pink text-body">Invoice No.</th>
+                     <th class="w-min-120 border-none bg-light-pink text-body">Party</th>
+                     <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Quantity</th>
+                     <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Amount</th>     
                   </tr>
                </thead>
                <tbody>
@@ -252,7 +251,9 @@
                                        })+"</td>";
                         html += "<td style='text-align: right;'></td>";
                      }else if(item.type=="PURCHASE RETURN"){
-                        total_weight -= parseFloat(item.purchase_return_weight);
+                        if(item.purchase_return_weight!=null && item.purchase_return_weight!=""){
+                           total_weight-= parseFloat(item.purchase_return_weight);
+                        }
                         total_amount -= parseFloat(item.purchase_return_amount);
                         html += "<td>"+item.pr_voucher+"</td>";
                         html += "<td>"+item.pr_account+"</td>";
