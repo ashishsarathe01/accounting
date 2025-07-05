@@ -483,12 +483,16 @@ class AccountsController extends Controller{
                $opening_balance = $credit;
                $opening_balance_type = "credit";
             }
-            $state_id = State::select('id')->where('name',$state)->first();
-            if(!$state_id){
-               $state = "";
+            if(!empty($gstin)){
+               $state_id = State::select('id')->where('state_code',substr($gstin, 0, 2))->first();
+               if(!$state_id){
+                  $state = "";
+               }else{
+                  $state = $state_id->id;
+               }
             }else{
-               $state = $state_id->id;
-            }
+               $state = "";
+            }            
             $incomplete_status = 0;
             if($check_group){
                if($check_group->id==1 || $check_group->id==7 || $under_group=='Fixed Assets'){

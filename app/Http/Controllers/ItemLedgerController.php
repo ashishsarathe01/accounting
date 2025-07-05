@@ -417,10 +417,15 @@ class ItemLedgerController extends Controller
                   ->where('series_no',$request->series)
                   ->whereRaw("STR_TO_DATE(stock_date, '%Y-%m-%d')>=STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and STR_TO_DATE(stock_date, '%Y-%m-%d')<=STR_TO_DATE('".$request->to_date."', '%Y-%m-%d')")
                   ->get();
-      $average_opening = ItemAverage::where('item_id',$item_id)
-                     ->where('series_no',$request->series)
-                     ->where('stock_date','<',$request->from_date)
-                     ->first();
+     
+            // run query
+            $from_date = date('Y-m-d', strtotime($request->from_date));
+            $average_opening = ItemAverage::where('item_id', $item_id)
+               ->where('series_no', $request->series)
+               ->whereRaw("STR_TO_DATE(stock_date, '%Y-%m-%d')<STR_TO_DATE('".$request->from_date."', '%Y-%m-%d')")
+               ->orderBy('stock_date','desc')
+               ->first();
+
       if($average_opening){
          $opening_amount = $average_opening->amount;
          $opening_weight = $average_opening->average_weight;
