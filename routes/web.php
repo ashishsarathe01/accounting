@@ -343,6 +343,7 @@ Route::Resource('payment', PaymentController::class);
  Route::get('/report/hsn', [gstR1Controller::class, 'hsnSummary'])->name('hsnSummary');
  Route::get('/document-summary', [gstR1Controller::class, 'documentIssuedSummary'])->name('docIssued');
  Route::get('/gstr1/view', [GstR1Controller::class, 'showView'])->name('gstr1.view');
+Route::post('/gstr1-detail', [GSTR1Controller::class, 'gstr1Detail'])->name('gstr1-detail');
  Route::get('/gstr3b/view', [GstR3BController::class, 'index'])->name('gstr3B.view');
  Route::get('/settings', [SettingsController::class, 'index'])->name('viewSettings');
 });

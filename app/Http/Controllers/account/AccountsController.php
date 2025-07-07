@@ -422,6 +422,7 @@ class AccountsController extends Controller{
          $failed_invoice_count = 0;
          $incomplete_status_count = 0;
          while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+              $data = array_map('trim', $data);
             $name = $data[0];
             $under_group = $data[1];
             $debit = $data[2];

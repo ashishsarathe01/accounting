@@ -10,11 +10,15 @@ use DateTime;
 use App\Models\BillSundrys;
 use App\Models\SaleSundry;
 use App\Models\State;
+use App\Models\Sales;
+use App\Models\SaleReturn;
 use App\Models\Accounts;
 use App\Helpers\CommonHelper;
 use App\Models\GstBranch;
 use App\Models\Companies;
 use App\Models\gstToken;
+use Carbon\Carbon;
+use Illuminate\Support\Str;
 
 
 
@@ -83,6 +87,73 @@ public function filterform()
 }
 
 
+public function gstr1Detail(Request $request)
+{
+    $from_date = $request->from_date;
+    $to_date = $request->to_date;
+    $month = Carbon::parse($from_date)->format('mY');
+
+    $company = Companies::select('gst_config_type')
+                                ->where('id', Session::get('user_company_id'))
+                                ->first();
+        if($company->gst_config_type == "single_gst"){
+            $gst = DB::table('gst_settings')
+                            ->select('gst_username')
+                            ->where([
+                                'company_id' => Session::get('user_company_id'),
+                                'gst_no' => $request->series
+                            ])
+                            ->first();
+            $gst_username = $gst->gst_username;
+        }else if($company->gst_config_type == "multiple_gst"){            
+            $gst = DB::table('gst_settings_multiple')
+                            ->select('gst_username')
+                            ->where([
+                                'company_id' => Session::get('user_company_id'),
+                                'gst_no' => $request->series
+                            ])
+                            ->first();
+            $gst_username = $gst->gst_username;
+        }
+        if($gst_username==""){
+            $response = array(
+                    'status' => false,
+                    'message' => 'Please Enter GST User Name In GST Configuration.'
+                );
+            return json_encode($response);
+        }
+
+   
+    $state_code = substr(trim($request->series), 0, 2);
+
+    $gst_token = gstToken::select('txn','created_at')
+        ->where('company_gstin',$request->series)
+        ->where('company_id',Session::get('user_company_id'))
+        ->where('status',1)
+        ->orderBy('id','desc')
+        ->first();
+
+    if ($gst_token) {
+        $token_expiry = Carbon::parse($gst_token->created_at)->addHours(6);
+        $current_time = Carbon::now();
+
+        if ($token_expiry < $current_time) {
+            $token_res = CommonHelper::gstTokenOtpRequest($state_code, $gst_username, $request->series);
+            if ($token_res == 0) {
+                return response()->json(['status' => false, 'message' => 'Something Went Wrong In Token Generation']);
+            }
+            return response()->json(['status' => true, 'message' => 'TOKEN-OTP']);
+        }
+    } else {
+        $token_res = CommonHelper::gstTokenOtpRequest($state_code, $gst_username, $request->series);
+        if ($token_res == 0) {
+            return response()->json(['status' => false, 'message' => 'Something Went Wrong In Token Generation']);
+        }
+        return response()->json(['status' => true, 'message' => 'TOKEN-OTP']);
+    }
+
+    return response()->json(['status' => true, 'message' => 'TOKEN-VALID']);
+}
 
 
 
@@ -129,6 +200,8 @@ public function filterform()
         ->where('delete', '0')
         ->where('status', '1')
         ->pluck('id');
+
+        $saleCount = $saleIds->count();
     
     // Get IDs of tax sundries
     $companyId = Session::get('user_company_id');
@@ -174,6 +247,11 @@ public function filterform()
     // Split B2C Large and Normal based on total > 250000
     $b2cLargeIds = $b2cSales->where('total', '>', 250000)->pluck('id')->toArray();
     $b2cNormalIds = $b2cSales->where('total', '<=', 250000)->pluck('id')->toArray();
+
+    $b2cLargeCount = count($b2cLargeIds);
+    $b2cNormalCount = count($b2cNormalIds);
+
+
 
     // Summarize B2C Large Sales
     $summaryB2CLarge = DB::table('sales')
@@ -336,6 +414,7 @@ $month = $from->format('mY'); // MMYYYY => 042025
 
 $gst_user_name = 'KRAFTPAPER1991';
 $state_code = substr(trim($request->series), 0, 2); // e.g., "07"
+
 $gst_token = gstToken::select('txn','created_at')
                                 ->where('company_gstin',$request->series)
                                 ->where('company_id',Session::get('user_company_id'))
@@ -409,38 +488,423 @@ $response = curl_exec($curl);
 curl_close($curl);
 $result = json_decode($response, true); // Convert to array
 
-
-
 // Debug response
 if (isset($result['status_cd']) && $result['status_cd'] == 0) {
     return response()->json(["status" => 0, "message" => $result['error']['message']]);
 }
 
 // Example: extract invoice summaries
+$sale = Sales::where('sales.company_id', Session::get('user_company_id'))
+    ->whereBetween('sales.date', [$from_date, $to_date])
+    ->where('sales.merchant_gst', $request->series)
+    ->where('sales.delete', '0' )
+     ->whereNotNull('sales.billing_gst')
+     ->Where('billing_gst','!=','')
+    ->select('sales.billing_gst', 'sales.total')
+    ->get();
+
+$saleTotals = $sale->groupBy('billing_gst')->map(function ($group) {
+    return $group->sum('total');
+});
+
 $invoiceSummaries = [];
 
 if (isset($result['data']['b2b']) && is_array($result['data']['b2b'])) {
     foreach ($result['data']['b2b'] as $party) {
-        $accountName = Accounts::where('gstin', $party['ctin'])
-                                ->where('company_id',Session::get('user_company_id'))
-                                ->value('account_name');
-        $ctin = $accountName ?? 'NOT FOUND (' . $party['ctin'] . ')';
+        $ctin = $party['ctin'];
+        
+        $accountName = Accounts::where('gstin', $ctin)
+            ->where('company_id', Session::get('user_company_id'))
+            ->value('account_name');
 
-        if (isset($party['inv']) && is_array($party['inv'])) {
-            $totalValue = 0;
+        
+        $name = $accountName ?? 'NOT FOUND (' . $ctin . ')';
+        $apiInvoices = collect($party['inv'] ?? []);
+        $apiTotal = $apiInvoices->sum('val');
 
-            foreach ($party['inv'] as $invoice) {
-                $totalValue += $invoice['val'] ?? 0;
+    
+        $dbInvoices = Sales::where('billing_gst', $ctin)
+            ->where('company_id', Session::get('user_company_id'))
+            ->whereBetween('date', [$from_date, $to_date])
+            ->get(['id', 'voucher_no_prefix', 'date', 'total']);
+
+           
+        // Match by invoice number
+        $matched = [];
+        $onlyInApi = [];
+        $onlyInBooks = [];
+
+        foreach ($apiInvoices as $apiInv) {
+            $match = $dbInvoices->firstWhere('voucher_no_prefix', $apiInv['inum']);
+            if ($match) {
+                $matched[] = [
+                    'invoice_no' => $apiInv['inum'],
+                    'api_value' => $apiInv['val'],
+                    'db_value' => $match->total,
+                    'match' => round($apiInv['val'], 2) == round($match->total, 2)
+                ];
+            } else {
+                $onlyInApi[] = [
+                    'invoice_no' => $apiInv['inum'],
+                    'api_value' => $apiInv['val'],
+                ];
             }
-
-            $invoiceSummaries[] = [
-                'ctin' => $ctin,
-                'total_value' => $totalValue
-            ];
         }
+
+        // Now find DB invoices not in API
+        $apiInvoiceNumbers = $apiInvoices->pluck('inum')->toArray();
+        foreach ($dbInvoices as $dbInv) {
+            if (!in_array($dbInv->voucher_no_prefix, $apiInvoiceNumbers)) {
+                $onlyInBooks[] = [
+                    'invoice_no' => $dbInv->voucher_no_prefix,
+                    'db_value' => $dbInv->total,
+                ];
+            }
+        }
+   
+
+        
+        $invoiceSummaries[] = [
+            'ctin' => $name,
+            'gstin' => $ctin,
+            'total_value' => $apiTotal,
+            'db_value' => $saleTotals[$ctin] ?? 0,
+            'match' => round($apiTotal, 2) == round($saleTotals[$ctin] ?? 0, 2),
+            'matched_invoices' => $matched,
+            'only_in_api' => $onlyInApi,
+            'only_in_books' => $onlyInBooks,
+        ];
     }
 }
 
+// Step 1: Get all CTINs from API
+$apiCtins = collect($result['data']['b2b'])->pluck('ctin')->toArray();
+
+// Step 2: Loop through book GSTINs and find missing ones
+foreach ($saleTotals as $ctin => $dbValue) {
+    if (!in_array($ctin, $apiCtins)) {
+        $accountName = Accounts::where('gstin', $ctin)
+            ->where('company_id', Session::get('user_company_id'))
+            ->value('account_name');
+
+        $name = $accountName ?? 'NOT FOUND (' . $ctin . ')';
+
+        $dbInvoices = Sales::where('billing_gst', $ctin)
+            ->where('company_id', Session::get('user_company_id'))
+            ->whereBetween('date', [$from_date, $to_date])
+            ->get(['voucher_no_prefix', 'total']);
+
+      
+
+         $matched = [];          // No matched invoices since this CTIN is not in API
+        $onlyInApi = [];        // No API data for this CTIN
+        $onlyInBooks = [];      // List all DB invoices here
+
+        foreach ($dbInvoices as $inv) {
+            $onlyInBooks[] = [
+                'invoice_no' => $inv->voucher_no_prefix,
+                'db_value' => $inv->total
+            ];
+        }
+
+        $invoiceSummaries[] = [
+            'ctin' => $name,
+            'gstin' => $ctin,
+            'total_value' => 0, // Portal has no value
+            'db_value' => $dbValue,
+            'match' => false,
+             'matched_invoices' => $matched,
+            'only_in_api' => $onlyInApi,
+            'only_in_books' => $onlyInBooks,
+        ];
+    }
+}
+
+
+
+// === 1. CURL to fetch CDNR from API ===
+$curl = curl_init();
+
+curl_setopt_array($curl, [
+    CURLOPT_URL => 'https://api.mastergst.com/gstr1/cdnr?' . http_build_query([
+        'email'     => $email,
+        'gstin'     => $request->series,
+        'retperiod' => $month
+    ]),
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_ENCODING       => '',
+    CURLOPT_MAXREDIRS      => 10,
+    CURLOPT_TIMEOUT        => 0,
+    CURLOPT_FOLLOWLOCATION => true,
+    CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
+    CURLOPT_CUSTOMREQUEST  => 'GET',
+    CURLOPT_HTTPHEADER     => [
+        'Accept: application/json',
+        'gst_username: ' . $gst_user_name,
+        'state_cd: ' . $state_code,
+        'ip_address: 152.59.25.138',
+        'txn: ' . $txn,
+        'client_id: GSPdea8d6fb-aed1-431a-b589-f1c541424580',
+        'client_secret: GSP4c44b790-ef11-4725-81d9-5f8504279d67'
+    ],
+]);
+
+$response = curl_exec($curl);
+curl_close($curl);
+$result = json_decode($response, true);
+
+if (isset($result['status_cd']) && $result['status_cd'] == 0) {
+    return response()->json(["status" => 0, "message" => $result['error']['message']]);
+}
+
+$returns = DB::table('sales_returns')
+    ->where('sales_returns.company_id', Session::get('user_company_id'))
+    ->whereBetween('sales_returns.date', [$from_date, $to_date])
+    ->where('sales_returns.merchant_gst', $request->series)
+    ->where('voucher_type', 'SALE')
+    ->where('delete', '0')
+    ->whereNotNull('billing_gst')
+    ->where('billing_gst', '!=', '')
+    ->select('billing_gst', 'sr_prefix', 'total')
+    ->get();
+
+$returnTotals = $returns->groupBy('billing_gst')->map(function ($group) {
+    return $group->sum('total');
+});
+
+$creditNoteSummaries = [];
+
+if (isset($result['data']['cdnr']) && is_array($result['data']['cdnr'])) {
+    foreach ($result['data']['cdnr'] as $party) {
+        $ctin = $party['ctin'];
+
+          // Skip if there are no notes
+        if (!isset($party['nt']) || !is_array($party['nt'])) continue;
+
+        // Filter notes where ntty == 'C' (Credit Notes only)
+        $creditNotes = array_filter($party['nt'], function ($note) {
+            return isset($note['ntty']) && $note['ntty'] === 'C';
+        });
+
+        if (empty($creditNotes)) continue; // skip if no credit notes
+
+
+
+        $accountName = Accounts::where('gstin', $ctin)
+            ->where('company_id', Session::get('user_company_id'))
+            ->value('account_name');
+        $name = $accountName ?? 'NOT FOUND (' . $ctin . ')';
+
+        $apiNotes = collect($creditNotes);
+        $apiTotal = $apiNotes->sum('val');
+
+        $dbNotes = $returns->where('billing_gst', $ctin);
+
+        $matched = [];
+        $onlyInApi = [];
+        $onlyInBooks = [];
+
+        foreach ($apiNotes as $note) {
+            $inum = $note['nt_num'] ?? '';
+            $match = $dbNotes->firstWhere('voucher_no_prefix', $inum);
+
+            if ($match) {
+                $matched[] = [
+                    'invoice_no' => $inum,
+                    'api_value' => $note['val'],
+                    'db_value' => $match->total,
+                    'match' => round($note['val'], 2) == round($match->total, 2)
+                ];
+            } else {
+                $onlyInApi[] = [
+                    'invoice_no' => $inum,
+                    'api_value' => $note['val'],
+                ];
+            }
+        }
+
+        $apiNoteNumbers = $apiNotes->pluck('nt_num')->toArray();
+
+        foreach ($dbNotes as $dbNote) {
+            if (!in_array($dbNote->voucher_no_prefix, $apiNoteNumbers)) {
+                $onlyInBooks[] = [
+                    'invoice_no' => $dbNote->voucher_no_prefix,
+                    'db_value' => $dbNote->total
+                ];
+            }
+        }
+
+        $creditNoteSummaries[] = [
+            'gstin' => $ctin,
+            'ctin' => $name,
+            'total_value' => $apiTotal,
+            'db_value' => $returnTotals[$ctin] ?? 0,
+            'match' => round($apiTotal, 2) == round($returnTotals[$ctin] ?? 0, 2),
+            'matched_invoices' => $matched,
+            'only_in_api' => $onlyInApi,
+            'only_in_books' => $onlyInBooks
+        ];
+    }
+}
+$apiCtins = collect($result['data']['cdnr'])->pluck('ctin')->toArray();
+
+foreach ($returnTotals as $ctin => $dbValue) {
+    if (!in_array($ctin, $apiCtins)) {
+        $accountName = Accounts::where('gstin', $ctin)
+            ->where('company_id', Session::get('user_company_id'))
+            ->value('account_name');
+
+        $name = $accountName ?? 'NOT FOUND (' . $ctin . ')';
+
+        $dbNotes = $returns->where('billing_gst', $ctin);
+        $onlyInBooks = [];
+
+        foreach ($dbNotes as $note) {
+            $onlyInBooks[] = [
+                'invoice_no' => $note->voucher_no_prefix,
+                'db_value' => $note->total
+            ];
+        }
+
+        $creditNoteSummaries[] = [
+            'gstin' => $ctin,
+            'ctin' => $name,
+            'total_value' => 0,
+            'db_value' => $dbValue,
+            'match' => false,
+            'matched_invoices' => [],
+            'only_in_api' => [],
+            'only_in_books' => $onlyInBooks
+        ];
+    }
+}
+
+
+$debitReturns = DB::table('purchase_returns')
+    ->where('purchase_returns.company_id', Session::get('user_company_id'))
+    ->whereBetween('purchase_returns.date', [$from_date, $to_date])
+    ->where('purchase_returns.merchant_gst', $request->series)
+    ->where('voucher_type', 'SALE')
+    ->where('delete', '0')
+    ->whereNotNull('billing_gst')
+    ->where('billing_gst', '!=', '')
+    ->select('billing_gst', 'sr_prefix', 'total')
+    ->get();
+
+$debitNoteTotals = $debitReturns->groupBy('billing_gst')->map(function ($group) {
+    return $group->sum('total');
+});
+
+$debitNoteSummaries = [];
+
+if (isset($result['data']['cdnr']) && is_array($result['data']['cdnr'])) {
+    foreach ($result['data']['cdnr'] as $party) {
+        $ctin = $party['ctin'];
+
+        // Ensure notes exist and are an array
+        if (!isset($party['nt']) || !is_array($party['nt'])) continue;
+
+        // ✅ Filter only debit notes from API
+        $debitNotes = array_filter($party['nt'], function ($note) {
+            return isset($note['ntty']) && $note['ntty'] === 'D';
+        });
+
+        if (empty($debitNotes)) continue;
+
+        $accountName = Accounts::where('gstin', $ctin)
+            ->where('company_id', Session::get('user_company_id'))
+            ->value('account_name');
+        $name = $accountName ?? 'NOT FOUND (' . $ctin . ')';
+
+        $apiNotes = collect($debitNotes);
+        $apiTotal = $apiNotes->sum('val');
+
+        $dbNotes = $debitReturns->where('billing_gst', $ctin);
+
+        $matched = [];
+        $onlyInApi = [];
+        $onlyInBooks = [];
+
+        foreach ($apiNotes as $note) {
+            $inum = $note['nt_num'] ?? '';
+            $match = $dbNotes->firstWhere('voucher_no_prefix', $inum); // Check pr_prefix in DB, use alias if needed
+
+            if ($match) {
+                $matched[] = [
+                    'invoice_no' => $inum,
+                    'api_value' => $note['val'],
+                    'db_value' => $match->total,
+                    'match' => round($note['val'], 2) == round($match->total, 2)
+                ];
+            } else {
+                $onlyInApi[] = [
+                    'invoice_no' => $inum,
+                    'api_value' => $note['val'],
+                ];
+            }
+        }
+
+        $apiNoteNumbers = $apiNotes->pluck('nt_num')->toArray();
+
+        foreach ($dbNotes as $dbNote) {
+            if (!in_array($dbNote->voucher_no_prefix, $apiNoteNumbers)) {
+                $onlyInBooks[] = [
+                    'invoice_no' => $dbNote->voucher_no_prefix,
+                    'db_value' => $dbNote->total
+                ];
+            }
+        }
+
+        $debitNoteSummaries[] = [
+            'gstin' => $ctin,
+            'ctin' => $name,
+            'total_value' => $apiTotal,
+            'db_value' => $debitNoteTotals[$ctin] ?? 0,
+            'match' => round($apiTotal, 2) == round($debitNoteTotals[$ctin] ?? 0, 2),
+            'matched_invoices' => $matched,
+            'only_in_api' => $onlyInApi,
+            'only_in_books' => $onlyInBooks
+        ];
+    }
+}
+
+// Handle entries only in books (DB side but not in API)
+$apiCtins = collect($result['data']['cdnr'])->pluck('ctin')->toArray();
+
+foreach ($debitNoteTotals as $ctin => $dbValue) {
+    if (!in_array($ctin, $apiCtins)) {
+        $accountName = Accounts::where('gstin', $ctin)
+            ->where('company_id', Session::get('user_company_id'))
+            ->value('account_name');
+
+        $name = $accountName ?? 'NOT FOUND (' . $ctin . ')';
+
+        $dbNotes = $debitReturns->where('billing_gst', $ctin);
+        $onlyInBooks = [];
+
+        foreach ($dbNotes as $note) {
+            $onlyInBooks[] = [
+                'invoice_no' => $note->voucher_no_prefix,
+                'db_value' => $note->total
+            ];
+        }
+
+        $debitNoteSummaries[] = [
+            'gstin' => $ctin,
+            'ctin' => $name,
+            'total_value' => 0,
+            'db_value' => $dbValue,
+            'match' => false,
+            'matched_invoices' => [],
+            'only_in_api' => [],
+            'only_in_books' => $onlyInBooks
+        ];
+    }
+}
+
+$totalCreditNotes = $returns->count();
+$totalDebitNotes = $debitReturns->count();
+$totalNotes = $totalCreditNotes + $totalDebitNotes;
 
 
 // Return data to Blade or frontend
@@ -479,13 +943,20 @@ if (isset($result['data']['b2b']) && is_array($result['data']['b2b'])) {
             'fy' => $fy,
             'comp_details' => $comp_details,
              'invoiceSummaries' => $invoiceSummaries,
-
+             'creditNoteSummaries' => $creditNoteSummaries,
+             'debitNoteSummaries' => $debitNoteSummaries,
             'b2c_statewise_taxable' => $b2cTaxableTotal,
-'b2c_statewise_cgst' => $b2cCGST,
-'b2c_statewise_sgst' => $b2cSGST,
-'b2c_statewise_igst' => $b2cIGST, // likely 0 unless interstate
+            'b2c_statewise_cgst' => $b2cCGST,
+            'b2c_statewise_sgst' => $b2cSGST,
+            'b2c_statewise_igst' => $b2cIGST,
+            'saleCountB2B' =>$saleCount,
+            'b2cLargeCount' => $b2cLargeCount,
+            'b2cNormalCount' => $b2cLargeCount,
+            'totalCreditNotes' => $totalCreditNotes,
+            'totalDebitNotes' => $totalCreditNotes,
+            'totalNotes' => $totalNotes // likely 0 unless interstate
 
-        ]);
+                    ]);
         
         
         

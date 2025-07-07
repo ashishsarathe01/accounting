@@ -1248,6 +1248,7 @@ class SalesController extends Controller
             $index = 1;
             $series_no = "";
             while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+               $data = array_map('trim', $data);
                if($data[0]!="" && $data[2]!=""){
                   $series_no = $data[0];
                   $voucher_no = $data[2];                             
@@ -1318,6 +1319,7 @@ class SalesController extends Controller
          $success_row = 0;
          $index = 1;
          while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+            $data = array_map('trim', $data);
             if($data[0]!="" && $data[2]!=""){
                if($series_no!=""){
                   $akey = array_search($series_no, $series_arr);
