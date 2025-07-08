@@ -452,7 +452,7 @@
                         <input type="hidden" id="parameter_modal_qty">
                         <div class="modal-footer border-0 mx-auto p-0">
                            <button type="button" class="btn btn-border-body close" data-bs-dismiss="modal">CANCEL</button>
-                           <button type="button" class="ms-3 btn btn-red parameter_save_btn">SUBMIT</button>
+                           <button type="button" class="ms-3 btn btn-red parameter_save_btn" style="display:none">SUBMIT</button>
                         </div>
                      </div>
                   </div>
@@ -575,6 +575,7 @@
    var add_more_count = 1;
    var add_more_counts = 1;
    var add_more_bill_sundry_up_count = 2;
+   var parameter_assign_item_arr = [];
    function addMoreItem() {
       let empty_status = 0;
       $('.item_id').each(function(){   
@@ -1449,6 +1450,7 @@ $( ".select2-single, .select2-multiple" ).select2();
    });
    var paremeter_table_add_more_data = "";
    $(document).on('click',".unit",function(){
+      
       let parameter_qty = $("#quantity_tr_"+$(this).attr('data-id')).val()+" "+$(this).val();
       let parameter_name = $("#goods_discription_tr_"+$(this).attr('data-id')).val();
       let item_qty = $("#quantity_tr_"+$(this).attr('data-id')).val();
@@ -1456,7 +1458,7 @@ $( ".select2-single, .select2-multiple" ).select2();
       $("#parameter_qty").html(parameter_qty);
       $("#parameter_modal_qty").val($("#quantity_tr_"+$(this).attr('data-id')).val());
       let uname = $(this).val();
-      paremeter_table_add_more_data = "";
+      
       let config_status = $(this).attr('data-config_status');
       let parameterized_stock_status = $(this).attr('data-parameterized_stock_status');
       let group_id = $(this).attr('data-group_id');
@@ -1465,6 +1467,12 @@ $( ".select2-single, .select2-multiple" ).select2();
       if(parameterized_stock_status==null || parameterized_stock_status==0 || parameterized_stock_status==""){
          return;
       }     
+      
+      if ($.inArray(id, parameter_assign_item_arr) !== -1) {
+         $("#parameter_modal").modal('toggle');
+         return;
+      }
+      paremeter_table_add_more_data = "";
       $.ajax({
          url: '{{url("get-parameter-data")}}',
          async: false,
@@ -1556,14 +1564,16 @@ $( ".select2-single, .select2-multiple" ).select2();
          $(".parameter_column_value_"+parameter_column).each(function(){            
             data_value_arr.push($(this).val());
          });
-         data_arr.push({'column_id':parameter_column,'alternative_qty':alternative_qty,'column_value':data_value_arr});         
+         data_arr.push({'column_id':parameter_column,'alternative_qty':alternative_qty,'column_value':data_value_arr});
+        
       });
-      console.log(data_arr);
+       parameter_assign_item_arr.push($("#parameter_modal_id").val());
       $("#item_parameters_"+$("#parameter_modal_id").val()).val(JSON.stringify(data_arr));
    });
    $(document).on('keyup','.param_col',function(){
       let id = $(this).attr('data-id');
       if($(this).attr('data-alternative_qty')==1){
+        
          let item_total_qty = $("#parameter_modal_qty").val();
          if(item_total_qty==""){
             item_total_qty = 0;
@@ -1576,7 +1586,7 @@ $( ".select2-single, .select2-multiple" ).select2();
             }            
             if(conversion_val==""){
                conversion_val = 1;
-            }            
+            } 
             let qty = parseFloat(unit_val)*parseFloat(conversion_val);
             $("#parameter_column_value_qty_"+id).val(qty);
          }else  if($(this).attr('data-conversion_factor')==1){
@@ -1601,13 +1611,21 @@ $( ".select2-single, .select2-multiple" ).select2();
                $("#param_tr_"+$(this).attr('data-id')).remove();
             }
          });
+         
          if(parseFloat(qty1)<parseFloat(item_total_qty)){
-            $(".add_new_row").click();
+            //$(".add_new_row").click();
+            $(".add_new_row").trigger('click');
          }else if(parseFloat(qty1)>parseFloat(item_total_qty)){
             $(this).val('');
             $("#parameter_column_value_qty_"+id).val('');
             alert("Quntity should be equal to item quantity")
          }
+         $(".parameter_save_btn").hide();
+         if(parseFloat(qty1)==parseFloat(item_total_qty)){
+            $(".parameter_save_btn").show();
+         }
+         $("#item_parameters_"+$("#parameter_modal_id").val()).val("");
+         $("#quantity_tr_"+$("#parameter_modal_id").val()).attr('readonly',false);
       }
    });   
    $(document).on('keyup','.parameter_column_value_QTY_COL',function(){
@@ -1648,6 +1666,8 @@ $( ".select2-single, .select2-multiple" ).select2();
       });
       $("#item_parameters_"+row_id).val(parameter_arr);
       $("#parameter_modal").modal('toggle');
+      $("#quantity_tr_"+row_id).attr('readonly',true);
+      
    });
    $("#series_no").change(function(){
       let series = $(this).val();      
@@ -1755,42 +1775,6 @@ $(document).ready(function() {
     $(this).data('previousValue', selectedValue);
   });
 });
-
-
-  
-
-// document.addEventListener("DOMContentLoaded", function () {
-//   const amountInput = document.getElementById("amount_tr_1");
-//   const addBtn = document.getElementById("select_item_add_btn");
-
-//   // 1. Tab or Enter from input to the add button (SVG)
-//   amountInput.addEventListener("keydown", function (event) {
-//   console.log("Key pressed:", event.key); // Debugging line
-//   if (event.key === "Tab" && !event.shiftKey || event.key==="Enter") {
-//     event.preventDefault(); // Prevent default behavior
-//     addBtn.focus(); // Move focus to SVG
-//     console.log("Focus moved to button"); // Debugging line
-//   }
-//   else if (event.key === "Enter") {
-//     event.preventDefault(); // Prevent default behavior
-//     addBtn.focus(); // Move focus to SVG
-//     console.log("Focus moved to button"); // Debugging line
-//   }
-// });
-
-//   // 2. Pressing Enter on the button triggers click
-//   addBtn.addEventListener("keydown", function (event) {
-//     if (event.key === "Enter") {
-//       event.preventDefault();
-//       addMoreItem(); // Your custom function
-//     }
-//   });
-
-//   // 3. Click on the button (mouse or keyboard)
-//   addBtn.addEventListener("click", function () {
-//     addMoreItem(); // Your logic to add row/item
-//   });
-// });
 
 
 $(document).on("keydown", ".amount", function (event) {
