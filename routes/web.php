@@ -49,6 +49,7 @@ use App\Http\Controllers\gstReturn\GstDetailController;
 use App\Http\Controllers\gstReturn\GSTR2BController;
 use App\Http\Controllers\gstReturn\GSTR2AController;
 use App\Http\Controllers\gstReturn\GSTR3BController;
+use App\Http\Controllers\ParameterizedStockController;
 
 /*
 |--------------------------------------------------------------------------
@@ -328,6 +329,7 @@ Route::Resource('payment', PaymentController::class);
   Route::get('gst2a', [GSTR2AController::class, 'index'])->name('gst2a');
   Route::post('gstr2a-detail', [GSTR2AController::class, 'gstr2aDetail'])->name('gstr2a-detail');
   Route::get('gstr2a-all-info/{month}/{gstin}/{ctin}', [GSTR2AController::class, 'gstr2aAllInfo'])->name('gstr2a-all-info');
+  Route::get('parameterized-stock', [ParameterizedStockController::class,'index'])->name('parameterized-stock');  
   Route::get('gst2b', [GSTR2BController::class, 'index'])->name('gst2b');  
   Route::post('gstr2b-detail', [GSTR2BController::class, 'gstr2bDetail'])->name('gstr2b-detail');
   Route::get('gstr2b-all-info/{month}/{gstin}/{ctin}', [GSTR2BController::class, 'gstr2bAllInfo'])->name('gstr2b-all-info');

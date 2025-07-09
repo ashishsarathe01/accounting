@@ -8,4 +8,5 @@ use Illuminate\Database\Eloquent\Model;
 class ManageItems extends Model
 {
     use HasFactory;
+    
 }

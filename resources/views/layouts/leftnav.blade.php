@@ -541,7 +541,9 @@
                                        <a href="{{ route('itemledger.index') }}" class="text-blue">Items Ledger</a>
                                     </li>
                                  @endcan
-                                 
+                                    <li class="py-1 clickable-row-blue">
+                                       <a href="{{ route('parameterized-stock') }}" class="text-blue">Parameterized Stock</a>
+                                    </li>
                               </ul>
                            </div>
                         </li>
