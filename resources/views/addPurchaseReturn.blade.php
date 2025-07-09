@@ -749,6 +749,15 @@
          return;
       }
       let voucher_type = $('option:selected', this).attr('data-voucher_type');
+      let voucher_date = $('option:selected', this).attr('data-voucher_date');
+      let debit_note_date = $("#date").val();
+      var d1 = new Date(voucher_date);
+      var d2 = new Date(debit_note_date);
+      if (d1 > d2) {
+         $('#voucher_no').val("");
+         alert("Date Cannot be greater than Voucher Date.");
+         return;
+      }
       $(".extra_taxes_row").remove();
       $("#bill_sundry_tr_1").val('');
       $("#bill_sundry_amount_1").val('');
@@ -1497,7 +1506,7 @@
                }else{
                   voc_no = val.voucher_no_prefix;
                }
-               optionElements += '<option value="' + voc_no + '" data-id="'+val.id+'" data-series_no="'+val.series_no+'" data-material_center="'+val.material_center+'" data-voucher_type="'+val.voucher_type+'">'+ voc_no + '</option>';
+               optionElements += '<option value="' + voc_no + '" data-id="'+val.id+'" data-series_no="'+val.series_no+'" data-material_center="'+val.material_center+'" data-voucher_type="'+val.voucher_type+'" data-voucher_date="'+val.date+'">'+ voc_no + '</option>';
             });
             optionElements += '<option value="OTHER">OTHER</option>';
             $("#voucher_no").append(optionElements);
@@ -1831,5 +1840,20 @@ function refreshActionIcons() {
       debitTotal();
       creditTotal();
    });
+   $("#date").change(function(){
+   if($("#voucher_no").val()!="" && $("#voucher_no").val()!="OTHER"){
+      let voucher_date = $('#voucher_no option:selected').data('voucher_date');
+      let credit_note_date = $("#date").val();
+      var d1 = new Date(voucher_date);
+      var d2 = new Date(credit_note_date);
+      if (d1 > d2) {
+         //$('#voucher_no').val(null).trigger('change');
+         $("#date").val("");
+         alert("Date Cannot be greater than Voucher Date.");
+         return;
+      }
+   }
+   
+});
 </script>
 @endsection

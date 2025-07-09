@@ -847,6 +847,15 @@
          return;
       }
       let voucher_type = $('option:selected', this).attr('data-voucher_type');
+      let voucher_date = $('option:selected', this).attr('data-voucher_date');
+      let credit_note_date = $("#date").val();
+      var d1 = new Date(voucher_date);
+      var d2 = new Date(credit_note_date);
+      if (d1 > d2) {
+         $('#voucher_no').val("");
+         alert("Date Cannot be greater than Voucher Date.");
+         return;
+      }
       $(".extra_taxes_row").remove();
       $("#bill_sundry_tr_1").val('');
       $("#bill_sundry_amount_1").val('');
@@ -898,9 +907,9 @@
       // Function to calculate amount and update total sum
       window.calculateAmount = function(key=null) {         
          customer_gstin = $('#party_id option:selected').attr('data-state_code'); 
-         if(customer_gstin==undefined){
+         if(customer_gstin==undefined || merchant_gstin==undefined){
             return;
-         }            
+         }      
          if(customer_gstin==merchant_gstin.substring(0,2)){  
             $("#billtr_cgst").show();
             $("#billtr_sgst").show();
@@ -1563,7 +1572,7 @@
                }else{
                   voc_no = val.voucher_no_prefix;
                }
-               optionElements += '<option value="' + val.voucher_no + '" data-id="'+val.id+'" data-series_no="'+val.series_no+'" data-material_center="'+val.material_center+'" data-voucher_no_prefix="'+val.voucher_no_prefix+'" data-voucher_type="'+val.voucher_type+'">' + voc_no + '</option>';
+               optionElements += '<option value="' + val.voucher_no + '" data-id="'+val.id+'" data-series_no="'+val.series_no+'" data-material_center="'+val.material_center+'" data-voucher_no_prefix="'+val.voucher_no_prefix+'" data-voucher_type="'+val.voucher_type+'" data-voucher_date="'+val.date+'">' + voc_no + '</option>';
             });
              optionElements += '<option value="OTHER">OTHER</option>';
             $("#voucher_no").append(optionElements);
@@ -1990,6 +1999,20 @@ $(document).ready(function () {
       updateNarration();
    });
 });
-
+$("#date").change(function(){
+   if($("#voucher_no").val()!="" && $("#voucher_no").val()!="OTHER"){
+      let voucher_date = $('#voucher_no option:selected').data('voucher_date');
+      let credit_note_date = $("#date").val();
+      var d1 = new Date(voucher_date);
+      var d2 = new Date(credit_note_date);
+      if (d1 > d2) {
+         //$('#voucher_no').val(null).trigger('change');
+         $("#date").val("");
+         alert("Date Cannot be greater than Voucher Date.");
+         return;
+      }
+   }
+   
+});
 </script>
 @endsection
