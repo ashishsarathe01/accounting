@@ -76,31 +76,56 @@
                                 @foreach($value->purchaseDescription as $v)
                                     <strong>{{$v->item->name}} ({{$v->qty}} {{$v->units->name}})</strong><br>
                                     <table class="table table-bordered">
-                                        @foreach($v->parameterColumnInfo as $v1)
-                                            @if($v1->parameterColumnName)
+                                        @foreach($v->parameterColumnInfo as $k1=>$v1)
+                                            @if($k1==0)
                                                 <tr>
-                                                    <td>
-                                                        {{$v1->parameterColumnName->paremeter_name}}
-                                                    </td>
-                                                    @foreach($v1->parameterColumnValues as $v2)
-                                                        <td>
-                                                            {{$v2->column_value}}
-                                                        </td>
-                                                    @endforeach
-                                                </tr> 
+                                                    @if($v1->paremeter_name1!="")
+                                                        <th>{{$v1->paremeter_name1}}</th>
+                                                    @endif
+                                                    @if($v1->paremeter_name2!="")
+                                                        <th>{{$v1->paremeter_name2}}</th>
+                                                    @endif
+                                                    @if($v1->paremeter_name3!="")
+                                                        <th>{{$v1->paremeter_name3}}</th>
+                                                    @endif
+                                                    @if($v1->paremeter_name4!="")
+                                                        <th>{{$v1->paremeter_name4}}</th>
+                                                    @endif
+                                                    @if($v1->paremeter_name5!="")
+                                                        <th>{{$v1->paremeter_name5}}</th>
+                                                    @endif
+                                                </tr>
                                             @endif
-                                            @if($v1->parameter_col_id==0)
-                                                <td>Qty.</td>
-                                                @foreach($v1->parameterColumnValues as $v2)
+                                            <tr>
+                                                @if($v1->parameter1_id!="" && $v1->parameter1_id!="0")
                                                     <td>
-                                                        {{$v2->column_value}}
+                                                        {{$v1->parameter1_value}}
                                                     </td>
-                                                @endforeach
-                                            @endif
+                                                @endif
+                                                @if($v1->parameter2_id!="" && $v1->parameter2_id!="0")
+                                                    <td>
+                                                        {{$v1->parameter2_value}}
+                                                    </td>
+                                                @endif
+                                                @if($v1->parameter3_id!="" && $v1->parameter3_id!="0")
+                                                    <td>
+                                                        {{$v1->parameter3_value}}
+                                                    </td>
+                                                @endif
+                                                @if($v1->parameter4_id!="" && $v1->parameter4_id!="0")
+                                                    <td>
+                                                        {{$v1->parameter4_value}}
+                                                    </td>
+                                                @endif
+                                                @if($v1->parameter5_id!="" && $v1->parameter5_id!="0")
+                                                    <td>
+                                                        {{$v1->parameter5_value}}
+                                                    </td>
+                                                @endif
+                                            </tr>
                                         @endforeach
                                     </table>
                                     @php $qty_total = $qty_total + $v->qty; @endphp
-                                    
                                 @endforeach
                               </td>
                               <!-- <td style="text-align: right;">{{$qty_total}}</td> -->

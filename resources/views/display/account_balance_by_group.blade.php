@@ -81,7 +81,8 @@
    $(document).ready(function(){
       $(".get_info").click(function(){
          if($(this).attr('data-type')==1){
-            window.location = "{{url('account-balance-by-group')}}/"+$(this).attr('data-id')+"/"+$(this).attr('data-financial_year')+"/{{$from_date}}/{{$to_date}}";
+            // window.location = "{{url('account-balance-by-group')}}/"+$(this).attr('data-id')+"/"+$(this).attr('data-financial_year')+"/{{$from_date}}/{{$to_date}}";
+            window.location = "{{url('account-balance-by-group')}}/bs/"+$(this).attr('data-id')+"/"+"{{$from_date}}/{{$to_date}}/group";
          }else{
             window.location = "{{url('accountledger-filter')}}/?party="+$(this).attr('data-id')+"&from_date={{$from_date}}&to_date={{$to_date}}";            
          }         

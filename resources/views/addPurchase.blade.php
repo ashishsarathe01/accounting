@@ -1500,8 +1500,8 @@ $( ".select2-single, .select2-multiple" ).select2();
                html+='<td>Qty ('+uname+')<input type="hidden" name="parameter_column[]" class="parameter_column" value="QTY_COL"></td>'; 
                html+='<td></td>';
                html+='</tr></thead><tbody>';
-               html+='<tr>';
-               paremeter_table_add_more_data+='<tr id="param_tr_param_index">';
+               html+='<tr class="tr_param" data-id="param_index">';
+               paremeter_table_add_more_data+='<tr id="param_tr_param_index" class="tr_param" data-id="param_index">';
                if(data.parameters.length>0){
                   let i = 1;
                   data.parameters.forEach(function(e){
@@ -1512,8 +1512,8 @@ $( ".select2-single, .select2-multiple" ).select2();
                         }else if(e.conversion_factor=="1"){
                            id_val = "conversion_factor_id_param_index";
                         }
-                        html+='<td><input id="'+id_val+'" type="text" name="parameter_column_value_'+e.id+'" class="form-control param_col param_col_param_index parameter_column_value_'+e.id+'" style="height: 52px;" placeholder="'+e.paremeter_name+'" data-alternative_unit="'+e.alternative_unit+'" data-alternative_qty="'+data.alternative_qty+'" data-conversion_factor="'+e.conversion_factor+'" data-id="param_index" ></td>';
-                        paremeter_table_add_more_data+='<td><input id="'+id_val+'" type="text" name="parameter_column_value_'+e.id+'" class="form-control param_col param_col_param_index parameter_column_value_'+e.id+'" style="height: 52px;" placeholder="'+e.paremeter_name+'" data-alternative_unit="'+e.alternative_unit+'" data-alternative_qty="'+data.alternative_qty+'" data-conversion_factor="'+e.conversion_factor+'" data-id="param_index"></td>';
+                        html+='<td><input id="'+id_val+'" type="text" name="parameter_column_value_'+e.id+'" class="form-control param_col param_col_param_index parameter_column_value_'+e.id+'" style="height: 52px;" placeholder="'+e.paremeter_name+'" data-alternative_unit="'+e.alternative_unit+'" data-alternative_qty="'+data.alternative_qty+'" data-conversion_factor="'+e.conversion_factor+'" data-id="param_index" data-parameter_id="'+e.id+'"></td>';
+                        paremeter_table_add_more_data+='<td><input id="'+id_val+'" type="text" name="parameter_column_value_'+e.id+'" class="form-control param_col param_col_param_index parameter_column_value_'+e.id+'" style="height: 52px;" placeholder="'+e.paremeter_name+'" data-alternative_unit="'+e.alternative_unit+'" data-alternative_qty="'+data.alternative_qty+'" data-conversion_factor="'+e.conversion_factor+'" data-id="param_index" data-parameter_id="'+e.id+'"></td>';
                      }else{
                         let predefined_list = "";
                         if(e.predefined_value.length>0){
@@ -1556,24 +1556,35 @@ $( ".select2-single, .select2-multiple" ).select2();
    });
    $(document).on('click','.parameter_save_btn',function(){   
       let data_arr = [];
-      $(".parameter_column").each(function(){
-         let parameter_column = $(this).val();
+      // $(".parameter_column").each(function(){
+      //    let parameter_column = $(this).val();
+      //    let data_value_arr = [];
+        
+      //    let alternative_qty = $(this).attr('data-alternative_qty');
+      //    $(".parameter_column_value_"+parameter_column).each(function(){            
+      //       data_value_arr.push($(this).val());
+      //    });
+      //    data_arr.push({'column_id':parameter_column,'alternative_qty':alternative_qty,'column_value':data_value_arr});
+        
+      // });
+      
+      $(".tr_param").each(function(){
+         let id = $(this).attr('data-id');
          let data_value_arr = [];
-        
-         let alternative_qty = $(this).attr('data-alternative_qty');
-         $(".parameter_column_value_"+parameter_column).each(function(){            
-            data_value_arr.push($(this).val());
+         $(".param_col_"+id).each(function(){
+            data_value_arr.push({'id':$(this).attr('data-parameter_id'),'value':$(this).val(),'alternative_unit':$(this).attr('data-alternative_unit'),'alternative_qty':$(this).attr('data-alternative_qty')})
          });
-         data_arr.push({'column_id':parameter_column,'alternative_qty':alternative_qty,'column_value':data_value_arr});
-        
+         data_arr.push(data_value_arr);
       });
-       parameter_assign_item_arr.push($("#parameter_modal_id").val());
+      parameter_assign_item_arr.push($("#parameter_modal_id").val());
       $("#item_parameters_"+$("#parameter_modal_id").val()).val(JSON.stringify(data_arr));
+
+      $("#quantity_tr_"+$("#parameter_modal_id").val()).attr('readonly',true);
+      $("#parameter_modal").modal('toggle');
    });
    $(document).on('keyup','.param_col',function(){
       let id = $(this).attr('data-id');
       if($(this).attr('data-alternative_qty')==1){
-        
          let item_total_qty = $("#parameter_modal_qty").val();
          if(item_total_qty==""){
             item_total_qty = 0;
@@ -1621,11 +1632,15 @@ $( ".select2-single, .select2-multiple" ).select2();
             alert("Quntity should be equal to item quantity")
          }
          $(".parameter_save_btn").hide();
+         
          if(parseFloat(qty1)==parseFloat(item_total_qty)){
             $(".parameter_save_btn").show();
          }
          $("#item_parameters_"+$("#parameter_modal_id").val()).val("");
          $("#quantity_tr_"+$("#parameter_modal_id").val()).attr('readonly',false);
+         
+      }else{
+         
       }
    });   
    $(document).on('keyup','.parameter_column_value_QTY_COL',function(){
@@ -1648,27 +1663,14 @@ $( ".select2-single, .select2-multiple" ).select2();
          }else if(parseFloat(qty)>parseFloat(item_total_qty)){
             $(this).val('');
             alert("Quntity should be equal to item quantity")
+         }else{
+             $(".parameter_save_btn").show();
          }
+
+        
       }
    });
-   $(".parameter_save_btn").click(function(){
-      let row_id = $("#parameter_modal_id").val();
-      let parameter_arr = [];
-      $(".parameter_column").each(function(){
-         let id = $(this).val();
-         let col_val_arr = [];
-         $(".parameter_column_value_"+id).each(function(){
-            if($(this).val()!=""){
-               col_val_arr.push($(this).val());
-            }            
-         });
-         parameter_arr[row_id] = col_val_arr;
-      });
-      $("#item_parameters_"+row_id).val(parameter_arr);
-      $("#parameter_modal").modal('toggle');
-      $("#quantity_tr_"+row_id).attr('readonly',true);
-      
-   });
+   
    $("#series_no").change(function(){
       let series = $(this).val();      
       $("#material_center").val($('option:selected', this).attr('data-mat_center'));

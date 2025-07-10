@@ -28,7 +28,7 @@
                                 <select class="form-select" name="item" style="width: 120%;" required>
                                     <option value="">Select Item</option>
                                     @foreach ($items as $item)
-                                        <option value="{{$item->id}}">{{$item->name}}</option>
+                                        <option value="{{$item->id}}" @if($item_id && $item_id==$item->id) selected @endif>{{$item->name}}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -36,13 +36,13 @@
                                 <select class="form-select" name="series" style="width: 120%;" required>
                                     <option value="">Select Branch</option>
                                     @foreach ($series as $branch)
-                                        <option value="{{$branch->series}}">{{$branch->series}}</option>
+                                        <option value="{{$branch->series}}" @if($selected_series && $selected_series==$branch->series) selected @endif>{{$branch->series}}</option>
                                     @endforeach
                                     series
                                 </select>
                             </div>
                             <div class="calender-administrator ms-md-4">
-                                <input type="date" id="customDate" class="form-control calender-bg-icon calender-placeholder" placeholder="To date" required name="to_date" value="{{date('Y-m-d')}}">
+                                <input type="date" id="customDate" class="form-control calender-bg-icon calender-placeholder" placeholder="To date" required name="to_date" value="@if($to_date && !empty($to_date)){{$to_date}}@else{{date('Y-m-d')}}@endif">
                             </div>
                             <button class="btn btn-info" style="margin-left: 5px;">Search</button>
                         </div>
@@ -52,31 +52,92 @@
                 </div>
                <div class="transaction-table bg-white table-view shadow-sm purchase_table">
                   <table class="table-bodered table m-0 shadow-sm">
-                    @if($parameters)
-                    {{$parameters}}
+                    
+                    @if($parameter_header && count($parameter_header)>0)
                         <thead>
-                            <tr>                                
-                                @foreach($parameters as $key => $value)
-                                    <th>
-                                        @if($value->parameterColumnName)
-                                            {{ $value->parameterColumnName->paremeter_name }}
-                                        @endif
-                                    </th>
+                            <tr>
+                                @php $total_header = "Total "; @endphp
+                                @foreach($parameter_header as $key => $value)
+                                    <th>{{ $value->paremeter_name }}</th>
+                                    @if($value->conversion_factor==1)
+                                        @php $total_header.=$value->paremeter_name; @endphp
+                                    @endif
                                 @endforeach
+                                <th>{{$total_header}}</th>
                             </tr>                        
                         </thead>
-                        <tbody>   
-                                               
-                            @foreach($parameters as $key => $value) 
-                                <tr>                             
-                                @if($value->parameterColumnValues)
-                                    @foreach($value->parameterColumnValues as $k => $v)
-                                        <td>{{$v->column_value}}</td>
-                                    @endforeach                                    
-                                @endif    
-                                </tr>                        
+                        <tbody>
+                            @foreach($parameter_value as $key => $value) 
+                                @php $alternative_value = 0;$conversion_value = 0;@endphp
+                               <tr>                                                      
+                                    @if($value->parameter1_id!=null)
+                                        <td>
+                                            {{$value->parameter1_value}} 
+                                            @if($value->alternative_unit1==1)
+                                                {{$value->paremeter_name1}} 
+                                                @php $alternative_value = $value->parameter1_value @endphp
+                                            @endif
+                                            @if($value->conversion_factor1==1)
+                                                {{$item_unit->s_name}}
+                                                @php $conversion_value = $value->parameter1_value @endphp
+                                            @endif
+                                        </td>
+                                    @endif
+                                    @if($value->parameter2_id!=null)
+                                        <td>
+                                            {{$value->parameter2_value}}
+                                            @if($value->alternative_unit2==1)
+                                                {{$value->paremeter_name2}} 
+                                                @php $alternative_value = $value->parameter2_value @endphp
+                                            @endif
+                                            @if($value->conversion_factor2==1)
+                                                {{$item_unit->s_name}}  
+                                                @php $conversion_value = $value->parameter2_value @endphp
+                                            @endif
+                                        </td>
+                                    @endif
+                                    @if($value->parameter3_id!=null)
+                                        <td>
+                                            {{$value->parameter3_value}}
+                                            @if($value->alternative_unit3==1)
+                                                {{$value->paremeter_name3}} 
+                                                @php $alternative_value = $value->parameter3_value @endphp
+                                            @endif
+                                            @if($value->conversion_factor3==1)
+                                                {{$item_unit->s_name}} 
+                                                @php $conversion_value = $value->parameter3_value @endphp
+                                            @endif
+                                        </td>
+                                    @endif
+                                    @if($value->parameter4_id!=null)
+                                        <td>
+                                            {{$value->parameter4_value}}
+                                            @if($value->alternative_unit4==1)
+                                                {{$value->paremeter_name4}} 
+                                                @php $alternative_value = $value->parameter4_value @endphp
+                                            @endif
+                                            @if($value->conversion_factor4==1)
+                                                {{$item_unit->s_name}}  
+                                                @php $conversion_value = $value->parameter4_value @endphp
+                                            @endif
+                                        </td>
+                                    @endif
+                                    @if($value->parameter5_id!=null)
+                                        <td>
+                                            {{$value->parameter5_value}}
+                                            @if($value->alternative_unit5==1)
+                                                {{$value->paremeter_name5}} 
+                                                @php $alternative_value = $value->parameter5_value @endphp
+                                            @endif
+                                            @if($value->conversion_factor5==1)
+                                                {{$item_unit->s_name}} 
+                                                @php $conversion_value = $value->parameter5_value @endphp
+                                            @endif
+                                        </td>
+                                    @endif
+                                    <td>{{$alternative_value*$conversion_value}} {{$item_unit->s_name}}</td>
+                                </tr>
                             @endforeach
-                            
                         </tbody>
                     @endif
                   </table>

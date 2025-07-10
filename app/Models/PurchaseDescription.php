@@ -15,6 +15,6 @@ class PurchaseDescription extends Model
         return $this->belongsTo('App\Models\Units','unit','id');
     }
     public function parameterColumnInfo() {
-        return $this->hasMany('App\Models\ParameterInfo','purchase_desc_row_id','id');
+        return $this->hasMany('App\Models\PurchaseParameterInfo','purchase_desc_row_id','id');
     }
 }

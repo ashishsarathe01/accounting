@@ -18,6 +18,8 @@ use App\Models\ParameterInfoValue;
 use App\Models\ParameterInfoValueDetail;
 use App\Models\ItemAverage;
 use App\Models\ItemAverageDetail;
+use App\Models\PurchaseParameterInfo;
+use App\Models\ItemParameterStock;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\URL;
 use Carbon\Carbon;
@@ -70,11 +72,12 @@ class PurchaseController extends Controller{
                     'item:id,name',
                     'units:id,name',
                     'parameterColumnInfo' => function ($q2) {
-                        $q2->with([
-                            'parameterColumnName:id,paremeter_name',
-                            'parameterColumnValues:parent_id,column_value'
-                        ]);
-                        $q2->select('id', 'purchase_desc_row_id', 'parameter_col_id');
+                        $q2->leftjoin('item_paremeter_list as param1','purchase_parameter_info.parameter1_id','=','param1.id');
+                        $q2->leftjoin('item_paremeter_list as param2','purchase_parameter_info.parameter2_id','=','param2.id');
+                        $q2->leftjoin('item_paremeter_list as param3','purchase_parameter_info.parameter3_id','=','param3.id');
+                        $q2->leftjoin('item_paremeter_list as param4','purchase_parameter_info.parameter4_id','=','param4.id');
+                        $q2->leftjoin('item_paremeter_list as param5','purchase_parameter_info.parameter5_id','=','param5.id');
+                        $q2->select('purchase_parameter_info.id', 'purchase_desc_row_id','parameter1_id','parameter2_id','parameter3_id','parameter4_id','parameter5_id','parameter1_value','parameter2_value','parameter3_value','parameter4_value','parameter5_value','param1.paremeter_name as paremeter_name1','param2.paremeter_name as paremeter_name2','param3.paremeter_name as paremeter_name3','param4.paremeter_name as paremeter_name4','param5.paremeter_name as paremeter_name5');
                     }
                 ]);
                 $query->select('id', 'goods_discription', 'qty', 'purchase_id', 'unit');
@@ -100,7 +103,8 @@ class PurchaseController extends Controller{
     }
 
     $purchase = $query->get()->reverse()->values();
-
+   //  echo "<pre>";
+   //  print_r($purchase->toArray());die;
     return view('purchase')
         ->with('purchase', $purchase)
         ->with('month_arr', $month_arr)
@@ -200,6 +204,57 @@ class PurchaseController extends Controller{
      * @return \Illuminate\Http\Response
      */
    public function store(Request $request){
+      // echo "<pre>";
+      // $parameter = json_decode($request->input('item_parameters')[0],true);
+      // if(count($parameter)>0){
+      //    foreach ($parameter as $k1 => $param) {
+      //       $parameter1_id = "";$parameter1_value = "";
+      //       $parameter2_id = "";$parameter2_value = "";
+      //       $parameter3_id = "";$parameter3_value = "";
+      //       $parameter4_id = "";$parameter4_value = "";
+      //       $parameter5_id = "";$parameter5_value = "";
+      //       $alternative_unit_value = 0;
+      //       foreach($param as $k11 => $v){
+      //          print_r($v);
+      //          if($k11==0){
+      //             $parameter1_id = $v['id'];
+      //             $parameter1_value = $v['value'];
+      //             if($v['alternative_unit']==1){
+      //                $alternative_unit_value = $v['value'];
+      //             }
+      //          }else if($k11==1){
+      //             $parameter2_id = $v['id'];
+      //             $parameter2_value = $v['value'];
+      //             if($v['alternative_unit']==1){
+      //                $alternative_unit_value = $v['value'];
+      //             }
+      //          }else if($k11==2){
+      //             $parameter3_id = $v['id'];
+      //             $parameter3_value = $v['value'];
+      //             if($v['alternative_unit']==1){
+      //                $alternative_unit_value = $v['value'];
+      //             }
+      //          }else if($k11==3){
+      //             $parameter4_id = $v['id'];
+      //             $parameter4_value = $v['value'];
+      //             if($v['alternative_unit']==1){
+      //                $alternative_unit_value = $v['value'];
+      //             }
+      //          }else if($k11==4){
+      //             $parameter5_id = $v['id'];
+      //             $parameter5_value = $v['value'];
+      //             if($v['alternative_unit']==1){
+      //                $alternative_unit_value = $v['value'];
+      //             }
+      //          }
+      //       }
+      //       while($alternative_unit_value>0){
+
+      //          $alternative_unit_value--;
+      //       }
+      //    }
+      // }
+      //          die;
       Gate::authorize('action-module',83);
       $validated = $request->validate([
          'series_no' => 'required',
@@ -293,42 +348,135 @@ class PurchaseController extends Controller{
                $parameter = json_decode($item_parameters[$key],true);
                if(count($parameter)>0){
                   foreach ($parameter as $k1 => $param) {
-                     $column_id = $param['column_id'];
-                     $parameter_info = new ParameterInfo();
-                     $parameter_info->item_id = $good;
-                     $parameter_info->purchase_id = $purchase->id;
-                     $parameter_info->purchase_desc_row_id = $desc->id;
-                     $parameter_info->parameter_col_id = $column_id;
-                     //$parameter_info->purchase_type = "PURCHASE";
-                     $parameter_info->company_id = Session::get('user_company_id');
-                     $parameter_info->created_by = Session::get('user_id');
-                     $parameter_info->created_at = date('Y-m-d H:i:s');
-                     if($parameter_info->save()){
-                        if(count($param['column_value'])>0){
-                           foreach ($param['column_value'] as $k2 => $param_val) {
-                              $parameter_info_value = new ParameterInfoValue();
-                              $parameter_info_value->parent_id = $parameter_info->id;
-                              $parameter_info_value->item_id = $good;
-                              $parameter_info_value->column_value = $param_val;
-                              $parameter_info_value->in_source_id = $purchase->id;
-                              $parameter_info_value->in_source_row_id = $desc->id;
-                              $parameter_info_value->company_id = Session::get('user_company_id');
-                              $parameter_info_value->created_at = date('Y-m-d H:i:s');
-                              if($parameter_info_value->save()){
-                                 $parameter_info_value_detail = new ParameterInfoValueDetail();
-                                 $parameter_info_value_detail->parent_id = $parameter_info->id;
-                                 $parameter_info_value_detail->item_id = $good;
-                                 $parameter_info_value_detail->column_value = $param_val;
-                                 $parameter_info_value_detail->in_source_id = $purchase->id;
-                                 $parameter_info_value_detail->in_source_row_id = $desc->id;
-                                 $parameter_info_value_detail->company_id = Session::get('user_company_id');
-                                 $parameter_info_value_detail->created_at = date('Y-m-d H:i:s');
-                              }
-
-                              
+                     $parameter1_id = "";$parameter1_value = "";
+                     $parameter2_id = "";$parameter2_value = "";
+                     $parameter3_id = "";$parameter3_value = "";
+                     $parameter4_id = "";$parameter4_value = "";
+                     $parameter5_id = "";$parameter5_value = "";
+                     $alternative_unit_value = 0;
+                     $alternative_unit_key = '';
+                     foreach($param as $k11 => $v){
+                        if($k11==0){
+                           $parameter1_id = $v['id'];
+                           $parameter1_value = $v['value'];
+                           if($v['alternative_unit']==1){
+                              $alternative_unit_key = "parameter1_value";
+                           }
+                        }else if($k11==1){
+                           $parameter2_id = $v['id'];
+                           $parameter2_value = $v['value'];
+                           if($v['alternative_unit']==1){
+                              $alternative_unit_key = "parameter2_value";
+                           }
+                        }else if($k11==2){
+                           $parameter3_id = $v['id'];
+                           $parameter3_value = $v['value'];
+                           if($v['alternative_unit']==1){
+                              $alternative_unit_key = "parameter3_value";
+                           }
+                        }else if($k11==3){
+                           $parameter4_id = $v['id'];
+                           $parameter4_value = $v['value'];
+                           if($v['alternative_unit']==1){
+                              $alternative_unit_key = "parameter4_value";
+                           }
+                        }else if($k11==4){
+                           $parameter5_id = $v['id'];
+                           $parameter5_value = $v['value'];
+                           if($v['alternative_unit']==1){
+                              $alternative_unit_key = "parameter5_value";
                            }
                         }
+                        if($v['alternative_unit']==1){
+                           $alternative_unit_value = $v['value'];
+                        }
                      }
+                     $purchase_parameter_info = new PurchaseParameterInfo;
+                     $purchase_parameter_info->item_id = $good;
+                     $purchase_parameter_info->purchase_id = $purchase->id;
+                     $purchase_parameter_info->purchase_desc_row_id = $desc->id;
+                     $purchase_parameter_info->parameter1_id = $parameter1_id;
+                     $purchase_parameter_info->parameter1_value = $parameter1_value;
+                     $purchase_parameter_info->parameter2_id = $parameter2_id;
+                     $purchase_parameter_info->parameter2_value = $parameter2_value;
+                     $purchase_parameter_info->parameter3_id = $parameter3_id;
+                     $purchase_parameter_info->parameter3_value = $parameter3_value;
+                     $purchase_parameter_info->parameter4_id = $parameter4_id;
+                     $purchase_parameter_info->parameter4_value = $parameter4_value;
+                     $purchase_parameter_info->parameter5_id = $parameter5_id;
+                     $purchase_parameter_info->parameter5_value = $parameter5_value;
+                     $purchase_parameter_info->company_id = Session::get('user_company_id');
+                     $purchase_parameter_info->created_by = Session::get('user_id');
+                     $purchase_parameter_info->created_at = date('Y-m-d H:i:s');
+                     if($purchase_parameter_info->save()){
+                        while($alternative_unit_value>0){
+                           if($alternative_unit_key=="parameter1_value"){
+                              $parameter1_value = 1;
+                           }
+                           if($alternative_unit_key=="parameter2_value"){
+                              $parameter2_value = 1;
+                           }
+                           if($alternative_unit_key=="parameter3_value"){
+                              $parameter3_value = 1;
+                           }
+                           if($alternative_unit_key=="parameter4_value"){
+                              $parameter4_value = 1;
+                           }
+                           if($alternative_unit_key=="parameter5_value"){
+                              $parameter5_value = 1;
+                           }
+                           $item_parameter_stock = new ItemParameterStock;
+                           $item_parameter_stock->item_id = $good;
+                           $item_parameter_stock->series_no = $request->input('series_no');
+                           $item_parameter_stock->parameter1_id = $parameter1_id;
+                           $item_parameter_stock->parameter1_value = $parameter1_value;
+                           $item_parameter_stock->parameter2_id = $parameter2_id;
+                           $item_parameter_stock->parameter2_value = $parameter2_value;
+                           $item_parameter_stock->parameter3_id = $parameter3_id;
+                           $item_parameter_stock->parameter3_value = $parameter3_value;
+                           $item_parameter_stock->parameter4_id = $parameter4_id;
+                           $item_parameter_stock->parameter4_value = $parameter4_value;
+                           $item_parameter_stock->parameter5_id = $parameter5_id;
+                           $item_parameter_stock->parameter5_value = $parameter5_value;
+                           $item_parameter_stock->stock_in_id = $purchase->id;
+                           $item_parameter_stock->company_id = Session::get('user_company_id');
+                           $item_parameter_stock->save();
+                           $alternative_unit_value--;
+                        }
+                     }
+                     // $column_id = $param['column_id'];
+                     // $parameter_info = new ParameterInfo();
+                     // $parameter_info->item_id = $good;
+                     // $parameter_info->purchase_id = $purchase->id;
+                     // $parameter_info->purchase_desc_row_id = $desc->id;
+                     // $parameter_info->parameter_col_id = $column_id;
+                     // $parameter_info->company_id = Session::get('user_company_id');
+                     // $parameter_info->created_by = Session::get('user_id');
+                     // $parameter_info->created_at = date('Y-m-d H:i:s');
+                     // if($parameter_info->save()){
+                        // if(count($param['column_value'])>0){
+                        //    foreach ($param['column_value'] as $k2 => $param_val) {
+                        //       $parameter_info_value = new ParameterInfoValue();
+                        //       $parameter_info_value->parent_id = $parameter_info->id;
+                        //       $parameter_info_value->item_id = $good;
+                        //       $parameter_info_value->column_value = $param_val;
+                        //       $parameter_info_value->in_source_id = $purchase->id;
+                        //       $parameter_info_value->in_source_row_id = $desc->id;
+                        //       $parameter_info_value->company_id = Session::get('user_company_id');
+                        //       $parameter_info_value->created_at = date('Y-m-d H:i:s');
+                        //       if($parameter_info_value->save()){
+                        //          $parameter_info_value_detail = new ParameterInfoValueDetail();
+                        //          $parameter_info_value_detail->parent_id = $parameter_info->id;
+                        //          $parameter_info_value_detail->item_id = $good;
+                        //          $parameter_info_value_detail->column_value = $param_val;
+                        //          $parameter_info_value_detail->in_source_id = $purchase->id;
+                        //          $parameter_info_value_detail->in_source_row_id = $desc->id;
+                        //          $parameter_info_value_detail->company_id = Session::get('user_company_id');
+                        //          $parameter_info_value_detail->created_at = date('Y-m-d H:i:s');
+                        //       }
+                        //    }
+                        // }
+                     //}
                   }
                }
             }
