@@ -860,7 +860,7 @@ class PurchaseController extends Controller{
             return back()->with('error', '❌ Action not allowed. Please delete or cancel the related Debit Note or Credit Note first.');
          }
       }
-      print_r($check_entry_in_cn_dn);die;
+      
       $purchase =  Purchase::find($request->purchase_id);
       $purchase->delete = '1';
       $purchase->deleted_at = Carbon::now();
