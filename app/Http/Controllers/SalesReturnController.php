@@ -76,15 +76,17 @@ class SalesReturnController extends Controller
       // Base query
       $query = DB::table('sales_returns')
           ->select(
-              'sr_prefix', 'sr_nature', 'sr_type',
-              'sales_returns.id as sales_returns_id',
-              'sales_returns.date',
-              'sales_returns.series_no',
-              'sales_returns.financial_year',
-              'sales_returns.invoice_no',
-              'sale_return_no',
-              'sales_returns.total',
-              DB::raw('(select account_name from accounts where accounts.id=sales_returns.party limit 1) as account_name')
+               'sr_prefix', 'sr_nature', 'sr_type',
+               'sales_returns.id as sales_returns_id',
+               'sales_returns.date',
+               'sales_returns.series_no',
+               'sales_returns.financial_year',
+               'sales_returns.invoice_no',
+               'sale_return_no',
+               'sales_returns.total',
+               DB::raw('(select account_name from accounts where accounts.id=sales_returns.party limit 1) as account_name'),
+               DB::raw('(select manual_numbering from voucher_series_configurations where voucher_series_configurations.company_id = '.Session::get('user_company_id').' and configuration_for="CREDIT NOTE" and voucher_series_configurations.status=1 and voucher_series_configurations.series = sales_returns.series_no limit 1) as manual_numbering_status'),
+               DB::raw('(select max(sale_return_no) from sales_returns as s where s.company_id = '.Session::get('user_company_id').' and s.delete="0" and s.series_no = sales_returns.series_no) as max_voucher_no')
           )
           ->where('company_id', Session::get('user_company_id'))
           ->where('delete', '0');

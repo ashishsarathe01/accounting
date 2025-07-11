@@ -81,9 +81,11 @@
                                     <a href="{{ URL::to('sale-return-edit/'.$value->sales_returns_id) }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
                                  @endcan
                                  @can('action-module',70)
-                                    <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $value->sales_returns_id;?>">
-                                       <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
-                                    </button>
+                                    @if(($value->max_voucher_no==$value->sale_return_no && $value->manual_numbering_status=="NO") || ($value->manual_numbering_status=="YES" || $value->manual_numbering_status==""))
+                                       <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $value->sales_returns_id;?>">
+                                          <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
+                                       </button>
+                                    @endif
                                  @endcan
                                  <?php 
                               } ?>

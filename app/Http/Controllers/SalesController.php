@@ -81,7 +81,8 @@ class SalesController extends Controller
                      'e_waybill_status',
                      'sales.status',
                      DB::raw('(select account_name from accounts where accounts.id = sales.party limit 1) as account_name'),
-                     DB::raw('(select count(*) from sales_returns where sales_returns.sale_bill_id = sales.id and voucher_type="SALE" and status="1" and sales_returns.delete="0")  as sale_return_count')
+                     DB::raw('(select manual_numbering from voucher_series_configurations where voucher_series_configurations.company_id = '.Session::get('user_company_id').' and configuration_for="SALE" and voucher_series_configurations.status=1 and voucher_series_configurations.series = sales.series_no limit 1) as manual_numbering_status'),
+                     DB::raw('(select max(voucher_no) from sales as s where s.company_id = '.Session::get('user_company_id').' and s.delete="0" and s.series_no = sales.series_no and entry_source=1) as max_voucher_no')
                   )
                   ->where('sales.company_id', Session::get('user_company_id'))
                   ->where('sales.delete', '0');   
@@ -98,6 +99,9 @@ class SalesController extends Controller
          $query->orderBy('financial_year','desc')->orderBy(DB::raw("cast(date as SIGNED)"), 'desc')->limit(10);
       }
       $sale = $query->get()->reverse()->values();
+
+      
+
       return view('sale')
             ->with('sale', $sale)
             ->with('month_arr', $month_arr)
@@ -1226,8 +1230,7 @@ class SalesController extends Controller
       
    }
    public function saleImportProcess(Request $request) { 
-        ini_set('max_execution_time', 600);
-      
+      ini_set('max_execution_time', 600);      
       $validator = Validator::make($request->all(), [
          'csv_file' => 'required|file|mimes:csv,txt|max:2048', // Max 2MB, CSV or TXT file
       ]); 
@@ -1550,6 +1553,7 @@ class SalesController extends Controller
                   $sale->shipping_pan = $shipp->pan;
                }
                $sale->financial_year = $financial_year;
+               $sale->entry_source = 2; 
                $sale->save();
                if($sale->id){  
                   //ITEM DATA INSERT

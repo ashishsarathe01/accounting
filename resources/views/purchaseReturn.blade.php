@@ -96,9 +96,11 @@
                                                 <a href="{{ URL::to('purchase-return-edit/'.$value->purchases_id) }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
                                             @endcan
                                             @can('action-module',48)
-                                                <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $value->purchases_id;?>">
-                                                    <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
-                                                </button>
+                                                @if(($value->max_voucher_no==$value->purchase_return_no && $value->manual_numbering_status=="NO") || ($value->manual_numbering_status=="YES" || $value->manual_numbering_status==""))
+                                                    <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $value->purchases_id;?>">
+                                                        <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
+                                                    </button>
+                                                @endif
                                             @endcan
                                           <?php 
                                        } ?>
