@@ -42,73 +42,68 @@ class SalesController extends Controller
      * @return \Illuminate\Http\Response
      */
    public function index(Request $request){
-       Gate::authorize('action-module',10);
-    $input = $request->all();
-
-    // Initialize dates
-    $from_date = null;
-    $to_date = null;
-
-    // If user submitted new dates, update session
-    if (!empty($input['from_date']) && !empty($input['to_date'])) {
-        $from_date = date('d-m-Y', strtotime($input['from_date']));
-        $to_date = date('d-m-Y', strtotime($input['to_date']));
-
-        session(['sales_from_date' => $from_date, 'sales_to_date' => $to_date]);
-    } elseif (session()->has('sales_from_date') && session()->has('sales_to_date')) {
-        // Use previously stored session dates
-        $from_date = session('sales_from_date');
-        $to_date = session('sales_to_date');
-    }
-    
-        Session::put('redirect_url', '');
-    
-        // Financial year processing
-        $financial_year = Session::get('default_fy');      
-        $y = explode("-", $financial_year);
-        $from = DateTime::createFromFormat('y', $y[0])->format('Y');
-        $to = DateTime::createFromFormat('y', $y[1])->format('Y');
-        $month_arr = [
-            $from.'-04', $from.'-05', $from.'-06', $from.'-07', $from.'-08', $from.'-09',
-            $from.'-10', $from.'-11', $from.'-12', $to.'-01', $to.'-02', $to.'-03'
-        ];
-    
-        // Base query
-        $query = DB::table('sales')
-            ->select(
-                'sales.id as sales_id', 'sales.date', 'sales.voucher_no', 'sales.voucher_no_prefix',
-                'sales.total', 'financial_year', 'series_no', 'e_invoice_status', 'e_waybill_status','sales.status',
-                DB::raw('(select account_name from accounts where accounts.id=sales.party limit 1) as account_name')
-            )
-            ->where('company_id', Session::get('user_company_id'))
-            ->where('delete', '0');
-    
-        // Filter if dates selected
-        if ($from_date && $to_date) {
-            $query->whereRaw("
-                STR_TO_DATE(sales.date,'%Y-%m-%d') >= STR_TO_DATE('" . date('Y-m-d', strtotime($from_date)) . "','%Y-%m-%d')
-                AND STR_TO_DATE(sales.date,'%Y-%m-%d') <= STR_TO_DATE('" . date('Y-m-d', strtotime($to_date)) . "','%Y-%m-%d')
-            ");
-            $query->orderBy('sales.date','asc');
-            $query->orderBy(DB::raw("cast(voucher_no as SIGNED)"), 'ASC');
-            
-        } else {
-            // No date filter: show last 10 transactions
-           $query->orderBy('financial_year','desc')->orderBy(DB::raw("cast(date as SIGNED)"), 'desc')->limit(10);
-        }
-    
-        // Default ordering
-        
-      
-
-        $sale = $query->get()->reverse()->values();
-    
-        return view('sale')
+      Gate::authorize('action-module',10);
+      $input = $request->all();
+      // Initialize dates
+      $from_date = null;
+      $to_date = null;
+      // If user submitted new dates, update session
+      if (!empty($input['from_date']) && !empty($input['to_date'])) {
+         $from_date = date('d-m-Y', strtotime($input['from_date']));
+         $to_date = date('d-m-Y', strtotime($input['to_date']));
+         session(['sales_from_date' => $from_date, 'sales_to_date' => $to_date]);
+      }elseif (session()->has('sales_from_date') && session()->has('sales_to_date')) {
+         // Use previously stored session dates
+         $from_date = session('sales_from_date');
+         $to_date = session('sales_to_date');
+      }
+      Session::put('redirect_url', '');    
+      // Financial year processing
+      $financial_year = Session::get('default_fy');      
+      $y = explode("-", $financial_year);
+      $from = DateTime::createFromFormat('y', $y[0])->format('Y');
+      $to = DateTime::createFromFormat('y', $y[1])->format('Y');
+      $month_arr = [
+         $from.'-04', $from.'-05', $from.'-06', $from.'-07', $from.'-08', $from.'-09',
+         $from.'-10', $from.'-11', $from.'-12', $to.'-01', $to.'-02', $to.'-03'
+      ];    
+      // Base query
+      $query = DB::table('sales')
+                  ->select(
+                     'sales.id as sales_id',
+                     'sales.date',
+                     'sales.voucher_no',
+                     'sales.voucher_no_prefix',
+                     'sales.total',
+                     'financial_year',
+                     'series_no',
+                     'e_invoice_status',
+                     'e_waybill_status',
+                     'sales.status',
+                     DB::raw('(select account_name from accounts where accounts.id = sales.party limit 1) as account_name'),
+                     DB::raw('(select count(*) from sales_returns where sales_returns.sale_bill_id = sales.id and voucher_type="SALE" and status="1" and sales_returns.delete="0")  as sale_return_count')
+                  )
+                  ->where('sales.company_id', Session::get('user_company_id'))
+                  ->where('sales.delete', '0');   
+      // Filter if dates selected
+      if($from_date && $to_date) {
+         $query->whereRaw("
+            STR_TO_DATE(sales.date,'%Y-%m-%d') >= STR_TO_DATE('" . date('Y-m-d', strtotime($from_date)) . "','%Y-%m-%d')
+            AND STR_TO_DATE(sales.date,'%Y-%m-%d') <= STR_TO_DATE('" . date('Y-m-d', strtotime($to_date)) . "','%Y-%m-%d')
+         ");
+         $query->orderBy('sales.date','asc');
+         $query->orderBy(DB::raw("cast(voucher_no as SIGNED)"), 'ASC');
+      }else{
+         // No date filter: show last 10 transactions
+         $query->orderBy('financial_year','desc')->orderBy(DB::raw("cast(date as SIGNED)"), 'desc')->limit(10);
+      }
+      $sale = $query->get()->reverse()->values();
+      return view('sale')
             ->with('sale', $sale)
             ->with('month_arr', $month_arr)
             ->with("from_date", $from_date)
             ->with("to_date", $to_date);
-    }
+   }
 
     /**
      * Show the specified resources in storage.
@@ -964,6 +959,18 @@ class SalesController extends Controller
    }
    public function delete(Request $request){
       Gate::authorize('action-module',62);
+      $check_entry_in_cn_dn = DB::table('sales')
+                  ->select(
+                        DB::raw('(select count(*) from sales_returns where sales_returns.sale_bill_id = sales.id and voucher_type="SALE" and status="1" and sales_returns.delete="0")  as sale_return_count'),
+                        DB::raw('(select count(*) from purchase_returns where purchase_returns.purchase_bill_id = sales.id and voucher_type="SALE" and status="1" and purchase_returns.delete="0")  as purchase_return_count')
+                  )
+                  ->where('id',$request->sale_id)
+                  ->first();
+      if($check_entry_in_cn_dn){
+         if($check_entry_in_cn_dn->sale_return_count>0 || $check_entry_in_cn_dn->purchase_return_count>0){
+            return back()->with('error', '❌ Action not allowed. Please delete or cancel the related Debit Note or Credit Note first.');
+         }
+      }
       $sale =  Sales::find($request->sale_id);
       $sale->delete = '1';
       $sale->deleted_at = Carbon::now();

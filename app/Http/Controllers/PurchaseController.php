@@ -848,6 +848,19 @@ class PurchaseController extends Controller{
    }
    public function delete(Request $request){
       Gate::authorize('action-module',58);
+      $check_entry_in_cn_dn = DB::table('purchases')
+                  ->select(
+                        DB::raw('(select count(*) from sales_returns where sales_returns.sale_bill_id = purchases.id and voucher_type="PURCHASE" and status="1" and sales_returns.delete="0")  as sale_return_count'),
+                        DB::raw('(select count(*) from purchase_returns where purchase_returns.purchase_bill_id = purchases.id and voucher_type="PURCHASE" and status="1" and purchase_returns.delete="0")  as purchase_return_count')
+                  )
+                  ->where('id',$request->purchase_id)
+                  ->first();
+      if($check_entry_in_cn_dn){
+         if($check_entry_in_cn_dn->sale_return_count>0 || $check_entry_in_cn_dn->purchase_return_count>0){
+            return back()->with('error', '❌ Action not allowed. Please delete or cancel the related Debit Note or Credit Note first.');
+         }
+      }
+      print_r($check_entry_in_cn_dn);die;
       $purchase =  Purchase::find($request->purchase_id);
       $purchase->delete = '1';
       $purchase->deleted_at = Carbon::now();
