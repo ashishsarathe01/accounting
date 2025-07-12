@@ -846,123 +846,27 @@ class AjaxController extends Controller
       }
    }
    public function getItemParameter(Request $request){
-      $param = ParameterInfo::with(['parameterColumnName'=>function($q){
-                              $q->select('id','paremeter_name','alternative_unit','conversion_factor');                        
-                           }])
-                           ->where('item_id',$request->get('item_id'))
-                           ->select('id','parameter_col_id','purchase_desc_row_id')
-                           //->groupBy('parameter_col_id')
+      $parameter_header = DB::table('item_paremeter_list')
+                            ->where('company_id',Session::get('user_company_id'))
                            ->where('status',1)
-                           ->get();  
-      //echo "<pre>";
-      //print_r($param->toArray());
-      $return = array();
-      foreach($param->toArray() as $val) {
-         $return[$val['purchase_desc_row_id']][] = $val;
-      }
-      // print_r($return);
-      // die;
-      $arr = [];
-      foreach ($return as $key => $value){
-         $arr1 = [];
-         foreach ($value as $k1 => $v1){
-            if($v1['parameter_col_id']!=0){
-               $id = $v1['id'];
-               $parameter_col_id = $v1['parameter_col_id'];
-               $parameter_col_name = $v1['parameter_column_name']['paremeter_name'];
-               $alternative_unit = $v1['parameter_column_name']['alternative_unit'];
-               $conversion_factor = $v1['parameter_column_name']['conversion_factor'];
-               $param_val = ParameterInfoValue::where('parent_id',$id)
-                                 ->where('item_id',$request->get('item_id'))
-                                 ->where('status',1)
-                                 ->pluck('column_value');
-               $param_sale_val = ParameterInfoValue::where('parent_id',$id)
-                                 ->where('item_id',$request->get('item_id'))
-                                 ->where('status',1)
-                                 ->pluck('sale_quantity');
-               $param_val_id = ParameterInfoValue::where('parent_id',$id)
-                                 ->where('item_id',$request->get('item_id'))
-                                 ->where('status',1)
-                                 ->pluck('id');
-                                 //print_r($param_val);
-               array_push($arr1,array("parameter_col_id"=>$parameter_col_id,"parameter_col_name"=>$parameter_col_name,"alternative_unit"=>$alternative_unit,"conversion_factor"=>$conversion_factor,"value"=>$param_val,"id"=>$param_val_id,"param_sale_val"=>$param_sale_val));
-            }            
-         }
-         array_push($arr,$arr1);                 
-      }
-      //print_r($arr);die;
-      $res = [];
-      foreach ($arr as $key => $value) {         
-         $len = count($value);
-         foreach ($value as $k1 => $v1) {
-            if($k1==0){
-               foreach ($v1['value'] as $k2 => $v2) {
-                  $j = 1; $j1 = 1; $empty_status = 0;
-                  while($len>$j1){                     
-                     if($value[$j1]['alternative_unit']==1){
-                        $a = $value[$j1]['value'][$k2];                        
-                        $a = $a - $value[$j1]['param_sale_val'][$k2];   
-                        if($a==0){                        
-                           $empty_status = 1;
-                        }                     
-                     }
-                     $j1++;
-                  }
-                  $r = [];
-                  if($empty_status==0){
-                     if($v1['alternative_unit']==1){                        
-                        $v2 = $v2 - $v1['param_sale_val'][$k2];
-                     }                     
-                     array_push($r,array("name"=>$v1['parameter_col_name'],"value"=>$v2,"alternative_unit"=>$v1['alternative_unit'],"conversion_factor"=>$v1['conversion_factor'],"id"=>$v1['id'][$k2]));
-                     
-                     $r1 = [];                 
-                     while($len>$j){
-                        if($value[$j]['alternative_unit']==1){
-                           //echo $value[$j]['value'][$k2]."**".$value[$j]['param_sale_val'][$k2];
-                           $value[$j]['value'][$k2] = $value[$j]['value'][$k2] - $value[$j]['param_sale_val'][$k2];
-                        }                         
-                        array_push($r,array("name"=>$value[$j]['parameter_col_name'],"value"=>$value[$j]['value'][$k2],"alternative_unit"=>$value[$j]['alternative_unit'],"conversion_factor"=>$value[$j]['conversion_factor'],"id"=>$value[$j]['id'][$k2]));
-                        $j++;
-                     }
-                     array_push($res,$r);
-                  }
-               }               
-            }
-         }
-      }
-      //Head 
-      $head = ParameterInfo::with(['parameterColumnName'=>function($q){
-                           $q->select('id','paremeter_name','alternative_unit','conversion_factor');                        
-                        }])
-                        ->where('item_id',$request->get('item_id'))
-                        ->groupBy('parameter_col_id')
-                        ->select('id','parameter_col_id')
-                        ->where('status',1)
-                        ->get();  
+                           ->get();
+      $parameter_value = DB::table('item_parameter_stocks')
+                        ->leftjoin('item_paremeter_list as param1','item_parameter_stocks.parameter1_id','=','param1.id')
+                        ->leftjoin('item_paremeter_list as param2','item_parameter_stocks.parameter2_id','=','param2.id')
+                        ->leftjoin('item_paremeter_list as param3','item_parameter_stocks.parameter3_id','=','param3.id')
+                        ->leftjoin('item_paremeter_list as param4','item_parameter_stocks.parameter4_id','=','param4.id')
+                        ->leftjoin('item_paremeter_list as param5','item_parameter_stocks.parameter5_id','=','param5.id')
+                     ->where('item_parameter_stocks.company_id',Session::get('user_company_id'))
+                     ->select('item_parameter_stocks.id','parameter1_id','parameter2_id','parameter3_id','parameter4_id','parameter5_id','parameter1_value','parameter2_value','parameter3_value','parameter4_value','parameter5_value','param1.conversion_factor as conversion_factor1','param1.alternative_unit as alternative_unit1','param1.paremeter_name as paremeter_name1','param2.conversion_factor as conversion_factor2','param2.alternative_unit as alternative_unit2','param2.paremeter_name as paremeter_name2','param3.conversion_factor as conversion_factor3','param3.alternative_unit as alternative_unit3','param3.paremeter_name as paremeter_name3','param4.conversion_factor as conversion_factor4','param4.alternative_unit as alternative_unit4','param4.paremeter_name as paremeter_name4','param5.conversion_factor as conversion_factor5','param5.alternative_unit as alternative_unit5','param5.paremeter_name as paremeter_name5')
+                     ->where('item_id',$request->item_id)
+                     ->where('series_no',$request->series)
+                     ->where('item_parameter_stocks.status',1)
+                     ->get();
       $response = array(
          'status' => true,
-         'data' => array('head' => $head,"data"=>$res)
+         'data' => array('parameter_head' => $parameter_header,"parameter_value"=>$parameter_value)
       );
-      return json_encode($response);
-      //print_r($res);
-      // $return = array();
-      // foreach($arr as $val) {
-      //    $return[$val['parameter_col_id']][] = $val;
-      // }
-      return $res;
-      //print_r($arr);
-      die;
-      // return ParameterInfo::with(['parameterColumnName'=>function($q){
-      //                   $q->select('id','paremeter_name','alternative_unit','conversion_factor');                        
-      //                },'parameterColumnValues'=>function($q1){
-      //                   $q1->where('status',1);
-      //                   $q1->select('id','parent_id','column_value');
-      //                }])
-      //                ->where('item_id',$request->get('item_id'))
-      //                ->groupBy('parameter_col_id')
-      //                ->select('id','parameter_col_id')
-      //                ->where('status',1)
-      //                ->get();      
+      return json_encode($response);          
    }
    public function verifyGstTokenOtp(Request $request){
       $state_code = substr($request->gstin,0,2);

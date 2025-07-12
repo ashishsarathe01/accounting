@@ -1402,6 +1402,7 @@ class PurchaseReturnController extends Controller
          $purchase->original_invoice_value = $request->input('other_invoice_value'); // ❗️fixed missing quote
          $purchase->voucher_type = $request->input('other_invoice_against');
       }
+      
       $last_date = $purchase->date;
       $purchase->date = $request->input('date');
       
@@ -1419,7 +1420,7 @@ class PurchaseReturnController extends Controller
       //$purchase->series_no = $request->input('series_no');
       //$purchase->material_center = $request->input('material_center');
       $purchase->vehicle_no = $request->input('vehicle_no');
-      $purchase->voucher_type = $request->input('voucher_type');
+      //$purchase->voucher_type = $request->input('voucher_type');
       $purchase->gr_pr_no = $request->input('gr_pr_no');
       $purchase->transport_name = $request->input('transport_name');
       $purchase->station = $request->input('station');

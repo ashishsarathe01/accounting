@@ -1846,6 +1846,8 @@ function removeItem() {
       }
    });
    var modal_item_arr = [];
+   var parameter_modal_id = "1";
+   var option = ""; 
    $(document).on('click',".unit",function(){
       let parameter_qty = $("#quantity_tr_"+$(this).attr('data-id')).val()+" "+$(this).val();
       let parameter_name = $("#item_id_"+$(this).attr('data-id')).val();
@@ -1873,90 +1875,119 @@ function removeItem() {
             config_status: config_status,
             parameterized_stock_status : parameterized_stock_status,
             group_id : group_id,
-            item_id: item_id
+            item_id: item_id,
+            series: $("#series_no").val()
          },
-         success: function(data){  
-            if(data.data.head.length==0 || data.data.data.length==0){
+         success: function(res){  
+            console.log(res);
+            if(res.data.parameter_head.length==0 || res.data.parameter_value==0){
                return;
             }
-            let html = "<table class='table table-bordered'><thead><tr>";
-            data.data.head.forEach(function(e,i){
-               if(e.parameter_col_id!=0){
-                  let style = "";
-                  if(i==0){
-                     style = "style='width: 45%;'";
-                  }
-                  html+='<th '+style+'>'+e.parameter_column_name.paremeter_name+'</th>'; 
-               }                        
+            let html = "<table class='table table-bordered parameter_tbl'><thead><tr>";
+            res.data.parameter_head.forEach(function(e,i){
+                html+='<th>'+e.paremeter_name+'</th>';                                     
             });
-            html+='<th>Qty</th>';
-            html+='</tr></thead><tbody>';            
-            data.data.data.forEach(function(e,i){
-               let v = ""; let option_value = "";
-               let size_id = 0;let reel_id = 0;let update_id = 0;let weight_id = 0;
-               let size = "";let reel = "";let weight = "";
-               e.forEach(function(v1,k1){
-                  if(k1==0){
-                     option_value = v1.value;
-                  }
-                  v+=v1.name+" - "+v1.value+" | ";
-                  let alternative_unit = v1.alternative_unit;
-                  let conversion_factor = v1.conversion_factor;
-                  if(alternative_unit==0 && conversion_factor==0){
-                     size_id = v1.id;
-                     size = v1.value;
-                  }else if(alternative_unit==1){
-                     reel_id = v1.id;
-                     reel = v1.value;
-                  }else if(conversion_factor==1){
-                     weight_id = v1.id;
-                     weight = v1.value;
-                  }                  
-                  if(v1.alternative_unit==1){
-                     update_id = v1.id;
-                  }
-               });
-
-               modal_item_arr.push({"size":size,"size_id":size_id,"reel":reel,"reel_id":reel_id,"update_id":update_id,"weight":weight,"weight_id":weight_id,'text':v});
-               
-            });            
-            let index = 1;
-            while(index<10){
-               html+='<tr>';
-               data.data.head.forEach(function(e,i){
-                  if(e.parameter_col_id!=0){
-                     let alternative_unit = e.parameter_column_name.alternative_unit;
-                     let conversion_factor = e.parameter_column_name.conversion_factor;
-                     if(alternative_unit==0 && conversion_factor==0){                        
-                        html+='<th><input type="text" data-id="'+index+'" id="param_item_size_'+index+'" class="form-control input-lg param_item_size" ><div id="item_list_'+index+'" ></div></th>';
-                     }else if(alternative_unit==1){
-                        html+='<th><input type="text" class="form-control param_item_reel" id="param_item_reel_'+index+'" data-id="'+index+'"  ></th>'; 
-                     }else if(conversion_factor==1){
-                        html+='<th><input type="text" class="form-control" id="param_item_weight_'+index+'" data-id="'+index+'"  readonly></th>'; 
-                     }else{
-                        html+='<th><input type="text" class="form-control"  data-id="'+index+'"  readonly></th>'; 
-                     }                
-                  }                   
-               });
-               html+='<th><input type="text" class="form-control param_item_qty" id="param_item_qty_'+index+'" data-id="'+index+'"  readonly></th>'; 
-               index++;               
-               html+='</tr>';
-            }  
+            html+='<th></th></tr></thead><tbody>';  
+            option = "";          
+            res.data.parameter_value.forEach(function(e,i){
+               let list = "";let conversion_factor_value = "";let alternative_unit_value = "";
+               if(e.alternative_unit1==0 && e.conversion_factor1==0){
+                  list+=e.parameter1_value+" "+e.paremeter_name1+" - ";
+               }
+               if(e.alternative_unit2==0 && e.conversion_factor2==0){
+                  list+=e.parameter2_value+" "+e.paremeter_name2+" - ";
+               }
+               if(e.alternative_unit3==0 && e.conversion_factor3==0){
+                  list+=e.parameter3_value+" "+e.paremeter_name3+" - ";
+               }
+               if(e.alternative_unit4==0 && e.conversion_factor4==0){
+                  list+=e.parameter4_value+" "+e.paremeter_name4+" - ";
+               }
+               if(e.alternative_unit5==0 && e.conversion_factor5==0){
+                  list+=e.parameter1_value+" "+e.paremeter_name5+" - ";
+               }
+               if(e.alternative_unit1==1){
+                  list+=e.parameter1_value+" "+e.paremeter_name1+" - ";
+               }
+               if(e.alternative_unit2==1){
+                  list+=e.parameter2_value+" "+e.paremeter_name2+" - ";
+               }
+               if(e.alternative_unit3==1){
+                  list+=e.parameter3_value+" "+e.paremeter_name3+" - ";
+               }
+               if(e.alternative_unit4==1){
+                  list+=e.parameter4_value+" "+e.paremeter_name4+" - ";
+               }
+               if(e.alternative_unit5==1){
+                  list+=e.parameter5_value+" "+e.paremeter_name5+" - ";
+               }
+               if(e.conversion_factor1==1){
+                  list+=e.parameter1_value+" "+parameter_qty+" ";
+                  conversion_factor_value = e.parameter1_value;
+               }
+               if(e.conversion_factor2==1){
+                  list+=e.parameter2_value+" "+parameter_qty+" ";
+                  conversion_factor_value = e.parameter2_value;
+               }
+               if(e.conversion_factor3==1){
+                  list+=e.parameter3_value+" "+parameter_qty+" ";
+                  conversion_factor_value = e.parameter3_value;
+               }
+               if(e.conversion_factor4==1){
+                  list+=e.parameter4_value+" "+parameter_qty+" ";
+                  conversion_factor_value = e.parameter4_value;
+               }
+               if(e.conversion_factor5==1){
+                  list+=e.parameter5_value+" "+parameter_qty+" ";
+                  conversion_factor_value = e.parameter5_value;
+               }
+               option+= "<option value="+e.id+" data-conversion_factor_value='"+conversion_factor_value+"'>"+list+"</option>";
+            });
             html+='<tr>';
-            data.data.head.forEach(function(e,i){
-               if(e.parameter_col_id!=0){
-                  html+='<th></th>'; 
-               }                   
-            });   
-            html+='<th><input type="text" class="form-control"  readonly id="total_weight"></th>';
-            html+='</tr>';    
+            html+='<td>';
+            html+='<select class="form-select parameter_id select2-single" id="parameter_id_'+parameter_modal_id+'" data-id="'+parameter_modal_id+'"><option value="">Select</option>'+option+'</select>'; 
+            html+='</select>';
+            html+='<td>';
+            html+='</td>';
+            html+='<td>';
+            html+='</td>';
+            html+='</td>';
+            html+='<td><svg xmlns="http://www.w3.org/2000/svg" data-id="1" class="bg-primary rounded-circle add_parameter" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;" tabindex="0" role="button"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg></td>';
+            html+='<tr>';
             html+='</tbody></table>';
             $(".parameter_body").html(html);
             $("#parameter_modal_id").val(id);            
             $("#parameter_modal").modal('toggle');
+            $('#parameter_id_'+parameter_modal_id).select2({
+               dropdownParent: $('#parameter_modal .modal-content'),
+               width: '100%'
+            });
          }
       });
    });
+   $(document).on('click','.add_parameter',function(){
+      parameter_modal_id++;
+      newRow='<tr>';
+      newRow+='<td>';
+      newRow+='<select class="form-select parameter_id select2-single" id="parameter_id_'+parameter_modal_id+'" data-id="'+parameter_modal_id+'"><option value="">Select</option>'+option+'</select>'; 
+      newRow+='</select>';
+      newRow+='<td>';
+      newRow+='</td>';
+      newRow+='<td>';
+      newRow+='</td>';
+      newRow+='</td>';
+      newRow+='<td><svg style="color: red; cursor: pointer; margin-right: 8px;" xmlns="http://www.w3.org/2000/svg" tabindex="0" width="24" height="24" fill="currentColor" class="bi bi-file-minus-fill removeParameterRowBtn" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"></path></svg></td>';
+      newRow+='<tr>';
+      $('.parameter_tbl tbody').append(newRow);
+      $('#parameter_id_'+parameter_modal_id).select2({
+         dropdownParent: $('#parameter_modal .modal-content'),
+         width: '100%'
+      });
+   });
+   $(document).on('click', '.removeParameterRowBtn', function() {
+      $(this).closest('tr').remove();
+   });
+
    // $(document).on('change','.param_item_size',function(){
    //    let id = $(this).attr('data-id');
    //    $("#param_item_weight_"+id).val($('option:selected', this).attr('data-weight'));
@@ -2043,20 +2074,17 @@ function removeItem() {
       calculateWeight($(this).attr('data-id'));
    });
    $(".parameter_save_btn").click(function(){
-      let arr = [];
-      $(".param_item_size").each(function(){
-         let id = $(this).attr('data-id');
-         if($(this).val()!="" && $("#param_item_reel_"+id).val()!="" && $("#param_item_weight_"+id).val()!=""){
-            let sale_info = [];
-            sale_info.push({'value':$(this).val(),"id":$(this).attr('data-size_id')});
-            sale_info.push({'value':$("#param_item_reel_"+id).val(),"id":$(this).attr('data-reel_id')});
-            sale_info.push({'value':$("#param_item_weight_"+id).val(),"id":$(this).attr('data-weight_id')});
-            arr.push({"reel":$("#param_item_reel_"+id).val(),"id":$(this).attr('data-update_id'),"sale_info":sale_info});
-         }         
+      let arr = [];let conversion_factor_value_total = 0;
+      $(".parameter_id").each(function(){
+         let id = $(this).val();
+         conversion_factor_value_total+=parseFloat($(this).find(':selected').data('conversion_factor_value'));
+         arr.push(id);                
       });
       $("#item_parameters_"+$("#parameter_modal_id").val()).val(JSON.stringify(arr));
-      $("#quantity_tr_"+$("#parameter_modal_id").val()).val($("#total_weight").val());
+      $("#quantity_tr_"+$("#parameter_modal_id").val()).val(conversion_factor_value_total);
+      $("#quantity_tr_"+$("#parameter_modal_id").val()).attr('readonly',true);
       $("#parameter_modal").modal('toggle');
+      calculateAmount();
    });
    $(".transport_info").click(function(){
       $("#transport_info_modal").modal('toggle');

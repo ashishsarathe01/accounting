@@ -69,7 +69,7 @@ class ParameterizedStockController extends Controller
                            ->where('item_parameter_stocks.status',1)
                            ->get();
             // echo "<pre>";
-            // print_r($parameters->toArray());
+            // print_r($parameter_value->toArray());
             // die;
         }        
         return view('parameterized_stock',["items"=>$items,"series"=>$series,"parameter_header"=>$parameter_header,"parameter_value"=>$parameter_value,"item_id"=>$request->item,"selected_series"=>$request->series,"to_date"=>$request->to_date,'item_unit'=>$item_unit]);

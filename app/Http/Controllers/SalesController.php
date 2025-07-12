@@ -27,6 +27,7 @@ use App\Models\EinvoiceToken;
 use App\Models\ItemAverage;
 use App\Models\ItemAverageDetail;
 use App\Models\AccountOtherAddress;
+use App\Models\ItemParameterStock;
 use App\Helpers\CommonHelper;
 use Illuminate\Support\Facades\URL;
 use DB;
@@ -312,10 +313,10 @@ class SalesController extends Controller
          'goods_discription' => 'required|array|min:1',
       ]); 
 
-      // echo "<pre>";
-      // print_r($request->all());
+      //echo "<pre>";
+      //print_r($request->all());
       
-      // die;
+      //die;
       //Check Item Empty or not
       if($request->input('goods_discription')[0]=="" || $request->input('qty')[0]=="" || $request->input('price')[0]=="" || $request->input('amount')[0]==""){
          return $this->failedMessage('Plases Select Item','sale/create');
@@ -437,31 +438,9 @@ class SalesController extends Controller
             //Parameter Info
             if($item_parameters[$key]!=""){
                $parameter = json_decode($item_parameters[$key],true);
-               if(count($parameter)>0){
-                  foreach ($parameter as $k1 => $param) {                     
-                     $reel = $param['reel'];                    
-                     $id = $param['id'];
-                     $sale_info = $param['sale_info'];
-                     $params = ParameterInfoValue::find($id);
-                     if($params){
-                        $sale_quantity = $params->sale_quantity;
-                        $sale_quantity = $sale_quantity + $reel;
-                        $params->sale_quantity = $sale_quantity;
-                        $params->save();
-                     }
-                     foreach ($sale_info as $k2 => $v2) {
-                        $sale_parameter_info = new SaleParameterInfo;
-                        $sale_parameter_info->sale_id = $sale->id;
-                        $sale_parameter_info->sale_desc_id = $desc->id;
-                        $sale_parameter_info->item_id = $good;
-                        $sale_parameter_info->parameter_map_id = $v2['id'];
-                        $sale_parameter_info->parameter_map_val = $v2['value'];
-                        $sale_parameter_info->status = '1';
-                        $sale_parameter_info->company_id = Session::get('user_company_id');
-                        $sale_parameter_info->created_at = date('d-m-Y H:i:s');
-                        $sale_parameter_info->save();
-                     }
-                  }
+               if(count($parameter)>0){                  
+                  ItemParameterStock::whereIn('id',$parameter)->update(['status'=>0,'stock_out_id'=>$sale->id]);
+                  SaleDescription::where('id',$desc->id)->update(['parameter_ids'=>$item_parameters[$key]]);
                }
             }
          }
