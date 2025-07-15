@@ -856,12 +856,12 @@ class AjaxController extends Controller
                         ->leftjoin('item_paremeter_list as param3','item_parameter_stocks.parameter3_id','=','param3.id')
                         ->leftjoin('item_paremeter_list as param4','item_parameter_stocks.parameter4_id','=','param4.id')
                         ->leftjoin('item_paremeter_list as param5','item_parameter_stocks.parameter5_id','=','param5.id')
-                     ->where('item_parameter_stocks.company_id',Session::get('user_company_id'))
-                     ->select('item_parameter_stocks.id','parameter1_id','parameter2_id','parameter3_id','parameter4_id','parameter5_id','parameter1_value','parameter2_value','parameter3_value','parameter4_value','parameter5_value','param1.conversion_factor as conversion_factor1','param1.alternative_unit as alternative_unit1','param1.paremeter_name as paremeter_name1','param2.conversion_factor as conversion_factor2','param2.alternative_unit as alternative_unit2','param2.paremeter_name as paremeter_name2','param3.conversion_factor as conversion_factor3','param3.alternative_unit as alternative_unit3','param3.paremeter_name as paremeter_name3','param4.conversion_factor as conversion_factor4','param4.alternative_unit as alternative_unit4','param4.paremeter_name as paremeter_name4','param5.conversion_factor as conversion_factor5','param5.alternative_unit as alternative_unit5','param5.paremeter_name as paremeter_name5')
-                     ->where('item_id',$request->item_id)
-                     ->where('series_no',$request->series)
-                     ->where('item_parameter_stocks.status',1)
-                     ->get();
+                        ->where('item_parameter_stocks.company_id',Session::get('user_company_id'))
+                        ->select('item_parameter_stocks.id','parameter1_id','parameter2_id','parameter3_id','parameter4_id','parameter5_id','parameter1_value','parameter2_value','parameter3_value','parameter4_value','parameter5_value','param1.conversion_factor as conversion_factor1','param1.alternative_unit as alternative_unit1','param1.paremeter_name as paremeter_name1','param2.conversion_factor as conversion_factor2','param2.alternative_unit as alternative_unit2','param2.paremeter_name as paremeter_name2','param3.conversion_factor as conversion_factor3','param3.alternative_unit as alternative_unit3','param3.paremeter_name as paremeter_name3','param4.conversion_factor as conversion_factor4','param4.alternative_unit as alternative_unit4','param4.paremeter_name as paremeter_name4','param5.conversion_factor as conversion_factor5','param5.alternative_unit as alternative_unit5','param5.paremeter_name as paremeter_name5')
+                        ->where('item_id',$request->item_id)
+                        ->where('series_no',$request->series)
+                        ->where('item_parameter_stocks.status',1)
+                        ->get();
       $response = array(
          'status' => true,
          'data' => array('parameter_head' => $parameter_header,"parameter_value"=>$parameter_value)
