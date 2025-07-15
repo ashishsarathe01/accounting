@@ -328,7 +328,7 @@
        $("#item_ledger_details").modal("hide");
    });
    function reDirectFun(url){
-      window.open(url, '_blank');
+      window.location.href = url;
    }
 </script>
 @endsection

@@ -221,6 +221,7 @@
                                                                     @php
                                                                         $total_api_value_inv = 0;
                                                                         $total_db_value_inv = 0;
+                                                                        $anyMismatch = false;
                                                                     @endphp
 
                                                                     <!-- Summary rows (hidden initially) -->
@@ -317,7 +318,7 @@
                                                                     </tbody>
 
                                                                     <!-- Total Summary Row -->
-                                                                    <tr style="cursor:pointer; color: {{ $anyMismatch ? 'red' : 'green' }};">
+                                                                    <tr style="color:{{ $anyMismatch ? 'red' : 'green' }};">
                                                                         <td colspan="2" style="border:1px solid black; text-align:center; font-weight: bold;">Total</td>
                                                                         <td style="border:1px solid black; font-weight: bold;">{{ formatIndianNumber($total_api_value_inv, 2) }}</td>
                                                                         <td style="border:1px solid black; font-weight: bold;">{{ formatIndianNumber($total_db_value_inv, 2) }}</td>
@@ -351,14 +352,16 @@
                                                                 <tbody>
                                                                     @php $grand_api_total = 0;
                                                                          $grand_books_total = 0;
+                                                                         $anyMismatchCr = false;
                                                                     @endphp
                                                                        <tbody id="credit-note-summary" style="display: none;">
                                                                     @foreach ($creditNoteSummaries as $index => $group)
                                                                         @php $grand_api_total += $group['total_value'];
                                                                             $grand_books_total += $group['db_value'];
+                                                                            if (!$group['match']) $anyMismatchCr = true;
                                                                         @endphp
 
-                                                                        <tr onclick="toggleCreditNoteDetails('cdnr{{ $index }}')" style="cursor:pointer; color: {{ $summary['match'] ? 'green' : 'red' }};">
+                                                                        <tr onclick="toggleCreditNoteDetails('cdnr{{ $index }}')" style="cursor:pointer; color: {{ $group['match'] ? 'green' : 'red' }};">
                                                                             <td style="border:1px solid black;">{{ $group['gstin'] }}</td>
                                                                             <td style="border:1px solid black;">{{ $group['ctin'] }}</td>
                                                                             <td style="border:1px solid black;">{{ formatIndianNumber($group['total_value'], 2) }}</td>

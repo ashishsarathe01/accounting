@@ -348,4 +348,6 @@ Route::Resource('payment', PaymentController::class);
 Route::post('/gstr1-detail', [GSTR1Controller::class, 'gstr1Detail'])->name('gstr1-detail');
  Route::get('/gstr3b/view', [GstR3BController::class, 'index'])->name('gstr3B.view');
  Route::get('/settings', [SettingsController::class, 'index'])->name('viewSettings');
+ Route::post('/gstr1/send-to-gstmaster', [Gstr1Controller::class, 'sendGstr1ToGSTMaster'])->name('gstr1.send');
+
 });

@@ -136,7 +136,7 @@
                      <input type="date" class="form-control" id="other_invoice_date" name="other_invoice_date">
                   </div>
                   <div class="mb-3 col-md-2 other_invoice_div" style="display:none">
-                     <label for="other_invoice_date" class="form-label font-14 font-heading">Original Invoice Value</label>
+                     <label for="other_invoice_value" class="form-label font-14 font-heading">Original Invoice Value</label>
                      <input type="number" class="form-control" id="original_invoice_value" name="other_invoice_value" placeholder="Including taxes">
                   </div>
                   <div class="mb-1 col-md-1 voucher_no_div" style="display:none">
@@ -1330,9 +1330,9 @@
          }
          calculateAmount($("#bill_sundry_"+$(this).attr('data-id')).val());
       });
-      $("#saveBtn").click(function(){
+      $("#ssaleReturnBtn").click(function(){
          if(confirm("Are you sure to submit?")==true){            
-            $("#saleForm").validate({
+            $("#saleReturnForm").validate({
                ignore: [], 
                rules: {
                   series_no: "required",

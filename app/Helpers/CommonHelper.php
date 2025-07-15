@@ -520,7 +520,6 @@ class CommonHelper
         $response = curl_exec($curl);
         curl_close($curl);
         $result = json_decode($response);
-         
         if(isset($result->status_cd) && $result->status_cd=='1'){
             if(isset($result->header->txn) && !empty($result->header->txn)){
                 $gstToken = new gstToken;

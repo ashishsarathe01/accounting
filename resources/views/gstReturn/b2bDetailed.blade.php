@@ -42,6 +42,14 @@
                      border-top-left-radius: 0.375rem;
                      border-top-right-radius: 0.375rem;">
             <h2 class="mb-0" style="color:white; font-size:18px;">B2B Detailed Summary</h2>
+                  <form method="POST" action="{{ route('gstr1.send') }}">
+                  @csrf
+                  <input type="hidden" name="merchant_gst" value="{{ $merchant_gst }}">
+                  <input type="hidden" name="company_id" value="{{ $company_id }}">
+                  <input type="hidden" name="from_date" value="{{ $from_date }}">
+                  <input type="hidden" name="to_date" value="{{ $to_date }}">
+                  <button class="btn btn-primary align-left" type="submit">Send to GST Portal</button>
+               </form>
             <form id="quitForm" method="POST" action="{{ url('gstr1') }}">
     @csrf
      <input type="hidden" name="series" value="{{ $merchant_gst }}">
@@ -49,6 +57,7 @@
             <input type="hidden" name="to_date" value="{{ $to_date }}">
     <button type="submit" class="btn btn-danger">QUIT</button>
 </form>
+
 
          </div>
 
@@ -184,6 +193,9 @@
                         <th style="color: white;">{{ number_format($total_sgst, 2) }}</th>
                         <th style="color: white;">{{ number_format($total_igst, 2) }}</th>
                      </tr>
+
+                
+
                   @else
                      <tr>
                         <td colspan="15" class="text-center">No B2B invoices found for the selected period.</td>
@@ -195,7 +207,6 @@
       </div>
    </div>
 </div>
-
 </div>
 </div>
    </section>

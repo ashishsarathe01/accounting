@@ -88,7 +88,11 @@ class AccountsController extends Controller{
          'account_name' => 'required|string',
       ]); 
       
+<<<<<<< Updated upstream
       
+=======
+     
+>>>>>>> Stashed changes
       $com_id = Session::get('user_company_id');
       $check = Accounts::select('id')
                         ->where('account_name',$request->input('account_name'))

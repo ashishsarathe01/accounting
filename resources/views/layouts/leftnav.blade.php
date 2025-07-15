@@ -97,65 +97,65 @@
                            </li>
                         @endcan
                         @can('view-module', 3)
-                           <li class="font-14  fw-500 m-0 py-12 px-2  ">
+                           <li class="font-14  fw-500 m-0 py-12 px-2 clickable-row ">
                               <a class=" text-decoration-none  d-flex   text-white" href="{{ route('account-group.index') }}">
                                           Account Group
                               </a>
                            </li>
                         @endcan
                         @can('view-module', 5)
-                           <li class="font-14  fw-500 m-0 py-12 px-2  ">
+                           <li class="font-14  fw-500 m-0 py-12 px-2  clickable-row">
                               <a class=" text-decoration-none  d-flex   text-white" href="{{ route('account.index') }}">
                                  Account
                               </a>
                            </li>
                         @endcan
                         @can('view-module', 6)
-                           <li class="font-14  fw-500 m-0 py-12 px-2  ">
+                           <li class="font-14  fw-500 m-0 py-12 px-2 clickable-row ">
                               <a class=" text-decoration-none  d-flex  text-white  " href="{{ route('account-unit.index') }}">
                                           Manage Unit
                               </a>
                            </li>
                         @endcan
                         @can('view-module', 7)
-                           <li class="font-14  fw-500 m-0 py-12 px-2  ">
+                           <li class="font-14  fw-500 m-0 py-12 px-2 clickable-row ">
                               <a class=" text-decoration-none  d-flex   text-white" href="{{ route('account-item-group.index') }}">
                                           Item Group
                               </a>
                            </li>
                         @endcan
                         @can('view-module', 8)
-                           <li class="font-14  fw-500 m-0 py-12 px-2  ">
+                           <li class="font-14  fw-500 m-0 py-12 px-2 clickable-row ">
                               <a class=" text-decoration-none  d-flex   text-white" href="{{ route('account-manage-item.index') }}">
                                           Manage Item
                               </a>
                            </li>
                         @endcan
                         @can('view-module', 9)
-                           <li class="font-14  fw-500 m-0 py-12 px-2  ">
+                           <li class="font-14  fw-500 m-0 py-12 px-2 clickable-row ">
                               <a class=" text-decoration-none  d-flex    text-white" href="{{ route('account-bill-sundry.index') }}">
                                           Bill Sundry
                               </a>
                            </li>
                         @endcan
                         <div class="card bg-blue pt-2 px-2 rounded-0 aside-bottom-divider">
-                           <div class="card-header py-12 px-2 border-0 rounded-0 d-flex" id="importMasterDataHeading">
+                           <div class="card-header py-12 px-2 border-0 rounded-0 d-flex " id="importMasterDataHeading">
                               <a class="nav-link text-white font-14 fw-500 dropdown-icon-img p-0 collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#importMasterDataCollapse" aria-expanded="true" aria-controls="importMasterDataCollapse">
                               <img src="{{ URL::asset('public/assets/imgs/display.svg')}}" class="me-2" alt="">Import Master Data
                               </a>
                            </div>
                            <div id="importMasterDataCollapse" class="collapse" aria-labelledby="importMasterDataHeading" data-bs-parent="#importMasterDataHeading">
                               <ul class="nav flex-column">
-                                 <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4">
+                                 <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4 clickable-row-blue">
                                     <a class=" text-decoration-none d-flex text-blue" href="{{ route('account-group-import-view') }}">Import Account Group</a>
                                  </li>
-                                 <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4">
+                                 <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4 clickable-row-blue">
                                     <a class=" text-decoration-none d-flex text-blue" href="{{ route('import-account-view') }}">Import Account</a>
                                  </li>
-                                 <!-- <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4">
+                                 <!-- <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4 clickable-row-blue">
                                     <a class=" text-decoration-none d-flex text-blue" href="{{ route('import-account-view') }}">Import Item Group</a>
                                  </li> -->
-                                 <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4">
+                                 <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4 clickable-row-blue">
                                     <a class=" text-decoration-none d-flex text-blue" href="{{ route('item-import-view') }}">Import Item</a>
                                  </li>
                               </ul>
@@ -254,22 +254,22 @@
                            </div>
                            <div id="importDataCollapse" class="collapse" aria-labelledby="importDataHeading" data-bs-parent="#importDataHeading">
                               <ul class="nav flex-column">
-                                 <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4">
+                                 <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4 clickable-row-blue">
                                     <a class=" text-decoration-none d-flex text-blue" href="{{ route('sale-import-view') }}">Import Sale</a>
                                  </li>
-                                 <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4">
+                                 <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4 clickable-row-blue">
                                     <a class=" text-decoration-none d-flex text-blue" href="{{ route('purchase-import-view') }}">Import Purchase</a>
                                  </li>
-                                 <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4">
+                                 <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4 clickable-row-blue">
                                     <a class=" text-decoration-none d-flex text-blue" href="{{ route('payment-import-view') }}">Import Payment</a>
                                  </li>
-                                 <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4">
+                                 <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4 clickable-row-blue">
                                     <a class=" text-decoration-none d-flex text-blue" href="{{ route('receipt-import-view') }}">Import Receipt</a>
                                  </li>
-                                 <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4">
+                                 <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4 clickable-row-blue">
                                     <a class=" text-decoration-none d-flex text-blue" href="{{ route('journal-import-view') }}">Import Journal</a>
                                  </li>
-                                 <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4">
+                                 <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4 clickable-row-blue">
                                     <a class=" text-decoration-none d-flex text-blue" href="{{ route('contra-import-view') }}">Import Contra</a>
                                  </li>
                               </ul>
