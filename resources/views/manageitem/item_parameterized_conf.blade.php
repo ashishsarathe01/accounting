@@ -41,7 +41,13 @@
                   </div>
                   <div class="mb-3 col-md-3 parameter_sec" style="display:none">
                      <label for="no_of_parameter" class="form-label font-14 font-heading">Specify No. of Parameters</label>
-                     <input type="text" class="form-control" name="no_of_parameter" id="no_of_parameter" placeholder="Specify No. of Parameters" value="@if($parameter) {{$parameter->no_of_parameter}} @endif" />
+                     <select class="form-select" name="no_of_parameter" id="no_of_parameter">
+                        <option value="1" @if($parameter && $parameter->no_of_parameter==1) selected  @endif>1</option>
+                        <option value="2" @if($parameter && $parameter->no_of_parameter==2) selected  @endif>2</option>
+                        <option value="3" @if($parameter && $parameter->no_of_parameter==3) selected  @endif>3</option>
+                        <option value="4" @if($parameter && $parameter->no_of_parameter==4) selected  @endif>4</option>
+                        <option value="5" @if($parameter && $parameter->no_of_parameter==5) selected  @endif>5</option>
+                     </select>
                   </div>
                   <div class="clearfix"></div> 
                   

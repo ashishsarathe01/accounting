@@ -40,7 +40,14 @@
                   <div class="clearfix"></div>
                   <div class="mb-3 col-md-3 parameter_sec" style="display:none;">
                      <label for="no_of_parameter" class="form-label font-14 font-heading">Specify No. of Parameters</label>
-                     <input type="text" class="form-control" name="no_of_parameter" id="no_of_parameter" placeholder="Specify No. of Parameters" value="" />
+                     <select class="form-select" name="no_of_parameter" id="no_of_parameter">
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                     </select>
+                     
                   </div>
                   <div class="clearfix"></div> 
                   
