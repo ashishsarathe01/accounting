@@ -23,6 +23,7 @@ use App\Models\PurchaseReturnEntry;
 use App\Models\ItemAverageDetail;
 use App\Helpers\CommonHelper;
 use App\Models\State;
+use App\Models\ItemParameterStock;
 use App\Models\Sales;
 use Carbon\Carbon;
 use DB;
@@ -477,6 +478,7 @@ class PurchaseReturnController extends Controller
             $units = $request->input('units');
             $prices = $request->input('price');
             $amounts = $request->input('amount');
+            $item_parameters = $request->input('item_parameters');
             foreach ($goods_discriptions as $key => $good) {
                if($good=="" || $amounts[$key]==""){
                   continue;
@@ -506,6 +508,14 @@ class PurchaseReturnController extends Controller
                      $item_ledger->created_by = Session::get('user_id');
                      $item_ledger->created_at = date('d-m-Y H:i:s');
                      $item_ledger->save();
+                     //Parameter Info
+                     if($item_parameters[$key]!=""){
+                        $parameter = json_decode($item_parameters[$key],true);
+                        if(count($parameter)>0){                  
+                           ItemParameterStock::whereIn('id',$parameter)->update(['status'=>0,'stock_out_id'=>$purchase->id,'stock_out_type'=>'PURCHASE RETURN']);
+                           PurchaseReturnDescription::where('id',$desc->id)->update(['parameter_ids'=>$item_parameters[$key]]);
+                        }
+                     }
                   }
                }
             }
@@ -1457,6 +1467,7 @@ class PurchaseReturnController extends Controller
             $units = $request->input('units');
             $prices = $request->input('price');
             $amounts = $request->input('amount');
+           
             foreach ($goods_discriptions as $key => $good) {
                if($good=="" || $amounts[$key]==""){
                   continue;
@@ -1486,6 +1497,8 @@ class PurchaseReturnController extends Controller
                      $item_ledger->created_by = Session::get('user_id');
                      $item_ledger->created_at = date('d-m-Y H:i:s');
                      $item_ledger->save();
+
+                     
                   }
                }
             }

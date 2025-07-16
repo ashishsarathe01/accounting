@@ -24,6 +24,7 @@ use App\Models\ItemGroupParameterPredefinedValue;
 use App\Models\ParameterInfo;
 use App\Models\ParameterInfoValue;
 use App\Models\gstToken;
+use App\Models\ItemParameterStock;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use DB;
@@ -459,20 +460,22 @@ class AjaxController extends Controller
     {
         $invoice_id  = $request->invoice_id;
         $voucher_type  = $request->voucher_type;
-        if($voucher_type == 'SALE'){   
-            
-            $manageitems = DB::table('sale_descriptions')->where('sale_id', $invoice_id)
-            ->select('units.s_name as unit','manage_items.gst_rate', 'units.id as unit_id', 'sale_descriptions.goods_discription', 'manage_items.name as items_name', 'manage_items.id as item_id', 'sale_descriptions.qty')
-            ->join('units', 'sale_descriptions.unit', '=', 'units.id')
-            ->join('manage_items', 'sale_descriptions.goods_discription', '=', 'manage_items.id')
-            ->get();
+        if($voucher_type == 'SALE'){
+            $manageitems = DB::table('sale_descriptions')
+                              ->where('sale_id', $invoice_id)
+                              ->select('units.s_name as unit','manage_items.gst_rate', 'units.id as unit_id', 'sale_descriptions.goods_discription', 'manage_items.name as items_name', 'manage_items.id as item_id', 'sale_descriptions.qty','parameterized_stock_status','config_status','item_groups.id as group_id','parameter_ids')
+                              ->join('units', 'sale_descriptions.unit', '=', 'units.id')
+                              ->join('manage_items', 'sale_descriptions.goods_discription', '=', 'manage_items.id')
+                              ->join('item_groups', 'item_groups.id', '=', 'manage_items.g_name')
+                              ->get();
         }else{
-            
-            $manageitems = DB::table('purchase_descriptions')->where('purchase_id', $invoice_id)
-               ->select('units.s_name as unit','manage_items.gst_rate', 'units.id as unit_id', 'purchase_descriptions.goods_discription', 'manage_items.name as items_name', 'manage_items.id as item_id', 'purchase_descriptions.qty')
-               ->join('units', 'purchase_descriptions.unit', '=', 'units.id')
-               ->join('manage_items', 'purchase_descriptions.goods_discription', '=', 'manage_items.id')
-               ->get();
+            $manageitems = DB::table('purchase_descriptions')
+                              ->where('purchase_id', $invoice_id)
+                              ->select('units.s_name as unit','manage_items.gst_rate', 'units.id as unit_id', 'purchase_descriptions.goods_discription', 'manage_items.name as items_name', 'manage_items.id as item_id', 'purchase_descriptions.qty','parameterized_stock_status','config_status','item_groups.id as group_id')
+                              ->join('units', 'purchase_descriptions.unit', '=', 'units.id')
+                              ->join('manage_items', 'purchase_descriptions.goods_discription', '=', 'manage_items.id')
+                              ->join('item_groups', 'item_groups.id', '=', 'manage_items.g_name')
+                              ->get();
         }
 
         
@@ -486,20 +489,24 @@ class AjaxController extends Controller
                               ->where('id', $request->id)
                               ->where('company_id',Session::get('user_company_id'))
                               ->first();
-         $manageitems = DB::table('purchase_descriptions')->where('purchase_id', $purchase->id)
-            ->select('units.s_name as unit','manage_items.gst_rate', 'units.id as unit_id', 'purchase_descriptions.goods_discription', 'manage_items.name as items_name', 'manage_items.id as item_id')
-            ->join('units', 'purchase_descriptions.unit', '=', 'units.id')
-            ->join('manage_items', 'purchase_descriptions.goods_discription', '=', 'manage_items.id')
-            ->get();
+         $manageitems = DB::table('purchase_descriptions')
+                           ->where('purchase_id', $purchase->id)
+                           ->select('units.s_name as unit','manage_items.gst_rate', 'units.id as unit_id', 'purchase_descriptions.goods_discription', 'manage_items.name as items_name', 'manage_items.id as item_id','parameterized_stock_status','config_status','item_groups.id as group_id')
+                           ->join('units', 'purchase_descriptions.unit', '=', 'units.id')
+                           ->join('manage_items', 'purchase_descriptions.goods_discription', '=', 'manage_items.id')
+                           ->join('item_groups', 'item_groups.id', '=', 'manage_items.g_name')
+                           ->get();
       }else if($voucher_type == 'SALE'){
          $sale = Sales::select('id')
                            ->where('id', $request->id)
                            ->where('company_id',Session::get('user_company_id'))
                            ->first();
-         $manageitems = DB::table('sale_descriptions')->where('sale_id', $sale->id)
-                           ->select('units.s_name as unit','manage_items.gst_rate', 'units.id as unit_id', 'sale_descriptions.goods_discription', 'manage_items.name as items_name', 'manage_items.id as item_id', 'sale_descriptions.qty')
+         $manageitems = DB::table('sale_descriptions')
+                           ->where('sale_id', $sale->id)
+                           ->select('units.s_name as unit','manage_items.gst_rate', 'units.id as unit_id', 'sale_descriptions.goods_discription', 'manage_items.name as items_name', 'manage_items.id as item_id', 'sale_descriptions.qty','parameterized_stock_status','config_status','item_groups.id as group_id')
                            ->join('units', 'sale_descriptions.unit', '=', 'units.id')
                            ->join('manage_items', 'sale_descriptions.goods_discription', '=', 'manage_items.id')
+                           ->join('item_groups', 'item_groups.id', '=', 'manage_items.g_name')
                            ->get();
       }
       return json_encode($manageitems);
@@ -834,15 +841,28 @@ class AjaxController extends Controller
    }
    public function getParameterData(Request $request){
       if($request->get('parameterized_stock_status')==1 && $request->get('config_status')=="SEPARATE"){
-         return ItemGroups::with(['parameters.predefinedValue'])
+         $parameter = ItemGroups::with(['parameters.predefinedValue'])
             ->where('status','1')
             ->where('id',$request->get('group_id'))
             ->first();
+         return $parameter;
       }else{
-         return ItemParameter::with(['parameters.predefinedValue'])
+         $parameter = ItemParameter::with(['parameters.predefinedValue'])
             ->where('status',1)
             ->where('company_id',Session::get('user_company_id'))
             ->first();
+            // if($request->get('assign_param') && !empty($request->get('assign_param'))){
+            //    $stock = ItemParameterStock::select('parameter1_value')
+            //                               ->whereIn('id',explode(",",$request->get('assign_param')))
+            //                               ->get();
+            //    if($stock && count($stock)>0){
+            //      return response()->json([
+            //          'parameter' => $parameter,
+            //          'stock' => $stock
+            //       ]);
+            //    }
+            // }
+          return $parameter;
       }
    }
    public function getItemParameter(Request $request){
@@ -861,6 +881,10 @@ class AjaxController extends Controller
                         ->where('item_id',$request->item_id)
                         ->where('series_no',$request->series)
                         ->where('item_parameter_stocks.status',1)
+                        ->when($request->has('purchase_bill_id') && $request->purchase_bill_id != '' && $request->has('voucher_type') && $request->voucher_type != '' && $request->voucher_type = 'PURCHASE', function($q) use ($request) {
+                           $q->where('stock_in_type','PURCHASE');
+                           $q->where('stock_in_id',$request->purchase_bill_id);
+                        })
                         ->get();
       $response = array(
          'status' => true,

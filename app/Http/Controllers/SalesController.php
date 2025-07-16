@@ -982,6 +982,7 @@ class SalesController extends Controller
                      ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
 
          ItemParameterStock::where('stock_out_id',$request->sale_id)
+                           ->where('stock_out_type','SALE')
                            ->where('status',0)
                            ->update(['status'=>1,'stock_out_id'=>null]);
          return redirect('sale')->withSuccess('Sale deleted successfully!');

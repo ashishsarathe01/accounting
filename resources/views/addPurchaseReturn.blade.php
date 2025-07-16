@@ -209,7 +209,7 @@
                               <input type="number" class="quantity w-100 form-control" id="quantity_tr_1" name="qty[]" placeholder="Quantity" style="text-align:right;" step="0.01"/>
                            </td>
                            <td class="w-min-50">
-                              <input type="text" class="w-100 form-control" id="unit_tr_1" readonly style="text-align:center;" />
+                              <input type="text" class="w-100 form-control unit" id="unit_tr_1" readonly style="text-align:center;" data-id="1" />
                               <input type="hidden" class="units" name="units[]" id="units_tr_1" />
                            </td>
                            <td class="w-min-50">
@@ -221,6 +221,8 @@
                            <td class="">
                               <svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle add_more" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg>
                            </td>
+                           <input type="hidden" name="item_parameters[]" id="item_parameters_1">
+                           <input type="hidden" name="config_status[]" id="config_status_1">
                         </tr>
                      </tbody>                     
                      <div class="total">
@@ -572,6 +574,7 @@
                               <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" />
                            </svg>
                            </td>
+                           
                         </tr>
                         
                      </tbody>
@@ -692,6 +695,26 @@
       </div>
    </section>
 </div>
+<div class="modal fade" id="parameter_modal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+   <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content p-4 border-divider border-radius-8">
+         <div class="modal-header border-0 p-0">
+            <p><h5 class="modal-title">Parameterized Stock Details (Sale Voucher)</h5></p>
+            <button type="button" class="btn-close close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div>
+         <div style="font-size:20px">Item : <span id="parameter_item"></span></div>
+         <div>Qty. In : <span id="parameter_qty"></span></div>
+         <div class="modal-body parameter_body">            
+         </div>
+         <input type="hidden" id="parameter_modal_id">
+         <input type="hidden" id="parameter_modal_qty">
+         <div class="modal-footer border-0 mx-auto p-0">
+            <button type="button" class="btn btn-border-body close" data-bs-dismiss="modal">CANCEL</button>
+            <button type="button" class="ms-3 btn btn-red parameter_save_btn">SUBMIT</button>
+         </div>
+      </div>
+   </div>
+</div>
 </body>
 @include('layouts.footer')
 <script>
@@ -721,7 +744,7 @@
       var tr_id = 'tr_' + add_more_count;
       newRow = '<tr id="tr_' + add_more_count + '" class="font-14 font-heading bg-white"><td class="w-min-50">' + add_more_count + '</td><td class=""><select onchange="call_fun(\'tr_' + add_more_count + '\');" id="goods_discription_tr_' + add_more_count + '" class="border-0 w-95-parsent  goods_items form-select" name="goods_discription[]" required data-id="'+add_more_count+'">';
       newRow += optionElements;
-      newRow += '</select></td><td class=""><input type="number" class="quantity w-100 form-control" name="qty[]" id="quantity_tr_' + add_more_count + '" placeholder="Quantity"  style="text-align:right;" /></td><td class="w-min-50"><input type="text" class="w-100 form-control form-control" id="unit_tr_'+add_more_count+'" readonly style="text-align:center;"/><input type="hidden" class="units w-100" name="units[]" id="units_tr_' + add_more_count + '"/></td><td class=" w-min-50"><input type="number" class="price w-100 form-control" name="price[]" id="price_tr_' + add_more_count + '" placeholder="Price"  style="text-align:right;" step="0.01"/></td><td class=" w-min-50"><input type="number" class="amount w-100 form-control" name="amount[]" id="amount_tr_' + add_more_count + '" placeholder="Amount"  style="text-align:right;" step="0.01"/></td><td class="w-min-50"><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
+      newRow += '</select></td><td class=""><input type="number" class="quantity w-100 form-control" name="qty[]" id="quantity_tr_' + add_more_count + '" placeholder="Quantity"  style="text-align:right;" /></td><td class="w-min-50"><input type="text" class="w-100 form-control unit form-control" id="unit_tr_'+add_more_count+'" readonly style="text-align:center;"/ data-id="'+add_more_count+'"><input type="hidden" class="units w-100" name="units[]" id="units_tr_' + add_more_count + '"/></td><td class=" w-min-50"><input type="number" class="price w-100 form-control" name="price[]" id="price_tr_' + add_more_count + '" placeholder="Price"  style="text-align:right;" step="0.01"/></td><td class=" w-min-50"><input type="number" class="amount w-100 form-control" name="amount[]" id="amount_tr_' + add_more_count + '" placeholder="Amount"  style="text-align:right;" step="0.01"/></td><td class="w-min-50"><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td><input type="hidden" name="item_parameters[]" id="item_parameters_'+add_more_count+'"><input type="hidden" name="config_status[]" id="config_status_'+add_more_count+'"></tr>';
       $("#max_sale_descrption").val(add_more_count);
       $("#example11").append(newRow);
       $("#goods_discription_tr_"+add_more_count).select2();
@@ -790,15 +813,14 @@
          success: function(data) {
             var optionElements = '<option value="">Select</option>';
             $.each(data, function(key, val) {
-               optionElements += '<option unit_id="' + val.unit_id + '" data-val="' + val.unit + '" value="' + val.item_id + '" data-percent="' + val.gst_rate + '">' + val.items_name + '</option>';
+               optionElements += '<option unit_id="' + val.unit_id + '" data-val="' + val.unit + '" value="' + val.item_id + '" data-percent="' + val.gst_rate + '" data-parameterized_stock_status="'+val.parameterized_stock_status+ '" data-config_status="'+val.config_status+'" data-group_id="'+val.group_id+'">' + val.items_name + '</option>';
             });
             $("#goods_discription_tr_1").html(optionElements);
             $("#series_no").change();
          }
       });
    });
-  $(document).ready(function() {
-      
+  $(document).ready(function() {      
       $('#party_id').select2({
          placeholder: "Select Account",
          allowClear: true,
@@ -1419,8 +1441,7 @@
       newRow += optionElements;
       newRow += '</select></td><td class="w-min-50 "><span name="tax_amt[]" id="tax_amt_' + add_more_bill_sundry_up_count + '"></span><input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_' + add_more_bill_sundry_up_count + '"></td><td class="w-min-50 "><input type="number" class="bill_amt w-100 form-control" id="bill_sundry_amount_' + add_more_bill_sundry_up_count + '" name="bill_sundry_amount[]" data-id="'+add_more_bill_sundry_up_count+'" readonly style="text-align:right;"></td><td class="w-min-50"></td></tr>';
       $curRow.before(newRow);
-   });
-   
+   });   
    $("#voucher_no").change(function(){
       if($(this).val()==""){
          $("#voucher_no-error").show();
@@ -1448,6 +1469,282 @@
       }else{
          $("#goods_discription_tr_"+id+"-error").hide();
       }
+      $('#unit_tr_'+id).val($('option:selected', this).attr('data-val'));
+      $('#unit_tr_'+id).attr('data-parameterized_stock_status',$('option:selected', this).attr('data-parameterized_stock_status'));
+      $('#unit_tr_'+id).attr('data-assign_param',$('option:selected', this).attr('data-assign_param'));
+      $('#unit_tr_'+id).attr('data-group_id',$('option:selected', this).attr('data-group_id'));
+      $('#unit_tr_'+id).attr('data-config_status',$('option:selected', this).attr('data-config_status'));
+     // $('#units_tr_'+id).val($('option:selected', this).attr('unit_id'));
+      $('#config_status_'+id).val($('option:selected', this).attr('data-config_status'));
+   });
+   var modal_item_arr = [];
+   var parameter_modal_id = "1";
+   var option = ""; 
+   var header_res = [];
+   $(document).on('click',".unit",function(){
+      let parameter_qty = $("#quantity_tr_"+$(this).attr('data-id')).val()+" "+$(this).val();
+      let parameter_name = $("#goods_discription_tr_"+$(this).attr('data-id')).val();
+      let item_qty = $("#quantity_tr_"+$(this).attr('data-id')).val();
+      let itemname = $("#goods_discription_tr_"+$(this).attr('data-id')+" option:selected").text();
+      $("#parameter_item").html(itemname);
+      $("#parameter_qty").html(parameter_qty);
+      $("#parameter_modal_qty").val($("#quantity_tr_"+$(this).attr('data-id')).val());
+      let uname = $(this).val();
+      paremeter_table_add_more_data = "";
+      let config_status = $(this).attr('data-config_status');
+      let parameterized_stock_status = $(this).attr('data-parameterized_stock_status');
+      let group_id = $(this).attr('data-group_id');
+      let id = $(this).attr('data-id');
+      let item_id = $("#goods_discription_tr_"+id).val();
+      if(parameterized_stock_status==null || parameterized_stock_status==0 || parameterized_stock_status==""){
+         return;
+      }
+      let selected_patameter = $("#item_parameters_"+$(this).attr('data-id')).val();
+      $.ajax({
+         url: '{{url("get-item-parameter")}}',
+         async: false,
+         type: 'POST',
+         dataType: 'JSON',
+         data: {
+            _token: '<?php echo csrf_token() ?>',
+            config_status: config_status,
+            parameterized_stock_status : parameterized_stock_status,
+            group_id : group_id,
+            item_id: item_id,
+            voucher_type : $("#voucher_type").val(),
+            purchase_bill_id : $("#purchase_bill_id").val(),
+            series: $("#series_no").val()
+         },
+         success: function(res){
+            if(res.data.parameter_head.length==0 || res.data.parameter_value==0){
+               return;
+            }
+            header_res = res.data.parameter_head;
+            let html = "<table class='table table-bordered parameter_tbl'><thead><tr>";
+            res.data.parameter_head.forEach(function(e,i){
+               html+='<th style="text-align:center">'+e.paremeter_name+'</th>';
+            });
+            html+='<th></th></tr></thead><tbody>';
+            option = "";
+            res.data.parameter_value.forEach(function(e,i){
+               let list = "";let conversion_factor_value = "";let alternative_unit_value = "";
+               if(e.alternative_unit1==0 && e.conversion_factor1==0){
+                  list+=e.parameter1_value+" "+e.paremeter_name1+" - ";
+               }
+               if(e.alternative_unit2==0 && e.conversion_factor2==0){
+                  list+=e.parameter2_value+" "+e.paremeter_name2+" - ";
+               }
+               if(e.alternative_unit3==0 && e.conversion_factor3==0){
+                  list+=e.parameter3_value+" "+e.paremeter_name3+" - ";
+               }
+               if(e.alternative_unit4==0 && e.conversion_factor4==0){
+                  list+=e.parameter4_value+" "+e.paremeter_name4+" - ";
+               }
+               if(e.alternative_unit5==0 && e.conversion_factor5==0){
+                  list+=e.parameter1_value+" "+e.paremeter_name5+" - ";
+               }
+               if(e.alternative_unit1==1){
+                  list+=e.parameter1_value+" "+e.paremeter_name1+" - ";
+                  alternative_unit_value = e.parameter1_value;
+               }
+               if(e.alternative_unit2==1){
+                  list+=e.parameter2_value+" "+e.paremeter_name2+" - ";
+                  alternative_unit_value = e.parameter2_value;
+               }
+               if(e.alternative_unit3==1){
+                  list+=e.parameter3_value+" "+e.paremeter_name3+" - ";
+                  alternative_unit_value = e.parameter3_value;
+               }
+               if(e.alternative_unit4==1){
+                  list+=e.parameter4_value+" "+e.paremeter_name4+" - ";
+                  alternative_unit_value = e.parameter4_value;
+               }
+               if(e.alternative_unit5==1){
+                  list+=e.parameter5_value+" "+e.paremeter_name5+" - ";
+                  alternative_unit_value = e.parameter5_value;
+               }
+               if(e.conversion_factor1==1){
+                  list+=e.parameter1_value+" "+uname+" ";
+                  conversion_factor_value = e.parameter1_value;
+               }
+               if(e.conversion_factor2==1){
+                  list+=e.parameter2_value+" "+uname+" ";
+                  conversion_factor_value = e.parameter2_value;
+               }
+               if(e.conversion_factor3==1){
+                  list+=e.parameter3_value+" "+uname+" ";
+                  conversion_factor_value = e.parameter3_value;
+               }
+               if(e.conversion_factor4==1){
+                  list+=e.parameter4_value+" "+uname+" ";
+                  conversion_factor_value = e.parameter4_value;
+               }
+               if(e.conversion_factor5==1){
+                  list+=e.parameter5_value+" "+uname+" ";
+                  conversion_factor_value = e.parameter5_value;
+               }
+               option+= "<option value="+e.id+" id='option_id_"+e.id+"' data-conversion_factor_value='"+conversion_factor_value+"' data-alternative_unit_value='"+alternative_unit_value+"'>"+list+"</option>";
+            });
+            let parameter_mapp = [];
+            if(selected_patameter!=""){
+               selected_patameter = JSON.parse(selected_patameter);
+               if(selected_patameter.length>0){
+                  selected_patameter.forEach(function(e,i){
+                     html+='<tr>';
+                     res.data.parameter_head.forEach(function(e,i){
+                        if(e.alternative_unit==0 && e.conversion_factor==0){
+                           html+='<td>';
+                           html+='<select class="form-select parameter_id select2-single" id="parameter_id_'+parameter_modal_id+'" data-id="'+parameter_modal_id+'"><option value="">Select</option>'+option+'</select>'; 
+                           html+='</select>';
+                           html+='</td>';
+                        }else if(e.alternative_unit==1){
+                           html+='<td style="width:20%;"><input type="text" class="form-control" readonly id="alternative_unit_id_'+parameter_modal_id+'" style="text-align:right;"></td>';
+                        }else if(e.conversion_factor==1){
+                           html+='<td style="width:20%;"><input type="text" class="form-control" readonly id="conversion_factor_id_'+parameter_modal_id+'" style="text-align:right;"></td>';
+                        }
+                     });
+                     if(i==0){
+                        html+='<td style="width:5%;"><svg xmlns="http://www.w3.org/2000/svg" data-id="1" class="bg-primary rounded-circle add_parameter" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;" tabindex="0" role="button"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg></td>';
+                     }else{
+                        html+='<td><svg style="color: red; cursor: pointer; margin-right: 8px;" xmlns="http://www.w3.org/2000/svg" tabindex="0" width="24" height="24" fill="currentColor" class="bi bi-file-minus-fill removeParameterRowBtn" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"></path></svg></td>';
+                     }
+                     
+                     html+='</tr>';
+                     parameter_mapp[parameter_modal_id] = e;
+                     parameter_modal_id++;
+                  });
+               }
+            }else{
+               html+='<tr>';
+               res.data.parameter_head.forEach(function(e,i){
+                  if(e.alternative_unit==0 && e.conversion_factor==0){
+                     html+='<td>';
+                     html+='<select class="form-select parameter_id select2-single" id="parameter_id_'+parameter_modal_id+'" data-id="'+parameter_modal_id+'"><option value="">Select</option>'+option+'</select>'; 
+                     html+='</select>';
+                     html+='</td>';
+                  }else if(e.alternative_unit==1){
+                     html+='<td style="width:20%;"><input type="text" class="form-control" readonly id="alternative_unit_id_'+parameter_modal_id+'" style="text-align:right;"></td>';
+                  }else if(e.conversion_factor==1){
+                     html+='<td style="width:20%;"><input type="text" class="form-control" readonly id="conversion_factor_id_'+parameter_modal_id+'" style="text-align:right;"></td>';
+                  }
+               });
+               html+='<td style="width:5%;"><svg xmlns="http://www.w3.org/2000/svg" data-id="1" class="bg-primary rounded-circle add_parameter" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;" tabindex="0" role="button"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg></td>';
+               html+='</tr>';
+            }            
+            html+='</tbody><tr>';
+            res.data.parameter_head.forEach(function(e,i){
+               if(e.alternative_unit==0 && e.conversion_factor==0){
+                  html+='<td></td>';
+               }else if(e.alternative_unit==1){
+                  html+='<th style="text-align:right" >Total</th>';
+               }else if(e.conversion_factor==1){
+                  html+='<td ><input type="text" class="form-control" readonly id="total_conversion" style="text-align:right"></td>';
+               }
+            });
+            html+='<td></td></tr></table>';
+            $(".parameter_body").html(html);
+            $("#parameter_modal_id").val(id);            
+            $("#parameter_modal").modal('toggle');
+            $('#parameter_id_'+parameter_modal_id).select2({
+               dropdownParent: $('#parameter_modal .modal-content'),
+               width: '100%'
+            });
+            if(parameter_mapp.length>0){
+               parameter_mapp.forEach(function(e,i){
+                  $('#parameter_id_'+i).select2({
+                     dropdownParent: $('#parameter_modal .modal-content'),
+                     width: '100%'
+                  });
+                  $("#parameter_id_"+i).val(e);
+                  $(".parameter_id").change();
+               });
+            }            
+         }
+      });
+   });
+   $(document).on('change','.parameter_id',function(){
+      let selected_arr = [];
+      let id = $(this).attr('data-id');
+      let v = $(this).val();
+      let total_conversion = 0;
+      $('.parameter_id').each(function () {         
+         let val = $(this).val();         
+         if($.inArray(val, selected_arr) !== -1){
+            alert("Already Selected.");
+            $('#parameter_id_'+id).val('').trigger('change');
+            let index = $.inArray($('#parameter_id_'+id).attr('data-val'), selected_arr); // or arr.indexOf(valueToRemove)
+            if (index !== -1) {
+               selected_arr.splice(index, 1); // removes 1 element at index
+            }
+            return false;
+         }
+         if(val!=""){
+            $('#parameter_id_'+id).attr('data-val',val);
+            selected_arr.push(val);
+            total_conversion+=parseFloat($('option:selected', this).attr('data-conversion_factor_value'));
+         }else{
+            let index = $.inArray($('#parameter_id_'+id).attr('data-val'), selected_arr); // or arr.indexOf(valueToRemove)
+            if (index !== -1) {
+               selected_arr.splice(index, 1); // removes 1 element at index
+            }
+         }
+      });
+      if(v!=""){
+         $("#alternative_unit_id_"+id).val($('option:selected', this).attr('data-alternative_unit_value'));
+         $("#conversion_factor_id_"+id).val($('option:selected', this).attr('data-conversion_factor_value'));
+         
+      }else{
+         $("#alternative_unit_id_"+id).val('');
+         $("#conversion_factor_id_"+id).val('');
+      }
+      $("#total_conversion").val(total_conversion);
+   });
+   $(document).on('click','.add_parameter',function(){
+      parameter_modal_id++;
+      newRow='<tr>';
+      header_res.forEach(function(e,i){
+         if(e.alternative_unit==0 && e.conversion_factor==0){
+            newRow+='<td>';
+            newRow+='<select class="form-select parameter_id select2-single" id="parameter_id_'+parameter_modal_id+'" data-id="'+parameter_modal_id+'"><option value="">Select</option>'+option+'</select>'; 
+            newRow+='</select>';
+            newRow+='</td>';
+         }else if(e.alternative_unit==1){
+            newRow+='<td><input type="text" class="form-control" readonly id="alternative_unit_id_'+parameter_modal_id+'" style="text-align:right;"></td>';
+         }else if(e.conversion_factor==1){
+            newRow+='<td><input type="text" class="form-control" readonly id="conversion_factor_id_'+parameter_modal_id+'" style="text-align:right;"></td>';
+         }
+      });      
+      newRow+='<td><svg style="color: red; cursor: pointer; margin-right: 8px;" xmlns="http://www.w3.org/2000/svg" tabindex="0" width="24" height="24" fill="currentColor" class="bi bi-file-minus-fill removeParameterRowBtn" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"></path></svg></td>';
+      newRow+='<tr>';
+      $('.parameter_tbl tbody tr:last').before(newRow);
+      $('#parameter_id_'+parameter_modal_id).select2({
+         dropdownParent: $('#parameter_modal .modal-content'),
+         width: '100%'
+      });
+   });
+   $(document).on('click', '.removeParameterRowBtn', function() {
+      $(this).closest('tr').remove();
+      $(".parameter_id").change();
+   });
+   $(".parameter_save_btn").click(function(){
+      let arr = [];let conversion_factor_value_total = 0;
+      $(".parameter_id").each(function(){
+         let id = $(this).val();
+         if(id!=""){
+            conversion_factor_value_total+=parseFloat($(this).find(':selected').data('conversion_factor_value'));
+            arr.push(id); 
+         }
+                        
+      });
+      if(arr.length==0){
+         alert('Please Select Item')
+         return;
+      }
+      $("#item_parameters_"+$("#parameter_modal_id").val()).val(JSON.stringify(arr));
+      $("#quantity_tr_"+$("#parameter_modal_id").val()).val(conversion_factor_value_total);
+      $("#quantity_tr_"+$("#parameter_modal_id").val()).attr('readonly',true);
+      $("#parameter_modal").modal('toggle');
+      calculateAmount();
    });
    $('#party').keydown(function(e) {
       if (e.keyCode === 8) {

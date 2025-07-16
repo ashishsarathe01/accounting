@@ -28,6 +28,8 @@ use App\Models\State;
 use App\Models\SaleInvoiceTermCondition;
 use App\Models\SaleReturnWithoutGstEntry;
 use App\Models\ItemAverageDetail;
+use App\Models\SaleReturnParameterInfo;
+use App\Models\ItemParameterStock;
 use App\Helpers\CommonHelper;
 use Session;
 use DateTime;
@@ -513,6 +515,8 @@ class SalesReturnController extends Controller
             $units = $request->input('units');
             $prices = $request->input('price');
             $amounts = $request->input('amount');
+            $config_status = $request->input('config_status');
+            $item_parameters = $request->input('item_parameters');
             foreach ($goods_discriptions as $key => $good) {
                if($good=="" || $amounts[$key]==""){
                   continue;
@@ -542,6 +546,113 @@ class SalesReturnController extends Controller
                      $item_ledger->created_by = Session::get('user_id');
                      $item_ledger->created_at = date('d-m-Y H:i:s');
                      $item_ledger->save();
+                     
+                     //Parameter Info
+                     if($item_parameters[$key]!=""){
+                        $parameter = json_decode($item_parameters[$key],true);
+                        if(count($parameter)>0){
+                           foreach ($parameter as $k1 => $param) {
+                              $parameter1_id = "";$parameter1_value = "";
+                              $parameter2_id = "";$parameter2_value = "";
+                              $parameter3_id = "";$parameter3_value = "";
+                              $parameter4_id = "";$parameter4_value = "";
+                              $parameter5_id = "";$parameter5_value = "";
+                              $alternative_unit_value = 0;
+                              $alternative_unit_key = '';
+                              foreach($param as $k11 => $v){
+                                 if($k11==0){
+                                    $parameter1_id = $v['id'];
+                                    $parameter1_value = $v['value'];
+                                    if($v['alternative_unit']==1){
+                                       $alternative_unit_key = "parameter1_value";
+                                    }
+                                 }else if($k11==1){
+                                    $parameter2_id = $v['id'];
+                                    $parameter2_value = $v['value'];
+                                    if($v['alternative_unit']==1){
+                                       $alternative_unit_key = "parameter2_value";
+                                    }
+                                 }else if($k11==2){
+                                    $parameter3_id = $v['id'];
+                                    $parameter3_value = $v['value'];
+                                    if($v['alternative_unit']==1){
+                                       $alternative_unit_key = "parameter3_value";
+                                    }
+                                 }else if($k11==3){
+                                    $parameter4_id = $v['id'];
+                                    $parameter4_value = $v['value'];
+                                    if($v['alternative_unit']==1){
+                                       $alternative_unit_key = "parameter4_value";
+                                    }
+                                 }else if($k11==4){
+                                    $parameter5_id = $v['id'];
+                                    $parameter5_value = $v['value'];
+                                    if($v['alternative_unit']==1){
+                                       $alternative_unit_key = "parameter5_value";
+                                    }
+                                 }
+                                 if($v['alternative_unit']==1){
+                                    $alternative_unit_value = $v['value'];
+                                 }
+                              }
+                              $sale_return_parameter_info = new SaleReturnParameterInfo;
+                              $sale_return_parameter_info->item_id = $good;
+                              $sale_return_parameter_info->sale_return_id = $sale->id;
+                              $sale_return_parameter_info->sale_return_desc_row_id = $desc->id;
+                              $sale_return_parameter_info->parameter1_id = $parameter1_id;
+                              $sale_return_parameter_info->parameter1_value = $parameter1_value;
+                              $sale_return_parameter_info->parameter2_id = $parameter2_id;
+                              $sale_return_parameter_info->parameter2_value = $parameter2_value;
+                              $sale_return_parameter_info->parameter3_id = $parameter3_id;
+                              $sale_return_parameter_info->parameter3_value = $parameter3_value;
+                              $sale_return_parameter_info->parameter4_id = $parameter4_id;
+                              $sale_return_parameter_info->parameter4_value = $parameter4_value;
+                              $sale_return_parameter_info->parameter5_id = $parameter5_id;
+                              $sale_return_parameter_info->parameter5_value = $parameter5_value;
+                              $sale_return_parameter_info->company_id = Session::get('user_company_id');
+                              $sale_return_parameter_info->created_by = Session::get('user_id');
+                              $sale_return_parameter_info->created_at = date('Y-m-d H:i:s');
+                              if($sale_return_parameter_info->save()){
+                                 while($alternative_unit_value>0){
+                                    if($alternative_unit_key=="parameter1_value"){
+                                       $parameter1_value = 1;
+                                    }
+                                    if($alternative_unit_key=="parameter2_value"){
+                                       $parameter2_value = 1;
+                                    }
+                                    if($alternative_unit_key=="parameter3_value"){
+                                       $parameter3_value = 1;
+                                    }
+                                    if($alternative_unit_key=="parameter4_value"){
+                                       $parameter4_value = 1;
+                                    }
+                                    if($alternative_unit_key=="parameter5_value"){
+                                       $parameter5_value = 1;
+                                    }
+                                    $item_parameter_stock = new ItemParameterStock;
+                                    $item_parameter_stock->item_id = $good;
+                                    $item_parameter_stock->series_no = $request->input('series_no');
+                                    $item_parameter_stock->parameter1_id = $parameter1_id;
+                                    $item_parameter_stock->parameter1_value = $parameter1_value;
+                                    $item_parameter_stock->parameter2_id = $parameter2_id;
+                                    $item_parameter_stock->parameter2_value = $parameter2_value;
+                                    $item_parameter_stock->parameter3_id = $parameter3_id;
+                                    $item_parameter_stock->parameter3_value = $parameter3_value;
+                                    $item_parameter_stock->parameter4_id = $parameter4_id;
+                                    $item_parameter_stock->parameter4_value = $parameter4_value;
+                                    $item_parameter_stock->parameter5_id = $parameter5_id;
+                                    $item_parameter_stock->parameter5_value = $parameter5_value;
+                                    $item_parameter_stock->stock_in_id = $sale->id;
+                                    $item_parameter_stock->stock_in_type = 'SALE RETURN';
+                                    $item_parameter_stock->company_id = Session::get('user_company_id');
+                                    $item_parameter_stock->save();
+                                    $alternative_unit_value--;
+                                 }
+                              }
+                              
+                           }
+                        }
+                     }
                   }
                }
             }

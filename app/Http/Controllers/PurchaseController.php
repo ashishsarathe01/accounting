@@ -715,7 +715,8 @@ class PurchaseController extends Controller{
             return back()->with('error', '❌ Action not allowed. Please delete or cancel the related Debit Note or Credit Note first.');
          }
       }
-       $stock = ItemParameterStock::where('stock_in_id',$request->purchase_id)
+      $stock = ItemParameterStock::where('stock_in_id',$request->purchase_id)
+                           ->where('stock_in_type','PURCHASE')
                            ->where('status',0)
                            ->first();
       if($stock){
