@@ -1426,8 +1426,6 @@ if ($billing_gst_filter || $name_filter || $invoice_date_filter || $rate_filter)
 
 
 public function sendGstr1ToGSTMaster(Request $request){
-    echo "<pre>";
-   
     $merchant_gst = $request->merchant_gst;
     $company_id = Session::get('user_company_id');
     $from_date = $request->from_date;
@@ -2313,7 +2311,7 @@ public function sendGstr1ToGSTMaster(Request $request){
     echo "<pre>";
     echo json_encode($gstr1_requset);
     die;
-    //Api
+    //Call retsave Api 
     $txn = "";
     //Get GST Username
     $company = Companies::select('gst_config_type')
