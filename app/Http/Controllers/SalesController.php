@@ -101,9 +101,13 @@ class SalesController extends Controller
       }
       $sale = $query->get()->reverse()->values();
 
+<<<<<<< Updated upstream
    
     
         // Default ordering
+=======
+      
+>>>>>>> Stashed changes
 
       return view('sale')
             ->with('sale', $sale)

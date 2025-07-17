@@ -807,6 +807,52 @@
         }
     }
 
+
+
+function toggleDebitNoteDetails(index) {
+    const newRow = document.getElementById('details-' + index);
+    const clickedRow = document.querySelector(`tr[onclick="toggleDebitNoteDetails('${index}')"]`);
+
+    // Close previously opened detail row
+    if (currentlyOpenRow && currentlyOpenRow !== newRow) {
+        currentlyOpenRow.style.display = 'none';
+        if (currentlyClickedRow) {
+            currentlyClickedRow.classList.remove('no-border');
+        }
+    }
+
+    if (newRow && clickedRow) {
+        const isHidden = newRow.style.display === 'none';
+
+        newRow.style.display = isHidden ? 'table-row' : 'none';
+        clickedRow.classList.toggle('no-border', isHidden);
+
+        currentlyOpenRow = isHidden ? newRow : null;
+        currentlyClickedRow = isHidden ? clickedRow : null;
+    }
+}
+
+function toggleDebitNoteSummary() {
+    const summaryBody = document.getElementById('debit-note-summary');
+    const checkbox = document.getElementById('debitNoteDetailedCheckbox');
+
+    if (!summaryBody || !checkbox) return;
+
+    if (checkbox.checked) {
+        summaryBody.style.display = '';
+    } else {
+        summaryBody.style.display = 'none';
+        if (currentlyOpenRow) {
+            currentlyOpenRow.style.display = 'none';
+            currentlyOpenRow = null;
+        }
+        if (currentlyClickedRow) {
+            currentlyClickedRow.classList.remove('no-border');
+            currentlyClickedRow = null;
+        }
+    }
+}
+
     </script>
 
 @endsection
