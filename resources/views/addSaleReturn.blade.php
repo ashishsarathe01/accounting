@@ -925,7 +925,7 @@
             $.each(data, function(key, val) {
                let assign_param = "";
                if (typeof val.parameter_ids !== 'undefined' && val.parameter_ids !== null) {
-                  assign_param = val.parameter_ids;
+                  assign_param = JSON.parse(val.parameter_ids);
                }
                optionElements += '<option unit_id="' + val.unit_id + '" ' +
                      'data-val="' + val.unit + '" ' +
@@ -934,7 +934,7 @@
                      'data-parameterized_stock_status="'+val.parameterized_stock_status+ '"'+
                      'data-config_status="'+val.config_status+ '"'+
                      'data-group_id="'+val.group_id+'"'+
-                     'data-assign_param="'+JSON.parse(assign_param) + '" '+
+                     'data-assign_param="'+assign_param + '" '+
                      'data-qty="' + val.qty + '">' + val.items_name + '</option>';
 
                itemQtyMap[val.item_id] = val.qty; // store item qty for JS access

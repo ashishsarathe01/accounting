@@ -101,13 +101,7 @@ class SalesController extends Controller
       }
       $sale = $query->get()->reverse()->values();
 
-<<<<<<< Updated upstream
-   
-    
-        // Default ordering
-=======
       
->>>>>>> Stashed changes
 
       return view('sale')
             ->with('sale', $sale)
@@ -445,7 +439,7 @@ class SalesController extends Controller
             if($item_parameters[$key]!=""){
                $parameter = json_decode($item_parameters[$key],true);
                if(count($parameter)>0){                  
-                  ItemParameterStock::whereIn('id',$parameter)->update(['status'=>0,'stock_out_id'=>$sale->id]);
+                  ItemParameterStock::whereIn('id',$parameter)->update(['status'=>0,'stock_out_id'=>$sale->id,'stock_out_type'=>'SALE']);
                   SaleDescription::where('id',$desc->id)->update(['parameter_ids'=>$item_parameters[$key]]);
                }
             }

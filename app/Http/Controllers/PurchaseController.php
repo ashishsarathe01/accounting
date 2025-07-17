@@ -439,6 +439,7 @@ class PurchaseController extends Controller{
                            $item_parameter_stock->parameter5_id = $parameter5_id;
                            $item_parameter_stock->parameter5_value = $parameter5_value;
                            $item_parameter_stock->stock_in_id = $purchase->id;
+                           $item_parameter_stock->stock_in_type = 'PURCHASE';
                            $item_parameter_stock->company_id = Session::get('user_company_id');
                            $item_parameter_stock->save();
                            $alternative_unit_value--;
@@ -747,7 +748,7 @@ class PurchaseController extends Controller{
                      ->where('source_id',$request->purchase_id)
                      ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
          //Delete item Stock 
-        
+        ItemParameterStock::where('stock_in_id',$request->purchase_id)->where('stock_in_type','PURCHASE')->delete();
          return redirect('purchase')->withSuccess('Sale deleted successfully!');
       }
    }

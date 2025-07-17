@@ -1425,9 +1425,9 @@ if ($billing_gst_filter || $name_filter || $invoice_date_filter || $rate_filter)
 
 
 
-public function sendGstr1ToGSTMaster(Request $request)
-{
-    
+public function sendGstr1ToGSTMaster(Request $request){
+    echo "<pre>";
+   
     $merchant_gst = $request->merchant_gst;
     $company_id = Session::get('user_company_id');
     $from_date = $request->from_date;
@@ -1436,21 +1436,16 @@ public function sendGstr1ToGSTMaster(Request $request)
     if (!$merchant_gst || !$company_id || !$from_date || !$to_date) {
         return response()->json(['error' => 'Missing required filters'], 400);
     }
-
     $groupIds = CommonHelper::getAllGroupIds([3, 11]);
-
     $accountDropdown = DB::table('accounts')
-    ->where('company_id', $company_id)
-    ->whereIn('under_group', $groupIds)
-    ->select('account_name', 'gstin')
-    ->orderBy('account_name')
-    ->get();
-
+        ->where('company_id', $company_id)
+        ->whereIn('under_group', $groupIds)
+        ->select('account_name', 'gstin')
+        ->orderBy('account_name')
+        ->get();
     $user_company_id = Session::get('user_company_id');
-
     // Step 1: Fetch all Bill Sundries for the company
     $sundries = BillSundrys::where('company_id', $user_company_id)->get()->keyBy('id');
-
     // Step 2: Get matching sales data
     $sales = DB::table('sales')
         ->where('sales.merchant_gst', $merchant_gst)
@@ -1474,7 +1469,7 @@ public function sendGstr1ToGSTMaster(Request $request)
             'sales.reverse_charge'
         )
         ->get();
-
+    
     // Step 3: Fetch sale descriptions (items)
     $items = DB::table('sale_descriptions')
         ->join('sales', 'sale_descriptions.sale_id', '=', 'sales.id')
@@ -1492,7 +1487,7 @@ public function sendGstr1ToGSTMaster(Request $request)
             'sales.voucher_no_prefix'
         )
         ->get();
-
+        
     // Step 4: Fetch all sundries related to the sales
     $sundryDetails = DB::table('sale_sundries')
         ->whereIn('sale_id', $sales->pluck('id'))
@@ -1524,7 +1519,6 @@ public function sendGstr1ToGSTMaster(Request $request)
             }
         }
     }
-
     // Step 6: Group items by voucher_no_prefix and rate, and calculate taxes
     $grouped = [];
     foreach ($items as $item) {
@@ -1538,9 +1532,7 @@ public function sendGstr1ToGSTMaster(Request $request)
         // Sum all items in the sale to get the total amount for allocation of sundries
         $total_item_amount = $items->where('sale_id', $sale_id)->sum('amount');
         if ($total_item_amount == 0) continue; // Skip if no total amount
-
         $adjusted_value = 0;
-
         // Adjust from sundries where adjust_sale_amt = 'Yes' and bill_sundry_type = 'Other'
         if (isset($sundryDetails[$sale_id])) {
             foreach ($sundryDetails[$sale_id] as $sundryEntry) {
@@ -1555,7 +1547,6 @@ public function sendGstr1ToGSTMaster(Request $request)
                 }
             }
         }
-
         // Adjust from ledgers where adjust_sale_amt = 'No' and bill_sundry_type = 'Other'
         if (isset($ledgerAdjustments[$sale_id])) {
             foreach ($ledgerAdjustments[$sale_id] as $adj) {
@@ -1567,10 +1558,8 @@ public function sendGstr1ToGSTMaster(Request $request)
                 }
             }
         }
-
         // Calculate taxable value
         $taxable_value = $item_amount + $adjusted_value;
-
         // Compute taxes
         $igst = 0;
         $cgst = 0;
@@ -1587,294 +1576,67 @@ public function sendGstr1ToGSTMaster(Request $request)
             // Different state - IGST
             $igst = ($rate / 100) * $taxable_value;
         }
+        if ($item_type === 'taxable') {
+            $sale = $sales->where('id', $sale_id)->first();
+            $ctin = $sale->billing_gst;
+            $inum = $sale->voucher_no_prefix;
 
-       if ($item_type === 'taxable') {
-        $sale = $sales->where('id', $sale_id)->first();
-        $ctin = $sale->billing_gst;
-        $inum = $sale->voucher_no_prefix;
 
+            if (!isset($grouped[$ctin])) {
+                $grouped[$ctin] = [];
+            }
 
-        if (!isset($grouped[$ctin])) {
-            $grouped[$ctin] = [];
-        }
+            $invoice_key = $inum;
 
-        $invoice_key = $inum;
+            $existing_invoice = collect($grouped[$ctin])->firstWhere('inum', $invoice_key);
 
-        $existing_invoice = collect($grouped[$ctin])->firstWhere('inum', $invoice_key);
-
-        if (!$existing_invoice) {
-            $invoice_data = [
-                'inum' => $inum,
-                'idt' => \Carbon\Carbon::parse($sale->date)->format('d-m-Y'),
-                'val' => round($sale->total, 2),
-                'pos' => State::where('name', $sale->POS)->value('state_code'),
-                'rchrg' => $sale->reverse_charge ? 'Y' : 'N',
-                'etin' => '', // optional
-                'inv_typ' => 'R',
-                'diff_percent' => null, // if applicable,
-                'itms' => []
-            ];
-            $grouped[$ctin][] = $invoice_data;
-        }
-
-        // Find the current invoice again to push items
-        foreach ($grouped[$ctin] as &$invoice_ref) {
-            if ($invoice_ref['inum'] === $inum) {
-                $invoice_ref['itms'][] = [
-                    'num' => count($invoice_ref['itms']) + 1,
-                    'itm_det' => [
-                        'rt' => $rate,
-                        'txval' => round($taxable_value, 2),
-                        'iamt' => round($igst, 2),
-                        'cgst' => round($cgst, 2),
-                        'sgst' => round($sgst, 2),
-                    ]
+            if (!$existing_invoice) {
+                $invoice_data = [
+                    'inum' => $inum,
+                    'idt' => \Carbon\Carbon::parse($sale->date)->format('d-m-Y'),
+                    'val' => round($sale->total, 2),
+                    'pos' => State::where('name', $sale->POS)->value('state_code'),
+                    'rchrg' => $sale->reverse_charge ? 'Y' : 'N',
+                    'etin' => '', // optional
+                    'inv_typ' => 'R',
+                    'diff_percent' => null, // if applicable,
+                    'itms' => []
                 ];
-                break;
+                $grouped[$ctin][] = $invoice_data;
             }
-        }
 
-            }
-        }
-
-
-
-        //for b2clarge 
-       
-
- $sundries = BillSundrys::where('company_id', $user_company_id)->get()->keyBy('id');
-   
-
-    // Step 2: Get B2C Sale IDs
-    $b2cSaleIds = DB::table('sales')
-        ->where('merchant_gst', $merchant_gst)
-        ->where('company_id', $company_id)
-        ->whereBetween('date', [$from_date, $to_date])
-        ->where('delete', '0')
-        ->where('status', '1')
-         ->where(function($query) {
-            $query->whereNull('billing_gst')
-                  ->orWhere('billing_gst', '');
-                                  })
-        ->where('total', '>', 250000)
-        ->pluck('id');
-
-        
-   
-
-    // Step 3: Get sale item details
-    $items = DB::table('sale_descriptions')
-    ->join('sales', 'sale_descriptions.sale_id', '=', 'sales.id')
-    ->join('accounts', 'sales.party', '=', 'accounts.id')
-    ->join('states as account_state', 'accounts.state', '=', 'account_state.id') // alias 1
-    ->join('states as billing_state', 'sales.billing_state', '=', 'billing_state.id') // alias 2
-    ->join('manage_items', 'sale_descriptions.goods_discription', '=', 'manage_items.id')
-    ->whereIn('sale_descriptions.sale_id', $b2cSaleIds)
-    ->select(
-        'sale_descriptions.id as sale_desc_id',
-        'sale_descriptions.sale_id',
-        'account_state.name as state_name', // recipient state
-        'billing_state.name as POS', // POS (place of supply)
-        'billing_state.id as billing_state_id',
-        'manage_items.gst_rate',
-        'manage_items.item_type',
-        'sale_descriptions.amount',
-        'sales.voucher_no_prefix',
-        'sales.date as date',
-        'sales.total as total'
-       
-    )
-    ->get();
-
-    // Step 4: Get all sundries
-    $sundryDetails = DB::table('sale_sundries')
-        ->whereIn('sale_id', $b2cSaleIds)
-        ->select('sale_id', 'bill_sundry', 'amount')
-        ->get()
-        ->groupBy('sale_id');
-      
-      
-
-    // Step 5: Get ledger entries for bill_sundry_type='Other' and adjust_sale_amt='No'
-    $ledgerAdjustments = [];
-    foreach ($sundryDetails as $saleId => $entries) {
-        foreach ($entries as $entry) {
-           
-            $bs = $sundries[$entry->bill_sundry] ?? null;
-            
-            if (!$bs) continue;
-           
-
-            if ($bs->adjust_sale_amt == 'No' && $bs->nature_of_sundry == 'OTHER') {
-          
-                $ledger_amount = DB::table('account_ledger')
-                    ->where('company_id', $user_company_id)
-                    ->where('entry_type', 1)
-                    ->where('entry_type_id', $saleId)
-                    ->where('account_id', $bs->sale_amt_account)
-                    ->sum($bs->bill_sundry_type == 'subtractive' ? 'debit' : 'credit');
-
-        
-
-                $ledgerAdjustments[$saleId][] = [
-                    'amount' => $ledger_amount,
-                    'type' => $bs->bill_sundry_type
-                ];
-            }
-        }
-    }
-
-        $grouped = [];
-
-    foreach ($items as $item) {
-        $sale_id = $item->sale_id;
-        $state = $item->state_name;
-        $rate = $item->gst_rate;
-        $item_amount = $item->amount;
-        $voucher_no_prefix = $item->voucher_no_prefix;
-        $item_type = $item->item_type;
-
-
-        $total_item_amount = $items->where('sale_id', $sale_id)->sum('amount');
-        if ($total_item_amount == 0) continue;
-
-        $adjusted_value = 0;
-
-        // Adjust from sundries where adjust_sale_amt = 'Yes' and bill_sundry_type = 'Other'
-        if (isset($sundryDetails[$sale_id])) {
-            foreach ($sundryDetails[$sale_id] as $sundryEntry) {
-                $bs = $sundries[$sundryEntry->bill_sundry] ?? null;
-                if (!$bs || $bs->adjust_sale_amt != 'Yes' || $bs->nature_of_sundry != 'OTHER') continue;
-
-                $share = ($item_amount / $total_item_amount) * $sundryEntry->amount;
-                if ($bs->bill_sundry_type == 'subtractive') {
-                    $adjusted_value -= $share;
-                } else {
-                    $adjusted_value += $share;
+            // Find the current invoice again to push items
+            foreach ($grouped[$ctin] as &$invoice_ref) {
+                if ($invoice_ref['inum'] === $inum) {
+                    $invoice_ref['itms'][] = [
+                        'num' => count($invoice_ref['itms']) + 1,
+                        'itm_det' => [
+                            'rt' => $rate,
+                            'txval' => round($taxable_value, 2),
+                            'iamt' => round($igst, 2),
+                            'cgst' => round($cgst, 2),
+                            'sgst' => round($sgst, 2),
+                        ]
+                    ];
+                    break;
                 }
             }
         }
-
-        // Adjust from ledgers where adjust_sale_amt = 'No' and bill_sundry_type = 'Other'
-        if (isset($ledgerAdjustments[$sale_id])) {
-            foreach ($ledgerAdjustments[$sale_id] as $adj) {
-                $share = ($item_amount / $total_item_amount) * $adj['amount'];
-                if ($adj['type'] == 'subtractive') {
-                    $adjusted_value -= $share;
-                } else {
-                    $adjusted_value += $share;
-                }
-            }
-        }
-
-        $taxable_value = $item_amount + $adjusted_value;
-       
-        // Compute taxes
-        $igst = 0;
-        $cgst = 0;
-        $sgst = 0;
-        $merchant_state_code = substr($merchant_gst, 0, 2); // e.g. '07'
-        $customer_state_code = State::where('name', $state)->value('state_code'); // assuming states table has GST code
-        
-        if ($merchant_state_code == $customer_state_code) {
-            $cgst = ($rate / 2 / 100) * $taxable_value;
-            $sgst = ($rate / 2 / 100) * $taxable_value;
-        } else {
-            $igst = ($rate / 100) * $taxable_value;
-        }
-        
-
-         if ($item_type === 'taxable') {
-        $sale =  $b2cSaleIds->where('id', $sale_id)->first();
-        $key = $item->voucher_no_prefix . '|' . $rate;
-
-        if (!isset($grouped[$key])) {
-            $grouped[$key] = [
-                'voucher_no_prefix' =>  $item->voucher_no_prefix,
-                'rate' => $rate,
-                'total' => $item->total,
-                'sales_id' => $item->sale_id,
-                'date'=> $item->date,
-                'POS' => $item->POS,
-                'taxable_value' => 0,
-                'igst' => 0,
-                'cgst' => 0,
-                'sgst' => 0,
-            ];
-        }
-
-        $grouped[$key]['taxable_value'] += $taxable_value;
-        $grouped[$key]['igst'] += $igst;
-        $grouped[$key]['cgst'] += $cgst;
-        $grouped[$key]['sgst'] += $sgst;
     }
-}
-
- $b2cl = [];
-        foreach ($grouped as $key => $entry) {
-            $pos = State::where('name', $entry['POS'])->value('state_code');  // GST state code
-            $inum = $entry['voucher_no_prefix'];
-            $idt = \Carbon\Carbon::parse($entry['date'])->format('d-m-Y');
-            $val = round($entry['total'], 2);
-            $diff_percent = null; // use 0.65 if applicable
-            $etin = ''; // optional
-            $rate = $entry['rate'];
-
-            $item = [
-                'num' => 1,
-                'itm_det' => [
-                    'rt' => $rate,
-                    'txval' => round($entry['taxable_value'], 2),
-                    'iamt' => round($entry['igst'], 2),
-                    'csamt' => 0 // cess, if applicable
-                ]
-            ];
-
-            // Check if this POS already exists
-            if (!isset($b2cl[$pos])) {
-                $b2cl[$pos] = [
-                    'pos' => $pos,
-                    'inv' => []
-                ];
-            }
-
-            $b2cl[$pos]['inv'][] = [
-                'inum' => $inum,
-                'idt' => $idt,
-                'val' => $val,
-                'etin' => $etin,
-                'diff_percent' => $diff_percent,
-                'itms' => [$item]
-            ];
-        }
-
-// Final formatting as indexed array
-                $b2cl = array_values($b2cl);
-
-
-                    // Step 3: Send to GSTMaster API
-                    $apiUrl = 'https://gstmaster.example.com/api/gstr1/upload'; // Replace with real API
-                    $token = 'your-access-token-here'; // Replace with actual token
-
-                 
-  
-
-//for debit credit note registered 
-
-
-
-    // Step 1: Fetch all Bill Sundries for the company
+    $b2b_arr = [];
+    foreach ($grouped as $k=>$invoice) {
+        array_push($b2b_arr,array("ctin"=>$k,"inv"=>$invoice));
+    }
+   
     
 
+    // Step 3: Send to GSTMaster API
+    $apiUrl = 'https://gstmaster.example.com/api/gstr1/upload'; // Replace with real API
+    $token = 'your-access-token-here'; // Replace with actual token
+    //for debit credit note registered 
+    // Step 1: Fetch all Bill Sundries for the company  
     // -------------------- CREDIT NOTES FETCH --------------------
-       
-       
-          
-
-
-
-
- $creditSales = DB::table('sales_returns')
+    $creditSales = DB::table('sales_returns')
             ->where('sales_returns.merchant_gst', $merchant_gst)
             ->where('sales_returns.company_id', $company_id)
             ->whereBetween('sales_returns.date', [$from_date, $to_date])
@@ -1887,7 +1649,7 @@ public function sendGstr1ToGSTMaster(Request $request)
             ->where('sales_returns.status', '1')
             ->pluck('sales_returns.id');
 
-        $creditSales1 = DB::table('sales_returns')
+    $creditSales1 = DB::table('sales_returns')
             ->where('sales_returns.merchant_gst', $merchant_gst)
             ->where('sales_returns.company_id', $company_id)
             ->whereBetween('sales_returns.date', [$from_date, $to_date])
@@ -1903,7 +1665,7 @@ public function sendGstr1ToGSTMaster(Request $request)
             ->where('sales_returns.status', '1')
             ->pluck('sales_returns.id');
 
-        $creditItems = DB::table('sale_return_descriptions')
+    $creditItems = DB::table('sale_return_descriptions')
             ->join('sales_returns', 'sale_return_descriptions.sale_return_id', '=', 'sales_returns.id')
             ->join('states', 'sales_returns.billing_state', '=', 'states.id')
             ->join('manage_items', 'sale_return_descriptions.goods_discription', '=', 'manage_items.id')
@@ -1922,7 +1684,7 @@ public function sendGstr1ToGSTMaster(Request $request)
             )
             ->get();
 
-        $creditItems1 = DB::table('sale_return_descriptions')
+    $creditItems1 = DB::table('sale_return_descriptions')
             ->join('sales_returns', 'sale_return_descriptions.sale_return_id', '=', 'sales_returns.id')
             ->join('states', 'sales_returns.billing_state', '=', 'states.id')
             ->join('manage_items', 'sale_return_descriptions.goods_discription', '=', 'manage_items.id')
@@ -1943,7 +1705,7 @@ public function sendGstr1ToGSTMaster(Request $request)
             )
             ->get();
 
-        $creditWithoutGstItems = DB::table('sale_return_without_gst_entry')
+    $creditWithoutGstItems = DB::table('sale_return_without_gst_entry')
             ->join('sales_returns', 'sale_return_without_gst_entry.sale_return_id', '=', 'sales_returns.id')
             ->leftJoin('states', 'sales_returns.billing_state', '=', 'states.id')
             ->where('sale_return_without_gst_entry.percentage', '>', 0)
@@ -1961,105 +1723,103 @@ public function sendGstr1ToGSTMaster(Request $request)
             )
             ->get();
 
-        $creditItems = $creditItems->merge($creditItems1)->merge($creditWithoutGstItems);
-
-        $creditSundryDetails = DB::table('sale_return_sundries')
+    $creditItems = $creditItems->merge($creditItems1)->merge($creditWithoutGstItems);
+    $creditSundryDetails = DB::table('sale_return_sundries')
             ->whereIn('sale_return_id', $creditSales)
             ->select('sale_return_id', 'bill_sundry', 'amount')
             ->get()
             ->groupBy('sale_return_id');
 
-        $ledgerAdjustments_credit = [];
-        foreach ($creditSundryDetails as $return_id => $entries) {
-            foreach ($entries as $entry) {
-                $bs = $sundries[$entry->bill_sundry] ?? null;
-                if (!$bs) continue;
+    $ledgerAdjustments_credit = [];
+    foreach ($creditSundryDetails as $return_id => $entries) {
+        foreach ($entries as $entry) {
+            $bs = $sundries[$entry->bill_sundry] ?? null;
+            if (!$bs) continue;
 
-                if ($bs->adjust_sale_amt == 'No' && $bs->nature_of_sundry == 'OTHER') {
-                    $ledger_amount = DB::table('account_ledger')
-                        ->where('company_id', $user_company_id)
-                        ->where('entry_type', 1)
-                        ->where('entry_type_id', $return_id)
-                        ->where('account_id', $bs->sale_amt_account)
-                        ->sum($bs->bill_sundry_type == 'subtractive' ? 'debit' : 'credit');
+            if ($bs->adjust_sale_amt == 'No' && $bs->nature_of_sundry == 'OTHER') {
+                $ledger_amount = DB::table('account_ledger')
+                    ->where('company_id', $user_company_id)
+                    ->where('entry_type', 1)
+                    ->where('entry_type_id', $return_id)
+                    ->where('account_id', $bs->sale_amt_account)
+                    ->sum($bs->bill_sundry_type == 'subtractive' ? 'debit' : 'credit');
 
-                    $ledgerAdjustments_credit[$return_id][] = [
-                        'amount' => $ledger_amount,
-                        'type' => $bs->bill_sundry_type
-                    ];
-                }
+                $ledgerAdjustments_credit[$return_id][] = [
+                    'amount' => $ledger_amount,
+                    'type' => $bs->bill_sundry_type
+                ];
             }
         }
+    }
+    // ---------- DEBIT NOTES (Purchase returns) -----------
+    $debitSales = DB::table('purchase_returns')
+        ->where('purchase_returns.merchant_gst', $merchant_gst)
+        ->where('purchase_returns.company_id', $company_id)
+        ->whereBetween('purchase_returns.date', [$from_date, $to_date])
+        ->where('voucher_type', 'SALE')
+        ->where('sr_nature', 'WITH GST')
+        ->where('sr_type', 'WITH ITEM')
+        ->whereNotNull('purchase_returns.billing_gst')
+    ->Where('billing_gst','!=','')
+        ->where('purchase_returns.delete', '0')
+        ->where('purchase_returns.status', '1')
+        ->pluck('purchase_returns.id');
 
-        // ---------- DEBIT NOTES (Purchase returns) -----------
-        $debitSales = DB::table('purchase_returns')
-            ->where('purchase_returns.merchant_gst', $merchant_gst)
-            ->where('purchase_returns.company_id', $company_id)
-            ->whereBetween('purchase_returns.date', [$from_date, $to_date])
-            ->where('voucher_type', 'SALE')
-            ->where('sr_nature', 'WITH GST')
-            ->where('sr_type', 'WITH ITEM')
-            ->whereNotNull('purchase_returns.billing_gst')
-        ->Where('billing_gst','!=','')
-            ->where('purchase_returns.delete', '0')
-            ->where('purchase_returns.status', '1')
-            ->pluck('purchase_returns.id');
+    $debitSales1 = DB::table('purchase_returns')
+        ->where('purchase_returns.merchant_gst', $merchant_gst)
+        ->where('purchase_returns.company_id', $company_id)
+        ->whereBetween('purchase_returns.date', [$from_date, $to_date])
+        ->where('voucher_type', 'SALE')
+        ->where('sr_nature', 'WITH GST')
+        ->where(function ($q) {
+            $q->where('sr_type', 'WITHOUT ITEM')
+                ->orWhere('sr_type', 'RATE DIFFERENCE');
+        })
+        ->whereNotNull('purchase_returns.billing_gst')
+    ->Where('billing_gst','!=','')
+        ->where('purchase_returns.delete', '0')
+        ->where('purchase_returns.status', '1')
+        ->pluck('purchase_returns.id');
 
-        $debitSales1 = DB::table('purchase_returns')
-            ->where('purchase_returns.merchant_gst', $merchant_gst)
-            ->where('purchase_returns.company_id', $company_id)
-            ->whereBetween('purchase_returns.date', [$from_date, $to_date])
-            ->where('voucher_type', 'SALE')
-            ->where('sr_nature', 'WITH GST')
-            ->where(function ($q) {
-                $q->where('sr_type', 'WITHOUT ITEM')
-                    ->orWhere('sr_type', 'RATE DIFFERENCE');
-            })
-            ->whereNotNull('purchase_returns.billing_gst')
-        ->Where('billing_gst','!=','')
-            ->where('purchase_returns.delete', '0')
-            ->where('purchase_returns.status', '1')
-            ->pluck('purchase_returns.id');
+    $debitItems = DB::table('purchase_return_descriptions')
+        ->join('purchase_returns', 'purchase_return_descriptions.purchase_return_id', '=', 'purchase_returns.id')
+        ->join('states', 'purchase_returns.billing_state', '=', 'states.id')
+        ->join('manage_items', 'purchase_return_descriptions.goods_discription', '=', 'manage_items.id')
+        ->join('units', 'manage_items.u_name', '=', 'units.id')
+        ->whereIn('purchase_return_id', $debitSales)
+        ->where('purchase_return_descriptions.status', '1')
+        ->where('purchase_return_descriptions.delete', '0')
+        ->select(
+            'purchase_return_descriptions.purchase_return_id',
+            'states.name as state_name',
+            'manage_items.gst_rate',
+            'purchase_return_descriptions.qty',
+            'purchase_return_descriptions.amount',
+            'units.unit_code',
+            'manage_items.hsn_code'
+        )
+        ->get();
 
-        $debitItems = DB::table('purchase_return_descriptions')
-            ->join('purchase_returns', 'purchase_return_descriptions.purchase_return_id', '=', 'purchase_returns.id')
-            ->join('states', 'purchase_returns.billing_state', '=', 'states.id')
-            ->join('manage_items', 'purchase_return_descriptions.goods_discription', '=', 'manage_items.id')
-            ->join('units', 'manage_items.u_name', '=', 'units.id')
-            ->whereIn('purchase_return_id', $debitSales)
-            ->where('purchase_return_descriptions.status', '1')
-            ->where('purchase_return_descriptions.delete', '0')
-            ->select(
-                'purchase_return_descriptions.purchase_return_id',
-                'states.name as state_name',
-                'manage_items.gst_rate',
-                'purchase_return_descriptions.qty',
-                'purchase_return_descriptions.amount',
-                'units.unit_code',
-                'manage_items.hsn_code'
-            )
-            ->get();
+    $debitItems1 = DB::table('purchase_return_descriptions')
+        ->join('purchase_returns', 'purchase_return_descriptions.purchase_return_id', '=', 'purchase_returns.id')
+        ->join('states', 'purchase_returns.billing_state', '=', 'states.id')
+        ->join('manage_items', 'purchase_return_descriptions.goods_discription', '=', 'manage_items.id')
+        ->join('units', 'manage_items.u_name', '=', 'units.id')
+        ->where('purchase_return_descriptions.status', '1')
+        ->where('purchase_return_descriptions.delete', '0')
+        ->whereIn('purchase_return_id', $debitSales1)
+        ->select(
+            'purchase_return_descriptions.purchase_return_id',
+            'states.name as state_name',
+            'manage_items.gst_rate',
+            DB::raw('0 as qty'),
+            'purchase_return_descriptions.amount',
+            'units.unit_code',
+            'manage_items.hsn_code'
+        )
+        ->get();
 
-        $debitItems1 = DB::table('purchase_return_descriptions')
-            ->join('purchase_returns', 'purchase_return_descriptions.purchase_return_id', '=', 'purchase_returns.id')
-            ->join('states', 'purchase_returns.billing_state', '=', 'states.id')
-            ->join('manage_items', 'purchase_return_descriptions.goods_discription', '=', 'manage_items.id')
-            ->join('units', 'manage_items.u_name', '=', 'units.id')
-            ->where('purchase_return_descriptions.status', '1')
-            ->where('purchase_return_descriptions.delete', '0')
-            ->whereIn('purchase_return_id', $debitSales1)
-            ->select(
-                'purchase_return_descriptions.purchase_return_id',
-                'states.name as state_name',
-                'manage_items.gst_rate',
-                DB::raw('0 as qty'),
-                'purchase_return_descriptions.amount',
-                'units.unit_code',
-                'manage_items.hsn_code'
-            )
-            ->get();
-
-        $debitWithoutGstItems = DB::table('purchase_return_entries')
+    $debitWithoutGstItems = DB::table('purchase_return_entries')
             ->join('purchase_returns', 'purchase_return_entries.purchase_return_id', '=', 'purchase_returns.id')
             ->leftJoin('states', 'purchase_returns.billing_state', '=', 'states.id')
             ->where('purchase_return_entries.percentage', '>', 0)
@@ -2076,304 +1836,283 @@ public function sendGstr1ToGSTMaster(Request $request)
                 'purchase_return_entries.unit_code'
             )
             ->get();
-        $debitItems = $debitItems->merge($debitItems1)->merge($debitWithoutGstItems);
+    $debitItems = $debitItems->merge($debitItems1)->merge($debitWithoutGstItems);
 
-        $debitSundryDetails = DB::table('purchase_return_sundries')
+    $debitSundryDetails = DB::table('purchase_return_sundries')
             ->whereIn('purchase_return_id', $debitSales->merge($debitSales1)) // Use merged IDs
             ->select('purchase_return_id', 'bill_sundry', 'amount')
             ->get()
             ->groupBy('purchase_return_id');
 
-        $ledgerAdjustments_debit = [];
-        foreach ($debitSundryDetails as $return_id => $entries) {
-            foreach ($entries as $entry) {
-                $bs = $sundries[$entry->bill_sundry] ?? null;
-                if (!$bs) continue;
+    $ledgerAdjustments_debit = [];
+    foreach ($debitSundryDetails as $return_id => $entries) {
+        foreach ($entries as $entry) {
+            $bs = $sundries[$entry->bill_sundry] ?? null;
+            if (!$bs) continue;
 
-                if ($bs->adjust_sale_amt == 'No' && $bs->nature_of_sundry == 'OTHER') {
-                    $ledger_amount = DB::table('account_ledger')
-                        ->where('company_id', $user_company_id)
-                        ->where('entry_type', 1)
-                        ->where('entry_type_id', $return_id)
-                        ->where('account_id', $bs->sale_amt_account)
-                        ->sum($bs->bill_sundry_type == 'subtractive' ? 'debit' : 'credit');
+            if ($bs->adjust_sale_amt == 'No' && $bs->nature_of_sundry == 'OTHER') {
+                $ledger_amount = DB::table('account_ledger')
+                    ->where('company_id', $user_company_id)
+                    ->where('entry_type', 1)
+                    ->where('entry_type_id', $return_id)
+                    ->where('account_id', $bs->sale_amt_account)
+                    ->sum($bs->bill_sundry_type == 'subtractive' ? 'debit' : 'credit');
 
-                    $ledgerAdjustments_debit[$return_id][] = [
-                        'amount' => $ledger_amount,
-                        'type' => $bs->bill_sundry_type
-                    ];
+                $ledgerAdjustments_debit[$return_id][] = [
+                    'amount' => $ledger_amount,
+                    'type' => $bs->bill_sundry_type
+                ];
+            }
+        }
+    }
+    $cdnr = [];
+    // Helper function to add item rows to cdnr
+    $addToCdnr = function ($entry, $ntty) use (&$cdnr, $merchant_gst) {
+        $ctin = $entry['ctin'];
+        $nt_num = $entry['nt_num'];
+        $nt_dt = $entry['nt_dt'];
+        $pos = $entry['pos'];
+        $rchrg = $entry['rchrg'];
+        $inv_typ = $entry['inv_typ'];
+        $val = $entry['val'];
+        $itemRow = $entry['itemRow'];
+
+        if (!isset($cdnr[$ctin])) {
+            $cdnr[$ctin] = [];
+        }
+
+        $existing = collect($cdnr[$ctin])->firstWhere('nt_num', $nt_num);
+        if (!$existing) {
+            $cdnr[$ctin][] = [
+                'ntty' => $ntty,
+                'nt_num' => $nt_num,
+                'nt_dt' => $nt_dt,
+                'pos' => $pos,
+                'rchrg' => $rchrg,
+                'inv_typ' => $inv_typ,
+                'val' => $val,
+                'diff_percent' => null,
+                'itms' => [$itemRow]
+            ];
+        } else {
+            foreach ($cdnr[$ctin] as &$note) {
+                if ($note['nt_num'] === $nt_num) {
+                    $itemRow['num'] = count($note['itms']) + 1;
+                    $note['itms'][] = $itemRow;
                 }
             }
         }
+    };
+    // 📌 Process credit notes (sales_returns)
+    foreach ($creditItems as $item) {
+        $return_id = $item->sale_return_id;
+        $item_amount = $item->amount;
+        $rate = $item->gst_rate;
+        $state = $item->state_name;
 
-        $cdnr = [];
+        $total_item_amount = $creditItems->where('sale_return_id', $return_id)->sum('amount');
+        if ($total_item_amount == 0) continue;
 
-// Helper function to add item rows to cdnr
-$addToCdnr = function ($entry, $ntty) use (&$cdnr, $merchant_gst) {
-    $ctin = $entry['ctin'];
-    $nt_num = $entry['nt_num'];
-    $nt_dt = $entry['nt_dt'];
-    $pos = $entry['pos'];
-    $rchrg = $entry['rchrg'];
-    $inv_typ = $entry['inv_typ'];
-    $val = $entry['val'];
-    $itemRow = $entry['itemRow'];
+        $adjusted_value = 0;
 
-    if (!isset($cdnr[$ctin])) {
-        $cdnr[$ctin] = [];
-    }
-
-    $existing = collect($cdnr[$ctin])->firstWhere('nt_num', $nt_num);
-    if (!$existing) {
-        $cdnr[$ctin][] = [
-            'ntty' => $ntty,
-            'nt_num' => $nt_num,
-            'nt_dt' => $nt_dt,
-            'pos' => $pos,
-            'rchrg' => $rchrg,
-            'inv_typ' => $inv_typ,
-            'val' => $val,
-            'diff_percent' => null,
-            'itms' => [$itemRow]
-        ];
-    } else {
-        foreach ($cdnr[$ctin] as &$note) {
-            if ($note['nt_num'] === $nt_num) {
-                $itemRow['num'] = count($note['itms']) + 1;
-                $note['itms'][] = $itemRow;
+        if (isset($creditSundryDetails[$return_id])) {
+            foreach ($creditSundryDetails[$return_id] as $sundryEntry) {
+                $bs = $sundries[$sundryEntry->bill_sundry] ?? null;
+                if (!$bs || $bs->adjust_sale_amt != 'Yes' || $bs->nature_of_sundry != 'OTHER') continue;
+                $share = ($item_amount / $total_item_amount) * $sundryEntry->amount;
+                $adjusted_value += ($bs->bill_sundry_type == 'subtractive') ? -$share : $share;
             }
         }
-    }
-};
 
-// 📌 Process credit notes (sales_returns)
-foreach ($creditItems as $item) {
-    $return_id = $item->sale_return_id;
-    $item_amount = $item->amount;
-    $rate = $item->gst_rate;
-    $state = $item->state_name;
-
-    $total_item_amount = $creditItems->where('sale_return_id', $return_id)->sum('amount');
-    if ($total_item_amount == 0) continue;
-
-    $adjusted_value = 0;
-
-    if (isset($creditSundryDetails[$return_id])) {
-        foreach ($creditSundryDetails[$return_id] as $sundryEntry) {
-            $bs = $sundries[$sundryEntry->bill_sundry] ?? null;
-            if (!$bs || $bs->adjust_sale_amt != 'Yes' || $bs->nature_of_sundry != 'OTHER') continue;
-            $share = ($item_amount / $total_item_amount) * $sundryEntry->amount;
-            $adjusted_value += ($bs->bill_sundry_type == 'subtractive') ? -$share : $share;
+        if (isset($ledgerAdjustments_credit[$return_id])) {
+            foreach ($ledgerAdjustments_credit[$return_id] as $adj) {
+                $share = ($item_amount / $total_item_amount) * $adj['amount'];
+                $adjusted_value += ($adj['type'] == 'subtractive') ? -$share : $share;
+            }
         }
-    }
 
-    if (isset($ledgerAdjustments_credit[$return_id])) {
-        foreach ($ledgerAdjustments_credit[$return_id] as $adj) {
-            $share = ($item_amount / $total_item_amount) * $adj['amount'];
-            $adjusted_value += ($adj['type'] == 'subtractive') ? -$share : $share;
+        $taxable_value = $item_amount + $adjusted_value;
+
+        $sale = DB::table('sales_returns')->where('id', $return_id)->first();
+        if (!$sale) continue;
+
+        $merchant_state_code = substr($merchant_gst, 0, 2);
+        $customer_state_code = State::where('id', $sale->billing_state)->value('state_code');
+        $igst = $cgst = $sgst = 0;
+
+        if ($merchant_state_code == $customer_state_code) {
+            $cgst = round(($rate / 2 / 100) * $taxable_value, 2);
+            $sgst = round(($rate / 2 / 100) * $taxable_value, 2);
+        } else {
+            $igst = round(($rate / 100) * $taxable_value, 2);
         }
-    }
 
-    $taxable_value = $item_amount + $adjusted_value;
-
-    $sale = DB::table('sales_returns')->where('id', $return_id)->first();
-    if (!$sale) continue;
-
-    $merchant_state_code = substr($merchant_gst, 0, 2);
-    $customer_state_code = State::where('id', $sale->billing_state)->value('state_code');
-    $igst = $cgst = $sgst = 0;
-
-    if ($merchant_state_code == $customer_state_code) {
-        $cgst = round(($rate / 2 / 100) * $taxable_value, 2);
-        $sgst = round(($rate / 2 / 100) * $taxable_value, 2);
-    } else {
-        $igst = round(($rate / 100) * $taxable_value, 2);
-    }
-
-    $entry = [
-        'ctin' => $sale->billing_gst,
-        'nt_num' => $sale->sr_prefix,
-        'nt_dt' => \Carbon\Carbon::parse($sale->date)->format('d-m-Y'),
-        'pos' => $customer_state_code,
-        'rchrg' => 'N',
-        'inv_typ' => 'R',
-        'val' => round($sale->total, 2),
-        'itemRow' => [
-            'num' => 1,
-            'itm_det' => [
-                'rt' => $rate,
-                'txval' => round($taxable_value, 2),
-                'iamt' => $igst,
-                'cgst' => $cgst,
-                'sgst' => $sgst
-            ]
-        ]
-    ];
-
-    $addToCdnr($entry, 'C'); // Add as credit note
-}
-
-// 📌 Process debit notes (purchase_returns)
-foreach ($debitItems as $item) {
-    $return_id = $item->purchase_return_id;
-    $item_amount = $item->amount;
-    $rate = $item->gst_rate;
-    $state = $item->state_name;
-
-    $total_item_amount = $debitItems->where('purchase_return_id', $return_id)->sum('amount');
-    if ($total_item_amount == 0) continue;
-
-    $adjusted_value = 0;
-
-    if (isset($debitSundryDetails[$return_id])) {
-        foreach ($debitSundryDetails[$return_id] as $sundryEntry) {
-            $bs = $sundries[$sundryEntry->bill_sundry] ?? null;
-            if (!$bs || $bs->adjust_sale_amt != 'Yes' || $bs->nature_of_sundry != 'OTHER') continue;
-            $share = ($item_amount / $total_item_amount) * $sundryEntry->amount;
-            $adjusted_value += ($bs->bill_sundry_type == 'subtractive') ? -$share : $share;
-        }
-    }
-
-    if (isset($ledgerAdjustments_debit[$return_id])) {
-        foreach ($ledgerAdjustments_debit[$return_id] as $adj) {
-            $share = ($item_amount / $total_item_amount) * $adj['amount'];
-            $adjusted_value += ($adj['type'] == 'subtractive') ? -$share : $share;
-        }
-    }
-
-    $taxable_value = $item_amount + $adjusted_value;
-
-    $return = DB::table('purchase_returns')->where('id', $return_id)->first();
-    if (!$return) continue;
-
-    $merchant_state_code = substr($merchant_gst, 0, 2);
-    $customer_state_code = State::where('id', $return->billing_state)->value('state_code');
-    $igst = $cgst = $sgst = 0;
-
-    if ($merchant_state_code == $customer_state_code) {
-        $cgst = round(($rate / 2 / 100) * $taxable_value, 2);
-        $sgst = round(($rate / 2 / 100) * $taxable_value, 2);
-    } else {
-        $igst = round(($rate / 100) * $taxable_value, 2);
-    }
-
-    $entry = [
-        'ctin' => $return->billing_gst,
-        'nt_num' => $return->sr_prefix,
-        'nt_dt' => \Carbon\Carbon::parse($return->date)->format('d-m-Y'),
-        'pos' => $customer_state_code,
-        'rchrg' => 'N',
-        'inv_typ' => 'R',
-        'val' => round($return->total, 2),
-        'itemRow' => [
-            'num' => 1,
-            'itm_det' => [
-                'rt' => $rate,
-                'txval' => round($taxable_value, 2),
-                'iamt' => $igst,
-                'cgst' => $cgst,
-                'sgst' => $sgst
-            ]
-        ]
-    ];
-
-    $addToCdnr($entry, 'D'); // Add as debit note
-}
-
-// Final formatting
-$finalData['cdnr'] = [];
-foreach ($cdnr as $ctin => $notes) {
-    $finalData['cdnr'][] = [
-        'ctin' => $ctin,
-        'nt' => $notes
-    ];
-}
-
-
-
-
-
-
-
-       
-             // Initialize arrays to hold data for B2B and B2C
-        $finalDataB2B = [];
-        $finalDataB2C = [];
-
-        // --- Process for B2B ---
-        $this->processHsnSummary(
-            $merchant_gst,
-            $company_id,
-            $from_date,
-            $to_date,
-            $user_company_id,
-            $sundries,
-            true, // isB2B
-            $finalDataB2B
-        );
-
-        // --- Process for B2C ---
-        $this->processHsnSummary(
-            $merchant_gst,
-            $company_id,
-            $from_date,
-            $to_date,
-            $user_company_id,
-            $sundries,
-            false, // isB2B
-            $finalDataB2C
-        );
-
-        // Format the final output as requested for the API
-        $formattedHsnData = [
-            "hsn" => [
-                "hsn_b2b" => [],
-                "hsn_b2c" => []
+        $entry = [
+            'ctin' => $sale->billing_gst,
+            'nt_num' => $sale->sr_prefix,
+            'nt_dt' => \Carbon\Carbon::parse($sale->date)->format('d-m-Y'),
+            'pos' => $customer_state_code,
+            'rchrg' => 'N',
+            'inv_typ' => 'R',
+            'val' => round($sale->total, 2),
+            'itemRow' => [
+                'num' => 1,
+                'itm_det' => [
+                    'rt' => $rate,
+                    'txval' => round($taxable_value, 2),
+                    'iamt' => $igst,
+                    'cgst' => $cgst,
+                    'sgst' => $sgst
+                ]
             ]
         ];
 
-        $numB2B = 1;
-        foreach ($finalDataB2B as $data) {
-            $formattedHsnData["hsn"]["hsn_b2b"][] = [
-                "num" => $numB2B++,
-                "hsn_sc" => $data['hsn'],
-                "desc" => "Goods Description", // Placeholder as per example
-                "user_desc" => "Taxpayer Description", // Placeholder as per example
-                "uqc" => $data['unit_code'],
-                "qty" => round($data['qty'], 2),
-                "txval" => round($data['taxable_value'], 2),
-                "iamt" => round($data['igst'], 2),
-                "camt" => round($data['cgst'], 2),
-                "samt" => round($data['sgst'], 2),
-                "csamt" => 0, // Not calculated in original logic, setting to 0 as per example
-                "rt" => round($data['rate'], 2)
-            ];
+        $addToCdnr($entry, 'C'); // Add as credit note
+    }
+    // 📌 Process debit notes (purchase_returns)
+    foreach ($debitItems as $item) {
+        $return_id = $item->purchase_return_id;
+        $item_amount = $item->amount;
+        $rate = $item->gst_rate;
+        $state = $item->state_name;
+
+        $total_item_amount = $debitItems->where('purchase_return_id', $return_id)->sum('amount');
+        if ($total_item_amount == 0) continue;
+
+        $adjusted_value = 0;
+
+        if (isset($debitSundryDetails[$return_id])) {
+            foreach ($debitSundryDetails[$return_id] as $sundryEntry) {
+                $bs = $sundries[$sundryEntry->bill_sundry] ?? null;
+                if (!$bs || $bs->adjust_sale_amt != 'Yes' || $bs->nature_of_sundry != 'OTHER') continue;
+                $share = ($item_amount / $total_item_amount) * $sundryEntry->amount;
+                $adjusted_value += ($bs->bill_sundry_type == 'subtractive') ? -$share : $share;
+            }
         }
 
-        $numB2C = 1;
-        foreach ($finalDataB2C as $data) {
-            $formattedHsnData["hsn"]["hsn_b2c"][] = [
-                "num" => $numB2C++,
-                "hsn_sc" => $data['hsn'],
-                "desc" => "Goods Description", // Placeholder as per example
-                "user_desc" => "Taxpayer Description", // Placeholder as per example
-                "uqc" => $data['unit_code'],
-                "qty" => round($data['qty'], 2),
-                "txval" => round($data['taxable_value'], 2),
-                "iamt" => round($data['igst'], 2),
-                "camt" => round($data['cgst'], 2),
-                "samt" => round($data['sgst'], 2),
-                "csamt" => 0, // Not calculated in original logic, setting to 0 as per example
-                "rt" => round($data['rate'], 2)
-            ];
+        if (isset($ledgerAdjustments_debit[$return_id])) {
+            foreach ($ledgerAdjustments_debit[$return_id] as $adj) {
+                $share = ($item_amount / $total_item_amount) * $adj['amount'];
+                $adjusted_value += ($adj['type'] == 'subtractive') ? -$share : $share;
+            }
         }
+
+        $taxable_value = $item_amount + $adjusted_value;
+
+        $return = DB::table('purchase_returns')->where('id', $return_id)->first();
+        if (!$return) continue;
+
+        $merchant_state_code = substr($merchant_gst, 0, 2);
+        $customer_state_code = State::where('id', $return->billing_state)->value('state_code');
+        $igst = $cgst = $sgst = 0;
+
+        if ($merchant_state_code == $customer_state_code) {
+            $cgst = round(($rate / 2 / 100) * $taxable_value, 2);
+            $sgst = round(($rate / 2 / 100) * $taxable_value, 2);
+        } else {
+            $igst = round(($rate / 100) * $taxable_value, 2);
+        }
+
+        $entry = [
+            'ctin' => $return->billing_gst,
+            'nt_num' => $return->sr_prefix,
+            'nt_dt' => \Carbon\Carbon::parse($return->date)->format('d-m-Y'),
+            'pos' => $customer_state_code,
+            'rchrg' => 'N',
+            'inv_typ' => 'R',
+            'val' => round($return->total, 2),
+            'itemRow' => [
+                'num' => 1,
+                'itm_det' => [
+                    'rt' => $rate,
+                    'txval' => round($taxable_value, 2),
+                    'iamt' => $igst,
+                    'cgst' => $cgst,
+                    'sgst' => $sgst
+                ]
+            ]
+        ];
+
+        $addToCdnr($entry, 'D'); // Add as debit note
+    }
+    // Final formatting
+    $finalData = [];
+    foreach ($cdnr as $ctin => $notes) {
+        $finalData[] = [
+            'ctin' => $ctin,
+            'nt' => $notes
+        ];
+    }       
+    // Initialize arrays to hold data for B2B and B2C
+    $finalDataB2B = [];
+    $finalDataB2C = [];
+
+    // --- Process for B2B ---
+    $this->processHsnSummary(
+        $merchant_gst,
+        $company_id,
+        $from_date,
+        $to_date,
+        $user_company_id,
+        $sundries,
+        true, // isB2B
+        $finalDataB2B
+    );
+
+    // --- Process for B2C ---
+    $this->processHsnSummary(
+        $merchant_gst,
+        $company_id,
+        $from_date,
+        $to_date,
+        $user_company_id,
+        $sundries,
+        false, // isB2B
+        $finalDataB2C
+    );
+    // Format the final output as requested for the API
+    $formattedHsnData = [
         
-       // return response()->json($formattedHsnData);
-
-
-
-
- $salesGrouped = DB::table('sales')
+            "hsn_b2b" => [],
+            "hsn_b2c" => []
+        
+    ];
+    $numB2B = 1;
+    foreach ($finalDataB2B as $data) {
+        $formattedHsnData["hsn_b2b"][] = [
+            "num" => $numB2B++,
+            "hsn_sc" => $data['hsn'],
+            "desc" => "Goods Description", // Placeholder as per example
+            "user_desc" => "Taxpayer Description", // Placeholder as per example
+            "uqc" => $data['unit_code'],
+            "qty" => round($data['qty'], 2),
+            "txval" => round($data['taxable_value'], 2),
+            "iamt" => round($data['igst'], 2),
+            "camt" => round($data['cgst'], 2),
+            "samt" => round($data['sgst'], 2),
+            "csamt" => 0, // Not calculated in original logic, setting to 0 as per example
+            "rt" => round($data['rate'], 2)
+        ];
+    }
+    $numB2C = 1;
+    foreach ($finalDataB2C as $data) {
+        $formattedHsnData["hsn_b2c"][] = [
+            "num" => $numB2C++,
+            "hsn_sc" => $data['hsn'],
+            "desc" => "Goods Description", // Placeholder as per example
+            "user_desc" => "Taxpayer Description", // Placeholder as per example
+            "uqc" => $data['unit_code'],
+            "qty" => round($data['qty'], 2),
+            "txval" => round($data['taxable_value'], 2),
+            "iamt" => round($data['igst'], 2),
+            "camt" => round($data['cgst'], 2),
+            "samt" => round($data['sgst'], 2),
+            "csamt" => 0, // Not calculated in original logic, setting to 0 as per example
+            "rt" => round($data['rate'], 2)
+        ];
+    }
+    // return response()->json($formattedHsnData);
+    $salesGrouped = DB::table('sales')
         ->where('company_id', $company_id)
         ->whereBetween('date', [$from_date, $to_date])
         ->where('delete', '0') // Exclude soft-deleted records
@@ -2385,7 +2124,6 @@ foreach ($cdnr as $ctin => $notes) {
         ->groupBy('series_no');
 
     $SalesdocumentSummary = [];
-
     foreach ($salesGrouped as $series => $records) {
         $total = $records->count();
         $cancelled = $records->where('status', 2)->count();
@@ -2401,8 +2139,6 @@ foreach ($cdnr as $ctin => $notes) {
             'net_issued' => $total - $cancelled,
         ];
     }
-
-
     $allCreditNotes = DB::table('sales_returns')
     ->where('company_id', $company_id)
     ->whereBetween('date', [$from_date, $to_date])
@@ -2413,35 +2149,29 @@ foreach ($cdnr as $ctin => $notes) {
     ->orderBy('sr_prefix')
     ->get()
     ->groupBy('series_no');
+    $CreditNotedocumentSummary = [];
+    foreach ($allCreditNotes as $series => $records) {
+        $from = $records->first()->sr_prefix ?? '-';
+        $to = $records->last()->sr_prefix ?? '-';
 
-$CreditNotedocumentSummary = [];
+        // Filter only SALE voucher_type for total and cancelled
+        $saleRecords = $records->where('voucher_type', 'SALE')
+                            ->where('sr_nature', 'WITH GST');
+                    
 
-foreach ($allCreditNotes as $series => $records) {
-    $from = $records->first()->sr_prefix ?? '-';
-    $to = $records->last()->sr_prefix ?? '-';
+        $total = $saleRecords->count();
+        $cancelled = $saleRecords->where('status', 2)->count();
 
-    // Filter only SALE voucher_type for total and cancelled
-    $saleRecords = $records->where('voucher_type', 'SALE')
-                           ->where('sr_nature', 'WITH GST');
-                   
-
-    $total = $saleRecords->count();
-    $cancelled = $saleRecords->where('status', 2)->count();
-
-    $CreditNotedocumentSummary[] = [
-        'series_no'   => $series ?? '-',
-        'from'        => $from,
-        'to'          => $to,
-        'total'       => $total,
-        'cancelled'   => $cancelled,
-        'net_issued'  => $total - $cancelled,
-    ];
-}
-
-
-
-
- $allDebitNotes = DB::table('purchase_returns')
+        $CreditNotedocumentSummary[] = [
+            'series_no'   => $series ?? '-',
+            'from'        => $from,
+            'to'          => $to,
+            'total'       => $total,
+            'cancelled'   => $cancelled,
+            'net_issued'  => $total - $cancelled,
+        ];
+    }
+    $allDebitNotes = DB::table('purchase_returns')
     ->where('company_id', $company_id)
     ->whereBetween('date', [$from_date, $to_date])
     ->where('delete', '0')
@@ -2451,43 +2181,39 @@ foreach ($allCreditNotes as $series => $records) {
     ->orderBy('sr_prefix')
     ->get()
     ->groupBy('series_no');
-
     $DebitNotedocumentSummary = [];
+    foreach ($allDebitNotes as $series => $records) {
+        $from = $records->first()->sr_prefix ?? '-';
+        $to = $records->last()->sr_prefix ?? '-';
 
-foreach ($allDebitNotes as $series => $records) {
-    $from = $records->first()->sr_prefix ?? '-';
-    $to = $records->last()->sr_prefix ?? '-';
+        // Filter only SALE voucher_type for total and cancelled
+        $saleRecords = $records->where('voucher_type', 'SALE')
+                            ->where('sr_nature', 'WITH GST');
 
-    // Filter only SALE voucher_type for total and cancelled
-    $saleRecords = $records->where('voucher_type', 'SALE')
-                           ->where('sr_nature', 'WITH GST');
+        $total = $saleRecords->count();
+        $cancelled = $saleRecords->where('status', 2)->count();
 
-    $total = $saleRecords->count();
-    $cancelled = $saleRecords->where('status', 2)->count();
+        $DebitNotedocumentSummary[] = [
+            'series_no'   => $series ?? '-',
+            'from'        => $from,
+            'to'          => $to,
+            'total'       => $total,
+            'cancelled'   => $cancelled,
+            'net_issued'  => $total - $cancelled,
+        ];
+    }
 
-    $DebitNotedocumentSummary[] = [
-        'series_no'   => $series ?? '-',
-        'from'        => $from,
-        'to'          => $to,
-        'total'       => $total,
-        'cancelled'   => $cancelled,
-        'net_issued'  => $total - $cancelled,
-    ];
-}
-
-$payments = DB::table('payments')
-    ->where('company_id', $company_id)
-    ->whereBetween('date', [$from_date, $to_date])
-    ->where('delete', '0')
-    ->whereNotNull('voucher_no')
-    ->select('voucher_no', 'series_no', 'status')
-    ->orderBy('series_no')
-    ->orderBy('voucher_no')
-    ->get()
-    ->groupBy('series_no');
-
-      $paymentsDocumentSummary = [];
-
+    $payments = DB::table('payments')
+                ->where('company_id', $company_id)
+                ->whereBetween('date', [$from_date, $to_date])
+                ->where('delete', '0')
+                ->whereNotNull('voucher_no')
+                ->select('voucher_no', 'series_no', 'status')
+                ->orderBy('series_no')
+                ->orderBy('voucher_no')
+                ->get()
+                ->groupBy('series_no');
+    $paymentsDocumentSummary = [];
     foreach ($payments as $series => $records) {
         $total = $records->count();
         $cancelled = $records->where('status', 2)->count();
@@ -2503,17 +2229,16 @@ $payments = DB::table('payments')
             'net_issued' => $total - $cancelled,
         ];
     }
-
     $receipts = DB::table('receipts')
-    ->where('company_id', $company_id)
-    ->whereBetween('date', [$from_date, $to_date])
-    ->where('delete', '0')
-    ->whereNotNull('voucher_no')
-    ->select('voucher_no', 'series_no', 'status')
-    ->orderBy('series_no')
-    ->orderBy('voucher_no')
-    ->get()
-    ->groupBy('series_no');
+            ->where('company_id', $company_id)
+            ->whereBetween('date', [$from_date, $to_date])
+            ->where('delete', '0')
+            ->whereNotNull('voucher_no')
+            ->select('voucher_no', 'series_no', 'status')
+            ->orderBy('series_no')
+            ->orderBy('voucher_no')
+            ->get()
+            ->groupBy('series_no');
 
       $receiptsDocumentSummary = [];
 
@@ -2532,64 +2257,170 @@ $payments = DB::table('payments')
             'net_issued' => $total - $cancelled,
         ];
     }
+    $docIssue = ['doc_det' => []];
 
-
-
-
-
-        $docIssue = ['doc_issue' => ['doc_det' => []]];
-
-// Helper function to map summaries to required doc format
-function mapSummaryToDocs($summaryArray) {
-    $docs = [];
-    $i = 1;
-    foreach ($summaryArray as $summary) {
-        $docs[] = [
-            'num' => $i++,
-            'from' => $summary['from'],
-            'to' => $summary['to'],
-            'totnum' => $summary['total'],
-            'cancel' => $summary['cancelled'],
-            'net_issue' => $summary['net_issued']
-        ];
+    // Helper function to map summaries to required doc format
+    function mapSummaryToDocs($summaryArray) {
+        $docs = [];
+        $i = 1;
+        foreach ($summaryArray as $summary) {
+            $docs[] = [
+                'num' => $i++,
+                'from' => $summary['from'],
+                'to' => $summary['to'],
+                'totnum' => $summary['total'],
+                'cancel' => $summary['cancelled'],
+                'net_issue' => $summary['net_issued']
+            ];
+        }
+        return $docs;
     }
-    return $docs;
+    // Add each doc type to the final array
+    $docIssue['doc_det'][] = [
+        'doc_num' => 1,
+        'docs' => mapSummaryToDocs($SalesdocumentSummary)
+    ];
+    $docIssue['doc_det'][] = [
+        'doc_num' => 5,
+        'docs' => mapSummaryToDocs($CreditNotedocumentSummary)
+    ];
+
+    $docIssue['doc_det'][] = [
+        'doc_num' => 4,
+        'docs' => mapSummaryToDocs($DebitNotedocumentSummary)
+    ];
+
+    $docIssue['doc_det'][] = [
+        'doc_num' => 7,
+        'docs' => mapSummaryToDocs($paymentsDocumentSummary)
+    ];
+
+    $docIssue['doc_det'][] = [
+        'doc_num' => 6,
+        'docs' => mapSummaryToDocs($receiptsDocumentSummary)
+    ];
+    // Add other doc_num (2, 3, 8–12) if applicable as empty or as needed
+    $gstr1_requset = array(
+        "gstin"=>$merchant_gst,
+        "fp"=>date('mY', strtotime($from_date)),
+        "gt"=>600096,
+        "cur_gt"=>600096,
+        "b2b"=>$b2b_arr,
+        "cdnr"=>$finalData,
+        "doc_issue"=>$docIssue,
+        "hsn"=>$formattedHsnData,
+    );
+    echo "<pre>";
+    echo json_encode($gstr1_requset);
+    die;
+    //Api
+    $txn = "";
+    //Get GST Username
+    $company = Companies::select('gst_config_type')
+                            ->where('id', Session::get('user_company_id'))
+                            ->first();
+    if($company->gst_config_type == "single_gst"){
+        $gst = DB::table('gst_settings')
+                        ->select('gst_username')
+                        ->where([
+                            'company_id' => Session::get('user_company_id'),
+                            'gst_no' => $merchant_gst
+                        ])
+                        ->first();
+        $gst_user_name = $gst->gst_username;
+    }else if($company->gst_config_type == "multiple_gst"){            
+        $gst = DB::table('gst_settings_multiple')
+                        ->select('gst_username')
+                        ->where([
+                            'company_id' => Session::get('user_company_id'),
+                            'gst_no' => $merchant_gst
+                        ])
+                        ->first();
+        $gst_user_name = $gst->gst_username;
+    }
+    if($gst_user_name==""){
+        $response = array(
+                'status' => false,
+                'message' => 'Please Enter GST User Name In GST Configuration.'
+            );
+        return json_encode($response);
+    }
+    $ret_period = date('mY',strtotime($from_date));
+    $state_code = substr($merchant_gst,0,2);
+    //Check and generate token
+    $gst_token = gstToken::select('txn','created_at')
+                        ->where('company_gstin',$request->gstin)
+                        ->where('company_id',Session::get('user_company_id'))
+                        ->where('status',1)
+                        ->orderBy('id','desc')
+                        ->first();
+    if($gst_token){
+        $token_expiry = date('d-m-Y H:i:s',strtotime('+6 hour',strtotime($gst_token->created_at)));
+        $current_time = date('d-m-Y H:i:s');
+        if(strtotime($token_expiry)<strtotime($current_time)){
+            $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->gstin);
+            if($token_res==0){
+                $response = array(
+                    'status' => false,
+                    'message' => 'Something Went Wrong In Token Generation'
+                );
+                return json_encode($response);
+            }
+            $response = array(
+                'status' => true,
+                'message' => 'TOKEN-OTP'
+            );
+            return json_encode($response);
+        }
+        $txn = $gst_token->txn;
+    }else{
+        $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->gstin);
+        if($token_res==0){
+                $response = array(
+                    'status' => false,
+                    'message' => 'Something Went Wrong In Token Generation'
+                );
+                return json_encode($response);
+            }
+        $response = array(
+                'status' => true,
+                'message' => 'TOKEN-OTP'
+        );
+        return json_encode($response);
+    }
+    $curl = curl_init();
+    curl_setopt_array($curl, array(
+        CURLOPT_URL => 'https://api.mastergst.com/gstr1/retsave?email=pram92500@gmail.com',
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_ENCODING => '',
+        CURLOPT_MAXREDIRS => 10,
+        CURLOPT_TIMEOUT => 0,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+        CURLOPT_CUSTOMREQUEST => 'PUT',
+        CURLOPT_POSTFIELDS =>json_encode($gstr1_requset),
+        CURLOPT_HTTPHEADER => array(
+            'gstin:'.$merchant_gst,
+            'ret_period:'.$ret_period,
+            'gst_username:'.$gst_user_name,
+            'state_cd:'.$state_code,
+            'ip_address: 162.241.85.89',
+            'txn:'.$txn,
+            'client_id: GSPdea8d6fb-aed1-431a-b589-f1c541424580',
+            'client_secret: GSP4c44b790-ef11-4725-81d9-5f8504279d67',        
+            'Content-Type: application/json'
+        ),
+    ));
+    $response = curl_exec($curl);
+    $err = curl_error($curl);
+    curl_close($curl); 
+    echo "<pre>";
+    print_r($response);
+    die;
+    // dd($docIssue);
+    // return response()->json($docIssue);
+
 }
-
-// Add each doc type to the final array
-$docIssue['doc_issue']['doc_det'][] = [
-    'doc_num' => 1,
-    'docs' => mapSummaryToDocs($SalesdocumentSummary)
-];
-
-$docIssue['doc_issue']['doc_det'][] = [
-    'doc_num' => 5,
-    'docs' => mapSummaryToDocs($CreditNotedocumentSummary)
-];
-
-$docIssue['doc_issue']['doc_det'][] = [
-    'doc_num' => 4,
-    'docs' => mapSummaryToDocs($DebitNotedocumentSummary)
-];
-
-$docIssue['doc_issue']['doc_det'][] = [
-    'doc_num' => 7,
-    'docs' => mapSummaryToDocs($paymentsDocumentSummary)
-];
-
-$docIssue['doc_issue']['doc_det'][] = [
-    'doc_num' => 6,
-    'docs' => mapSummaryToDocs($receiptsDocumentSummary)
-];
-
-// Add other doc_num (2, 3, 8–12) if applicable as empty or as needed
-
-dd($docIssue);
-return response()->json($docIssue);
-  
-
-
- }
 
 
 
