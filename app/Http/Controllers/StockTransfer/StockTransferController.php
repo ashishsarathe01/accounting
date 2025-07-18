@@ -16,6 +16,7 @@ use App\Models\VoucherSeriesConfiguration;
 use App\Models\ItemLedger;
 use App\Models\ItemAverageDetail;
 use App\Models\SaleInvoiceConfiguration;
+use App\Models\ItemAverage;
 use Carbon\Carbon;
 use App\Helpers\CommonHelper;
 use Illuminate\Support\Facades\URL;
@@ -134,17 +135,17 @@ class StockTransferController extends Controller
                             ->where('series_no','=',$value->series)
                             ->where('delete_status','=','0')
                             ->max(\DB::raw("cast(voucher_no as SIGNED)"));
-                            if(!$voucher_no){
-                                if($series_configuration && $series_configuration->manual_numbering=="NO" && $series_configuration->invoice_start!=""){
-                                    $series_list[$key]->invoice_start_from =  sprintf("%'03d",$series_configuration->invoice_start);
-                                }else{
-                                    $series_list[$key]->invoice_start_from =  "001";
-                                }            
-                            }else{
-                                $invc = $voucher_no + 1;
-                                $invc = sprintf("%'03d", $invc);
-                                $series_list[$key]->invoice_start_from =  $invc;
-                            }
+            if(!$voucher_no){
+                if($series_configuration && $series_configuration->manual_numbering=="NO" && $series_configuration->invoice_start!=""){
+                    $series_list[$key]->invoice_start_from =  sprintf("%'03d",$series_configuration->invoice_start);
+                }else{
+                    $series_list[$key]->invoice_start_from =  "001";
+                }            
+            }else{
+                $invc = $voucher_no + 1;
+                $invc = sprintf("%'03d", $invc);
+                $series_list[$key]->invoice_start_from =  $invc;
+            }
             $invoice_prefix = "";
             $duplicate_voucher = "";
             $blank_voucher = "";
@@ -214,6 +215,7 @@ class StockTransferController extends Controller
             $available_item = $item_in_weight-$item_out_weight;
             $item[$key]->available_item = $available_item;        
         }
+        
         //Bill Sundry List
         $billsundry = BillSundrys::where('delete', '=', '0')
                                  ->where('status', '=', '1')
@@ -328,7 +330,31 @@ class StockTransferController extends Controller
                 }else{
                     $sale_item_array[$good] = $qtys[$key];
                 }
-                array_push($item_average_arr,array("item"=>$good,"quantity"=>$qtys[$key],"price"=>$prices[$key],"amount"=>$amounts[$key]));
+                //From Series Avearge Rate
+                $average = ItemAverage::where('item_id',$good)
+                        //->where('stock_date','<',$date->toDateString())
+                        ->where('series_no',$request->input('series_no'))
+                        ->orderBy('stock_date','desc')
+                        ->orderBy('id','desc')
+                        ->first();
+                if($average){
+                    $from_price = $average->price;
+                    $from_amount = $qtys[$key] * $from_price;
+                }else{
+                    $opening = ItemLedger::where('item_id',$good)
+                                    ->where('series_no',$request->input('series_no'))
+                                    ->where('source','-1')
+                                    ->first();
+                    if($opening){
+                        $from_price = $opening->total_price/$opening->in_weight;
+                        $from_price = round($from_price,2);
+                        $from_amount = $qtys[$key] * $from_price;
+                    }else{
+                        $from_price = $prices[$key]; 
+                        $from_amount = $qtys[$key] * $from_price;
+                    }
+                }
+                array_push($item_average_arr,array("item"=>$good,"quantity"=>$qtys[$key],"price"=>$from_price,"amount"=>$from_amount));
                 $item_average_total = $item_average_total + $amounts[$key];
                 $desc = new StockTransferDescription;
                 $desc->stock_transfer_id = $stock_transfer->id;
@@ -431,6 +457,7 @@ class StockTransferController extends Controller
             foreach ($sale_item_array as $key => $value) {                
                 $average_detail = new ItemAverageDetail;
                 $average_detail->entry_date = $request->date;
+                $average_detail->series_no = $request->input('series_no');
                 $average_detail->item_id = $key;
                 $average_detail->type = 'STOCK TRANSFER OUT';
                 $average_detail->stock_transfer_id = $stock_transfer->id;
@@ -438,7 +465,7 @@ class StockTransferController extends Controller
                 $average_detail->company_id = Session::get('user_company_id');
                 $average_detail->created_at = Carbon::now();
                 $average_detail->save();
-                CommonHelper::RewriteItemAverageByItem($request->date,$key);
+                CommonHelper::RewriteItemAverageByItem($request->date,$key,$request->input('series_no'));
             }
             //Add Add Data In Average Details table
             foreach ($item_average_arr as $key => $value) {
@@ -457,6 +484,7 @@ class StockTransferController extends Controller
                 $average_price =  round($average_price,6);
                 //Add Data In Average Details table
                 $average_detail = new ItemAverageDetail;
+                $average_detail->series_no = $request->input('to_series');
                 $average_detail->entry_date = $request->date;
                 $average_detail->item_id = $value['item'];
                 $average_detail->type = 'STOCK TRANSFER IN';
@@ -465,11 +493,11 @@ class StockTransferController extends Controller
                 $average_detail->stock_transfer_in_amount = $value['amount'];
                 $average_detail->purchase_bill_sundry_additive_amount = $additive_sundry_amount;
                 $average_detail->purchase_bill_sundry_subtractive_amount = $subtractive_sundry_amount;
-                $average_detail->purchase_total_amount = $average_amount;
+                //$average_detail->purchase_total_amount = $average_amount;
                 $average_detail->company_id = Session::get('user_company_id');
                 $average_detail->created_at = Carbon::now();
                 $average_detail->save();
-                CommonHelper::RewriteItemAverageByItem($request->date,$value['item']);
+                CommonHelper::RewriteItemAverageByItem($request->date,$value['item'],$request->input('to_series'));
             }
             session(['previous_url_stock_transfer' => URL::previous()]);
             return redirect('stock-transfer')->withSuccess('Stock Transfer Successfully!');

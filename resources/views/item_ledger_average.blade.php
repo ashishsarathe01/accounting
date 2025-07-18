@@ -296,6 +296,28 @@
                                        maximumFractionDigits: 2
                                        })+"</td>";
                         html += "<td style='text-align: right;'></td>";
+                     }else if(item.type=="STOCK JOURNAL GENERATE"){
+                        total_weight += parseFloat(item.stock_journal_in_weight);
+                        total_amount += parseFloat(item.stock_journal_in_amount);
+                        html += "<td>"+item.sj_in_voucher+"</td>";
+                        html += "<td>"+item.sj_in_account+"</td>";
+                        html += "<td style='text-align: right;'>"+Number(item.stock_journal_in_weight).toLocaleString('en-IN', {
+                                       minimumFractionDigits: 2,
+                                       maximumFractionDigits: 2
+                                       })+"</td>";
+                        html += "<td style='text-align: right;'>"+Number(item.stock_journal_in_amount).toLocaleString('en-IN', {
+                                       minimumFractionDigits: 2,
+                                       maximumFractionDigits: 2
+                                       })+"</td>";
+                     }else if(item.type=="STOCK JOURNAL CONSUME"){
+                        total_weight -= parseFloat(item.stock_journal_out_weight);
+                        html += "<td>"+item.sj_out_voucher+"</td>";
+                        html += "<td>"+item.sj_out_account+"</td>";
+                        html += "<td style='text-align: right;'>"+Number(item.stock_journal_out_weight).toLocaleString('en-IN', {
+                                       minimumFractionDigits: 2,
+                                       maximumFractionDigits: 2
+                                       })+"</td>";
+                        html += "<td style='text-align: right;'></td>";
                      }
                      html += "</tr>";
                   });

@@ -14,6 +14,8 @@ use App\Models\Companies;
 use App\Models\VoucherSeriesConfiguration;
 use App\Models\GstBranch;
 use App\Models\ItemBalanceBySeries;
+use App\Models\ItemAverageDetail;
+use App\Helpers\CommonHelper;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Session;
@@ -585,7 +587,7 @@ public function stockJournal(Request $request)
       $stockjournal->created_by = Session::get('user_id');
       $stockjournal->financial_year = $financial_year;
       $stockjournal->created_at = date('d-m-Y H:i:s');
-      if($stockjournal->save()){         
+      if($stockjournal->save()){
          foreach ($consume_item as $key => $value){
             $stockjournaldetail = new StockJournalDetail;
             $stockjournaldetail->journal_date = $date;
@@ -614,6 +616,18 @@ public function stockJournal(Request $request)
             $item_ledger->created_by = Session::get('user_id');
             $item_ledger->created_at = date('d-m-Y H:i:s');
             $item_ledger->save();
+            //Add Data In Average Details table
+            $average_detail = new ItemAverageDetail;
+            $average_detail->entry_date = $request->date;
+            $average_detail->series_no = $request->input('series_no');
+            $average_detail->item_id = $consume_item[$key];
+            $average_detail->type = 'STOCK JOURNAL CONSUME';
+            $average_detail->stock_journal_out_id = $stockjournal->id;
+            $average_detail->stock_journal_out_weight = $consume_weight[$key];
+            $average_detail->company_id = Session::get('user_company_id');
+            $average_detail->created_at = Carbon::now();
+            $average_detail->save();
+            CommonHelper::RewriteItemAverageByItem($request->date,$consume_item[$key],$request->input('series_no'));
          }
          foreach ($generated_item as $key => $value){
             $stockjournaldetail = new StockJournalDetail;
@@ -643,6 +657,19 @@ public function stockJournal(Request $request)
             $item_ledger->created_by = Session::get('user_id');
             $item_ledger->created_at = date('d-m-Y H:i:s');
             $item_ledger->save();
+            //Add Data In Average Details table
+            $average_detail = new ItemAverageDetail;
+            $average_detail->series_no = $request->input('series_no');
+            $average_detail->entry_date = $request->date;
+            $average_detail->item_id = $generated_item[$key];
+            $average_detail->type = 'STOCK JOURNAL GENERATE';
+            $average_detail->stock_journal_in_id = $stockjournal->id;
+            $average_detail->stock_journal_in_weight = $generated_weight[$key];
+            $average_detail->stock_journal_in_amount = $generated_amount[$key];
+            $average_detail->company_id = Session::get('user_company_id');
+            $average_detail->created_at = Carbon::now();
+            $average_detail->save();
+            CommonHelper::RewriteItemAverageByItem($request->date,$generated_item[$key],$request->input('series_no'));
          }
          return redirect('stock-journal')->withSuccess('Stock Journal Added Successfully!'); 
       }

@@ -1160,7 +1160,7 @@ class SalesController extends Controller
             $average_detail->company_id = Session::get('user_company_id');
             $average_detail->created_at = Carbon::now();
             $average_detail->save();
-             $lower_date = (strtotime($last_date) < strtotime($request->date)) ? $last_date : $request->date;
+            $lower_date = (strtotime($last_date) < strtotime($request->date)) ? $last_date : $request->date;
             CommonHelper::RewriteItemAverageByItem($lower_date,$key,$request->input('series_no'));               
          }
          foreach ($desc_item_arr as $key => $value) {

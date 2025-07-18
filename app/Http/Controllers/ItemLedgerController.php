@@ -442,6 +442,8 @@ class ItemLedgerController extends Controller
          
       }      
       $selected_series = $request->series;
+      // echo "<pre>";
+      // print_r($average_data->toArray());die;
       return view('item_ledger_average')->with('item_list', $item_list)->with('fdate', $fdate)->with('tdate',$tdate)->with('item_id', $item_id)->with('opening_amount', $opening_amount)->with('opening_weight', $opening_weight)->with('average_data', $average_data)->with('selected_series', $selected_series)->with('series', $series);
    }
 
@@ -468,9 +470,13 @@ class ItemLedgerController extends Controller
     ->leftJoin('purchase_returns', 'item_average_details.purchase_return_id', '=', 'purchase_returns.id')
     ->leftJoin('accounts as pr_account', 'purchase_returns.party', '=', 'pr_account.id')
 
-    // Join with Stock Transfers (Note: Use alias to avoid duplicate table)
-   //  ->leftJoin('share_transfers as st_out', 'item_average_details.stock_transfer_id', '=', 'st_out.id')
-   //  ->leftJoin('share_transfers as st_in', 'item_average_details.stock_transfer_in_id', '=', 'st_in.id')
+    //Join with Stock Transfers (Note: Use alias to avoid duplicate table)
+    ->leftJoin('stock_transfers as st_out', 'item_average_details.stock_transfer_id', '=', 'st_out.id')
+    ->leftJoin('stock_transfers as st_in', 'item_average_details.stock_transfer_in_id', '=', 'st_in.id')
+
+    // Join with Stock Journal
+    ->leftJoin('stock_journal as sj_out', 'item_average_details.stock_journal_out_id', '=', 'sj_out.id')
+    ->leftJoin('stock_journal as sj_in', 'item_average_details.stock_journal_in_id', '=', 'sj_in.id')
 
     // Select all fields
     ->select(
@@ -487,11 +493,17 @@ class ItemLedgerController extends Controller
         'purchase_returns.sr_prefix as pr_voucher',
         'pr_account.account_name as pr_account',
 
-      //   'st_out.voucher_no_prefix as st_out_voucher',
-      //   'st_out.material_center_to as st_ot_account',
+        'st_out.voucher_no_prefix as st_out_voucher',
+        'st_out.material_center_to as st_ot_account',
 
-      //   'st_in.material_center_from as st_in_account',
-      //   'st_in.voucher_no_prefix as st_in_voucher'
+        'st_in.material_center_from as st_in_account',
+        'st_in.voucher_no_prefix as st_in_voucher',
+
+        'sj_out.series_no as sj_out_account',
+        'sj_out.voucher_no_prefix as sj_out_voucher',
+
+        'sj_in.series_no as sj_in_account',
+        'sj_in.voucher_no_prefix as sj_in_voucher'
     )
 
     ->get();

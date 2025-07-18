@@ -139,6 +139,17 @@ class CommonHelper
                 $sale_return_weight = $average_detail->sum('sale_return_weight');
                 $stock_transfer_in_weight = $average_detail->sum('stock_transfer_in_weight');
                 $stock_transfer_in_amount = $average_detail->sum('stock_transfer_in_amount');
+
+                $stock_journal_out_weight = $average_detail->sum('stock_journal_out_weight');
+                $stock_journal_in_weight = $average_detail->sum('stock_journal_in_weight');
+                $stock_journal_in_amount = $average_detail->sum('stock_journal_in_amount');
+                 if(!empty($stock_journal_in_weight)){
+                    $purchase_weight = $purchase_weight + $stock_journal_in_weight;
+                }
+                if(!empty($stock_journal_in_amount)){
+                    $purchase_amount = $purchase_amount + $stock_journal_in_amount;
+                }
+
                 if(!empty($stock_transfer_in_weight)){
                     $purchase_weight = $purchase_weight + $stock_transfer_in_weight;
                 }
@@ -174,14 +185,14 @@ class CommonHelper
                 }else{
                     $average_price = 0;
                 }               
-                $stock_average_amount = ($purchase_weight - $sale_weight - $stock_transfer_weight + $sale_return_weight) * $average_price;
+                $stock_average_amount = ($purchase_weight - $sale_weight - $stock_transfer_weight - $stock_journal_out_weight + $sale_return_weight) * $average_price;
                 $stock_average_amount =  round($stock_average_amount,2);
                 $average = new ItemAverage;
                 $average->item_id = $item;
                 $average->series_no = $series;
-                $average->sale_weight = $sale_weight + $stock_transfer_weight + $purchase_return_weight;
+                $average->sale_weight = $sale_weight + $stock_transfer_weight + $stock_journal_out_weight + $purchase_return_weight;
                 $average->purchase_weight = $on_date_purchase_weight;
-                $average->average_weight = $purchase_weight - $sale_weight - $stock_transfer_weight + $sale_return_weight;
+                $average->average_weight = $purchase_weight - $sale_weight - $stock_transfer_weight - $stock_journal_out_weight + $sale_return_weight;
                 $average->price = $average_price;
                 $average->company_id = Session::get('user_company_id');
                 $average->amount = $stock_average_amount;
