@@ -1603,36 +1603,40 @@ public function sendGstr1ToGSTMaster(Request $request){
                 $grouped[$ctin][] = $invoice_data;
             }
 
-            // Find the current invoice again to push items
-            foreach ($grouped[$ctin] as &$invoice_ref) {
-                if ($invoice_ref['inum'] === $inum) {
-                    $invoice_ref['itms'][] = [
-                        'num' => count($invoice_ref['itms']) + 1,
-                        'itm_det' => [
-                            'rt' => $rate,
-                            'txval' => round($taxable_value, 2),
-                            'iamt' => round($igst, 2),
-                            'cgst' => round($cgst, 2),
-                            'sgst' => round($sgst, 2),
-                        ]
-                    ];
-                    break;
-                }
+        // Find the current invoice again to push items
+        foreach ($grouped[$ctin] as &$invoice_ref) {
+            if ($invoice_ref['inum'] === $inum) {
+                $invoice_ref['itms'][] = [
+                    'num' => count($invoice_ref['itms']) + 1,
+                    'itm_det' => [
+                        'rt' => $rate,
+                        'txval' => round($taxable_value, 2),
+                        'iamt' => round($igst, 2),
+                        'cgst' => round($cgst, 2),
+                        'sgst' => round($sgst, 2),
+                    ]
+                ];
+                break;
             }
         }
-    }
-    $b2b_arr = [];
-    foreach ($grouped as $k=>$invoice) {
-        array_push($b2b_arr,array("ctin"=>$k,"inv"=>$invoice));
-    }
-   
+
+            }
+        }
+
+
+
+        //for b2clarge 
+       
+                 
+  
+
+//for debit credit note registered 
+
+
+
+    // Step 1: Fetch all Bill Sundries for the company
     
 
-    // Step 3: Send to GSTMaster API
-    $apiUrl = 'https://gstmaster.example.com/api/gstr1/upload'; // Replace with real API
-    $token = 'your-access-token-here'; // Replace with actual token
-    //for debit credit note registered 
-    // Step 1: Fetch all Bill Sundries for the company  
     // -------------------- CREDIT NOTES FETCH --------------------
     $creditSales = DB::table('sales_returns')
             ->where('sales_returns.merchant_gst', $merchant_gst)

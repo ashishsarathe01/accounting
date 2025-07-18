@@ -8,7 +8,7 @@ use App\Models\GSTR2B;
 use App\Models\Companies;
 use App\Models\gstToken;
 use App\Models\Accounts;
-use App\Models\RejectedGstr2b;
+use App\Models\RejectedGstr2b; 
 use App\Models\SalesReturn;
 use App\Models\PurchaseReturn;
 use App\Models\Purchase;
