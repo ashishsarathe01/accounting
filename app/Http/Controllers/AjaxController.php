@@ -417,8 +417,10 @@ class AjaxController extends Controller
          $item->voucher_type = 'SALE';
          return $item;
       });
-      $Accountdetails = $Accountdetails->merge($purchase_account_details);
-      return json_encode($Accountdetails);
+     
+      $merge = collect($Accountdetails)->merge($purchase_account_details);
+      
+      return json_encode($merge);
    }
 
    public function getPurchaseInvoiceDetails(Request $request){
@@ -851,17 +853,30 @@ class AjaxController extends Controller
             ->where('status',1)
             ->where('company_id',Session::get('user_company_id'))
             ->first();
-            // if($request->get('assign_param') && !empty($request->get('assign_param'))){
-            //    $stock = ItemParameterStock::select('parameter1_value')
-            //                               ->whereIn('id',explode(",",$request->get('assign_param')))
-            //                               ->get();
-            //    if($stock && count($stock)>0){
-            //      return response()->json([
-            //          'parameter' => $parameter,
-            //          'stock' => $stock
-            //       ]);
-            //    }
-            // }
+            if($request->get('assign_param') && !empty($request->get('assign_param'))){
+               if($request->get('assign_param')=="SALE"){
+                  $stock = ItemParameterStock::select('parameter1_value')
+                                          ->whereIn('id',explode(",",$request->get('assign_param')))
+                                          ->get();
+                  if($stock && count($stock)>0){
+                  return response()->json([
+                        'parameter' => $parameter,
+                        'stock' => $stock
+                     ]);
+                  }
+               }else if($request->get('assign_param')=="PURCHASE"){
+                  $stock = ItemParameterStock::select('parameter1_value')
+                                          ->whereIn('id',explode(",",$request->get('assign_param')))
+                                          ->get();
+                  if($stock && count($stock)>0){
+                  return response()->json([
+                        'parameter' => $parameter,
+                        'stock' => $stock
+                     ]);
+                  }
+               }
+               
+            }
           return $parameter;
       }
    }

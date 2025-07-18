@@ -318,8 +318,7 @@ class ManageItemsController extends Controller
       }
       return redirect('account-manage-item')->withSuccess('item updated successfully!');
    }
-   public function delete(Request $request)
-   {
+   public function delete(Request $request){
       Gate::authorize('view-module', 52);
       $exist = ItemLedger::where('item_id', $request->heading_id)
       ->where('source', '!=', -1)
@@ -677,9 +676,23 @@ public function stockJournal(Request $request)
    public function deleteStockJournal(Request $request){
       Gate::authorize('view-module', 64);
       $id = $request->input('del_id');
-      $delete = StockJournal::where('id',$id)
-                  ->delete();
+      $stock_journal = StockJournal::find($id);
+      $delete = StockJournal::where('id',$id)->delete();
       if($delete){
+         ItemAverageDetail::where('stock_journal_in_id',$id)
+                           ->where('type','STOCK JOURNAL GENERATE')
+                           ->delete();    
+         ItemAverageDetail::where('stock_journal_out_id',$id)
+                        ->where('type','STOCK JOURNAL CONSUME')
+                        ->delete();
+         $desc = StockJournalDetail::where('parent_id',$id)->get();
+         foreach ($desc as $key => $value) {
+            if(!empty($value->consume_item)){
+               CommonHelper::RewriteItemAverageByItem($stock_journal->jdate,$value->consume_item,$stock_journal->series_no);
+            }else if(!empty($value->new_item)){
+               CommonHelper::RewriteItemAverageByItem($stock_journal->jdate,$value->new_item,$stock_journal->series_no);
+            }               
+         }
          StockJournalDetail::where('parent_id',$id)->delete();
          ItemLedger::where('source',3)
                      ->where('source_id',$id)
@@ -751,6 +764,7 @@ public function stockJournal(Request $request)
       $generated_unit_name = $request->input('generated_unit_name');
 
       $stockjournal = StockJournal::find($request->input('edit_id'));
+      $last_date =  $stockjournal->jdate;
       $stockjournal->jdate = $date;
       $stockjournal->narration = $narration;
       $stockjournal->series_no = $series_no;
@@ -759,9 +773,29 @@ public function stockJournal(Request $request)
       $stockjournal->voucher_no = $voucher_no;
       $stockjournal->updated_by = Session::get('user_id');
       $stockjournal->updated_at = date('d-m-Y H:i:s');
+
+      
       if($stockjournal->save()){  
+         //$desc_item_arr = StockJournalDetail::where('parent_id',$id)->pluck('goods_discription')->toArray();
+
+         ItemAverageDetail::where('stock_journal_in_id',$id)
+                           ->where('type','STOCK JOURNAL GENERATE')
+                           ->delete();    
+         ItemAverageDetail::where('stock_journal_out_id',$id)
+                        ->where('type','STOCK JOURNAL CONSUME')
+                        ->delete();
+         $desc = StockJournalDetail::where('parent_id',$id)->get();
+         foreach ($desc as $key => $value) {
+            if(!empty($value->consume_item)){
+               CommonHelper::RewriteItemAverageByItem($stock_journal->jdate,$value->consume_item,$stock_journal->series_no);
+            }else if(!empty($value->new_item)){
+               CommonHelper::RewriteItemAverageByItem($stock_journal->jdate,$value->new_item,$stock_journal->series_no);
+            }               
+         }
+
          StockJournalDetail::where('parent_id',$request->input('edit_id'))->delete();
          ItemLedger::where('source',3)->where('source_id',$request->input('edit_id'))->delete();
+
          foreach ($consume_item as $key => $value){
             $stockjournaldetail = new StockJournalDetail;
             $stockjournaldetail->journal_date = $date;
@@ -790,6 +824,19 @@ public function stockJournal(Request $request)
             $item_ledger->created_by = Session::get('user_id');
             $item_ledger->created_at = date('d-m-Y H:i:s');
             $item_ledger->save();
+            //Add Data In Average Details table
+            $average_detail = new ItemAverageDetail;
+            $average_detail->entry_date = $request->date;
+            $average_detail->series_no = $request->input('series_no');
+            $average_detail->item_id = $consume_item[$key];
+            $average_detail->type = 'STOCK JOURNAL CONSUME';
+            $average_detail->stock_journal_out_id = $stockjournal->id;
+            $average_detail->stock_journal_out_weight = $consume_weight[$key];
+            $average_detail->company_id = Session::get('user_company_id');
+            $average_detail->created_at = Carbon::now();
+            $average_detail->save();
+            $lower_date = (strtotime($last_date) < strtotime($request->date)) ? $last_date : $request->date;
+            CommonHelper::RewriteItemAverageByItem($lower_date,$consume_item[$key],$request->input('series_no'));
          }
          foreach ($generated_item as $key => $value){
             $stockjournaldetail = new StockJournalDetail;
@@ -819,6 +866,21 @@ public function stockJournal(Request $request)
             $item_ledger->created_by = Session::get('user_id');
             $item_ledger->created_at = date('d-m-Y H:i:s');
             $item_ledger->save();
+
+            //Add Data In Average Details table
+            $average_detail = new ItemAverageDetail;
+            $average_detail->series_no = $request->input('series_no');
+            $average_detail->entry_date = $request->date;
+            $average_detail->item_id = $generated_item[$key];
+            $average_detail->type = 'STOCK JOURNAL GENERATE';
+            $average_detail->stock_journal_in_id = $stockjournal->id;
+            $average_detail->stock_journal_in_weight = $generated_weight[$key];
+            $average_detail->stock_journal_in_amount = $generated_amount[$key];
+            $average_detail->company_id = Session::get('user_company_id');
+            $average_detail->created_at = Carbon::now();
+            $average_detail->save();
+            $lower_date = (strtotime($last_date) < strtotime($request->date)) ? $last_date : $request->date;
+            CommonHelper::RewriteItemAverageByItem($lower_date,$generated_item[$key],$request->input('series_no'));
          }
          if(!empty(Session::get('redirect_url'))){
             return redirect(Session::get('redirect_url'));

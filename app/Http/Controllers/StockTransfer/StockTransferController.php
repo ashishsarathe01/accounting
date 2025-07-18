@@ -927,6 +927,7 @@ class StockTransferController extends Controller
             foreach ($sale_item_array as $key => $value) {                
                 $average_detail = new ItemAverageDetail;
                 $average_detail->entry_date = $request->date;
+                $average_detail->series_no = $request->input('series_no');
                 $average_detail->item_id = $key;
                 $average_detail->type = 'STOCK TRANSFER OUT';
                 $average_detail->stock_transfer_id = $stock_transfer->id;
@@ -935,7 +936,7 @@ class StockTransferController extends Controller
                 $average_detail->created_at = Carbon::now();
                 $average_detail->save();
                  $lower_date = (strtotime($last_date) < strtotime($request->date)) ? $last_date : $request->date;
-                CommonHelper::RewriteItemAverageByItem($$lower_date,$key);
+                CommonHelper::RewriteItemAverageByItem($lower_date,$key,$request->input('series_no'));
             }
             //Add Add Data In Average Details table
             foreach ($item_average_arr as $key => $value) {
@@ -957,6 +958,7 @@ class StockTransferController extends Controller
                 $average_detail->entry_date = $request->date;
                 $average_detail->item_id = $value['item'];
                 $average_detail->type = 'STOCK TRANSFER IN';
+                $average_detail->series_no = $request->input('to_series');
                 $average_detail->stock_transfer_in_id = $stock_transfer->id;
                 $average_detail->stock_transfer_in_weight = $value['quantity'];
                 $average_detail->stock_transfer_in_amount = $value['amount'];
@@ -966,8 +968,8 @@ class StockTransferController extends Controller
                 $average_detail->company_id = Session::get('user_company_id');
                 $average_detail->created_at = Carbon::now();
                 $average_detail->save();
-                 $lower_date = (strtotime($last_date) < strtotime($request->date)) ? $last_date : $request->date;
-                CommonHelper::RewriteItemAverageByItem($lower_date,$value['item']);
+                $lower_date = (strtotime($last_date) < strtotime($request->date)) ? $last_date : $request->date;
+                CommonHelper::RewriteItemAverageByItem($lower_date,$value['item'],$request->input('to_series'));
             }
             foreach ($desc_item_arr as $key => $value) {
                 if(!array_key_exists($value, $sale_item_array)){

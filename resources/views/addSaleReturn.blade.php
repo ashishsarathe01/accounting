@@ -427,7 +427,7 @@
                                     <td colspan="4" class="pl-40"><button type="button" class="btn btn-info transport_info" style="float: right;">Transport Info</button></td>
                                  </tr>
                               </div>
-                              <div class="modal fade" id="transport_info_modal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+                              <div class="modal fade" id="transport_info_modal" tabindex="-1" aria-labelledby="exampleModalLabel">
                                  <div class="modal-dialog modal-dialog-centered">
                                     <div class="modal-content p-4 border-divider border-radius-8">
                                        <div class="modal-header border-0 p-0">
@@ -665,7 +665,7 @@
                      </div>
                   </table>
                </div>
-               <div class="modal fade" id="parameter_modal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+               <div class="modal fade" id="parameter_modal" tabindex="-1" aria-labelledby="exampleModalLabel">
                   <div class="modal-dialog modal-dialog-centered modal-lg">
                      <div class="modal-content p-4 border-divider border-radius-8">
                         <div class="modal-header border-0 p-0">
@@ -926,7 +926,9 @@
                let assign_param = "";
                if (typeof val.parameter_ids !== 'undefined' && val.parameter_ids !== null) {
                   assign_param = JSON.parse(val.parameter_ids);
-               }
+               }else{
+                  assign_param = val.goods_discription;
+               }               
                optionElements += '<option unit_id="' + val.unit_id + '" ' +
                      'data-val="' + val.unit + '" ' +
                      'value="' + val.item_id + '" ' +
@@ -1697,7 +1699,7 @@
             parameterized_stock_status : parameterized_stock_status,
             group_id : group_id,
             assign_param : assign_param,
-            
+            voucher_type : $("#voucher_type").val()
          },
          success: function(data){
             if((data.parameterized_stock_status!=undefined && data.parameterized_stock_status==1) || data.parameterized_status!=undefined && data.parameterized_status==1){

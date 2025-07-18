@@ -123,9 +123,9 @@
             <table class="table table-striped table-bordered table-sm m-0 shadow-sm">
                <thead>
                   <tr class=" font-12 text-body bg-light-pink">                        
-                     <th class="w-min-120 border-none bg-light-pink text-body">Type </th>
-                     <th class="w-min-120 border-none bg-light-pink text-body">Invoice No.</th>
-                     <th class="w-min-120 border-none bg-light-pink text-body">Party</th>
+                     <th class="w-min-120 border-none bg-light-pink text-body" style="text-align:left">Type </th>
+                     <th class="w-min-120 border-none bg-light-pink text-body" style="text-align:left">Invoice No.</th>
+                     <th class="w-min-120 border-none bg-light-pink text-body" style="text-align:left">Party</th>
                      <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Quantity</th>
                      <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Amount</th>     
                   </tr>
@@ -227,12 +227,12 @@
                         redirect_url = "";
                      }
                      html += "<tr style='cursor:pointer' onclick='reDirectFun(\"" + redirect_url + "\")'>";
-                     html += "<td>"+item.type+"</td>";
+                     html += "<td style='text-align:left'>"+item.type+"</td>";
                      if(item.type=="PURCHASE"){
                         total_weight += parseFloat(item.purchase_weight);
                         total_amount += parseFloat(item.purchase_total_amount);
-                        html += "<td>"+item.purchase_voucher+"</td>";
-                        html += "<td>"+item.purchase_account+"</td>";
+                        html += "<td style='text-align:left'>"+item.purchase_voucher+"</td>";
+                        html += "<td style='text-align:left'>"+item.purchase_account+"</td>";
                         html += "<td style='text-align: right;'>"+Number(item.purchase_weight).toLocaleString('en-IN', {
                                        minimumFractionDigits: 2,
                                        maximumFractionDigits: 2
@@ -243,8 +243,8 @@
                                        })+"</td>";
                      }else if(item.type=="SALE"){
                         total_weight -= parseFloat(item.sale_weight);
-                        html += "<td>"+item.sale_voucher+"</td>";
-                        html += "<td>"+item.sale_account+"</td>";
+                        html += "<td style='text-align:left'>"+item.sale_voucher+"</td>";
+                        html += "<td style='text-align:left'>"+item.sale_account+"</td>";
                         html += "<td style='text-align: right;'>"+Number(item.sale_weight).toLocaleString('en-IN', {
                                        minimumFractionDigits: 2,
                                        maximumFractionDigits: 2
@@ -255,8 +255,8 @@
                            total_weight-= parseFloat(item.purchase_return_weight);
                         }
                         total_amount -= parseFloat(item.purchase_return_amount);
-                        html += "<td>"+item.pr_voucher+"</td>";
-                        html += "<td>"+item.pr_account+"</td>";
+                        html += "<td style='text-align:left'>"+item.pr_voucher+"</td>";
+                        html += "<td style='text-align:left'>"+item.pr_account+"</td>";
                         html += "<td style='text-align: right;'>"+Number(item.purchase_return_weight).toLocaleString('en-IN', {
                                        minimumFractionDigits: 2,
                                        maximumFractionDigits: 2
@@ -267,8 +267,8 @@
                                        })+"</td>";
                      }else if(item.type=="SALE RETURN"){
                         total_weight += parseFloat(item.sale_return_weight);
-                        html += "<td>"+item.sr_voucher+"</td>";
-                        html += "<td>"+item.sr_account+"</td>";
+                        html += "<td style='text-align:left'>"+item.sr_voucher+"</td>";
+                        html += "<td style='text-align:left'>"+item.sr_account+"</td>";
                         html += "<td style='text-align: right;'>"+Number(item.sale_return_weight).toLocaleString('en-IN', {
                                        minimumFractionDigits: 2,
                                        maximumFractionDigits: 2
@@ -277,8 +277,8 @@
                      }else if(item.type=="STOCK TRANSFER IN"){
                         total_weight += parseFloat(item.stock_transfer_in_weight);
                         total_amount += parseFloat(item.stock_transfer_in_amount);
-                        html += "<td>"+item.st_in_voucher+"</td>";
-                        html += "<td>"+item.st_in_account+"</td>";
+                        html += "<td style='text-align:left'>"+item.st_in_voucher+"</td>";
+                        html += "<td style='text-align:left'>"+item.st_in_account+"</td>";
                         html += "<td style='text-align: right;'>"+Number(item.stock_transfer_in_weight).toLocaleString('en-IN', {
                                        minimumFractionDigits: 2,
                                        maximumFractionDigits: 2
@@ -289,8 +289,8 @@
                                        })+"</td>";
                      }else if(item.type=="STOCK TRANSFER OUT"){
                         total_weight -= parseFloat(item.stock_transfer_weight);
-                        html += "<td>"+item.st_out_voucher+"</td>";
-                        html += "<td>"+item.st_ot_account+"</td>";
+                        html += "<td style='text-align:left'>"+item.st_out_voucher+"</td>";
+                        html += "<td style='text-align:left'>"+item.st_ot_account+"</td>";
                         html += "<td style='text-align: right;'>"+Number(item.stock_transfer_weight).toLocaleString('en-IN', {
                                        minimumFractionDigits: 2,
                                        maximumFractionDigits: 2
@@ -299,8 +299,8 @@
                      }else if(item.type=="STOCK JOURNAL GENERATE"){
                         total_weight += parseFloat(item.stock_journal_in_weight);
                         total_amount += parseFloat(item.stock_journal_in_amount);
-                        html += "<td>"+item.sj_in_voucher+"</td>";
-                        html += "<td>"+item.sj_in_account+"</td>";
+                        html += "<td style='text-align:left'>"+item.sj_in_voucher+"</td>";
+                        html += "<td style='text-align:left'>"+item.sj_in_account+"</td>";
                         html += "<td style='text-align: right;'>"+Number(item.stock_journal_in_weight).toLocaleString('en-IN', {
                                        minimumFractionDigits: 2,
                                        maximumFractionDigits: 2
@@ -311,8 +311,8 @@
                                        })+"</td>";
                      }else if(item.type=="STOCK JOURNAL CONSUME"){
                         total_weight -= parseFloat(item.stock_journal_out_weight);
-                        html += "<td>"+item.sj_out_voucher+"</td>";
-                        html += "<td>"+item.sj_out_account+"</td>";
+                        html += "<td style='text-align:left'>"+item.sj_out_voucher+"</td>";
+                        html += "<td style='text-align:left'>"+item.sj_out_account+"</td>";
                         html += "<td style='text-align: right;'>"+Number(item.stock_journal_out_weight).toLocaleString('en-IN', {
                                        minimumFractionDigits: 2,
                                        maximumFractionDigits: 2
