@@ -222,12 +222,18 @@ class CommonHelper
         $response = curl_exec($curl);
         curl_close($curl);        
     }
-    public static function profitLoss($financial_year){
+    public static function profitLoss($financial_year, $filter_from_date=null, $ilter_to_date=null){
         $y = explode("-",$financial_year);
         $from_date = $y['0']."-04-01";
         $from_date = date('Y-m-d',strtotime($from_date));
         $to_date = $y['1']."-03-31";  
         $to_date = date('Y-m-d',strtotime($to_date));
+        if($filter_from_date!=null && $filter_from_date!=""){
+            $from_date = date('Y-m-d',strtotime($filter_from_date));
+        }
+        if($ilter_to_date!=null || $ilter_to_date!=""){
+            $to_date = date('Y-m-d',strtotime($ilter_to_date));
+        }
         $profitloss = 0;
         $stock_in_hand = CommonHelper::ClosingStock($to_date);
         $stock_in_hand = round($stock_in_hand,2);    
@@ -237,58 +243,62 @@ class CommonHelper
         //Purchase
 
         $company_id = Session::get('user_company_id');
-        $result = DB::table('purchases')
-                        ->join('purchase_descriptions', 'purchases.id', '=', 'purchase_descriptions.purchase_id')
-                        ->leftJoin('purchase_sundries', function ($join) {
-                            $join->on('purchases.id', '=', 'purchase_sundries.purchase_id')
-                                ->where('purchase_sundries.adjust_purchase_amt', '=', 'Yes');
-                        })
-                        ->leftJoin('bill_sundrys', 'purchase_sundries.bill_sundry', '=', 'bill_sundrys.id')
-                        ->where([
-                            'purchases.delete' => 0,
-                            'purchases.company_id' => $company_id,
-                            'purchases.financial_year' => $financial_year,
-                        ])
-                        ->whereBetween('purchases.date', [$from_date, $to_date])
-                        ->selectRaw("
-                            SUM(purchase_descriptions.amount) as base_amount,
-                            SUM(CASE 
-                                WHEN bill_sundry_type = 'additive' THEN purchase_sundries.amount
-                                WHEN bill_sundry_type = 'subtractive' THEN -purchase_sundries.amount
-                                ELSE 0 END) as adjustment_amount
-                        ")
-                        ->first();
-        $tot_purchase_amt = ($result->base_amount ?? 0) + ($result->adjustment_amount ?? 0);
+        // $result = DB::table('purchases')
+        //                 ->join('purchase_descriptions', 'purchases.id', '=', 'purchase_descriptions.purchase_id')
+        //                 ->leftJoin('purchase_sundries', function ($join) {
+        //                     $join->on('purchases.id', '=', 'purchase_sundries.purchase_id');
+                                
+        //                 })
+        //                 ->leftJoin('bill_sundrys', function ($join) {
+        //                     $join->on('purchase_sundries.bill_sundry', '=', 'purchase_sundries.id')
+        //                             ->where('bill_sundrys.adjust_purchase_amt', '=', 'Yes');
+                                
+        //                 })                        
+        //                 ->where([
+        //                     'purchases.delete' => 0,
+        //                     'purchases.company_id' => $company_id,
+        //                     'purchases.financial_year' => $financial_year,
+        //                 ])
+        //                 ->whereBetween('purchases.date', [$from_date, $to_date])
+        //                 ->selectRaw("
+        //                     SUM(purchase_descriptions.amount) as base_amount,
+        //                     SUM(CASE 
+        //                         WHEN bill_sundry_type = 'additive' THEN purchase_sundries.amount
+        //                         WHEN bill_sundry_type = 'subtractive' THEN -purchase_sundries.amount
+        //                         ELSE 0 END) as adjustment_amount
+        //                 ")
+        //                 ->first();
+        // $tot_purchase_amt = ($result->base_amount ?? 0) + ($result->adjustment_amount ?? 0);
 
-        // $tot_purchase_amt = DB::table('purchases')
-        //                     ->join('purchase_descriptions','purchases.id','=','purchase_descriptions.purchase_id')
-        //                     ->where(['purchases.delete' => '0', 'purchases.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
-        //                     ->whereBetween('date', [$from_date, $to_date])
-        //                     //->get()
-        //                     ->sum("amount");
-        // $purchase_sundry = DB::table('purchases')
-        //                     ->join('purchase_sundries','purchases.id','=','purchase_sundries.purchase_id')
-        //                     ->join('bill_sundrys','purchase_sundries.bill_sundry','=','bill_sundrys.id')
-        //                     ->where(['purchases.delete' => '0', 'purchases.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
-        //                     ->whereBetween('date', [$from_date, $to_date])
-        //                     ->select('bill_sundry_type','amount')
-        //                     ->get();
-        // if(count($purchase_sundry)>0){
-        //     foreach ($purchase_sundry as $key => $value) {
-        //         if($value->bill_sundry_type=="additive"){
-        //             $tot_purchase_amt = $tot_purchase_amt + $value->amount;
-        //         }else if($value->bill_sundry_type=="subtractive"){
-        //             $tot_purchase_amt = $tot_purchase_amt - $value->amount;
-        //         }
-        //     }
-        // }
+        $tot_purchase_amt = DB::table('purchases')
+                            ->join('purchase_descriptions','purchases.id','=','purchase_descriptions.purchase_id')
+                            ->where(['purchases.delete' => '0', 'purchases.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
+                            ->whereBetween('date', [$from_date, $to_date])
+                            ->get()
+                            ->sum("amount");
+        $purchase_sundry = DB::table('purchases')
+                            ->join('purchase_sundries','purchases.id','=','purchase_sundries.purchase_id')
+                            ->join('bill_sundrys','purchase_sundries.bill_sundry','=','bill_sundrys.id')
+                            ->where(['purchases.delete' => '0', 'purchases.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
+                            ->whereBetween('date', [$from_date, $to_date])
+                            ->select('bill_sundry_type','amount')
+                            ->get();
+        if(count($purchase_sundry)>0){
+            foreach ($purchase_sundry as $key => $value) {
+                if($value->bill_sundry_type=="additive"){
+                    $tot_purchase_amt = $tot_purchase_amt + $value->amount;
+                }else if($value->bill_sundry_type=="subtractive"){
+                    $tot_purchase_amt = $tot_purchase_amt - $value->amount;
+                }
+            }
+        }
         //Sale
         $tot_sale_amt = DB::table('sales')
                             ->join('sale_descriptions','sales.id','=','sale_descriptions.sale_id')
                             ->where(['sales.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
                             ->whereRaw("STR_TO_DATE(sales.date,'%Y-%m-%d')>=STR_TO_DATE('".$from_date."','%Y-%m-%d')")
                             ->whereRaw("STR_TO_DATE(sales.date,'%Y-%m-%d')<=STR_TO_DATE('".$to_date."','%Y-%m-%d')")
-                            //->get()
+                            ->get()
                             ->sum("amount");
         $sale_sundry = DB::table('sales')
                             ->join('sale_sundries','sales.id','=','sale_sundries.sale_id')
@@ -311,7 +321,7 @@ class CommonHelper
                                         ->join('purchase_return_descriptions','purchase_returns.id','=','purchase_return_descriptions.purchase_return_id')
                                         ->where(['purchase_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
                                         ->whereBetween('date', [$from_date, $to_date])
-                                        //->get()
+                                        ->get()
                                         ->sum("amount");
         $purchase_return_sundry = DB::table('purchase_returns')
                                         ->join('purchase_return_sundries','purchase_returns.id','=','purchase_return_sundries.purchase_return_id')
@@ -357,7 +367,7 @@ class CommonHelper
                                     ->join('sale_return_descriptions','sales_returns.id','=','sale_return_descriptions.sale_return_id')
                                     ->where(['sales_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE'])
                                     ->whereBetween('date', [$from_date, $to_date])
-                                    //->get()
+                                    ->get()
                                     ->sum("amount");
         $sale_return_sundry = DB::table('sales_returns')
                                     ->join('sale_return_sundries','sales_returns.id','=','sale_return_sundries.sale_return_id')
@@ -380,7 +390,7 @@ class CommonHelper
             ->join('purchase_return_descriptions','purchase_returns.id','=','purchase_return_descriptions.purchase_return_id')
             ->where(['purchase_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE'])
             ->whereBetween('date', [$from_date, $to_date])
-            //->get()
+            ->get()
             ->sum("amount");
         $purchase_return_sundry_sale = DB::table('purchase_returns')
             ->join('purchase_return_sundries','purchase_returns.id','=','purchase_return_sundries.purchase_return_id')

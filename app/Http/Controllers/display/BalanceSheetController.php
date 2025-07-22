@@ -126,6 +126,7 @@ class BalanceSheetController extends Controller{
                         ->where('delete', '0')
                         ->where('company_id', '0')
                         ->get();
+                        
       // $assets = AccountHeading::with(['accountGroup.account.accountLedger' => function($q)use($to_date){
       //                               $q->where(function($q1) use ($to_date){
       //                                  $q1->where('company_id', '=', Session::get('user_company_id'));
@@ -166,8 +167,10 @@ class BalanceSheetController extends Controller{
       //                ->where('company_id','0')
       //                ->get();      
       $stock_in_hand = CommonHelper::ClosingStock($to_date);
-      $stock_in_hand = round($stock_in_hand,2);      
+     
+      $stock_in_hand = round($stock_in_hand,2); 
       $profitloss = CommonHelper::profitLoss($financial_year);
+      
       //Check Current Year Profit & Loss Account Entry
       $current_jouranl = Journal::select('id')
                      ->withSum(['journal_details' => function ($query) {
@@ -185,6 +188,7 @@ class BalanceSheetController extends Controller{
       //Prevoius year profit & loss
       list($start, $end) = explode('-', $financial_year);
       $prevFy = str_pad($start - 1, 2, '0', STR_PAD_LEFT) . '-' . str_pad($end - 1, 2, '0', STR_PAD_LEFT);
+      
       $prev_year_profitloss =  CommonHelper::profitLoss($prevFy);
       //Check Profit & Loss Account Entry
       $jouranl = Journal::select('id')
@@ -302,7 +306,7 @@ class BalanceSheetController extends Controller{
       
       $stock_in_hand = CommonHelper::ClosingStock($to_date);
       $stock_in_hand = round($stock_in_hand,2);
-      $profitloss = CommonHelper::profitLoss($financial_year);
+      $profitloss = CommonHelper::profitLoss($financial_year,$from_date,$to_date);
       
       //Check Current Year Profit & Loss Account Entry
       $current_jouranl = Journal::select('id')
