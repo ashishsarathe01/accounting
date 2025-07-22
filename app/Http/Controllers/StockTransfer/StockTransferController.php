@@ -301,6 +301,7 @@ class StockTransferController extends Controller
         $stock_transfer->voucher_no_prefix = $voucher_prefix;
         $stock_transfer->company_id = Session::get('user_company_id');
         $stock_transfer->series_no = $request->input('series_no');
+        $stock_transfer->series_no_to = $request->input('to_series');
         $stock_transfer->merchant_gst = $request->input('merchant_gst');
         $stock_transfer->transfer_date = $request->input('date');
         $stock_transfer->voucher_no = $voucher_no;
@@ -1006,7 +1007,8 @@ class StockTransferController extends Controller
             $desc = StockTransferDescription::where('stock_transfer_id',$id)
                               ->get();
             foreach ($desc as $key => $value) {
-                CommonHelper::RewriteItemAverageByItem($stock_transfer->date,$value->goods_discription);
+                CommonHelper::RewriteItemAverageByItem($stock_transfer->date,$value->goods_discription,$stock_transfer->series_no);
+                CommonHelper::RewriteItemAverageByItem($stock_transfer->date,$value->goods_discription,$stock_transfer->series_no_to);
             }
             StockTransferDescription::where('stock_transfer_id',$id)
                         ->update(['delete_status'=>'1']);

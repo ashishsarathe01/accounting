@@ -56,7 +56,7 @@
                               <?php
                               if(count($mat_series) > 0) {
                                  foreach ($mat_series as $value) { ?>
-                                    <option value="<?php echo $value->series; ?>" @if($journal->series_no==$value->series) selected @endif><?php echo $value->series; ?></option>
+                                    <option value="<?php echo $value->series; ?>" data-gst="<?php echo $value->gst_no;?>" @if($journal->series_no==$value->series) selected @endif><?php echo $value->series; ?></option>
                                     <?php 
                                  }
                               } ?>
@@ -462,7 +462,9 @@
     }
     $(".select2-single").select2();
     $(document).ready(function() {
+      
       if(claim_gst_status=="YES"){
+         
          $("#without_gst_section").hide();
          $(".with_gst_section").hide();
          $("#vendor").attr('required',false);
@@ -561,6 +563,14 @@
              $("#without_gst_section").show();
           }
        });
+       $("#series_no").change(function(){
+         let gst_no = $("#series_no option:selected").attr("data-gst");
+         if(gst_no){
+            company_gst = gst_no;
+            gstCalculation();
+         }
+      });
+      $("#series_no").change();
     });
     function gstCalculation(){
        let vendor_gstin = $("#vendor option:selected").attr("data-gstin").substr(0,2);

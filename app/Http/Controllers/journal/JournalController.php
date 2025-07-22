@@ -838,6 +838,7 @@ public function index(Request $request)
                   $receipt = Journal::select('id')
                                        ->where('voucher_no',$bill_no)
                                        ->where('series_no',trim($series))
+                                       ->where('delete','0')
                                        ->where('financial_year',$financial_year)
                                        ->where('company_id',trim(Session::get('user_company_id')))
                                        ->first();
@@ -897,29 +898,39 @@ public function index(Request $request)
          $success_row = 0;
          $index = 1;
          while (($data = fgetcsv($handle, 1000, ',')) !== false) {
-            if(trim($data[0])=="" && trim($data[1])=="" && $data[2]=="" && $data[3]=="" && $data[4]=="" && $data[5]=="" && $data[6]==""){
+            $data = array_map('trim', $data);
+            if(trim($data[0])=="" && trim($data[1])=="" && $data[2]=="" && $data[3]=="" && $data[4]=="" && $data[5]=="" && $data[6]=="" && $data[7]=="" && $data[8]==""){
                $index++;
                continue;                  
             }
             if(trim($data[0])!="" && trim($data[1])!=""){
                if($bill_date!=""){
-                  array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"bill_no"=>$bill_no,"txn_arr"=>$txn_arr,"error_arr"=>$error_arr));
+                  array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"bill_no"=>$bill_no,"claim_gst"=>$claim_gst,"invoice_no"=>$invoice_no,"merchant_gst"=>$merchant_gst,"txn_arr"=>$txn_arr,"error_arr"=>$error_arr));
                }
                $txn_arr = [];
                $error_arr = [];
                $bill_date = trim($data[0]);
                $series = trim($data[1]);
-               $bill_no = $data[2];               
+               $bill_no = $data[4];
+               $claim_gst = $data[2];
+               $invoice_no = $data[3];
+               $gst_rate = $data[6];
                if(strtotime($from_date)>strtotime(date('Y-m-d',strtotime($bill_date))) || strtotime($to_date)<strtotime(date('Y-m-d',strtotime($bill_date)))){                  
                   array_push($error_arr, 'Date '.$bill_date.' Not In Financial Year - Row '.$index);                  
                }
                if(!in_array($series, $series_arr)){
                   array_push($error_arr, 'Series No. '.$series.' Not Found - Row '.$index); 
                }
+               $merchant_gst = "";
+               $ind = array_search($series, $series_arr);
+               if($ind !== false){
+                  $merchant_gst = $gst_no_arr[$ind];
+               }
                if($duplicate_voucher_status!=2 && !empty($bill_no)){
                   $check_receipt = Journal::select('id')
                                        ->where('voucher_no',$bill_no)
                                        ->where('series_no',trim($series))
+                                       ->where('delete','0')
                                        ->where('financial_year',$financial_year)
                                        ->where('company_id',trim(Session::get('user_company_id')))
                                        ->first();
@@ -928,30 +939,32 @@ public function index(Request $request)
                   }
                }
             }
-            $account = $data[3];
+            $account = $data[5];
+            
             $check_account = Accounts::where('account_name',trim($account))
-                        ->where('company_id',trim(Session::get('user_company_id')))
+                        ->whereIn('company_id',[trim(Session::get('user_company_id')),0])
                         ->first();
             if(!$check_account){
                array_push($error_arr, 'Account Name '.$account.' Not Found - Row '.$index);
             }
-            $debit = $data[4];
+            $debit = $data[7];
             $debit = str_replace(",","",$debit);
-            $credit = $data[5];
+            $credit = $data[8];
             $credit = str_replace(",","",$credit);
+            
             if($debit=="" && $credit==""){
                array_push($error_arr, 'Debit/Credit Cannot - Row '.$index);
             }
             if($check_account){
-               array_push($txn_arr,array("account"=>$check_account->id,"debit"=>$debit,"credit"=>$credit));
+               array_push($txn_arr,array("account"=>$check_account->id,"account_state_code"=>$check_account->state,"debit"=>$debit,"credit"=>$credit,"gst_rate"=>$gst_rate));
             }else{
-               array_push($txn_arr,array("account"=>$account,"debit"=>$debit,"credit"=>$credit));
+               array_push($txn_arr,array("account"=>$account,"account_state_code"=>"","debit"=>$debit,"credit"=>$credit,"gst_rate"=>$gst_rate));
             }            
             if($index==$total_row){
-               array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"bill_no"=>$bill_no,"txn_arr"=>$txn_arr,"error_arr"=>$error_arr));
+               array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"bill_no"=>$bill_no,"claim_gst"=>$claim_gst,"invoice_no"=>$invoice_no,"merchant_gst"=>$merchant_gst,"txn_arr"=>$txn_arr,"error_arr"=>$error_arr));
             }   
             $index++;
-         } 
+         }
          fclose($handle);
          $total_invoice_count = count($data_arr);
          // echo "<pre>";
@@ -969,7 +982,9 @@ public function index(Request $request)
                $bill_date = $value['bill_date'];
                $series = $value['series'];
                $bill_no = $value['bill_no'];
-               $txn_arr = $value['txn_arr'];               
+               $txn_arr = $value['txn_arr'];
+               $merchant_gst = $value['merchant_gst'];
+               $claim_gst = $value['claim_gst'];
                if($duplicate_voucher_status==2){
                   $check_rec = Journal::select('id')
                                              ->where('voucher_no',$bill_no)
@@ -992,55 +1007,256 @@ public function index(Request $request)
                      }
                   }                  
                }
-               $receipt = new Journal;
-               $receipt->date = date('Y-m-d',strtotime($bill_date));
-               $receipt->voucher_no = $bill_no;
-               $receipt->series_no = $series;  
-               $receipt->company_id = Session::get('user_company_id');
-               $receipt->financial_year = $financial_year;
-               $i = 0;
-              
-               if($receipt->save()){
+
+               $journal = new Journal;
+               $journal->date = date('Y-m-d',strtotime($bill_date));
+               $journal->voucher_no = $bill_no;
+               $journal->series_no = $series;  
+               $journal->company_id = Session::get('user_company_id');
+               $journal->financial_year = $financial_year;
+               $journal->claim_gst_status = $claim_gst;
+               
+               if($claim_gst=="YES"){
+                  $journal->invoice_no = $invoice_no;
+                  
+                  $net_amount = 0;$vendor = "";$igst = 0;$cgst = 0;$sgst = 0;$total_amount = 0;$tax_amount = 0;
+                  foreach($txn_arr as $key => $data){      
+                     if($data['credit'] && $data['credit']!="" && $data['credit']!="0"){
+                        $vendor = $data['account'];
+                        $account_state_code = $data['account_state_code'];
+                     }
+                  }
                   foreach($txn_arr as $key => $data){
                      if($data['debit'] && $data['debit']!="" && $data['debit']!="0"){
-                        $type = "Debit";
-                     }else{
-                        $type = "Credit";
+                        $net_amount = $net_amount + $data['debit'];
+                        if(substr($merchant_gst, 0, 2)!=$account_state_code){
+                           $igst = ($data['debit']*$data['gst_rate'])/100;
+                           $tax_amount = $tax_amount + $igst;
+                        }else{
+                           $tax_rate = $data['gst_rate']/2;
+                           $cgst = ($data['debit']*$tax_rate)/100;
+                           $sgst = ($data['debit']*$tax_rate)/100;
+                           $tax_amount = $tax_amount + $cgst;
+                           $tax_amount = $tax_amount + $sgst;
+                        }
+                     }                                         
+                     if($data['credit'] && $data['credit']!="" && $data['credit']!="0"){
+                        $vendor = $data['account'];
                      }
-                     $paytype = new JournalDetails;
-                     $paytype->journal_id = $receipt->id;
-                     $paytype->company_id = Session::get('user_company_id');;
-                     $paytype->type = $type;
-                     $paytype->account_name = $data['account'];
-                     $paytype->debit = $data['debit'];
-                     $paytype->credit = $data['credit'];
-                     $paytype->status = '1';
-                     $paytype->save();
-                     //ADD DATA IN Customer ACCOUNT
-                     if($i==0){
-                        $map_account_id = $txn_arr[1]['account'];
-                     }else{
-                        $map_account_id = $txn_arr[0]['account'];
-                     }                    
+                  }
+                  $total_amount = $net_amount + $tax_amount;
+                  $journal->net_total = $net_amount;
+                  if($merchant_gst!=$account_state_code){
+                     $journal->igst = $tax_amount;
+                  }else{
+                     $journal->cgst = $tax_amount/2;
+                     $journal->sgst = $$tax_amount/2;
+                  }
+                  $journal->total_amount = $total_amount;
+                  $journal->vendor = $vendor;
+               }
+               $i = 0;              
+               if($journal->save()){
+                  if($claim_gst=="YES"){
+                     //Journal Entry
+                     $joundetail = new JournalDetails;
+                     $joundetail->journal_id = $journal->id;
+                     $joundetail->company_id = Session::get('user_company_id');
+                     $joundetail->type = "Credit";
+                     $joundetail->account_name = $vendor;
+                     $joundetail->credit = $total_amount;
+                     $joundetail->status = '1';
+                     $joundetail->save();
+                     //Ledger Entry
                      $ledger = new AccountLedger();
-                     if($data['debit'] && $data['debit']!="" && $data['debit']!="0"){
-                        $ledger->debit = $data['debit'];
-                     }else{
-                        $ledger->credit = $data['credit'];
-                     }
+                     $ledger->account_id = $vendor;
                      $ledger->series_no = $series;
-                     $ledger->account_id = $data['account'];                                 
-                     $ledger->txn_date = date('Y-m-d',strtotime($bill_date));
+                     $ledger->credit = $total_amount;                       
+                     $ledger->txn_date = $bill_date;
                      $ledger->company_id = Session::get('user_company_id');
                      $ledger->financial_year = Session::get('default_fy');
                      $ledger->entry_type = 7;
-                     $ledger->entry_type_id = $receipt->id;
-                     $ledger->map_account_id = $map_account_id;
+                     $ledger->map_account_id = $vendor;
+                     $ledger->entry_type_id = $journal->id;
+                     $ledger->entry_type_detail_id = $joundetail->id;
                      $ledger->created_by = Session::get('user_id');
                      $ledger->created_at = date('d-m-Y H:i:s');
                      $ledger->save();
-                     $i++;
+                     foreach ($txn_arr as $key => $item){
+                        if($item['debit'] && $item['debit']!="" && $item['debit']!="0"){
+                           $percentage = $item['gst_rate'];
+                           $amount = $item['debit'];
+                           $joundetail = new JournalDetails;
+                           $joundetail->journal_id = $journal->id;
+                           $joundetail->company_id = Session::get('user_company_id');
+                           $joundetail->type = "Debit";
+                           $joundetail->account_name = $item['account'];
+                           $joundetail->debit = $amount;
+                           $joundetail->percentage = $percentage;   
+                           $joundetail->status = '1';
+                           $joundetail->save();
+                           //Ledger Entry
+                           $ledger = new AccountLedger();
+                           $ledger->account_id = $item['account'];
+                           $ledger->debit = $amount;                       
+                           $ledger->txn_date = $bill_date;
+                           $ledger->series_no = $series;
+                           $ledger->company_id = Session::get('user_company_id');
+                           $ledger->financial_year = Session::get('default_fy');
+                           $ledger->entry_type = 7;
+                           $ledger->map_account_id = $item['account'];
+                           $ledger->entry_type_id = $journal->id;
+                           $ledger->entry_type_detail_id = $joundetail->id;
+                           $ledger->created_by = Session::get('user_id');
+                           $ledger->created_at = date('d-m-Y H:i:s');
+                           $ledger->save();
+                        }                        
+                     }
+                     if(!empty($igst) && $igst!=0){
+                        $sundry = BillSundrys::select('purchase_amt_account')
+                                                ->where('nature_of_sundry','IGST')
+                                                ->where('delete','0')
+                                                ->where('status','1')
+                                                ->where('company_id',Session::get('user_company_id'))
+                                                ->first();
+                        $account_name = "";
+                        if($sundry){
+                           $account_name = $sundry->purchase_amt_account;
+                        }
+                        $joundetail = new JournalDetails;
+                        $joundetail->journal_id = $journal->id;
+                        $joundetail->company_id = Session::get('user_company_id');
+                        $joundetail->type = "Debit";
+                        $joundetail->account_name = $account_name;
+                        $joundetail->debit = $tax_amount;
+                        $joundetail->status = '1';
+                        $joundetail->save();
+                        //Ledger Entry
+                        $ledger = new AccountLedger();
+                        $ledger->account_id = $account_name;
+                        $ledger->series_no = $series;
+                        $ledger->debit = $tax_amount;                       
+                        $ledger->txn_date = $bill_date;
+                        $ledger->company_id = Session::get('user_company_id');
+                        $ledger->financial_year = Session::get('default_fy');
+                        $ledger->entry_type = 7;
+                        $ledger->map_account_id = $account_name;
+                        $ledger->entry_type_id = $journal->id;
+                        $ledger->entry_type_detail_id = $joundetail->id;
+                        $ledger->created_by = Session::get('user_id');
+                        $ledger->created_at = date('d-m-Y H:i:s');
+                        $ledger->save();
+                     }else{
+                        $cgst_account_name = "";
+                        $cgst_sundry = BillSundrys::select('purchase_amt_account')
+                                 ->where('nature_of_sundry','CGST')
+                                 ->where('delete','0')
+                                 ->where('status','1')
+                                 ->where('company_id',Session::get('user_company_id'))
+                                 ->first();
+                        if($cgst_sundry){
+                           $cgst_account_name = $cgst_sundry->purchase_amt_account;
+                        }
+                        $sgst_sundry = BillSundrys::select('purchase_amt_account')
+                                    ->where('nature_of_sundry','SGST')
+                                    ->where('delete','0')
+                                    ->where('status','1')
+                                    ->where('company_id',Session::get('user_company_id'))
+                                    ->first();
+                        $sgst_account_name = "";
+                        if($sgst_sundry){
+                           $sgst_account_name = $sgst_sundry->purchase_amt_account;
+                        }
+                        $joundetail = new JournalDetails;
+                        $joundetail->journal_id = $journal->id;
+                        $joundetail->company_id = Session::get('user_company_id');
+                        $joundetail->type = "Debit";
+                        $joundetail->account_name = $cgst_account_name;
+                        $joundetail->debit = $tax_amount/2;
+                        $joundetail->status = '1';
+                        $joundetail->save();
+                        //Ledger Entry
+                        $ledger = new AccountLedger();
+                        $ledger->account_id = $cgst_account_name;
+                        $ledger->series_no = $series;
+                        $ledger->debit = $tax_amount/2;                       
+                        $ledger->txn_date = $bill_date;
+                        $ledger->company_id = Session::get('user_company_id');
+                        $ledger->financial_year = Session::get('default_fy');
+                        $ledger->entry_type = 7;
+                        $ledger->map_account_id = $cgst_account_name;
+                        $ledger->entry_type_id = $journal->id;
+                        $ledger->entry_type_detail_id = $joundetail->id;
+                        $ledger->created_by = Session::get('user_id');
+                        $ledger->created_at = date('d-m-Y H:i:s');
+                        $ledger->save();
+                        $joundetail = new JournalDetails;
+                        $joundetail->journal_id = $journal->id;
+                        $joundetail->company_id = Session::get('user_company_id');
+                        $joundetail->type = "Debit";
+                        $joundetail->account_name = $sgst_account_name;
+                        $joundetail->debit = $tax_amount/2;
+                        $joundetail->status = '1';
+                        $joundetail->save();
+                        //Ledger Entry
+                        $ledger = new AccountLedger();
+                        $ledger->account_id = $sgst_account_name;
+                        $ledger->series_no = $series;
+                        $ledger->debit = $tax_amount/2;                       
+                        $ledger->txn_date = $bill_date;
+                        $ledger->company_id = Session::get('user_company_id');
+                        $ledger->financial_year = Session::get('default_fy');
+                        $ledger->entry_type = 7;
+                        $ledger->map_account_id = $sgst_account_name;
+                        $ledger->entry_type_id = $journal->id;
+                        $ledger->entry_type_detail_id = $joundetail->id;
+                        $ledger->created_by = Session::get('user_id');
+                        $ledger->created_at = date('d-m-Y H:i:s');
+                        $ledger->save();
+                     }
+                  }else{
+                     foreach($txn_arr as $key => $data){
+                        if($data['debit'] && $data['debit']!="" && $data['debit']!="0"){
+                           $type = "Debit";
+                        }else{
+                           $type = "Credit";
+                        }
+                        $paytype = new JournalDetails;
+                        $paytype->journal_id = $journal->id;
+                        $paytype->company_id = Session::get('user_company_id');;
+                        $paytype->type = $type;
+                        $paytype->account_name = $data['account'];
+                        $paytype->debit = $data['debit'];
+                        $paytype->credit = $data['credit'];
+                        $paytype->status = '1';
+                        $paytype->save();
+                        //ADD DATA IN Customer ACCOUNT
+                        if($i==0){
+                           $map_account_id = $txn_arr[1]['account'];
+                        }else{
+                           $map_account_id = $txn_arr[0]['account'];
+                        }                    
+                        $ledger = new AccountLedger();
+                        if($data['debit'] && $data['debit']!="" && $data['debit']!="0"){
+                           $ledger->debit = $data['debit'];
+                        }else{
+                           $ledger->credit = $data['credit'];
+                        }
+                        $ledger->series_no = $series;
+                        $ledger->account_id = $data['account'];                                 
+                        $ledger->txn_date = date('Y-m-d',strtotime($bill_date));
+                        $ledger->company_id = Session::get('user_company_id');
+                        $ledger->financial_year = Session::get('default_fy');
+                        $ledger->entry_type = 7;
+                        $ledger->entry_type_id = $journal->id;
+                        $ledger->map_account_id = $map_account_id;
+                        $ledger->created_by = Session::get('user_id');
+                        $ledger->created_at = date('d-m-Y H:i:s');
+                        $ledger->save();
+                        $i++;
+                     }
                   }
+                  
                   $success_invoice_count++;
                }         
             }
