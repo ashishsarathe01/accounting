@@ -351,4 +351,6 @@ Route::get('/settings', [SettingsController::class, 'index'])->name('viewSetting
 Route::post('/gstr1/send-to-gstmaster', [Gstr1Controller::class, 'sendGstr1ToGSTMaster'])->name('gstr1.send');
 Route::get('debit-note-import-view', [PurchaseReturnController::class, 'debitNoteImportView'])->name('debit-note-import-view');
 Route::post('debit-note-import-process', [PurchaseReturnController::class, 'debitNoteImportProcess'])->name('debit-note-import-process');
+Route::get('credit-note-import-view', [SalesReturnController::class, 'creditNoteImportView'])->name('credit-note-import-view');
+Route::post('credit-note-import-process', [SalesReturnController::class, 'creditNoteImportProcess'])->name('credit-note-import-process');
 });

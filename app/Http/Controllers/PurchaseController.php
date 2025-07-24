@@ -469,6 +469,7 @@ class PurchaseController extends Controller{
             $billsundry = BillSundrys::where('id', $bill)->first();
             if($billsundry->adjust_purchase_amt=='No'){
                $ledger = new AccountLedger();
+               
                $ledger->account_id = $billsundry->purchase_amt_account;
                if($billsundry->nature_of_sundry=='ROUNDED OFF (-)'){
                   $ledger->credit = $bill_sundry_amounts[$key];

@@ -198,6 +198,7 @@
                         @php $i = 1; $item_arr = [];$total_amount = 0;@endphp
                         
                         @foreach($sale_return_description as $item)
+                        
                            @php $item_arr[$i] = $item->goods_discription;@endphp
                            <tr id="tr_@php $i; @endphp" class="font-14 font-heading bg-white">
                               <td class="w-min-50">@php echo $i; @endphp</td>
@@ -997,21 +998,27 @@
          }
       });
    });
+   var load = 1;
    $('#voucher_no').change(function() {
       // Get the selected value
       $("#invoice_id").show();
-      $(".other_invoice_div").hide();      
+      $(".other_invoice_div").hide();
       if($(this).val()=='OTHER'){
+         if(load==1){
+            load = 0;
+            return;
+         }
          $("#voucher_type").val('OTHER');
          $("#invoice_id").hide();
          $(".other_invoice_div").show();
          $("#sale_bill_id").val('');
          let option = "<option value=''>Select</option>";
          @foreach($manageitems as $item_info)
-            option+='<option value="{{$item_info->id}}" unit_id="{{$item_info->u_name}}" data-val="{{$item_info->unit}}"  data-percent="{{$item_info->gst_rate}}" @if($item_info->id==$item->goods_discription) selected @endif>{{$item_info->name}}</option>';
+            option+='<option value="{{$item_info->id}}" unit_id="{{$item_info->u_name}}" data-val="{{$item_info->unit}}"  data-percent="{{$item_info->gst_rate}}">{{$item_info->name}}</option>';
          @endforeach
          $(".goods_items").html(option)
          return;
+         
       }
       $("#other_invoice_no").val('');
       $("#other_invoice_date").val('');

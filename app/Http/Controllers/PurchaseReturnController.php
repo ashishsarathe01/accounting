@@ -538,11 +538,15 @@ class PurchaseReturnController extends Controller
                $billsundry = BillSundrys::where('id', $bill)->first();
                if($billsundry->adjust_sale_amt=='No'){
                   $ledger = new AccountLedger();
-                  $ledger->account_id = $billsundry->purchase_amt_account;
-                  if($billsundry->nature_of_sundry=='ROUNDED OFF (-)'){
+                  if($purchase->voucher_type=='SALE'){
+                     $ledger->account_id = $billsundry->sale_amt_account;
                      $ledger->debit = $bill_sundry_amounts[$key];
                   }else{
+                     $ledger->account_id = $billsundry->purchase_amt_account;
                      $ledger->credit = $bill_sundry_amounts[$key];
+                  }
+                  if($billsundry->nature_of_sundry=='ROUNDED OFF (-)'){
+                     $ledger->debit = $bill_sundry_amounts[$key];
                   }
                   $ledger->series_no = $request->input('series_no');
                   $ledger->txn_date = $request->input('date');
@@ -1521,11 +1525,15 @@ class PurchaseReturnController extends Controller
                $billsundry = BillSundrys::where('id', $bill)->first();
                if($billsundry->adjust_sale_amt=='No'){
                   $ledger = new AccountLedger();
-                  $ledger->account_id = $billsundry->purchase_amt_account;
-                  if($billsundry->nature_of_sundry=='ROUNDED OFF (-)'){
+                  if($purchase->voucher_type=='SALE'){
+                     $ledger->account_id = $billsundry->sale_amt_account;
                      $ledger->debit = $bill_sundry_amounts[$key];
                   }else{
+                     $ledger->account_id = $billsundry->purchase_amt_account;
                      $ledger->credit = $bill_sundry_amounts[$key];
+                  }
+                  if($billsundry->nature_of_sundry=='ROUNDED OFF (-)'){
+                     $ledger->debit = $bill_sundry_amounts[$key];
                   }
                   $ledger->txn_date = $request->input('date');
                   $ledger->series_no = $request->input('series_no');
@@ -3450,6 +3458,7 @@ class PurchaseReturnController extends Controller
                   $sale_amt_account = "";
                   $nature_of_sundry = "";
                   $bill_sundry_type = "";
+                  $purchase_amt_account = "";
                   $total_amount = 0;
                   $total_tax_amount = 0;
                   $cgst = 0;
@@ -3470,6 +3479,7 @@ class PurchaseReturnController extends Controller
                            $nature_of_sundry = $bill_sundrys->nature_of_sundry;
                            $sale_amt_account = $bill_sundrys->sale_amt_account;
                            $bill_sundry_type = $bill_sundrys->bill_sundry_type;
+                           $purchase_amt_account = $bill_sundrys->purchase_amt_account;
                         }else if($k2%2!=0){
                            $v2 = trim(str_replace(",","",$v2));
                            if(!empty($v2)){
@@ -3499,12 +3509,17 @@ class PurchaseReturnController extends Controller
                               //ADD DATA BILL SUNDRY ACCOUNT 
                               if($adjust_sale_amt=='No'){
                                  $ledger = new AccountLedger();
-                                 $ledger->account_id = $sale_amt_account;
-                                 if($nature_of_sundry=='ROUNDED OFF (-)'){
+                                 if($purchase->voucher_type=='SALE'){
+                                    $ledger->account_id = $sale_amt_account;
                                     $ledger->debit = $v2;
                                  }else{
+                                    $ledger->account_id = $purchase_amt_account;
                                     $ledger->credit = $v2;
-                                 }               
+                                 }
+                                 //$ledger->account_id = $sale_amt_account;
+                                 if($nature_of_sundry=='ROUNDED OFF (-)'){
+                                    $ledger->debit = $v2;
+                                 }              
                                  $ledger->txn_date = $date;
                                  $ledger->series_no = $series_no;
                                  $ledger->company_id = Session::get('user_company_id');
