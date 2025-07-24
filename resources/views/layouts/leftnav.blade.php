@@ -272,6 +272,9 @@
                                  <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4 clickable-row-blue">
                                     <a class=" text-decoration-none d-flex text-blue" href="{{ route('contra-import-view') }}">Import Contra</a>
                                  </li>
+                                 <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4 clickable-row-blue">
+                                    <a class=" text-decoration-none d-flex text-blue" href="{{ route('debit-note-import-view') }}">Import Debit Note</a>
+                                 </li>
                               </ul>
                            </div>
                         </div>

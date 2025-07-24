@@ -512,7 +512,8 @@ class ItemLedgerController extends Controller
       $opening_amount = 0;$opening_weight = 0;
       $average_opening = ItemAverage::where('item_id',$request->items_id)
                      ->where('stock_date','<',$request->date)
-                     ->where('series_no',$request->series)  
+                     ->where('series_no',$request->series)
+                     ->orderBy('stock_date','desc')
                      ->first();
       if($average_opening){
          $opening_amount = $average_opening->amount;

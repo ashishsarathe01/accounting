@@ -882,6 +882,9 @@
                var amount = $(this).find('.amount').val();
             }else{
                var amount = (price && quantity) ? (price * quantity) : 0;
+               if(price==0 && quantity==0){
+                     amount = $(this).find('.amount').val();
+                  }
                if(amount!=0){
                   $(this).find('.amount').val(parseFloat(amount).toFixed(2));
                   $(this).find('.amount').keyup();
