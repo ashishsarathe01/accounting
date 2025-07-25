@@ -3433,6 +3433,7 @@ class SalesReturnController extends Controller
                $invoice_date = $data[4];
                $invoice_date = date('Y-m-d',strtotime($invoice_date));
                $invoice_amount = $data[5];
+               $invoice_amount = str_replace(",","",$invoice_amount);
                $invoice_no = $data[6];
                $series_no = $data[7];
                $material_center = $data[8];               
@@ -3603,7 +3604,7 @@ class SalesReturnController extends Controller
                   $item_taxable_amount = 0;
                   //ITEM DATA INSERT
                   $item_tax = [];
-                  foreach ($item_arr as $k1 => $v1) {   
+                  foreach ($item_arr as $k1 => $v1) {
                      $item_taxable_amount = $item_taxable_amount + $v1['amount'];                
                      $item = ManageItems::join('units', 'manage_items.u_name', '=', 'units.id')
                         ->select('manage_items.id','manage_items.gst_rate','units.id as uid')
@@ -3695,7 +3696,7 @@ class SalesReturnController extends Controller
                               //ADD DATA BILL SUNDRY ACCOUNT 
                               if($adjust_sale_amt=='No'){
                                  $ledger = new AccountLedger();
-                                 if($sale->voucher_type=='SALE'){
+                                 if($purchase->voucher_type=='SALE'){
                                     $ledger->account_id = $sale_amt_account;
                                     $ledger->debit = $v2;
                                  }else{

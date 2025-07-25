@@ -211,8 +211,7 @@
                               @foreach($v1->accountUnderGroup as $val1)
                                  @foreach($val1->account as $val2)
                                     @foreach($val2->accountLedger as $val3)
-                                       @php 
-                                       
+                                       @php
                                           if($val3->debit!="" && $val3->debit!="Nan"){
                                              $debit = $debit + trim(str_replace(",","",$val3->debit));
                                           }
@@ -224,7 +223,8 @@
                                  @endforeach
                               @endforeach
                            @endif
-                           @php if($v1->stock_in_hand==0){ @endphp
+                           @php 
+                           if($v1->stock_in_hand==0){ @endphp
                               @foreach($v1->account as $v2)
                                  @foreach($v2->accountLedger as $v3)
                                     @php 
@@ -237,7 +237,8 @@
                                     @endphp
                                  @endforeach
                               @endforeach
-                           @php }else{                              
+                              @php 
+                           }else{                              
                               $debit = $debit + $stock_in_hand;
                            }
                            @endphp

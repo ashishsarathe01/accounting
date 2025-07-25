@@ -238,7 +238,7 @@ class BalanceSheetController extends Controller{
                                        $q1->where('status', '1');
                                        $q1->where('delete_status', '0');
                                     })->where(function($q2) use ($to_date){
-                                       $q2->whereRaw("STR_TO_DATE(txn_date,'%Y-%m-%d')<=STR_TO_DATE('".$to_date."','%Y-%m-%d')");
+                                       $q2->where('txn_date', '<=', $to_date);
                                        $q2->orWhere('entry_type','-1');
                                     });
                                  }
@@ -261,7 +261,26 @@ class BalanceSheetController extends Controller{
                      ->where('delete','0')
                      ->where('company_id','0')
                      ->get();
-                     
+      // $ledgerFilters = function ($q) use ($to_date) {
+      //       $q->where('company_id', Session::get('user_company_id'))
+      //          ->where('status', '1')
+      //          ->where('delete_status', '0')
+      //          ->where(function($q2) use ($to_date) {
+      //             $q2->where('txn_date', '<=', $to_date)
+      //                ->orWhere('entry_type', '-1');
+      //          });
+      //    };
+      //         $assets = AccountHeading::with([
+      //                      'accountGroup.account.accountLedger' => $ledgerFilters,
+      //                      'accountGroup.accountUnderGroup.account.accountLedger' => $ledgerFilters,
+      //                      'accountWithHead.accountLedger' => $ledgerFilters,
+      //                      'accountGroup' => fn($q) => $q->where('heading_type', 'head'),
+      //                   ])
+      //                   ->where('bs_profile', '2')  // for Assets
+      //                   ->where('status', '1')
+      //                   ->where('delete', '0')
+      //                   ->where('company_id', '0')
+      //                   ->get();       
       $assets = AccountHeading::with(['accountGroup.account.accountLedger' => function($q)use($to_date){
                                     $q->where(function($q1) use ($to_date){
                                        $q1->where('company_id', '=', Session::get('user_company_id'));
@@ -294,6 +313,7 @@ class BalanceSheetController extends Controller{
                                  }
                                  ])->with(['accountGroup'=> function($q3){
                                     $q3->where('heading_type','head');
+                                    
                                  }
                      ])
                      ->where('bs_profile','2')
@@ -345,6 +365,7 @@ class BalanceSheetController extends Controller{
          $prev_year_profit_status = 1;
       }   
       $prev_year_profitloss = abs($prev_year_profitloss) - $journal_amount;
+      
       return view('display/balanceSheet',['liability'=>$liability,'assets'=>$assets,'from_date'=>$from_date,'to_date'=>$to_date,"stock_in_hand"=>$stock_in_hand,"profitloss"=>$profitloss])->with('prev_year_profitloss',$prev_year_profitloss)->with('prev_year_profit_status',$prev_year_profit_status)->with('prevFy',$prevFy)->with('current_journal_amount',$current_journal_amount);
    }
    public function groupBalanceByHead($id,$from_date,$to_date){
@@ -514,6 +535,7 @@ class BalanceSheetController extends Controller{
       }
       $stock_in_hand = CommonHelper::ClosingStock($to_date);
       $stock_in_hand = round($stock_in_hand,2);
+     
       return view('display/group_balance_by_head',["from_date"=>$from_date,"to_date"=>$to_date,"head"=>$head,"group"=>$group,"head_account"=>$head_account,"stock_in_hand"=>$stock_in_hand,"undergroup"=>$undergroup]);
    }
    public function accountBalanceByGroup(Request $request,$id,$from_date,$to_date,$type){

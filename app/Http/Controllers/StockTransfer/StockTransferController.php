@@ -333,7 +333,7 @@ class StockTransferController extends Controller
                 }
                 //From Series Avearge Rate
                 $average = ItemAverage::where('item_id',$good)
-                        //->where('stock_date','<',$date->toDateString())
+                        ->where('stock_date','<=',$request->input('date')->toDateString())//$date->toDateString()
                         ->where('series_no',$request->input('series_no'))
                         ->orderBy('stock_date','desc')
                         ->orderBy('id','desc')

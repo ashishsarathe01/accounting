@@ -1748,13 +1748,13 @@ class SalesController extends Controller
                                  $ledger->created_by = Session::get('user_id');
                                  $ledger->created_at = date('d-m-Y H:i:s');
                                  $ledger->save();
-                              }else if($adjust_sale_amt=='Yes'){                                
-                                 if($bill_sundry_type=='additive'){
-                                    $item_taxable_amount = $item_taxable_amount + str_replace(",","",$v2);
-                                 }else if($bill_sundry_type=='subtractive'){
-                                    $item_taxable_amount = $item_taxable_amount - str_replace(",","",$v2);
-                                 }
                               }
+                              if($bill_sundry_type=='additive'){
+                                 $item_taxable_amount = $item_taxable_amount + str_replace(",","",$v2);
+                              }else if($bill_sundry_type=='subtractive'){
+                                 $item_taxable_amount = $item_taxable_amount - str_replace(",","",$v2);
+                              }
+                              
                            }
                            
                         }
@@ -1762,25 +1762,24 @@ class SalesController extends Controller
                   }
                   foreach ($item_arr as $k1 => $v1) {
                      if(!empty($v1['amount'])){
-                        $item_taxable_amount = $item_taxable_amount + str_replace(",","",$v1['amount']);
+                        //$item_taxable_amount = $item_taxable_amount + str_replace(",","",$v1['amount']);
                         $item = ManageItems::join('units','manage_items.u_name','=','units.id')
                            ->select('manage_items.id','manage_items.hsn_code','manage_items.gst_rate','units.s_name as unit','units.id as uid')
                            ->where('manage_items.name',trim($v1['item_name']))
                            ->where('manage_items.company_id',trim(Session::get('user_company_id')))
-                           ->first();
-                 
-               //Add Data In Average Details table
-               $average_detail = new ItemAverageDetail;
-               $average_detail->entry_date = $sale->date;
-               $average_detail->series_no = $series_no;
-               $average_detail->item_id = $item->id;
-               $average_detail->type = 'SALE';
-               $average_detail->sale_id = $sale->id;
-               $average_detail->sale_weight = $v1['item_weight'];
-               $average_detail->company_id = Session::get('user_company_id');
-               $average_detail->created_at = Carbon::now();
-               $average_detail->save();
-               CommonHelper::RewriteItemAverageByItem($sale->date,$item->id,$series_no);               
+                           ->first();                 
+                           //Add Data In Average Details table
+                           $average_detail = new ItemAverageDetail;
+                           $average_detail->entry_date = $sale->date;
+                           $average_detail->series_no = $series_no;
+                           $average_detail->item_id = $item->id;
+                           $average_detail->type = 'SALE';
+                           $average_detail->sale_id = $sale->id;
+                           $average_detail->sale_weight = $v1['item_weight'];
+                           $average_detail->company_id = Session::get('user_company_id');
+                           $average_detail->created_at = Carbon::now();
+                           $average_detail->save();
+                           CommonHelper::RewriteItemAverageByItem($sale->date,$item->id,$series_no);               
             
                      }
                   }

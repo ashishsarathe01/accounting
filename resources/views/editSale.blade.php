@@ -1737,9 +1737,13 @@ foreach($manageitems as $value) {
             }
             address_html += "<option value='"+e.id+"' "+selected+" data-address='"+e.address+"' data-pincode='"+e.pincode+"'>"+e.address+" ("+e.pincode+")</option>";
          });
+
          if(address_id!="" && selecte_status==0){
-            address_html += "<option value='"+address_id+"' selected data-address='{{$sale->billing_address}}' data-pincode='{{$sale->billing_pincode}}'>{{$sale->billing_address}}</option>";
-            $("#partyaddress").html("GSTIN : "+$("#party  option:selected").attr('data-gstin')+"<br>Address : {{$sale->billing_address}}");
+            let billing_address = `{{ e($sale->billing_address) }}`;
+            let billing_pincode = `{{ e($sale->billing_pincode) }}`;
+            let party_gstin = $("#party option:selected").attr('data-gstin');
+            address_html += "<option value='"+address_id+"' selected data-address='"+billing_address+"' data-pincode='"+billing_pincode+"'>"+billing_address+"</option>";
+            $("#partyaddress").html("GSTIN : "+party_gstin+"<br>Address : "+billing_address);
          }
          $("#address").html(address_html);
          $(".address_div").show();
