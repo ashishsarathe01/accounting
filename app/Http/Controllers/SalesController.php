@@ -1749,11 +1749,14 @@ class SalesController extends Controller
                                  $ledger->created_at = date('d-m-Y H:i:s');
                                  $ledger->save();
                               }
-                              if($bill_sundry_type=='additive'){
-                                 $item_taxable_amount = $item_taxable_amount + str_replace(",","",$v2);
-                              }else if($bill_sundry_type=='subtractive'){
-                                 $item_taxable_amount = $item_taxable_amount - str_replace(",","",$v2);
+                              if($nature_of_sundry=='OTHER'){
+                                 if($bill_sundry_type=='additive'){
+                                    $item_taxable_amount = $item_taxable_amount + str_replace(",","",$v2);
+                                 }else if($bill_sundry_type=='subtractive'){
+                                    $item_taxable_amount = $item_taxable_amount - str_replace(",","",$v2);
+                                 }
                               }
+                              
                               
                            }
                            

@@ -73,7 +73,7 @@
                            <td class="w-min-120 " style="text-align: right;">
                               <?php 
                               echo $value->credit;
-                              $tot_crt = $tot_crt+$value->credit; 
+                              $tot_crt = $tot_crt + str_replace(',', '', $value->credit);
                               ?>
                            </td>
                            <td class="w-min-120 ">

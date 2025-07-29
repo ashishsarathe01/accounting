@@ -448,7 +448,8 @@ class ReceiptController extends Controller
     public function receiptImportView(Request $request){      
       return view('receipt/receipt_view');
    }
-   public function receiptImportProcess(Request $request) {       
+   public function receiptImportProcess(Request $request) {
+      ini_set('max_execution_time', 600); 
       $validator = Validator::make($request->all(), [
          'csv_file' => 'required|file|mimes:csv,txt|max:2048', // Max 2MB, CSV or TXT file
       ]); 
@@ -479,6 +480,7 @@ class ReceiptController extends Controller
             $index = 1;
             $series_no = "";
             while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+               $data = array_map('trim', $data);
                if($data[0]!="" && $data[1]!="" && $data[2]!=""){                  
                   $series = $data[1];
                   $bill_no = $data[2];
@@ -544,6 +546,7 @@ class ReceiptController extends Controller
          $success_row = 0;
          $index = 1;
          while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+            $data = array_map('trim', $data);
             if($data[0]=="" && $data[1]=="" && $data[2]=="" && $data[3]=="" && $data[4]=="" && $data[5]=="" && $data[6]==""){
                $index++;
                continue;                  
@@ -589,9 +592,9 @@ class ReceiptController extends Controller
                array_push($error_arr, 'Account Name '.$account.' Not Found - Row '.$index);
             }
             $debit = $data[5];
-           $debit = trim(str_replace(",","",$debit));
-            $credit = $data[6];
             $debit = trim(str_replace(",","",$debit));
+            $credit = $data[6];
+            $credit = trim(str_replace(",","",$credit));
             if($debit=="" && $credit==""){
                array_push($error_arr, 'Debit/Credit Cannot - Row '.$index);
             }

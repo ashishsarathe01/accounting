@@ -221,6 +221,7 @@
                                        @endphp
                                     @endforeach
                                  @endforeach
+                                  
                               @endforeach
                            @endif
                            @php 
@@ -242,6 +243,7 @@
                               $debit = $debit + $stock_in_hand;
                            }
                            @endphp
+                          
                         @endforeach
                         @foreach($value->accountWithHead as $v1)
                            @foreach($v1->accountLedger as $v3)
@@ -256,7 +258,7 @@
                            @endforeach                           
                         @endforeach
                         <?php
-                        $amount = $debit - $credit;
+                        $amount = $debit - $credit;                        
                         if($value->show_in_balance_sheet==1 || $amount!=0){?>
                            <div class="col-md-12 fw-500 font-14 d-flex px-3 py-12 border-bottom-divider get_group_detail" data-id="{{$value->id}}" style="cursor:pointer;color: #0000EE">{{$value->name}}
                               <span class="ms-auto">
