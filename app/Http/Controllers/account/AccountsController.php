@@ -426,8 +426,12 @@ class AccountsController extends Controller{
          $success_invoice_count = 0;
          $failed_invoice_count = 0;
          $incomplete_status_count = 0;
+         
          while (($data = fgetcsv($handle, 1000, ',')) !== false) {
-              $data = array_map('trim', $data);
+            $data = array_map('trim', $data);       
+            $data = array_map(function ($value) {
+               return trim(rtrim(stripslashes($value), '\\'));
+            }, $data);     
             $name = $data[0];
             $under_group = $data[1];
             $debit = $data[2];
@@ -435,7 +439,7 @@ class AccountsController extends Controller{
             $credit = $data[3];
             $credit = trim(str_replace(",","",$credit));
             $gstin = $data[4];
-            $address = $data[5];
+            $address = rtrim($data[5], "\\");
             $state = $data[6];
             $pincode = $data[7];
             if($name=="" || $under_group==""){

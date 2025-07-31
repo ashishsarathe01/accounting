@@ -238,7 +238,7 @@ class BalanceSheetController extends Controller{
                                        $q1->where('status', '1');
                                        $q1->where('delete_status', '0');
                                     })->where(function($q2) use ($to_date){
-                                       $q2->where('txn_date', '<=', $to_date);
+                                       $q2->whereRaw("STR_TO_DATE(txn_date,'%Y-%m-%d')<=STR_TO_DATE('".$to_date."','%Y-%m-%d')");
                                        $q2->orWhere('entry_type','-1');
                                     });
                                  }
@@ -261,6 +261,8 @@ class BalanceSheetController extends Controller{
                      ->where('delete','0')
                      ->where('company_id','0')
                      ->get();
+                     // echo '<pre>';
+                     // print_r($liability->toArray());die;
       // $ledgerFilters = function ($q) use ($to_date) {
       //       $q->where('company_id', Session::get('user_company_id'))
       //          ->where('status', '1')

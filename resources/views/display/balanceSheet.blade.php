@@ -101,31 +101,54 @@
                     
                      @foreach($liability as $value)
                         @php $debit = 0;$credit = 0; @endphp
+                        
                         @foreach($value->accountGroup as $v1)
+                           @php
+                              $d = 0;
+                              $c = 0;
+                           // if($value->name=="CURRENT LIABILITIES"){
+                              
+                           //    print_r($v1->name);
+                           //    echo "<br>";
+                           //    echo $d." - ".$c;
+                           //    echo "<br>";
+                           // }
+                           @endphp
                            @if(count($v1->accountUnderGroup)>0)
                               @foreach($v1->accountUnderGroup as $val1)
+                                
                                  @foreach($val1->account as $val2)
+                                 
                                     @foreach($val2->accountLedger as $val3)
                                        @php 
                                           if($val3->debit!=""){
-                                             $debit = $debit + str_replace(",","",$val3->debit);;
+                                             $debit = $debit + str_replace(",","",$val3->debit);
+                                              $d = $d + str_replace(",","",$val3->debit);
                                           }
                                           if($val3->credit!=""){
-                                             $credit = $credit + str_replace(",","",$val3->credit);; 
+                                             $credit = $credit + str_replace(",","",$val3->credit);
+                                             $c = $c + str_replace(",","",$val3->credit);
                                           }                                    
                                        @endphp
                                     @endforeach
                                  @endforeach
                                  
                                  @foreach($val1->accountUnderGroup as $a3)
+                                 {{-- @php 
+                                if($v1->name=="PROVISIONS/EXPENSES PAYABLE"){
+                                 echo $a3->account;
+                                }
+                                @endphp --}}
                                     @foreach($a3->account as $a4)
                                        @foreach($a4->accountLedger as $val3)
                                        @php 
                                              if($val3->debit!=""){
                                                 $debit = $debit + str_replace(",","",$val3->debit);
+                                                $d = $d + str_replace(",","",$val3->debit);
                                              }
                                              if($val3->credit!=""){
                                                 $credit = $credit + str_replace(",","",$val3->credit); 
+                                                $c = $c + str_replace(",","",$val3->credit);
                                              }                                    
                                           @endphp
                                        @endforeach
@@ -135,17 +158,29 @@
                               @endforeach
                            @endif
                            @foreach($v1->account as $v2)
+                          
                               @foreach($v2->accountLedger as $v3)
                                  @php 
                                     if($v3->debit!="" && $v3->debit!="Nan"){                                       
                                        $debit = (float)$debit + (float)str_replace(",","",$v3->debit);
+                                       $d = (float)$d + (float)str_replace(",","",$v3->debit);
                                     }
                                     if($v3->credit!="" && $v3->credit!='null'){
                                        $credit = $credit + str_replace(",","",$v3->credit); 
+                                       $c = $c + str_replace(",","",$v3->credit);
                                     }                                    
                                  @endphp
                               @endforeach
                            @endforeach
+                           @php 
+                           // if($value->name=="CURRENT LIABILITIES"){
+                              
+                           //    print_r($v1->name);
+                           //    echo "<br>";
+                           //    echo $d." - ".$c;
+                           //    echo "<br>";
+                           // }
+                           @endphp
                         @endforeach
                         @foreach($value->accountWithHead as $v1)                           
                            @foreach($v1->accountLedger as $v3)

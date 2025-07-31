@@ -1093,7 +1093,7 @@ class PurchaseController extends Controller{
       return view('purchase_import');
    }
    public function purchaseImportProcess(Request $request) {    
-       ini_set('max_execution_time', 600);
+      ini_set('max_execution_time', 600);
       $validator = Validator::make($request->all(), [
          'csv_file' => 'required|file|mimes:csv,txt|max:2048', // Max 2MB, CSV or TXT file
       ]); 
@@ -1120,7 +1120,7 @@ class PurchaseController extends Controller{
             $index = 1;
             $series_no = "";
             while (($data = fgetcsv($handle, 1000, ',')) !== false) {
-                $data = array_map('trim', $data);
+               $data = array_map('trim', $data);
                if($data[0]!="" && $data[2]!=""){
                   $series_no = $data[0];
                   $voucher_no = $data[2]; 
@@ -1199,7 +1199,11 @@ class PurchaseController extends Controller{
          $success_row = 0;
          $index = 1;
          while (($data = fgetcsv($handle, 1000, ',')) !== false) {
-             $data = array_map('trim', $data);
+            $data = array_map('trim', $data);
+            if($data[2]==""){
+               array_push($error_arr, 'Invoice No. cannot be empty - Row No. '.$index); 
+            }
+            
             if($data[0]!="" && $data[2]!=""){
                if($series_no!=""){
                   array_push($data_arr,array("series_no"=>$series_no,"date"=>$date,"voucher_no"=>$voucher_no,"party"=>$party,"material_center"=>$material_center,"grand_total"=>$grand_total,"self_vehicle"=>$self_vehicle,"vehicle_no"=>$vehicle_no,"transport_name"=>$transport_name,"reverse_charge"=>$reverse_charge,"gr_pr_no"=>$gr_pr_no,"station"=>$station,"ewaybill_no"=>$ewaybill_no,"shipping_name"=>$shipping_name,"item_arr"=>$item_arr,"slicedData"=>$slicedData,"error_arr"=>$error_arr));
@@ -1220,24 +1224,22 @@ class PurchaseController extends Controller{
                $reverse_charge = $data[9];
                $gr_pr_no = $data[10];
                $station = $data[11];
-               $ewaybill_no = $data[12];            
+               $ewaybill_no = $data[12];
                $shipping_name = $data[13];
                $date = str_replace("/","-",$date);
                $date = date('Y-m-d',strtotime($date));
                if(strtotime($from_date)>strtotime(date('Y-m-d',strtotime($date))) || strtotime($to_date)<strtotime(date('Y-m-d',strtotime($date)))){                  
                   array_push($error_arr, 'Date '.$date.' not in Financial Year - Invoice No. '.$voucher_no);                  
-               }
-              
+               }              
                if(!in_array(trim($series_no), $series_arr)){
                   array_push($error_arr, 'Series No. '.$series_no.' not found in GST Configuration - Invoice No. '.$voucher_no); 
-               }
-                
+               }                
                if(!in_array($material_center, $material_center_arr)){
                   array_push($error_arr, 'Material Center '.$material_center.' not found in GST Configuration - Invoice No. '.$voucher_no);
                }
                $account = Accounts::where('account_name',trim($party))
-                        ->where('company_id',trim(Session::get('user_company_id')))
-                        ->first();
+                                 ->where('company_id',trim(Session::get('user_company_id')))
+                                 ->first();
                if(!$account){
                   array_push($error_arr, 'Party Name '.$party.' not found - Invoice No. '.$voucher_no);
                } 
@@ -1293,8 +1295,7 @@ class PurchaseController extends Controller{
                         // echo "<pre>";
                         // print_r($itemc);
             //echo $itemc->id;
-            if(!$itemc){
-               
+            if(!$itemc){               
                array_push($error_arr, 'Item Name '.$item_name.' not found - Invoice No. '.$voucher_no);
             }
             $item_weight = $data[15];

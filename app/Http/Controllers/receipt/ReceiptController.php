@@ -474,6 +474,8 @@ class ReceiptController extends Controller
          $file = $request->file('csv_file');  
          $filePath = $file->getRealPath();      
          $final_result = array();
+         $all_receipts = [];
+         $csv_rows = [];
          if(($handle = fopen($filePath, 'r')) !== false) {
             $header = fgetcsv($handle, 10000, ",");
             $fp = file($filePath, FILE_SKIP_EMPTY_LINES);
@@ -481,7 +483,7 @@ class ReceiptController extends Controller
             $series_no = "";
             while (($data = fgetcsv($handle, 1000, ',')) !== false) {
                $data = array_map('trim', $data);
-               if($data[0]!="" && $data[1]!="" && $data[2]!=""){                  
+               if($data[0]!="" && $data[1]!="" && $data[2]!=""){
                   $series = $data[1];
                   $bill_no = $data[2];
                   $receipt = Receipt::select('id')
@@ -616,106 +618,270 @@ class ReceiptController extends Controller
          // die;
          $success_invoice_count = 0;
          $failed_invoice_count = 0;
-         if(count($data_arr)>0){
-            foreach ($data_arr as $key => $value) {
-               if(count($value['error_arr'])>0){
-                  array_push($all_error_arr,$value['error_arr']);
-                  $failed_invoice_count++;
-                  continue;
-               }               
-               $bill_date = $value['bill_date'];
-               $series = $value['series'];
-               $bill_no = $value['bill_no'];
-               $mode = $value['mode'];
-               $txn_arr = $value['txn_arr'];
-               if($mode=="CHEQUE"){
-                  $success_invoice_count++;
-                  continue;
-               }
-               if($duplicate_voucher_status==2){
-                  $check_rec = Receipt::select('id')
-                                             ->where('voucher_no',$bill_no)
-                                             ->where('series_no',trim($series))
-                                             ->where('financial_year',$financial_year)
-                                             ->where('company_id',trim(Session::get('user_company_id')))
-                                             ->first();
-                  if($check_rec){              
-                     $updated_payment = Receipt::find($check_rec->id);
-                     $updated_payment->delete = '1';
-                     $updated_payment->deleted_at = Carbon::now();
-                     $updated_payment->deleted_by = Session::get('user_id');
-                     $updated_payment->update();
-                     if($updated_payment){
-                        ReceiptDetails::where('receipt_id',$check_rec->id)
-                        ->update(['delete'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
-                        AccountLedger::where('entry_type',6)
-                        ->where('entry_type_id',$check_rec->id)
-                        ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
-                     }
-                  }                  
-               }
-               if($mode=="IMPS" || $mode=="NEFT" || $mode=="RTGS"){
-                  $mode = 0;
-               }else if($mode=="CASH"){
-                  $mode = 1;
-               }else{
-                  $mode = 0;
-               }
-               $receipt = new Receipt;
-               $receipt->date = date('Y-m-d',strtotime($bill_date));
-               $receipt->voucher_no = $bill_no;
-               $receipt->mode = $mode;
-               $receipt->series_no = $series;  
-               $receipt->company_id = Session::get('user_company_id');
-               $receipt->financial_year = $financial_year;
-               $i = 0;
-              
-               if($receipt->save()){
-                  foreach($txn_arr as $key => $data){
-                     if($data['debit'] && $data['debit']!="" && $data['debit']!="0"){
-                        $type = "Debit";
-                     }else{
-                        $type = "Credit";
-                     }
-                     $paytype = new ReceiptDetails;
-                     $paytype->receipt_id = $receipt->id;
-                     $paytype->company_id = Session::get('user_company_id');;
-                     $paytype->type = $type;
-                     $paytype->account_name = $data['account'];
-                     $paytype->debit = $data['debit'];
-                     $paytype->credit = $data['credit'];
-                     $paytype->status = '1';
-                     $paytype->save();
-                     //ADD DATA IN Customer ACCOUNT
-                     if($i==0){
-                        $map_account_id = $txn_arr[1]['account'];
-                     }else{
-                        $map_account_id = $txn_arr[0]['account'];
-                     }                    
-                     $ledger = new AccountLedger();
-                     if($data['debit'] && $data['debit']!="" && $data['debit']!="0"){
-                        $ledger->debit = $data['debit'];
-                     }else{
-                        $ledger->credit = $data['credit'];
-                     }
-                     $ledger->series_no = $series;
-                     $ledger->account_id = $data['account'];                                 
-                     $ledger->txn_date = date('Y-m-d',strtotime($bill_date));
-                     $ledger->company_id = Session::get('user_company_id');
-                     $ledger->financial_year = Session::get('default_fy');
-                     $ledger->entry_type = 6;
-                     $ledger->entry_type_id = $receipt->id;
-                     $ledger->entry_type_detail_id = $paytype->id;
-                     $ledger->map_account_id = $map_account_id;
-                     $ledger->created_by = Session::get('user_id');
-                     $ledger->created_at = date('d-m-Y H:i:s');
-                     $ledger->save();
-                     $i++;
-                  }
-                  $success_invoice_count++;
-               }         
+         // if(count($data_arr)>0){
+         //    foreach (collect($data_arr)->chunk(500) as $chunk) {
+         //       foreach ($chunk as $key => $value) {
+         //          if(count($value['error_arr'])>0){
+         //             array_push($all_error_arr,$value['error_arr']);
+         //             $failed_invoice_count++;
+         //             continue;
+         //          }               
+         //          $bill_date = $value['bill_date'];
+         //          $series = $value['series'];
+         //          $bill_no = $value['bill_no'];
+         //          $mode = $value['mode'];
+         //          $txn_arr = $value['txn_arr'];
+         //          if($mode=="CHEQUE"){
+         //             $success_invoice_count++;
+         //             continue;
+         //          }
+         //          if($duplicate_voucher_status==2){
+         //             $check_rec = Receipt::select('id')
+         //                                        ->where('voucher_no',$bill_no)
+         //                                        ->where('series_no',trim($series))
+         //                                        ->where('financial_year',$financial_year)
+         //                                        ->where('delete','0') 
+         //                                        ->where('company_id',trim(Session::get('user_company_id')))
+         //                                        ->get();
+         //             if(count($check_rec)>0){
+         //                foreach ($check_rec as $rec_key => $rec) {
+         //                   $updated_payment = Receipt::find($rec->id);
+         //                   $updated_payment->delete = '1';
+         //                   $updated_payment->deleted_at = Carbon::now();
+         //                   $updated_payment->deleted_by = Session::get('user_id');
+         //                   $updated_payment->update();
+         //                   if($updated_payment){
+         //                      ReceiptDetails::where('receipt_id',$rec->id)
+         //                      ->update(['delete'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
+         //                      AccountLedger::where('entry_type',6)
+         //                      ->where('entry_type_id',$rec->id)
+         //                      ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
+         //                   }
+         //                }                     
+         //             }                  
+         //          }
+         //          if($mode=="IMPS" || $mode=="NEFT" || $mode=="RTGS"){
+         //             $mode = 0;
+         //          }else if($mode=="CASH"){
+         //             $mode = 1;
+         //          }else{
+         //             $mode = 0;
+         //          }
+         //          $receipt = new Receipt;
+         //          $receipt->date = date('Y-m-d',strtotime($bill_date));
+         //          $receipt->voucher_no = $bill_no;
+         //          $receipt->mode = $mode;
+         //          $receipt->series_no = $series;  
+         //          $receipt->company_id = Session::get('user_company_id');
+         //          $receipt->financial_year = $financial_year;
+         //          $i = 0;
+               
+         //          if($receipt->save()){
+         //             foreach($txn_arr as $key => $data){
+         //                if($data['debit'] && $data['debit']!="" && $data['debit']!="0"){
+         //                   $type = "Debit";
+         //                }else{
+         //                   $type = "Credit";
+         //                }
+         //                $paytype = new ReceiptDetails;
+         //                $paytype->receipt_id = $receipt->id;
+         //                $paytype->company_id = Session::get('user_company_id');;
+         //                $paytype->type = $type;
+         //                $paytype->account_name = $data['account'];
+         //                $paytype->debit = $data['debit'];
+         //                $paytype->credit = $data['credit'];
+         //                $paytype->status = '1';
+         //                $paytype->save();
+         //                //ADD DATA IN Customer ACCOUNT
+         //                if($i==0){
+         //                   $map_account_id = $txn_arr[1]['account'];
+         //                }else{
+         //                   $map_account_id = $txn_arr[0]['account'];
+         //                }                    
+         //                $ledger = new AccountLedger();
+         //                if($data['debit'] && $data['debit']!="" && $data['debit']!="0"){
+         //                   $ledger->debit = $data['debit'];
+         //                }else{
+         //                   $ledger->credit = $data['credit'];
+         //                }
+         //                $ledger->series_no = $series;
+         //                $ledger->account_id = $data['account'];                                 
+         //                $ledger->txn_date = date('Y-m-d',strtotime($bill_date));
+         //                $ledger->company_id = Session::get('user_company_id');
+         //                $ledger->financial_year = Session::get('default_fy');
+         //                $ledger->entry_type = 6;
+         //                $ledger->entry_type_id = $receipt->id;
+         //                $ledger->entry_type_detail_id = $paytype->id;
+         //                $ledger->map_account_id = $map_account_id;
+         //                $ledger->created_by = Session::get('user_id');
+         //                $ledger->created_at = date('d-m-Y H:i:s');
+         //                $ledger->save();
+         //                $i++;
+         //             }
+         //             $success_invoice_count++;
+         //          }
+         //       }
+                        
+         //    }
+         // }
+         if (count($data_arr) > 0) {
+    $company_id = Session::get('user_company_id');
+    $user_id = Session::get('user_id');
+    $financial_year = Session::get('default_fy');
+    $now = Carbon::now();
+
+    foreach (collect($data_arr)->chunk(500) as $chunk) {
+        $receiptInsert = [];
+        $detailsInsert = [];
+        $ledgerInsert = [];
+
+        foreach ($chunk as $value) {
+            if (!empty($value['error_arr'])) {
+                $all_error_arr[] = $value['error_arr'];
+                $failed_invoice_count++;
+                continue;
             }
+
+            $bill_date = date('Y-m-d', strtotime($value['bill_date']));
+            $series = $value['series'];
+            $bill_no = $value['bill_no'];
+            $mode_text = strtoupper(trim($value['mode']));
+            $txn_arr = $value['txn_arr'];
+
+            
+
+            // Skip CHEQUE mode
+            if ($mode_text === 'CHEQUE') {
+                $success_invoice_count++;
+                continue;
+            }
+
+            // Delete old receipt if duplicate exists
+            if ($duplicate_voucher_status == 2) {
+                $check_rec = Receipt::select('id')
+                    ->where('voucher_no', $bill_no)
+                    ->where('series_no', trim($series))
+                    ->where('financial_year', $financial_year)
+                    ->where('delete', '0')
+                    ->where('company_id', $company_id)
+                    ->get();
+
+                foreach ($check_rec as $rec) {
+                    // Soft delete receipt
+                    Receipt::where('id', $rec->id)->update([
+                        'delete' => '1',
+                        'deleted_at' => $now,
+                        'deleted_by' => $user_id,
+                    ]);
+
+                    // Soft delete related details
+                    ReceiptDetails::where('receipt_id', $rec->id)->update([
+                        'delete' => '1',
+                        'deleted_at' => $now,
+                        'deleted_by' => $user_id,
+                    ]);
+
+                    // Soft delete ledger entries
+                    AccountLedger::where('entry_type', 6)
+                        ->where('entry_type_id', $rec->id)
+                        ->update([
+                            'delete_status' => '1',
+                            'deleted_at' => $now,
+                            'deleted_by' => $user_id,
+                        ]);
+                }
+            }
+            if($mode_text=="IMPS" || $mode_text=="NEFT" || $mode_text=="RTGS"){
+                     $mode = 0;
+                  }else if($mode_text=="CASH"){
+                     $mode = 1;
+                  }else{
+                     $mode = 0;
+                  }
+            // Add main receipt entry
+            $receiptInsert[] = [
+                'date' => $bill_date,
+                'voucher_no' => $bill_no,
+                'mode' => $mode,
+                'series_no' => $series,
+                'company_id' => $company_id,
+                'financial_year' => $financial_year,
+                'created_at' => $now,
+            ];
          }
+
+        // Insert receipts & get last inserted ID
+        DB::table('receipts')->insert($receiptInsert);
+        $receipt_ids = DB::table('receipts')
+            ->latest('id')
+            ->take(count($receiptInsert))
+            ->pluck('id')
+            ->reverse()
+            ->values()
+            ->toArray();
+
+        // Now insert related details and ledgers
+        $i = 0;
+        foreach ($chunk as $value) {
+            if (!empty($value['error_arr']) || $value['mode'] === 'CHEQUE') {
+                continue;
+            }
+
+            $receipt_id = $receipt_ids[$i];
+            $txn_arr = $value['txn_arr'];
+            $series = $value['series'];
+            $bill_date = date('Y-m-d', strtotime($value['bill_date']));
+
+            foreach ($txn_arr as $k => $txn) {
+                $type = (!empty($txn['debit']) && $txn['debit'] != "0") ? 'Debit' : 'Credit';
+
+                $detailsInsert[] = [
+                    'receipt_id' => $receipt_id,
+                    'company_id' => $company_id,
+                    'type' => $type,
+                    'account_name' => $txn['account'],
+                    'debit' => $txn['debit'],
+                    'credit' => $txn['credit'],
+                    'status' => '1',
+                    'created_at' => $now,
+                ];
+            }
+
+            // Ledger entries
+            $map_account_id = $txn_arr[1]['account'] ?? $txn_arr[0]['account'];
+            foreach ($txn_arr as $j => $txn) {
+                $ledgerInsert[] = [
+                    'debit' => !empty($txn['debit']) ? $txn['debit'] : null,
+                    'credit' => !empty($txn['credit']) ? $txn['credit'] : null,
+                    'series_no' => $series,
+                    'account_id' => $txn['account'],
+                    'txn_date' => $bill_date,
+                    'company_id' => $company_id,
+                    'financial_year' => $financial_year,
+                    'entry_type' => 6,
+                    'entry_type_id' => $receipt_id,
+                    'entry_type_detail_id' => 0, // Can be filled if needed later
+                    'map_account_id' => $map_account_id,
+                    'created_by' => $user_id,
+                    'created_at' => now(),
+                ];
+            }
+
+            $success_invoice_count++;
+            $i++;
+        }
+
+        // Insert all in batches
+        if (!empty($detailsInsert)) {
+            DB::table('receipt_details')->insert($detailsInsert);
+        }
+
+        if (!empty($ledgerInsert)) {
+            DB::table('account_ledger')->insert($ledgerInsert);
+        }
+    }
+}
+
       }
       $res = array("total_count"=>$total_invoice_count,"success_count"=>$success_invoice_count,"failed_count"=>$failed_invoice_count,"error_message"=>$all_error_arr);
       $res = array(
