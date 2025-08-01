@@ -1206,7 +1206,9 @@ class PurchaseController extends Controller{
             
             if($data[0]!="" && $data[2]!=""){
                if($series_no!=""){
-                  array_push($data_arr,array("series_no"=>$series_no,"date"=>$date,"voucher_no"=>$voucher_no,"party"=>$party,"material_center"=>$material_center,"grand_total"=>$grand_total,"self_vehicle"=>$self_vehicle,"vehicle_no"=>$vehicle_no,"transport_name"=>$transport_name,"reverse_charge"=>$reverse_charge,"gr_pr_no"=>$gr_pr_no,"station"=>$station,"ewaybill_no"=>$ewaybill_no,"shipping_name"=>$shipping_name,"item_arr"=>$item_arr,"slicedData"=>$slicedData,"error_arr"=>$error_arr));
+                  $akey = array_search($series_no, $series_arr);
+                  $merchant_gst = $gst_no_arr[$akey];
+                  array_push($data_arr,array("series_no"=>$series_no,"date"=>$date,"voucher_no"=>$voucher_no,"party"=>$party,"material_center"=>$material_center,"grand_total"=>$grand_total,"self_vehicle"=>$self_vehicle,"vehicle_no"=>$vehicle_no,"transport_name"=>$transport_name,"reverse_charge"=>$reverse_charge,"gr_pr_no"=>$gr_pr_no,"station"=>$station,"ewaybill_no"=>$ewaybill_no,"shipping_name"=>$shipping_name,"item_arr"=>$item_arr,"slicedData"=>$slicedData,"merchant_gst"=>$merchant_gst,"error_arr"=>$error_arr));
                }               
                $item_arr = [];
                $error_arr = [];
@@ -1312,7 +1314,9 @@ class PurchaseController extends Controller{
             $igst = trim(str_replace(",","",$igst));         
             array_push($item_arr,array("item_name"=>$item_name,"item_weight"=>$item_weight,"price"=>$price,"amount"=>$amount,"cgst"=>$cgst,"sgst"=>$sgst,"igst"=>$igst));
             if($index==$total_row){
-               array_push($data_arr,array("series_no"=>$series_no,"date"=>$date,"voucher_no"=>$voucher_no,"party"=>$party,"material_center"=>$material_center,"grand_total"=>$grand_total,"self_vehicle"=>$self_vehicle,"vehicle_no"=>$vehicle_no,"transport_name"=>$transport_name,"reverse_charge"=>$reverse_charge,"gr_pr_no"=>$gr_pr_no,"station"=>$station,"ewaybill_no"=>$ewaybill_no,"shipping_name"=>$shipping_name,"item_arr"=>$item_arr,"slicedData"=>$slicedData,"error_arr"=>$error_arr));
+               $akey = array_search($series_no, $series_arr);
+               $merchant_gst = $gst_no_arr[$akey];
+               array_push($data_arr,array("series_no"=>$series_no,"date"=>$date,"voucher_no"=>$voucher_no,"party"=>$party,"material_center"=>$material_center,"grand_total"=>$grand_total,"self_vehicle"=>$self_vehicle,"vehicle_no"=>$vehicle_no,"transport_name"=>$transport_name,"reverse_charge"=>$reverse_charge,"gr_pr_no"=>$gr_pr_no,"station"=>$station,"ewaybill_no"=>$ewaybill_no,"shipping_name"=>$shipping_name,"item_arr"=>$item_arr,"slicedData"=>$slicedData,"merchant_gst"=>$merchant_gst,"error_arr"=>$error_arr));
             }
             $index++;
 
@@ -1344,9 +1348,11 @@ class PurchaseController extends Controller{
                $reverse_charge = $value['reverse_charge'];
                $gr_pr_no = $value['gr_pr_no'];
                $station = $value['station'];
+               $sale->merchant_gst = $merchant_gst;
                $ewaybill_no = $value['ewaybill_no'];
                $shipping_name = $value['shipping_name'];
                $item_arr = $value['item_arr'];
+               $merchant_gst = $value['merchant_gst'];
                $account = Accounts::where('account_name',trim($party))
                         ->where('company_id',trim(Session::get('user_company_id')))
                         ->first();

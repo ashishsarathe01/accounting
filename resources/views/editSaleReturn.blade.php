@@ -898,10 +898,8 @@
    var merchant_gstin = "{{$merchant_gst}}";
    var percent_arr = [];
    var item_count = '{{--$i}}';
-   console.log(item_count);
 
    var add_more_count = item_count;
-   console.log(add_more_count);
    var add_more_counts = 1;
    var add_more_bill_sundry_up_count = '<?php echo --$index;?>';
    
@@ -938,10 +936,14 @@
          alert("Please enter required fields");
          return;
       }
-      console.log(add_more_count);
+     
       add_more_count++;
-      console.log(add_more_count);
-      var optionElements = $('#goods_discription_tr_1').html();
+      var optionElements = $('<select>' + $('#goods_discription_tr_1').html() + '</select>')
+                       .find('option')
+                       .removeAttr('selected')
+                       .end()
+                       .html();
+      
       var tr_id = 'tr_' + add_more_count;
       newRow = '<tr id="tr_' + add_more_count + '" class="font-14 font-heading bg-white"><td class="w-min-50">' + add_more_count + '</td><td class=""><select onchange="call_fun(\'tr_' + add_more_count + '\');" id="goods_discription_tr_' + add_more_count + '" class="w-95-parsent form-select goods_items" name="goods_discription[]" required data-id="'+add_more_count+'">';
       newRow += optionElements;
@@ -1096,6 +1098,9 @@
                var amount = $(this).find('.amount').val();
             }else{
                var amount = (price && quantity) ? (price * quantity) : 0;
+               if(price==0 && quantity==0){
+                     amount = $(this).find('.amount').val();
+                  }
                if(amount!=0){
                   $(this).find('.amount').val(parseFloat(amount).toFixed(2));
                   $(this).find('.amount').keyup();
@@ -1485,8 +1490,8 @@
                   party: "required",
                   material_center: "required",
                   "goods_discription[]": "required",
-                  "qty[]" : "required",
-                  "price[]" : "required",
+                  //"qty[]" : "required",
+                  //"price[]" : "required",
                   "amount[]" : "required",
                },
                messages: {
@@ -1495,8 +1500,8 @@
                   party: "Please select party",
                   material_center: "Please select material center",
                   "goods_discription[]" : "Please select item",
-                  "qty[]" : "Please enter quantity",
-                  "price[]" : "Please enter price",
+                  //"qty[]" : "Please enter quantity",
+                  //"price[]" : "Please enter price",
                   "amount[]" : "Please enter amount",                
                }
             });

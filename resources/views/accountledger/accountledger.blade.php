@@ -142,9 +142,7 @@
                            <td class="w-min-120 " style="text-align: right;">
                          <?php
                               if(!empty($value['debit'])){
-                                 echo formatIndianNumber((float) str_replace(',', '', $value['debit']));
-
-                                 
+                                 echo formatIndianNumber((float) str_replace(',', '', $value['debit']));                                 
                                  $tot_blance = $tot_blance + (float)$value['debit'];
                                  $tot_dbt = $tot_dbt + abs((float)$value['debit']);
                               }
@@ -166,11 +164,16 @@
                            </td>
                            <td style="text-align: right;">
                               <?php 
-                              
+                              $$tot_blance = round($tot_blance, 2);
+                             
                               if($tot_blance<0){
-                                echo formatIndianNumber(abs((float) str_replace(',', '', $tot_blance))) . ' Cr';
+                                 //echo abs($tot_blance). ' Cr';
+                                 echo formatIndianNumber(abs(round((float)$tot_blance, 2))). ' Cr';
+                               // echo formatIndianNumber(abs((float) str_replace(',', '', $tot_blance))) . ' Cr';
                               }else{
-                                 echo formatIndianNumber((float) str_replace(',', '', $tot_blance)) . ' Dr';
+                                 echo formatIndianNumber(round((float)$tot_blance, 2)). ' Dr';
+                               
+                                 //echo formatIndianNumber((float) str_replace(',', '', $tot_blance)) . ' Dr';
                               }                              
                               ?>
                            </td>

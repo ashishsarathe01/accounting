@@ -136,7 +136,12 @@ class CommonHelper
                 $purchase_return_weight = $average_detail->sum('purchase_return_weight');
                 $purchase_return_amount = $average_detail->sum('purchase_return_amount');
                 $purchase_return_amount = $purchase_return_amount*2;
-                $sale_return_weight = $average_detail->sum('sale_return_weight');
+                $sale_return_weight = $average_detail->pluck('sale_return_weight')
+                                     ->filter(fn($val) => is_numeric($val))
+                                     ->sum();
+                if($sale_return_weight==''){
+                    $sale_return_weight = 0;
+                }
                 $stock_transfer_in_weight = $average_detail->sum('stock_transfer_in_weight');
                 $stock_transfer_in_amount = $average_detail->sum('stock_transfer_in_amount');
 

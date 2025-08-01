@@ -3714,7 +3714,9 @@ class SalesReturnController extends Controller
                                  //$ledger->account_id = $sale_amt_account;
                                  if($nature_of_sundry=='ROUNDED OFF (-)'){ //if($billsundry->nature_of_sundry=='subtractive'){
                                     $ledger->credit = $v2;
+                                    $ledger->account_id = $sale_amt_account;
                                  }else if($nature_of_sundry=='ROUNDED OFF (+)'){
+                                    $ledger->account_id = $sale_amt_account;
                                     $ledger->debit = $v2;
                                  }             
                                  $ledger->txn_date = $date;

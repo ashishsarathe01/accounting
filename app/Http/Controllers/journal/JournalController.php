@@ -832,6 +832,7 @@ public function index(Request $request)
             $index = 1;
             $series_no = "";
             while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+               $data = array_map('trim', $data);
                if(trim($data[0])!="" && trim($data[1])!="" && $data[2]!=""){                  
                   $series = trim($data[1]);
                   $bill_no = trim($data[2]);
@@ -955,10 +956,11 @@ public function index(Request $request)
             if($debit=="" && $credit==""){
                array_push($error_arr, 'Debit/Credit Cannot - Row '.$index);
             }
+            
             if($check_account){
-               array_push($txn_arr,array("account"=>$check_account->id,"account_state_code"=>$check_account->state,"debit"=>$debit,"credit"=>$credit,"gst_rate"=>$gst_rate));
+               array_push($txn_arr,array("account"=>$check_account->id,"account_state_code"=>$check_account->state,"debit"=>$debit,"credit"=>$credit,"gst_rate"=>$data[6]));
             }else{
-               array_push($txn_arr,array("account"=>$account,"account_state_code"=>"","debit"=>$debit,"credit"=>$credit,"gst_rate"=>$gst_rate));
+               array_push($txn_arr,array("account"=>$account,"account_state_code"=>"","debit"=>$debit,"credit"=>$credit,"gst_rate"=>$data[6]));
             }            
             if($index==$total_row){
                array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"bill_no"=>$bill_no,"claim_gst"=>$claim_gst,"invoice_no"=>$invoice_no,"merchant_gst"=>$merchant_gst,"txn_arr"=>$txn_arr,"error_arr"=>$error_arr));
@@ -985,6 +987,7 @@ public function index(Request $request)
                $txn_arr = $value['txn_arr'];
                $merchant_gst = $value['merchant_gst'];
                $claim_gst = $value['claim_gst'];
+               $invoice_no = $value['invoice_no'];
                if($duplicate_voucher_status==2){
                   $check_rec = Journal::select('id')
                                              ->where('voucher_no',$bill_no)
@@ -1017,8 +1020,7 @@ public function index(Request $request)
                $journal->claim_gst_status = $claim_gst;
                
                if($claim_gst=="YES"){
-                  $journal->invoice_no = $invoice_no;
-                  
+                  $journal->invoice_no = $invoice_no;                  
                   $net_amount = 0;$vendor = "";$igst = 0;$cgst = 0;$sgst = 0;$total_amount = 0;$tax_amount = 0;
                   foreach($txn_arr as $key => $data){      
                      if($data['credit'] && $data['credit']!="" && $data['credit']!="0"){

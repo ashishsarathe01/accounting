@@ -88,8 +88,8 @@ class AccountLedgerController extends Controller
                $ledger[$key]->account = $account->account_name;
             }
             if($value->entry_type==1){
-               $action = Sales::select('voucher_no','series_no','financial_year','e_invoice_status','e_waybill_status')->where('id',$value->entry_type_id)->first();
-               $ledger[$key]->bill_no = $action->series_no."/".$action->financial_year."/".$action->voucher_no;
+               $action = Sales::select('voucher_no_prefix','voucher_no','series_no','financial_year','e_invoice_status','e_waybill_status')->where('id',$value->entry_type_id)->first();
+               $ledger[$key]->bill_no = $action->voucher_no_prefix;
                $ledger[$key]->einvoice_status = 0;
                if($action->e_invoice_status==1 || $action->e_waybill_status==1){
                   $ledger[$key]->einvoice_status = 1;
@@ -104,11 +104,11 @@ class AccountLedgerController extends Controller
                $ledger[$key]->bill_no = "";
                $ledger[$key]->einvoice_status = 0;
                if($action){
-                  $ledger[$key]->bill_no = $action->sr_prefix.$action->sale_return_no;                  
+                  $ledger[$key]->bill_no = $action->sr_prefix;                  
                }
             }else if($value->entry_type==4 || $value->entry_type==12 || $value->entry_type==13){
                $action = PurchaseReturn::select('sr_prefix','series_no','financial_year')->where('id',$value->entry_type_id)->first();
-               $ledger[$key]->bill_no = $action->series_no."/".$action->financial_year."/DR".$action->sr_prefix;
+               $ledger[$key]->bill_no = $action->sr_prefix;
                $ledger[$key]->einvoice_status = 0;
             }else if($value->entry_type==5){
                $action = Payment::select('voucher_no', 'long_narration')->where('id', $value->entry_type_id)->first();
