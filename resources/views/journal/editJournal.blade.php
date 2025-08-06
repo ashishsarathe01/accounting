@@ -61,6 +61,7 @@
                                  }
                               } ?>
                            </select>
+                           <input type="hidden" name="merchant_gst" id="merchant_gst" value="{{$journal->merchant_gst}}">
                         </div>
                         <div class="mb-2 col-md-2">
                            <label class="form-label font-14 font-heading">Claim GST</label>
@@ -171,8 +172,13 @@
                               <?php
                              
                               $j = 1;
+                              // echo "<pre>";
+                              //    print_r($sundry);
+                              //    print_r($journal_detail->toArray());
                               foreach ($journal_detail as $value){
-                                 if(!in_array($value->account_name,$sundry) && $value->debit!=''){?>
+                                 if(!in_array($value->account_name,$sundry) && $value->debit!=''){
+                                    echo "ashish";
+                                    ?>
                                     <tr id="withgst_tr_<?php echo $j;?>" class="font-14 font-heading bg-white">
                                        <td>
                                           <select class="form-control item" id="item_<?php echo $j;?>" data-index="<?php echo $j;?>" name="item[]" onchange="gstCalculation()" style="width: 598.611px;">
@@ -565,6 +571,7 @@
        });
        $("#series_no").change(function(){
          let gst_no = $("#series_no option:selected").attr("data-gst");
+         $("#merchant_gst").val(gst_no);
          if(gst_no){
             company_gst = gst_no;
             gstCalculation();

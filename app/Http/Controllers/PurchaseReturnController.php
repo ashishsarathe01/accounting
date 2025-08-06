@@ -3195,7 +3195,54 @@ class PurchaseReturnController extends Controller
       $company_data = Companies::where('id', Session::get('user_company_id'))->first();
 
       $series_arr = [];$material_center_arr = [];$gst_no_arr = [];$all_error_arr = [];$error_arr = [];$item_arr = [];$data_arr = [];$voucher_arr = [];
-      $already_exists_error_arr = [];$already_exists_voucher_arr = [];          
+      $already_exists_error_arr = [];$already_exists_voucher_arr = [];
+      if($duplicate_voucher_status==0){
+         $file = $request->file('csv_file');  
+         $filePath = $file->getRealPath();      
+         $final_result = array();
+         if(($handle = fopen($filePath, 'r')) !== false) {
+            $header = fgetcsv($handle, 10000, ",");
+            $fp = file($filePath, FILE_SKIP_EMPTY_LINES);
+            $index = 1;
+            $series_no = "";
+            while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+               $data = array_map('trim', $data);
+               if($data[0]!="" && $data[2]!=""){
+                  $series_no = $data[7];
+                  $voucher_no = $data[3];
+                  $account = $data[1];
+                  $account = Accounts::select('id')
+                                       ->where('account_name',trim($account))
+                                       ->where('company_id',trim(Session::get('user_company_id')))
+                                       ->first();
+                  if($account){
+                     $check_invoice = PurchaseReturn::select('id')
+                              ->where('company_id',Session::get('user_company_id'))
+                              ->where('sr_prefix',$voucher_no)
+                              ->where('series_no',$series_no)
+                              ->where('financial_year','=',$financial_year)
+                              ->where('delete','0')
+                              ->first();
+                     if($check_invoice){
+                        array_push($already_exists_error_arr, 'Voucher '.$voucher_no.' already exists - Invoice No. '.$voucher_no);
+                     }
+                     if(in_array($account->id."_".$voucher_no, $already_exists_voucher_arr)){
+                        array_push($already_exists_error_arr, 'Voucher '.$voucher_no.' already exists - Invoice No. '.$voucher_no);
+                     }
+                     array_push($already_exists_voucher_arr,$account->id."_".$voucher_no);
+                  }                  
+               }
+            }
+         }
+         if(count($already_exists_error_arr)>0){
+            $res = array(
+               'status' => false,
+               'data' => $already_exists_error_arr,
+               "message"=>"Already Exists."
+            );
+            return json_encode($res);
+         }
+      }
       if($company_data->gst_config_type == "single_gst"){
          $gst_data = DB::table('gst_settings')
                            ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])
@@ -3356,41 +3403,43 @@ class PurchaseReturnController extends Controller
                $invoice_against = $value['invoice_against'];
                $item_arr = $value['item_arr'];
                $slicedData = $value['slicedData'];
-               $merchant_gst = $value['merchant_gst'];               
-               $check_invoices = PurchaseReturn::select('id')
-                           ->where('company_id',Session::get('user_company_id'))
-                           ->where('sr_prefix',$voucher_no)
-                           ->where('series_no',$series_no)
-                           ->where('financial_year','=',$financial_year)
-                           ->where('delete','0')
-                           ->first();               
-               if($check_invoices){
-                  // if($duplicate_voucher_status==2){
-                  //    $updated_sale = PurchaseReturn::find($check_invoices->id);
-                  //    $updated_sale->delete = '1';
-                  //    $updated_sale->deleted_at = Carbon::now();
-                  //    $updated_sale->deleted_by = Session::get('user_id');
-                  //    $updated_sale->update();
-                  //    if($updated_sale){
-                  //       SaleDescription::where('sale_id',$check_invoices->id)
-                  //                      ->update(['delete'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
-                  //       AccountLedger::where('entry_type',1)
-                  //                      ->where('entry_type_id',$check_invoices->id)
-                  //                      ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
-                  //       SaleSundry::where('sale_id',$check_invoices->id)
-                  //                      ->update(['delete'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
-                  //       ItemLedger::where('source',1)
-                  //                   ->where('source_id',$check_invoices->id)
-                  //                   ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
-                  //       ItemAverageDetail::where('sale_id',$check_invoices->id)
-                  //                         ->delete();
-                  //       $itemKiId =  SaleDescription::where('sale_id',$check_invoices->id)
-                  //                   ->select('sale_descriptions.goods_description as item_id');
-                  //       foreach( $itemKiId as $k){
-                  //          CommonHelper::RewriteItemAverageByItem($check_invoices->date,$k->item_id,$series_no);       
-                  //       }
-                  //    }
-                  // }                  
+               $merchant_gst = $value['merchant_gst'];
+               if($duplicate_voucher_status==2){
+                  $check_invoices = PurchaseReturn::select('id')
+                        ->where('company_id',Session::get('user_company_id'))
+                        ->where('sr_prefix',$voucher_no)
+                        ->where('series_no',$series_no)
+                        ->where('financial_year','=',$financial_year)
+                        ->where('delete','0')
+                        ->first();
+                  if($check_invoices){
+                     $updated_sale = PurchaseReturn::find($check_invoices->id);
+                     $updated_sale->delete = '1';
+                     $updated_sale->deleted_at = Carbon::now();
+                     $updated_sale->deleted_by = Session::get('user_id');
+                     $updated_sale->update();
+                     if($updated_sale){
+                        PurchaseReturnDescription::where('purchase_return_id',$check_invoices->id)
+                                       ->update(['delete'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
+                        PurchaseReturnSundry::where('purchase_return_id',$check_invoices->id)
+                                       ->update(['delete'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
+
+                        AccountLedger::where('entry_type',4)
+                                       ->where('entry_type_id',$check_invoices->id)
+                                       ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
+                        
+                        ItemLedger::where('source',5)
+                                    ->where('source_id',$check_invoices->id)
+                                    ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
+                        ItemAverageDetail::where('purchase_return_id',$check_invoices->id)
+                                          ->delete();
+                        $itemKiId = PurchaseReturnSundry::where('purchase_return_id',$check_invoices->id)
+                                    ->select('goods_discription as item_id');
+                        foreach( $itemKiId as $k){
+                           CommonHelper::RewriteItemAverageByItem($check_invoices->date,$k->item_id,$series_no);       
+                        }
+                     }  
+                  }                  
                }
                $sr_type = "RATE DIFFERENCE";
                foreach ($item_arr as $k1 => $v1) {

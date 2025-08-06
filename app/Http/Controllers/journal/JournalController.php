@@ -95,7 +95,8 @@ public function index(Request $request)
     // Fallback values if not set
     $from_date = $from_date ;
     $to_date = $to_date ;
-
+   //  echo "<pre>";
+   //  print_r($journal->toArray());die;
     return view('journal/journal')
         ->with('journal', $journal)
         ->with('month_arr', $month_arr)
@@ -207,7 +208,8 @@ public function index(Request $request)
    public function store(Request $request){
       Gate::authorize('action-module',80);
       // echo "<pre>";
-      // print_r($request->all());die;
+      // print_r($request->all());
+      //die;
       $financial_year = Session::get('default_fy');
       $journal = new Journal;
       $journal->date = $request->input('date');
@@ -217,9 +219,10 @@ public function index(Request $request)
       $journal->company_id = Session::get('user_company_id');
       $journal->financial_year = $financial_year;
       $journal->claim_gst_status = $request->input('flexRadioDefault');
+      $journal->merchant_gst = $request->input('merchant_gst');
       if($request->input('form_source') && !empty($request->input('form_source'))){
          $journal->form_source = $request->input('form_source');
-      }     
+      }  
       if($request->input('flexRadioDefault')=="YES"){
          $journal->invoice_no = $request->input('invoice_no');
          $journal->net_total = $request->input('net_amount');
@@ -229,10 +232,19 @@ public function index(Request $request)
          $journal->total_amount = $request->input('total_amount');
          $journal->remark = $request->input('remark');
          $journal->vendor = $request->input('vendor');
+         if(!empty($request->input('vendor'))){
+            $vendor = Accounts::select('id','gstin')->where('id',$request->input('vendor'))->first();
+            if($vendor){
+               $vendor_gstin = $vendor->gstin;
+               $journal->vendor_gstin = $vendor_gstin;
+            }            
+         }
       }
       $journal->save();
       if($journal->id){
          if($request->input('flexRadioDefault')=="YES"){
+            
+
             //Journal Entry
             $joundetail = new JournalDetails;
             $joundetail->journal_id = $journal->id;
@@ -252,6 +264,46 @@ public function index(Request $request)
             $ledger->financial_year = Session::get('default_fy');
             $ledger->entry_type = 7;
             $ledger->map_account_id = $request->input('vendor');
+            $ledger->entry_type_id = $journal->id;
+            $ledger->entry_type_detail_id = $joundetail->id;
+            $ledger->created_by = Session::get('user_id');
+            $ledger->created_at = date('d-m-Y H:i:s');
+            $ledger->save();
+            //Round Off Caculation
+            $calculated_total = $request->input('net_amount') + floatval($request->input('cgst')) + floatval($request->input('sgst')) + floatval($request->input('igst'));
+            $round_off = round($request->input('total_amount') - $calculated_total, 2);
+            //Round Off Entry
+            if($round_off<0){               
+               $billsundry = BillSundrys::where('id',8)->first();
+            }else{               
+               $billsundry = BillSundrys::where('id',9)->first();
+            }            
+            $joundetail = new JournalDetails;
+            $joundetail->journal_id = $journal->id;
+            $joundetail->company_id = Session::get('user_company_id');
+            if($billsundry->bill_sundry_type=='subtractive'){
+               $joundetail->debit = abs($round_off);
+               $joundetail->type = "Debit";
+            }else{
+               $joundetail->credit = abs($round_off);
+               $joundetail->type = "Credit";
+            }            
+            $joundetail->account_name = $billsundry->sale_amt_account;
+            $joundetail->status = '1';
+            $joundetail->save();
+            $ledger = new AccountLedger();
+            if($billsundry->bill_sundry_type=='subtractive'){
+               $ledger->debit = abs($round_off);
+            }else{
+               $ledger->credit = abs($round_off);
+            }
+            $ledger->account_id = $billsundry->sale_amt_account;
+            $ledger->series_no = $request->input('series_no');            
+            $ledger->txn_date = $request->input('date');
+            $ledger->company_id = Session::get('user_company_id');
+            $ledger->financial_year = Session::get('default_fy');
+            $ledger->entry_type = 7;
+            $ledger->map_account_id = $billsundry->sale_amt_account;
             $ledger->entry_type_id = $journal->id;
             $ledger->entry_type_detail_id = $joundetail->id;
             $ledger->created_by = Session::get('user_id');
@@ -452,7 +504,6 @@ public function index(Request $request)
          $this->failedMessage();
       }
    }
-
    public function edit($id){
       Gate::authorize('action-module',53);
       $journal = Journal::find($id);
@@ -525,7 +576,7 @@ public function index(Request $request)
                ->get();
 
       $sundry = BillSundrys::select('purchase_amt_account')
-                           ->whereIn('nature_of_sundry',['IGST','CGST','SGST'])
+                           ->whereIn('nature_of_sundry',['IGST','CGST','SGST','ROUNDED OFF (+)','ROUNDED OFF (-)'])
                            ->where('company_id',Session::get('user_company_id'))
                            ->where('delete','0')
                            ->where('status','1')
@@ -534,14 +585,6 @@ public function index(Request $request)
       $sundry_arr = $sundry->toArray();
       return view('journal/editJournal')->with('journal', $journal)->with('party_list', $party_list)->with('journal_detail', $journal_detail)->with('mat_series', $mat_series)->with('vendors', $vendors)->with('items', $items)->with('company_gst', $companyData->gst)->with('sundry', $sundry_arr);
    }
-
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\AccountGroups  $fooditem
-     * @return \Illuminate\Http\Response
-     */
    public function update(Request $request){
       Gate::authorize('action-module',53);
       $validator = Validator::make($request->all(), [
@@ -557,6 +600,7 @@ public function index(Request $request)
       $receipt->series_no = $request->input('series_no');
       $receipt->long_narration = $request->input('long_narration');
       $receipt->date = $request->input('date');
+      $receipt->merchant_gst = $request->input('merchant_gst');
       $receipt->claim_gst_status = $request->input('flexRadioDefault');
       if($request->input('flexRadioDefault')=="YES"){
          $receipt->invoice_no = $request->input('invoice_no');
@@ -567,6 +611,23 @@ public function index(Request $request)
          $receipt->total_amount = $request->input('total_amount');
          $receipt->remark = $request->input('remark');
          $receipt->vendor = $request->input('vendor');
+         if(!empty($request->input('vendor'))){
+            $vendor = Accounts::select('id','gstin')->where('id',$request->input('vendor'))->first();
+            if($vendor){
+               $vendor_gstin = $vendor->gstin;
+               $receipt->vendor_gstin = $vendor_gstin;
+            }            
+         }
+      }else{
+         $receipt->invoice_no = "";
+         $receipt->net_total = 0;
+         $receipt->cgst = 0;
+         $receipt->sgst = 0;
+         $receipt->igst = 0;
+         $receipt->total_amount = 0;
+         $receipt->remark = "";
+         $receipt->vendor = "";
+         $receipt->vendor_gstin = "";
       }
       $receipt->save();
       $receipt_detail = JournalDetails::where('journal_id', '=', $request->journal_id)->delete();
@@ -594,6 +655,49 @@ public function index(Request $request)
          $ledger->entry_type = 7;
          $ledger->map_account_id = $request->input('vendor');
          $ledger->entry_type_id = $request->journal_id;
+         $ledger->created_by = Session::get('user_id');
+         $ledger->created_at = date('d-m-Y H:i:s');
+         $ledger->save();
+
+         //Round Off Caculation
+         $calculated_total = $request->input('net_amount') + floatval($request->input('cgst')) + floatval($request->input('sgst')) + floatval($request->input('igst'));
+         $round_off = round($request->input('total_amount') - $calculated_total, 2);
+
+         //Round Off Entry
+         if($round_off<0){               
+            $billsundry = BillSundrys::where('id',8)->first();
+         }else{               
+            $billsundry = BillSundrys::where('id',9)->first();
+         }
+         
+         $joundetail = new JournalDetails;
+         $joundetail->journal_id = $request->journal_id;
+         $joundetail->company_id = Session::get('user_company_id');
+         if($billsundry->bill_sundry_type=='subtractive'){
+            $joundetail->debit = abs($round_off);
+            $joundetail->type = "Debit";
+         }else{
+            $joundetail->credit = abs($round_off);
+            $joundetail->type = "Credit";
+         }            
+         $joundetail->account_name = $billsundry->sale_amt_account;
+         $joundetail->status = '1';
+         $joundetail->save();
+         $ledger = new AccountLedger();
+         if($billsundry->bill_sundry_type=='subtractive'){
+            $ledger->debit = abs($round_off);
+         }else{
+            $ledger->credit = abs($round_off);
+         }
+         $ledger->account_id = $billsundry->sale_amt_account;
+         $ledger->series_no = $request->input('series_no');            
+         $ledger->txn_date = $request->input('date');
+         $ledger->company_id = Session::get('user_company_id');
+         $ledger->financial_year = Session::get('default_fy');
+         $ledger->entry_type = 7;
+         $ledger->map_account_id = $billsundry->sale_amt_account;
+         $ledger->entry_type_id = $request->journal_id;
+         $ledger->entry_type_detail_id = $joundetail->id;
          $ledger->created_by = Session::get('user_id');
          $ledger->created_at = date('d-m-Y H:i:s');
          $ledger->save();
@@ -798,10 +902,10 @@ public function index(Request $request)
          return redirect('journal')->withSuccess('Journal deleted successfully!');
       }
    }
-   public function journalImportView(Request $request){      
+   public function journalImportView(Request $request){
       return view('journal/import_journal_view');
    }
-   public function journalImportProcess(Request $request) {       
+   public function journalImportProcess(Request $request) {
       $validator = Validator::make($request->all(), [
          'csv_file' => 'required|file|mimes:csv,txt|max:2048', // Max 2MB, CSV or TXT file
       ]); 
@@ -906,6 +1010,8 @@ public function index(Request $request)
             }
             if(trim($data[0])!="" && trim($data[1])!=""){
                if($bill_date!=""){
+                  $akey = array_search($series, $series_arr);
+                  $merchant_gst = $gst_no_arr[$akey];
                   array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"bill_no"=>$bill_no,"claim_gst"=>$claim_gst,"invoice_no"=>$invoice_no,"merchant_gst"=>$merchant_gst,"txn_arr"=>$txn_arr,"error_arr"=>$error_arr));
                }
                $txn_arr = [];
@@ -1018,7 +1124,7 @@ public function index(Request $request)
                $journal->company_id = Session::get('user_company_id');
                $journal->financial_year = $financial_year;
                $journal->claim_gst_status = $claim_gst;
-               
+               $journal->merchant_gst = $merchant_gst;
                if($claim_gst=="YES"){
                   $journal->invoice_no = $invoice_no;                  
                   $net_amount = 0;$vendor = "";$igst = 0;$cgst = 0;$sgst = 0;$total_amount = 0;$tax_amount = 0;
@@ -1056,6 +1162,12 @@ public function index(Request $request)
                   }
                   $journal->total_amount = $total_amount;
                   $journal->vendor = $vendor;
+                  if(!empty($vendor)){
+                     $vendor_data = Accounts::select('id','gstin')->where('id',$vendor)->first();
+                     if($vendor_data){
+                        $journal->vendor_gstin = $vendor_data->gstin;
+                     }
+                  }
                }
                $i = 0;              
                if($journal->save()){
@@ -1074,7 +1186,7 @@ public function index(Request $request)
                      $ledger->account_id = $vendor;
                      $ledger->series_no = $series;
                      $ledger->credit = $total_amount;                       
-                     $ledger->txn_date = $bill_date;
+                     $ledger->txn_date = date('Y-m-d',strtotime($bill_date));
                      $ledger->company_id = Session::get('user_company_id');
                      $ledger->financial_year = Session::get('default_fy');
                      $ledger->entry_type = 7;
@@ -1084,6 +1196,51 @@ public function index(Request $request)
                      $ledger->created_by = Session::get('user_id');
                      $ledger->created_at = date('d-m-Y H:i:s');
                      $ledger->save();
+                     //Round Off Caculation
+                     if(!empty($igst) && $igst!=0){
+                        $calculated_total = $$net_amount + floatval($tax_amount);
+                     }else{
+                        $calculated_total = $$net_amount + floatval($tax_amount/2) + floatval($tax_amount/2);
+                     }                     
+                     $round_off = round($total_amount - $calculated_total, 2);
+                     //Round Off Entry
+                     if($round_off<0){               
+                        $billsundry = BillSundrys::where('id',8)->first();
+                     }else{               
+                        $billsundry = BillSundrys::where('id',9)->first();
+                     }            
+                     $joundetail = new JournalDetails;
+                     $joundetail->journal_id = $journal->id;
+                     $joundetail->company_id = Session::get('user_company_id');
+                     if($billsundry->bill_sundry_type=='subtractive'){
+                        $joundetail->debit = abs($round_off);
+                        $joundetail->type = "Debit";
+                     }else{
+                        $joundetail->credit = abs($round_off);
+                        $joundetail->type = "Credit";
+                     }            
+                     $joundetail->account_name = $billsundry->sale_amt_account;
+                     $joundetail->status = '1';
+                     $joundetail->save();
+                     $ledger = new AccountLedger();
+                     if($billsundry->bill_sundry_type=='subtractive'){
+                        $ledger->debit = abs($round_off);
+                     }else{
+                        $ledger->credit = abs($round_off);
+                     }
+                     $ledger->account_id = $billsundry->sale_amt_account;
+                     $ledger->series_no = $series;
+                     $ledger->txn_date = date('Y-m-d',strtotime($bill_date));
+                     $ledger->company_id = Session::get('user_company_id');
+                     $ledger->financial_year = Session::get('default_fy');
+                     $ledger->entry_type = 7;
+                     $ledger->map_account_id = $billsundry->sale_amt_account;
+                     $ledger->entry_type_id = $journal->id;
+                     $ledger->entry_type_detail_id = $joundetail->id;
+                     $ledger->created_by = Session::get('user_id');
+                     $ledger->created_at = date('d-m-Y H:i:s');
+                     $ledger->save();
+
                      foreach ($txn_arr as $key => $item){
                         if($item['debit'] && $item['debit']!="" && $item['debit']!="0"){
                            $percentage = $item['gst_rate'];
@@ -1101,7 +1258,7 @@ public function index(Request $request)
                            $ledger = new AccountLedger();
                            $ledger->account_id = $item['account'];
                            $ledger->debit = $amount;                       
-                           $ledger->txn_date = $bill_date;
+                           $ledger->txn_date = date('Y-m-d',strtotime($bill_date));
                            $ledger->series_no = $series;
                            $ledger->company_id = Session::get('user_company_id');
                            $ledger->financial_year = Session::get('default_fy');
@@ -1138,7 +1295,7 @@ public function index(Request $request)
                         $ledger->account_id = $account_name;
                         $ledger->series_no = $series;
                         $ledger->debit = $tax_amount;                       
-                        $ledger->txn_date = $bill_date;
+                        $ledger->txn_date = date('Y-m-d',strtotime($bill_date));
                         $ledger->company_id = Session::get('user_company_id');
                         $ledger->financial_year = Session::get('default_fy');
                         $ledger->entry_type = 7;
@@ -1182,7 +1339,7 @@ public function index(Request $request)
                         $ledger->account_id = $cgst_account_name;
                         $ledger->series_no = $series;
                         $ledger->debit = $tax_amount/2;                       
-                        $ledger->txn_date = $bill_date;
+                        $ledger->txn_date = date('Y-m-d',strtotime($bill_date));
                         $ledger->company_id = Session::get('user_company_id');
                         $ledger->financial_year = Session::get('default_fy');
                         $ledger->entry_type = 7;
@@ -1205,7 +1362,7 @@ public function index(Request $request)
                         $ledger->account_id = $sgst_account_name;
                         $ledger->series_no = $series;
                         $ledger->debit = $tax_amount/2;                       
-                        $ledger->txn_date = $bill_date;
+                        $ledger->txn_date = date('Y-m-d',strtotime($bill_date));
                         $ledger->company_id = Session::get('user_company_id');
                         $ledger->financial_year = Session::get('default_fy');
                         $ledger->entry_type = 7;

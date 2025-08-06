@@ -24,6 +24,7 @@ use Session;
 use DB;
 use DateTime;
 use Gate;
+use Validator;
 class StockTransferController extends Controller
 {
     /**
@@ -333,7 +334,7 @@ class StockTransferController extends Controller
                 }
                 //From Series Avearge Rate
                 $average = ItemAverage::where('item_id',$good)
-                        ->where('stock_date','<=',$request->input('date')->toDateString())//$date->toDateString()
+                        ->where('stock_date','<=',$date = Carbon::parse($request->input('date'))->toDateString())
                         ->where('series_no',$request->input('series_no'))
                         ->orderBy('stock_date','desc')
                         ->orderBy('id','desc')
@@ -1007,8 +1008,8 @@ class StockTransferController extends Controller
             $desc = StockTransferDescription::where('stock_transfer_id',$id)
                               ->get();
             foreach ($desc as $key => $value) {
-                CommonHelper::RewriteItemAverageByItem($stock_transfer->date,$value->goods_discription,$stock_transfer->series_no);
-                CommonHelper::RewriteItemAverageByItem($stock_transfer->date,$value->goods_discription,$stock_transfer->series_no_to);
+                CommonHelper::RewriteItemAverageByItem($stock_transfer->transfer_date,$value->goods_discription,$stock_transfer->series_no);
+                CommonHelper::RewriteItemAverageByItem($stock_transfer->transfer_date,$value->goods_discription,$stock_transfer->series_no_to);
             }
             StockTransferDescription::where('stock_transfer_id',$id)
                         ->update(['delete_status'=>'1']);
@@ -1025,5 +1026,508 @@ class StockTransferController extends Controller
     }
     public function failedMessage($msg,$url){
         return redirect($url)->withError($msg);
-     }
+    }
+    public function importStockTransferView(Request $request){
+      return view('stockTransfer/import_stock_journal_view');
+    }
+    public function importStockTransferProcess(Request $request) {
+        $validator = Validator::make($request->all(), [
+            'csv_file' => 'required|file|mimes:csv,txt|max:2048', // Max 2MB, CSV or TXT file
+        ]); 
+        if($validator->fails()){
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+        $duplicate_voucher_status = $request->duplicate_voucher_status;
+        $financial_year = Session::get('default_fy');
+        $fy = explode('-',$financial_year);
+        $from_date = $fy[0]."-04-01";
+        $from_date = date('Y-m-d',strtotime($from_date));
+        $to_date = $fy[1]."-03-31";
+        $to_date = date('Y-m-d',strtotime($to_date));
+        $company_data = Companies::where('id', Session::get('user_company_id'))->first(); 
+        $already_exists_error_arr = [];
+        $already_exists_item_arr = [];
+        $error_arr = [];
+        $data_arr = [];
+        $all_error_arr = [];
+        $mode_arr = ['NEFT','RGTS','IMPS','CHEQUE','CASH'];
+        if($duplicate_voucher_status==0){
+            $file = $request->file('csv_file');  
+            $filePath = $file->getRealPath();      
+            $final_result = array();
+            if(($handle = fopen($filePath, 'r')) !== false) {
+                $header = fgetcsv($handle, 10000, ",");
+                $fp = file($filePath, FILE_SKIP_EMPTY_LINES);
+                $index = 1;
+                $series_no = "";
+                while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+                    $data = array_map('trim', $data);
+                    if(trim($data[0])!="" && trim($data[1])!="" && $data[2]!=""){
+                        $series = trim($data[0]);
+                        $voucher_no = trim($data[2]);
+                        $stock_transfer = StockTransfer::select('id')
+                                        ->where('voucher_no',$voucher_no)
+                                        ->where('series_no',trim($series))
+                                        ->where('delete_status','0')
+                                        ->where('financial_year',$financial_year)
+                                        ->where('company_id',trim(Session::get('user_company_id')))
+                                        ->first();
+                        if($stock_transfer){
+                            array_push($already_exists_error_arr, 'Stock Transfer on voucher no. - '.$voucher_no.' already exists');
+                        }
+                    }
+                }
+            }
+            if(count($already_exists_error_arr)>0){
+                $res = array(
+                'status' => false,
+                'data' => $already_exists_error_arr,
+                "message"=>"Already Exists."
+                );
+                return json_encode($res);
+            }
+        }
+        if($company_data->gst_config_type == "single_gst"){
+            $gst_data = DB::table('gst_settings')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])
+                           ->get();
+            $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series','branch_invoice_start_from as invoice_start_from')
+                           ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_id'=>$gst_data[0]->id])
+                           ->get();
+            if(count($branch)>0){
+                $gst_data = $gst_data->merge($branch);
+            }         
+        }else if($company_data->gst_config_type == "multiple_gst"){
+            $gst_data = DB::table('gst_settings_multiple')
+                           ->select('id','gst_no','mat_center','series','invoice_start_from')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst"])
+                           ->get();
+            foreach ($gst_data as $key => $value) {
+                $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series','branch_invoice_start_from as invoice_start_from')
+                        ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_multiple_id'=>$value->id])
+                        ->get();
+                if(count($branch)>0){
+                $gst_data = $gst_data->merge($branch);
+                }
+            }         
+        }
+        foreach ($gst_data as $key => $value) {
+            $series_arr[] = $value->series;
+            $material_center_arr[] = $value->mat_center;
+            $gst_no_arr[] = $value->gst_no;
+        }
+        $bill_date = "";
+        $file = $request->file('csv_file');  
+        $filePath = $file->getRealPath();      
+        $final_result = array();
+        if(($handle = fopen($filePath, 'r')) !== false) {
+            $header = fgetcsv($handle, 10000, ",");
+            $fp = file($filePath, FILE_SKIP_EMPTY_LINES);
+            $total_row = count($fp);
+            $total_row = $total_row - 1;
+            $success_row = 0;
+            $index = 1;
+        while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+            $data = array_map('trim', $data);
+            if(trim($data[0])=="" && trim($data[1])=="" && $data[2]=="" && $data[3]=="" && $data[4]=="" && $data[5]==""){
+               $index++;
+               continue;
+            }
+            if($data[0]!="" && $data[2]!=""){        
+                if($bill_date!=""){
+                    $akey = array_search($series, $series_arr);
+                    $merchant_gst = $gst_no_arr[$akey];
+                    $key1 = array_search($from_series, $series_arr);
+                    if($key1 !== false){
+                        $material_center_from = $material_center_arr[$key1];
+                    }
+                    $material_center_to = "";
+                    $key1 = array_search($to_series, $series_arr);
+                    if($key1 !== false){
+                        $material_center_to = $material_center_arr[$key1];
+                    }
+                    array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"voucher_no"=>$voucher_no,"from_series"=>$from_series,"to_series"=>$to_series,"material_center_from"=>$material_center_from,"material_center_to"=>$material_center_to,"merchant_gst"=>$merchant_gst,"slicedData"=>$slicedData,"item_arr"=>$item_arr,"error_arr"=>$error_arr));
+                }
+                $item_arr = [];
+                $txn_arr = [];
+                $error_arr = [];
+                $series = $data[0];
+                $bill_date = $data[1];
+                $voucher_no = $data[2];
+                $from_series = $data[3];
+                $to_series = $data[4];
+                if(strtotime($from_date)>strtotime(date('Y-m-d',strtotime($bill_date))) || strtotime($to_date)<strtotime(date('Y-m-d',strtotime($bill_date)))){                  
+                    array_push($error_arr, 'Date '.$bill_date.' Not In Financial Year - Row '.$index);                  
+                }
+                if(!in_array($series, $series_arr)){
+                    array_push($error_arr, 'Series No. '.$series.' Not Found - Row '.$index); 
+                }
+                if(!in_array($from_series, $series_arr)){
+                    array_push($error_arr, 'From Series No. '.$from_series.' Not Found - Row '.$index); 
+                }
+                if(!in_array($to_series, $series_arr)){
+                    array_push($error_arr, 'To Series No. '.$to_series.' Not Found - Row '.$index); 
+                }
+                $merchant_gst = "";
+                $ind = array_search($series, $series_arr);
+                if($ind !== false){
+                    $merchant_gst = $gst_no_arr[$ind];
+                }
+                $material_center_from = "";
+                $key1 = array_search($from_series, $series_arr);
+                if($key1 !== false){
+                    $material_center_from = $material_center_arr[$key1];
+                }
+                $material_center_to = "";
+                $key1 = array_search($to_series, $series_arr);
+                if($key1 !== false){
+                    $material_center_to = $material_center_arr[$key1];
+                }
+                if($duplicate_voucher_status!=2 && !empty($voucher_no)){
+                    $stock_transfer = StockTransfer::select('id')
+                                            ->where('voucher_no',$voucher_no)
+                                            ->where('series_no',trim($series))
+                                            ->where('delete_status','0')
+                                            ->where('financial_year',$financial_year)
+                                            ->where('company_id',trim(Session::get('user_company_id')))
+                                            ->first();
+                    if($stock_transfer){
+                        array_push($error_arr, 'Stock Transfer on voucher no. - '.$voucher_no.' already exists');
+                    }
+                }
+                $slicedData = array_slice($data,9,100);
+                if(count($slicedData)>0){
+                    foreach($slicedData as $key => $value){
+                        $value = trim($value);
+                        if($key%2==0){
+                            if($value!="" && $value!='0'){
+                                $bill_sundrys = BillSundrys::where('delete', '=', '0')
+                                    ->where('status', '=', '1')
+                                    ->whereIn('company_id',[Session::get('user_company_id'),0])
+                                    ->where('name',$value)
+                                    ->first();
+                                if(!$bill_sundrys){
+                                    array_push($error_arr, 'Bill Sundry '.$value.' not found - Invoice No. '.$voucher_no);
+                                }
+                            }                        
+                        }                     
+                    }
+                }
+            }          
+            $item_name = $data[5];
+            $item = ManageItems::select('id','hsn_code')
+                        ->where('name',trim($item_name))
+                        ->where('company_id',trim(Session::get('user_company_id')))
+                        ->first();
+            if(!$item){
+               array_push($error_arr, 'Item Name '.$item_name.' not found - Invoice No. '.$voucher_no);
+            }
+            $item_qty = $data[6];
+            $item_qty = str_replace(",","",$item_qty);
+            $price = $data[7];
+            $price = trim(str_replace(",","",$price));
+            $amount = $data[8];
+            $amount = trim(str_replace(",","",$amount));
+            array_push($item_arr,array("item_name"=>$item_name,"item_qty"=>$item_qty,"price"=>$price,"amount"=>$amount));
+            
+            if($index==$total_row){
+                array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"voucher_no"=>$voucher_no,"from_series"=>$from_series,"to_series"=>$to_series,"material_center_from"=>$material_center_from,"material_center_to"=>$material_center_to,"merchant_gst"=>$merchant_gst,"slicedData"=>$slicedData,"item_arr"=>$item_arr,"error_arr"=>$error_arr));
+            }   
+            $index++;
+        }
+        fclose($handle);
+        $total_invoice_count = count($data_arr);
+        // echo "<pre>";
+        // print_r($data_arr);
+        // die;
+        $success_invoice_count = 0;
+        $failed_invoice_count = 0;
+        if(count($data_arr)>0){
+            foreach ($data_arr as $key => $value) {
+                if(count($value['error_arr'])>0){
+                    array_push($all_error_arr,$value['error_arr']);
+                    $failed_invoice_count++;
+                    continue;
+                }               
+                $bill_date = date('Y-m-d',strtotime($value['bill_date']));
+                $series = $value['series'];
+                $voucher_no = $value['voucher_no'];
+                $from_series = $value['from_series'];
+                $to_series = $value['to_series'];
+                $merchant_gst = $value['merchant_gst'];
+                $slicedData = $value['slicedData'];
+                $item_arr = $value['item_arr'];
+                if($duplicate_voucher_status==2){
+                    $check_invoices = StockTransfer::where('company_id',Session::get('user_company_id'))
+                              ->where('voucher_no',$voucher_no)
+                              ->where('series_no',$series)
+                              ->where('financial_year','=',$financial_year)
+                              ->where('delete_status','0')
+                              ->first();
+                    if($check_invoices){
+                        StockTransfer::where('id',$check_invoices->id)
+                                    ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
+                        ItemAverageDetail::where('stock_transfer_in_id',$check_invoices->id)
+                           ->where('type','STOCK TRANSFER IN')
+                           ->delete();    
+                        ItemAverageDetail::where('stock_transfer_id',$check_invoices->id)
+                                    ->where('type','STOCK TRANSFER OUT')
+                                    ->delete();
+                        $desc = StockTransferDescription::where('stock_transfer_id',$check_invoices->id)
+                                        ->get();
+                        foreach ($desc as $key => $val) {
+                            CommonHelper::RewriteItemAverageByItem($check_invoices->transfer_date,$val->goods_discription,$check_invoices->series_no);
+                            CommonHelper::RewriteItemAverageByItem($check_invoices->transfer_date,$val->goods_discription,$check_invoices->series_no_to);
+                        }
+                        StockTransferDescription::where('stock_transfer_id',$check_invoices->id)
+                                    ->update(['delete_status'=>'1']);
+                        StockTransferSundry::where('stock_transfer_id',$check_invoices->id)
+                                    ->update(['delete_status'=>'1']);
+                        AccountLedger::where('entry_type',11)
+                                    ->where('entry_type_id',$check_invoices->id)
+                                    ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
+                        ItemLedger::where('source',6)
+                                    ->where('source_id',$check_invoices->id)
+                                    ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
+                    }                    
+                } 
+                $stock_transfer = new StockTransfer();
+                $stock_transfer->voucher_no_prefix = $voucher_no;
+                $stock_transfer->company_id = Session::get('user_company_id');
+                $stock_transfer->series_no = $from_series;
+                $stock_transfer->series_no_to = $to_series;
+                $stock_transfer->merchant_gst = $merchant_gst;
+                $stock_transfer->transfer_date = $bill_date;
+                $stock_transfer->voucher_no = $voucher_no;
+                $stock_transfer->material_center_from = $value['material_center_from'];
+                $stock_transfer->material_center_to = $value['material_center_to'];
+                $stock_transfer->financial_year = Session::get('default_fy');
+                $stock_transfer->created_by = Session::get('user_id');
+                $stock_transfer->created_at = Carbon::now();
+                if($stock_transfer->save()){
+                    $item_total = 0;$grand_total = 0;
+                    $sale_item_array = [];$item_average_arr = [];$item_average_total = 0;
+                    foreach($item_arr as $key => $items){
+                        if($items['item_name']=="" || $items['item_qty']=="" || $items['price']=="" || $items['amount']==""){
+                            continue;
+                        }
+                        $item_total = $item_total + $items['amount'];
+                        $item = ManageItems::select('manage_items.id','manage_items.gst_rate','manage_items.u_name')
+                                            ->where('manage_items.name',trim($items['item_name']))
+                                            ->where('manage_items.company_id',trim(Session::get('user_company_id')))
+                                            ->first();  
+                        if(array_key_exists($item->id,$sale_item_array)){
+                            $sale_item_array[$item->id] = $sale_item_array[$item->id] + $items['item_qty'];
+                        }else{
+                            $sale_item_array[$item->id] = $items['item_qty'];
+                        }
+                        //From Series Avearge Rate
+                        $average = ItemAverage::where('item_id',$item->id)
+                                ->where('stock_date','<=',$bill_date = Carbon::parse($bill_date)->toDateString())
+                                ->where('series_no',$from_series)
+                                ->orderBy('stock_date','desc')
+                                ->orderBy('id','desc')
+                                ->first();
+                        if($average){
+                            $from_price = $average->price;
+                            $from_amount = $items['item_qty'] * $from_price;
+                            
+                        }else{
+                            $opening = ItemLedger::where('item_id',$item->id)
+                                            ->where('series_no',$from_series)
+                                            ->where('source','-1')
+                                            ->first();
+                            if($opening){
+                                $from_price = $opening->total_price/$opening->in_weight;
+                                $from_price = round($from_price,2);
+                                $from_amount = $items['item_qty'] * $from_price;
+                            }else{
+                                $from_price = $items['price']; 
+                                $from_amount = $items['item_qty'] * $from_price;
+                            }
+                        }                       
+                        array_push($item_average_arr,array("item"=>$item->id,"quantity"=>$items['item_qty'],"price"=>$from_price,"amount"=>$from_amount));
+                        $item_average_total = $item_average_total + $items['amount'];
+                        $desc = new StockTransferDescription;
+                        $desc->stock_transfer_id = $stock_transfer->id;
+                        $desc->goods_discription = $item->id;
+                        $desc->qty = $items['item_qty'];
+                        $desc->unit = $item->u_name;
+                        $desc->price = $items['price'];
+                        $desc->amount = $items['amount'];
+                        $desc->save();
+                        //Remove ITEM LEDGER
+                        $item_ledger = new ItemLedger();
+                        $item_ledger->item_id = $item->id;
+                        $item_ledger->out_weight = $items['item_qty'];
+                        $item_ledger->series_no = $from_series;
+                        $item_ledger->txn_date = $bill_date;
+                        $item_ledger->price = $items['price'];
+                        $item_ledger->total_price = $items['amount'];
+                        $item_ledger->company_id = Session::get('user_company_id');
+                        $item_ledger->source = 6;
+                        $item_ledger->source_id = $stock_transfer->id;
+                        $item_ledger->created_by = Session::get('user_id');
+                        $item_ledger->created_at = date('d-m-Y H:i:s');
+                        $item_ledger->save();
+                        //Add ITEM LEDGER
+                        $item_ledger = new ItemLedger();
+                        $item_ledger->item_id = $item->id;
+                        $item_ledger->in_weight = $items['item_qty'];
+                        $item_ledger->series_no = $to_series;
+                        $item_ledger->txn_date = $bill_date;
+                        $item_ledger->price = $items['price'];
+                        $item_ledger->total_price = $items['amount'];
+                        $item_ledger->company_id = Session::get('user_company_id');
+                        $item_ledger->source = 6;
+                        $item_ledger->source_id = $stock_transfer->id;
+                        $item_ledger->created_by = Session::get('user_id');
+                        $item_ledger->created_at = date('d-m-Y H:i:s');
+                        $item_ledger->save();                        
+                    }
+                    $grand_total = $grand_total + $item_total;
+                    // Bill Sundry 
+                    $sundry_id = "";
+                    $adjust_sale_amt = "";
+                    $bill_sundry_amounts = "";
+                    $sale_amt_account = "";
+                    $nature_of_sundry = "";
+                    $bill_sundry_type = "";
+                    $additive_sundry_amount_first = 0;
+                    $subtractive_sundry_amount_first = 0;
+                    foreach($slicedData as $k2 => $v2){
+                        $v2 = trim($v2);
+                        if($v2!="" && $v2!='0'){                      
+                            if($k2%2==0){
+                            $bill_sundrys = BillSundrys::where('delete', '=', '0')
+                                        ->where('status', '=', '1')
+                                        ->where('name', '=', $v2)
+                                        ->whereIn('company_id',[Session::get('user_company_id'),0])
+                                        ->first();  
+                            $sundry_id = $bill_sundrys->id;
+                            $adjust_sale_amt = $bill_sundrys->adjust_sale_amt;
+                            $nature_of_sundry = $bill_sundrys->nature_of_sundry;
+                            $sale_amt_account = $bill_sundrys->sale_amt_account;
+                            $bill_sundry_type = $bill_sundrys->bill_sundry_type;
+                            }else if($k2%2!=0){
+                            $v2 = trim(str_replace(",","",$v2));
+                            if(!empty($v2)){
+                                    $sundry = new StockTransferSundry;
+                                    $sundry->stock_transfer_id = $stock_transfer->id;
+                                    $sundry->bill_sundry = $sundry_id;
+                                    $sundry->rate = 0;
+                                    $sundry->amount = $v2;
+                                    $sundry->save();
+                                    //ADD DATA BILL SUNDRY ACCOUNT 
+                                    if($adjust_sale_amt=='No'){
+                                        $grand_total = $grand_total + $v2;
+                                        //From Series Account Ledger
+                                        $ledger = new AccountLedger();
+                                        $ledger->account_id = $sale_amt_account;
+                                        if($nature_of_sundry=='ROUNDED OFF (-)'){
+                                            $ledger->debit = $v2;
+                                        }else{
+                                            $ledger->credit = $v2;
+                                        }               
+                                        $ledger->txn_date = $bill_date;
+                                        $ledger->series_no = $from_series;
+                                        $ledger->company_id = Session::get('user_company_id');
+                                        $ledger->financial_year = Session::get('default_fy');
+                                        $ledger->entry_type = 11;
+                                        $ledger->entry_type_id = $stock_transfer->id;
+                                        $ledger->created_by = Session::get('user_id');
+                                        $ledger->created_at = date('d-m-Y H:i:s');
+                                        $ledger->save();
+
+                                        //To Series Account Ledger
+                                        $ledger = new AccountLedger();
+                                        $ledger->account_id = $sale_amt_account;
+                                        if($nature_of_sundry=='ROUNDED OFF (-)'){
+                                            $ledger->debit = $v2;
+                                        }else{
+                                            $ledger->credit = $v2;
+                                        }               
+                                        $ledger->txn_date = $bill_date;
+                                        $ledger->series_no = $to_series;
+                                        $ledger->company_id = Session::get('user_company_id');
+                                        $ledger->financial_year = Session::get('default_fy');
+                                        $ledger->entry_type = 11;
+                                        $ledger->entry_type_id = $stock_transfer->id;
+                                        $ledger->created_by = Session::get('user_id');
+                                        $ledger->created_at = date('d-m-Y H:i:s');
+                                        $ledger->save();
+                                    }
+                                    if($nature_of_sundry=='OTHER'){
+                                        if($bill_sundry_type=='additive'){
+                                            $additive_sundry_amount_first = $additive_sundry_amount_first + str_replace(",","",$v2);
+                                        }else if($bill_sundry_type=='subtractive'){
+                                            $subtractive_sundry_amount_first = $subtractive_sundry_amount_first - str_replace(",","",$v2);
+                                        }
+                                    }
+                                }
+                            }
+                        }                     
+                    }
+                    //Add Remove Data In Average Details table
+                    foreach ($sale_item_array as $key => $value) {                
+                        $average_detail = new ItemAverageDetail;
+                        $average_detail->entry_date = $bill_date;
+                        $average_detail->series_no = $from_series;
+                        $average_detail->item_id = $key;
+                        $average_detail->type = 'STOCK TRANSFER OUT';
+                        $average_detail->stock_transfer_id = $stock_transfer->id;
+                        $average_detail->stock_transfer_weight = $value;
+                        $average_detail->company_id = Session::get('user_company_id');
+                        $average_detail->created_at = Carbon::now();
+                        $average_detail->save();
+                        CommonHelper::RewriteItemAverageByItem($bill_date,$key,$from_series);
+                    }
+                    //Add Add Data In Average Details table
+                    foreach ($item_average_arr as $key => $value) {
+                        $subtractive_sundry_amount = 0;$additive_sundry_amount = 0;
+                        if($additive_sundry_amount_first>0){
+                        $additive_sundry_amount = ($value['amount']/$item_average_total)*$additive_sundry_amount_first;
+                        }
+                        if($subtractive_sundry_amount_first>0){
+                        $subtractive_sundry_amount = ($value['amount']/$item_average_total)*$subtractive_sundry_amount_first;
+                        }
+                        $additive_sundry_amount = round($additive_sundry_amount,2);
+                        $subtractive_sundry_amount = round($subtractive_sundry_amount,2);
+                        $average_amount = $value['amount'] + $additive_sundry_amount - $subtractive_sundry_amount;
+                        $average_amount =  round($average_amount,2);
+                        $average_price = $average_amount/$value['quantity'];
+                        $average_price =  round($average_price,6);
+                        //Add Data In Average Details table
+                        $average_detail = new ItemAverageDetail;
+                        $average_detail->series_no = $to_series;
+                        $average_detail->entry_date = $bill_date;
+                        $average_detail->item_id = $value['item'];
+                        $average_detail->type = 'STOCK TRANSFER IN';
+                        $average_detail->stock_transfer_in_id = $stock_transfer->id;
+                        $average_detail->stock_transfer_in_weight = $value['quantity'];
+                        $average_detail->stock_transfer_in_amount = $value['amount'];
+                        $average_detail->purchase_bill_sundry_additive_amount = $additive_sundry_amount;
+                        $average_detail->purchase_bill_sundry_subtractive_amount = $subtractive_sundry_amount;
+                        //$average_detail->purchase_total_amount = $average_amount;
+                        $average_detail->company_id = Session::get('user_company_id');
+                        $average_detail->created_at = Carbon::now();
+                        $average_detail->save();
+                        CommonHelper::RewriteItemAverageByItem($bill_date,$value['item'],$to_series);
+                    }
+                    StockTransfer::where('id',$stock_transfer->id)
+                        ->update(['item_total'=>$item_total,'grand_total'=>$grand_total]);
+                    $success_invoice_count++;
+                }         
+            }
+         }
+      }
+      $res = array("total_count"=>$total_invoice_count,"success_count"=>$success_invoice_count,"failed_count"=>$failed_invoice_count,"error_message"=>$all_error_arr);
+      $res = array(
+         'status' => true,
+         'data' => $res,
+         "message"=>"Uploaded Successfully."
+      );
+      return json_encode($res);
+      
+   }
 }

@@ -80,6 +80,7 @@ input[type=number]::-webkit-outer-spin-button {
                            }
                         } ?>
                      </select>
+                     <input type="hidden" name="merchant_gst" id="merchant_gst">
                   </div>
                   <div class="mb-2 col-md-2">
                      <label class="form-label font-14 font-heading">Claim GST</label>
@@ -477,6 +478,7 @@ input[type=number]::-webkit-outer-spin-button {
       });
       $("#series_no").change(function(){
          let gst_no = $("#series_no option:selected").attr("data-gst");
+         $("#merchant_gst").val(gst_no);
          if(gst_no){
             company_gst = gst_no;
             gstCalculation();

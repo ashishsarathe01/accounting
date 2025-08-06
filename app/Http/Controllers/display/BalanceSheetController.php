@@ -118,6 +118,10 @@ class BalanceSheetController extends Controller{
             $assets = AccountHeading::with([
                            'accountGroup.account.accountLedger' => $ledgerFilters,
                            'accountGroup.accountUnderGroup.account.accountLedger' => $ledgerFilters,
+                           'accountGroup.accountUnderGroup.accountUnderGroup.account.accountLedger' => $ledgerFilters,
+                           'accountGroup.accountUnderGroup.accountUnderGroup.accountUnderGroup.account.accountLedger' => $ledgerFilters,
+                           'accountGroup.accountUnderGroup.accountUnderGroup.accountUnderGroup.accountUnderGroup.account.accountLedger' => $ledgerFilters,
+                           'accountGroup.accountUnderGroup.accountUnderGroup.accountUnderGroup.accountUnderGroup.accountUnderGroup.account.accountLedger' => $ledgerFilters,
                            'accountWithHead.accountLedger' => $ledgerFilters,
                            'accountGroup' => fn($q) => $q->where('heading_type', 'head'),
                         ])
@@ -126,6 +130,9 @@ class BalanceSheetController extends Controller{
                         ->where('delete', '0')
                         ->where('company_id', '0')
                         ->get();
+                     //    echo "<pre>";
+                     // print_r($assets->toArray());
+                     // echo "</pre>";
                         
       // $assets = AccountHeading::with(['accountGroup.account.accountLedger' => function($q)use($to_date){
       //                               $q->where(function($q1) use ($to_date){
@@ -242,6 +249,16 @@ class BalanceSheetController extends Controller{
                                        $q2->orWhere('entry_type','-1');
                                     });
                                  }
+                                 ])->with(['accountGroup.accountUnderGroup.accountUnderGroup.account.accountLedger' => function($q)use($to_date){
+                                    $q->where(function($q1) use ($to_date){
+                                       $q1->where('company_id', '=', Session::get('user_company_id'));
+                                       $q1->where('status', '1');
+                                       $q1->where('delete_status', '0');
+                                    })->where(function($q2) use ($to_date){
+                                       $q2->whereRaw("STR_TO_DATE(txn_date,'%Y-%m-%d')<=STR_TO_DATE('".$to_date."','%Y-%m-%d')");
+                                       $q2->orWhere('entry_type','-1');
+                                    });
+                                 }
                                  ])->with(['accountWithHead.accountLedger' => function($q4)use($to_date){
                                     $q4->where(function($q5) use ($to_date){
                                        $q5->where('company_id', '=', Session::get('user_company_id'));
@@ -303,6 +320,46 @@ class BalanceSheetController extends Controller{
                                        $q2->orWhere('entry_type','-1');
                                     });
                                  }
+                                 ])->with(['accountGroup.accountUnderGroup.accountUnderGroup.account.accountLedger' => function($q)use($to_date){
+                                    $q->where(function($q1) use ($to_date){
+                                       $q1->where('company_id', '=', Session::get('user_company_id'));
+                                       $q1->where('status', '1');
+                                       $q1->where('delete_status', '0');
+                                    })->where(function($q2) use ($to_date){
+                                       $q2->whereRaw("STR_TO_DATE(txn_date,'%Y-%m-%d')<=STR_TO_DATE('".$to_date."','%Y-%m-%d')");
+                                       $q2->orWhere('entry_type','-1');
+                                    });
+                                 }
+                                 ])->with(['accountGroup.accountUnderGroup.accountUnderGroup.accountUnderGroup.account.accountLedger' => function($q)use($to_date){
+                                    $q->where(function($q1) use ($to_date){
+                                       $q1->where('company_id', '=', Session::get('user_company_id'));
+                                       $q1->where('status', '1');
+                                       $q1->where('delete_status', '0');
+                                    })->where(function($q2) use ($to_date){
+                                       $q2->whereRaw("STR_TO_DATE(txn_date,'%Y-%m-%d')<=STR_TO_DATE('".$to_date."','%Y-%m-%d')");
+                                       $q2->orWhere('entry_type','-1');
+                                    });
+                                 }
+                                 ])->with(['accountGroup.accountUnderGroup.accountUnderGroup.accountUnderGroup.accountUnderGroup.account.accountLedger' => function($q)use($to_date){
+                                    $q->where(function($q1) use ($to_date){
+                                       $q1->where('company_id', '=', Session::get('user_company_id'));
+                                       $q1->where('status', '1');
+                                       $q1->where('delete_status', '0');
+                                    })->where(function($q2) use ($to_date){
+                                       $q2->whereRaw("STR_TO_DATE(txn_date,'%Y-%m-%d')<=STR_TO_DATE('".$to_date."','%Y-%m-%d')");
+                                       $q2->orWhere('entry_type','-1');
+                                    });
+                                 }
+                                 ])->with(['accountGroup.accountUnderGroup.accountUnderGroup.accountUnderGroup.accountUnderGroup.accountUnderGroup.account.accountLedger' => function($q)use($to_date){
+                                    $q->where(function($q1) use ($to_date){
+                                       $q1->where('company_id', '=', Session::get('user_company_id'));
+                                       $q1->where('status', '1');
+                                       $q1->where('delete_status', '0');
+                                    })->where(function($q2) use ($to_date){
+                                       $q2->whereRaw("STR_TO_DATE(txn_date,'%Y-%m-%d')<=STR_TO_DATE('".$to_date."','%Y-%m-%d')");
+                                       $q2->orWhere('entry_type','-1');
+                                    });
+                                 }
                                  ])->with(['accountWithHead.accountLedger' => function($q4)use($to_date){
                                     $q4->where(function($q5) use ($to_date){
                                        $q5->where('company_id', '=', Session::get('user_company_id'));
@@ -324,7 +381,8 @@ class BalanceSheetController extends Controller{
                      ->where('company_id','0')
                      ->get();
                      // echo "<pre>";
-                     // print_r($assets->toArray());die;
+                     // print_r($assets->toArray());
+                     // echo "</pre>";
       
       $stock_in_hand = CommonHelper::ClosingStock($to_date);
       $stock_in_hand = round($stock_in_hand,2);
@@ -406,7 +464,7 @@ class BalanceSheetController extends Controller{
                                  ->select('id','name','stock_in_hand','heading_type')
                                  ->orderBy('name')
                                  ->get();
-      $undergroup = AccountGroups::with(['accountUnderGroup'=>function($q)use($to_date){
+            $undergroup = AccountGroups::with(['accountUnderGroup'=>function($q)use($to_date){
                                  $q->select('id','name','heading','heading_type');                                 
                                  $q->where('status','1');
                                  $q->where('delete','0');
@@ -431,11 +489,11 @@ class BalanceSheetController extends Controller{
                                           });
                                        }], 'credit');
                                  }]);
-                                 $q->with(['accountUnderGroup'=>function($q)use($to_date){
-                                    $q->select('id','name','heading','heading_type');                                 
-                                    $q->where('status','1');
-                                    $q->where('delete','0');
-                                    $q->with(['account'=>function($query)use($to_date){
+                                 $q->with(['accountUnderGroup'=>function($qa)use($to_date){
+                                    $qa->select('id','name','heading','heading_type');
+                                    $qa->where('status','1');
+                                    $qa->where('delete','0');
+                                    $qa->with(['account'=>function($query)use($to_date){
                                        $query->select('id','account_name','under_group');
                                        $query->withSum(['accountLedger'=>function($q1)use($to_date){
                                           $q1->where('company_id', '=', Session::get('user_company_id'));
@@ -456,8 +514,85 @@ class BalanceSheetController extends Controller{
                                              });
                                           }], 'credit');
                                     }]);
-                                 }
-                              ]);
+                                    $qa->with(['accountUnderGroup'=>function($qb)use($to_date){
+                                       $qb->select('id','name','heading','heading_type');
+                                       $qb->where('status','1');
+                                       $qb->where('delete','0');
+                                       $qb->with(['account'=>function($query)use($to_date){
+                                          $query->select('id','account_name','under_group');
+                                          $query->withSum(['accountLedger'=>function($q1)use($to_date){
+                                             $q1->where('company_id', '=', Session::get('user_company_id'));
+                                             $q1->where('status','1');
+                                             $q1->where('delete_status','0');
+                                             $q1->where(function($q2)use ($to_date){
+                                                $q2->whereRaw("STR_TO_DATE(txn_date,'%Y-%m-%d')<=STR_TO_DATE('".$to_date."','%Y-%m-%d')");
+                                                $q2->orWhere('entry_type','-1');
+                                             });
+                                          }], 'debit');
+                                             $query->withSum(['accountLedger'=>function($q1)use($to_date){
+                                                $q1->where('company_id', '=', Session::get('user_company_id'));
+                                                $q1->where('status','1');
+                                                $q1->where('delete_status','0');
+                                                $q1->where(function($q2)use ($to_date){
+                                                   $q2->whereRaw("STR_TO_DATE(txn_date,'%Y-%m-%d')<=STR_TO_DATE('".$to_date."','%Y-%m-%d')");
+                                                   $q2->orWhere('entry_type','-1');
+                                                });
+                                             }], 'credit');
+                                       }]);
+                                       $qb->with(['accountUnderGroup'=>function($qc)use($to_date){
+                                          $qc->select('id','name','heading','heading_type');
+                                          $qc->where('status','1');
+                                          $qc->where('delete','0');
+                                          $qc->with(['account'=>function($query)use($to_date){
+                                             $query->select('id','account_name','under_group');
+                                             $query->withSum(['accountLedger'=>function($q1)use($to_date){
+                                                $q1->where('company_id', '=', Session::get('user_company_id'));
+                                                $q1->where('status','1');
+                                                $q1->where('delete_status','0');
+                                                $q1->where(function($q2)use ($to_date){
+                                                   $q2->whereRaw("STR_TO_DATE(txn_date,'%Y-%m-%d')<=STR_TO_DATE('".$to_date."','%Y-%m-%d')");
+                                                   $q2->orWhere('entry_type','-1');
+                                                });
+                                             }], 'debit');
+                                                $query->withSum(['accountLedger'=>function($q1)use($to_date){
+                                                   $q1->where('company_id', '=', Session::get('user_company_id'));
+                                                   $q1->where('status','1');
+                                                   $q1->where('delete_status','0');
+                                                   $q1->where(function($q2)use ($to_date){
+                                                      $q2->whereRaw("STR_TO_DATE(txn_date,'%Y-%m-%d')<=STR_TO_DATE('".$to_date."','%Y-%m-%d')");
+                                                      $q2->orWhere('entry_type','-1');
+                                                   });
+                                                }], 'credit');
+                                          }]);
+                                          $qc->with(['accountUnderGroup'=>function($qd)use($to_date){
+                                             $qd->select('id','name','heading','heading_type');
+                                             $qd->where('status','1');
+                                             $qd->where('delete','0');
+                                             $qd->with(['account'=>function($query)use($to_date){
+                                                $query->select('id','account_name','under_group');
+                                                $query->withSum(['accountLedger'=>function($q1)use($to_date){
+                                                   $q1->where('company_id', '=', Session::get('user_company_id'));
+                                                   $q1->where('status','1');
+                                                   $q1->where('delete_status','0');
+                                                   $q1->where(function($q2)use ($to_date){
+                                                      $q2->whereRaw("STR_TO_DATE(txn_date,'%Y-%m-%d')<=STR_TO_DATE('".$to_date."','%Y-%m-%d')");
+                                                      $q2->orWhere('entry_type','-1');
+                                                   });
+                                                }], 'debit');
+                                                   $query->withSum(['accountLedger'=>function($q1)use($to_date){
+                                                      $q1->where('company_id', '=', Session::get('user_company_id'));
+                                                      $q1->where('status','1');
+                                                      $q1->where('delete_status','0');
+                                                      $q1->where(function($q2)use ($to_date){
+                                                         $q2->whereRaw("STR_TO_DATE(txn_date,'%Y-%m-%d')<=STR_TO_DATE('".$to_date."','%Y-%m-%d')");
+                                                         $q2->orWhere('entry_type','-1');
+                                                      });
+                                                   }], 'credit');
+                                             }]);
+                                          }]);
+                                       }]);
+                                    }]);
+                                 }]);
                               }
                            ])
                         ->whereIn('company_id',[Session::get('user_company_id'),'0'])
@@ -537,7 +672,9 @@ class BalanceSheetController extends Controller{
       }
       $stock_in_hand = CommonHelper::ClosingStock($to_date);
       $stock_in_hand = round($stock_in_hand,2);
-     
+   //   echo "<pre>";
+   //   print_r($undergroup->toArray());
+   //   echo "</pre>";
       return view('display/group_balance_by_head',["from_date"=>$from_date,"to_date"=>$to_date,"head"=>$head,"group"=>$group,"head_account"=>$head_account,"stock_in_hand"=>$stock_in_hand,"undergroup"=>$undergroup]);
    }
    public function accountBalanceByGroup(Request $request,$id,$from_date,$to_date,$type){
@@ -577,8 +714,7 @@ class BalanceSheetController extends Controller{
                               ->whereIn('accounts.company_id',[Session::get('user_company_id'),0])
                               ->orderBy('account_name')
                               ->get();
-      }else if($type=="group"){
-         
+      }else if($type=="group"){         
          $group = AccountGroups::select('name')
                                  ->where('id',$id)
                                  ->whereIn('company_id',[Session::get('user_company_id'),'0'])
@@ -612,6 +748,8 @@ class BalanceSheetController extends Controller{
                               ->whereIn('accounts.company_id',[Session::get('user_company_id'),0])
                               ->orderBy('account_name')
                               ->get();
+         //echo "<pre>";
+        
          //Inner Group
          $inner_group = AccountGroups::select('id','name as account_name')
                                        ->where('heading',$id)
@@ -619,10 +757,8 @@ class BalanceSheetController extends Controller{
                                        ->whereIn('company_id',[Session::get('user_company_id'),0])
                                        ->where('heading_type','group')
                                       ->get();
-           // if($value->id==65){
-            //    print_r($account_id);
-            //    die;  
-            // } 
+                                       // print_r($inner_group->toArray());
+                                       //  echo "</pre>";
          foreach ($inner_group as $key => $value) {
             $account_id = Accounts::where('under_group',$value->id)
                                     ->where('accounts.delete','0')
@@ -638,8 +774,39 @@ class BalanceSheetController extends Controller{
                                     ->where('accounts.status','1')
                                     ->whereIn('accounts.company_id',[Session::get('user_company_id'),0])
                                     ->pluck('id');
-            $account_id = $account_id->merge($account_id1);
 
+            $sub_group2 = AccountGroups::whereIn('heading',$sub_group)
+                                    ->where('heading_type',"group")
+                                    ->pluck('id');
+            $account_id2 = Accounts::whereIn('under_group',$sub_group2)
+                                    ->where('accounts.delete','0')
+                                    ->where('accounts.status','1')
+                                    ->whereIn('accounts.company_id',[Session::get('user_company_id'),0])
+                                    ->pluck('id');
+
+            $sub_group3 = AccountGroups::whereIn('heading',$sub_group2)
+                                    ->where('heading_type',"group")
+                                    ->pluck('id');
+            $account_id3 = Accounts::whereIn('under_group',$sub_group3)
+                                    ->where('accounts.delete','0')
+                                    ->where('accounts.status','1')
+                                    ->whereIn('accounts.company_id',[Session::get('user_company_id'),0])
+                                    ->pluck('id');
+
+            $sub_group4 = AccountGroups::whereIn('heading',$sub_group3)
+                                    ->where('heading_type',"group")
+                                    ->pluck('id');
+            $account_id4 = Accounts::whereIn('under_group',$sub_group4)
+                                    ->where('accounts.delete','0')
+                                    ->where('accounts.status','1')
+                                    ->whereIn('accounts.company_id',[Session::get('user_company_id'),0])
+                                    ->pluck('id');
+
+
+            $account_id = $account_id->merge($account_id1);
+            $account_id = $account_id->merge($account_id2);
+            $account_id = $account_id->merge($account_id3);
+            $account_id = $account_id->merge($account_id4);
             $debit_sum = AccountLedger::whereIn('account_id',$account_id)
                            //->where('financial_year',$financial_year)
                            ->where('delete_status','0')
@@ -662,17 +829,7 @@ class BalanceSheetController extends Controller{
                         })
                         ->whereIn('company_id',[Session::get('user_company_id'),0])
                      ->sum('credit');
-            // $leger = AccountLedger::whereIn('account_id',$account_id)
-            //                ->where('financial_year',$financial_year)
-            //                ->where('delete_status','0')
-            //                ->where('txn_date', '<=', $to_date)
-            //                ->where('delete_status','0')
-            //                ->orWhere(function($query)use($account_id) {
-            //                   $query->whereIn('account_id',$account_id)
-            //                   ->Where('entry_type','-1');
-            //                })
-            //                ->whereIn('company_id',[Session::get('user_company_id'),0])
-            //                ->get();                       
+                                 
             $inner_group[$key]->account_ledger_sum_debit = $debit_sum;         
             $inner_group[$key]->account_ledger_sum_credit = $credit_sum;                     
             $inner_group[$key]->type = 1;

@@ -85,6 +85,41 @@
                                           $credit = $credit + $a4['account_ledger_sum_credit'];
                                        }
                                     }
+                                    foreach($a3['account_under_group'] as $a5){                                       
+                                       foreach($a5['account'] as $a6){
+                                          if($a6['account_ledger_sum_debit']!=""){
+                                             $debit = $debit + $a6['account_ledger_sum_debit'];
+                                          }
+                                          if($a6['account_ledger_sum_credit']!=""){
+                                             $credit = $credit + $a6['account_ledger_sum_credit'];
+                                          }
+                                       }
+                                       foreach($a5['account_under_group'] as $a7){                                       
+                                          foreach($a7['account'] as $a8){
+                                             if($a8['account_ledger_sum_debit']!=""){
+                                                $debit = $debit + $a8['account_ledger_sum_debit'];
+                                             }
+                                             if($a8['account_ledger_sum_credit']!=""){
+                                                $credit = $credit + $a8['account_ledger_sum_credit'];
+                                             }
+                                          }
+                                          foreach($a7['account_under_group'] as $a9){                                       
+                                             foreach($a9['account'] as $a10){
+                                                if($a10['account_ledger_sum_debit']!=""){
+                                                   $debit = $debit + $a10['account_ledger_sum_debit'];
+                                                }
+                                                if($a10['account_ledger_sum_credit']!=""){
+                                                   $credit = $credit + $a10['account_ledger_sum_credit'];
+                                                }
+                                             }
+
+                                             
+                                          }
+                                          
+                                       }
+                                       
+                                    }
+
                                  }
                               }                                 
                            }

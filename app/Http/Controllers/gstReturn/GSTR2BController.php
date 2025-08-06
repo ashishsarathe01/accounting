@@ -12,6 +12,7 @@ use App\Models\RejectedGstr2b;
 use App\Models\SalesReturn;
 use App\Models\PurchaseReturn;
 use App\Models\Purchase;
+use App\Models\Journal;
 use Session;
 use DB;
 use Carbon\Carbon;
@@ -239,10 +240,43 @@ class GSTR2BController extends Controller
                     $supplier_amount[$ctin] = 0;
                 }
                 $supplier_amount[$ctin] = $supplier_amount[$ctin]- $rejected_invoice_debit_note + $rejected_credit_note;
+                //Book Value Calculation
+                $purchase_book_data = Purchase::select('total')
+                                        ->where('billing_gst',$ctin)
+                                        ->where('company_id',Session::get('user_company_id'))
+                                        ->where('merchant_gst',$request->gstin)
+                                        ->where('date', 'like', $request->month.'%')
+                                        ->where('status','1')
+                                        ->where('delete','0')
+                                        ->sum('total');
+                $journal_book_data = Journal::select('total_amount')
+                                        ->where('vendor_gstin',$ctin)
+                                        ->where('company_id',Session::get('user_company_id'))
+                                        ->where('merchant_gst',$request->gstin)
+                                        ->where('claim_gst_status','YES')
+                                        ->where('date', 'like', $request->month.'%')
+                                        ->where('status','1')
+                                        ->where('delete','0')
+                                        ->sum('total_amount');
+                $sale_return_book_data = SalesReturn::where('gstr2b_invoice_id','!=','')
+                                        ->where('company_id',Session::get('user_company_id'))
+                                        ->where('merchant_gst',$request->gstin)
+                                        ->where('billing_gst',$ctin)
+                                        ->select('total')
+                                        ->sum('total');
+                $purchase_return_data = PurchaseReturn::where('gstr2b_invoice_id','!=','')
+                                        ->where('company_id',Session::get('user_company_id'))
+                                        ->where('merchant_gst',$request->gstin)
+                                        ->where('billing_gst',$ctin)
+                                        ->select('total')
+                                        ->sum('total');
+                
+                $book_value = $purchase_book_data + $journal_book_data + $sale_return_book_data - $purchase_return_data;
                 $suppliers[] = (object)[
                     'ctin' => $ctin,
                     'trdnm' => $trdnm,
                     'amount' => isset($supplier_amount[$ctin]) ? $supplier_amount[$ctin] : 0
+                    ,'book_value' => $book_value,
                 ];
             }
             // Sort by trdnm (case-insensitive)
@@ -295,6 +329,19 @@ class GSTR2BController extends Controller
                     $book_value = 0;
                     if($book_data){
                         $book_value = $book_data->total;
+                    }else{
+                        $journal_book_data = Journal::select('total_amount')
+                                            ->where('vendor_gstin',$request->ctin)
+                                            ->where('company_id',Session::get('user_company_id'))
+                                            ->where('merchant_gst',$request->gstin)
+                                            ->where('claim_gst_status','YES')
+                                            ->where('invoice_no',$invoice->inum)
+                                            ->where('status','1')
+                                            ->where('delete','0')
+                                            ->first();
+                        if($journal_book_data){
+                            $book_value = $journal_book_data->total_amount;
+                        }
                     }
                     $total_val += $invoice->val;
                     $total_txval += $invoice->txval;
@@ -922,6 +969,8 @@ class GSTR2BController extends Controller
             ->where('merchant_gst', $request->gstin)
             ->where('billing_gst', $request->ctin)
             ->where('voucher_type','PURCHASE')
+            ->where('delete','0')
+            ->where('status','1')
             ->whereNull('gstr2b_invoice_id')
             ->orWhere('gstr2b_invoice_id',$request->invoice_no)
             ->orderBy('id', 'desc')
@@ -930,6 +979,8 @@ class GSTR2BController extends Controller
             ->where('company_id', Session::get('user_company_id'))
             ->where('merchant_gst', $request->gstin)
             ->where('billing_gst', $request->ctin)
+            ->where('delete','0')
+            ->where('status','1')
             ->where('voucher_type','PURCHASE')
             ->whereNull('gstr2b_invoice_id')
             ->orWhere('gstr2b_invoice_id',$request->invoice_no)

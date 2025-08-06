@@ -70,6 +70,7 @@ class AccountsController extends Controller{
                      ->whereIn('company_id', [$com_id,0])
                      ->orderBy('name')
                      ->get();
+      
       $state_list = State::all();
       return view('account/addAccount')->with('state_list', $state_list)->with('accountgroup', $accountgroup);
    }
@@ -206,6 +207,12 @@ class AccountsController extends Controller{
                      ->whereIn('company_id', [$com_id,0])
                      ->orderBy('name')
                      ->get();
+                     foreach($accountgroup as $key => $val){
+         if($val->primary=='No' && $val->heading_type=='group'){
+            $super_parent_id = $this->getSuperParentGroupId($val->heading);
+            $accountgroup[$key]->super_parent_id = $super_parent_id;
+         }
+      }
       $state_list = State::all();  
       $other_address = AccountOtherAddress::where('account_id',$id)
          ->where('status','1')
@@ -390,7 +397,7 @@ class AccountsController extends Controller{
    public function addAccount(){
       Gate::authorize('view-module', 73);
       $com_id = Session::get('user_company_id');
-      $accountgroup = AccountGroups::where('delete', '=', '0')
+      $accountgroup = AccountGroups::select('id','name','primary','heading','heading_type')->where('delete', '=', '0')
                      ->whereIn('company_id', [$com_id,0])
                      ->orderBy('name')
                      ->get();
@@ -398,6 +405,17 @@ class AccountsController extends Controller{
                      ->whereIn('company_id', [$com_id,0])
                      ->orderBy('name')
                      ->get();
+      foreach($accountgroup as $key => $val){
+         if($val->primary=='No' && $val->heading_type=='group'){
+            $super_parent_id = $this->getSuperParentGroupId($val->heading);
+            $accountgroup[$key]->super_parent_id = $super_parent_id;
+         }
+      }
+                     
+      
+      // echo "<pre>";
+      // print_r($accountgroup->toArray());
+      // echo "</pre>";
       $state_list = State::orderBy('state_code')->get();
       return view('account/add_account')->with('state_list', $state_list)->with('accountgroup', $accountgroup)->with('accountheading', $accountheading);
    }
@@ -561,5 +579,16 @@ class AccountsController extends Controller{
          $return[$val['error_title']][] = $val;
       }
       return view('account/account_import')->with('upload_log',1)->with('total_count',$total_invoice_count)->with('success_count',$success_invoice_count)->with('failed_count',$failed_invoice_count)->with('error_message',$return)->with('incomplete_status_count',$incomplete_status_count);
+   }
+   function getSuperParentGroupId($group_id) {      
+      $group = AccountGroups::where('id', $group_id)->where('delete', '0')->first();
+      
+      if (!$group) {
+         return null; // group not found
+      }
+      if (($group->primary == 'No' && $group->heading_type == 'head') || $group->primary == 'Yes') {
+         return $group->id; // reached top-level group
+      }
+      return $this->getSuperParentGroupId($group->heading);
    }
 }

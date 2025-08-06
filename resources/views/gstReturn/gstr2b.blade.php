@@ -90,6 +90,7 @@
                      <tr>
                         <th>Account Name</th>
                         <th style='text-align:right'>Amount</th>
+                        <th style='text-align:right'>Book Amount</th>
                      </tr>
                   </thead>
                   <tbody style="font-size: 15px;">
@@ -275,17 +276,28 @@
                      getGSTR2BData(month,gstin);
                   }else if(obj.message=="GSTR2B"){
                      $(".gst_head").html('GSTR2B');
-                     let html = "";let total_amount = 0;
+                     let html = "";let total_amount = 0;let total_book_amount = 0;
                      obj.data.forEach(element => {
                         let baseUrl = "{{ url('/gstr2b-all-info') }}";
                         let fullUrl = `${baseUrl}/${month}/${gstin}/${element.ctin}`;
-                        html+="<tr style='cursor:pointer'><td><a href='"+fullUrl+"'>"+element.trdnm+" ("+element.ctin+")</a></td><td style='text-align:right'><a href='"+fullUrl+"'>"+Number(element.amount).toLocaleString('en-IN', {
+                        let color = '';
+                        if(element.amount!=element.book_value){
+                           color = 'style="color:red;"';
+                        }
+                        html+="<tr style='cursor:pointer;'><td><a "+color+" href='"+fullUrl+"'>"+element.trdnm+" ("+element.ctin+")</a></td><td style='text-align:right'><a "+color+" href='"+fullUrl+"'>"+Number(element.amount).toLocaleString('en-IN', {
+                                       minimumFractionDigits: 2,
+                                       maximumFractionDigits: 2
+                                       })+"</a></td><td style='text-align:right'><a "+color+" href='"+fullUrl+"'>"+Number(element.book_value).toLocaleString('en-IN', {
                                        minimumFractionDigits: 2,
                                        maximumFractionDigits: 2
                                        })+"</a></td></tr>";
                         total_amount += parseFloat(element.amount);
+                        total_book_amount += parseFloat(element.book_value);
                      });
                      html+="<tr><th>Total</th><th style='text-align:right'>"+Number(total_amount).toLocaleString('en-IN', {
+                           minimumFractionDigits: 2,
+                           maximumFractionDigits: 2
+                           })+"</th><th style='text-align:right'>"+Number(total_book_amount).toLocaleString('en-IN', {
                            minimumFractionDigits: 2,
                            maximumFractionDigits: 2
                            })+"</th></tr>";

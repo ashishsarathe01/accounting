@@ -353,4 +353,6 @@ Route::get('debit-note-import-view', [PurchaseReturnController::class, 'debitNot
 Route::post('debit-note-import-process', [PurchaseReturnController::class, 'debitNoteImportProcess'])->name('debit-note-import-process');
 Route::get('credit-note-import-view', [SalesReturnController::class, 'creditNoteImportView'])->name('credit-note-import-view');
 Route::post('credit-note-import-process', [SalesReturnController::class, 'creditNoteImportProcess'])->name('credit-note-import-process');
+Route::get('import-stock-transfer-view', [StockTransferController::class, 'importStockTransferView'])->name('import-stock-transfer-view');
+Route::post('import-stock-transfer-process', [StockTransferController::class, 'importStockTransferProcess'])->name('import-stock-transfer-process');
 });

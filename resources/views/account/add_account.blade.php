@@ -50,26 +50,26 @@
                         <option value="">SELECT GROUP</option>
                         @foreach($accountgroup as $value)
                            @php $under_debtor_status = 0;$under_creditors_status = 0; $under_dutytaxes_status = 0;$bank_account_status = 0;$capital_account_status = 0;$loan_status = 0;@endphp
-                           @if($value->heading==11 && $value->heading_type=='group')
+                           @if($value->super_parent_id==11 && $value->heading_type=='group')
                               @php  $under_debtor_status = 1; @endphp
                            @endif
 
-                           @if($value->heading==3 && $value->heading_type=='group')
+                           @if($value->super_parent_id==3 && $value->heading_type=='group')
                               @php  $under_creditors_status = 1; @endphp
                            @endif
 
-                           @if($value->heading==1 && $value->heading_type=='group')
+                           @if($value->super_parent_id==1 && $value->heading_type=='group')
                               @php  $under_dutytaxes_status = 1; @endphp
                            @endif
 
-                           @if($value->heading==7 && $value->heading_type=='group')
+                           @if($value->super_parent_id==7 && $value->heading_type=='group')
                               @php  $bank_account_status = 1; @endphp
                            @endif
 
-                           @if($value->heading==18 && $value->heading_type=='group')
+                           @if($value->super_parent_id==18 && $value->heading_type=='group')
                               @php  $capital_account_status = 1; @endphp
                            @endif
-                           @if(($value->heading==5 || $value->heading==6) && $value->heading_type=='group')
+                           @if(($value->super_parent_id==5 || $value->super_parent_id==6) && $value->heading_type=='group')
                               @php  $loan_status = 1; @endphp
                            @endif
                            

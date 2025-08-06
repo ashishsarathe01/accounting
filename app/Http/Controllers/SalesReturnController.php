@@ -3382,6 +3382,53 @@ class SalesReturnController extends Controller
       $company_data = Companies::where('id', Session::get('user_company_id'))->first();
       $series_arr = [];$material_center_arr = [];$gst_no_arr = [];$all_error_arr = [];$error_arr = [];$item_arr = [];$data_arr = [];$voucher_arr = [];
       $already_exists_error_arr = [];$already_exists_voucher_arr = [];
+      // if($duplicate_voucher_status==0){
+      //    $file = $request->file('csv_file');  
+      //    $filePath = $file->getRealPath();      
+      //    $final_result = array();
+      //    if(($handle = fopen($filePath, 'r')) !== false) {
+      //       $header = fgetcsv($handle, 10000, ",");
+      //       $fp = file($filePath, FILE_SKIP_EMPTY_LINES);
+      //       $index = 1;
+      //       $series_no = "";
+      //       while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+      //          $data = array_map('trim', $data);
+      //          if($data[0]!="" && $data[2]!=""){
+      //             $series_no = $data[7];
+      //             $voucher_no = $data[3];
+      //             $account = $data[1];
+      //             $account = Accounts::select('id')
+      //                                  ->where('account_name',trim($account))
+      //                                  ->where('company_id',trim(Session::get('user_company_id')))
+      //                                  ->first();
+      //             if($account){
+      //                $check_invoice = PurchaseReturn::select('id')
+      //                         ->where('company_id',Session::get('user_company_id'))
+      //                         ->where('sr_prefix',$voucher_no)
+      //                         ->where('series_no',$series_no)
+      //                         ->where('financial_year','=',$financial_year)
+      //                         ->where('delete','0')
+      //                         ->first();
+      //                if($check_invoice){
+      //                   array_push($already_exists_error_arr, 'Voucher '.$voucher_no.' already exists - Invoice No. '.$voucher_no);
+      //                }
+      //                if(in_array($account->id."_".$voucher_no, $already_exists_voucher_arr)){
+      //                   array_push($already_exists_error_arr, 'Voucher '.$voucher_no.' already exists - Invoice No. '.$voucher_no);
+      //                }
+      //                array_push($already_exists_voucher_arr,$account->id."_".$voucher_no);
+      //             }                  
+      //          }
+      //       }
+      //    }
+      //    if(count($already_exists_error_arr)>0){
+      //       $res = array(
+      //          'status' => false,
+      //          'data' => $already_exists_error_arr,
+      //          "message"=>"Already Exists."
+      //       );
+      //       return json_encode($res);
+      //    }
+      // }
       if($company_data->gst_config_type == "single_gst"){
          $gst_data = DB::table('gst_settings')
                            ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])

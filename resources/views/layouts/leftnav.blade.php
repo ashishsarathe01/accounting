@@ -278,6 +278,9 @@
                                  <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4 clickable-row-blue">
                                     <a class=" text-decoration-none d-flex text-blue" href="{{ route('credit-note-import-view') }}">Import Credit Note</a>
                                  </li>
+                                 <li class="font-14  fw-500 m-0 py-12 px-2  bg-white border-radius-4 clickable-row-blue">
+                                    <a class=" text-decoration-none d-flex text-blue" href="{{ route('import-stock-transfer-view') }}">Import Stock Transfer</a>
+                                 </li>
                               </ul>
                            </div>
                         </div>

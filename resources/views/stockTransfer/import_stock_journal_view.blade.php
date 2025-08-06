@@ -55,48 +55,46 @@
       <div class="row vh-100">
          @include('layouts.leftnav')
          <div class="col-md-12 ml-sm-auto  col-lg-9 px-md-4 bg-mint">
-            @if (session('error'))
-               <div class="alert alert-danger" role="alert"> {{session('error')}}</div>
-            @endif
+             @if (session('error'))
+             <div class="alert alert-danger" role="alert"> {{session('error')}}
+             </div>
+             @endif
             @if (session('success'))
                <div class="alert alert-success" role="alert">
                   {{ session('success') }}
                </div>
             @endif
-            <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">GSTR2A</h5>
-            <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm">
+            
+            <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Import Stock Transfer</h5>
+            <!-- <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('sale-import-process') }}" multipart enctype="multipart/form-data"> -->
+            <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" id="upload_form" multipart enctype="multipart/form-data">
+               @csrf
                <div class="row">
-                  <div class="mb-3 col-md-3">
-                     <label for="month" class="form-label font-14 font-heading">Month</label>
-                     <input type="month" class="form-control" name="month" id="month" required value="{{date('Y-m', strtotime('-1 month'))}}"/>
+                  <div class="mb-5 col-md-5">
+                     <label for="name" class="form-label font-14 font-heading">Upload CSV File *</label> <strong>(<a href="{{ URL::asset('public/csv-template/MA - StockTransfer.csv')}}">Download Template</a>)</strong>
+                     <span style="display: inline-flex">
+                        
+                        <input type="file" class="form-control" id="csv_file" name="csv_file" required style="height: 30%;" accept=".csv">
+                     </span>
+                     <ul style="color: red;">
+                       @error('csv_file'){{$message}}@enderror                        
+                     </ul>
                   </div>
-                  <div class="mb-3 col-md-3">
-                     <label for="gstin" class="form-label font-14 font-heading">GSTIN</label>
-                     <select class="form-select" id="gstin">
-                        @foreach ($gst as $value)
-                           <option value="{{$value->gst_no}}">{{$value->gst_no}}</option>
-                        @endforeach
-                     </select>
-                  </div>
-                  <div class="mb-3 col-md-3">
-                     <button type="button" class="btn btn-xs-primary submit_btn" style="margin-top: 20px;">SUBMIT</button>
+               </div> 
+               <div class=" d-flex">                  
+                  <div class="ms-auto">
+                     <input type="submit" value="SAVE" class="btn btn-xs-primary" id="saveBtn">
+                     <a href="{{ route('sale.index') }}" class="btn  btn-black ">QUIT</a>
                   </div>
                </div>
-            </form>
-            <div id="gst_div" style="display: none">
-               <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm gst_head"></h5>
-               <table class="table table-ordered bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm gst_table">
-                  <thead>
-                     <tr>
-                        <th>Account Name</th>
-                        <th style="text-align: right">Amount</th>
-                     </tr>
-                  </thead>
-                  <tbody style="font-size: 15px;">
-                     
-                  </tbody>
-               </table>
-            </div>
+            </form>            
+               <p style="font-size:20px;text-align:center;" class="res_log total_voucher"></p>
+               <p style="font-size:20px;text-align:center;color:green" class="res_log insert_voucher"></p>
+               <p style="font-size:20px;text-align:center;color:red" class="res_log failed_voucher"></p>
+               <p style="font-size:20px;text-align:center;color:red" class="res_log error_msg">
+
+               </p>
+                              
             
          </div>
          <div class="col-lg-1 d-none d-lg-flex justify-content-center px-1">
@@ -192,129 +190,97 @@
       </div>
    </section>
 </div>
-
-
-<div class="modal fade" id="otpModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-   <div class="modal-dialog modal-dialog-centered">
+<div class="modal fade" id="voucherModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+   <div class="modal-dialog  modal-dialog-centered modal-lg">
       <div class="modal-content p-4 border-divider border-radius-8">
          <div class="modal-header border-0 p-0">
-            <p><h5 class="modal-title">OTP Verification</h5></p>
-            <button type="button" class="btn-close close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <h4 class="modal-title">Duplicate Voucher List (<span id="duplicate_count"></span>)</h4>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div><br><br>
+         <div class="modal-body text-center p-0">
+         <div class="modal-footer border-0 mx-auto p-0" style="display: block;">            
+            <button type="button" class="btn btn-danger upload_duplicate_voucher_no">Ignore Duplicate Voucher</button>
+            <button type="button" class="ms-3 btn btn-info upload_duplicate_voucher_yes">Override Duplicate Voucher</button>
          </div>
-         <div class="modal-body">
-            <div class="form-group">
-               <input type="text" class="form-control" id="otp" placeholder="Enter OTP">
-               <input type="hidden" id="fgstin">
+         <br><br>
+            <div class="row duplicate_voucher_list">
+               
             </div>
          </div>
-         <div class="modal-footer border-0 mx-auto p-0">
-            <button type="button" class="btn btn-border-body close" data-bs-dismiss="modal">CANCEL</button>
-            <button type="button" class="ms-3 btn btn-red verify_otp">SUBMIT</button>
-         </div>
+         
       </div>
    </div>
 </div>
 </body>
 @include('layouts.footer')
-<script>
-   var refresh = 0;
-   $(document).ready(function(){
-      $(".submit_btn").click(function(){
-         refresh = 0;
-         let month = $("#month").val();
-         let gstin = $("#gstin").val();
-         getGstData(month,gstin);
-      });
-      $(".verify_otp").click(function(){
-         let otp = $("#otp").val();
-         let fgstin = $("#fgstin").val();
-         let month = $("#month").val();
-         let gstin = $("#gstin").val();
-         if(otp==""){
-            alert("Please Enter Otp");
-            return;
-         }
-         $.ajax({
-            url : "{{route('verify-gst-token-otp')}}",
-            method : 'post',
-            data : {
-               _token : '{{ csrf_token() }}',
-               otp : otp,
-               gstin : fgstin
-            },
-            success : function(res){
-               if(res!=""){
-                  let obj = JSON.parse(res);
-                  if(obj.status==true){
-                     getGstData(month,gstin)
-                  }else{
-                     alert(obj.message);
-                  }
-               }else{
-                  alert("Something Went Wrong.Please Try Again.");
-               }
-            }
-         });
-      });
-   });
-   function getGstData(month,gstin){
-      $.ajax({
-         url : "{{route('gstr2a-detail')}}",
-         method : 'post',
-         data : {
-            _token : '{{ csrf_token() }}',
-            month : month,
-            gstin : gstin,
-            refresh : refresh
-         },
-         success : function(res){
-            if(res!=""){
-               let obj = JSON.parse(res);
-               if(obj.status==true){
-                  if(obj.message=="TOKEN-OTP"){
-                     $("#fgstin").val(gstin);
-                     $("#otpModal").modal('toggle');
-                  }else if(obj.message=="SUCCESS"){
-                     //alert("OTP Verified Successfully");
-                     if(refresh==1){
-                        refresh = 0;
-                     }
-                     getGstData(month,gstin);
-                  }else if(obj.message=="GSTR2A"){
-                     $(".gst_head").html('GSTR2A - Last Created Date : '+obj.last_created_date+' - <button type="button" class="btn btn-xs-primary new_data_btn">Refresh</button>');
-                     let html = "";let total_amount = 0;
-                     for (let key in obj.data) {
-                        let baseUrl = "{{ url('/gstr2a-all-info') }}";
-                        let fullUrl = `${baseUrl}/${month}/${gstin}/${key}`;
-                        html+="<tr><td><a href='"+fullUrl+"'>"+obj.data[key].name+" ("+key+")</a></td><td style='text-align:right'><a href='"+fullUrl+"'>"+Number(obj.data[key].amount).toLocaleString('en-IN', {
-                                       minimumFractionDigits: 2,
-                                       maximumFractionDigits: 2
-                                       })+"</a></td></tr>";
-                        total_amount += parseFloat(obj.data[key].amount);
-                     }
-                     html+="<tr><th>Total</th><th style='text-align:right'>"+Number(total_amount).toLocaleString('en-IN', {
-                           minimumFractionDigits: 2,
-                           maximumFractionDigits: 2
-                           })+"</th></tr>";
-                     $(".gst_table tbody").html(html);
-                     $("#gst_div").show();
-                  }
-               }else{
-                  alert(obj.message);
-               }
-            }else{
-               alert("Something Went Wrong.Please Try Again.");
-            }
-         }
-      });
-   }
-   $(document).on('click','.new_data_btn',function(){
-      if(confirm("Do you want to refresh data?")==true){
-         let month = $("#month").val();
-         let gstin = $("#gstin").val();
-         refresh = 1;
-         getGstData(month,gstin);
+<script type="text/javascript">
+   
+   var duplicate_voucher_status = 0;
+   $('form#upload_form').on('submit', function(e){
+      e.preventDefault();
+      var uploadFile =  $('#csv_file');
+      var ext = $("input#csv_file").val().split(".").pop().toLowerCase();
+      var file = $('input[name="csv_file"]').val();
+      if($.inArray(ext, ["csv"]) === -1) {
+         alert("Please upload a .csv file!");
+         return false;
       }
+      var csv = uploadFile[0].files;
+      var formData = new FormData($(this)[0]);
+      formData.append('uploaded_file', $("#csv_file")[0].files[0]);
+      formData.append('lastModifed', csv[0].lastModified);
+      formData.append('fileName', csv[0].name);
+      formData.append('duplicate_voucher_status',duplicate_voucher_status);
+      $("#cover-spin").show();
+      $.ajax({
+         url: '{{ URL::route("import-stock-transfer-process") }}',
+         type: 'POST',
+         data: formData,
+         async: true,
+         cache: false,
+         contentType: false,
+         processData: false,
+         success: function (returndata) {             
+            let obj = JSON.parse(returndata);
+            if(obj.status==false){
+               if(obj.message=="Already Exists."){
+                  let list = "";
+                  $("#duplicate_count").html(obj.data.length);
+                  obj.data.forEach(function(e){
+                     list+= "<p>"+e+"</p>";
+                  });                  
+                  $(".duplicate_voucher_list").html(list);
+                  $("#voucherModal").modal('toggle');
+               }else{
+
+               }
+            }else if(obj.status==true){
+               duplicate_voucher_status = 0;
+               $('#csv_file').val('');
+               $(".total_voucher").html("Total Voucher : "+obj.data.total_count);
+               $(".insert_voucher").html("Insert Voucher : "+obj.data.success_count);
+               $(".failed_voucher").html("Failed Voucher : "+obj.data.failed_count);
+               let err = "";
+               obj.data.error_message.forEach(function(e){
+                  err+='<p>'+e[0]+'</p>';
+               });
+               $(".error_msg").html(err);
+            }
+            $("#cover-spin").hide();
+         }
+      });
    });
-</script>
+
+   $(".upload_duplicate_voucher_no").click(function(){
+      duplicate_voucher_status = 1; //Not Override Duplicate Voucher
+      $("#voucherModal").modal('toggle');
+      $('#upload_form').submit();      
+   });
+   $(".upload_duplicate_voucher_yes").click(function(){
+      
+      duplicate_voucher_status = 2; //Override Duplicate Voucher
+      $("#voucherModal").modal('toggle');
+      $('#upload_form').submit();      
+   });
+ </script>
 @endsection
