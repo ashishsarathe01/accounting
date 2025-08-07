@@ -346,13 +346,8 @@ Route::get('/report/hsn', [gstR1Controller::class, 'hsnSummary'])->name('hsnSumm
 Route::get('/document-summary', [gstR1Controller::class, 'documentIssuedSummary'])->name('docIssued');
 Route::get('/gstr1/view', [GstR1Controller::class, 'showView'])->name('gstr1.view');
 Route::post('/gstr1-detail', [GSTR1Controller::class, 'gstr1Detail'])->name('gstr1-detail');
-Route::get('/gstr3b/view', [GstR3BController::class, 'index'])->name('gstr3B.view');
-Route::get('/settings', [SettingsController::class, 'index'])->name('viewSettings');
-Route::post('/gstr1/send-to-gstmaster', [Gstr1Controller::class, 'sendGstr1ToGSTMaster'])->name('gstr1.send');
-Route::get('debit-note-import-view', [PurchaseReturnController::class, 'debitNoteImportView'])->name('debit-note-import-view');
-Route::post('debit-note-import-process', [PurchaseReturnController::class, 'debitNoteImportProcess'])->name('debit-note-import-process');
-Route::get('credit-note-import-view', [SalesReturnController::class, 'creditNoteImportView'])->name('credit-note-import-view');
-Route::post('credit-note-import-process', [SalesReturnController::class, 'creditNoteImportProcess'])->name('credit-note-import-process');
-Route::get('import-stock-transfer-view', [StockTransferController::class, 'importStockTransferView'])->name('import-stock-transfer-view');
-Route::post('import-stock-transfer-process', [StockTransferController::class, 'importStockTransferProcess'])->name('import-stock-transfer-process');
+ Route::get('/gstr3b/view', [GstR3BController::class, 'index'])->name('gstr3B.view');
+ Route::get('/settings', [SettingsController::class, 'index'])->name('viewSettings');
+ Route::post('/gstr1/send-to-gstmaster', [Gstr1Controller::class, 'sendGstr1ToGSTMaster'])->name('gstr1.send');
+
 });

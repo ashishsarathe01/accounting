@@ -493,6 +493,7 @@ class PaymentController extends Controller
             $index = 1;
             $series_no = "";
             while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+                $data = array_map('trim', $data);
                if($data[0]!="" && $data[1]!="" && $data[2]!=""){                  
                   $series = $data[1];
                   $bill_no = $data[2];
@@ -558,6 +559,7 @@ class PaymentController extends Controller
          $success_row = 0;
          $index = 1;
          while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+             $data = array_map('trim', $data);
             if($data[0]=="" && $data[1]=="" && $data[2]=="" && $data[3]=="" && $data[4]=="" && $data[5]=="" && $data[6]==""){
                $index++;
                continue;                  

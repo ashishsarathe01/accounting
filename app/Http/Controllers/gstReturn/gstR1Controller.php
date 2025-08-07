@@ -1549,7 +1549,6 @@ public function sendGstr1ToGSTMaster(Request $request){
         }
 
 
-
         //for b2clarge 
        
                  
@@ -2227,7 +2226,7 @@ public function sendGstr1ToGSTMaster(Request $request){
         'docs' => mapSummaryToDocs($receiptsDocumentSummary)
     ];
     // Add other doc_num (2, 3, 8–12) if applicable as empty or as needed
-    $gstr1_requset = array(
+    $gstr1_request = array(
         "gstin"=>$merchant_gst,
         "fp"=>date('mY', strtotime($from_date)),
         "gt"=>600096,
@@ -2325,7 +2324,7 @@ public function sendGstr1ToGSTMaster(Request $request){
         CURLOPT_FOLLOWLOCATION => true,
         CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
         CURLOPT_CUSTOMREQUEST => 'PUT',
-        CURLOPT_POSTFIELDS =>json_encode($gstr1_requset),
+        CURLOPT_POSTFIELDS =>json_encode($gstr1_request),
         CURLOPT_HTTPHEADER => array(
             'gstin:'.$merchant_gst,
             'ret_period:'.$ret_period,

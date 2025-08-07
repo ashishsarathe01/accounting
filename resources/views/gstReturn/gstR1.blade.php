@@ -637,8 +637,8 @@
                                                                         </div>
                                                                     </div>
                                                                 </div>
+                                                            </div>
                                                         </div>
-                                                     </div>
 
                                                         <!-- Toggle buttons -->
                                                         <div class="bg-white py-2 px-3 border mb-3">
@@ -675,6 +675,15 @@
                                                                 @endforeach
                                                             </div>
                                                         </div>
+
+                                                         <form method="POST" action="{{ route('gstr1.send') }}">
+                                                                @csrf
+                                                                <input type="hidden" name="merchant_gst" value="{{ $merchant_gst }}">
+                                                                <input type="hidden" name="company_id" value="{{ $company_id }}">
+                                                                <input type="hidden" name="from_date" value="{{ $from_date }}">
+                                                                <input type="hidden" name="to_date" value="{{ $to_date }}">
+                                                                <button class="btn btn-primary align-left" type="submit">Send to GST Portal</button>
+                                                            </form>
                                                     </div>
 
                                                     <!-- view third -->
