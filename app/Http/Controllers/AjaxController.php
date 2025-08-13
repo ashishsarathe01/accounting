@@ -989,4 +989,26 @@ class AjaxController extends Controller
          }
       }
    }
+   public function checkDebitCreditNoteVoucherno(Request $request){
+      $voucher_no = $request->voucher_no;
+      $status = 0;
+      $sale_return = SalesReturn::select('id')->where('sr_prefix',$voucher_no)
+                              ->where('financial_year',Session::get('default_fy'))
+                              ->where('company_id',Session::get('user_company_id'))
+                              ->where('delete','0')
+                              ->first();      
+      $purchase_return = PurchaseReturn::select('id')->where('sr_prefix',$voucher_no)
+                              ->where('financial_year',Session::get('default_fy'))
+                              ->where('company_id',Session::get('user_company_id'))
+                              ->where('delete','0')
+                              ->first();
+      if($sale_return || $purchase_return){
+         $status = 1;
+      }
+      $response = array(
+            'status' => $status,
+      );
+      return json_encode($response);
+   }
+   
 }

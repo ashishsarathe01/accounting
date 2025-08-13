@@ -541,7 +541,7 @@
                         @if(count($without_gst)>0)
                            @foreach($without_gst as $k=>$v)
                            <tr class="font-14 font-heading bg-white" id="withgst_tr_{{$k}}">
-                              <td style="width:50%">
+                              <td style="width:30%">
                                  <select class="form-control item select2-single" id="item_{{$k}}" data-index="{{$k}}" name="item[]" onchange="gstCalculation()" >
                                     <option value="">Select Item</option>
                                     @foreach($items as $item)
@@ -552,7 +552,7 @@
                               <td>
                                  <input type="number" class="form-control hsn" id="hsn_{{$k}}" name="hsn[]" placeholder="HSN/SAC" value="{{$v->hsn_code}}">
                               </td>
-                              <td style="width:15%">
+                              <td style="width:10%">
                                  <select class="form-select percentage" id="percentage_{{$k}}" data-index="{{$k}}" name="percentage[]" onchange="gstCalculation()">
                                     <option value="">GST(%)</option>
                                     <option value="5" @if($v->percentage==0) selected @endif>0%</option>
@@ -562,8 +562,58 @@
                                     <option value="28" @if($v->percentage==28) selected @endif>28%</option>
                                  </select>
                               </td>
+                              <td style="width:20%">
+                                 <select class="form-select select2-single unit_code" name="unit_code[]" id="unit_code_{{$k}}" required>
+                                    <option value="">-- Select UQC --</option>
+                                    <option value="BAL - BALE" {{ $v->unit_code == 'BAL - BALE' ? 'selected' : '' }}>BAL - BALE</option>
+                                    <option value="BDL - BUNDLES" {{ $v->unit_code == 'BDL - BUNDLES' ? 'selected' : '' }}>BDL - BUNDLES</option>
+                                    <option value="BKL - BUCKLES" {{ $v->unit_code == 'BKL - BUCKLES' ? 'selected' : '' }}>BKL - BUCKLES</option>
+                                    <option value="BOU - BILLION OF UNITS" {{ $v->unit_code == 'BOU - BILLION OF UNITS' ? 'selected' : '' }}>BOU - BILLION OF UNITS</option>
+                                    <option value="BOX - BOX" {{ $v->unit_code == 'BOX - BOX' ? 'selected' : '' }}>BOX - BOX</option>
+                                    <option value="BTL - BOTTLES" {{ $v->unit_code == 'BTL - BOTTLES' ? 'selected' : '' }}>BTL - BOTTLES</option>
+                                    <option value="BUN - BUNCHES" {{ $v->unit_code == 'BUN - BUNCHES' ? 'selected' : '' }}>BUN - BUNCHES</option>
+                                    <option value="CAN - CANS" {{ $v->unit_code == 'CAN - CANS' ? 'selected' : '' }}>CAN - CANS</option>
+                                    <option value="CBM - CUBIC METERS" {{ $v->unit_code == 'CBM - CUBIC METERS' ? 'selected' : '' }}>CBM - CUBIC METERS</option>
+                                    <option value="CCM - CUBIC CENTIMETERS" {{ $v->unit_code == 'CCM - CUBIC CENTIMETERS' ? 'selected' : '' }}>CCM - CUBIC CENTIMETERS</option>
+                                    <option value="CMS - CENTIMETERS" {{ $v->unit_code == 'CMS - CENTIMETERS' ? 'selected' : '' }}>CMS - CENTIMETERS</option>
+                                    <option value="CTN - CARTONS" {{ $v->unit_code == 'CTN - CARTONS' ? 'selected' : '' }}>CTN - CARTONS</option>
+                                    <option value="DOZ - DOZENS" {{ $v->unit_code == 'DOZ - DOZENS' ? 'selected' : '' }}>DOZ - DOZENS</option>
+                                    <option value="DRM - DRUMS" {{ $v->unit_code == 'DRM - DRUMS' ? 'selected' : '' }}>DRM - DRUMS</option>
+                                    <option value="GGK - GREAT GROSS" {{ $v->unit_code == 'GGK - GREAT GROSS' ? 'selected' : '' }}>GGK - GREAT GROSS</option>
+                                    <option value="GMS - GRAMMES" {{ $v->unit_code == 'GMS - GRAMMES' ? 'selected' : '' }}>GMS - GRAMMES</option>
+                                    <option value="GRS - GROSS" {{ $v->unit_code == 'GRS - GROSS' ? 'selected' : '' }}>GRS - GROSS</option>
+                                    <option value="GYD - GROSS YARDS" {{ $v->unit_code == 'GYD - GROSS YARDS' ? 'selected' : '' }}>GYD - GROSS YARDS</option>
+                                    <option value="KGS - KILOGRAMS" {{ $v->unit_code == 'KGS - KILOGRAMS' ? 'selected' : '' }}>KGS - KILOGRAMS</option>
+                                    <option value="KLR - KILOLITRE" {{ $v->unit_code == 'KLR - KILOLITRE' ? 'selected' : '' }}>KLR - KILOLITRE</option>
+                                    <option value="KME - KILOMETRE" {{ $v->unit_code == 'KME - KILOMETRE' ? 'selected' : '' }}>KME - KILOMETRE</option>
+                                    <option value="LTR - LITRES" {{ $v->unit_code == 'LTR - LITRES' ? 'selected' : '' }}>LTR - LITRES</option>
+                                    <option value="MLT - MILILITRE" {{ $v->unit_code == 'MLT - MILILITRE' ? 'selected' : '' }}>MLT - MILILITRE</option>
+                                    <option value="MTR - METERS" {{ $v->unit_code == 'MTR - METERS' ? 'selected' : '' }}>MTR - METERS</option>
+                                    <option value="MTS - METRIC TON" {{ $v->unit_code == 'MTS - METRIC TON' ? 'selected' : '' }}>MTS - METRIC TON</option>
+                                    <option value="NOS - NUMBERS" {{ $v->unit_code == 'NOS - NUMBERS' ? 'selected' : '' }}>NOS - NUMBERS</option>
+                                    <option value="PAC - PACKS" {{ $v->unit_code == 'PAC - PACKS' ? 'selected' : '' }}>PAC - PACKS</option>
+                                    <option value="PCS - PIECES" {{ $v->unit_code == 'PCS - PIECES' ? 'selected' : '' }}>PCS - PIECES</option>
+                                    <option value="PRS - PAIRS" {{ $v->unit_code == 'PRS - PAIRS' ? 'selected' : '' }}>PRS - PAIRS</option>
+                                    <option value="QTL - QUINTAL" {{ $v->unit_code == 'QTL - QUINTAL' ? 'selected' : '' }}>QTL - QUINTAL</option>
+                                    <option value="ROL - ROLLS" {{ $v->unit_code == 'ROL - ROLLS' ? 'selected' : '' }}>ROL - ROLLS</option>
+                                    <option value="SET - SETS" {{ $v->unit_code == 'SET - SETS' ? 'selected' : '' }}>SET - SETS</option>
+                                    <option value="SQF - SQUARE FEET" {{ $v->unit_code == 'SQF - SQUARE FEET' ? 'selected' : '' }}>SQF - SQUARE FEET</option>
+                                    <option value="SQM - SQUARE METERS" {{ $v->unit_code == 'SQM - SQUARE METERS' ? 'selected' : '' }}>SQM - SQUARE METERS</option>
+                                    <option value="SQY - SQUARE YARDS" {{ $v->unit_code == 'SQY - SQUARE YARDS' ? 'selected' : '' }}>SQY - SQUARE YARDS</option>
+                                    <option value="TBS - TABLETS" {{ $v->unit_code == 'TBS - TABLETS' ? 'selected' : '' }}>TBS - TABLETS</option>
+                                    <option value="TGM - TEN GROSS" {{ $v->unit_code == 'TGM - TEN GROSS' ? 'selected' : '' }}>TGM - TEN GROSS</option>
+                                    <option value="THD - THOUSANDS" {{ $v->unit_code == 'THD - THOUSANDS' ? 'selected' : '' }}>THD - THOUSANDS</option>
+                                    <option value="TON - TONNES" {{ $v->unit_code == 'TON - TONNES' ? 'selected' : '' }}>TON - TONNES</option>
+                                    <option value="TUB - TUBES" {{ $v->unit_code == 'TUB - TUBES' ? 'selected' : '' }}>TUB - TUBES</option>
+                                    <option value="UGS - US GALLONS" {{ $v->unit_code == 'UGS - US GALLONS' ? 'selected' : '' }}>UGS - US GALLONS</option>
+                                    <option value="UNT - UNITS" {{ $v->unit_code == 'UNT - UNITS' ? 'selected' : '' }}>UNT - UNITS</option>
+                                    <option value="YDS - YARDS" {{ $v->unit_code == 'YDS - YARDS' ? 'selected' : '' }}>YDS - YARDS</option>
+                                    <option value="OTH - OTHERS" {{ $v->unit_code == 'OTH - OTHERS' ? 'selected' : '' }}>OTH - OTHERS</option>
+                                    <option value="Test - ER Scenario" {{ $v->unit_code == 'Test - ER Scenario' ? 'selected' : '' }}>Test - ER Scenario</option>
+                                 </select>
+                                                            </td>
                               <td>
-                                 <input type="text" class="form-control amount" id="amount_{{$k}}" data-index="{{$k}}" name="without_item_amount[]" placeholder="Enter Amount" onkeyup="gstCalculation()" value="{{$v->debit}}">
+                                 <input type="text" class="form-control amount" id="amount_{{$k}}" data-index="{{$k}}" name="without_item_amount[]" placeholder="Enter Amount" onkeyup="gstCalculation()" value="{{$v->debit}}" style="text-align: right;">
                               </td>
                               <td>
                                  <svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove_more_tr" data-id="{{$k}}" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"></path></svg>
@@ -572,51 +622,57 @@
                            @endforeach
                         @endif
                         <tr>
-                           <td colspan="5" style="text-align: right;">
+                           <td colspan="6" style="text-align: right;">
                               <svg xmlns="http://www.w3.org/2000/svg" style="cursor:pointer;" class="bg-primary rounded-circle add_more_tr" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"></path></svg>
                            </td>
                         </tr>
                         <tr class="font-14 font-heading bg-white">
                            <td></td>
                            <td></td>
+                           <td></td>
                            <td style="text-align: right;">Net Amount</td>
                            <td>
-                              <input type="text" class="form-control" id="net_amount" name="net_amount" placeholder="Net Amount" readonly>
+                              <input type="text" class="form-control" id="net_amount" name="net_amount" placeholder="Net Amount" readonly style="text-align: right;">
                            </td>
                         </tr>
                         <tr class="font-14 font-heading bg-white cgst_tr" style="display: none;">
                            <td></td>
                            <td></td>
+                           <td></td>
                            <td style="text-align: right;">CGST</td>
                            <td>
-                              <input type="text" class="form-control" id="cgst" name="cgst" readonly>
+                              <input type="text" class="form-control" id="cgst" name="cgst" readonly style="text-align: right;">
                            </td>
                         </tr>
                         <tr class="font-14 font-heading bg-white sgst_tr" style="display: none;">
                            <td></td>
                            <td></td>
+                           <td></td>
                            <td style="text-align: right;">SGST</td>
                            <td>
-                              <input type="text" class="form-control" id="sgst" name="sgst" readonly>
+                              <input type="text" class="form-control" id="sgst" name="sgst" readonly style="text-align: right;">
                            </td>
                         </tr>
                         <tr class="font-14 font-heading bg-white igst_tr" style="display: none;">
                            <td></td>
                            <td></td>
+                           <td></td>
                            <td style="text-align: right;">IGST</td>
                            <td>
-                              <input type="text" class="form-control" id="igst" name="igst" readonly>
+                              <input type="text" class="form-control" id="igst" name="igst" readonly style="text-align: right;">
                            </td>
                         </tr>
                         <tr class="font-14 font-heading bg-white">
+                           <td></td>
                            <td></td>
                            <td></td>
                            <td style="text-align: right;">Total Amount</td>
                            <td>
-                              <input type="text" class="form-control" id="total_amount" name="total_amount" placeholder="Total Amount" readonly>
+                              <input type="text" class="form-control" id="total_amount" name="total_amount" placeholder="Total Amount" readonly style="text-align: right;">
                            </td>
                         </tr>
                         <tr class="font-14 font-heading bg-white">
+                           <td></td>
                            <td></td>
                            <td></td>
                            <td style="text-align: right;">Remark</td>
@@ -1677,10 +1733,12 @@
       }
       add_more_count_withgst++;
       var $curRow = $(this).closest('tr');
-      let newRow = '<tr id="withgst_tr_'+add_more_count_withgst+'" class="font-14 font-heading bg-white"><td style="width:50%"><select class="form-control item" id="item_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="item[]" onchange="gstCalculation()"><option value="">Select Item</option>@foreach($items as $item)<option value="{{$item->id}}">{{$item->account_name}}</option>@endforeach </select></td><td><input type="number" class="form-control hsn" id="hsn_1" name="hsn[]" placeholder="HSN/SAC"></td><td><select class="form-select percentage" id="percentage_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="percentage[]" onchange="gstCalculation()"><option value="">GST(%)</option><option value="0">0%</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option><option value="28">28%</option></select></td><td><input type="text" class="form-control amount" id="amount_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="without_item_amount[]" placeholder="Enter Amount" onkeyup="gstCalculation()"></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove_more_tr" data-id="'+add_more_count_withgst+'" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"></path></svg></td></tr>';
+      let newRow = '<tr id="withgst_tr_'+add_more_count_withgst+'" class="font-14 font-heading bg-white"><td style="width:30%"><select class="form-control item" id="item_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="item[]" onchange="gstCalculation()"><option value="">Select Item</option>@foreach($items as $item)<option value="{{$item->id}}">{{$item->account_name}}</option>@endforeach </select></td><td><input type="number" class="form-control hsn" id="hsn_1" name="hsn[]" placeholder="HSN/SAC"></td><td><select class="form-select percentage" id="percentage_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="percentage[]" onchange="gstCalculation()"><option value="">GST(%)</option><option value="0">0%</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option><option value="28">28%</option></select></td><td style="width:15%"><select class="form-control select2-single unit_code" name="unit_code[]" id="unit_code_'+add_more_count_withgst+'" ><option value="">-- Select UQC --</option><option value="BAL - BALE">BAL - BALE</option><option value="BDL - BUNDLES">BDL - BUNDLES</option><option value="BKL - BUCKLES">BKL - BUCKLES</option><option value="BOU - BILLION OF UNITS">BOU - BILLION OF UNITS</option><option value="BOX - BOX">BOX - BOX</option><option value="BTL - BOTTLES">BTL - BOTTLES</option><option value="BUN - BUNCHES">BUN - BUNCHES</option><option value="CAN - CANS">CAN - CANS</option><option value="CBM - CUBIC METERS">CBM - CUBIC METERS</option><option value="CCM - CUBIC CENTIMETERS">CCM - CUBIC CENTIMETERS</option><option value="CMS - CENTIMETERS">CMS - CENTIMETERS</option><option value="CTN - CARTONS">CTN - CARTONS</option><option value="DOZ - DOZENS">DOZ - DOZENS</option><option value="DRM - DRUMS">DRM - DRUMS</option><option value="GGK - GREAT GROSS">GGK - GREAT GROSS</option><option value="GMS - GRAMMES">GMS - GRAMMES</option><option value="GRS - GROSS">GRS - GROSS</option><option value="GYD - GROSS YARDS">GYD - GROSS YARDS</option><option value="KGS - KILOGRAMS">KGS - KILOGRAMS</option><option value="KLR - KILOLITRE">KLR - KILOLITRE</option><option value="KME - KILOMETRE">KME - KILOMETRE</option><option value="LTR - LITRES">LTR - LITRES</option><option value="MLT - MILILITRE">MLT - MILILITRE</option><option value="MTR - METERS">MTR - METERS</option><option value="MTS - METRIC TON">MTS - METRIC TON</option><option value="NOS - NUMBERS">NOS - NUMBERS</option><option value="PAC - PACKS">PAC - PACKS</option><option value="PCS - PIECES">PCS - PIECES</option><option value="PRS - PAIRS">PRS - PAIRS</option><option value="QTL - QUINTAL">QTL - QUINTAL</option><option value="ROL - ROLLS">ROL - ROLLS</option><option value="SET - SETS">SET - SETS</option><option value="SQF - SQUARE FEET">SQF - SQUARE FEET</option><option value="SQM - SQUARE METERS">SQM - SQUARE METERS</option><option value="SQY - SQUARE YARDS">SQY - SQUARE YARDS</option><option value="TBS - TABLETS">TBS - TABLETS</option><option value="TGM - TEN GROSS">TGM - TEN GROSS</option><option value="THD - THOUSANDS">THD - THOUSANDS</option><option value="TON - TONNES">TON - TONNES</option><option value="TUB - TUBES">TUB - TUBES</option><option value="UGS - US GALLONS">UGS - US GALLONS</option><option value="UNT - UNITS">UNT - UNITS</option><option value="YDS - YARDS">YDS - YARDS</option><option value="OTH - OTHERS">OTH - OTHERS</option><option value="Test - ER Scenario">Test - ER Scenario</option></select></td><td><input type="text" class="form-control amount" id="amount_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="without_item_amount[]" placeholder="Enter Amount" onkeyup="gstCalculation()" style="text-align: right;"></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove_more_tr" data-id="'+add_more_count_withgst+'" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"></path></svg></td></tr>';
       $curRow.before(newRow);
       //$("#item_"+add_more_count_withgst).select2();
       $(".item").select2();
+      $(".unit_code").select2();
+      
    });
    $(document).on("click", ".remove_more_tr", function() {
       let id = $(this).attr('data-id');

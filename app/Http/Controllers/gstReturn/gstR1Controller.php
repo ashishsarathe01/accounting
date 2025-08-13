@@ -1351,11 +1351,12 @@ if ($billing_gst_filter || $name_filter || $invoice_date_filter || $rate_filter)
 
 
 public function sendGstr1ToGSTMaster(Request $request){
+    ini_set('serialize_precision','-1');
+    $b2b_arr = [];
     $merchant_gst = $request->merchant_gst;
     $company_id = Session::get('user_company_id');
     $from_date = $request->from_date;
     $to_date = $request->to_date;
-
     if (!$merchant_gst || !$company_id || !$from_date || !$to_date) {
         return response()->json(['error' => 'Missing required filters'], 400);
     }
@@ -1391,6 +1392,7 @@ public function sendGstr1ToGSTMaster(Request $request){
             'states.name as POS',
             'sales.reverse_charge'
         )
+        //->where('voucher_no_prefix',307)
         ->get();
     
     // Step 3: Fetch sale descriptions (items)
@@ -1423,9 +1425,7 @@ public function sendGstr1ToGSTMaster(Request $request){
     foreach ($sundryDetails as $saleId => $entries) {
         foreach ($entries as $entry) {
             $bs = $sundries[$entry->bill_sundry] ?? null;
-
             if (!$bs) continue;
-
             // Include only if sundry is 'OTHER' and adjust_sale_amt = 'No'
             if ($bs->adjust_sale_amt == 'No' && $bs->nature_of_sundry == 'OTHER') {
                 $ledger_amount = DB::table('account_ledger')
@@ -1444,6 +1444,7 @@ public function sendGstr1ToGSTMaster(Request $request){
     }
     // Step 6: Group items by voucher_no_prefix and rate, and calculate taxes
     $grouped = [];
+   
     foreach ($items as $item) {
         $sale_id = $item->sale_id;
         $state = $item->state_name;
@@ -1451,7 +1452,6 @@ public function sendGstr1ToGSTMaster(Request $request){
         $item_amount = $item->amount;
         $voucher_no_prefix = $item->voucher_no_prefix;
          $item_type = $item->item_type;
-
         // Sum all items in the sale to get the total amount for allocation of sundries
         $total_item_amount = $items->where('sale_id', $sale_id)->sum('amount');
         if ($total_item_amount == 0) continue; // Skip if no total amount
@@ -1489,7 +1489,6 @@ public function sendGstr1ToGSTMaster(Request $request){
         $sgst = 0;
         $merchant_state_code = substr($merchant_gst, 0, 2); // Get first 2 digits of merchant's GSTIN
         $customer_state_code = State::where('name', $state)->value('state_code'); // assuming states table has GST code
-
         // Tax calculation logic based on GSTIN state match
         if ($merchant_state_code == $customer_state_code) {
             // Same state - CGST and SGST
@@ -1499,67 +1498,201 @@ public function sendGstr1ToGSTMaster(Request $request){
             // Different state - IGST
             $igst = ($rate / 100) * $taxable_value;
         }
+        
         if ($item_type === 'taxable') {
             $sale = $sales->where('id', $sale_id)->first();
             $ctin = $sale->billing_gst;
             $inum = $sale->voucher_no_prefix;
-
-
             if (!isset($grouped[$ctin])) {
                 $grouped[$ctin] = [];
             }
-
             $invoice_key = $inum;
-
             $existing_invoice = collect($grouped[$ctin])->firstWhere('inum', $invoice_key);
-
             if (!$existing_invoice) {
+                
                 $invoice_data = [
-                    'inum' => $inum,
-                    'idt' => \Carbon\Carbon::parse($sale->date)->format('d-m-Y'),
-                    'val' => round($sale->total, 2),
-                    'pos' => State::where('name', $sale->POS)->value('state_code'),
-                    'rchrg' => $sale->reverse_charge ? 'Y' : 'N',
-                    'etin' => '', // optional
-                    'inv_typ' => 'R',
-                    'diff_percent' => null, // if applicable,
-                    'itms' => []
+                    "inum" =>$inum,
+                    "idt" =>\Carbon\Carbon::parse($sale->date)->format('d-m-Y'),
+                    "val" =>(float)$sale->total,
+                    "pos" =>State::where('name', $sale->POS)->value('state_code'),
+                    "rchrg" =>$sale->reverse_charge ? 'Y' : 'N',
+                    //"etin" =>$ctin,
+                    "inv_typ" =>'R',
+                    //"diff_percent"=>0.65, // if applicable,
+                    "itms" =>[]
                 ];
-                $grouped[$ctin][] = $invoice_data;
+                array_push($grouped[$ctin], $invoice_data);
+                
+                //$grouped[$ctin][] = $invoice_data;
             }
+            
+            // Find the current invoice again to push items
+            foreach ($grouped[$ctin] as &$invoice_ref) {
 
-        // Find the current invoice again to push items
-        foreach ($grouped[$ctin] as &$invoice_ref) {
-            if ($invoice_ref['inum'] === $inum) {
-                $invoice_ref['itms'][] = [
-                    'num' => count($invoice_ref['itms']) + 1,
-                    'itm_det' => [
-                        'rt' => $rate,
-                        'txval' => round($taxable_value, 2),
-                        'iamt' => round($igst, 2),
-                        'cgst' => round($cgst, 2),
-                        'sgst' => round($sgst, 2),
-                    ]
-                ];
-                break;
+                if ($invoice_ref['inum'] === $inum) {
+                    if($igst!=""){
+                        $invoice_ref['itms'][] = [
+                            "num" => count($invoice_ref['itms']) + 1,
+                            "itm_det" => [
+                                "rt" => (float)$rate, 
+                                "txval" => (float)round($taxable_value, 2),
+                                "iamt" => (float)round($igst, 2),
+                                "csamt"=> (float)0
+
+                            ]
+                        ];
+                    }else{
+                        $invoice_ref['itms'][] = [
+                            "num" => count($invoice_ref['itms']) + 1,
+                            "itm_det" => [                                
+                                "txval" => (float)round($taxable_value, 2),
+                                "rt" => (float)$rate,
+                                "camt" => (float)round($cgst, 2),
+                                "samt" => (float)round($sgst, 2),
+                                "iamt" => (float)round($igst, 2),
+                                "csamt"=> (float)0
+
+                            ]
+                        ];
+                    }
+                    
+                    //$b2b_arr[$ctin] = $invoice_ref;
+                    array_push($b2b_arr, array("ctin"=>$ctin,"inv"=>$invoice_ref));
+                    break;
+                }
             }
+            
+            
         }
-
+    }
+    $check_inv_arr = [];
+    foreach ($b2b_arr as $in=>$invs) {        
+        $k = $invs['ctin']."_".$invs['inv']['inum'];
+        $check_inv_arr[$k] = $invs;
+    }
+    foreach ($check_inv_arr as $key => &$invoice) {
+            if (!isset($invoice['inv']['itms']) || !is_array($invoice['inv']['itms'])) {
+                continue;
             }
+            $item_ind = 1;
+            $merged = [];
+
+            foreach ($invoice['inv']['itms'] as $item) {
+                $rt = $item['itm_det']['rt'];
+
+                if (!isset($merged[$rt])) {
+                    // First time seeing this rate
+                    $merged[$rt] = [
+                        'num' => $item_ind, // or keep original numbering if needed
+                        'itm_det' => [
+                            'txval' => 0,
+                            'rt' => $rt,
+                            'camt' => 0,
+                            'samt' => 0,
+                            'iamt' => 0,
+                            'csamt' => 0
+                        ]
+                    ];
+                    $item_ind++;
+                }
+
+                // Add values
+                $merged[$rt]['itm_det']['txval'] += $item['itm_det']['txval'];
+                if(isset($item['itm_det']['camt'])){
+                    $merged[$rt]['itm_det']['camt']  += $item['itm_det']['camt'];
+                }
+                if(isset($item['itm_det']['samt'])){
+                    $merged[$rt]['itm_det']['samt']  += $item['itm_det']['samt'];
+                }
+                if(isset($item['itm_det']['iamt'])){
+                    $merged[$rt]['itm_det']['iamt']  += $item['itm_det']['iamt'];
+                }
+                $merged[$rt]['itm_det']['txval'] = round($merged[$rt]['itm_det']['txval'],2);
+                $merged[$rt]['itm_det']['camt'] = round($merged[$rt]['itm_det']['camt'],2);
+                $merged[$rt]['itm_det']['samt'] = round($merged[$rt]['itm_det']['samt'],2);
+                $merged[$rt]['itm_det']['iamt'] = round($merged[$rt]['itm_det']['iamt'],2);
+                
+                
+                $merged[$rt]['itm_det']['csamt'] += $item['itm_det']['csamt'];
+                
+            }
+
+            // Reset array keys (optional)
+            $invoice['inv']['itms'] = array_values($merged);
         }
+        unset($invoice);
 
+    // foreach ($check_inv_arr as $key => $data) {
+    //     if (!empty($data['inv']['itms']) && count($data['inv']['itms']) > 1) {
+    //         $merged = [
+    //             'num' => 1,
+    //             'itm_det' => [
+    //                 'txval' => 0,
+    //                 'rt'    => $data['inv']['itms'][0]['itm_det']['rt'], // keep first rt
+    //                 'camt'  => 0,
+    //                 'samt'  => 0,
+    //                 'iamt'  => 0,
+    //                 'csamt' => 0
+    //             ]
+    //         ];
 
-        //for b2clarge 
-       
-                 
+    //         foreach ($data['inv']['itms'] as $item) {
+    //             $merged['itm_det']['txval'] += $item['itm_det']['txval'];
+    //             if(isset($item['itm_det']['camt'])){
+    //                 $merged['itm_det']['camt']  += $item['itm_det']['camt'];
+    //             }
+    //             if(isset($item['itm_det']['samt'])){
+    //                 $merged['itm_det']['samt']  += $item['itm_det']['samt'];
+    //             }
+    //             if(isset($item['itm_det']['iamt'])){
+    //                 $merged['itm_det']['iamt']  += $item['itm_det']['iamt'];
+    //             }
+    //             $merged['itm_det']['txval'] = round($merged['itm_det']['txval'],2);
+    //             $merged['itm_det']['camt'] = round($merged['itm_det']['camt'],2);
+    //             $merged['itm_det']['samt'] = round($merged['itm_det']['samt'],2);
+    //             $merged['itm_det']['iamt'] = round($merged['itm_det']['iamt'],2);
+    //             $merged['itm_det']['csamt'] += $item['itm_det']['csamt'];
+    //         }
+
+    //         // Replace with merged single item
+    //         $check_inv_arr[$key]['inv']['itms'] = [$merged];
+    //     }
+    // }
+
+//    echo "<pre>";
+//     print_r($check_inv_arr);
+//     echo "</pre>";
   
 
-//for debit credit note registered 
+    // Output the result
 
-
-
-    // Step 1: Fetch all Bill Sundries for the company
-    
+   
+    $new_arr = [];
+    $ctin_seen = [];
+    foreach ($check_inv_arr as $ke=>$entry) {
+        $ctin = $entry['ctin'];
+        $inv  = $entry['inv'];
+        if (!isset($ctin_seen[$ctin])) {
+            $ctin_seen[$ctin] = [
+                'ctin' => $ctin,
+                'inv' => []
+            ];
+        }
+        array_push($ctin_seen[$ctin]['inv'], $inv);
+    }
+    //$b2b_arr = array_values($ctin_seen);
+    foreach ($ctin_seen as $ctin => $data) {
+        $new_arr[] = [
+            "ctin" => $data['ctin'],
+            "inv" => $data['inv']
+        ];
+    }
+//    echo "<pre>";
+//             print_r($new_arr);
+//             echo "</pre>";
+//     die;
+    //for debit credit note registered 
+    // Step 1: Fetch all Bill Sundries for the company   
 
     // -------------------- CREDIT NOTES FETCH --------------------
     $creditSales = DB::table('sales_returns')
@@ -1763,7 +1896,6 @@ public function sendGstr1ToGSTMaster(Request $request){
             )
             ->get();
     $debitItems = $debitItems->merge($debitItems1)->merge($debitWithoutGstItems);
-
     $debitSundryDetails = DB::table('purchase_return_sundries')
             ->whereIn('purchase_return_id', $debitSales->merge($debitSales1)) // Use merged IDs
             ->select('purchase_return_id', 'bill_sundry', 'amount')
@@ -1802,11 +1934,9 @@ public function sendGstr1ToGSTMaster(Request $request){
         $inv_typ = $entry['inv_typ'];
         $val = $entry['val'];
         $itemRow = $entry['itemRow'];
-
         if (!isset($cdnr[$ctin])) {
             $cdnr[$ctin] = [];
         }
-
         $existing = collect($cdnr[$ctin])->firstWhere('nt_num', $nt_num);
         if (!$existing) {
             $cdnr[$ctin][] = [
@@ -1817,11 +1947,46 @@ public function sendGstr1ToGSTMaster(Request $request){
                 'rchrg' => $rchrg,
                 'inv_typ' => $inv_typ,
                 'val' => $val,
-                'diff_percent' => null,
+                //'diff_percent' => null,
                 'itms' => [$itemRow]
             ];
         } else {
             foreach ($cdnr[$ctin] as &$note) {
+                if ($note['nt_num'] === $nt_num) {
+                    $itemRow['num'] = count($note['itms']) + 1;
+                    $note['itms'][] = $itemRow;
+                }
+            }
+        }
+    };
+    $debit_note_arr = [];
+    $addToDebitNote = function ($entry, $ntty) use (&$debit_note_arr, $merchant_gst) {
+        $ctin = $entry['ctin'];
+        $nt_num = "DR/".$entry['nt_num'];
+        $nt_dt = $entry['nt_dt'];
+        $pos = $entry['pos'];
+        $rchrg = $entry['rchrg'];
+        $inv_typ = $entry['inv_typ'];
+        $val = $entry['val'];
+        $itemRow = $entry['itemRow'];
+        if (!isset($debit_note_arr[$ctin])) {
+            $debit_note_arr[$ctin] = [];
+        }
+        $existing = collect($debit_note_arr[$ctin])->firstWhere('nt_num', $nt_num);
+        if (!$existing) {
+            $debit_note_arr[$ctin][] = [
+                'ntty' => $ntty,
+                'nt_num' => $nt_num,
+                'nt_dt' => $nt_dt,
+                'pos' => $pos,
+                'rchrg' => $rchrg,
+                'inv_typ' => $inv_typ,
+                'val' => $val,
+                //'diff_percent' => null,
+                'itms' => [$itemRow]
+            ];
+        } else {
+            foreach ($debit_note_arr[$ctin] as &$note) {
                 if ($note['nt_num'] === $nt_num) {
                     $itemRow['num'] = count($note['itms']) + 1;
                     $note['itms'][] = $itemRow;
@@ -1884,11 +2049,12 @@ public function sendGstr1ToGSTMaster(Request $request){
             'itemRow' => [
                 'num' => 1,
                 'itm_det' => [
-                    'rt' => $rate,
+                    'rt' => (float)$rate,
                     'txval' => round($taxable_value, 2),
                     'iamt' => $igst,
-                    'cgst' => $cgst,
-                    'sgst' => $sgst
+                    'camt' => $cgst,
+                    'samt' => $sgst,
+                    "csamt" => 0
                 ]
             ]
         ];
@@ -1950,29 +2116,53 @@ public function sendGstr1ToGSTMaster(Request $request){
             'itemRow' => [
                 'num' => 1,
                 'itm_det' => [
-                    'rt' => $rate,
+                    'rt' => (float)$rate,
                     'txval' => round($taxable_value, 2),
                     'iamt' => $igst,
-                    'cgst' => $cgst,
-                    'sgst' => $sgst
+                    'camt' => $cgst,
+                    'samt' => $sgst,
+                    "csamt" => 0
                 ]
             ]
         ];
 
-        $addToCdnr($entry, 'D'); // Add as debit note
+        $addToDebitNote($entry, 'D'); // Add as debit note
     }
     // Final formatting
     $finalData = [];
+
+    $final_notes = [];
+    // Merge credit notes
     foreach ($cdnr as $ctin => $notes) {
+        if (!isset($final_notes[$ctin])) {
+            $final_notes[$ctin] = [];
+        }
+        $final_notes[$ctin] = array_merge($final_notes[$ctin], $notes);
+    }
+
+    // Merge debit notes
+    foreach ($debit_note_arr as $ctin => $notes) {
+        if (!isset($final_notes[$ctin])) {
+            $final_notes[$ctin] = [];
+        }
+        $final_notes[$ctin] = array_merge($final_notes[$ctin], $notes);
+    }
+
+   
+
+    foreach ($final_notes as $ctin => $notes) {
         $finalData[] = [
             'ctin' => $ctin,
             'nt' => $notes
         ];
-    }       
+    }
+    // echo "<pre>";
+    // print_r($final_notes);
+    // echo "</pre>";
+    // die;
     // Initialize arrays to hold data for B2B and B2C
     $finalDataB2B = [];
     $finalDataB2C = [];
-
     // --- Process for B2B ---
     $this->processHsnSummary(
         $merchant_gst,
@@ -1984,7 +2174,6 @@ public function sendGstr1ToGSTMaster(Request $request){
         true, // isB2B
         $finalDataB2B
     );
-
     // --- Process for B2C ---
     $this->processHsnSummary(
         $merchant_gst,
@@ -1997,44 +2186,47 @@ public function sendGstr1ToGSTMaster(Request $request){
         $finalDataB2C
     );
     // Format the final output as requested for the API
-    $formattedHsnData = [
-        
-            "hsn_b2b" => [],
-            "hsn_b2c" => []
-        
+    $formattedHsnData = [        
+        "hsn_b2b" => [],
+        "hsn_b2c" => []        
     ];
     $numB2B = 1;
+    $hsn_arr = [];
     foreach ($finalDataB2B as $data) {
         $formattedHsnData["hsn_b2b"][] = [
+        //$hsn_arr[] = [
             "num" => $numB2B++,
-            "hsn_sc" => $data['hsn'],
+            "hsn_sc" => (String)$data['hsn'],
             "desc" => "Goods Description", // Placeholder as per example
-            "user_desc" => "Taxpayer Description", // Placeholder as per example
-            "uqc" => $data['unit_code'],
+            //"user_desc" => "Taxpayer Description", // Placeholder as per example
+            "uqc" => substr($data['unit_code'], 0, 3),
             "qty" => round($data['qty'], 2),
-            "txval" => round($data['taxable_value'], 2),
-            "iamt" => round($data['igst'], 2),
-            "camt" => round($data['cgst'], 2),
-            "samt" => round($data['sgst'], 2),
-            "csamt" => 0, // Not calculated in original logic, setting to 0 as per example
-            "rt" => round($data['rate'], 2)
+            "rt" =>(int) round($data['rate'], 2),
+            "txval" => (float)round($data['taxable_value'], 2),
+            "iamt" => (float)round($data['igst'], 2),
+            "camt" => (float)round($data['cgst'], 2),
+            "samt" => (float)round($data['sgst'], 2),
+            "csamt" => (float)0 // Not calculated in original logic, setting to 0 as per example
+            
         ];
     }
     $numB2C = 1;
     foreach ($finalDataB2C as $data) {
         $formattedHsnData["hsn_b2c"][] = [
+        //$hsn_arr[] = [
             "num" => $numB2C++,
-            "hsn_sc" => $data['hsn'],
+            "hsn_sc" => (String)$data['hsn'],
             "desc" => "Goods Description", // Placeholder as per example
-            "user_desc" => "Taxpayer Description", // Placeholder as per example
-            "uqc" => $data['unit_code'],
+            //"user_desc" => "Taxpayer Description", // Placeholder as per example
+            "uqc" => substr($data['unit_code'], 0, 3),
             "qty" => round($data['qty'], 2),
-            "txval" => round($data['taxable_value'], 2),
-            "iamt" => round($data['igst'], 2),
-            "camt" => round($data['cgst'], 2),
-            "samt" => round($data['sgst'], 2),
-            "csamt" => 0, // Not calculated in original logic, setting to 0 as per example
-            "rt" => round($data['rate'], 2)
+            "rt" => (int)round($data['rate'], 2),
+            "txval" => (float)round($data['taxable_value'], 2),
+            "iamt" => (float)round($data['igst'], 2),
+            "camt" => (float)round($data['cgst'], 2),
+            "samt" => (float)round($data['sgst'], 2),
+            "csamt" => (float)0// Not calculated in original logic, setting to 0 as per example
+            
         ];
     }
     // return response()->json($formattedHsnData);
@@ -2066,15 +2258,15 @@ public function sendGstr1ToGSTMaster(Request $request){
         ];
     }
     $allCreditNotes = DB::table('sales_returns')
-    ->where('company_id', $company_id)
-    ->whereBetween('date', [$from_date, $to_date])
-    ->where('delete', '0')
-    ->whereNotNull('sr_prefix')
-    ->select('sr_prefix', 'series_no', 'status', 'voucher_type','sr_nature')
-    ->orderBy('series_no')
-    ->orderBy('sr_prefix')
-    ->get()
-    ->groupBy('series_no');
+        ->where('company_id', $company_id)
+        ->whereBetween('date', [$from_date, $to_date])
+        ->where('delete', '0')
+        ->whereNotNull('sr_prefix')
+        ->select('sr_prefix', 'series_no', 'status', 'voucher_type','sr_nature')
+        ->orderBy('series_no')
+        ->orderBy('sr_prefix')
+        ->get()
+        ->groupBy('series_no');
     $CreditNotedocumentSummary = [];
     foreach ($allCreditNotes as $series => $records) {
         $from = $records->first()->sr_prefix ?? '-';
@@ -2098,15 +2290,15 @@ public function sendGstr1ToGSTMaster(Request $request){
         ];
     }
     $allDebitNotes = DB::table('purchase_returns')
-    ->where('company_id', $company_id)
-    ->whereBetween('date', [$from_date, $to_date])
-    ->where('delete', '0')
-    ->whereNotNull('sr_prefix')
-    ->select('sr_prefix', 'series_no', 'status', 'voucher_type','sr_nature')
-    ->orderBy('series_no')
-    ->orderBy('sr_prefix')
-    ->get()
-    ->groupBy('series_no');
+        ->where('company_id', $company_id)
+        ->whereBetween('date', [$from_date, $to_date])
+        ->where('delete', '0')
+        ->whereNotNull('sr_prefix')
+        ->select('sr_prefix', 'series_no', 'status', 'voucher_type','sr_nature')
+        ->orderBy('series_no')
+        ->orderBy('sr_prefix')
+        ->get()
+        ->groupBy('series_no');
     $DebitNotedocumentSummary = [];
     foreach ($allDebitNotes as $series => $records) {
         $from = $records->first()->sr_prefix ?? '-';
@@ -2128,63 +2320,8 @@ public function sendGstr1ToGSTMaster(Request $request){
             'net_issued'  => $total - $cancelled,
         ];
     }
-
-    $payments = DB::table('payments')
-                ->where('company_id', $company_id)
-                ->whereBetween('date', [$from_date, $to_date])
-                ->where('delete', '0')
-                ->whereNotNull('voucher_no')
-                ->select('voucher_no', 'series_no', 'status')
-                ->orderBy('series_no')
-                ->orderBy('voucher_no')
-                ->get()
-                ->groupBy('series_no');
-    $paymentsDocumentSummary = [];
-    foreach ($payments as $series => $records) {
-        $total = $records->count();
-        $cancelled = $records->where('status', 2)->count();
-        $from = $records->first()->voucher_no ?? '-';
-        $to = $records->last()->voucher_no ?? '-';
-
-        $paymentsDocumentSummary[] = [
-            'series_no' => $series ?? '-',
-            'from' => $from,
-            'to' => $to,
-            'total' => $total,
-            'cancelled' => $cancelled,
-            'net_issued' => $total - $cancelled,
-        ];
-    }
-    $receipts = DB::table('receipts')
-            ->where('company_id', $company_id)
-            ->whereBetween('date', [$from_date, $to_date])
-            ->where('delete', '0')
-            ->whereNotNull('voucher_no')
-            ->select('voucher_no', 'series_no', 'status')
-            ->orderBy('series_no')
-            ->orderBy('voucher_no')
-            ->get()
-            ->groupBy('series_no');
-
-      $receiptsDocumentSummary = [];
-
-    foreach ($receipts as $series => $records) {
-        $total = $records->count();
-        $cancelled = $records->where('status', 2)->count();
-        $from = $records->first()->voucher_no ?? '-';
-        $to = $records->last()->voucher_no ?? '-';
-
-        $receiptsDocumentSummary[] = [
-            'series_no' => $series ?? '-',
-            'from' => $from,
-            'to' => $to,
-            'total' => $total,
-            'cancelled' => $cancelled,
-            'net_issued' => $total - $cancelled,
-        ];
-    }
+    
     $docIssue = ['doc_det' => []];
-
     // Helper function to map summaries to required doc format
     function mapSummaryToDocs($summaryArray) {
         $docs = [];
@@ -2202,44 +2339,28 @@ public function sendGstr1ToGSTMaster(Request $request){
         return $docs;
     }
     // Add each doc type to the final array
-    $docIssue['doc_det'][] = [
-        'doc_num' => 1,
-        'docs' => mapSummaryToDocs($SalesdocumentSummary)
-    ];
-    $docIssue['doc_det'][] = [
-        'doc_num' => 5,
-        'docs' => mapSummaryToDocs($CreditNotedocumentSummary)
-    ];
-
-    $docIssue['doc_det'][] = [
-        'doc_num' => 4,
-        'docs' => mapSummaryToDocs($DebitNotedocumentSummary)
-    ];
-
-    $docIssue['doc_det'][] = [
-        'doc_num' => 7,
-        'docs' => mapSummaryToDocs($paymentsDocumentSummary)
-    ];
-
-    $docIssue['doc_det'][] = [
-        'doc_num' => 6,
-        'docs' => mapSummaryToDocs($receiptsDocumentSummary)
-    ];
-    // Add other doc_num (2, 3, 8–12) if applicable as empty or as needed
-    $gstr1_request = array(
-        "gstin"=>$merchant_gst,
-        "fp"=>date('mY', strtotime($from_date)),
-        "gt"=>600096,
-        "cur_gt"=>600096,
-        "b2b"=>$b2b_arr,
-        "cdnr"=>$finalData,
-        "doc_issue"=>$docIssue,
-        "hsn"=>$formattedHsnData,
-    );
-    echo "<pre>";
-    echo json_encode($gstr1_requset);
-    die;
-    //Call retsave Api 
+    $docIssue_index = 1;
+    if (count($SalesdocumentSummary) > 0) {
+        $docIssue['doc_det'][] = [
+            'doc_num' => $docIssue_index,
+            'docs' => mapSummaryToDocs($SalesdocumentSummary)
+        ];
+        $docIssue_index++;
+    } 
+    if (count($CreditNotedocumentSummary) > 0) {
+        $docIssue['doc_det'][] = [
+            'doc_num' => $docIssue_index,
+            'docs' => mapSummaryToDocs($CreditNotedocumentSummary)
+        ];
+        $docIssue_index++;
+    }
+    if (count($DebitNotedocumentSummary) > 0) {
+        $docIssue['doc_det'][] = [
+            'doc_num' => $docIssue_index,
+            'docs' => mapSummaryToDocs($DebitNotedocumentSummary)
+        ];
+        $docIssue_index++;
+    }
     $txn = "";
     //Get GST Username
     $company = Companies::select('gst_config_type')
@@ -2247,22 +2368,24 @@ public function sendGstr1ToGSTMaster(Request $request){
                             ->first();
     if($company->gst_config_type == "single_gst"){
         $gst = DB::table('gst_settings')
-                        ->select('gst_username')
+                        ->select('gst_username','einvoice')
                         ->where([
                             'company_id' => Session::get('user_company_id'),
                             'gst_no' => $merchant_gst
                         ])
                         ->first();
         $gst_user_name = $gst->gst_username;
+        $einvoice_status = $gst->einvoice;
     }else if($company->gst_config_type == "multiple_gst"){            
         $gst = DB::table('gst_settings_multiple')
-                        ->select('gst_username')
+                        ->select('gst_username','einvoice')
                         ->where([
                             'company_id' => Session::get('user_company_id'),
                             'gst_no' => $merchant_gst
                         ])
                         ->first();
         $gst_user_name = $gst->gst_username;
+        $einvoice_status = $gst->einvoice;
     }
     if($gst_user_name==""){
         $response = array(
@@ -2271,11 +2394,38 @@ public function sendGstr1ToGSTMaster(Request $request){
             );
         return json_encode($response);
     }
+    if($einvoice_status==1){
+        $gstr1_requset = array(
+            "gstin"=>$merchant_gst,
+            "fp"=>date('mY', strtotime($from_date)),
+            "gt"=>600096,
+            "cur_gt"=>600096,
+            "b2b"=>$new_arr,
+            "cdnr"=>$finalData,
+            "doc_issue"=>$docIssue,
+            "hsn"=>$formattedHsnData
+        );
+    }else{
+        $gstr1_requset = array(
+            "gstin"=>$merchant_gst,
+            "fp"=>date('mY', strtotime($from_date)),
+            "gt"=>600096,
+            "cur_gt"=>600096,
+            "doc_issue"=>$docIssue,
+            "hsn"=>$formattedHsnData
+        );
+    }
+    
+    echo "<pre>";
+    echo json_encode($gstr1_requset);
+    //die;
+    //Call retsave Api 
+    
     $ret_period = date('mY',strtotime($from_date));
     $state_code = substr($merchant_gst,0,2);
     //Check and generate token
     $gst_token = gstToken::select('txn','created_at')
-                        ->where('company_gstin',$request->gstin)
+                        ->where('company_gstin',$merchant_gst)
                         ->where('company_id',Session::get('user_company_id'))
                         ->where('status',1)
                         ->orderBy('id','desc')
@@ -2284,7 +2434,7 @@ public function sendGstr1ToGSTMaster(Request $request){
         $token_expiry = date('d-m-Y H:i:s',strtotime('+6 hour',strtotime($gst_token->created_at)));
         $current_time = date('d-m-Y H:i:s');
         if(strtotime($token_expiry)<strtotime($current_time)){
-            $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->gstin);
+            $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$merchant_gst);
             if($token_res==0){
                 $response = array(
                     'status' => false,
@@ -2300,7 +2450,7 @@ public function sendGstr1ToGSTMaster(Request $request){
         }
         $txn = $gst_token->txn;
     }else{
-        $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->gstin);
+        $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$merchant_gst);
         if($token_res==0){
                 $response = array(
                     'status' => false,
@@ -2314,6 +2464,7 @@ public function sendGstr1ToGSTMaster(Request $request){
         );
         return json_encode($response);
     }
+    
     $curl = curl_init();
     curl_setopt_array($curl, array(
         CURLOPT_URL => 'https://api.mastergst.com/gstr1/retsave?email=pram92500@gmail.com',
@@ -5072,7 +5223,7 @@ $payments = DB::table('payments')
                 }
             }
         }
-
+        
         // --------- Group and calculate for sales --------
         $grouped_sale = [];
         foreach ($items_sale as $item) {
@@ -5282,7 +5433,9 @@ $payments = DB::table('payments')
             $grouped_debit[$key]['cgst'] += $cgst;
             $grouped_debit[$key]['sgst'] += $sgst;
         }
-
+        // echo "<pre>";
+        // print_r($grouped_debit);
+        // echo "</pre>";
         // -------- Combine final adjusted data: sales + debit - credit -------
         $allKeys = collect(array_unique(array_merge(array_keys($grouped_sale), array_keys($grouped_credit), array_keys($grouped_debit))));
 

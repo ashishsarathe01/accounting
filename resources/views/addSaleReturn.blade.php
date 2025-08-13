@@ -1881,12 +1881,15 @@
       $("#material_center").val($('option:selected', this).attr('data-mat_center'));
       merchant_gstin = $('option:selected', this).attr('data-gst_no');
       $("#merchant_gst").val(merchant_gstin);
+      let vou_no = "";
       if(nature=="WITHOUT GST"){
          if(manual_enter_invoice_no==0){
             if(invoice_prefix_wt!=""){
                $("#voucher_prefix").val(invoice_prefix_wt);
+               vou_no = invoice_prefix_wt;
             }else{
                $("#voucher_prefix").val($('option:selected', this).attr('data-without_invoice_start_from'));
+               vou_no = $('option:selected', this).attr('data-without_invoice_start_from');
             }
             $("#sale_return_no").val($('option:selected', this).attr('data-without_invoice_start_from'));
          }else{
@@ -1898,8 +1901,10 @@
          if(manual_enter_invoice_no==0){
             if(invoice_prefix!=""){
                $("#voucher_prefix").val(invoice_prefix);
+               vou_no = invoice_prefix;
             }else{
                $("#voucher_prefix").val(invoice_start_from);
+               vou_no = invoice_start_from;
             }         
             $("#sale_return_no").val(invoice_start_from);
          }else{
@@ -1907,7 +1912,19 @@
             $("#voucher_prefix").val("");
             $("#voucher_prefix").prop('readonly',false);
          }
-      }      
+      }
+      $.ajax({
+         url : '{{url("check-debit-credit-note-voucherno")}}',
+         method : 'post',
+         data : { _token: '<?php echo csrf_token() ?>','voucher_no':vou_no},
+         success : function(res){
+            let obj = JSON.parse(res);
+            if(obj.status==1){
+               alert("Voucher No Already Exist In Debit/Credit Note");
+               $("#series_no").val('');
+            }
+         }
+      });
       calculateAmount();          
    });
    $("#nature").change(function(){

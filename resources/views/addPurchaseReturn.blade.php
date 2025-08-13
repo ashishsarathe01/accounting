@@ -450,7 +450,7 @@
                   <table class="table-striped table m-0 shadow-sm table-bordered with_gst_section">
                      <tbody>
                         <tr class="font-14 font-heading bg-white">
-                           <td style="width:50%">
+                           <td style="width:30%">
                               <select class="form-control item select2-single" id="item_1" data-index="1" name="item[]" onchange="gstCalculation()" >
                                  <option value="">Select Item</option>
                                  @foreach($items as $item)
@@ -461,7 +461,7 @@
                            <td>
                               <input type="number" class="form-control hsn" id="hsn_1" name="hsn[]" placeholder="HSN/SAC">
                            </td>
-                           <td style="width:15%">
+                           <td style="width:10%">
                               <select class="form-select percentage" id="percentage_1" data-index="1" name="percentage[]" onchange="gstCalculation()">
                                  <option value="">GST(%)</option>
                                  <option value="0">0%</option>
@@ -471,53 +471,108 @@
                                  <option value="28">28%</option>
                               </select>
                            </td>
+                           <td style="width:20%">
+                               <select class="form-control select2-single unit_code" name="unit_code[]" id="unit_code_1" >
+                                          <option value="">-- Select UQC --</option>
+                                          <option value="BAL - BALE">BAL - BALE</option>
+                                          <option value="BDL - BUNDLES">BDL - BUNDLES</option>
+                                          <option value="BKL - BUCKLES">BKL - BUCKLES</option>
+                                          <option value="BOU - BILLION OF UNITS">BOU - BILLION OF UNITS</option>
+                                          <option value="BOX - BOX">BOX - BOX</option>
+                                          <option value="BTL - BOTTLES">BTL - BOTTLES</option>
+                                          <option value="BUN - BUNCHES">BUN - BUNCHES</option>
+                                          <option value="CAN - CANS">CAN - CANS</option>
+                                          <option value="CBM - CUBIC METERS">CBM - CUBIC METERS</option>
+                                          <option value="CCM - CUBIC CENTIMETERS">CCM - CUBIC CENTIMETERS</option>
+                                          <option value="CMS - CENTIMETERS">CMS - CENTIMETERS</option>
+                                          <option value="CTN - CARTONS">CTN - CARTONS</option>
+                                          <option value="DOZ - DOZENS">DOZ - DOZENS</option>
+                                          <option value="DRM - DRUMS">DRM - DRUMS</option>
+                                          <option value="GGK - GREAT GROSS">GGK - GREAT GROSS</option>
+                                          <option value="GMS - GRAMMES">GMS - GRAMMES</option>
+                                          <option value="GRS - GROSS">GRS - GROSS</option>
+                                          <option value="GYD - GROSS YARDS">GYD - GROSS YARDS</option>
+                                          <option value="KGS - KILOGRAMS">KGS - KILOGRAMS</option>
+                                          <option value="KLR - KILOLITRE">KLR - KILOLITRE</option>
+                                          <option value="KME - KILOMETRE">KME - KILOMETRE</option>
+                                          <option value="LTR - LITRES">LTR - LITRES</option>
+                                          <option value="MLT - MILILITRE">MLT - MILILITRE</option>
+                                          <option value="MTR - METERS">MTR - METERS</option>
+                                          <option value="MTS - METRIC TON">MTS - METRIC TON</option>
+                                          <option value="NOS - NUMBERS">NOS - NUMBERS</option>
+                                          <option value="PAC - PACKS">PAC - PACKS</option>
+                                          <option value="PCS - PIECES">PCS - PIECES</option>
+                                          <option value="PRS - PAIRS">PRS - PAIRS</option>
+                                          <option value="QTL - QUINTAL">QTL - QUINTAL</option>
+                                          <option value="ROL - ROLLS">ROL - ROLLS</option>
+                                          <option value="SET - SETS">SET - SETS</option>
+                                          <option value="SQF - SQUARE FEET">SQF - SQUARE FEET</option>
+                                          <option value="SQM - SQUARE METERS">SQM - SQUARE METERS</option>
+                                          <option value="SQY - SQUARE YARDS">SQY - SQUARE YARDS</option>
+                                          <option value="TBS - TABLETS">TBS - TABLETS</option>
+                                          <option value="TGM - TEN GROSS">TGM - TEN GROSS</option>
+                                          <option value="THD - THOUSANDS">THD - THOUSANDS</option>
+                                          <option value="TON - TONNES">TON - TONNES</option>
+                                          <option value="TUB - TUBES">TUB - TUBES</option>
+                                          <option value="UGS - US GALLONS">UGS - US GALLONS</option>
+                                          <option value="UNT - UNITS">UNT - UNITS</option>
+                                          <option value="YDS - YARDS">YDS - YARDS</option>
+                                          <option value="OTH - OTHERS">OTH - OTHERS</option>
+                                          <option value="Test - ER Scenario">Test - ER Scenario</option>
+                                       </select>
+                           </td>
                            <td>
-                              <input type="text" class="form-control amount" id="amount_1" data-index="1" name="without_item_amount[]" placeholder="Enter Amount" onkeyup="gstCalculation()">
+                              <input type="text" class="form-control amount" id="amount_1" data-index="1" name="without_item_amount[]" placeholder="Enter Amount" onkeyup="gstCalculation()" style="text-align: right">
                            </td>
                            <td>
                               <svg xmlns="http://www.w3.org/2000/svg" style="cursor:pointer;" class="bg-primary rounded-circle add_more_tr" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"></path></svg>
                         </tr>
                         <tr class="font-14 font-heading bg-white">
                            <td></td>
-                           <td></td>
+                           <td></td><td></td>
                            <td style="text-align: right;">Net Amount</td>
                            <td>
-                              <input type="text" class="form-control" id="net_amount" name="net_amount" placeholder="Net Amount" readonly>
+                              <input type="text" class="form-control" id="net_amount" name="net_amount" placeholder="Net Amount" readonly style="text-align: right">
                            </td>
                         </tr>
                         <tr class="font-14 font-heading bg-white cgst_tr" style="display: none;">
                            <td></td>
                            <td></td>
+                           <td></td>
                            <td style="text-align: right;">CGST</td>
                            <td>
-                              <input type="text" class="form-control" id="cgst" name="cgst" readonly>
+                              <input type="text" class="form-control" id="cgst" name="cgst" readonly style="text-align: right">
                            </td>
                         </tr>
                         <tr class="font-14 font-heading bg-white sgst_tr" style="display: none;">
                            <td></td>
                            <td></td>
+                           <td></td>
                            <td style="text-align: right;">SGST</td>
                            <td>
-                              <input type="text" class="form-control" id="sgst" name="sgst" readonly>
+                              <input type="text" class="form-control" id="sgst" name="sgst" readonly style="text-align: right">
                            </td>
                         </tr>
                         <tr class="font-14 font-heading bg-white igst_tr" style="display: none;">
                            <td></td>
                            <td></td>
+                           <td></td>
                            <td style="text-align: right;">IGST</td>
                            <td>
-                              <input type="text" class="form-control" id="igst" name="igst" readonly>
+                              <input type="text" class="form-control" id="igst" name="igst" readonly style="text-align: right">
                            </td>
                         </tr>
                         <tr class="font-14 font-heading bg-white">
+                           <td></td>
                            <td></td>
                            <td></td>
                            <td style="text-align: right;">Total Amount</td>
                            <td>
-                              <input type="text" class="form-control" id="total_amount" name="total_amount" placeholder="Total Amount" readonly>
+                              <input type="text" class="form-control" id="total_amount" name="total_amount" placeholder="Total Amount" readonly style="text-align: right">
                            </td>
                         </tr>
                         <tr class="font-14 font-heading bg-white">
+                           <td></td>
                            <td></td>
                            <td></td>
                            <td style="text-align: right;">Remark</td>
@@ -1838,12 +1893,15 @@
       $("#material_center").val($('option:selected', this).attr('data-mat_center'));
       merchant_gstin = $('option:selected', this).attr('data-gst_no');
       $("#merchant_gst").val(merchant_gstin);
+      let vou_no = "";
       if(nature=="WITHOUT GST"){
          if(manual_enter_invoice_no==0){
             if(invoice_prefix_wt!=""){
                $("#voucher_prefix").val(invoice_prefix_wt);
+               vou_no = invoice_prefix_wt;
             }else{
                $("#voucher_prefix").val($('option:selected', this).attr('data-without_invoice_start_from'));
+               vou_no = $('option:selected', this).attr('data-without_invoice_start_from');
             }
             $("#purchase_return_no").val($('option:selected', this).attr('data-without_invoice_start_from'));
          }else{
@@ -1855,8 +1913,10 @@
          if(manual_enter_invoice_no==0){
             if(invoice_prefix!=""){
                $("#voucher_prefix").val(invoice_prefix);
+               vou_no = invoice_prefix;
             }else{
                $("#voucher_prefix").val(invoice_start_from);
+               vou_no = invoice_start_from;
             }         
             $("#purchase_return_no").val(invoice_start_from);
          }else{
@@ -1864,8 +1924,20 @@
             $("#voucher_prefix").val("");
             $("#voucher_prefix").prop('readonly',false);
          }
-      }      
-      calculateAmount();          
+      }
+      $.ajax({
+         url : '{{url("check-debit-credit-note-voucherno")}}',
+         method : 'post',
+         data : { _token: '<?php echo csrf_token() ?>','voucher_no':vou_no},
+         success : function(res){
+            let obj = JSON.parse(res);
+            if(obj.status==1){
+               alert("Voucher No Already Exist In Debit/Credit Note");
+               $("#series_no").val('');
+            }
+         }
+      })
+      calculateAmount();
    });
    $("#nature").change(function(){
       $("#series_no").change();
@@ -1901,6 +1973,7 @@
       if((nature=="WITH GST" && type=="WITHOUT ITEM")){
          $(".with_gst_without_item_section").show();
          $(".item").select2();
+         $(".unit_code").select2();
       }
    }
    $(".transport_info").click(function(){
@@ -1968,10 +2041,11 @@
       }
       add_more_count_withgst++;
       var $curRow = $(this).closest('tr');
-      let newRow = '<tr id="withgst_tr_'+add_more_count_withgst+'" class="font-14 font-heading bg-white"><td style="width:50%"><select class="form-control item" id="item_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="item[]" onchange="gstCalculation()"><option value="">Select Item</option>@foreach($items as $item)<option value="{{$item->id}}">{{$item->account_name}}</option>@endforeach </select></td><td><input type="number" class="form-control hsn" id="hsn_1" name="hsn[]" placeholder="HSN/SAC"></td><td><select class="form-select percentage" id="percentage_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="percentage[]" onchange="gstCalculation()"><option value="">GST(%)</option><option value="0">0%</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option><option value="28">28%</option></select></td><td><input type="text" class="form-control amount" id="amount_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="without_item_amount[]" placeholder="Enter Amount" onkeyup="gstCalculation()"></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove_more_tr" data-id="'+add_more_count_withgst+'" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"></path></svg></td></tr>';
+      let newRow = '<tr id="withgst_tr_'+add_more_count_withgst+'" class="font-14 font-heading bg-white"><td style="width:30%"><select class="form-control item" id="item_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="item[]" onchange="gstCalculation()"><option value="">Select Item</option>@foreach($items as $item)<option value="{{$item->id}}">{{$item->account_name}}</option>@endforeach </select></td><td><input type="number" class="form-control hsn" id="hsn_1" name="hsn[]" placeholder="HSN/SAC"></td><td><select class="form-select percentage" id="percentage_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="percentage[]" onchange="gstCalculation()"><option value="">GST(%)</option><option value="0">0%</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option><option value="28">28%</option></select></td><td style="width:15%"><select class="form-control select2-single unit_code" name="unit_code[]" id="unit_code_'+add_more_count_withgst+'" ><option value="">-- Select UQC --</option><option value="BAL - BALE">BAL - BALE</option><option value="BDL - BUNDLES">BDL - BUNDLES</option><option value="BKL - BUCKLES">BKL - BUCKLES</option><option value="BOU - BILLION OF UNITS">BOU - BILLION OF UNITS</option><option value="BOX - BOX">BOX - BOX</option><option value="BTL - BOTTLES">BTL - BOTTLES</option><option value="BUN - BUNCHES">BUN - BUNCHES</option><option value="CAN - CANS">CAN - CANS</option><option value="CBM - CUBIC METERS">CBM - CUBIC METERS</option><option value="CCM - CUBIC CENTIMETERS">CCM - CUBIC CENTIMETERS</option><option value="CMS - CENTIMETERS">CMS - CENTIMETERS</option><option value="CTN - CARTONS">CTN - CARTONS</option><option value="DOZ - DOZENS">DOZ - DOZENS</option><option value="DRM - DRUMS">DRM - DRUMS</option><option value="GGK - GREAT GROSS">GGK - GREAT GROSS</option><option value="GMS - GRAMMES">GMS - GRAMMES</option><option value="GRS - GROSS">GRS - GROSS</option><option value="GYD - GROSS YARDS">GYD - GROSS YARDS</option><option value="KGS - KILOGRAMS">KGS - KILOGRAMS</option><option value="KLR - KILOLITRE">KLR - KILOLITRE</option><option value="KME - KILOMETRE">KME - KILOMETRE</option><option value="LTR - LITRES">LTR - LITRES</option><option value="MLT - MILILITRE">MLT - MILILITRE</option><option value="MTR - METERS">MTR - METERS</option><option value="MTS - METRIC TON">MTS - METRIC TON</option><option value="NOS - NUMBERS">NOS - NUMBERS</option><option value="PAC - PACKS">PAC - PACKS</option><option value="PCS - PIECES">PCS - PIECES</option><option value="PRS - PAIRS">PRS - PAIRS</option><option value="QTL - QUINTAL">QTL - QUINTAL</option><option value="ROL - ROLLS">ROL - ROLLS</option><option value="SET - SETS">SET - SETS</option><option value="SQF - SQUARE FEET">SQF - SQUARE FEET</option><option value="SQM - SQUARE METERS">SQM - SQUARE METERS</option><option value="SQY - SQUARE YARDS">SQY - SQUARE YARDS</option><option value="TBS - TABLETS">TBS - TABLETS</option><option value="TGM - TEN GROSS">TGM - TEN GROSS</option><option value="THD - THOUSANDS">THD - THOUSANDS</option><option value="TON - TONNES">TON - TONNES</option><option value="TUB - TUBES">TUB - TUBES</option><option value="UGS - US GALLONS">UGS - US GALLONS</option><option value="UNT - UNITS">UNT - UNITS</option><option value="YDS - YARDS">YDS - YARDS</option><option value="OTH - OTHERS">OTH - OTHERS</option><option value="Test - ER Scenario">Test - ER Scenario</option></select></td><td><input type="text" class="form-control amount" id="amount_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="without_item_amount[]" placeholder="Enter Amount" onkeyup="gstCalculation()" style="text-align: right"></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove_more_tr" data-id="'+add_more_count_withgst+'" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"></path></svg></td></tr>';
       $curRow.after(newRow);
       //$("#item_"+add_more_count_withgst).select2();
       $(".item").select2();
+       $(".unit_code").select2();
    });
    $(document).on("click", ".remove_more_tr", function() {
       let id = $(this).attr('data-id');

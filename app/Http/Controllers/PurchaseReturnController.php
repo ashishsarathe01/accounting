@@ -679,6 +679,7 @@ class PurchaseReturnController extends Controller
                $percentage = $request->input('percentage')[$key];
                $amount = $request->input('without_item_amount')[$key];
                $hsn = $request->input('hsn')[$key];
+               $unit_code = $request->input('unit_code')[$key];
                $purchase_return_without = new PurchaseReturnEntry;
                $purchase_return_without->purchase_return_id = $purchase->id;
                $purchase_return_without->company_id = Session::get('user_company_id');
@@ -686,7 +687,8 @@ class PurchaseReturnController extends Controller
                $purchase_return_without->account_name = $item;
                $purchase_return_without->debit = $amount;
                $purchase_return_without->percentage = $percentage;  
-               $purchase_return_without->hsn_code = $hsn;  
+               $purchase_return_without->hsn_code = $hsn; 
+               $purchase_return_without->unit_code = $unit_code; 
                $purchase_return_without->status = '1';
                $purchase_return_without->save();
                //Ledger Entry
@@ -1683,14 +1685,17 @@ class PurchaseReturnController extends Controller
                $percentage = $request->input('percentage')[$key];
                $amount = $request->input('without_item_amount')[$key];
                $hsn = $request->input('hsn')[$key];
+               $unit_code = $request->input('unit_code')[$key];
                $purchase_return_without = new PurchaseReturnEntry;
                $purchase_return_without->purchase_return_id = $purchase->id;
                $purchase_return_without->company_id = Session::get('user_company_id');
                $purchase_return_without->type = "Credit";
                $purchase_return_without->account_name = $item;
                $purchase_return_without->debit = $amount;
-               $purchase_return_without->percentage = $percentage;  
+               $purchase_return_without->percentage = $percentage;
+               $purchase_return_without->unit_code = $unit_code;
                $purchase_return_without->hsn_code = $hsn;  
+               
                $purchase_return_without->status = '1';
                $purchase_return_without->save();
                //Ledger Entry

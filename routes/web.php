@@ -297,6 +297,7 @@ Route::Resource('payment', PaymentController::class);
    Route::get('signout', [AuthController::class, 'signOut'])->name('signout');*/
 
    // Ajax requests
+   Route::post('check-debit-credit-note-voucherno', [AjaxController::class, 'checkDebitCreditNoteVoucherno']);
    Route::post('get/items/details', [AjaxController::class, 'getItemDetails']);
    Route::post('get/billsundry/details', [AjaxController::class, 'getBillSundryDetails']);
    Route::post('get/accounts/details', [AjaxController::class, 'getAccountsDetails']);

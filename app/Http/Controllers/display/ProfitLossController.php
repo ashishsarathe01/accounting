@@ -199,21 +199,29 @@ class ProfitLossController extends Controller{
                      ->whereIn('company_id',[Session::get('user_company_id'),0])
                      ->where('heading_type','group')
                      ->pluck('id');
-      $direct_expenses_account_id1 = Accounts::whereIn('under_group',$account_group)
+      $group_ids = $this->getAllChildGroupIds(12,Session::get('user_company_id'));
+      $group_ids[] = 12; // Include current group
+      $direct_expenses_account_id1 = Accounts::whereIn('under_group',$group_ids)
                                     ->whereIn('company_id',[Session::get('user_company_id'),0])
                                     ->pluck('id');      
       $direct_expenses_account_id = $direct_expenses_account_id->merge($direct_expenses_account_id1);      
       $direct_expenses = AccountLedger::whereIn('account_id',$direct_expenses_account_id)
                   ->where('delete_status','0')
                   ->whereIn('company_id',[Session::get('user_company_id'),0])
-                  ->whereBetween('txn_date', [$from_date, $to_date])
+                  ->where(function($q) use ($from_date, $to_date) {
+                        $q->whereBetween('txn_date', [$from_date, $to_date])
+                           ->orWhere('entry_type', '-1'); // <-- your OR condition here
+                     })
                   ->where('status','1')
                   ->where('financial_year',$financial_year)
                   ->sum('debit');
       $direct_expenses_credit = AccountLedger::whereIn('account_id',$direct_expenses_account_id)
                   ->where('delete_status','0')
                   ->whereIn('company_id',[Session::get('user_company_id'),0])
-                  ->whereBetween('txn_date', [$from_date, $to_date])
+                  ->where(function($q) use ($from_date, $to_date) {
+                        $q->whereBetween('txn_date', [$from_date, $to_date])
+                           ->orWhere('entry_type', '-1'); // <-- your OR condition here
+                     })
                   ->where('status','1')
                   ->where('financial_year',$financial_year)
                   ->sum('credit');
@@ -225,21 +233,30 @@ class ProfitLossController extends Controller{
                      ->whereIn('company_id',[Session::get('user_company_id'),0])
                      ->where('heading_type','group')
                      ->pluck('id');
-      $indirect_expenses_account_id1 = Accounts::whereIn('under_group',$account_group)
+      $group_ids = $this->getAllChildGroupIds(15,Session::get('user_company_id'));
+      $group_ids[] = 15; // Include current group
+
+      $indirect_expenses_account_id1 = Accounts::whereIn('under_group',$group_ids)
                                     ->whereIn('company_id',[Session::get('user_company_id'),0])
                                     ->pluck('id');      
       $indirect_expenses_account_id = $indirect_expenses_account_id->merge($indirect_expenses_account_id1);   
       $indirect_expenses = AccountLedger::whereIn('account_id',$indirect_expenses_account_id)
                   ->where('delete_status','0')
                   ->whereIn('company_id',[Session::get('user_company_id'),0])
-                  ->whereBetween('txn_date', [$from_date, $to_date])
+                  ->where(function($q) use ($from_date, $to_date) {
+                        $q->whereBetween('txn_date', [$from_date, $to_date])
+                           ->orWhere('entry_type', '-1'); // <-- your OR condition here
+                     })
                   ->where('status','1')
                   ->where('financial_year',$financial_year)
                   ->sum('debit');
       $indirect_expenses_credit = AccountLedger::whereIn('account_id',$indirect_expenses_account_id)
                   ->where('delete_status','0')
                   ->whereIn('company_id',[Session::get('user_company_id'),0])
-                  ->whereBetween('txn_date', [$from_date, $to_date])
+                  ->where(function($q) use ($from_date, $to_date) {
+                        $q->whereBetween('txn_date', [$from_date, $to_date])
+                           ->orWhere('entry_type', '-1'); // <-- your OR condition here
+                     })
                   ->where('status','1')
                   ->where('financial_year',$financial_year)
                   ->sum('credit');
@@ -251,7 +268,9 @@ class ProfitLossController extends Controller{
                      ->whereIn('company_id',[Session::get('user_company_id'),0])
                      ->where('heading_type','group')
                      ->pluck('id');
-      $direct_income_account_id1 = Accounts::whereIn('under_group',$account_group)
+      $group_ids = $this->getAllChildGroupIds(13,Session::get('user_company_id'));
+      $group_ids[] = 13; // Include current group
+      $direct_income_account_id1 = Accounts::whereIn('under_group',$group_ids)
                                     ->whereIn('company_id',[Session::get('user_company_id'),0])
                                     ->pluck('id');
       
@@ -259,14 +278,20 @@ class ProfitLossController extends Controller{
       $direct_income = AccountLedger::whereIn('account_id',$direct_income_account_id)
                   ->where('delete_status','0')
                   ->whereIn('company_id',[Session::get('user_company_id'),0])
-                  ->whereBetween('txn_date', [$from_date, $to_date])
+                  ->where(function($q) use ($from_date, $to_date) {
+                        $q->whereBetween('txn_date', [$from_date, $to_date])
+                           ->orWhere('entry_type', '-1'); // <-- your OR condition here
+                     })
                   ->where('status','1')
                   ->where('financial_year',$financial_year)
                   ->sum('credit');
       $debit_direct_income = AccountLedger::whereIn('account_id',$direct_income_account_id)
                   ->where('delete_status','0')
                   ->whereIn('company_id',[Session::get('user_company_id'),0])
-                  ->whereBetween('txn_date', [$from_date, $to_date])
+                  ->where(function($q) use ($from_date, $to_date) {
+                        $q->whereBetween('txn_date', [$from_date, $to_date])
+                           ->orWhere('entry_type', '-1'); // <-- your OR condition here
+                     })
                   ->where('status','1')
                   ->where('financial_year',$financial_year)
                   ->sum('debit');
@@ -278,7 +303,9 @@ class ProfitLossController extends Controller{
                      ->whereIn('company_id',[Session::get('user_company_id'),0])
                      ->where('heading_type','group')
                      ->pluck('id');
-      $indirect_income_account_id1 = Accounts::whereIn('under_group',$account_group)
+      $group_ids = $this->getAllChildGroupIds(14,Session::get('user_company_id'));
+      $group_ids[] = 14; // Include current group
+      $indirect_income_account_id1 = Accounts::whereIn('under_group',$group_ids)
                                     ->whereIn('company_id',[Session::get('user_company_id'),0])
                                     ->pluck('id');
       
@@ -286,14 +313,20 @@ class ProfitLossController extends Controller{
       $indirect_income = AccountLedger::whereIn('account_id',$indirect_income_account_id)
                   ->where('delete_status','0')
                   ->whereIn('company_id',[Session::get('user_company_id'),0])
-                  ->whereBetween('txn_date', [$from_date, $to_date])
+                  ->where(function($q) use ($from_date, $to_date) {
+                        $q->whereBetween('txn_date', [$from_date, $to_date])
+                           ->orWhere('entry_type', '-1'); // <-- your OR condition here
+                     })
                   ->where('status','1')
                   ->where('financial_year',$financial_year)
                   ->sum('credit');
       $debit_indirect_income = AccountLedger::whereIn('account_id',$indirect_income_account_id)
                   ->where('delete_status','0')
                   ->whereIn('company_id',[Session::get('user_company_id'),0])
-                  ->whereBetween('txn_date', [$from_date, $to_date])
+                  ->where(function($q) use ($from_date, $to_date) {
+                        $q->whereBetween('txn_date', [$from_date, $to_date])
+                           ->orWhere('entry_type', '-1'); // <-- your OR condition here
+                     })
                   ->where('status','1')
                   ->where('financial_year',$financial_year)
                   ->sum('debit');
@@ -918,39 +951,85 @@ class ProfitLossController extends Controller{
                      ->where('heading_type','group')
                      ->where('delete','0')
                      ->where('status','1')
-                     ->get();                     
-      foreach ($account_group as $key => $value) {
-         $account_id = Accounts::where('under_group',$value->id)
-                                 ->where('accounts.delete','0')
-                                 ->whereIn('accounts.company_id',[Session::get('user_company_id'),0])
-                                 ->pluck('id');
+                     ->get();
+      // echo "<pre>";
+      // print_r($account_group->toArray());
+      // echo "</pre>";
+      foreach ($account_group as $key => $group) {
+            $company_id = Session::get('user_company_id');
+
+            // 1. Get current + child group IDs
+            $group_ids = $this->getAllChildGroupIds($group->id, $company_id);
+            $group_ids[] = $group->id; // Include current group
+
+            // 2. Get all accounts under these groups
+            $account_ids = Accounts::whereIn('under_group', $group_ids)
+                           ->where('accounts.delete', '0')
+                           ->whereIn('accounts.company_id', [$company_id, 0])
+                           ->pluck('id');
+
+            // 3. Get debit and credit sums
+            $debit_sum = AccountLedger::whereIn('account_id', $account_ids)
+                           ->where('financial_year', $financial_year)
+                           ->where('delete_status', '0')
+                           ->whereBetween('txn_date', [$from_date, $to_date])
+                           ->whereIn('company_id', [$company_id, 0])
+                           ->orWhere(function($query) use ($account_ids) {
+                                 $query->whereIn('account_id', $account_ids)
+                                       ->where('entry_type', '-1');
+                           })
+                           ->sum('debit');
+
+            $credit_sum = AccountLedger::whereIn('account_id', $account_ids)
+                           ->where('financial_year', $financial_year)
+                           ->where('delete_status', '0')
+                           ->whereBetween('txn_date', [$from_date, $to_date])
+                           ->whereIn('company_id', [$company_id, 0])
+                           ->orWhere(function($query) use ($account_ids) {
+                                 $query->whereIn('account_id', $account_ids)
+                                       ->where('entry_type', '-1');
+                           })
+                           ->sum('credit');
+
+            // 4. Assign
+            $account_group[$key]->account_ledger_sum_debit = $debit_sum;
+            $account_group[$key]->account_ledger_sum_credit = $credit_sum;
+            $account_group[$key]->type = 1;
+         }
+
+      // foreach ($account_group as $key => $value) {
+      //    $account_id = Accounts::where('under_group',$value->id)
+      //                            ->where('accounts.delete','0')
+      //                            ->whereIn('accounts.company_id',[Session::get('user_company_id'),0])
+      //                            ->pluck('id');
          
-         $debit_sum = AccountLedger::whereIn('account_id',$account_id)
-                        ->where('financial_year',$financial_year)
-                        ->where('delete_status','0')
-                        ->whereBetween('txn_date', [$from_date, $to_date])
-                        ->whereIn('company_id',[Session::get('user_company_id'),0])
-                        ->orWhere(function($query)use($account_id) {
-                           $query->whereIn('account_id',$account_id)
-                           ->Where('entry_type','-1');
-                        }) 
-                        ->sum('debit');
-         $credit_sum = AccountLedger::whereIn('account_id',$account_id)
-                        ->where('financial_year',$financial_year)
-                        ->where('delete_status','0')
-                        ->whereBetween('txn_date', [$from_date, $to_date])
-                        ->whereIn('company_id',[Session::get('user_company_id'),0])
-                        ->orWhere(function($query)use($account_id) {
-                           $query->whereIn('account_id',$account_id)
-                           ->Where('entry_type','-1');
-                        })                        
-                        ->sum('credit');         
-         $account_group[$key]->account_ledger_sum_debit = $debit_sum;
-         $account_group[$key]->account_ledger_sum_credit = $credit_sum;
-         
-         
-         $account_group[$key]->type = 1;
-      }
+      //    $debit_sum = AccountLedger::whereIn('account_id',$account_id)
+      //                   ->where('financial_year',$financial_year)
+      //                   ->where('delete_status','0')
+      //                   ->whereBetween('txn_date', [$from_date, $to_date])
+      //                   ->whereIn('company_id',[Session::get('user_company_id'),0])
+      //                   ->orWhere(function($query)use($account_id) {
+      //                      $query->whereIn('account_id',$account_id)
+      //                      ->Where('entry_type','-1');
+      //                   }) 
+      //                   ->sum('debit');
+      //    $credit_sum = AccountLedger::whereIn('account_id',$account_id)
+      //                   ->where('financial_year',$financial_year)
+      //                   ->where('delete_status','0')
+      //                   ->whereBetween('txn_date', [$from_date, $to_date])
+      //                   ->whereIn('company_id',[Session::get('user_company_id'),0])
+      //                   ->orWhere(function($query)use($account_id) {
+      //                      $query->whereIn('account_id',$account_id)
+      //                      ->Where('entry_type','-1');
+      //                   })
+      //                   ->sum('credit');
+
+
+
+      //    $account_group[$key]->account_ledger_sum_debit = $debit_sum;
+      //    $account_group[$key]->account_ledger_sum_credit = $credit_sum;
+      //    $account_group[$key]->type = 1;
+      // }
       
       $account = Accounts::withSum([
                             'accountLedger' => function ($query) use ($financial_year,$from_date,$to_date) { 
@@ -984,14 +1063,27 @@ class ProfitLossController extends Controller{
                            ->whereIn('accounts.company_id',[Session::get('user_company_id'),0])
                            ->orderBy('account_name')
                            ->get();
-// echo "<pre>";
-//       print_r($account->toArray());
-//       echo "</pre>";
-//       exit;
-      $account = $account->merge($account_group);
-      
-      
+            // echo "<pre>";
+            //       print_r($account->toArray());
+            //       echo "</pre>";
+            //       exit;
+      $account = $account->merge($account_group); 
       return view('display/account_balance_by_group')->with('data',$account)->with('group',$group)->with('financial_year',$financial_year)->with('type',$type)->with('from_date',$from_date)->with('to_date',$to_date);
+   }
+   function getAllChildGroupIds($group_id, $company_id) {
+      $child_ids = AccountGroups::where('heading', $group_id)
+                     ->where('delete', '0')
+                     ->whereIn('company_id', [$company_id, 0])
+                     ->pluck('id')
+                     ->toArray();
+
+      $all_ids = $child_ids;
+
+      foreach ($child_ids as $child_id) {
+         $all_ids = array_merge($all_ids, $this->getAllChildGroupIds($child_id, $company_id));
+      }
+
+      return $all_ids;
    }
    public function accountMonthlySummary(Request $request,$id,$financial_year){
       $y = explode("-",$financial_year);

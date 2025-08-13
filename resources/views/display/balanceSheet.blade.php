@@ -113,48 +113,93 @@
                            // }
                            @endphp
                            @if(count($v1->accountUnderGroup)>0)
-                              @foreach($v1->accountUnderGroup as $val1)
-                                
-                                 @foreach($val1->account as $val2)
-                                 
-                                    @foreach($val2->accountLedger as $val3)
-                                       @php 
-                                          if($val3->debit!=""){
-                                             $debit = $debit + str_replace(",","",$val3->debit);
-                                              $d = $d + str_replace(",","",$val3->debit);
-                                          }
-                                          if($val3->credit!=""){
-                                             $credit = $credit + str_replace(",","",$val3->credit);
-                                             $c = $c + str_replace(",","",$val3->credit);
-                                          }                                    
-                                       @endphp
-                                    @endforeach
-                                 @endforeach
-                                 
-                                 @foreach($val1->accountUnderGroup as $a3)
-                                 {{-- @php 
-                                if($v1->name=="PROVISIONS/EXPENSES PAYABLE"){
-                                 echo $a3->account;
-                                }
-                                @endphp --}}
-                                    @foreach($a3->account as $a4)
-                                       @foreach($a4->accountLedger as $val3)
-                                       @php 
-                                             if($val3->debit!=""){
-                                                $debit = $debit + str_replace(",","",$val3->debit);
-                                                $d = $d + str_replace(",","",$val3->debit);
-                                             }
-                                             if($val3->credit!=""){
-                                                $credit = $credit + str_replace(",","",$val3->credit); 
-                                                $c = $c + str_replace(",","",$val3->credit);
-                                             }                                    
-                                          @endphp
+                                    @foreach($v1->accountUnderGroup as $val1a)
+                                       @foreach($val1a->account as $val2)
+                                          @foreach($val2->accountLedger as $val3)
+                                             @php
+                                                if($val3->debit!="" && $val3->debit!="Nan"){
+                                                   $debit = $debit + trim(str_replace(",","",$val3->debit));
+                                                }
+                                                if($val3->credit!=""){
+                                                   $credit = $credit + str_replace(",","",$val3->credit);
+                                                }                                    
+                                             @endphp
+                                          @endforeach
                                        @endforeach
-                                    @endforeach
-                                 @endforeach
 
-                              @endforeach
-                           @endif
+                                       @if(count($val1a->accountUnderGroup)>0)
+                                          @foreach($val1a->accountUnderGroup as $val1b)
+                                             @foreach($val1b->account as $val2)
+                                                @foreach($val2->accountLedger as $val3)
+                                                   @php
+                                                      if($val3->debit!="" && $val3->debit!="Nan"){
+                                                         $debit = $debit + trim(str_replace(",","",$val3->debit));
+                                                      }
+                                                      if($val3->credit!=""){
+                                                         $credit = $credit + str_replace(",","",$val3->credit);
+                                                      }                                    
+                                                   @endphp
+                                                @endforeach
+                                             @endforeach
+                                             @if(count($val1b->accountUnderGroup)>0)
+                                                @foreach($val1b->accountUnderGroup as $val1c)
+                                                   @foreach($val1c->account as $val2)
+                                                      @foreach($val2->accountLedger as $val3)
+                                                         @php
+                                                            if($val3->debit!="" && $val3->debit!="Nan"){
+                                                               $debit = $debit + trim(str_replace(",","",$val3->debit));
+                                                            }
+                                                            if($val3->credit!=""){
+                                                               $credit = $credit + str_replace(",","",$val3->credit);
+                                                            }                                    
+                                                         @endphp
+                                                      @endforeach
+                                                   @endforeach
+                                                   @if(count($val1c->accountUnderGroup)>0)
+                                                      @foreach($val1c->accountUnderGroup as $val1d)
+                                                         @foreach($val1d->account as $val2)
+                                                            @foreach($val2->accountLedger as $val3)
+                                                               @php
+                                                                  if($val3->debit!="" && $val3->debit!="Nan"){
+                                                                     $debit = $debit + trim(str_replace(",","",$val3->debit));
+                                                                  }
+                                                                  if($val3->credit!=""){
+                                                                     $credit = $credit + str_replace(",","",$val3->credit);
+                                                                  }                                    
+                                                               @endphp
+                                                            @endforeach
+                                                         @endforeach
+                                                         @if(count($val1d->accountUnderGroup)>0)
+                                                            @foreach($val1d->accountUnderGroup as $val1e)
+                                                               @foreach($val1e->account as $val2)
+                                                                  @foreach($val2->accountLedger as $val3)
+                                                                     @php
+                                                                        if($val3->debit!="" && $val3->debit!="Nan"){
+                                                                           $debit = $debit + trim(str_replace(",","",$val3->debit));
+                                                                        }
+                                                                        if($val3->credit!=""){
+                                                                           $credit = $credit + str_replace(",","",$val3->credit);
+                                                                        }                                    
+                                                                     @endphp
+                                                                  @endforeach
+                                                               @endforeach
+
+                                                               
+                                                               
+                                                            @endforeach
+                                                         @endif
+                                                         
+                                                         
+                                                      @endforeach
+                                                   @endif
+                                                   
+                                                   
+                                                @endforeach
+                                             @endif 
+                                          @endforeach
+                                       @endif                                       
+                                    @endforeach
+                                 @endif
                            @foreach($v1->account as $v2)
                           
                               @foreach($v2->accountLedger as $v3)
