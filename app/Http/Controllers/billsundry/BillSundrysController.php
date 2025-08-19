@@ -86,6 +86,9 @@ class BillSundrysController extends Controller
         $account->sale_amt_account = $request->input('sale_amt_account');
         $account->adjust_purchase_amt = $request->input('adjust_purchase_amt');
         $account->nature_of_sundry = $request->input('nature_of_sundry');
+        if($request->input('nature_of_sundry')=="TCS"){
+            $account->sundry_percent = 0.1;
+        }
         $account->sequence = $request->input('sequence');
         $account->purchase_amt_account = $request->input('purchase_amt_account');
         $account->status = $request->input('status');
@@ -144,6 +147,11 @@ class BillSundrysController extends Controller
         $account->purchase_amt_account = $request->input('purchase_amt_account');
         $account->status = $request->input('status');
         $account->sequence = $request->input('sequence');
+        if($request->input('nature_of_sundry')=="TCS"){
+            $account->sundry_percent = 0.1;
+        }else{
+            $account->sundry_percent = "";
+        }
         $account->nature_of_sundry = $request->input('nature_of_sundry');
         
         $account->updated_at = Carbon::now();

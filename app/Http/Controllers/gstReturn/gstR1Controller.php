@@ -4101,36 +4101,28 @@ $sortedGrouped = collect($grouped)->sortBy(function ($item) {
 
 
 public function hsnSummary(Request $request){
-     $type = $request->input('type');
-
-
-
+    $type = $request->input('type');
     $merchant_gst = $request->merchant_gst;
     $company_id = $request->company_id;
     $from_date = $request->from_date;
     $to_date = $request->to_date;
-
     $user_company_id = Session::get('user_company_id');
-
     $sundries = BillSundrys::where('company_id', $user_company_id)->get()->keyBy('id');
-
     // -------- STEP 1: Get B2C Sale IDs --------
-$b2cSaleIds = DB::table('sales')
-    ->where('merchant_gst', $merchant_gst)
-    ->where('company_id', $company_id)
-    ->whereBetween('date', [$from_date, $to_date])
-    ->where('delete', '0')
-    ->where('status', '1')
-    ->where(function($q) use ($type) {
-        if ($type === 'B2C') {
-            $q->whereNull('billing_gst')->orWhere('billing_gst', '');
-        } else {
-             $q->whereNotNull('billing_gst')->where('billing_gst', '!=', '');
-        }
-    })
-    ->pluck('id');
-
-
+    $b2cSaleIds = DB::table('sales')
+                        ->where('merchant_gst', $merchant_gst)
+                        ->where('company_id', $company_id)
+                        ->whereBetween('date', [$from_date, $to_date])
+                        ->where('delete', '0')
+                        ->where('status', '1')
+                        ->where(function($q) use ($type) {
+                            if ($type === 'B2C') {
+                                $q->whereNull('billing_gst')->orWhere('billing_gst', '');
+                            } else {
+                                $q->whereNotNull('billing_gst')->where('billing_gst', '!=', '');
+                            }
+                        })
+                        ->pluck('id');
     if ($b2cSaleIds->isEmpty()) {
         return view('gstReturn.hsnSummary', ['data' => []]);
     }
@@ -4200,11 +4192,12 @@ $b2cSaleIds = DB::table('sales')
          ->where('sr_nature', 'WITH GST')
           ->where('sr_type','WITH ITEM')
           ->where(function($q) use ($type) {
-    if ($type === 'B2B') {
-        $q->whereNotNull('billing_gst')->where('billing_gst', '!=', '');
-    } else {
-        $q->whereNull('billing_gst')->orWhere('billing_gst', '');
-    }
+                if ($type === 'B2B') {
+                    $q->whereNotNull('billing_gst')
+                        ->where('billing_gst', '!=', '');
+                } else {
+                    $q->whereNull('billing_gst')->orWhere('billing_gst', '');
+                }
 })
 
         ->where('sales_returns.delete', '0')

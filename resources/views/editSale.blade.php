@@ -292,7 +292,7 @@ foreach($manageitems as $value) {
                               @php $index = 1; $count_sundry = 0;
                               @endphp                           
                               @foreach($SaleSundry as $sundry)
-                                 @if($sundry->nature_of_sundry!='CGST' && $sundry->nature_of_sundry!='SGST' && $sundry->nature_of_sundry!='IGST' && $sundry->nature_of_sundry!='ROUNDED OFF (+)' && $sundry->nature_of_sundry!='ROUNDED OFF (-)')
+                                 @if($sundry->nature_of_sundry=='OTHER')
 
                                  @php $count_sundry++ @endphp 
                                     <tr id="billtr_@php echo $index;@endphp" class="font-14 font-heading bg-white bill_taxes_row sundry_tr">
@@ -301,7 +301,7 @@ foreach($manageitems as $value) {
                                              <option value="">Select</option>
                                              <?php
                                              foreach ($billsundry as $value) { 
-                                                if($value->nature_of_sundry!='CGST' && $value->nature_of_sundry!='SGST' && $value->nature_of_sundry!='IGST' && $value->nature_of_sundry!='ROUNDED OFF (+)' && $value->nature_of_sundry!='ROUNDED OFF (-)'){?>
+                                                if($value->nature_of_sundry=='OTHER'){?>
                                                    <option value="<?php echo $value->id;?>" data-sundry_percent="<?php echo $value->sundry_percent;?>" data-sundry_percent_date="<?php echo $value->sundry_percent_date;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_@php echo $index;@endphp" id="sundry_option_<?php echo $value->id;?>_1" <?php if($sundry->bill_sundry==$value->id){ echo "selected";} ?> data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
                                                    <?php 
                                                 }
@@ -373,11 +373,11 @@ foreach($manageitems as $value) {
                               foreach($SaleSundry as $val) {
                                  if($val['nature_of_sundry']=="CGST" || $val['nature_of_sundry']=="SGST" || $val['nature_of_sundry']=="IGST"){
                                     $return[$val['nature_of_sundry']][] = $val;
-                                 }else if($val['nature_of_sundry']=="ROUNDED OFF (+)" || $val['nature_of_sundry']=="ROUNDED OFF (-)"){
+                                 }else if($val['nature_of_sundry']=="ROUNDED OFF (+)" || $val['nature_of_sundry']=="ROUNDED OFF (-)" || $val['nature_of_sundry']=="TCS"){
                                     $roundReturn[$val['nature_of_sundry']][] = $val;
                                  }
                               }
-
+                              
                               $saleSundryArr = [];
                               if(isset($return['CGST'][0]['id'])){
                                  array_push($saleSundryArr,$return['CGST'][0]['id']);
@@ -388,6 +388,7 @@ foreach($manageitems as $value) {
                               if(isset($return['IGST'][0]['id'])){
                                  array_push($saleSundryArr,$return['IGST'][0]['id']);
                               }
+                              
                               ?>
                               <tr id="billtr_cgst" class="font-14 font-heading bg-white bill_taxes_row sundry_tr" <?php if(!isset($return['CGST'])){?> style="display:none" <?php } ?> >
                                  <td class="w-min-50">
@@ -575,6 +576,27 @@ foreach($manageitems as $value) {
                                     </td>
                                  </tr>
                               </div> -->
+                              <tr id="billtr_tcs" class="font-14 font-heading bg-white bill_taxes_row sundry_tr" <?php $tcs_status = 1; if(!isset($roundReturn["TCS"])){ $tcs_status = 0;?>  style="display:none" <?php } ?>>
+                                 <td class="w-min-50">
+                                   
+                                    <select id="bill_sundry_tcs" class="w-95-parsent bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="tcs">
+                                       <?php
+                                       foreach ($billsundry as $value) { 
+                                          if($value->nature_of_sundry=='TCS'){?>
+                                             <option value="<?php echo $value->id;?>" data-sundry_percent="<?php echo $value->sundry_percent;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_tcs" id="sundry_option_tcs" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>" data-tcs_status="<?php echo $tcs_status;?>"><?php echo $value->name; ?></option>
+                                             <?php 
+                                          }
+                                       } ?>
+                                    </select>
+                                 </td>
+                                 <td class="w-min-50 ">
+                                    <span name="tax_amt[]" class="tax_amount" id="tax_amt_tcs"></span>
+                                    <input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_tcs">
+                                 </td>
+                                 <td class="w-min-50 ">
+                                    <input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_tcs" data-id="tcs" <?php if(isset($roundReturn["TCS"])){?> value="<?php echo $roundReturn["TCS"][0]['amount'];?>" <?php } ?> style="text-align:right;" readonly></td>
+                                 <td></td>
+                              </tr>
                               <tr id="billtr_round_plus" class="font-14 font-heading bg-white bill_taxes_row sundry_tr" <?php if(!isset($roundReturn["ROUNDED OFF (+)"])){?> style="display:none" <?php } ?>>
                                  <td class="w-min-50">
                                     <select id="bill_sundry_round_plus" class="w-95-parsent bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="round_plus">
@@ -1218,6 +1240,7 @@ foreach($manageitems as $value) {
          final_total = total;
          let total_item_taxable_amount = 0;
          let on_tcs_amount = 0;
+         let final_tcs_amount = 0;
          if(customer_gstin==merchant_gstin.substring(0,2)){            
             var maxPercent = Math.max.apply(null, result.map(function(item){
               return item.percent;
@@ -1232,6 +1255,7 @@ foreach($manageitems as $value) {
                   item_total_amount = parseFloat(item_total_amount) + parseFloat(e.amount); //New Changes By Ashish
                 
                }); //New Changes By Ashish
+               
                result.forEach(function(e,i){     
                   let item_taxable_amount = e.amount;   
                   if(i==0){ //New Changes By Ashish
@@ -1247,7 +1271,7 @@ foreach($manageitems as $value) {
                                     final_total = final_total - parseFloat(e.value);
                                  }
                               } 
-                           }                           
+                           }
                         });
                      }
                   } //New Changes By Ashish
@@ -1378,7 +1402,7 @@ foreach($manageitems as $value) {
                                     final_total = final_total - parseFloat(e.value);
                                  }
                               }
-                           }                           
+                           }                         
                         });
                      }
                   }  //New Changes By Ashish
@@ -1449,6 +1473,12 @@ foreach($manageitems as $value) {
                });
             } 
          }
+         // if(tcs_amoumt!="" && tcs_amoumt!=0){
+         //    alert()
+         //    final_total = parseFloat(final_total) + parseFloat((final_total*0.1)/100);
+         // }
+         // console.log(final_total)
+         
          $('#total_taxable_amounts').val(total_item_taxable_amount.toFixed(2));
          let gstamount = 0;
          $(".bill_sundry_tax_type").each(function(){
@@ -1460,26 +1490,18 @@ foreach($manageitems as $value) {
             let adjust_sale_amt = $('option:selected', this).attr('data-adjust_sale_amt');
             let effect_gst_calculation = $('option:selected', this).attr('data-effect_gst_calculation');
             let type = $('option:selected', this).attr('data-type');
-            if(sundry_percent!=undefined && sundry_percent_date!=undefined && sundry_percent!='' && sundry_percent_date!=''){
-               if(new Date(sundry_percent_date) <= new Date(bill_date)){
+            if(nature_of_sundry=="TCS" && $('option:selected', this).attr('data-tcs_status')==1){
+               
                   $("#tax_amt_"+id).html(sundry_percent+" %");
                   $("#tax_rate_tr_"+id).val(sundry_percent);
                   let tcs_amount = (on_tcs_amount*sundry_percent)/100;
+                  final_tcs_amount = tcs_amount;
                   tcs_amount = tcs_amount.toFixed(2);
                   $("#bill_sundry_amount_"+id).val(tcs_amount);
+                  
                   final_total = final_total + parseFloat(tcs_amount);
-               }
-            }else{
-               if(new Date(sundry_percent_date) <= new Date(bill_date)){
-                  if($("#bill_sundry_amount_"+id).val()!=""){
-                     if(type=="additive"){
-                        //final_total = final_total + parseFloat($("#bill_sundry_amount_"+id).val());
-                     }else if(type=="subtractive"){
-                        //final_total = final_total - parseFloat($("#bill_sundry_amount_"+id).val());
-                     }
-                  }
-               }
-            } 
+               
+            }
             
             if($("#bill_sundry_amount_"+id).val()!='' && (nature_of_sundry=='CGST' || nature_of_sundry=='SGST' || nature_of_sundry=='IGST') && nature_of_sundry!='ROUNDED OFF (+)' && nature_of_sundry!='ROUNDED OFF (-)'){
                if(type=="additive"){
@@ -1498,8 +1520,8 @@ foreach($manageitems as $value) {
          });
          $("#bill_sundry_amt").html(formattedNumber);
          $("#total_amounts").val(final_total);         
-         let roundoff = parseFloat(final_total) - parseFloat($("#total_taxable_amounts").val()) - parseFloat(gstamount);     
-            
+         let roundoff = parseFloat(final_total) - parseFloat($("#total_taxable_amounts").val()) - parseFloat(gstamount) - parseFloat(final_tcs_amount);
+            console.log($("#total_taxable_amounts").val());
          roundoff = roundoff.toFixed(2);
          $("#billtr_round_plus").hide();
          $("#billtr_round_minus").hide();
@@ -1514,7 +1536,7 @@ foreach($manageitems as $value) {
             $("#bill_sundry_amount_round_plus").attr('readonly',true); 
             $("#billtr_round_plus").show(); 
          }
-         return;         
+         return;
       }
    $(document).ready(function() {
       let si = "";

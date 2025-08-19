@@ -1439,7 +1439,6 @@ $( ".select2-single, .select2-multiple" ).select2();
    });
    $(document).on('change','.item_id', function(){
       let id = $(this).attr('data-id');
-           
       $('#unit_tr_'+id).val($('option:selected', this).attr('data-val'));
       $('#unit_tr_'+id).attr('data-parameterized_stock_status',$('option:selected', this).attr('data-parameterized_stock_status'));
       $('#unit_tr_'+id).attr('data-group_id',$('option:selected', this).attr('data-group_id'));
@@ -1450,7 +1449,6 @@ $( ".select2-single, .select2-multiple" ).select2();
    });
    var paremeter_table_add_more_data = "";
    $(document).on('click',".unit",function(){
-      
       let parameter_qty = $("#quantity_tr_"+$(this).attr('data-id')).val()+" "+$(this).val();
       let parameter_name = $("#goods_discription_tr_"+$(this).attr('data-id')).val();
       let item_qty = $("#quantity_tr_"+$(this).attr('data-id')).val();

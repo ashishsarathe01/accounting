@@ -34,8 +34,7 @@ class PurchaseController extends Controller{
      *
      * @return \Illuminate\Http\Response
      */
-   public function index(Request $request)
-{
+   public function index(Request $request){
     Gate::authorize('action-module', 11);
 
     $input = $request->all();

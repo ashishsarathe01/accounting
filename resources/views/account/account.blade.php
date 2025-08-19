@@ -81,10 +81,14 @@
                            </td>
                            <td class="w-min-120 text-center">
                               <?php 
-                              if($value->company_id!=0){ ?>
+                               ?>
                                  @can('action-module',41)
                                     <a href="{{ URL::to('account/' . $value->id . '/edit') }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
                                  @endcan
+                                 
+                                 <?php
+                              
+                              if($value->company_id!=0){ ?>                                 
                                  @can('action-module',42)
                                     <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $value->id; ?>">
                                        <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">

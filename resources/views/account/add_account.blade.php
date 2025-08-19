@@ -33,7 +33,7 @@
                   @endif           
                   <div class="mb-4 col-md-4">
                      <label for="name" class="form-label font-14 font-heading">ACCOUNT NAME</label>
-                     <input type="text" class="form-control" id="account_name" name="account_name" placeholder="ENTER ACCOUNT NAME" required value="@if(isset($id)){{$account->account_name}}@endif"/>
+                     <input type="text" class="form-control" id="account_name" name="account_name" placeholder="ENTER ACCOUNT NAME" required value="@if(isset($id)){{$account->account_name}}@endif"  @if(isset($account) && $account->company_id==0) readonly @endif/>
                      <ul style="color: red;">
                        @error('account_name'){{$message}}@enderror                        
                      </ul>
@@ -41,10 +41,10 @@
                   <div class="clearfix"></div>
                   <div class="mb-4 col-md-4">
                      <label for="print_name" class="form-label font-14 font-heading">PRINT NAME</label>
-                     <input type="text" class="form-control" id="print_name" name="print_name" placeholder="ENTER PRINT NAME" required value="@if(isset($id)){{$account->print_name}}@endif">
+                     <input type="text" class="form-control" id="print_name" name="print_name" placeholder="ENTER PRINT NAME" required value="@if(isset($id)){{$account->print_name}}@endif" @if(isset($account) && $account->company_id==0) readonly @endif>
                   </div>
                   <div class="clearfix"></div>
-                  <div class="mb-4 col-md-4">
+                  <div class="mb-4 col-md-4" @if(isset($account) && $account->company_id==0) style="display:none" @endif>
                      <label for="under_group" class="form-label font-14 font-heading">UNDER GROUP</label>
                      <select class="form-select form-select-lg select2-single" name="under_group" id="under_group" aria-label="form-select-lg example" required>
                         <option value="">SELECT GROUP</option>
@@ -273,7 +273,7 @@
                      </select>
                   </div>                
                   <div class="clearfix"></div>
-                  <div class="mb-4 col-md-4">
+                  <div class="mb-4 col-md-4" @if(isset($account) && $account->company_id==0) style="display:none" @endif>
                      <label for="name" class="form-label font-14 font-heading">STATUS</label>
                      <select class="form-select form-select-lg" name="status" id="status" aria-label="form-select-lg example" required>
                         <option value="1" @if(isset($id) && $account->status=='1') selected  @endif>Enable</option>

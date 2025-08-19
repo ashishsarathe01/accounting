@@ -330,7 +330,7 @@ body {
                         <td style="border-right:0; border-top:0;" colspan="2"></td>
                         <td colspan="4" style="border-left:0; border-right:0; border-top:0;">
                             @php
-    $addTypes = ['CGST', 'SGST', 'IGST', 'ROUNDED OFF (+)'];
+    $addTypes = ['CGST', 'SGST', 'IGST','TCS', 'ROUNDED OFF (+)'];
     $lessTypes = ['ROUNDED OFF (-)'];
 @endphp
 
