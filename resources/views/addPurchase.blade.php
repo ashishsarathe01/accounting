@@ -1482,7 +1482,8 @@ $( ".select2-single, .select2-multiple" ).select2();
             parameterized_stock_status : parameterized_stock_status,
             group_id : group_id
          },
-         success: function(data){
+         success: function(res){
+            let data = res.parameters;
             if((data.parameterized_stock_status!=undefined && data.parameterized_stock_status==1) || data.parameterized_status!=undefined && data.parameterized_status==1){
                let html = "<table class='table table-bordered'><thead><tr>";
                if(data.parameters.length>0){

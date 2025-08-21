@@ -35,37 +35,31 @@ class PurchaseController extends Controller{
      * @return \Illuminate\Http\Response
      */
    public function index(Request $request){
-    Gate::authorize('action-module', 11);
-
-    $input = $request->all();
-
-    // Initialize dates
-    $from_date = null;
-    $to_date = null;
-
-    // If user submitted new dates, update session
-    if (!empty($input['from_date']) && !empty($input['to_date'])) {
-        $from_date = date('d-m-Y', strtotime($input['from_date']));
-        $to_date = date('d-m-Y', strtotime($input['to_date']));
-        session(['purchase_from_date' => $from_date, 'purchase_to_date' => $to_date]);
-    } elseif (session()->has('purchase_from_date') && session()->has('purchase_to_date')) {
-        $from_date = session('purchase_from_date');
-        $to_date = session('purchase_to_date');
-    }
-
-    Session::put('redirect_url', '');
-
-    // Financial year processing
-    $financial_year = Session::get('default_fy');
-    $y = explode("-", $financial_year);
-    $from = DateTime::createFromFormat('y', $y[0])->format('Y');
-    $to = DateTime::createFromFormat('y', $y[1])->format('Y');
-    $month_arr = [
-        $from . '-04', $from . '-05', $from . '-06', $from . '-07', $from . '-08', $from . '-09',
-        $from . '-10', $from . '-11', $from . '-12', $to . '-01', $to . '-02', $to . '-03'
-    ];
-
-    $query = Purchase::with([
+      Gate::authorize('action-module', 11);
+      $input = $request->all();
+      // Initialize dates
+      $from_date = null;
+      $to_date = null;
+      // If user submitted new dates, update session
+      if (!empty($input['from_date']) && !empty($input['to_date'])) {
+         $from_date = date('d-m-Y', strtotime($input['from_date']));
+         $to_date = date('d-m-Y', strtotime($input['to_date']));
+         session(['purchase_from_date' => $from_date, 'purchase_to_date' => $to_date]);
+      } elseif (session()->has('purchase_from_date') && session()->has('purchase_to_date')) {
+         $from_date = session('purchase_from_date');
+         $to_date = session('purchase_to_date');
+      }
+      Session::put('redirect_url', '');
+      // Financial year processing
+      $financial_year = Session::get('default_fy');
+      $y = explode("-", $financial_year);
+      $from = DateTime::createFromFormat('y', $y[0])->format('Y');
+      $to = DateTime::createFromFormat('y', $y[1])->format('Y');
+      $month_arr = [
+         $from . '-04', $from . '-05', $from . '-06', $from . '-07', $from . '-08', $from . '-09',
+         $from . '-10', $from . '-11', $from . '-12', $to . '-01', $to . '-02', $to . '-03'
+      ];
+      $query = Purchase::with([
             'purchaseDescription' => function ($query) {
                 $query->with([
                     'item:id,name',
@@ -87,29 +81,26 @@ class PurchaseController extends Controller{
         ->where('company_id', Session::get('user_company_id'))
         ->where('delete', '0');
 
-    // If date range is provided, filter by date
-    if ($from_date && $to_date) {
-        $query->whereRaw("
+      // If date range is provided, filter by date
+      if ($from_date && $to_date) {
+         $query->whereRaw("
             STR_TO_DATE(purchases.date,'%Y-%m-%d') >= STR_TO_DATE('" . date('Y-m-d', strtotime($from_date)) . "','%Y-%m-%d')
             AND STR_TO_DATE(purchases.date,'%Y-%m-%d') <= STR_TO_DATE('" . date('Y-m-d', strtotime($to_date)) . "','%Y-%m-%d')
-        ");
-        $query->orderBy('purchases.created_at', 'ASC');
-    } else {
-        // No date selected — fetch latest 10 records
-        $query->orderBy(DB::raw("cast(voucher_no as SIGNED)"), 'desc')
+         ");
+         $query->orderBy('purchases.created_at', 'ASC');
+      } else {
+         // No date selected — fetch latest 10 records
+         $query->orderBy(DB::raw("cast(voucher_no as SIGNED)"), 'desc')
               ->orderBy('date', 'desc')
               ->limit(10);
-    }
-
-    $purchase = $query->get()->reverse()->values();
-   //  echo "<pre>";
-   //  print_r($purchase->toArray());die;
-    return view('purchase')
-        ->with('purchase', $purchase)
-        ->with('month_arr', $month_arr)
-        ->with('from_date', $from_date)
-        ->with('to_date', $to_date);
-}
+      }
+      $purchase = $query->get()->reverse()->values();
+      return view('purchase')
+         ->with('purchase', $purchase)
+         ->with('month_arr', $month_arr)
+         ->with('from_date', $from_date)
+         ->with('to_date', $to_date);
+   }
 
     /**
      * Show the specified resources in storage.
@@ -758,10 +749,28 @@ class PurchaseController extends Controller{
    public function purchaseEdit($id){
       Gate::authorize('action-module',57);
       $purchase = Purchase::where('id',$id)->first();
-      $PurchaseDescription = PurchaseDescription::join('units','purchase_descriptions.unit','=','units.id')
+      $PurchaseDescription = PurchaseDescription::with(['parameterColumnInfo'=>function($q){
+                              $q->leftjoin('item_paremeter_list as p1', 'purchase_parameter_info.parameter1_id', '=', 'p1.id')
+                                 ->leftjoin('item_paremeter_list as p2', 'purchase_parameter_info.parameter2_id', '=', 'p2.id')
+                                 ->leftjoin('item_paremeter_list as p3', 'purchase_parameter_info.parameter3_id', '=', 'p3.id')
+                                 ->leftjoin('item_paremeter_list as p4', 'purchase_parameter_info.parameter4_id', '=', 'p4.id')
+                                 ->leftjoin('item_paremeter_list as p5', 'purchase_parameter_info.parameter5_id', '=', 'p5.id')
+                                 ->select([
+                                    'purchase_parameter_info.*',
+                                    'p1.alternative_unit as parameter1_alternative_unit',  // adjust column alternative_unit
+                                    'p2.alternative_unit as parameter2_alternative_unit',  // adjust column alternative_unit
+                                    'p3.alternative_unit as parameter3_alternative_unit',  // adjust column alternative_unit
+                                    'p4.alternative_unit as parameter4_alternative_unit',  // adjust column alternative_unit
+                                    'p5.alternative_unit as parameter5_alternative_unit',  // adjust column alternative_unit
+                                 ]);
+                           }])
+                           ->join('units','purchase_descriptions.unit','=','units.id')
                            ->where('purchase_id',$id)
                            ->select(['purchase_descriptions.*','units.s_name'])
                            ->get();
+      // echo "<pre>";
+      // print_r($PurchaseDescription->toArray());
+      // die;
       $PurchaseSundry = PurchaseSundry::join('bill_sundrys','purchase_sundries.bill_sundry','=','bill_sundrys.id')
                                  ->select(['bill_sundrys.effect_gst_calculation','bill_sundrys.nature_of_sundry','purchase_sundries.*'])
                                  ->where('purchase_id',$id)
@@ -783,12 +792,16 @@ class PurchaseController extends Controller{
                               ->whereIn('under_group', $groups)
                               ->orderBy('account_name')
                               ->get();
-      $manageitems = DB::table('manage_items')->where('manage_items.company_id', Session::get('user_company_id'))
-            ->select('units.s_name as unit', 'manage_items.*')
+      $manageitems = DB::table('manage_items')->join('units', 'manage_items.u_name', '=', 'units.id')
+            ->join('item_groups', 'item_groups.id', '=', 'manage_items.g_name')
             ->where('manage_items.delete', '=', '0')
-            ->join('units', 'manage_items.u_name', '=', 'units.id')
+            ->where('manage_items.status', '=', '1')
+            ->where('manage_items.company_id',Session::get('user_company_id'))
             ->orderBy('manage_items.name')
-            ->get();
+            ->select(['units.s_name as unit', 'manage_items.id','manage_items.u_name','manage_items.gst_rate','manage_items.name','parameterized_stock_status','config_status','item_groups.id as group_id'])
+            ->get(); 
+
+
       $companyData = Companies::where('id', Session::get('user_company_id'))->first();
       $GstSettings = (object)NULL;
       $GstSettings->mat_center = array();
@@ -840,13 +853,15 @@ class PurchaseController extends Controller{
                                  //->OrwhereIn('id',[1,2,3,8,9])
                                  ->orderBy('name')
                                  ->get();
-
+      //Parameter data
+      
       return view('editPurchase')->with('party_list', $party_list)->with('manageitems', $manageitems)->with('billsundry', $billsundry)->with('mat_center', $mat_center)->with('GstSettings', $GstSettings)->with('mat_series', $mat_series)->with('purchase', $purchase)->with('PurchaseDescription', $PurchaseDescription)->with('PurchaseSundry', $PurchaseSundry);
    }
    public function update(Request $request){
       // echo "<pre>";
       // print_r($request->all());
-      Gate::authorize('action-module',57);
+      // die;
+      // Gate::authorize('action-module',57);
       $validated = $request->validate([
          'series_no' => 'required',
          'date' => 'required',
@@ -897,17 +912,20 @@ class PurchaseController extends Controller{
          $units = $request->input('units');
          $prices = $request->input('price');
          $amounts = $request->input('amount');
+         $config_status = $request->input('config_status');
+         $item_parameters = $request->input('item_parameters');
          $desc_item_arr = PurchaseDescription::where('purchase_id',$purchase->id)->pluck('goods_discription')->toArray();
          PurchaseDescription::where('purchase_id',$purchase->id)->delete();
          ItemLedger::where('source_id',$purchase->id)->where('source',2)->delete();
          ItemAverageDetail::where('purchase_id',$purchase->id)
                            ->where('type','PURCHASE')
                            ->delete(); 
+         PurchaseParameterInfo::where('purchase_id',$purchase->id)->delete();
+         ItemParameterStock::where('stock_in_id',$purchase->id)->where('stock_in_type',"PURCHASE")->delete();
          foreach ($goods_discriptions as $key => $good) {
             if($good=="" || $qtys[$key]=="" || $units[$key]=="" || $prices[$key]=="" || $amounts[$key]==""){
                continue;
             }
-
             $desc = new PurchaseDescription;
             $desc->purchase_id = $purchase->id;
             $desc->company_id = Session::get('user_company_id');
@@ -932,6 +950,112 @@ class PurchaseController extends Controller{
             $item_ledger->created_by = Session::get('user_id');
             $item_ledger->created_at = date('d-m-Y H:i:s');
             $item_ledger->save();
+            //Parameter Info
+            if($item_parameters[$key]!=""){
+               $parameter = json_decode($item_parameters[$key],true);
+               if(count($parameter)>0){
+                  foreach ($parameter as $k1 => $param) {
+                     $parameter1_id = "";$parameter1_value = "";
+                     $parameter2_id = "";$parameter2_value = "";
+                     $parameter3_id = "";$parameter3_value = "";
+                     $parameter4_id = "";$parameter4_value = "";
+                     $parameter5_id = "";$parameter5_value = "";
+                     $alternative_unit_value = 0;
+                     $alternative_unit_key = '';
+                     foreach($param as $k11 => $v){
+                        if($k11==0){
+                           $parameter1_id = $v['id'];
+                           $parameter1_value = $v['value'];
+                           if($v['alternative_unit']==1){
+                              $alternative_unit_key = "parameter1_value";
+                           }
+                        }else if($k11==1){
+                           $parameter2_id = $v['id'];
+                           $parameter2_value = $v['value'];
+                           if($v['alternative_unit']==1){
+                              $alternative_unit_key = "parameter2_value";
+                           }
+                        }else if($k11==2){
+                           $parameter3_id = $v['id'];
+                           $parameter3_value = $v['value'];
+                           if($v['alternative_unit']==1){
+                              $alternative_unit_key = "parameter3_value";
+                           }
+                        }else if($k11==3){
+                           $parameter4_id = $v['id'];
+                           $parameter4_value = $v['value'];
+                           if($v['alternative_unit']==1){
+                              $alternative_unit_key = "parameter4_value";
+                           }
+                        }else if($k11==4){
+                           $parameter5_id = $v['id'];
+                           $parameter5_value = $v['value'];
+                           if($v['alternative_unit']==1){
+                              $alternative_unit_key = "parameter5_value";
+                           }
+                        }
+                        if($v['alternative_unit']==1){
+                           $alternative_unit_value = $v['value'];
+                        }
+                     }
+                     $purchase_parameter_info = new PurchaseParameterInfo;
+                     $purchase_parameter_info->item_id = $good;
+                     $purchase_parameter_info->purchase_id = $purchase->id;
+                     $purchase_parameter_info->purchase_desc_row_id = $desc->id;
+                     $purchase_parameter_info->parameter1_id = $parameter1_id;
+                     $purchase_parameter_info->parameter1_value = $parameter1_value;
+                     $purchase_parameter_info->parameter2_id = $parameter2_id;
+                     $purchase_parameter_info->parameter2_value = $parameter2_value;
+                     $purchase_parameter_info->parameter3_id = $parameter3_id;
+                     $purchase_parameter_info->parameter3_value = $parameter3_value;
+                     $purchase_parameter_info->parameter4_id = $parameter4_id;
+                     $purchase_parameter_info->parameter4_value = $parameter4_value;
+                     $purchase_parameter_info->parameter5_id = $parameter5_id;
+                     $purchase_parameter_info->parameter5_value = $parameter5_value;
+                     $purchase_parameter_info->company_id = Session::get('user_company_id');
+                     $purchase_parameter_info->created_by = Session::get('user_id');
+                     $purchase_parameter_info->created_at = date('Y-m-d H:i:s');
+                     if($purchase_parameter_info->save()){
+                        while($alternative_unit_value>0){
+                           if($alternative_unit_key=="parameter1_value"){
+                              $parameter1_value = 1;
+                           }
+                           if($alternative_unit_key=="parameter2_value"){
+                              $parameter2_value = 1;
+                           }
+                           if($alternative_unit_key=="parameter3_value"){
+                              $parameter3_value = 1;
+                           }
+                           if($alternative_unit_key=="parameter4_value"){
+                              $parameter4_value = 1;
+                           }
+                           if($alternative_unit_key=="parameter5_value"){
+                              $parameter5_value = 1;
+                           }
+                           $item_parameter_stock = new ItemParameterStock;
+                           $item_parameter_stock->item_id = $good;
+                           $item_parameter_stock->series_no = $request->input('series_no');
+                           $item_parameter_stock->parameter1_id = $parameter1_id;
+                           $item_parameter_stock->parameter1_value = $parameter1_value;
+                           $item_parameter_stock->parameter2_id = $parameter2_id;
+                           $item_parameter_stock->parameter2_value = $parameter2_value;
+                           $item_parameter_stock->parameter3_id = $parameter3_id;
+                           $item_parameter_stock->parameter3_value = $parameter3_value;
+                           $item_parameter_stock->parameter4_id = $parameter4_id;
+                           $item_parameter_stock->parameter4_value = $parameter4_value;
+                           $item_parameter_stock->parameter5_id = $parameter5_id;
+                           $item_parameter_stock->parameter5_value = $parameter5_value;
+                           $item_parameter_stock->stock_in_id = $purchase->id;
+                           $item_parameter_stock->stock_in_type = 'PURCHASE';
+                           $item_parameter_stock->company_id = Session::get('user_company_id');
+                           $item_parameter_stock->save();
+                           $alternative_unit_value--;
+                        }
+                     }
+                     
+                  }
+               }
+            }
          }
          $bill_sundrys = $request->input('bill_sundry');
          $tax_amts = $request->input('tax_rate');

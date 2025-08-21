@@ -1214,7 +1214,8 @@ class SalesController extends Controller
       
    }
    public function saleImportProcess(Request $request) { 
-      ini_set('max_execution_time', 600);      
+      ini_set('max_execution_time', 0);
+      ini_set('memory_limit', '1024M'); 
       $validator = Validator::make($request->all(), [
          'csv_file' => 'required|file|mimes:csv,txt|max:2048', // Max 2MB, CSV or TXT file
       ]); 
@@ -1459,42 +1460,41 @@ class SalesController extends Controller
                $item_arr = $value['item_arr'];
                $slicedData = $value['slicedData'];
                $merchant_gst = $value['merchant_gst'];
-               
+               if($duplicate_voucher_status==2){
                   $check_invoices = Sales::select('id')
-                              ->where('company_id',Session::get('user_company_id'))
-                              ->where('voucher_no',$voucher_no)
-                              ->where('series_no',$series_no)
-                              ->where('financial_year','=',$financial_year)
-                              ->where('delete','0')
-                              ->first();
-               
-               if($check_invoices){
-                  if($duplicate_voucher_status==2){
-                     $updated_sale = Sales::find($check_invoices->id);
+                           ->where('company_id',Session::get('user_company_id'))
+                           ->where('voucher_no',$voucher_no)
+                           ->where('series_no',$series_no)
+                           ->where('financial_year','=',$financial_year)
+                           ->where('delete','0')
+                           ->where('status','1')
+                           ->get();
+                  foreach($check_invoices as $check_invoices_value){
+                     $updated_sale = Sales::find($check_invoices_value->id);
                      $updated_sale->delete = '1';
                      $updated_sale->deleted_at = Carbon::now();
                      $updated_sale->deleted_by = Session::get('user_id');
                      $updated_sale->update();
                      if($updated_sale){
-                        SaleDescription::where('sale_id',$check_invoices->id)
+                        SaleDescription::where('sale_id',$check_invoices_value->id)
                                        ->update(['delete'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
                         AccountLedger::where('entry_type',1)
-                                       ->where('entry_type_id',$check_invoices->id)
+                                       ->where('entry_type_id',$check_invoices_value->id)
                                        ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
-                        SaleSundry::where('sale_id',$check_invoices->id)
+                        SaleSundry::where('sale_id',$check_invoices_value->id)
                                        ->update(['delete'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
                         ItemLedger::where('source',1)
-                                    ->where('source_id',$check_invoices->id)
+                                    ->where('source_id',$check_invoices_value->id)
                                     ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
-                        ItemAverageDetail::where('sale_id',$check_invoices->id)
+                        ItemAverageDetail::where('sale_id',$check_invoices_value->id)
                                           ->delete();
-                        $itemKiId =  SaleDescription::where('sale_id',$check_invoices->id)
+                        $itemKiId =  SaleDescription::where('sale_id',$check_invoices_value->id)
                                     ->select('sale_descriptions.goods_description as item_id');
                                     foreach( $itemKiId as $k){
-                        CommonHelper::RewriteItemAverageByItem($check_invoices->date,$k->item_id,$series_no);       
+                        CommonHelper::RewriteItemAverageByItem($check_invoices_value->date,$k->item_id,$series_no);       
                                     }
                      }
-                  }                  
+                  }             
                }
                $item_taxable_amount = 0;
                //Insert Data In Sale Table
@@ -1832,7 +1832,7 @@ class SalesController extends Controller
          "message"=>"Uploaded Successfully."
       );
       return json_encode($res);
-      return view('sale_import')->with('upload_log',1)->with('total_count',$total_invoice_count)->with('success_count',$success_invoice_count)->with('failed_count',$failed_invoice_count)->with('error_message',$all_error_arr);
+      //return view('sale_import')->with('upload_log',1)->with('total_count',$total_invoice_count)->with('success_count',$success_invoice_count)->with('failed_count',$failed_invoice_count)->with('error_message',$all_error_arr);
    }
    public function generateEinvoice(Request $request){      
       $einvoice_username = ""; $einvoice_password = "";

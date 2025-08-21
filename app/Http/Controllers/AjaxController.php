@@ -860,7 +860,7 @@ class AjaxController extends Controller
                                           ->get();
                   if($stock && count($stock)>0){
                   return response()->json([
-                        'parameter' => $parameter,
+                        'parameters' => $parameter,
                         'stock' => $stock
                      ]);
                   }
@@ -870,14 +870,45 @@ class AjaxController extends Controller
                                           ->get();
                   if($stock && count($stock)>0){
                   return response()->json([
-                        'parameter' => $parameter,
+                        'parameters' => $parameter,
                         'stock' => $stock
                      ]);
                   }
                }
                
             }
-          return $parameter;
+            //Edit Purchase Data
+            if($request->get('action') && !empty($request->get('action')) && $request->get('action')=="edit_purchase"){
+               $row_id = $request->get('row_id');
+                  $query = Purchase::with([
+                     'purchaseDescription' => function ($query)use($row_id) {
+                        $query->with([
+                           'item:id,name',
+                           'units:id,name',
+                           'parameterColumnInfo' => function ($q2) {
+                                 $q2->leftjoin('item_paremeter_list as param1','purchase_parameter_info.parameter1_id','=','param1.id');
+                                 $q2->leftjoin('item_paremeter_list as param2','purchase_parameter_info.parameter2_id','=','param2.id');
+                                 $q2->leftjoin('item_paremeter_list as param3','purchase_parameter_info.parameter3_id','=','param3.id');
+                                 $q2->leftjoin('item_paremeter_list as param4','purchase_parameter_info.parameter4_id','=','param4.id');
+                                 $q2->leftjoin('item_paremeter_list as param5','purchase_parameter_info.parameter5_id','=','param5.id');
+                                 $q2->select('purchase_parameter_info.id', 'purchase_desc_row_id','parameter1_id','parameter2_id','parameter3_id','parameter4_id','parameter5_id','parameter1_value','parameter2_value','parameter3_value','parameter4_value','parameter5_value','param1.paremeter_name as paremeter_name1','param2.paremeter_name as paremeter_name2','param3.paremeter_name as paremeter_name3','param4.paremeter_name as paremeter_name4','param5.paremeter_name as paremeter_name5');
+                           }
+                        ]);
+                        $query->select('id', 'goods_discription', 'qty', 'purchase_id', 'unit');
+                        $query->where('id',$row_id);
+                     }
+               ])
+               ->select(['id'])
+               ->where('id', $request->get('id'))
+               ->first();
+               return response()->json([
+                  'parameters' => $parameter,
+                  'edit_purchase_data'=>$query
+               ]);
+            }
+         return response()->json([
+            'parameters' => $parameter
+         ]);
       }
    }
    public function getItemParameter(Request $request){

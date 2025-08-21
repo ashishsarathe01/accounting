@@ -1701,7 +1701,8 @@
             assign_param : assign_param,
             voucher_type : $("#voucher_type").val()
          },
-         success: function(data){
+         success: function(res){
+            let data = res.parameters;
             if((data.parameterized_stock_status!=undefined && data.parameterized_stock_status==1) || data.parameterized_status!=undefined && data.parameterized_status==1){
                let html = "<table class='table table-bordered'><thead><tr>";
                if(data.parameters.length>0){

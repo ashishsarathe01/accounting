@@ -53,7 +53,7 @@ class ProfitLossController extends Controller{
       //Purchase
       $tot_purchase_amt = DB::table('purchases')
          ->join('purchase_descriptions','purchases.id','=','purchase_descriptions.purchase_id')
-         ->where(['purchases.delete' => '0', 'purchases.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
+         ->where(['purchases.delete' => '0','purchases.status' => '1', 'purchases.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
          ->whereBetween('date', [$from_date, $to_date])
          ->get()
          ->sum("amount");
@@ -61,7 +61,7 @@ class ProfitLossController extends Controller{
       $purchase_sundry = DB::table('purchases')
          ->join('purchase_sundries','purchases.id','=','purchase_sundries.purchase_id')
          ->join('bill_sundrys','purchase_sundries.bill_sundry','=','bill_sundrys.id')
-         ->where(['purchases.delete' => '0', 'purchases.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
+         ->where(['purchases.delete' => '0','purchases.status' => '1', 'purchases.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
          ->whereBetween('date', [$from_date, $to_date])
          ->select('bill_sundry_type','amount')
          ->get();
@@ -77,7 +77,7 @@ class ProfitLossController extends Controller{
       //Sale
       $tot_sale_amt = DB::table('sales')
          ->join('sale_descriptions','sales.id','=','sale_descriptions.sale_id')
-         ->where(['sales.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
+         ->where(['sales.delete' => '0','sales.status' => '1', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
          ->whereBetween('date', [$from_date, $to_date])
          ->get()
          ->sum("amount");
@@ -85,7 +85,7 @@ class ProfitLossController extends Controller{
       $sale_sundry = DB::table('sales')
          ->join('sale_sundries','sales.id','=','sale_sundries.sale_id')
          ->join('bill_sundrys','sale_sundries.bill_sundry','=','bill_sundrys.id')
-         ->where(['sales.delete' => '0', 'sales.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
+         ->where(['sales.delete' => '0','sales.status' => '1', 'sales.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
          ->whereBetween('date', [$from_date, $to_date])
          ->select('bill_sundry_type','amount')
          ->get();
@@ -101,14 +101,14 @@ class ProfitLossController extends Controller{
       //Purchase Return
       $tot_purchase_return_amt = DB::table('purchase_returns')
          ->join('purchase_return_descriptions','purchase_returns.id','=','purchase_return_descriptions.purchase_return_id')
-         ->where(['purchase_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
+         ->where(['purchase_returns.delete' => '0','purchase_returns.status' => '1', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
          ->whereBetween('date', [$from_date, $to_date])
          ->get()
          ->sum("amount");
       $purchase_return_sundry = DB::table('purchase_returns')
          ->join('purchase_return_sundries','purchase_returns.id','=','purchase_return_sundries.purchase_return_id')
          ->join('bill_sundrys','purchase_return_sundries.bill_sundry','=','bill_sundrys.id')
-         ->where(['purchase_returns.delete' => '0', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE','adjust_purchase_amt'=>'Yes'])
+         ->where(['purchase_returns.delete' => '0','purchase_returns.status' => '1', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE','adjust_purchase_amt'=>'Yes'])
          ->whereBetween('date', [$from_date, $to_date])
          ->select('bill_sundry_type','amount')
          ->get();
@@ -439,7 +439,7 @@ class ProfitLossController extends Controller{
       //Sale
       $tot_sale_amt = DB::table('sales')
          ->join('sale_descriptions','sales.id','=','sale_descriptions.sale_id')
-         ->where(['sales.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
+         ->where(['sales.delete' => '0','sales.status' => '1', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
          ->whereBetween('date', [$from_date, $to_date])
          ->when(!empty($req_series), function ($query) use ($req_series) {
             return $query->where('sales.series_no', $req_series);
@@ -450,7 +450,7 @@ class ProfitLossController extends Controller{
       $sale_sundry = DB::table('sales')
          ->join('sale_sundries','sales.id','=','sale_sundries.sale_id')
          ->join('bill_sundrys','sale_sundries.bill_sundry','=','bill_sundrys.id')
-         ->where(['sales.delete' => '0', 'sales.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
+         ->where(['sales.delete' => '0','sales.status' => '1', 'sales.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
          ->whereBetween('date', [$from_date, $to_date])
          ->when(!empty($req_series), function ($query) use ($req_series) {
             return $query->where('sales.series_no', $req_series);
@@ -810,6 +810,7 @@ class ProfitLossController extends Controller{
                               }])                     
                      ->withSum('saleDescription', 'amount')
                      ->where('sales.delete','0')
+                     ->where('sales.status','1')
                      ->where('sales.company_id',Session::get('user_company_id'))
                      ->whereBetween('sales.date', [$from_date, $to_date])
                      ->orderBy('sales.date')
