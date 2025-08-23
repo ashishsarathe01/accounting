@@ -128,20 +128,16 @@ class SalesReturnController extends Controller
 
    public function create(){
       Gate::authorize('action-module',76);
-      $groups = DB::table('account_groups')
-                        ->whereIn('heading', [3,11])
-                        ->where('heading_type','group')
-                        ->where('status','1')
-                        ->where('delete','0')
-                        ->where('company_id',Session::get('user_company_id'))
-                        ->pluck('id');
-      $groups->push(3);
-      $groups->push(11);
+      $group_ids = CommonHelper::getAllChildGroupIds(3,Session::get('user_company_id'));
+      array_push($group_ids, 3);
+      $group_ids = array_merge($group_ids, CommonHelper::getAllChildGroupIds(11,Session::get('user_company_id'))); // Include group 11 as well
+      $group_ids = array_unique($group_ids); // Ensure unique group IDs       
+      array_push($group_ids, 11);
       $party_list = Accounts::leftjoin('states','accounts.state','=','states.id')
                               ->where('delete', '=', '0')
                               ->where('status', '=', '1')
                               ->whereIn('company_id', [Session::get('user_company_id'),0])
-                              ->whereIn('under_group',$groups)
+                              ->whereIn('under_group',$group_ids)
                               ->select('accounts.id','accounts.gstin','accounts.address','accounts.pin_code','accounts.account_name','states.state_code')
                               ->orderBy('account_name')
                               ->get();  

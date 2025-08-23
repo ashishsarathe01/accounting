@@ -52,6 +52,8 @@ use App\Http\Controllers\gstReturn\GSTR3BController;
 use App\Http\Controllers\ParameterizedStockController;
 use App\Http\Controllers\SaleOrderController;
 use App\Http\Controllers\Supplier\SupplierController;
+use App\Http\Controllers\Supplier\SupplierRateLocationWiseController;
+use App\Http\Controllers\Supplier\SupplierPurchaseController;
 
 /*
 |--------------------------------------------------------------------------
@@ -361,5 +363,11 @@ Route::post('import-stock-transfer-process', [StockTransferController::class, 'i
 Route::Resource('sale-order', SaleOrderController::class);
 Route::Resource('supplier', SupplierController::class);
 Route::post('get-supplier-location', [SupplierController::class, 'getSupplierLocation'])->name('get-supplier-location');
-
+Route::get('manage-supplier-rate', [SupplierRateLocationWiseController::class, 'manageSupplierRate'])->name('manage-supplier-rate');
+Route::POST('store-supplier-rate', [SupplierRateLocationWiseController::class, 'storeSupplierRate'])->name('store-supplier-rate');
+Route::get('manage-supplier-purchase', [SupplierPurchaseController::class, 'manageSupplierPurchase'])->name('manage-supplier-purchase');
+Route::post('get-supplier-rate-by-location', [SupplierPurchaseController::class, 'getSupplierRateByLocation'])->name('get-supplier-rate-by-location');
+('manage-supplier-purchase');
+Route::post('store-supplier-purchase-report', [SupplierPurchaseController::class, 'storeSupplierPurchaseReport'])->name('store-supplier-purchase-report');
+Route::get('complete-supplier-purchase/{id?}', [SupplierPurchaseController::class, 'completeSupplierPurchase'])->name('complete-supplier-purchase');
 });

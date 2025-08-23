@@ -182,7 +182,6 @@ $(document).ready(function(){
             $(".location").each(function(){
                 selected_location_arr.push($(this).val())
             });
-            console.log(selected_location_arr);
         }
     });
     $(".save_location").click(function(){

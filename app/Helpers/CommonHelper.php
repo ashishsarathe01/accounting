@@ -565,30 +565,41 @@ class CommonHelper
             }
         }       
     }
-
-
-
     public static function getAllGroupIds($parentIds)
-{
-    $allGroups = DB::table('account_groups')->get();
-    $groupMap = $allGroups->groupBy('heading');
+    {
+        $allGroups = DB::table('account_groups')->get();
+        $groupMap = $allGroups->groupBy('heading');
 
-    $result = collect($parentIds);
-    $queue = $parentIds;
+        $result = collect($parentIds);
+        $queue = $parentIds;
 
-    while (!empty($queue)) {
-        $current = array_shift($queue);
-        if (isset($groupMap[$current])) {
-            foreach ($groupMap[$current] as $child) {
-                if (!$result->contains($child->id)) {
-                    $result->push($child->id);
-                    $queue[] = $child->id;
+        while (!empty($queue)) {
+            $current = array_shift($queue);
+            if (isset($groupMap[$current])) {
+                foreach ($groupMap[$current] as $child) {
+                    if (!$result->contains($child->id)) {
+                        $result->push($child->id);
+                        $queue[] = $child->id;
+                    }
                 }
             }
         }
+        return $result->toArray();
     }
+    public static function getAllChildGroupIds($group_id, $company_id)
+    {
+        $child_ids = AccountGroups::where('heading', $group_id)
+                        ->where('delete', '0')
+                        ->where('heading_type','group')
+                        ->whereIn('company_id', [$company_id, 0])
+                        ->pluck('id')
+                        ->toArray();
 
-    return $result->toArray();
-}
+        $all_ids = $child_ids;
+        foreach ($child_ids as $child_id) {
+            $all_ids = array_merge($all_ids, CommonHelper::getAllChildGroupIds($child_id, $company_id));
+        }
+        return $all_ids;
+    }
 
 }

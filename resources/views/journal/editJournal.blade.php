@@ -176,8 +176,8 @@
                               //    print_r($sundry);
                               //    print_r($journal_detail->toArray());
                               foreach ($journal_detail as $value){
-                                 if(!in_array($value->account_name,$sundry) && $value->debit!=''){
-                                    echo "ashish";
+                                 if(!in_array($value->account_name,$sundry) && $value->debit!='' && $value->percentage!=''){
+                                   
                                     ?>
                                     <tr id="withgst_tr_<?php echo $j;?>" class="font-14 font-heading bg-white">
                                        <td>

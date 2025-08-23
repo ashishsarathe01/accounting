@@ -18,6 +18,7 @@ use Carbon\Carbon;
 use Session;
 use DateTime;
 use Gate;
+use App\Helpers\CommonHelper;
 class JournalController extends Controller
 {
     /**
@@ -170,22 +171,32 @@ public function index(Request $request)
                ->where('gstin','!=','')
                ->orderBy('account_name')
                ->get();
-      $fixed_asset_group = AccountGroups::where('heading','6')
-                                       ->whereIn('company_id',[Session::get('user_company_id'),0])
-                                       ->where('heading_type',null)
-                                       ->where('heading_type','')
-                                       ->pluck('id');
-      $fixed_asset_group->push(12);//DIRECT EXPENSE
-      $fixed_asset_group->push(15);//INDIRECT EXPENSE
-      $fixed_asset_group->push(6);//UNSECURED LOANS
-      $fixed_asset_group->push(13);//DIRECT INCOME
-      $fixed_asset_group->push(14);//INDIRECT INCOME
-      $sub_group = AccountGroups::whereIn('heading',$fixed_asset_group)
-                                       //->where('heading_type',"group")
-                                       ->pluck('id');
+      // $fixed_asset_group = AccountGroups::where('heading','6')
+      //                                  ->whereIn('company_id',[Session::get('user_company_id'),0])
+      //                                  ->where('heading_type',null)
+      //                                  ->where('heading_type','')
+      //                                  ->pluck('id');
+      // $fixed_asset_group->push(12);//DIRECT EXPENSE
+      // $fixed_asset_group->push(15);//INDIRECT EXPENSE
+      // $fixed_asset_group->push(6);//UNSECURED LOANS
+      // $fixed_asset_group->push(13);//DIRECT INCOME
+      // $fixed_asset_group->push(14);//INDIRECT INCOME
+      // $sub_group = AccountGroups::whereIn('heading',$fixed_asset_group)
+      //                                  //->where('heading_type',"group")
+      //                                  ->pluck('id');
                                        
-      $fixed_asset_group = $fixed_asset_group->merge($sub_group);
-      
+      // $fixed_asset_group = $fixed_asset_group->merge($sub_group);
+
+      $fixed_asset_group = CommonHelper::getAllChildGroupIds(6,Session::get('user_company_id'));
+      array_push($fixed_asset_group, 6);
+      array_push($fixed_asset_group, 12);
+      array_push($fixed_asset_group, 15);
+      array_push($fixed_asset_group, 13);
+      array_push($fixed_asset_group, 14);
+      $fixed_asset_group = array_merge($fixed_asset_group, CommonHelper::getAllChildGroupIds(12,Session::get('user_company_id')));
+      $fixed_asset_group = array_merge($fixed_asset_group, CommonHelper::getAllChildGroupIds(15,Session::get('user_company_id')));
+      $fixed_asset_group = array_merge($fixed_asset_group, CommonHelper::getAllChildGroupIds(13,Session::get('user_company_id')));
+      $fixed_asset_group = array_merge($fixed_asset_group, CommonHelper::getAllChildGroupIds(14,Session::get('user_company_id')));
       $items = Accounts::select('id','account_name')
                ->whereIn('company_id',[Session::get('user_company_id'),0])
                ->whereIn('under_group',$fixed_asset_group)
@@ -555,18 +566,28 @@ public function index(Request $request)
                ->where('gstin','!=','')
                ->orderBy('account_name')
                ->get();
-      $fixed_asset_group = AccountGroups::where('heading','6')
-                                       ->whereIn('company_id',[Session::get('user_company_id'),0])
-                                       ->where('heading_type',null)
-                                       ->where('heading_type','')
-                                       ->pluck('id');
-      $fixed_asset_group->push(12);
-      $fixed_asset_group->push(15);
-      $fixed_asset_group->push(6);
-      $sub_group = AccountGroups::whereIn('heading',$fixed_asset_group)
-                                       ->where('heading_type',"group")
-                                       ->pluck('id');
-      $fixed_asset_group->merge($sub_group);
+      // $fixed_asset_group = AccountGroups::where('heading','6')
+      //                                  ->whereIn('company_id',[Session::get('user_company_id'),0])
+      //                                  ->where('heading_type',null)
+      //                                  ->where('heading_type','')
+      //                                  ->pluck('id');
+      // $fixed_asset_group->push(12);
+      // $fixed_asset_group->push(15);
+      // $fixed_asset_group->push(6);
+      // $sub_group = AccountGroups::whereIn('heading',$fixed_asset_group)
+      //                                  ->where('heading_type',"group")
+      //                                  ->pluck('id');
+      // $fixed_asset_group->merge($sub_group);
+      $fixed_asset_group = CommonHelper::getAllChildGroupIds(6,Session::get('user_company_id'));
+      array_push($fixed_asset_group, 6);
+      array_push($fixed_asset_group, 12);
+      array_push($fixed_asset_group, 15);
+      array_push($fixed_asset_group, 13);
+      array_push($fixed_asset_group, 14);
+      $fixed_asset_group = array_merge($fixed_asset_group, CommonHelper::getAllChildGroupIds(12,Session::get('user_company_id')));
+      $fixed_asset_group = array_merge($fixed_asset_group, CommonHelper::getAllChildGroupIds(15,Session::get('user_company_id')));
+      $fixed_asset_group = array_merge($fixed_asset_group, CommonHelper::getAllChildGroupIds(13,Session::get('user_company_id')));
+      $fixed_asset_group = array_merge($fixed_asset_group, CommonHelper::getAllChildGroupIds(14,Session::get('user_company_id')));
       $items = Accounts::select('id','account_name')
                ->whereIn('company_id',[Session::get('user_company_id'),0])
                ->whereIn('under_group',$fixed_asset_group)
@@ -1142,6 +1163,7 @@ public function index(Request $request)
                      if($data['debit'] && $data['debit']!="" && $data['debit']!="0"){
                         $net_amount = $net_amount + $data['debit'];
                         if(substr($merchant_gst, 0, 2)!=$account_state_code){
+                           
                            $igst = ($data['debit']*$data['gst_rate'])/100;
                            $tax_amount = $tax_amount + $igst;
                         }else{
@@ -1157,12 +1179,13 @@ public function index(Request $request)
                      }
                   }
                   $total_amount = $net_amount + $tax_amount;
+                  $total_amount = round($total_amount);
                   $journal->net_total = $net_amount;
                   if($merchant_gst!=$account_state_code){
                      $journal->igst = $tax_amount;
                   }else{
                      $journal->cgst = $tax_amount/2;
-                     $journal->sgst = $$tax_amount/2;
+                     $journal->sgst = $tax_amount/2;
                   }
                   $journal->total_amount = $total_amount;
                   $journal->vendor = $vendor;
@@ -1202,13 +1225,14 @@ public function index(Request $request)
                      $ledger->save();
                      //Round Off Caculation
                      if(!empty($igst) && $igst!=0){
-                        $calculated_total = $$net_amount + floatval($tax_amount);
+                        $calculated_total = $net_amount + floatval($tax_amount);
                      }else{
-                        $calculated_total = $$net_amount + floatval($tax_amount/2) + floatval($tax_amount/2);
+                        $calculated_total = $net_amount + floatval($tax_amount/2) + floatval($tax_amount/2);
                      }                     
                      $round_off = round($total_amount - $calculated_total, 2);
                      //Round Off Entry
-                     if($round_off<0){               
+                     if($round_off !=0){
+                        if($round_off<0){               
                         $billsundry = BillSundrys::where('id',8)->first();
                      }else{               
                         $billsundry = BillSundrys::where('id',9)->first();
@@ -1216,7 +1240,7 @@ public function index(Request $request)
                      $joundetail = new JournalDetails;
                      $joundetail->journal_id = $journal->id;
                      $joundetail->company_id = Session::get('user_company_id');
-                     if($billsundry->bill_sundry_type=='subtractive'){
+                     if($round_off>=0){
                         $joundetail->debit = abs($round_off);
                         $joundetail->type = "Debit";
                      }else{
@@ -1227,7 +1251,7 @@ public function index(Request $request)
                      $joundetail->status = '1';
                      $joundetail->save();
                      $ledger = new AccountLedger();
-                     if($billsundry->bill_sundry_type=='subtractive'){
+                     if($round_off>=0){
                         $ledger->debit = abs($round_off);
                      }else{
                         $ledger->credit = abs($round_off);
@@ -1244,6 +1268,8 @@ public function index(Request $request)
                      $ledger->created_by = Session::get('user_id');
                      $ledger->created_at = date('d-m-Y H:i:s');
                      $ledger->save();
+                     }
+                     
 
                      foreach ($txn_arr as $key => $item){
                         if($item['debit'] && $item['debit']!="" && $item['debit']!="0"){
@@ -1395,7 +1421,17 @@ public function index(Request $request)
                         $paytype->save();
                         //ADD DATA IN Customer ACCOUNT
                         if($i==0){
-                           $map_account_id = $txn_arr[1]['account'];
+                           if($txn_arr[1]){
+                              if($txn_arr[1]){
+                                 $map_account_id = $txn_arr[1]['account'];
+                              }else{
+                                 $map_account_id = "";
+                              }
+                              
+                           }else{
+                              $map_account_id = "";
+                           }
+                           
                         }else{
                            $map_account_id = $txn_arr[0]['account'];
                         }                    

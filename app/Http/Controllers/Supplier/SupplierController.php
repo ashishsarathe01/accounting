@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use session;
 use DB;
+use App\Helpers\CommonHelper;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Supplier;
@@ -47,9 +48,9 @@ class SupplierController extends Controller
         $supplier = Supplier::select('account_id')
                                 ->where('company_id',Session::get('user_company_id'))
                                 ->pluck('account_id');
-        $group_ids = $this->getAllChildGroupIds(3,Session::get('user_company_id'));
+        $group_ids = CommonHelper::getAllChildGroupIds(3,Session::get('user_company_id'));
         array_push($group_ids, 3);
-        $group_ids = array_merge($group_ids, $this->getAllChildGroupIds(11,Session::get('user_company_id'))); // Include group 11 as well
+        $group_ids = array_merge($group_ids, CommonHelper::getAllChildGroupIds(11,Session::get('user_company_id'))); // Include group 11 as well
         $group_ids = array_unique($group_ids); // Ensure unique group IDs       
         array_push($group_ids, 11);
         $accounts = Accounts::where('delete', '=', '0')
@@ -62,20 +63,7 @@ class SupplierController extends Controller
                               ->get(); 
         return view('supplier.add_supplier',["accounts"=>$accounts]);
     }
-    function getAllChildGroupIds($group_id, $company_id) {
-        $child_ids = AccountGroups::where('heading', $group_id)
-                        ->where('delete', '0')
-                        ->where('heading_type','group')
-                        ->whereIn('company_id', [$company_id, 0])
-                        ->pluck('id')
-                        ->toArray();
-
-        $all_ids = $child_ids;
-        foreach ($child_ids as $child_id) {
-            $all_ids = array_merge($all_ids, $this->getAllChildGroupIds($child_id, $company_id));
-        }
-        return $all_ids;
-    }
+    
     /**
      * Store a newly created resource in storage.
      *
