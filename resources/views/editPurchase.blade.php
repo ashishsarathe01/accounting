@@ -169,10 +169,10 @@ foreach ($manageitems as $value) {
                                  </select>
                               </td>                              
                               <td class=" w-min-50">
-                                 <input type="number" class="quantity form-control w-100" id="quantity_tr_{{$i}}" name="qty[]" value="{{$item->qty}}" style="text-align:right"/>
+                                 <input type="number" class="quantity form-control w-100" id="quantity_tr_{{$i}}" name="qty[]" value="{{$item->qty}}" style="text-align:right" @if($stock_status==0) readonly @endif/>
                               </td>
                               <td class=" w-min-50">
-                                 <input type="text" class="w-100 form-control unit" id="unit_tr_{{$i}}" readonly style="text-align:center;" value="{{$item->s_name}}"  data-id="{{$i}}" data-row_id="{{$item->id}}"/>
+                                 <input type="text" class="w-100 form-control @if($stock_status==1) unit @endif " id="unit_tr_{{$i}}" readonly style="text-align:center;" value="{{$item->s_name}}"  data-id="{{$i}}" data-row_id="{{$item->id}}"/>
                                  <input type="hidden" class="units" name="units[]" id="units_tr_{{$i}}" value="{{$item->unit}}" />
                               </td>
                               <td class=" w-min-50">
@@ -212,10 +212,7 @@ foreach ($manageitems as $value) {
                               @endif
                               </td>
                               @php 
-                              
-                              
-                              $final = [];
-                                
+                              $final = [];                                
                               if(count($item->parameterColumnInfo)>0){
                                  foreach ($item->parameterColumnInfo as $pkey => $pvalue) {   
                                     $param_arr = [];                              

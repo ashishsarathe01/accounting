@@ -1012,16 +1012,17 @@ public function index(Request $request)
                if($bill_date!=""){
                   $akey = array_search($series, $series_arr);
                   $merchant_gst = $gst_no_arr[$akey];
-                  array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"bill_no"=>$bill_no,"claim_gst"=>$claim_gst,"invoice_no"=>$invoice_no,"merchant_gst"=>$merchant_gst,"txn_arr"=>$txn_arr,"error_arr"=>$error_arr));
+                  array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"bill_no"=>$bill_no,"claim_gst"=>$claim_gst,"invoice_no"=>$invoice_no,'remark'=>$remark,"merchant_gst"=>$merchant_gst,"txn_arr"=>$txn_arr,"error_arr"=>$error_arr));
                }
                $txn_arr = [];
                $error_arr = [];
                $bill_date = trim($data[0]);
                $series = trim($data[1]);
-               $bill_no = $data[4];
                $claim_gst = $data[2];
                $invoice_no = $data[3];
-               $gst_rate = $data[6];
+               $bill_no = $data[4];
+               $remark = $data[5];
+               $gst_rate = $data[7];
                if(strtotime($from_date)>strtotime(date('Y-m-d',strtotime($bill_date))) || strtotime($to_date)<strtotime(date('Y-m-d',strtotime($bill_date)))){                  
                   array_push($error_arr, 'Date '.$bill_date.' Not In Financial Year - Row '.$index);                  
                }
@@ -1046,7 +1047,7 @@ public function index(Request $request)
                   }
                }
             }
-            $account = $data[5];
+            $account = $data[6];
             
             $check_account = Accounts::where('account_name',trim($account))
                         ->whereIn('company_id',[trim(Session::get('user_company_id')),0])
@@ -1054,9 +1055,9 @@ public function index(Request $request)
             if(!$check_account){
                array_push($error_arr, 'Account Name '.$account.' Not Found - Row '.$index);
             }
-            $debit = $data[7];
+            $debit = $data[8];
             $debit = str_replace(",","",$debit);
-            $credit = $data[8];
+            $credit = $data[9];
             $credit = str_replace(",","",$credit);
             
             if($debit=="" && $credit==""){
@@ -1064,12 +1065,12 @@ public function index(Request $request)
             }
             
             if($check_account){
-               array_push($txn_arr,array("account"=>$check_account->id,"account_state_code"=>$check_account->state,"debit"=>$debit,"credit"=>$credit,"gst_rate"=>$data[6]));
+               array_push($txn_arr,array("account"=>$check_account->id,"account_state_code"=>$check_account->state,"debit"=>$debit,"credit"=>$credit,"gst_rate"=>$data[7]));
             }else{
-               array_push($txn_arr,array("account"=>$account,"account_state_code"=>"","debit"=>$debit,"credit"=>$credit,"gst_rate"=>$data[6]));
+               array_push($txn_arr,array("account"=>$account,"account_state_code"=>"","debit"=>$debit,"credit"=>$credit,"gst_rate"=>$data[7]));
             }            
             if($index==$total_row){
-               array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"bill_no"=>$bill_no,"claim_gst"=>$claim_gst,"invoice_no"=>$invoice_no,"merchant_gst"=>$merchant_gst,"txn_arr"=>$txn_arr,"error_arr"=>$error_arr));
+               array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"bill_no"=>$bill_no,"claim_gst"=>$claim_gst,"invoice_no"=>$invoice_no,"merchant_gst"=>$merchant_gst,'remark'=>$remark,"txn_arr"=>$txn_arr,"error_arr"=>$error_arr));
             }   
             $index++;
          }
@@ -1094,6 +1095,7 @@ public function index(Request $request)
                $merchant_gst = $value['merchant_gst'];
                $claim_gst = $value['claim_gst'];
                $invoice_no = $value['invoice_no'];
+               $remark = $value['remark'];
                if($duplicate_voucher_status==2){
                   $check_rec = Journal::select('id')
                                              ->where('voucher_no',$bill_no)
@@ -1125,6 +1127,8 @@ public function index(Request $request)
                $journal->financial_year = $financial_year;
                $journal->claim_gst_status = $claim_gst;
                $journal->merchant_gst = $merchant_gst;
+               $journal->remark = $remark;
+               $journal->long_narration = $remark;
                if($claim_gst=="YES"){
                   $journal->invoice_no = $invoice_no;                  
                   $net_amount = 0;$vendor = "";$igst = 0;$cgst = 0;$sgst = 0;$total_amount = 0;$tax_amount = 0;

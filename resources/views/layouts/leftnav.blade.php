@@ -618,6 +618,51 @@
                </div>
                
             @endcan
+            @if(Session::get('user_company_id') != 4)
+            <div class="card bg-blue pt-2 px-2 rounded-0 aside-bottom-divider">
+                  <div class="card-header py-12 px-2 border-0 rounded-0 d-flex" id="displayHeading">
+                     <a class="nav-link text-white font-14 fw-500 dropdown-icon-img p-0 collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#businessCollapse" aria-expanded="true" aria-controls="businessCollapse">
+                        <img src="{{ URL::asset('public/assets/imgs/display.svg')}}" class="me-2" alt="">
+                              Business Management
+                     </a>
+                  </div>
+                  
+                  <div id="businessCollapse" class="collapse" aria-labelledby="displayHeading" data-bs-parent="#accordion">
+                     <ul class="nav flex-column">
+                        <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue" style="border: 1px solid #007bff;">
+                           <!-- Toggle for Balance Sheet submenu -->
+                           <a class="text-decoration-none d-flex text-blue collapsed"
+                              href="#"
+                              data-bs-toggle="collapse"
+                              data-bs-target="#financialSubmenu"
+                              aria-expanded="false"
+                              aria-controls="financialSubmenu"> 
+                              Purchase Management
+                              <i class="arrow-icon fa fa-chevron-down ms-auto"></i>
+                           </a>
+                           <!-- Submenu under Balance Sheet -->
+                           <div class="collapse ps-3" id="financialSubmenu">
+                              <ul class="nav flex-column">
+                                    <li class="py-1 clickable-row-blue">
+                                       <a href="{{ route('supplier.index') }}" class="text-blue">Manage Supplier</a>
+                                    </li>
+                                    <li class="py-1 clickable-row-blue">
+                                       <a href="{{ route('profitloss.index') }}" class="text-blue">Manage Rate</a>
+                                    </li>
+                                    <li class="py-1 clickable-row-blue">
+                                       <a href="{{ route('trialbalance.index') }}" class="text-blue"> Manage Purchase </a>
+                                    </li>
+                                    <li class="py-1 clickable-row-blue">
+                                       <a href="{{ route('trialbalance.index') }}" class="text-blue">Report </a>
+                                    </li>
+                              </ul>
+                           </div>
+                        </li>                        
+                     </ul>
+                  </div>
+                  
+               </div>
+               @endif
             <?php 
          } ?>
       </div>

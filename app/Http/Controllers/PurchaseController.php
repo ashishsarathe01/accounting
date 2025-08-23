@@ -842,11 +842,7 @@ class PurchaseController extends Controller{
       if(!empty($GstSettings->mat_center)) {
          $mat_center[] = array("branch_matcenter" => $GstSettings->mat_center);
       }
-      // $mat_series = array();
-      // $mat_series = GstBranch::select('branch_series')->where(['delete' => '0', 'company_id' => Session::get('user_company_id')])->get()->toArray();
-      // if(!empty($GstSettings->series)) {
-      //    $mat_series[] = array("branch_series" => $GstSettings->series);
-      // }
+      
       $billsundry = BillSundrys::where('delete', '=', '0')
                                  ->where('status', '=', '1')
                                  ->whereIn('company_id',[Session::get('user_company_id'),0])
@@ -854,8 +850,15 @@ class PurchaseController extends Controller{
                                  ->orderBy('name')
                                  ->get();
       //Parameter data
-      
-      return view('editPurchase')->with('party_list', $party_list)->with('manageitems', $manageitems)->with('billsundry', $billsundry)->with('mat_center', $mat_center)->with('GstSettings', $GstSettings)->with('mat_series', $mat_series)->with('purchase', $purchase)->with('PurchaseDescription', $PurchaseDescription)->with('PurchaseSundry', $PurchaseSundry);
+      $stock_status = 1;
+      $check_stock = ItemParameterStock::where('stock_in_id',$purchase->id)
+                                          ->where('stock_in_type',"PURCHASE")
+                                          ->where('status',"0")
+                                          ->first();
+      if($check_stock){
+         $stock_status = 0;
+      }
+      return view('editPurchase')->with('party_list', $party_list)->with('manageitems', $manageitems)->with('billsundry', $billsundry)->with('mat_center', $mat_center)->with('GstSettings', $GstSettings)->with('mat_series', $mat_series)->with('purchase', $purchase)->with('PurchaseDescription', $PurchaseDescription)->with('PurchaseSundry', $PurchaseSundry)->with("stock_status",$stock_status);
    }
    public function update(Request $request){
       // echo "<pre>";
@@ -1311,7 +1314,7 @@ class PurchaseController extends Controller{
       }      
        
       $series_no = "";
-      $file = $request->file('csv_file');  
+      $file = $request->file('csv_file');
       $filePath = $file->getRealPath();      
       $final_result = array();
       if(($handle = fopen($filePath, 'r')) !== false) {
@@ -1323,16 +1326,16 @@ class PurchaseController extends Controller{
          $index = 1;
          while (($data = fgetcsv($handle, 1000, ',')) !== false) {
             $data = array_map('trim', $data);
-            if($data[2]==""){
-               array_push($error_arr, 'Invoice No. cannot be empty - Row No. '.$index); 
-            }
+            // if($data[2]==""){
+            //    array_push($error_arr, 'Invoice No. cannot be empty - Row No. '.$index); 
+            // }
             
             if($data[0]!="" && $data[2]!=""){
                if($series_no!=""){
                   $akey = array_search($series_no, $series_arr);
                   $merchant_gst = $gst_no_arr[$akey];
                   array_push($data_arr,array("series_no"=>$series_no,"date"=>$date,"voucher_no"=>$voucher_no,"party"=>$party,"material_center"=>$material_center,"grand_total"=>$grand_total,"self_vehicle"=>$self_vehicle,"vehicle_no"=>$vehicle_no,"transport_name"=>$transport_name,"reverse_charge"=>$reverse_charge,"gr_pr_no"=>$gr_pr_no,"station"=>$station,"ewaybill_no"=>$ewaybill_no,"shipping_name"=>$shipping_name,"item_arr"=>$item_arr,"slicedData"=>$slicedData,"merchant_gst"=>$merchant_gst,"error_arr"=>$error_arr));
-               }               
+               }
                $item_arr = [];
                $error_arr = [];
                $slicedData = [];
@@ -1471,7 +1474,7 @@ class PurchaseController extends Controller{
                $reverse_charge = $value['reverse_charge'];
                $gr_pr_no = $value['gr_pr_no'];
                $station = $value['station'];
-               $sale->merchant_gst = $merchant_gst;
+               //$sale->merchant_gst = $merchant_gst;
                $ewaybill_no = $value['ewaybill_no'];
                $shipping_name = $value['shipping_name'];
                $item_arr = $value['item_arr'];

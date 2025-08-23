@@ -51,6 +51,7 @@ use App\Http\Controllers\gstReturn\GSTR2AController;
 use App\Http\Controllers\gstReturn\GSTR3BController;
 use App\Http\Controllers\ParameterizedStockController;
 use App\Http\Controllers\SaleOrderController;
+use App\Http\Controllers\Supplier\SupplierController;
 
 /*
 |--------------------------------------------------------------------------
@@ -358,4 +359,7 @@ Route::post('credit-note-import-process', [SalesReturnController::class, 'credit
 Route::get('import-stock-transfer-view', [StockTransferController::class, 'importStockTransferView'])->name('import-stock-transfer-view');
 Route::post('import-stock-transfer-process', [StockTransferController::class, 'importStockTransferProcess'])->name('import-stock-transfer-process');
 Route::Resource('sale-order', SaleOrderController::class);
+Route::Resource('supplier', SupplierController::class);
+Route::post('get-supplier-location', [SupplierController::class, 'getSupplierLocation'])->name('get-supplier-location');
+
 });
