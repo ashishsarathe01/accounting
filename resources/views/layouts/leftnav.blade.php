@@ -653,7 +653,7 @@
                                        <a href="{{ route('manage-supplier-purchase') }}" class="text-blue"> Manage Purchase </a>
                                     </li>
                                     <li class="py-1 clickable-row-blue">
-                                       <a href="{{ route('trialbalance.index') }}" class="text-blue">Report </a>
+                                       <a href="{{ route('manage-supplier-purchase-report') }}" class="text-blue">Report </a>
                                     </li>
                               </ul>
                            </div>

@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use App\Models\PrivilegesModule;
 use App\Models\PrivilegesModuleMapping;
+use App\Models\Companies;
 use Validation;
 use Session;
 use Hash;
@@ -135,35 +136,56 @@ class MerchantEmployeeController extends Controller{
                                        ->get()
                                        ->toArray();
       $tree = $this->buildTree($privileges);
-      return view('merchant_employee_privileges',["privileges"=>$tree,"employee_id"=>$id,"assign_privilege"=>$assign_privilege]);
+      $company = Companies::select('id','company_name')->where('user_id', Auth::id())->where('status','1')->where('delete','0')->get();
+      return view('merchant_employee_privileges',["privileges"=>$tree,"employee_id"=>$id,"company"=>$company]);
    }
    function buildTree(array $elements, $parentId = null) {
-         $branch = [];
-
-         foreach ($elements as $element) {
-            if ($element['parent_id'] == $parentId) {
-                  $children = $this->buildTree($elements, $element['id']);
-                  if ($children) {
-                     $element['children'] = $children;
-                  }
-                  $branch[] = $element;
+      $branch = [];
+      foreach ($elements as $element) {
+         if ($element['parent_id'] == $parentId) {
+               $children = $this->buildTree($elements, $element['id']);
+               if ($children) {
+                  $element['children'] = $children;
+               }
+               $branch[] = $element;
+         }
+      }
+      return $branch;
+   }
+   public function setEmployeePrivileges(Request $request){
+      Gate::authorize('action-module', 36);
+      if($request->apply_all){
+         $company = Companies::select('id')->where('user_id', Auth::id())->where('status','1')->where('delete','0')->get();
+         foreach ($company as $k => $v) {
+            PrivilegesModuleMapping::where('employee_id',$request->employee_id)->where('company_id',$v->id)->delete();
+            if($request->privileges && count($request->privileges)>0){
+            foreach ($request->privileges as $key => $value) {
+               $pri = new PrivilegesModuleMapping;
+               $pri->module_id = $value;
+               $pri->employee_id = $request->employee_id;
+               $pri->company_id = $v->id;
+               $pri->created_at = Carbon::now();
+               $pri->save();
             }
          }
-
-         return $branch;
-      }
-      public function setEmployeePrivileges(Request $request){
-         Gate::authorize('action-module', 36);
-         PrivilegesModuleMapping::where('employee_id',$request->employee_id)->delete();
-         foreach ($request->privileges as $key => $value) {
-            $pri = new PrivilegesModuleMapping;
-            $pri->module_id = $value;
-            $pri->employee_id = $request->employee_id;
-            $pri->created_at = Carbon::now();
-            $pri->save();
+         }         
+      }else{
+         PrivilegesModuleMapping::where('employee_id',$request->employee_id)->where('company_id',$request->company_id)->delete();
+         if($request->privileges && count($request->privileges)>0){
+            foreach ($request->privileges as $key => $value) {
+               $pri = new PrivilegesModuleMapping;
+               $pri->module_id = $value;
+               $pri->employee_id = $request->employee_id;
+               $pri->company_id = $request->company_id;
+               $pri->created_at = Carbon::now();
+               $pri->save();
+            }
          }
-         return redirect('merchant-employee-privileges/'.$request->employee_id)->withSuccess('Privileges Updated Successfully.');
-         //PrivilegesModuleMapping
+         
       }
+      
+      return redirect('merchant-employee-privileges/'.$request->employee_id)->withSuccess('Privileges Updated Successfully.');
+      //PrivilegesModuleMapping
+   }
       
 }

@@ -6,6 +6,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Session;
 
 class User extends Authenticatable
 {
@@ -45,6 +46,7 @@ class User extends Authenticatable
     {
         $priv = \App\Models\PrivilegesModuleMapping::where('employee_id', $this->id)
             ->where('module_id', $module_id)
+            ->where('company_id', Session()->get('user_company_id'))
             ->first();
 
         return $priv;

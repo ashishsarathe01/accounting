@@ -164,6 +164,43 @@ class SupplierPurchaseController extends Controller
                               ->get(); 
         return view('supplier.complete_supplier_purchase', ["purchases" => $purchases,"accounts"=>$accounts,"id"=>$id]);
     }
+    public function manageSupplierPurchaseReport($id=null, $from_date=null, $to_date=null)
+    {
+        $purchases = Purchase::join('supplier_purchase_reports','purchases.id','=','supplier_purchase_reports.purchase_id')
+        ->select('purchases.*','supplier_purchase_reports.difference_total_amount')
+        ->where('purchases.company_id',Session::get('user_company_id'))
+                                ->where('delete','0')
+                                ->where('purchases.status','1')
+                                ->where('supplier_action_status','1')
+                                ->where('purchases.party', $id)
+                                ->whereDate('purchases.date', '>=', date('Y-m-d', strtotime($from_date)))
+                                ->whereDate('purchases.date', '<=', date('Y-m-d', strtotime($to_date)))
+                                ->orderBy('date','asc')
+                                ->get();
+        $group_ids = CommonHelper::getAllChildGroupIds(3,Session::get('user_company_id'));
+        array_push($group_ids, 3);
+        $group_ids = array_merge($group_ids, CommonHelper::getAllChildGroupIds(11,Session::get('user_company_id'))); // Include group 11 as well
+        $group_ids = array_unique($group_ids); // Ensure unique group IDs       
+        array_push($group_ids, 11);
+        $accounts = Accounts::where('delete', '=', '0')
+                              ->where('status', '=', '1')
+                              ->whereIn('company_id', [Session::get('user_company_id'),0])
+                              ->whereIn('under_group',$group_ids)
+                              ->select('accounts.id','accounts.account_name')
+                              ->orderBy('account_name')
+                              ->get(); 
+        return view('supplier.supplier_purchase_report', ["purchases" => $purchases,"accounts"=>$accounts,"id"=>$id,"from_date"=>$from_date,"to_date"=>$to_date]);
+    }
+    public function viewCompletePurchaseInfo($id=null)
+    {
+        $report = SupplierPurchaseReport::join('supplier_locations','supplier_purchase_reports.location','=','supplier_locations.id')
+                                        ->select('supplier_purchase_reports.*','supplier_locations.name as location_name')
+        ->where('purchase_id',$id)->first();
+        $response = array(
+            'reports' => $report
+        );
+        return json_encode($response);
+    }
     
     
 }

@@ -59,7 +59,10 @@
                         </tr>
                      </thead>
                      <tbody>
-                        @php $total_debit_amount = 0;$total_credit_amount = 0; setlocale(LC_MONETARY, 'en_IN');@endphp
+                        @php $total_debit_amount = 0;$total_credit_amount = 0; setlocale(LC_MONETARY, 'en_IN'); 
+                        // echo "<pre>";
+                        //    print_r($account->toArray());
+                           @endphp
                         @foreach($account as $value)
                            @php 
                               $balance = $value['debit'] - $value['credit']; 
@@ -67,7 +70,7 @@
                                  continue;
                               }
                            @endphp
-                           <tr class=" font-14 font-heading bg-white">
+                           <tr class=" font-14 font-heading bg-white view_account_tr" data-id="{{$value['id']}}" data-type="{{$value['type']}}" data-under="{{$value['under_group']}}" style="cursor: pointer;">
                               <td class="w-min-230 fw-500 py-12 px-3">{{$value['account_name']}}</td>
                               <td class="w-min-180 fw-500 py-12 px-3 border-left-divider detail_td" style="text-align: right;">
                                  @if($balance>=0)
@@ -270,7 +273,21 @@
             $(".detail_td").hide();
          }
       });
-        
+      $(".view_account_tr").click(function(){
+         var id = $(this).data('id');
+         var type = $(this).data('type');
+         var under = $(this).data('under');
+         var to_date = $("#to_date").val();
+         var trial_balance_by = $("input[name='trial_balance_by']:checked").val();
+         var type1 = $("select[name='type']").val();
+         if(id){
+            if(type=="inner_group"){
+               var url = "trialbalance-filter?trial_balance_by="+trial_balance_by+"&type="+type1+"&to_date="+to_date+"&group_id="+under+"&under=group";
+               window.location.href = url; 
+            }
+            
+         }         
+      });
    });
 </script>
 @endsection

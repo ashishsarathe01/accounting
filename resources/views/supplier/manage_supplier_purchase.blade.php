@@ -38,7 +38,7 @@
                   <tbody>
                      @foreach($purchases as $key => $value)
                         <tr>
-                            <td>{{$value->date}}</td>
+                            <td>{{date('d-m-Y',strtotime($value->date))}}</td>
                             <td>{{$value->voucher_no}}</td>
                             <td>{{$value->account['account_name']}}</td>
                             <td style="text-align:right;">{{$value->total}}</td>
@@ -159,104 +159,104 @@
    </section>
 </div>
 <div class="modal fade" id="report_modal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content p-4 border-divider border-radius-8">
-                <div class="modal-header border-0 p-0">
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content p-4 border-divider border-radius-8">
+            <div class="modal-header border-0 p-0">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Report</h5>
+            <br>
+            <div class="row">
+                <div class="mb-6 col-md-6">
+                    <label for="name" class="form-label font-14 font-heading">Voucher Number</label>
+                    <input type="text" id="voucher_no" class="form-control" placeholder="Enter Voucher Number"/>
+                    <input type="hidden" id="row_id">
+                    <input type="hidden" id="account_id">
+                </div> 
+                <div class="mb-6 col-md-6">
+                    <label for="name" class="form-label font-14 font-heading">Area</label>
+                    <select id="location" class="form-select">
+                        <option value="">Select Area</option>
+                        @foreach($locations as $loc)
+                            <option value="{{$loc->id}}">{{$loc->name}}</option>
+                        @endforeach
+                    </select>
                 </div>
-                <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Report</h5>
-                <br>
-                <div class="row">
-                    <div class="mb-6 col-md-6">
-                        <label for="name" class="form-label font-14 font-heading">Voucher Number</label>
-                        <input type="text" id="voucher_no" class="form-control" placeholder="Enter Voucher Number"/>
-                        <input type="hidden" id="row_id">
-                        <input type="hidden" id="account_id">
-                    </div> 
-                    <div class="mb-6 col-md-6">
-                        <label for="name" class="form-label font-14 font-heading">Area</label>
-                        <select id="location" class="form-select">
-                            <option value="">Select Area</option>
-                            @foreach($locations as $loc)
-                                <option value="{{$loc->id}}">{{$loc->name}}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="mb-12 col-md-12"></div>
-                    <div class="mb-12 col-md-12">
-                        <table class="table table-bordered">
-                            <thead>
-                                <tr>
-                                    <th></th>
-                                    <th id="purchase_weight" style="text-align: right"></th>
-                                    <th style="text-align: right">Bill Rate</th>
-                                    <th style="text-align: right">Contract Rate</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody id="report_body">
-                                <tr>
-                                    <td><input type="text" class="form-control" value="Kraft I" readonly></td>
-                                    <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="kraft_i_qty" style="text-align: right" data-id="kraft_i"></td>
-                                    <td><input type="text" class="form-control calculate" placeholder="Enter Rate" id="kraft_i_bill_rate" style="text-align: right" data-id="kraft_i"></td>
-                                    <td><input type="text" class="form-control" id="kraft_i_contract_rate" style="text-align: right" readonly></td>
-                                    <td><input type="text" class="form-control" id="kraft_i_difference_amount" data-id="kraft_i" style="text-align: right" readonly></td>
-                                </tr>
-                                <tr>
-                                    <td><input type="text" class="form-control" value="Kraft II" readonly></td>
-                                    <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="kraft_ii_qty" style="text-align: right" data-id="kraft_ii"></td>
-                                    <td><input type="text" class="form-control calculate" placeholder="Enter Rate" id="kraft_ii_bill_rate" style="text-align: right" data-id="kraft_ii"></td>
-                                    <td><input type="text" class="form-control" id="kraft_ii_contract_rate" style="text-align: right" readonly></td>
-                                    <td><input type="text" class="form-control" id="kraft_ii_difference_amount" data-id="kraft_ii" style="text-align: right" readonly></td>
-                                </tr>
-                                <tr>
-                                    <td><input type="text" class="form-control" value="Duplex" readonly></td>
-                                    <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="duplex_qty" style="text-align: right" data-id="duplex"></td>
-                                    <td><input type="text" class="form-control calculate" placeholder="Enter Rate" id="duplex_bill_rate" style="text-align: right" data-id="duplex"></td>
-                                    <td><input type="text" class="form-control" id="duplex_contract_rate" style="text-align: right" readonly></td>
-                                    <td><input type="text" class="form-control" id="duplex_difference_amount" data-id="duplex" style="text-align: right" readonly></td>
-                                </tr>
-                                <tr>
-                                    <td><input type="text" class="form-control" value="Poor" readonly></td>
-                                    <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="poor_qty" style="text-align: right" data-id="poor"></td>
-                                    <td><input type="text" class="form-control calculate" placeholder="Enter Rate" id="poor_bill_rate" style="text-align: right" data-id="poor"></td>
-                                    <td><input type="text" class="form-control" id="poor_contract_rate" style="text-align: right" readonly></td>
-                                    <td><input type="text" class="form-control" id="poor_difference_amount" data-id="poor" style="text-align: right" readonly></td>
-                                </tr>
-                                <tr>
-                                    <td><input type="text" class="form-control" value="Cut" readonly></td>
-                                    <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="cut_qty" style="text-align: right" data-id="cut"></td>
-                                    <td><input type="text" class="form-control calculate" placeholder="Enter Rate" id="cut_bill_rate" style="text-align: right" data-id="cut"></td>
-                                    <td><input type="text" class="form-control" id="cut_contract_rate" style="text-align: right" readonly></td>
-                                    <td><input type="text" class="form-control" id="cut_difference_amount" data-id="cut" style="text-align: right" readonly></td>
-                                </tr>
-                                <tr>
-                                    <td><input type="checkbox" id="other_check"></td>
-                                    <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="other_qty" style="text-align: right" data-id="other"></td>
-                                    <td><input type="text" class="form-control calculate" placeholder="Enter Rate" id="other_bill_rate" style="text-align: right" data-id="other"></td>
-                                    <td><input type="text" class="form-control" id="other_contract_rate" style="text-align: right" readonly></td>
-                                    <td><input type="text" class="form-control" id="other_difference_amount" data-id="other" style="text-align: right" readonly></td>
-                                </tr>
-                                <tr>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td>Difference</td>
-                                    <td><input type="text" class="form-control" id="difference_total_amount" style="text-align: right" readonly></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="mb-12 col-md-12"></div>
+                <div class="mb-12 col-md-12">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th id="purchase_weight" style="text-align: right"></th>
+                                <th style="text-align: right">Bill Rate</th>
+                                <th style="text-align: right">Contract Rate</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="report_body">
+                            <tr>
+                                <td><input type="text" class="form-control" value="Kraft I" readonly></td>
+                                <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="kraft_i_qty" style="text-align: right" data-id="kraft_i"></td>
+                                <td><input type="text" class="form-control calculate" placeholder="Enter Rate" id="kraft_i_bill_rate" style="text-align: right" data-id="kraft_i"></td>
+                                <td><input type="text" class="form-control" id="kraft_i_contract_rate" style="text-align: right" readonly></td>
+                                <td><input type="text" class="form-control" id="kraft_i_difference_amount" data-id="kraft_i" style="text-align: right" readonly></td>
+                            </tr>
+                            <tr>
+                                <td><input type="text" class="form-control" value="Kraft II" readonly></td>
+                                <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="kraft_ii_qty" style="text-align: right" data-id="kraft_ii"></td>
+                                <td><input type="text" class="form-control calculate" placeholder="Enter Rate" id="kraft_ii_bill_rate" style="text-align: right" data-id="kraft_ii"></td>
+                                <td><input type="text" class="form-control" id="kraft_ii_contract_rate" style="text-align: right" readonly></td>
+                                <td><input type="text" class="form-control" id="kraft_ii_difference_amount" data-id="kraft_ii" style="text-align: right" readonly></td>
+                            </tr>
+                            <tr>
+                                <td><input type="text" class="form-control" value="Duplex" readonly></td>
+                                <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="duplex_qty" style="text-align: right" data-id="duplex"></td>
+                                <td><input type="text" class="form-control calculate" placeholder="Enter Rate" id="duplex_bill_rate" style="text-align: right" data-id="duplex"></td>
+                                <td><input type="text" class="form-control" id="duplex_contract_rate" style="text-align: right" readonly></td>
+                                <td><input type="text" class="form-control" id="duplex_difference_amount" data-id="duplex" style="text-align: right" readonly></td>
+                            </tr>
+                            <tr>
+                                <td><input type="text" class="form-control" value="Poor" readonly></td>
+                                <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="poor_qty" style="text-align: right" data-id="poor"></td>
+                                <td><input type="text" class="form-control calculate" placeholder="Enter Rate" id="poor_bill_rate" style="text-align: right" data-id="poor"></td>
+                                <td><input type="text" class="form-control" id="poor_contract_rate" style="text-align: right" readonly></td>
+                                <td><input type="text" class="form-control" id="poor_difference_amount" data-id="poor" style="text-align: right" readonly></td>
+                            </tr>
+                            <tr>
+                                <td><input type="text" class="form-control" value="Cut" readonly></td>
+                                <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="cut_qty" style="text-align: right" data-id="cut"></td>
+                                <td><input type="text" class="form-control calculate" placeholder="Enter Rate" id="cut_bill_rate" style="text-align: right" data-id="cut"></td>
+                                <td><input type="text" class="form-control" id="cut_contract_rate" style="text-align: right" readonly></td>
+                                <td><input type="text" class="form-control" id="cut_difference_amount" data-id="cut" style="text-align: right" readonly></td>
+                            </tr>
+                            <tr>
+                                <td><input type="checkbox" id="other_check"></td>
+                                <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="other_qty" style="text-align: right" data-id="other"></td>
+                                <td><input type="text" class="form-control calculate" placeholder="Enter Rate" id="other_bill_rate" style="text-align: right" data-id="other"></td>
+                                <td><input type="text" class="form-control" id="other_contract_rate" style="text-align: right" readonly></td>
+                                <td><input type="text" class="form-control" id="other_difference_amount" data-id="other" style="text-align: right" readonly></td>
+                            </tr>
+                            <tr>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td>Difference</td>
+                                <td><input type="text" class="form-control" id="difference_total_amount" style="text-align: right" readonly></td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
-                <br>
-                <div class="text-start">
-                    <button type="button" class="btn  btn-xs-primary save_location">
-                        SAVE
-                    </button>
-                </div>
+            </div>
+            <br>
+            <div class="text-start">
+                <button type="button" class="btn  btn-xs-primary save_location">
+                    SAVE
+                </button>
             </div>
         </div>
     </div>
+</div>
 </body>
 @include('layouts.footer')
 <script>

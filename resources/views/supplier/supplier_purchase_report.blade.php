@@ -17,56 +17,55 @@
                   {{ session('success') }}
                </div>
             @endif
-            
             <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
-               <h5 class="transaction-table-title m-0 py-2">Complete Purchase Voucher</h5>
-               <select class="form-select form-select-sm w-auto select2-single" aria-label=".form-select-sm example" id="supplier">
-                  <option selected value="">Select Supplier</option>
-                  @foreach($accounts as $loc)
-                     <option value="{{$loc->id}}" @if($loc->id==$id) selected @endif>{{$loc->account_name}}</option>
-                  @endforeach
-
-               </select>
-               <a href="{{route('manage-supplier-purchase')}}"><button class="btn btn-primary btn-sm d-flex align-items-center" >Pending Purchase Voucher</button></a>
+               <h5 class="transaction-table-title m-0 py-2">Purchase Report</h5>
+               <div class="d-md-flex d-block"> 
+                    <div class="calender-administrator my-2 my-md-0">
+                        <input type="date" id="from_date" class="form-control calender-bg-icon calender-placeholder" placeholder="From date" required name="from_date" value="{{ !empty($from_date) ? date('Y-m-d', strtotime($from_date)) : date('Y-m-01') }}">
+                     </div>
+                     <div class="calender-administrator ms-md-4">
+                        <input type="date" id="to_date" class="form-control calender-bg-icon calender-placeholder" placeholder="To date" required name="to_date" value="{{ !empty($to_date) ? date('Y-m-d', strtotime($to_date)) : date('Y-m-t')}}">
+                     </div>
+                    <select class="form-select form-select-sm w-auto ms-md-4 select2-single" aria-label=".form-select-sm example" id="supplier">
+                        <option selected value="">Select Supplier</option>
+                        @foreach($accounts as $loc)
+                            <option value="{{$loc->id}}" @if($loc->id==$id) selected @endif>{{$loc->account_name}}</option>
+                        @endforeach
+                    </select>
+                    <button class="btn btn-primary btn-sm d-flex align-items-center ms-md-4 search_btn">Submit</button>
+               </div>
             </div>
             <div class="transaction-table bg-white table-view shadow-sm">
-               <table class="table-striped table m-0 shadow-sm payment_table">
+               <table class="table-bordered table m-0 shadow-sm payment_table">
                   <thead>
                      <tr class=" font-12 text-body bg-light-pink ">
                         <th class="w-min-120 border-none bg-light-pink text-body">Date </th>
                         <th class="w-min-120 border-none bg-light-pink text-body">Voucher No. </th>
-                        <th class="w-min-120 border-none bg-light-pink text-body ">Account Name </th>
-                        <th class="w-min-120 border-none bg-light-pink text-body " style="text-align:right;">Amount</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body " style="text-align:right;">Difference Amount</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body " style="text-align:right;">Weight (Qty)</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body ">Item Name</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body text-center">Action </th>
+                        <th class="w-min-120 border-none bg-light-pink text-body" style="text-align:right;">Actual Amount</th>
+                        <th class="w-min-120 border-none bg-light-pink text-body" style="text-align:right;">Difference Amount</th>
+                        <th class="w-min-120 border-none bg-light-pink text-body">Action</th>
                      </tr>
                   </thead>
                   <tbody>
-                     @foreach($purchases as $key => $value)
+                    @php $total = 0; $difference_total = 0; @endphp
+                    @foreach($purchases as $key => $value)
                         <tr>
                             <td>{{date('d-m-Y',strtotime($value->date))}}</td>
                             <td>{{$value->voucher_no}}</td>
-                            <td>{{$value->account['account_name']}}</td>
                             <td style="text-align:right;">{{$value->total}}</td>
                             <td style="text-align:right;">{{$value->difference_total_amount}}</td>
-                            <td style="text-align:right;">
-                                @php $qty_total = 0; @endphp
-                                @foreach($value->purchaseDescription as $v)
-                                    @php $qty_total = $qty_total + $v->qty; @endphp
-                                @endforeach
-                                @php echo $qty_total; @endphp
-                            </td>
-                            <td>
-                                @foreach($value->purchaseDescription as $v)
-                                    {{$v->item->name}} ({{$v->qty}} {{$v->units->name}})<br>
-                                @endforeach
-                            </td>
                             <td><button class="btn btn-info view" data-id="{{$value->id}}">View</button></td>
                         </tr>
-                     @endforeach
-                     
+                        @php $total = $total + $value->total; $difference_total = $difference_total + $value->difference_total_amount; @endphp
+                    @endforeach
+                    <tr>
+                        <th></th>
+                        <th style="text-align:right;">Total</th>
+                        <th style="text-align:right;">{{$total}}</th>
+                        <th style="text-align:right;">{{$difference_total}}</th>
+                        <td></td>
+                    </tr>
+                        
                   </tbody>
                </table>
             </div>
@@ -256,13 +255,19 @@
 </body>
 @include('layouts.footer')
 <script>
-   $(".select2-single").select2({
+    $(".select2-single").select2({
       //   theme: "classic",
     });
-    $("#supplier").change(function(){
-        window.location = "{{url('complete-supplier-purchase/')}}/"+$(this).val();
+    $(".search_btn").click(function(){
+        let supplier = $("#supplier").val();
+        let from_date = $("#from_date").val();
+        let to_date = $("#to_date").val();
+        if(supplier == ''){
+            alert('Please select supplier');
+            return false;
+        }
+        window.location = "{{url('manage-supplier-purchase-report/')}}/"+supplier+'/'+from_date+'/'+to_date;
     });
-    
     $(".view").click(function(){
          let id = $(this).data('id');
          $.ajax({

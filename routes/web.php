@@ -370,4 +370,6 @@ Route::post('get-supplier-rate-by-location', [SupplierPurchaseController::class,
 ('manage-supplier-purchase');
 Route::post('store-supplier-purchase-report', [SupplierPurchaseController::class, 'storeSupplierPurchaseReport'])->name('store-supplier-purchase-report');
 Route::get('complete-supplier-purchase/{id?}', [SupplierPurchaseController::class, 'completeSupplierPurchase'])->name('complete-supplier-purchase');
+Route::get('manage-supplier-purchase-report/{id?}/{from_date?}/{to_date?}', [SupplierPurchaseController::class, 'manageSupplierPurchaseReport'])->name('manage-supplier-purchase-report');
+Route::post('view-complete-purchase-info/{id?}', [SupplierPurchaseController::class, 'viewCompletePurchaseInfo'])->name('view-complete-purchase-info');
 });
