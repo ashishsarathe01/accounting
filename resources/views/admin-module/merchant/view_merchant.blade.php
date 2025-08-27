@@ -78,7 +78,7 @@
                                     <ul class="dropdown-menu">
                                        <!-- <li><a class="dropdown-item" href="#">EDIT</a></li> -->
                                        <li><a class="dropdown-item merchant_login" href="javascript:void(0)" data-id="{{$merchant->id}}">LOGIN</a></li>
-                                       <!-- <li><a class="dropdown-item" href="#">VIEW</a></li> -->
+                                       <li><a class="dropdown-item" href="{{route('admin.merchant-module-permission')}}/{{$merchant->id}}">Modules Permission</a></li>
                                     </ul>
                                  </div>
                               </div>

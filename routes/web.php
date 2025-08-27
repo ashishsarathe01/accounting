@@ -42,6 +42,7 @@ use App\Http\Controllers\AdminModuleController\AccountHeadController;
 use App\Http\Controllers\AdminModuleController\AccountGroupController;
 use App\Http\Controllers\AdminModuleController\AccountController;
 use App\Http\Controllers\AdminModuleController\MerchantPrivilegesController;
+use App\Http\Controllers\AdminModuleController\MerchantModulePermissionController;
 use App\Http\Controllers\VoucherSeriesConfigurationController;
 use App\Http\Controllers\StockTransfer\StockTransferController;
 use App\Http\Controllers\gstReturn\gstR1Controller;
@@ -83,6 +84,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
       Route::Resource('/account',AccountController::class)->name('*','account');
       Route::post('/login-merchant', [MerchantController::class, 'loginMerchant']);
       Route::Resource('/merchant-privilege',MerchantPrivilegesController::class)->name('*','merchant-privilege');
+      Route::get('/merchant-module-permission/{id?}',[MerchantModulePermissionController::class, 'index'])->name('merchant-module-permission');
+      Route::post('/store-merchant-module',[MerchantModulePermissionController::class, 'storeMerchantModule'])->name('store-merchant-module');
+      
    });
 });
 
