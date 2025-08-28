@@ -171,27 +171,27 @@
                            <td>{{ $row['name'] }}</td>
                            <td>{{ $row['voucher_no_prefix'] }}</td>
                            <td>{{ \Carbon\Carbon::parse($row['invoice_date'])->format('d-m-Y') }}</td>
-                           <td>{{ number_format($row['total'], 2) }}</td>
+                           <td>{{ formatIndianNumber($row['total']) }}</td>
                            <td>{{ $row['POS'] }}</td>
                            <td style="text-align:center;">N</td>
                            <td>..</td>
                            <td>Regular</td>
                            <td>..</td>
                            <td>{{ $row['rate'] }}%</td>
-                           <td>{{ number_format($row['taxable_value'], 2) }}</td>
-                           <td>{{ number_format($row['cgst'], 2) }}</td>
-                           <td>{{ number_format($row['sgst'], 2) }}</td>
-                           <td>{{ number_format($row['igst'], 2) }}</td>
+                           <td>{{ formatIndianNumber($row['taxable_value']) }}</td>
+                           <td>{{ formatIndianNumber($row['cgst']) }}</td>
+                           <td>{{ formatIndianNumber($row['sgst']) }}</td>
+                           <td>{{ formatIndianNumber($row['igst']) }}</td>
                         </tr>
                      @endforeach
                      <tr style="background-color: #003366;">
                         <th colspan="4" style="text-align:center;color: white;">Total Invoice Value</th>
-                        <th style="color: white;">{{ number_format($total_invoice_value, 2) }}</th>
+                        <th style="color: white;">{{ formatIndianNumber($total_invoice_value) }}</th>
                         <th colspan="6" style="text-align:center; color: white;">Total</th>
-                        <th style="color: white;">{{ number_format($total_taxable_value, 2) }}</th>
-                        <th style="color: white;">{{ number_format($total_cgst, 2) }}</th>
-                        <th style="color: white;">{{ number_format($total_sgst, 2) }}</th>
-                        <th style="color: white;">{{ number_format($total_igst, 2) }}</th>
+                        <th style="color: white;">{{ formatIndianNumber($total_taxable_value) }}</th>
+                        <th style="color: white;">{{ formatIndianNumber($total_cgst) }}</th>
+                        <th style="color: white;">{{ formatIndianNumber($total_sgst) }}</th>
+                        <th style="color: white;">{{ formatIndianNumber($total_igst) }}</th>
                      </tr>
 
                 

@@ -56,27 +56,27 @@
                     <td>{{ $row['name'] }}</td>
                     <td>{{ $row['sr_prefix'] }}</td>
                     <td>{{ \Carbon\Carbon::parse($row['note_date'])->format('d-m-Y') }}</td>
-                    <td>{{ number_format($row['total'], 2) }}</td>
+                    <td>{{ formatIndianNumber($row['total']) }}</td>
                     <td>{{ $row['note_type'] }}</td>
                     <td>{{ $row['POS'] }}</td>
                     <td>N</td>
                     <td>..</td>  
                     <td>{{ $row['rate'] }}%</td>
-                    <td>{{ number_format($row['taxable_value'], 2) }}</td>
-                    <td>{{ number_format($row['cgst'], 2) }}</td>
-                    <td>{{ number_format($row['sgst'], 2) }}</td>
-                    <td>{{ number_format($row['igst'], 2) }}</td>
+                    <td>{{ formatIndianNumber($row['taxable_value']) }}</td>
+                    <td>{{ formatIndianNumber($row['cgst']) }}</td>
+                    <td>{{ formatIndianNumber($row['sgst']) }}</td>
+                    <td>{{ formatIndianNumber($row['igst']) }}</td>
                 </tr>
             @endforeach
 
             <tr style="font-weight: bold; background-color: #003366;">
                 <td style="color: white;" colspan="4" class="text-end">TOTAL</td>
-                <td style="color: white;" >{{ number_format($total_note_value, 2) }}</td>
+                <td style="color: white;" >{{ formatIndianNumber($total_note_value) }}</td>
                 <td colspan="5"></td>
-                <td style="color: white;">{{ number_format($total_taxable_value, 2) }}</td>
-                <td style="color: white;">{{ number_format($total_cgst, 2) }}</td>
-                <td style="color: white;">{{ number_format($total_sgst, 2) }}</td>
-                <td style="color: white;">{{ number_format($total_igst, 2) }}</td>
+                <td style="color: white;">{{ formatIndianNumber($total_taxable_value) }}</td>
+                <td style="color: white;">{{ formatIndianNumber($total_cgst) }}</td>
+                <td style="color: white;">{{ formatIndianNumber($total_sgst) }}</td>
+                <td style="color: white;">{{ formatIndianNumber($total_igst) }}</td>
             </tr>
         </tbody>
     </table>

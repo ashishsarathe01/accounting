@@ -120,7 +120,7 @@
                            <td style="text-align:left;">{{$value['account_name']}}</td>
                            <td style="text-align:right;">{{$value['voucher_no']}}</td>
                            <td style="text-align:right;">
-                              {{number_format($value['net_total'],2)}}
+                              {{formatIndianNumber($value['net_total'])}}
                               @php 
                                  if($value['type']=="CREDIT NOTE"){
                                     $net_total = $net_total - $value['net_total']; 
@@ -130,7 +130,7 @@
                               @endphp
                            </td>
                            <td class="td_detail" style="text-align:right;display: none;">
-                              {{number_format($value['sale_total'],2)}}
+                              {{formatIndianNumber($value['sale_total'])}}
                               @php 
                                  if($value['type']=="CREDIT NOTE"){
                                     $sale_total = $sale_total - $value['sale_total'];  
@@ -149,7 +149,7 @@
                                        @endphp
                                     @endif
                                  @endforeach
-                                 {{number_format($freight,2)}}
+                                 {{formatIndianNumber($freight)}}
                                  @php 
                                     if(isset($sundry_sum_arr[$bsundry->id])){
                                        $sundry_sum_arr[$bsundry->id] = $sundry_sum_arr[$bsundry->id] + $freight;
@@ -160,7 +160,7 @@
                               </td>
                            @endforeach                           
                            <td class="td_detail" style="text-align:right;display: none;">
-                              {{number_format($value['grand_total'],2)}}
+                              {{formatIndianNumber($value['grand_total'])}}
                               @php 
                                  if($value['type']=="CREDIT NOTE"){
                                     $grand_total = $grand_total - $value['grand_total']; 
@@ -176,19 +176,19 @@
                         <th style="text-align:center;"></th>
                         <th style="text-align:center;"></th>
                         <th style="text-align:right;">Total</th>
-                        <th style="text-align:right;">{{number_format($net_total,2)}}</th>
-                        <th class="td_detail" style="text-align:right;display: none;">{{number_format($sale_total,2)}}</th>
+                        <th style="text-align:right;">{{formatIndianNumber($net_total)}}</th>
+                        <th class="td_detail" style="text-align:right;display: none;">{{formatIndianNumber($sale_total)}}</th>
                         @foreach($bill_sundray as $bsundry)
                         
                            <th class="td_detail" style="text-align:right;display: none;">
                               @php 
                               if(isset($sundry_sum_arr[$bsundry->id])){
-                                 echo number_format($sundry_sum_arr[$bsundry->id],2);
+                                 echo formatIndianNumber($sundry_sum_arr[$bsundry->id]);
                               }
                               @endphp
                            </th>
                         @endforeach
-                        <th class="td_detail" style="text-align:right;display: none;">{{number_format($grand_total,2)}}</th>
+                        <th class="td_detail" style="text-align:right;display: none;">{{formatIndianNumber($grand_total)}}</th>
                      </tr>              
                   </tbody>
                </table>

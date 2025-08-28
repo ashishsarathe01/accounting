@@ -125,7 +125,26 @@ input[type=number] {
 @include('layouts.footer')
 <script>
 $(document).ready(function(){
-    $( ".select2-single" ).select2();
+    $( ".select2-single" ).select2({
+        matcher: function(params, data) {
+            if ($.trim(params.term) === '') {
+                return data;
+            }
+            // Normalize: remove dots + spaces, lowercase everything
+            function normalize(str) {
+                return (str || '')
+                    .toLowerCase()
+                    .replace(/[.\s]/g, ''); // remove '.' and spaces
+            }
+            var term = normalize(params.term);
+            var text = normalize(data.text);
+            if (text.indexOf(term) > -1) {
+                return data;
+            }
+            return null;
+        }
+    });
+
     let location_index = 1;
     let selected_location_arr = [];
     var location_list = "<option value=''>Select Location</option>";

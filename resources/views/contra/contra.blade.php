@@ -96,7 +96,7 @@ foreach ($contra as $value) {
             echo $value->debit;
         } else {
             if(!empty($value->debit)){
-                echo number_format(str_replace(",","",$value->debit));
+                echo formatIndianNumber(str_replace(",","",$value->debit));
             } else {
                 echo $value->debit;
             }
@@ -112,7 +112,7 @@ foreach ($contra as $value) {
             echo $value->credit;
         } else {
             if(!empty($value->credit)){
-                echo number_format(str_replace(",","",$value->credit));
+                echo formatIndianNumber(str_replace(",","",$value->credit));
             } else {
                 echo $value->credit;
             }

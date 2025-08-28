@@ -256,8 +256,24 @@
 </body>
 @include('layouts.footer')
 <script>
-   $(".select2-single").select2({
-      //   theme: "classic",
+   $( ".select2-single" ).select2({
+        matcher: function(params, data) {
+            if ($.trim(params.term) === '') {
+                return data;
+            }
+            // Normalize: remove dots + spaces, lowercase everything
+            function normalize(str) {
+                return (str || '')
+                    .toLowerCase()
+                    .replace(/[.\s]/g, ''); // remove '.' and spaces
+            }
+            var term = normalize(params.term);
+            var text = normalize(data.text);
+            if (text.indexOf(term) > -1) {
+                return data;
+            }
+            return null;
+        }
     });
     $("#supplier").change(function(){
         window.location = "{{url('complete-supplier-purchase/')}}/"+$(this).val();

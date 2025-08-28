@@ -213,7 +213,7 @@ p {
                         <td style="text-align:right">{{$item->qty}}</td>
                         <td style="text-align:center">{{$item->unit}}</td>
                         <td style="text-align:right;">{{$item->price}}</td>
-                        <td style="text-align:right;">{{number_format($item->amount,2)}}</td>
+                        <td style="text-align:right;">{{formatIndianNumber($item->amount)}}</td>
                      </tr>
                      @php $i++;$item_total = $item_total + $item->amount; @endphp
                   @endforeach
@@ -238,7 +238,7 @@ p {
                   <tr>
                      <td colspan="6" style="border-bottom:0; border-right:0"></td>
                      <td style="border-bottom:0; border-left:0"><strong>Total</strong></td>
-                     <td style="text-align:right; border-bottom:0;">{{number_format($item_total,2)}} </td>
+                     <td style="text-align:right; border-bottom:0;">{{formatIndianNumber($item_total)}} </td>
                   </tr>
                   <tr>
                      <td style="border-right:0; border-top:0;" colspan="2"></td>
@@ -280,7 +280,7 @@ p {
                          @php
                              
                            @endphp
-                        <p>{{number_format($row->amount,2)}}</p>
+                        <p>{{formatIndianNumber($row->amount)}}</p>
                         @endforeach
                      </td>
                   </tr>                                
@@ -289,7 +289,7 @@ p {
                         <p><strong>Grand Total ₹</strong></p>
                      </td>                                     
                      <td style="text-align:right">
-                        <p><strong>{{number_format($stock_transfer->grand_total,2)}}</strong></p>
+                        <p><strong>{{formatIndianNumber($stock_transfer->grand_total)}}</strong></p>
                      </td>
                   </tr>
                   <tr>

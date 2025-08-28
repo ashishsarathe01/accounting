@@ -23,13 +23,13 @@
                 <tbody>
                     <tr>
                         <td>Registered</td>
-                        <td>{{ number_format($nil_rated_reg_intra, 2) }}</td>
-                        <td>{{ number_format($nil_rated_reg_inter, 2) }}</td>
+                        <td>{{ formatIndianNumber($nil_rated_reg_intra) }}</td>
+                        <td>{{ formatIndianNumber($nil_rated_reg_inter) }}</td>
                     </tr>
                     <tr>
                         <td>Unregistered</td>
-                        <td>{{ number_format($nil_rated_unreg_intra, 2) }}</td>
-                        <td>{{ number_format($nil_rated_unreg_inter, 2) }}</td>
+                        <td>{{ formatIndianNumber($nil_rated_unreg_intra) }}</td>
+                        <td>{{ formatIndianNumber($nil_rated_unreg_inter) }}</td>
                     </tr>
                 </tbody>
             </table>
@@ -48,13 +48,13 @@
                 <tbody>
                     <tr>
                         <td>Registered</td>
-                        <td>{{ number_format($exempted_reg_intra, 2) }}</td>
-                        <td>{{ number_format($exempted_reg_inter, 2) }}</td>
+                        <td>{{ formatIndianNumber($exempted_reg_intra) }}</td>
+                        <td>{{ formatIndianNumber($exempted_reg_inter) }}</td>
                     </tr>
                     <tr>
                         <td>Unregistered</td>
-                        <td>{{ number_format($exempted_unreg_intra, 2) }}</td>
-                        <td>{{ number_format($exempted_unreg_inter, 2) }}</td>
+                        <td>{{ formatIndianNumber($exempted_unreg_intra) }}</td>
+                        <td>{{ formatIndianNumber($exempted_unreg_inter) }}</td>
                     </tr>
                 </tbody>
             </table>

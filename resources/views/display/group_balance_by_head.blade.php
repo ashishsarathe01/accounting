@@ -142,11 +142,11 @@
                               setlocale(LC_MONETARY, 'en_IN'); 
                               if($value->stock_in_hand==1){
                                  $debit_total = $debit_total + $stock_in_hand;                    
-                                echo number_format($stock_in_hand,2);
+                                echo formatIndianNumber($stock_in_hand);
                               }else{
                                  if($balance>=0){                                    
                                     $debit_total = $debit_total + $balance; 
-                                    echo number_format($balance,2);                          
+                                    echo formatIndianNumber($balance);                          
                                  }else{
                                     echo '0.00';
                                  }
@@ -158,7 +158,7 @@
                               if($value->stock_in_hand==0){
                                  if($balance<0){                                     
                                     $credit_total = $credit_total + abs($balance); 
-                                    echo number_format(abs($balance),2);                          
+                                    echo formatIndianNumber(abs($balance));                          
                                  }else{
                                     echo '0.00';
                                  }
@@ -181,14 +181,14 @@
                               <?php 
                               $debit_total = $debit_total + $value1->account_ledger_sum_debit;
                               setlocale(LC_MONETARY, 'en_IN');                              
-                              echo number_format($value1->account_ledger_sum_debit,2);
+                              echo formatIndianNumber($value1->account_ledger_sum_debit);
                               ?>
                            </td>
                            <td style="text-align:right;">
                               <?php 
                               $credit_total = $credit_total + $value1->account_ledger_sum_credit;
                               setlocale(LC_MONETARY, 'en_IN');                              
-                              echo number_format($value1->account_ledger_sum_credit,2);
+                              echo formatIndianNumber($value1->account_ledger_sum_credit);
                               ?>
                            </td>
                         </tr>
@@ -198,12 +198,12 @@
                         <th style="text-align:right;"></th>
                         <th style="text-align:right;">
                            <?php                              
-                           echo number_format($debit_total,2);
+                           echo formatIndianNumber($debit_total);
                            ?>
                         </th>
                         <th style="text-align:right;">
                            <?php                              
-                           echo number_format($credit_total,2);
+                           echo formatIndianNumber($credit_total);
                            ?>
                         </th>
                      </tr> 
@@ -213,10 +213,10 @@
                            $bal = $debit_total - $credit_total;
                            if($bal>=0){
                               $balance = $bal;
-                              echo number_format($bal,2).' Dr';
+                              echo formatIndianNumber($bal).' Dr';
                            }else{
                               $balance = abs($bal);
-                              echo number_format(abs($bal),2).' Cr';
+                              echo formatIndianNumber(abs($bal)).' Cr';
                            }
                            
                            ?>

@@ -376,4 +376,6 @@ Route::post('store-supplier-purchase-report', [SupplierPurchaseController::class
 Route::get('complete-supplier-purchase/{id?}', [SupplierPurchaseController::class, 'completeSupplierPurchase'])->name('complete-supplier-purchase');
 Route::get('manage-supplier-purchase-report/{id?}/{from_date?}/{to_date?}', [SupplierPurchaseController::class, 'manageSupplierPurchaseReport'])->name('manage-supplier-purchase-report');
 Route::post('view-complete-purchase-info/{id?}', [SupplierPurchaseController::class, 'viewCompletePurchaseInfo'])->name('view-complete-purchase-info');
+Route::post('get-location-by-supplier', [SupplierPurchaseController::class, 'getLocationBySupplier'])->name('get-location-by-supplier');
+
 });

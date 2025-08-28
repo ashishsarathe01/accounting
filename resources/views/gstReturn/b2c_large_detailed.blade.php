@@ -65,12 +65,12 @@
             @endforeach
              <tr style="background-color:rgb(58, 95, 150);">
                     <th colspan="2"  style="text-align:center;color: white;">Total Invoice Value</th>
-                    <th style="color: white;">{{ number_format($total_invoice_value, 2) }}</th>
+                    <th style="color: white;">{{ formatIndianNumber($total_invoice_value) }}</th>
                     <th colspan="2"  style="text-align:center; color: white;">Total</th>
-                    <th style="color: white;" >{{ number_format($total_taxable_value, 2) }}</th>
-                    <th style="color: white;" >{{ number_format($total_cgst, 2) }}</th>
-                    <th style="color: white;">{{ number_format($total_sgst, 2) }}</th>
-                    <th style="color: white;">{{ number_format($total_igst, 2) }}</th>
+                    <th style="color: white;" >{{ formatIndianNumber($total_taxable_value) }}</th>
+                    <th style="color: white;" >{{ formatIndianNumber($total_cgst) }}</th>
+                    <th style="color: white;">{{ formatIndianNumber($total_sgst) }}</th>
+                    <th style="color: white;">{{ formatIndianNumber($total_igst) }}</th>
                 </tr>
                 @else
                 <tr>

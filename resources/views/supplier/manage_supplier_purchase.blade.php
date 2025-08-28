@@ -263,10 +263,31 @@
     $(document).ready(function() {
         $('.report').on('click', function() {
             var id = $(this).data('id');
-            $("#report_modal").modal('show');
-            $("#purchase_weight").html($(this).data('qty'));
-            $("#row_id").val(id);
-            $("#account_id").val($(this).data('account_id'));
+            var account_id = $(this).data('account_id');
+            let qty = $(this).data('qty')
+            $.ajax({
+                url : "{{url('get-location-by-supplier')}}",
+                method : "POST",
+                data: {
+                    _token: '<?php echo csrf_token() ?>',
+                    account_id : account_id
+                },
+                success:function(res){
+                    location_list = "<option value=''>Select Area</option>";
+                    if(res.location.length>0){
+                        location_arr = res.location;
+                        res.location.forEach(function(e){
+                        location_list+="<option value="+e.id+">"+e.name+"</option>";
+                        });
+                    }
+                    $("#location").html(location_list);
+                    $("#purchase_weight").html(qty);
+                    $("#row_id").val(id);
+                    $("#account_id").val(account_id);
+                    $("#report_modal").modal('show');
+                }
+            });
+            
         });
         $("#location").change(function(){
             var loc_id = $(this).val();

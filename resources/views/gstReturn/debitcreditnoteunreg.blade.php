@@ -31,16 +31,16 @@
                 <td>{{ $row['name'] }}</td>
                 <td>{{ $row['sr_prefix'] }}</td>
                 <td>{{ \Carbon\Carbon::parse($row['note_date'])->format('d-m-Y') }}</td>
-                <td>{{ number_format($row['total'], 2) }}</td>
+                <td>{{ formatIndianNumber($row['total']) }}</td>
                 <td> {{ $row['note_type'] }}</td>
                 <td>{{ $row['POS'] }}</td>
                   <td>N</td>
                   <td>..</td>  
                 <td>{{ $row['rate'] }}%</td>
-                <td>{{ number_format($row['taxable_value'], 2) }}</td>
-                <td>{{ number_format($row['cgst'], 2) }}</td>
-                <td>{{ number_format($row['sgst'], 2) }}</td>
-                <td>{{ number_format($row['igst'], 2) }}</td>
+                <td>{{ formatIndianNumber($row['taxable_value']) }}</td>
+                <td>{{ formatIndianNumber($row['cgst']) }}</td>
+                <td>{{ formatIndianNumber($row['sgst']) }}</td>
+                <td>{{ formatIndianNumber($row['igst']) }}</td>
             </tr>
             @endforeach
                    @else

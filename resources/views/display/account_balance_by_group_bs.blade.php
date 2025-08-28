@@ -44,12 +44,12 @@
                            <td style="text-align:left;">{{$value['account_name']}}</td>
                            <td style="text-align:right;">
                               @if($balance>=0)
-                                 {{number_format($balance,2)}}
+                                 {{formatIndianNumber($balance)}}
                               @endif  
                            </td>
                            <td style="text-align:right;">                              
                               @if($balance<0)
-                                 {{number_format(abs($balance),2)}}
+                                 {{formatIndianNumber(abs($balance))}}
                               @endif                              
                            </td>
                         </tr>
@@ -65,8 +65,8 @@
                      @endforeach  
                      <tr>
                         <th style="text-align:left;">Total</th>
-                        <th style="text-align:right;">{{number_format($debit_balance,2)}}</th>
-                        <th style="text-align:right;">{{number_format($credit_balance,2)}}</th>
+                        <th style="text-align:right;">{{formatIndianNumber($debit_balance)}}</th>
+                        <th style="text-align:right;">{{formatIndianNumber($credit_balance)}}</th>
                      </tr>                
                   </tbody>
                </table>

@@ -131,14 +131,14 @@
                      <tr>
                         <th></th>
                         <th></th>
-                        <th style="text-align:right;">{{number_format($generated_weight_total,2)}}</th>
+                        <th style="text-align:right;">{{formatIndianNumber($generated_weight_total)}}</th>
                         <th></th>
                         <th></th>
-                        <th style="text-align:right;">{{number_format($generated_amount_total,2)}}</th>
-                        <th style="text-align:right;">{{number_format($consumed_weight_total,2)}}</th>
+                        <th style="text-align:right;">{{formatIndianNumber($generated_amount_total)}}</th>
+                        <th style="text-align:right;">{{formatIndianNumber($consumed_weight_total)}}</th>
                         <th></th>
                         <th></th>
-                        <th style="text-align:right;">{{number_format($consumed_amount_total,2)}}</th>
+                        <th style="text-align:right;">{{formatIndianNumber($consumed_amount_total)}}</th>
                         <th></th>
                      </tr>
                   </tbody>

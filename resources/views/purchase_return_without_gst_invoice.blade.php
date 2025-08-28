@@ -146,7 +146,7 @@
                         <tr>
                            <td colspan="1"style="text-align:left">{{$i}}</td>
                            <td colspan="4" style="text-align:left">{{$item->account_name}}</td>
-                           <td colspan="3"style="text-align:right;">{{number_format($item->credit,2)}}</td>
+                           <td colspan="3"style="text-align:right;">{{formatIndianNumber($item->credit)}}</td>
                         </tr>
                         @php $i++;$item_total = $item_total + $item->credit;$percentage = $percentage + $item->percentage; @endphp
                      @endforeach 
@@ -157,7 +157,7 @@
                      <tr>
                         <td colspan="1" style="border-bottom:0; border-right:0"></td>
                         <td colspan="4"style="border-bottom:0; border-left:0"><strong>Total</strong></td>
-                        <td colspan="3"style="text-align:right; border-bottom:0;">{{number_format($item_total,2)}} </td>
+                        <td colspan="3"style="text-align:right; border-bottom:0;">{{formatIndianNumber($item_total)}} </td>
                      </tr>
                      
                      <tr>
@@ -165,7 +165,7 @@
                            <p><strong>Grand Total ₹</strong></p>
                         </td>                                     
                         <td colspan="3"style="text-align:right">
-                           <p><strong>{{number_format($sale_return->total,2)}}</strong></p>
+                           <p><strong>{{formatIndianNumber($sale_return->total)}}</strong></p>
                         </td>
                      </tr>
                      <tr>

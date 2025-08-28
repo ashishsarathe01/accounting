@@ -201,6 +201,22 @@ class SupplierPurchaseController extends Controller
         );
         return json_encode($response);
     }
-    
+    public function getLocationBySupplier(Request $request){
+        $location_id = SupplierLocationRates::where('company_id', Session::get('user_company_id'))
+                                            ->where('account_id', $request->account_id)
+                                            ->pluck('location')
+                                            ->unique()
+                                            ->values();
+        
+        $location = SupplierLocation::select('id','name')
+                                    ->where('status',1)
+                                    ->whereIn('id',$location_id)
+                                    ->where('company_id',Session::get('user_company_id'))
+                                    ->orderBy('name')
+                                    ->get();
+        return response()->json([
+            'location' => $location
+        ]);
+    }
     
 }

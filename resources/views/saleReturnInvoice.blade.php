@@ -190,7 +190,7 @@ p {
                            <td style="text-align:right">{{$item->qty}}</td>
                            <td style="text-align:center">{{$item->unit}}</td>
                            <td style="text-align:right;">{{$item->price}}</td>
-                           <td style="text-align:right;">{{number_format($item->amount,2)}}</td>
+                           <td style="text-align:right;">{{formatIndianNumber($item->amount)}}</td>
                      </tr>
                      @php $i++;$item_total = $item_total + $item->amount; @endphp
                   @endforeach                     
@@ -201,7 +201,7 @@ p {
                   <tr>
                      <td colspan="6" style="border-bottom:0; border-right:0"></td>
                      <td style="border-bottom:0; border-left:0"><strong>Total</strong></td>
-                     <td style="text-align:right; border-bottom:0;">{{number_format($item_total,2)}} </td>
+                     <td style="text-align:right; border-bottom:0;">{{formatIndianNumber($item_total)}} </td>
                   </tr>
                   <tr>
                      <td style="border-right:0; border-top:0;" colspan="2"></td>
@@ -218,7 +218,7 @@ p {
                      </td>
                      <td style="text-align:right; border-top:0;">
                         @foreach($sale_sundry as $sundry)
-                        <p>{{number_format($sundry->amount,2)}}</p>
+                        <p>{{formatIndianNumber($sundry->amount)}}</p>
                         @endforeach
                      </td>
                   </tr>                                
@@ -227,7 +227,7 @@ p {
                         <p><strong>Grand Total ₹</strong></p>
                      </td>                                     
                      <td style="text-align:right">
-                        <p><strong>{{number_format($sale_return->total,2)}}</strong></p>
+                        <p><strong>{{formatIndianNumber($sale_return->total)}}</strong></p>
                      </td>
                   </tr>
                   <tr>
@@ -237,25 +237,25 @@ p {
                               <small>{{$val->rate}}%</small>
                            </span>
                            <span class="mar_lft10"><u><small>Taxable Amount</small></u><br>
-                              <small>{{number_format($val->taxable_amount,2)}}</small>
+                              <small>{{formatIndianNumber($val->taxable_amount)}}</small>
                            </span>
                            @if(Str::limit($company_data->gst,2,'')==Str::limit($sale_return->billing_gst,2,''))
                               <span class="mar_lft10"><u><small>CGST</small></u><br>
-                                 <small>{{number_format($val->amount,2)}}</small>
+                                 <small>{{formatIndianNumber($val->amount)}}</small>
                               </span>
                               <span class="mar_lft10"><u><small>SGST</small></u><br>
-                                 <small>{{number_format($val->amount,2)}}</small>
+                                 <small>{{formatIndianNumber($val->amount)}}</small>
                               </span>
                            @else
                               <span class="mar_lft10"><u><small>IGST</small></u><br>
-                                 <small>{{number_format($val->amount,2)}}</small>
+                                 <small>{{formatIndianNumber($val->amount)}}</small>
                               </span>
                            @endif                        
                            <span class="mar_lft10"><u><small>Total Tax</small></u><br>
                               @if(Str::limit($company_data->gst,2,'')==Str::limit($sale_return->billing_gst,2,''))
-                                 <small>{{number_format($val->amount+$val->amount,2)}}</small>
+                                 <small>{{formatIndianNumber($val->amount+$val->amount)}}</small>
                               @else
-                                 <small>{{number_format($val->amount,2)}}</small>
+                                 <small>{{formatIndianNumber($val->amount)}}</small>
                               @endif
                            </span><br>
                         @endforeach

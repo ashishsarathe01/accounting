@@ -171,7 +171,7 @@ input[type=number]::-webkit-outer-spin-button {
                      <div class="col-md-12 fw-500 font-14 d-flex px-3 py-12 border-bottom-divider">
                         
                         <?php if($gross_loss>0){
-                           echo 'Gross Loss B/D<span class="ms-auto">'.number_format($gross_loss,2).'</span>';
+                           echo 'Gross Loss B/D<span class="ms-auto">'.formatIndianNumber($gross_loss).'</span>';
                         }else{
                            echo '<span class="ms-auto">&nbsp;</span>';
                         } ?>
