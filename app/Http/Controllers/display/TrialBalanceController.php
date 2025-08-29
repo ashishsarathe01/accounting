@@ -126,6 +126,9 @@ class TrialBalanceController extends Controller
                             $credit = $debit_credit[0]->credit ?? 0;
                             $account[$key]->debit = $debit;
                             $account[$key]->credit = $credit;
+                            $account[$key]->type = "account";
+                           
+                            
                         } 
         $previous_date = Carbon::parse($from_date)->subDay(); 
         $stock_in_hand = CommonHelper::ClosingStock($previous_date);
@@ -136,7 +139,9 @@ class TrialBalanceController extends Controller
                     'id' => '',
                     'account_name' => 'Stock In Hand',
                     'debit' => '0',
-                    'credit' => $stock_in_hand
+                    'credit' => $stock_in_hand,
+                    'type' => 'account',
+                    'under_group' => 30
                 ]
             ]);
         }else{
@@ -145,7 +150,9 @@ class TrialBalanceController extends Controller
                     'id' => '',
                     'account_name' => 'Stock In Hand',
                     'debit' => $stock_in_hand,
-                    'credit' => '0'
+                    'credit' => '0',
+                    'type' => 'account',
+                    'under_group' => 30
                 ]
             ]);
         }      
@@ -175,6 +182,7 @@ class TrialBalanceController extends Controller
          $prev_year_profit_status = 1;
       }   
       $prev_year_profitloss = abs($prev_year_profitloss) - $journal_amount;
+    //   echo "<pre>";print_r($account->toArray());exit;
         return view('display/trialbalance')->with('account', $account)->with('type','open')->with('to_date',$to_date)->with('prev_year_profitloss',$prev_year_profitloss)->with('prev_year_profit_status',$prev_year_profit_status)->with('prevFy',$prevFy);
     }
     public function filter(Request $request){     
@@ -808,7 +816,9 @@ class TrialBalanceController extends Controller
                 'id' => '',
                 'account_name' => 'Stock In Hand',
                 'debit' => $stock_in_hand > 0 ? $stock_in_hand : 0,
-                'credit' => $stock_in_hand < 0 ? abs($stock_in_hand) : 0
+                'credit' => $stock_in_hand < 0 ? abs($stock_in_hand) : 0,
+                'type' => 'account',
+                'under_group' => 30
             ]
         ]);     
         $account = $account->sortBy('account_name');     

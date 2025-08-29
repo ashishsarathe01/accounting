@@ -245,14 +245,17 @@ $(".add_more").click(function () {
     add_more_count++;
 
     const $curRow = $(this).closest('tr');
-
+   let type_option = '<option value="Credit">Credit</option><option value="Debit">Debit</option>';
+    $(".type").each(function(){
+      if(this.value == 'Credit') {
+         type_option = '<option value="Debit">Debit</option>';
+      }
+    });
     const newRow = `
     <tr id="tr_${add_more_count}">
         <td>
             <select class="form-control type" name="type[]" data-id="${add_more_count}" id="type_${add_more_count}">
-                <option value="">Type</option>
-                <option value="Credit">Credit</option>
-                <option value="Debit">Debit</option>
+                <option value="">Type</option>${type_option}
             </select>
         </td>
         <td>
@@ -338,10 +341,12 @@ $(".add_more").click(function () {
          let cr = 0;
          let ids = 0;
          let error = false;
+         let credit_count = 0;
          $(".type").each(function() {
             let id = $(this).attr('data-id');
             if($(this).val() != '' && $("#account_" + id).val() != "" && $("#date").val()!='' && $("#mode").val()!='') {
                if($(this).val() == "Credit" && $("#credit_" + id).val() != "" && $("#account_" + id).val() != "") {
+                  
                   form_data.push({
                      "type": "Credit",
                      "credit": $("#credit_" + id).val(),
@@ -351,6 +356,7 @@ $(".add_more").click(function () {
                     
                   });
                   cr = parseFloat(cr) + parseFloat($("#credit_" + id).val());
+                  credit_count++;
                }else if($(this).val() == "Debit" && $("#debit_" + id).val() != "" && $("#account_" + id).val() != "") {
                   form_data.push({
                      "type": "Debit",
@@ -373,7 +379,11 @@ $(".add_more").click(function () {
             alert("Please enter at least one transaction.");
             return false;
          }
-
+        
+         if(credit_count >1) {
+            alert("Only 1 Bank/Cash Account(Credit) Allowed.");
+            return false;
+         }
          if(cr != dr) {
             alert("Debit and credit amounts should be equal.");
             return false;

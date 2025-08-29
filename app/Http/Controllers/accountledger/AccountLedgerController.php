@@ -68,6 +68,17 @@ class AccountLedgerController extends Controller
                               ->get();
       if(isset($request->from_date) && !empty($request->from_date) && isset($request->to_date) && !empty($request->to_date)){         
          $ledger = DB::select(DB::raw("SELECT * FROM account_ledger WHERE account_id='".$party_id."' and entry_type!=-1 and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$request->to_date."', '%Y-%m-%d') and status=1 and delete_status='0' and company_id='".Session::get('user_company_id')."' order by STR_TO_DATE(txn_date, '%Y-%m-%d'),entry_type,entry_type_id"));
+         // $ledger = AccountLedger::where('account_id', $party_id)
+         //                         ->where('entry_type', '!=', -1)
+         //                         ->whereRaw("STR_TO_DATE(txn_date, '%Y-%m-%d') >= STR_TO_DATE(?, '%Y-%m-%d')", [$request->from_date])
+         //                         ->whereRaw("STR_TO_DATE(txn_date, '%Y-%m-%d') <= STR_TO_DATE(?, '%Y-%m-%d')", [$request->to_date])
+         //                         ->where('status', 1)
+         //                         ->where('delete_status', '0')
+         //                         ->where('company_id', Session::get('user_company_id'))
+         //                         ->orderByRaw("STR_TO_DATE(txn_date, '%Y-%m-%d')")
+         //                         ->orderBy('entry_type')
+         //                         ->orderBy('entry_type_id')
+         //                         ->get();
       }else{
          $ledger = AccountLedger::where('account_id',$party_id)
                                  ->where('company_id',Session::get('user_company_id'))

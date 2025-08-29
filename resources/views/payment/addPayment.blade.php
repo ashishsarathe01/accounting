@@ -65,11 +65,11 @@
                @csrf
                <div class="row">
                   <div class="mb-2 col-md-2">
-                     <label for="name" class="form-label font-14 font-heading">Date</label>
+                     <label for="date" class="form-label font-14 font-heading">Date</label>
                      <input type="date" id="date" class="form-control calender-bg-icon calender-placeholder" name="date" placeholder="Select date" autofocus required value="{{$date}}" min="{{Session::get('from_date')}}" max="{{Session::get('to_date')}}">
                   </div>
                   <div class="mb-2 col-md-2">
-                     <label for="name" class="form-label font-14 font-heading">Voucher No.</label>
+                     <label for="voucher_no" class="form-label font-14 font-heading">Voucher No.</label>
                      <input type="text" id="voucher_no" class="form-control" name="voucher_no" placeholder="Voucher No.">
                   </div>
                   <div class="mb-2 col-md-2">
@@ -86,7 +86,7 @@
                      </select>
                   </div>
                   <div class="mb-2 col-md-2 ">
-                     <label for="name" class="form-label font-14 font-heading">Mode</label>
+                     <label for="mode" class="form-label font-14 font-heading">Mode</label>
                      <select id="mode" class="form-control select2-single" name="mode">
                         <option value="">Select Mode</option>
                         <option value="0">IMPS/NEFT/RTGS</option>
@@ -95,7 +95,7 @@
                      </select>
                   </div>
                   <div class="mb-2 col-md-2">
-                     <label for="name" class="form-label font-14 font-heading">Cheque No.</label>
+                     <label for="cheque_no" class="form-label font-14 font-heading">Cheque No.</label>
                      <input type="text" id="cheque_no" class="form-control" name="cheque_no" placeholder="Cheque No." readonly>
                   </div>
                </div>
@@ -148,23 +148,23 @@
                               </select>
                            </td>
                           <td class="">
-    <select class="form-select select2-single account-dropdown" id="account_1" data-id="1" name="account_name[]" required>
-        <option value="">Select</option>
-        <!-- Cash Accounts -->
-        @foreach($credit_cash_accounts as $cash)
-            <option value="{{ $cash->id }}" class="account-option mode-cash" >
-                {{ $cash->account_name }}
-            </option>
-        @endforeach
+                              <select class="form-select select2-single account-dropdown" id="account_2" data-id="2" name="account_name[]" required>
+                                 <option value="">Select</option>
+                                 <!-- Cash Accounts -->
+                                 @foreach($credit_cash_accounts as $cash)
+                                       <option value="{{ $cash->id }}" class="account-option mode-cash" >
+                                          {{ $cash->account_name }}
+                                       </option>
+                                 @endforeach
 
-        <!-- Bank Accounts -->
-        @foreach($credit_bank_accounts as $bank)
-            <option value="{{ $bank->id }}" class="account-option mode-bank" >
-                {{ $bank->account_name }}
-            </option>
-        @endforeach
-    </select>
-</td>
+                                 <!-- Bank Accounts -->
+                                 @foreach($credit_bank_accounts as $bank)
+                                       <option value="{{ $bank->id }}" class="account-option mode-bank" >
+                                          {{ $bank->account_name }}
+                                       </option>
+                                 @endforeach
+                              </select>
+                           </td>
 
                            <td class="">
                               <input type="number" name="debit[]" class="form-control debit" data-id="2" id="debit_2" placeholder="Debit Amount" readonly onkeyup="debitTotal();">
@@ -255,6 +255,7 @@ const bankAccounts = @json($credit_bank_accounts); // Credit - mode 0 or 2
             $("#debit_"+id).val(amount);
          }
          $("#account_"+id).html("<?php echo $debit_html;?>");
+         $("#account_" + id).select2();
       }     
       debitTotal();
       creditTotal();
@@ -264,14 +265,17 @@ const bankAccounts = @json($credit_bank_accounts); // Credit - mode 0 or 2
 $(".add_more").click(function () {
     add_more_count++;
     const $curRow = $(this).closest('tr');
-
+    let type_option = '<option value="Credit">Credit</option><option value="Debit">Debit</option>';
+    $(".type").each(function(){
+      if(this.value == 'Credit') {
+         type_option = '<option value="Debit">Debit</option>';
+      }
+    });
     const newRow = `
     <tr id="tr_${add_more_count}">
         <td>
             <select class="form-control type" name="type[]" data-id="${add_more_count}" id="type_${add_more_count}">
-                <option value="">Type</option>
-                <option value="Credit">Credit</option>
-                <option value="Debit">Debit</option>
+                <option value="">Type</option>${type_option}
             </select>
         </td>
         <td>
@@ -353,6 +357,7 @@ $(".add_more").click(function () {
          let cr = 0;
          let ids = 0;
          let error = false;
+         let credit_count = 0;
          $(".type").each(function() {
             let id = $(this).attr('data-id');
             if($(this).val() != '' && $("#account_" + id).val() != "" && $("#date").val()!='') {
@@ -365,6 +370,7 @@ $(".add_more").click(function () {
                      "remark": $("#narration_" + id).val()
                   });
                   cr = parseFloat(cr) + parseFloat($("#credit_" + id).val());
+                  credit_count++;
                }else if($(this).val() == "Debit" && $("#debit_" + id).val() != "" && $("#account_" + id).val() != "") {
 
                   form_data.push({
@@ -388,6 +394,11 @@ $(".add_more").click(function () {
             alert("Please enter at least one transaction.");
             return false;
          }
+         if(credit_count >1) {
+            alert("Only 1 Bank/Cash Account(Credit) Allowed.");
+            return false;
+         }
+         
          if(cr != dr) {
             alert("Debit and credit amounts should be equal.");
             return false;

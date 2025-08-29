@@ -58,6 +58,8 @@ class AuthServiceProvider extends ServiceProvider
             }
             return $user->hasPrivilege($module_id, 'delete');
         });
-        
+        Gate::define('module-permission', function (User $user, $module_id) {            
+            return $user->hasModulePermission($module_id, 'module-permission');
+        });
     }
 }

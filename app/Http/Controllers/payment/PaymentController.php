@@ -25,42 +25,35 @@ class PaymentController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-   public function index(Request $request)
-{
-    Gate::authorize('action-module', 15);
-
-    $input = $request->all();
-    $from_date = null;
-    $to_date = null;
-
-    // If user selected date range
-    if (!empty($input['from_date']) && !empty($input['to_date'])) {
-        $from_date = date('d-m-Y', strtotime($input['from_date']));
-        $to_date = date('d-m-Y', strtotime($input['to_date']));
-        session(['payment_from_date' => $from_date, 'payment_to_date' => $to_date]);
-    } elseif (session()->has('payment_from_date') && session()->has('payment_to_date')) {
-        $from_date = session('payment_from_date');
-        $to_date = session('payment_to_date');
-    }
-
-    Session::put('redirect_url', '');
-
-    // Financial Year logic
-    $financial_year = Session::get('default_fy');
-    $y = explode("-", $financial_year);
-    $from = DateTime::createFromFormat('y', $y[0])->format('Y');
-    $to = DateTime::createFromFormat('y', $y[1])->format('Y');
-    $month_arr = [
-        $from . '-04', $from . '-05', $from . '-06', $from . '-07',
-        $from . '-08', $from . '-09', $from . '-10', $from . '-11',
-        $from . '-12', $to . '-01', $to . '-02', $to . '-03'
-    ];
-
-    $com_id = Session::get('user_company_id');
-
-    // Start query
-    $query = DB::table('payment_details')
-        ->select(
+   public function index(Request $request){
+      Gate::authorize('action-module', 15);
+      $input = $request->all();
+      $from_date = null;
+      $to_date = null;
+      // If user selected date range
+      if(!empty($input['from_date']) && !empty($input['to_date'])) {
+         $from_date = date('d-m-Y', strtotime($input['from_date']));
+         $to_date = date('d-m-Y', strtotime($input['to_date']));
+         session(['payment_from_date' => $from_date, 'payment_to_date' => $to_date]);
+      }elseif (session()->has('payment_from_date') && session()->has('payment_to_date')) {
+         $from_date = session('payment_from_date');
+         $to_date = session('payment_to_date');
+      }
+      Session::put('redirect_url', '');
+      // Financial Year logic
+      $financial_year = Session::get('default_fy');
+      $y = explode("-", $financial_year);
+      $from = DateTime::createFromFormat('y', $y[0])->format('Y');
+      $to = DateTime::createFromFormat('y', $y[1])->format('Y');
+      $month_arr = [
+         $from . '-04', $from . '-05', $from . '-06', $from . '-07',
+         $from . '-08', $from . '-09', $from . '-10', $from . '-11',
+         $from . '-12', $to . '-01', $to . '-02', $to . '-03'
+      ];
+      $com_id = Session::get('user_company_id');
+      // Start query
+      $query = DB::table('payment_details')
+         ->select(
             'payments.series_no',
             'payments.id as pay_id',
             'payments.date',
@@ -68,38 +61,35 @@ class PaymentController extends Controller
             'accounts.account_name as acc_name',
             'payment_details.*',
             'payments.voucher_no'
-        )
-        ->join('payments', 'payment_details.payment_id', '=', 'payments.id')
-        ->join('accounts', 'payment_details.account_name', '=', 'accounts.id')
-        ->where('payment_details.company_id', $com_id)
-        ->where('payments.delete', '0')
-        ->where('payment_details.debit', '!=', '')
-        ->where('payment_details.debit', '!=', '0');
-
-    // Apply date filter if dates are provided
-    if ($from_date && $to_date) {
-        $query->whereRaw("
+         )
+         ->join('payments', 'payment_details.payment_id', '=', 'payments.id')
+         ->join('accounts', 'payment_details.account_name', '=', 'accounts.id')
+         ->where('payment_details.company_id', $com_id)
+         ->where('payments.delete', '0')
+         ->where('payment_details.debit', '!=', '')
+         ->where('payment_details.debit', '!=', '0');
+      // Apply date filter if dates are provided
+      if($from_date && $to_date) {
+         $query->whereRaw("
             STR_TO_DATE(payments.date,'%Y-%m-%d') >= STR_TO_DATE('" . date('Y-m-d', strtotime($from_date)) . "','%Y-%m-%d')
             AND STR_TO_DATE(payments.date,'%Y-%m-%d') <= STR_TO_DATE('" . date('Y-m-d', strtotime($to_date)) . "','%Y-%m-%d')
-        ");
-        $query->orderBy('payments.date', 'asc')
+         ");
+         $query->orderBy('payments.date', 'asc')
               ->orderBy('payments.voucher_no', 'asc');
-    } else {
-        // Show last 10 entries if no date is selected
-        $query->orderBy(DB::raw("cast(payments.voucher_no as SIGNED)"), 'desc')
+      }else{
+         // Show last 10 entries if no date is selected
+         $query->orderBy(DB::raw("cast(payments.voucher_no as SIGNED)"), 'desc')
               ->orderBy('payments.date', 'desc')
               ->limit(10);
-    }
-
-    // Fetch data
-    $payment = $query->get()->reverse()->values();
-
-    return view('payment/payment')
-        ->with('payment', $payment)
-        ->with('month_arr', $month_arr)
-        ->with('from_date', $from_date)
-        ->with('to_date', $to_date);
-}
+      }
+      // Fetch data
+      $payment = $query->get()->reverse()->values();
+      return view('payment/payment')
+         ->with('payment', $payment)
+         ->with('month_arr', $month_arr)
+         ->with('from_date', $from_date)
+         ->with('to_date', $to_date);
+   }
 
     /**
      * Show the specified resources in storage.
@@ -210,7 +200,7 @@ class PaymentController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
    */
-   public function store(Request $request){
+   public function store(Request $request){      
       Gate::authorize('action-module',82);
       $com_id = Session::get('user_company_id');
       $financial_year = Session::get('default_fy');
@@ -224,15 +214,19 @@ class PaymentController extends Controller
       $payment->company_id = $com_id;
       $payment->financial_year = $financial_year;
       $payment->save();
-      $i=0;
       if($payment->id){
          $types = $request->input('type');
          $account_names = $request->input('account_name');
          $debits = $request->input('debit');
-         $credits = $request->input('credit');
-         
+         $credits = $request->input('credit');         
          $narrations = $request->input('narration');
+         //Details
+         $credit_id = "";$credit_narration = "";
          foreach($types as $key => $type){
+            if($type=="Credit"){
+               $credit_id = $request->input('account_name')[$key];
+               $credit_narration = isset($request->input('narration')[$key]) ? $request->input('narration')[$key] : '';
+            }
             $paytype = new PaymentDetails;
             $paytype->payment_id = $payment->id;
             $paytype->company_id = $com_id;
@@ -242,33 +236,59 @@ class PaymentController extends Controller
             $paytype->credit = isset($credits[$key]) ? $credits[$key] : 0;
             $paytype->narration = isset($narrations[$key]) ? $narrations[$key] : '';  // safe handling
             $paytype->status = '1';
-            $paytype->save();
-         
-            //ADD DATA IN Customer ACCOUNT
-            if($i==0){
-               $map_account_id = $account_names['1'];
-            }else{
-               $map_account_id = $account_names['0'];
+            $paytype->save();           
+         }
+         //Account Ledger Entry
+         $debit_arr = [];$credit_arr = [];
+         foreach($request->input('type') as $key => $type){
+            if($type=="Debit"){
+               array_push($debit_arr,array(
+                  'type' => $type,
+                  'account_name' => $request->input('account_name')[$key],
+                  'debit' => $request->input('debit')[$key],
+                  'credit' => 0,
+                  'narration' => isset($request->input('narration')[$key]) ? $request->input('narration')[$key] : '',
+                  'mapped_account_id' => $credit_id
+                  ));
+                  //Credit Array
+                  $accountName = $request->input('account_name')[$key];
+                  $debitValue  = $request->input('debit')[$key];
+                  if(isset($credit_arr[$accountName])) {
+                        // If already exists, add credit
+                        $credit_arr[$accountName]['credit'] += $debitValue;
+                  } else {
+                        // Otherwise, create new
+                        $credit_arr[$accountName] = [
+                           'type' => 'Credit',
+                           'account_name' => $credit_id,
+                           'debit' => 0,
+                           'credit' => $debitValue,
+                           'narration' => $credit_narration,
+                           'mapped_account_id' => $accountName
+                        ];
+                  }
             }
+         }
+         $final_arr = array_merge($debit_arr, array_values($credit_arr));
+         foreach ($final_arr as $key => $value) {
             $ledger = new AccountLedger();
-            $ledger->account_id = $account_names[$key];
-            if(isset($debits[$key]) && !empty($debits[$key])){
-               $ledger->debit = $debits[$key];
+            $ledger->account_id = $value['account_name'];
+            if(isset($value['debit']) && !empty($value['debit']) && $value['debit'] != 0){
+               $ledger->debit = $value['debit'];
             }else{
-               $ledger->credit = $credits[$key];
-            }            
+               $ledger->credit = $value['credit'];
+            }
             $ledger->series_no = $request->input('series_no');
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
             $ledger->financial_year = Session::get('default_fy');
             $ledger->entry_type = 5;
             $ledger->entry_type_id = $payment->id;
-            $ledger->entry_type_detail_id = $paytype->id;
-            $ledger->map_account_id = $map_account_id;
+            $ledger->entry_narration = $value['narration'];
+            $ledger->map_account_id = $value['mapped_account_id'];
             $ledger->created_by = Session::get('user_id');
             $ledger->created_at = date('d-m-Y H:i:s');
             $ledger->save();
-            $i++;
          }
          session(['previous_url_payment' => URL::previous()]);
          return redirect('payment')->withSuccess('Payment voucher added successfully!');
@@ -392,8 +412,13 @@ class PaymentController extends Controller
       $debits = $request->input('debit');
       $credits = $request->input('credit');
       $narrations = $request->input('narration');
-      $i=0;
+      //Details
+      $credit_id = "";$credit_narration = "";
       foreach($types as $key => $type) {
+         if($type=="Credit"){
+            $credit_id = $request->input('account_name')[$key];
+            $credit_narration = isset($request->input('narration')[$key]) ? $request->input('narration')[$key] : '';
+         }
          $paytype = new PaymentDetails;
          $paytype->payment_id = $request->payment_id;
          $paytype->company_id = Session::get('user_company_id');
@@ -404,18 +429,46 @@ class PaymentController extends Controller
          $paytype->narration = $narrations[$key];
          $paytype->status = '1';
          $paytype->save();
-         //ADD DATA IN Customer ACCOUNT
-         if($i==0){
-            $map_account_id = $account_names['1'];
-         }else{
-            $map_account_id = $account_names['0'];
+      }
+      //Account Ledger Entry
+      $debit_arr = [];$credit_arr = [];
+      foreach($request->input('type') as $key => $type){
+         if($type=="Debit"){
+            array_push($debit_arr,array(
+               'type' => $type,
+               'account_name' => $request->input('account_name')[$key],
+               'debit' => $request->input('debit')[$key],
+               'credit' => 0,
+               'narration' => isset($request->input('narration')[$key]) ? $request->input('narration')[$key] : '',
+               'mapped_account_id' => $credit_id
+               ));
+               //Credit Array
+               $accountName = $request->input('account_name')[$key];
+               $debitValue  = $request->input('debit')[$key];
+               if(isset($credit_arr[$accountName])) {
+                     // If already exists, add credit
+                     $credit_arr[$accountName]['credit'] += $debitValue;
+               } else {
+                     // Otherwise, create new
+                     $credit_arr[$accountName] = [
+                        'type' => 'Credit',
+                        'account_name' => $credit_id,
+                        'debit' => 0,
+                        'credit' => $debitValue,
+                        'narration' => $credit_narration,
+                        'mapped_account_id' => $accountName
+                     ];
+               }
          }
+      }
+      $final_arr = array_merge($debit_arr, array_values($credit_arr));
+      foreach ($final_arr as $key => $value) {
          $ledger = new AccountLedger();
-         $ledger->account_id = $account_names[$key];
-         if(isset($debits[$key]) && !empty($debits[$key])){
-            $ledger->debit = $debits[$key];
+         $ledger->account_id = $value['account_name'];
+         if(isset($value['debit']) && !empty($value['debit']) && $value['debit'] != 0){
+            $ledger->debit = $value['debit'];
          }else{
-            $ledger->credit = $credits[$key];
+            $ledger->credit = $value['credit'];
          }
          $ledger->series_no = $request->input('series_no');
          $ledger->txn_date = $request->input('date');
@@ -423,12 +476,11 @@ class PaymentController extends Controller
          $ledger->financial_year = Session::get('default_fy');
          $ledger->entry_type = 5;
          $ledger->entry_type_id = $payment->id;
-         $ledger->entry_type_detail_id = $paytype->id;
-         $ledger->map_account_id = $map_account_id;
+         $ledger->entry_narration = $value['narration'];
+         $ledger->map_account_id = $value['mapped_account_id'];
          $ledger->created_by = Session::get('user_id');
          $ledger->created_at = date('d-m-Y H:i:s');
          $ledger->save();
-         $i++;
       }
       if(!empty(Session::get('redirect_url'))){
          return redirect(Session::get('redirect_url'));
@@ -566,14 +618,16 @@ class PaymentController extends Controller
             }
             if($data[0]!="" && $data[1]!=""){
                if($bill_date!=""){
-                  array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"bill_no"=>$bill_no,"mode"=>$mode,"txn_arr"=>$txn_arr,"error_arr"=>$error_arr));
+                  array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"bill_no"=>$bill_no,"mode"=>$mode,"remark"=>$remark,"txn_arr"=>$txn_arr,"error_arr"=>$error_arr));
                }
                $txn_arr = [];
+               $credit_count = 0;
                $error_arr = [];
                $bill_date = $data[0];
                $series = $data[1];
                $bill_no = $data[2];
                $mode = $data[3];
+               $remark = $data[4];
                if($mode!=""){
                   if(!in_array($mode,$mode_arr)){
                      array_push($error_arr, "Mode should be ['NEFT','IMPS','RTGS','CASH','CHEQUE'] - Row ".$index);
@@ -597,19 +651,25 @@ class PaymentController extends Controller
                   }
                }
             }
-            $account = $data[4];
+            $account = $data[5];
             $check_account = Accounts::where('account_name',trim($account))
                         ->where('company_id',trim(Session::get('user_company_id')))
                         ->first();
             if(!$check_account){
                array_push($error_arr, 'Account Name '.$account.' Not Found - Row '.$index);
             }
-            $debit = $data[5];
+            $debit = $data[6];
             $debit = trim(str_replace(",","",$debit));
-            $credit = $data[6];
+            $credit = $data[7];
             $credit = trim(str_replace(",","",$credit));
             if($debit=="" && $credit==""){
                array_push($error_arr, 'Debit/Credit Cannot - Row '.$index);
+            }
+            if($credit!="" && $credit!=0){
+               $credit_count++;
+            }
+            if($credit_count>1){
+               array_push($error_arr, 'More than one credit entry found - Row '.$index);
             }
             if($check_account){
                array_push($txn_arr,array("account"=>$check_account->id,"debit"=>$debit,"credit"=>$credit));
@@ -617,7 +677,7 @@ class PaymentController extends Controller
                array_push($txn_arr,array("account"=>$account,"debit"=>$debit,"credit"=>$credit));
             }            
             if($index==$total_row){
-               array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"bill_no"=>$bill_no,"mode"=>$mode,"txn_arr"=>$txn_arr,"error_arr"=>$error_arr));
+               array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"bill_no"=>$bill_no,"mode"=>$mode,"remark"=>$remark,"txn_arr"=>$txn_arr,"error_arr"=>$error_arr));
             }   
             $index++;
          }
@@ -639,6 +699,7 @@ class PaymentController extends Controller
                $series = $value['series'];
                $bill_no = $value['bill_no'];
                $mode = $value['mode'];
+               $remark = $value['remark'];
                $txn_arr = $value['txn_arr'];
                if($mode=="CHEQUE"){
 
@@ -679,15 +740,21 @@ class PaymentController extends Controller
                $payment->voucher_no = $bill_no;
                $payment->mode = $mode;
                $payment->series_no = $series;  
+               $payment->long_narration = $remark;
                $payment->company_id = Session::get('user_company_id');
                $payment->financial_year = $financial_year;
                $i = 0;
                if($payment->save()){
+                  $credit_id = "";$credit_narration = "";
                   foreach($txn_arr as $key => $data){
                      if($data['debit'] && $data['debit']!="" && $data['debit']!="0"){
                         $type = "Debit";
                      }else{
                         $type = "Credit";
+                     }
+                     if($type=="Credit"){
+                        $credit_id = $data['account'];
+                        $credit_narration = '';
                      }
                      $paytype = new PaymentDetails;
                      $paytype->payment_id = $payment->id;
@@ -697,32 +764,64 @@ class PaymentController extends Controller
                      $paytype->debit = $data['debit'];
                      $paytype->credit = $data['credit'];
                      $paytype->status = '1';
-                     $paytype->save();
-                     //ADD DATA IN Customer ACCOUNT
-                     if($i==0){
-                        $map_account_id = $txn_arr[1]['account'];
-                     }else{
-                        $map_account_id = $txn_arr[0]['account'];
-                     }                    
-                     $ledger = new AccountLedger();
+                     $paytype->save();                     
+                  }
+                  //Account Ledger Entry
+                  $debit_arr = [];$credit_arr = [];
+                  foreach($txn_arr as $key => $data){
                      if($data['debit'] && $data['debit']!="" && $data['debit']!="0"){
-                        $ledger->debit = $data['debit'];
+                        $type = "Debit";
                      }else{
-                        $ledger->credit = $data['credit'];
+                        $type = "Credit";
+                     }
+                     if($type=="Debit"){
+                        array_push($debit_arr,array(
+                           'type' => $type,
+                           'account_name' => $data['account'],
+                           'debit' => $data['debit'],
+                           'credit' => 0,
+                           'narration' =>'',
+                           'mapped_account_id' => $credit_id
+                           ));
+                           //Credit Array
+                           $accountName = $data['account'];
+                           $debitValue  = $data['debit'];
+                           if(isset($credit_arr[$accountName])) {
+                              // If already exists, add credit
+                              $credit_arr[$accountName]['credit'] += $debitValue;
+                           } else {
+                                 // Otherwise, create new
+                                 $credit_arr[$accountName] = [
+                                    'type' => 'Credit',
+                                    'account_name' => $credit_id,
+                                    'debit' => 0,
+                                    'credit' => $debitValue,
+                                    'narration' => $credit_narration,
+                                    'mapped_account_id' => $accountName
+                                 ];
+                           }
+                     }
+                  }
+                  $final_arr = array_merge($debit_arr, array_values($credit_arr));
+                  foreach ($final_arr as $key => $value) {
+                     $ledger = new AccountLedger();
+                     $ledger->account_id = $value['account_name'];
+                     if(isset($value['debit']) && !empty($value['debit']) && $value['debit'] != 0){
+                        $ledger->debit = $value['debit'];
+                     }else{
+                        $ledger->credit = $value['credit'];
                      }
                      $ledger->series_no = $series;
-                     $ledger->account_id = $data['account'];                                 
                      $ledger->txn_date = date('Y-m-d',strtotime($bill_date));
                      $ledger->company_id = Session::get('user_company_id');
                      $ledger->financial_year = Session::get('default_fy');
                      $ledger->entry_type = 5;
                      $ledger->entry_type_id = $payment->id;
-                     $ledger->entry_type_detail_id = $paytype->id;
-                     $ledger->map_account_id = $map_account_id;
+                     $ledger->entry_narration = $value['narration'];
+                     $ledger->map_account_id = $value['mapped_account_id'];
                      $ledger->created_by = Session::get('user_id');
                      $ledger->created_at = date('d-m-Y H:i:s');
                      $ledger->save();
-                     $i++;
                   }
                   $success_invoice_count++;
                }         

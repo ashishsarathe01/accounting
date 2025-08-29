@@ -553,7 +553,7 @@ class ReceiptController extends Controller
             }
             if($data[0]!="" && $data[1]!=""){
                if($bill_date!=""){
-                  array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"bill_no"=>$bill_no,"mode"=>$mode,"txn_arr"=>$txn_arr,"error_arr"=>$error_arr));
+                  array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"bill_no"=>$bill_no,"mode"=>$mode,"remark"=>$remark,"txn_arr"=>$txn_arr,"error_arr"=>$error_arr));
                }
                $txn_arr = [];
                $error_arr = [];
@@ -561,6 +561,7 @@ class ReceiptController extends Controller
                $series = $data[1];
                $bill_no = $data[2];
                $mode = $data[3];
+               $remark = $remark[4];
                if($mode!=""){
                   if(!in_array($mode,$mode_arr)){
                      array_push($error_arr, "Mode should be ['NEFT','IMPS','RTGS','CASH','CHEQUE'] - Row ".$index);
@@ -584,16 +585,16 @@ class ReceiptController extends Controller
                   }
                }
             }
-            $account = $data[4];
+            $account = $data[5];
             $check_account = Accounts::where('account_name',trim($account))
                         ->where('company_id',trim(Session::get('user_company_id')))
                         ->first();
             if(!$check_account){
                array_push($error_arr, 'Account Name '.$account.' Not Found - Row '.$index);
             }
-            $debit = $data[5];
+            $debit = $data[6];
             $debit = trim(str_replace(",","",$debit));
-            $credit = $data[6];
+            $credit = $data[7];
             $credit = trim(str_replace(",","",$credit));
             if($debit=="" && $credit==""){
                array_push($error_arr, 'Debit/Credit Cannot - Row '.$index);
@@ -605,7 +606,7 @@ class ReceiptController extends Controller
             }
             
             if($index==$total_row){
-               array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"bill_no"=>$bill_no,"mode"=>$mode,"txn_arr"=>$txn_arr,"error_arr"=>$error_arr));
+               array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"bill_no"=>$bill_no,"mode"=>$mode,"remark"=>$remark,"txn_arr"=>$txn_arr,"error_arr"=>$error_arr));
             }   
             $index++;
          } 
@@ -743,6 +744,7 @@ class ReceiptController extends Controller
             $bill_date = date('Y-m-d', strtotime($value['bill_date']));
             $series = $value['series'];
             $bill_no = $value['bill_no'];
+            $remark = $value['remark'];
             $mode_text = strtoupper(trim($value['mode']));
             $txn_arr = $value['txn_arr'];
 
@@ -802,6 +804,7 @@ class ReceiptController extends Controller
                 'voucher_no' => $bill_no,
                 'mode' => $mode,
                 'series_no' => $series,
+                'long_narration' => $remark,
                 'company_id' => $company_id,
                 'financial_year' => $financial_year,
                 'created_at' => $now,

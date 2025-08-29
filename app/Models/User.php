@@ -51,4 +51,13 @@ class User extends Authenticatable
 
         return $priv;
     }
+    public function hasModulePermission($module_id, $action)
+    {
+        $user = \App\Models\Companies::where('id', Session()->get('user_company_id'))->first();
+        $priv = \App\Models\MerchantModuleMapping::where('module_id', $module_id)
+            ->where('merchant_id', $user->user_id)
+            ->first();
+
+        return $priv;
+    }
 }

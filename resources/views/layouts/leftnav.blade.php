@@ -615,10 +615,9 @@
                         </li>
                      </ul>
                   </div>
-               </div>
-               
+               </div>               
             @endcan
-            @if(Session::get('user_company_id') != 4)
+            @can('module-permission',1)
             <div class="card bg-blue pt-2 px-2 rounded-0 aside-bottom-divider">
                   <div class="card-header py-12 px-2 border-0 rounded-0 d-flex" id="displayHeading">
                      <a class="nav-link text-white font-14 fw-500 dropdown-icon-img p-0 collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#businessCollapse" aria-expanded="true" aria-controls="businessCollapse">
@@ -662,7 +661,7 @@
                   </div>
                   
                </div>
-               @endif
+               @endcan
             <?php 
          } ?>
       </div>

@@ -1490,9 +1490,9 @@ class SalesController extends Controller
                                           ->delete();
                         $itemKiId =  SaleDescription::where('sale_id',$check_invoices_value->id)
                                     ->select('sale_descriptions.goods_description as item_id');
-                                    foreach( $itemKiId as $k){
-                        CommonHelper::RewriteItemAverageByItem($check_invoices_value->date,$k->item_id,$series_no);       
-                                    }
+                        foreach( $itemKiId as $k){
+                           CommonHelper::RewriteItemAverageByItem($check_invoices_value->date,$k->item_id,$series_no);
+                        }
                      }
                   }             
                }
