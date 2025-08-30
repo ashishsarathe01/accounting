@@ -430,12 +430,26 @@
         creditTotal();
     });
 
-    var add_more_count = '<?php echo $i;?>';
-    $(".add_more").click(function() {
-        add_more_count++;
-        var $curRow = $(this).closest('tr');
-        var optionElements = "";
-        newRow = '<tr id="tr_' + add_more_count + '"><td><select class="form-control type" name="type[]"  data-id="' + add_more_count + '" id="type_' + add_more_count + '"><option value="">Type</option><option value="Credit">Credit</option><option value="Debit">Debit</option></select></td><td><select class="form-control account select2-single" name="account_name[]" data-id="' + add_more_count + '" id="account_' + add_more_count + '">';
+     var add_more_count = '<?php echo $i;?>';
+     $(".add_more").click(function() {
+         add_more_count++;
+         var $curRow = $(this).closest('tr');
+         var optionElements = "";
+         let type_option = '<option value="Credit">Credit</option><option value="Debit">Debit</option>';
+         let debit_count = 0; let credit_count = 0;
+         $(".type").each(function(){
+            if(this.value == 'Credit') {
+               credit_count++;
+            }else if(this.value == 'Debit'){
+               debit_count++;
+            }
+         });
+         if(debit_count>1){
+            type_option = '<option value="Debit">Debit</option>';
+         }else if(credit_count>1){
+            type_option = '<option value="Credit">Credit</option>';
+         }
+        newRow = '<tr id="tr_' + add_more_count + '"><td><select class="form-control type" name="type[]"  data-id="' + add_more_count + '" id="type_' + add_more_count + '"><option value="">Type</option>'+type_option+'</select></td><td><select class="form-control account select2-single" name="account_name[]" data-id="' + add_more_count + '" id="account_' + add_more_count + '">';
         newRow += optionElements;
         newRow += '</select></td><td><input type="text" name="debit[]" class="form-control debit" data-id="' + add_more_count + '" id="debit_' + add_more_count + '" placeholder="Debit Amount" readonly onkeyup="debitTotal();"></td><td><input type="text" name="credit[]" class="form-control credit" data-id="' + add_more_count + '" id="credit_' + add_more_count + '" placeholder="Credit Amount" readonly onkeyup="creditTotal();"></td><td><input type="text" name="narration[]" class="form-control narration" data-id="' + add_more_count + '" id="narration_' + add_more_count + '" placeholder="Enter Narration"></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
         $curRow.before(newRow);
@@ -498,6 +512,7 @@
           let ids = 0;
           let error = false;
           let claim_gst_status = document.querySelector('input[name="flexRadioDefault"]:checked').value;
+          let debit_count = 0;let credit_count = 0;
           if(claim_gst_status=="NO"){
           $(".type").each(function() {
              let id = $(this).attr('data-id');
@@ -512,6 +527,7 @@
                      
                    });
                    cr = parseFloat(cr) + parseFloat($("#credit_" + id).val());
+                   credit_count++
                 }else if($(this).val() == "Debit" && $("#debit_" + id).val() != "" && $("#account_" + id).val() != "") {
                    form_data.push({
                       "type": "Debit",
@@ -521,6 +537,7 @@
                       "remark": $("#narration_" + id).val()
                    });
                    dr = parseFloat(dr) + parseFloat($("#debit_" + id).val());
+                    debit_count++;
                 }
              }else{
                 error = true; // Set error flag if any required field is empty
@@ -539,7 +556,10 @@
              alert("Please enter at least one transaction.");
              return false;
           }
-
+          if(credit_count>1 && debit_count>1){
+            alert("Not Allowed - You cannot enter multiple debits and credits simultaneously.");
+            return false;
+         }
           if(cr != dr && claim_gst_status=="NO") {
              alert("Debit and credit amounts should be equal.");
              return false;

@@ -87,7 +87,7 @@
                                         <select class="form-control type" name="type[]" data-id="1" id="type_1">
                                             <option value="">Type</option>
                                             <option value="Credit" selected>Credit</option>
-                                            <option value="Debit">Debit</option>
+                                            {{-- <option value="Debit">Debit</option> --}}
                                         </select>
                                     </td>
                                     <td class="">
@@ -114,7 +114,7 @@
                                     <td class="">
                                         <select class="form-control type" name="type[]" data-id="2" id="type_2">
                                             <option value="">Type</option>
-                                            <option value="Credit">Credit</option>
+                                            {{-- <option value="Credit">Credit</option> --}}
                                             <option value="Debit" selected>Debit</option>
                                         </select>
                                     </td>
@@ -143,9 +143,9 @@
                                 <tr class="font-14 font-heading bg-white">
                                     <!-- icon 3 tr ma joi aavi nathi rahyo -->
                                     <td class="w-min-120 " colspan="7">
-                                        <a class="add_more"><svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;">
+                                        {{-- <a class="add_more"><svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;">
                                                 <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" />
-                                            </svg></a>
+                                            </svg></a> --}}
                                     </td>
 
                                 </tr>

@@ -59,7 +59,13 @@
             foreach ($party_list as $value) {
                $debit_html.="<option value='".$value->id."'>".$value->account_name.'</option>';
             } 
-         
+            $credit_html = "<option value=''>Select</option>";            
+            foreach ($credit_cash_accounts as $value) {
+               $credit_html.="<option value='".$value->id."'>".$value->account_name."</option>";
+            } 
+            foreach ($credit_bank_accounts as $value) {
+               $credit_html.="<option value='".$value->id."'>".$value->account_name."</option>";
+            }
             ?>
             <form id="frm" class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('payment.store') }}">
                @csrf
@@ -218,7 +224,7 @@
 @include('layouts.footer')
 <script>
 
-   const partyList = @json($party_list); // Debit accounts
+const partyList = @json($party_list); // Debit accounts
 const cashAccounts = @json($credit_cash_accounts); // Credit - mode 1
 const bankAccounts = @json($credit_bank_accounts); // Credit - mode 0 or 2
 
@@ -246,7 +252,8 @@ const bankAccounts = @json($credit_bank_accounts); // Credit - mode 0 or 2
          if(amount>0){
             $("#credit_"+id).val(amount);
          }
-        
+         $("#account_"+id).html("<?php echo $credit_html;?>");
+         $("#account_" + id).select2();
       }else if ($("#type_" + id).val() == "Debit") {
          $("#debit_" + id).prop('readonly', false);
          $("#credit_" + id).prop('readonly', true);

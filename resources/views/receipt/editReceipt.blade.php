@@ -36,7 +36,18 @@
                Edit Receipt Voucher
             </h5>
             <?php 
-           
+            $credit_html = "<option value=''>Select</option>";            
+            foreach ($party_list as $value) {
+               $credit_html.="<option value='".$value->id."'>".$value->account_name."</option>";
+            } 
+            $debit_html = "<option value=''>Select</option>";            
+            foreach ($debit_cash_accounts as $value) {
+               $debit_html.="<option value='".$value->id."'>".$value->account_name."</option>";
+            } 
+            foreach ($debit_bank_accounts as $value) {
+               $debit_html.="<option value='".$value->id."'>".$value->account_name."</option>";
+            } 
+            
             ?>
             <form id="frm" class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('receipt.update') }}">
                @csrf
@@ -202,7 +213,9 @@
 </body>
 @include('layouts.footer')
 <script>
-
+   const partyList = @json($party_list); // Debit accounts
+   const cashAccounts = @json($debit_cash_accounts); // Credit - mode 1
+   const bankAccounts = @json($debit_bank_accounts); // Credit - mode 0 or 2
 function redirectBack(){
       let previousUrl = document.referrer; // Get Previous URL
 
@@ -237,7 +250,8 @@ function redirectBack(){
          if(amount>0){
             $("#credit_"+id).val(amount);
          }
-      
+         $("#account_"+id).html("<?php echo $credit_html;?>");
+         $("#account_" + id).select2();
       }else if ($("#type_" + id).val() == "Debit") {
          $("#debit_" + id).prop('readonly', false);
          $("#credit_" + id).prop('readonly', true);
@@ -245,7 +259,8 @@ function redirectBack(){
          if(amount>0){
             $("#debit_"+id).val(amount);
          }
-         
+         $("#account_"+id).html("<?php echo $debit_html;?>");
+         $("#account_" + id).select2();
       }
       debitTotal();
       creditTotal();
@@ -255,10 +270,43 @@ function redirectBack(){
       add_more_count++;
       var $curRow = $(this).closest('tr');
       var optionElements = "";
-      newRow = '<tr id="tr_' + add_more_count + '"><td><select class="form-control type" name="type[]"  data-id="' + add_more_count + '" id="type_' + add_more_count + '"><option value="">Type</option><option value="Credit">Credit</option><option value="Debit">Debit</option></select></td><td><select class="form-control account select2-single" name="account_name[]" data-id="' + add_more_count + '" id="account_' + add_more_count + '">';
+      let type_option = '<option value="Credit">Credit</option><option value="Debit">Debit</option>';
+      $(".type").each(function(){
+         if(this.value == 'Debit') {
+            type_option = '<option value="Credit">Credit</option>';
+         }
+      });
+      newRow = '<tr id="tr_' + add_more_count + '"><td><select class="form-control type" name="type[]"  data-id="' + add_more_count + '" id="type_' + add_more_count + '"><option value="">Type</option>'+type_option+'</select></td><td><select class="form-control account select2-single" name="account_name[]" data-id="' + add_more_count + '" id="account_' + add_more_count + '">';
       newRow += optionElements;
       newRow += '</select></td><td><input type="number" name="debit[]" class="form-control debit" data-id="' + add_more_count + '" id="debit_' + add_more_count + '" placeholder="Debit Amount" readonly onkeyup="debitTotal();"></td><td><input type="number" name="credit[]" class="form-control credit" data-id="' + add_more_count + '" id="credit_' + add_more_count + '" placeholder="Credit Amount" readonly onkeyup="creditTotal();"></td><td><input type="text" name="narration[]" class="form-control narration" data-id="' + add_more_count + '" id="narration_' + add_more_count + '" placeholder="Enter Narration"></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
       $curRow.before(newRow);
+      $('.select2-single').select2();
+      // Add change event handler for new Type dropdown
+      $(`#type_${add_more_count}`).change(function () {
+         const selectedType = $(this).val();
+         const accountDropdown = $(`#account_${add_more_count}`);
+         const currentMode = $('#mode').val(); // Get mode from mode dropdown
+
+         accountDropdown.empty().append(`<option value="">Select</option>`);
+
+         if (selectedType === 'Credit') {
+               partyList.forEach(item => {
+                  accountDropdown.append(`<option value="${item.id}">${item.account_name}</option>`);
+               });
+         } else if (selectedType === 'Debit') {
+               if (currentMode == 1) {
+                  cashAccounts.forEach(item => {
+                     accountDropdown.append(`<option value="${item.id}">${item.account_name}</option>`);
+                  });
+               } else if (currentMode == 0 || currentMode == 2) {
+                  bankAccounts.forEach(item => {
+                     accountDropdown.append(`<option value="${item.id}">${item.account_name}</option>`);
+                  });
+               }
+         }
+
+         accountDropdown.val('').trigger('change.select2');
+      });
    });
    $(document).on("click", ".remove", function() {
       let id = $(this).attr('data-id');
@@ -299,6 +347,7 @@ function redirectBack(){
          let cr = 0;
          let ids = 0;
          let error = false;
+         let debit_count = 0;
          $(".type").each(function() {
             let id = $(this).attr('data-id');
             if($(this).val() != '' && $("#account_" + id).val() != "" && $("#date").val()!='' && $("#mode").val()!='') {
@@ -320,6 +369,7 @@ function redirectBack(){
                      "remark": $("#narration_" + id).val()
                   });
                   dr = parseFloat(dr) + parseFloat($("#debit_" + id).val());
+                  debit_count++;
                }
             }else{
                error = true; // Set error flag if any required field is empty
@@ -331,6 +381,10 @@ function redirectBack(){
          }
          if(form_data.length == 0) {
             alert("Please enter at least one transaction.");
+            return false;
+         }
+         if(debit_count >1) {
+            alert("Only 1 Bank/Cash Account(Debit) Allowed.");
             return false;
          }
          if(cr != dr) {

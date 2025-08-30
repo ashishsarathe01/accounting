@@ -225,6 +225,7 @@ class ContraController extends Controller
             $ledger->entry_type = 8;
             $ledger->entry_type_id = $con->id;
             $ledger->entry_type_detail_id = $contype->id;
+            $ledger->entry_narration = $narrations[$key];
             $ledger->map_account_id = $map_account_id;
             $ledger->created_by = Session::get('user_id');
             $ledger->created_at = date('d-m-Y H:i:s');
@@ -360,6 +361,7 @@ class ContraController extends Controller
          $ledger->entry_type_id = $contra->id;
          $ledger->entry_type_detail_id = $paytype->id;
          $ledger->map_account_id = $map_account_id;
+         $ledger->entry_narration = $narrations[$key];
          $ledger->created_by = Session::get('user_id');
          $ledger->created_at = date('d-m-Y H:i:s');
          $ledger->save();
@@ -478,6 +480,7 @@ class ContraController extends Controller
                if($bill_date!=""){
                   array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"bill_no"=>$bill_no,"mode"=>$mode,"remark"=>$remark,"txn_arr"=>$txn_arr,"error_arr"=>$error_arr));
                }
+               $credit_count = 0;$debit_count = 0;
                $txn_arr = [];
                $error_arr = [];
                $bill_date = $data[0];
@@ -521,6 +524,15 @@ class ContraController extends Controller
             $credit = str_replace(",","",$credit);
             if($debit=="" && $credit==""){
                array_push($error_arr, 'Debit/Credit Cannot - Row '.$index);
+            }
+            if($debit!="" && $credit!=0){
+               $debit_count++;
+            }
+            if($credit!="" && $credit!=0){
+               $credit_count++;
+            }
+            if($debit_count>1 || $credit_count>1){
+               array_push($error_arr, 'Debit/Credit Only 1 entry Allowed - Row '.$index);
             }
             if($check_account){
                array_push($txn_arr,array("account"=>$check_account->id,"debit"=>$debit,"credit"=>$credit));

@@ -218,9 +218,7 @@ public function index(Request $request)
      */
    public function store(Request $request){
       Gate::authorize('action-module',80);
-      // echo "<pre>";
-      // print_r($request->all());
-      //die;
+      
       $financial_year = Session::get('default_fy');
       $journal = new Journal;
       $journal->date = $request->input('date');
@@ -254,8 +252,6 @@ public function index(Request $request)
       $journal->save();
       if($journal->id){
          if($request->input('flexRadioDefault')=="YES"){
-            
-
             //Journal Entry
             $joundetail = new JournalDetails;
             $joundetail->journal_id = $journal->id;
@@ -457,7 +453,17 @@ public function index(Request $request)
             $credits = $request->input('credit');         
             $narrations = $request->input('narration');
             $i = 0;
+            $debit_count = 0;$credit_count = 0;$debit_id = "";$credit_id = "";$entry_narration = "";
             foreach ($types as $key => $type){
+               if($type=="Credit"){
+                  $credit_id = $request->input('account_name')[$key];
+                  $entry_narration = $request->input('narration')[$key];
+                  $credit_count++;
+               }else if($type=="Debit"){
+                  $debit_id = $request->input('account_name')[$key];
+                  $entry_narration = $request->input('narration')[$key];
+                  $debit_count++;
+               }
                $joundetail = new JournalDetails;
                $joundetail->journal_id = $journal->id;
                $joundetail->company_id = Session::get('user_company_id');;
@@ -468,40 +474,93 @@ public function index(Request $request)
                $joundetail->narration = $narrations[$key];
                $joundetail->status = '1';
                $joundetail->save();
-               //ADD DATA IN Customer ACCOUNT
-               if($type=="Credit"){
-                  if($i==0){
-                     $map_account_id = $account_names['1'];
-                  }else{
-                     $map_account_id = $account_names['0'];
-                  }
-               }else if($type=="Debit"){
-                  if($i==0){
-                     $map_account_id = $account_names['1'];
-                  }else{
-                     $map_account_id = $account_names['0'];
+            }
+            if($credit_count==1){
+               //Account Ledger Entry
+               $debit_arr = [];$credit_arr = [];
+               foreach($request->input('type') as $key => $type){
+                  if($type=="Debit"){
+                     array_push($debit_arr,array(
+                        'type' => $type,
+                        'account_name' => $request->input('account_name')[$key],
+                        'debit' => $request->input('debit')[$key],
+                        'credit' => 0,
+                        'narration' => isset($request->input('narration')[$key]) ? $request->input('narration')[$key] : '',
+                        'mapped_account_id' => $credit_id
+                        ));
+                        //Credit Array
+                        $accountName = $request->input('account_name')[$key];
+                        $debitValue  = $request->input('debit')[$key];
+                        if(isset($credit_arr[$accountName])) {
+                              // If already exists, add credit
+                              $credit_arr[$accountName]['credit'] += $debitValue;
+                        } else {
+                              // Otherwise, create new
+                              $credit_arr[$accountName] = [
+                                 'type' => 'Credit',
+                                 'account_name' => $credit_id,
+                                 'debit' => 0,
+                                 'credit' => $debitValue,
+                                 'narration' => $entry_narration,
+                                 'mapped_account_id' => $accountName
+                              ];
+                        }
                   }
                }
+               $final_arr = array_merge($debit_arr, array_values($credit_arr));
+            }else if($debit_count==1){
+               //Account Ledger Entry
+               $debit_arr = [];$credit_arr = [];
+               foreach($request->input('type') as $key => $type){
+                  if($type=="Credit"){
+                     array_push($credit_arr,array(
+                        'type' => $type,
+                        'account_name' => $request->input('account_name')[$key],
+                        'credit' => $request->input('credit')[$key],
+                        'debit' => 0,
+                        'narration' => isset($request->input('narration')[$key]) ? $request->input('narration')[$key] : '',
+                        'mapped_account_id' => $debit_id
+                     ));
+                     //Credit Array
+                     $accountName = $request->input('account_name')[$key];
+                     $creditValue  = $request->input('credit')[$key];
+                     if(isset($debit_arr[$accountName])) {
+                           // If already exists, add credit
+                           $debit_arr[$accountName]['debit'] += $creditValue;
+                     } else {
+                           // Otherwise, create new
+                           $debit_arr[$accountName] = [
+                              'type' => 'Debit',
+                              'account_name' => $debit_id,
+                              'credit' => 0,
+                              'debit' => $creditValue,
+                              'narration' => $entry_narration,
+                              'mapped_account_id' => $accountName
+                           ];
+                     }
+                  }
+               }
+               $final_arr = array_merge($debit_arr, array_values($credit_arr));
+            }
+            foreach ($final_arr as $key => $value) {
                $ledger = new AccountLedger();
-               $ledger->account_id = $account_names[$key];
-               if(isset($debits[$key]) && !empty($debits[$key])){
-                  $ledger->debit = $debits[$key];
+               $ledger->account_id = $value['account_name'];
+               if(isset($value['debit']) && !empty($value['debit']) && $value['debit'] != 0){
+                  $ledger->debit = $value['debit'];
                }else{
-                  $ledger->credit = $credits[$key];
-               }            
+                  $ledger->credit = $value['credit'];
+               }
                $ledger->series_no = $request->input('series_no');
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
                $ledger->financial_year = Session::get('default_fy');
                $ledger->entry_type = 7;
                $ledger->entry_type_id = $journal->id;
-               $ledger->entry_type_detail_id = $joundetail->id;
-
-               $ledger->map_account_id = $map_account_id;
+               $ledger->entry_narration = $value['narration'];
+               $ledger->map_account_id = $value['mapped_account_id'];
                $ledger->created_by = Session::get('user_id');
                $ledger->created_at = date('d-m-Y H:i:s');
                $ledger->save();
-               $i++;
             }
          }
          session(['previous_url_journal' => URL::previous()]);
@@ -856,7 +915,17 @@ public function index(Request $request)
          $credits = $request->input('credit');        
          $narrations = $request->input('narration');
          $i = 0;
+         $debit_count = 0;$credit_count = 0;$debit_id = "";$credit_id = "";$entry_narration = "";
          foreach ($types as $key => $type){
+            if($type=="Credit"){
+               $credit_id = $request->input('account_name')[$key];
+               $entry_narration = $request->input('narration')[$key];
+               $credit_count++;
+            }else if($type=="Debit"){
+               $debit_id = $request->input('account_name')[$key];
+               $entry_narration = $request->input('narration')[$key];
+               $debit_count++;
+            }
             $paytype = new JournalDetails;
             $paytype->journal_id = $request->journal_id;
             $paytype->company_id = Session::get('user_company_id');;
@@ -867,38 +936,93 @@ public function index(Request $request)
             $paytype->narration = $narrations[$key];
             $paytype->status = '1';
             $paytype->save();
-            //ADD DATA IN Customer ACCOUNT
-            if($type=="Credit"){
-               if($i==0){
-                  $map_account_id = $account_names['1'];
-               }else{
-                  $map_account_id = $account_names['0'];
-               }
-            }else if($type=="Debit"){
-               if($i==0){
-                  $map_account_id = $account_names['1'];
-               }else{
-                  $map_account_id = $account_names['0'];
+         }
+         if($credit_count==1){
+            //Account Ledger Entry
+            $debit_arr = [];$credit_arr = [];
+            foreach($request->input('type') as $key => $type){
+               if($type=="Debit"){
+                  array_push($debit_arr,array(
+                     'type' => $type,
+                     'account_name' => $request->input('account_name')[$key],
+                     'debit' => $request->input('debit')[$key],
+                     'credit' => 0,
+                     'narration' => isset($request->input('narration')[$key]) ? $request->input('narration')[$key] : '',
+                     'mapped_account_id' => $credit_id
+                     ));
+                     //Credit Array
+                     $accountName = $request->input('account_name')[$key];
+                     $debitValue  = $request->input('debit')[$key];
+                     if(isset($credit_arr[$accountName])) {
+                           // If already exists, add credit
+                           $credit_arr[$accountName]['credit'] += $debitValue;
+                     } else {
+                           // Otherwise, create new
+                           $credit_arr[$accountName] = [
+                              'type' => 'Credit',
+                              'account_name' => $credit_id,
+                              'debit' => 0,
+                              'credit' => $debitValue,
+                              'narration' => $entry_narration,
+                              'mapped_account_id' => $accountName
+                           ];
+                     }
                }
             }
+            $final_arr = array_merge($debit_arr, array_values($credit_arr));
+         }else if($debit_count==1){
+            //Account Ledger Entry
+            $debit_arr = [];$credit_arr = [];
+            foreach($request->input('type') as $key => $type){
+               if($type=="Credit"){
+                  array_push($credit_arr,array(
+                     'type' => $type,
+                     'account_name' => $request->input('account_name')[$key],
+                     'credit' => $request->input('credit')[$key],
+                     'debit' => 0,
+                     'narration' => isset($request->input('narration')[$key]) ? $request->input('narration')[$key] : '',
+                     'mapped_account_id' => $debit_id
+                  ));
+                  //Credit Array
+                  $accountName = $request->input('account_name')[$key];
+                  $creditValue  = $request->input('credit')[$key];
+                  if(isset($debit_arr[$accountName])) {
+                        // If already exists, add credit
+                        $debit_arr[$accountName]['debit'] += $creditValue;
+                  } else {
+                        // Otherwise, create new
+                        $debit_arr[$accountName] = [
+                           'type' => 'Debit',
+                           'account_name' => $debit_id,
+                           'credit' => 0,
+                           'debit' => $creditValue,
+                           'narration' => $entry_narration,
+                           'mapped_account_id' => $accountName
+                        ];
+                  }
+               }
+            }
+            $final_arr = array_merge($debit_arr, array_values($credit_arr));
+         }
+         foreach ($final_arr as $key => $value) {
             $ledger = new AccountLedger();
-            $ledger->account_id = $account_names[$key];
-            if(isset($debits[$key]) && !empty($debits[$key])){
-               $ledger->debit = $debits[$key];
+            $ledger->account_id = $value['account_name'];
+            if(isset($value['debit']) && !empty($value['debit']) && $value['debit'] != 0){
+               $ledger->debit = $value['debit'];
             }else{
-               $ledger->credit = $credits[$key];
-            }            
+               $ledger->credit = $value['credit'];
+            }
             $ledger->series_no = $request->input('series_no');
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
             $ledger->financial_year = Session::get('default_fy');
             $ledger->entry_type = 7;
             $ledger->entry_type_id = $request->journal_id;
-            $ledger->map_account_id = $map_account_id;
+            $ledger->entry_narration = $value['narration'];
+            $ledger->map_account_id = $value['mapped_account_id'];
             $ledger->created_by = Session::get('user_id');
             $ledger->created_at = date('d-m-Y H:i:s');
             $ledger->save();
-            $i++;
          }
       }
       if(!empty(Session::get('redirect_url'))){
@@ -1035,6 +1159,7 @@ public function index(Request $request)
                   $merchant_gst = $gst_no_arr[$akey];
                   array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"bill_no"=>$bill_no,"claim_gst"=>$claim_gst,"invoice_no"=>$invoice_no,'remark'=>$remark,"merchant_gst"=>$merchant_gst,"txn_arr"=>$txn_arr,"error_arr"=>$error_arr));
                }
+               $debit_count = 0;$credit_count = 0;
                $txn_arr = [];
                $error_arr = [];
                $bill_date = trim($data[0]);
@@ -1069,7 +1194,6 @@ public function index(Request $request)
                }
             }
             $account = $data[6];
-            
             $check_account = Accounts::where('account_name',trim($account))
                         ->whereIn('company_id',[trim(Session::get('user_company_id')),0])
                         ->first();
@@ -1080,7 +1204,18 @@ public function index(Request $request)
             $debit = str_replace(",","",$debit);
             $credit = $data[9];
             $credit = str_replace(",","",$credit);
-            
+            if($claim_gst=="NO"){
+               if($debit!="" && $debit!=0){
+                  $debit_count++;
+               }
+               if($credit!="" && $credit!=0){
+                  $credit_count++;
+               }
+
+               if($debit_count>1 && $credit_count>1){
+                  array_push($error_arr, "Not Allowed - You cannot enter multiple debits and credits simultaneously.- Row ".$index);
+               }
+            }
             if($debit=="" && $credit==""){
                array_push($error_arr, 'Debit/Credit Cannot - Row '.$index);
             }
@@ -1404,11 +1539,21 @@ public function index(Request $request)
                         $ledger->save();
                      }
                   }else{
+                     $debit_count = 0;$credit_count = 0;$debit_id = "";$credit_id = "";$entry_narration = "";
                      foreach($txn_arr as $key => $data){
                         if($data['debit'] && $data['debit']!="" && $data['debit']!="0"){
                            $type = "Debit";
                         }else{
                            $type = "Credit";
+                        }
+                        if($type=="Credit"){
+                           $credit_id = $data['account'];
+                           $entry_narration = "";
+                           $credit_count++;
+                        }else if($type=="Debit"){
+                           $debit_id = $data['account'];
+                           $entry_narration = "";
+                           $debit_count++;
                         }
                         $paytype = new JournalDetails;
                         $paytype->journal_id = $journal->id;
@@ -1419,40 +1564,103 @@ public function index(Request $request)
                         $paytype->credit = $data['credit'];
                         $paytype->status = '1';
                         $paytype->save();
-                        //ADD DATA IN Customer ACCOUNT
-                        if($i==0){
-                           if($txn_arr[1]){
-                              if($txn_arr[1]){
-                                 $map_account_id = $txn_arr[1]['account'];
-                              }else{
-                                 $map_account_id = "";
-                              }
-                              
+                     }
+                     if($credit_count==1){
+                        //Account Ledger Entry
+                        $debit_arr = [];$credit_arr = [];
+                        foreach($txn_arr as $key => $data){
+                           if($data['debit'] && $data['debit']!="" && $data['debit']!="0"){
+                              $type = "Debit";
                            }else{
-                              $map_account_id = "";
+                              $type = "Credit";
                            }
-                           
-                        }else{
-                           $map_account_id = $txn_arr[0]['account'];
-                        }                    
+                           if($type=="Debit"){
+                              array_push($debit_arr,array(
+                                 'type' => $type,
+                                 'account_name' => $data['account'],
+                                 'debit' => $data['debit'],
+                                 'credit' => 0,
+                                 'narration' => '',
+                                 'mapped_account_id' => $credit_id
+                                 ));
+                                 //Credit Array
+                                 $accountName = $data['account'];
+                                 $debitValue  = $data['debit'];
+                                 if(isset($credit_arr[$accountName])) {
+                                       // If already exists, add credit
+                                       $credit_arr[$accountName]['credit'] += $debitValue;
+                                 } else {
+                                       // Otherwise, create new
+                                       $credit_arr[$accountName] = [
+                                          'type' => 'Credit',
+                                          'account_name' => $credit_id,
+                                          'debit' => 0,
+                                          'credit' => $debitValue,
+                                          'narration' => $entry_narration,
+                                          'mapped_account_id' => $accountName
+                                       ];
+                                 }
+                           }
+                        }
+                        $final_arr = array_merge($debit_arr, array_values($credit_arr));
+                     }else if($debit_count==1){
+                        //Account Ledger Entry
+                        $debit_arr = [];$credit_arr = [];
+                        foreach($txn_arr as $key => $data){
+                           if($data['debit'] && $data['debit']!="" && $data['debit']!="0"){
+                              $type = "Debit";
+                           }else{
+                              $type = "Credit";
+                           }
+                           if($type=="Credit"){
+                              array_push($credit_arr,array(
+                                 'type' => $type,
+                                 'account_name' => $data['account'],
+                                 'credit' => $data['credit'],
+                                 'debit' => 0,
+                                 'narration' => '',
+                                 'mapped_account_id' => $debit_id
+                              ));
+                              //Credit Array
+                              $accountName = $data['account'];
+                              $creditValue  = $data['credit'];
+                              if(isset($debit_arr[$accountName])) {
+                                    // If already exists, add credit
+                                    $debit_arr[$accountName]['debit'] += $creditValue;
+                              } else {
+                                    // Otherwise, create new
+                                    $debit_arr[$accountName] = [
+                                       'type' => 'Debit',
+                                       'account_name' => $debit_id,
+                                       'credit' => 0,
+                                       'debit' => $creditValue,
+                                       'narration' => $entry_narration,
+                                       'mapped_account_id' => $accountName
+                                    ];
+                              }
+                           }
+                        }
+                        $final_arr = array_merge($debit_arr, array_values($credit_arr));
+                     }
+                     foreach ($final_arr as $key => $value) {
                         $ledger = new AccountLedger();
-                        if($data['debit'] && $data['debit']!="" && $data['debit']!="0"){
-                           $ledger->debit = $data['debit'];
+                        $ledger->account_id = $value['account_name'];
+                        if(isset($value['debit']) && !empty($value['debit']) && $value['debit'] != 0){
+                           $ledger->debit = $value['debit'];
                         }else{
-                           $ledger->credit = $data['credit'];
+                           $ledger->credit = $value['credit'];
                         }
                         $ledger->series_no = $series;
-                        $ledger->account_id = $data['account'];                                 
                         $ledger->txn_date = date('Y-m-d',strtotime($bill_date));
                         $ledger->company_id = Session::get('user_company_id');
                         $ledger->financial_year = Session::get('default_fy');
                         $ledger->entry_type = 7;
                         $ledger->entry_type_id = $journal->id;
-                        $ledger->map_account_id = $map_account_id;
+                        $ledger->entry_narration = $value['narration'];
+                        $ledger->map_account_id = $value['mapped_account_id'];
                         $ledger->created_by = Session::get('user_id');
                         $ledger->created_at = date('d-m-Y H:i:s');
                         $ledger->save();
-                        $i++;
                      }
                   }
                   

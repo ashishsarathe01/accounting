@@ -32,7 +32,17 @@
             </div>
             <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Edit Payment Voucher</h5>
             <?php 
-            
+               $debit_html = "<option value=''>Select</option>";            
+               foreach ($party_list as $value) {
+                  $debit_html.="<option value='".$value->id."'>".$value->account_name."</option>";
+               } 
+               $credit_html = "<option value=''>Select</option>";            
+               foreach ($credit_cash_accounts as $value) {
+                  $credit_html.="<option value='".$value->id."'>".$value->account_name."</option>";
+               } 
+               foreach ($credit_bank_accounts as $value) {
+                  $credit_html.="<option value='".$value->id."'>".$value->account_name."</option>";
+               } 
             ?>
             <form id="frm" class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('payment.update') }}">
                @csrf
@@ -225,7 +235,8 @@
          if(amount>0){
             $("#credit_"+id).val(amount);
          }
-          
+          $("#account_"+id).html("<?php echo $credit_html;?>");
+         $("#account_" + id).select2();
       }else if ($("#type_" + id).val() == "Debit") {
          $("#debit_" + id).prop('readonly', false);
          $("#credit_" + id).prop('readonly', true);
@@ -233,7 +244,8 @@
          if(amount>0){
             $("#debit_"+id).val(amount);
          }
-       
+         $("#account_"+id).html("<?php echo $debit_html;?>");
+         $("#account_" + id).select2();
       }
       debitTotal();
       creditTotal();

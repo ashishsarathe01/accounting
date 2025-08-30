@@ -227,8 +227,12 @@ class ReceiptController extends Controller
          $debits = $request->input('debit');
          $credits = $request->input('credit');
          $narrations = $request->input('narration');
-         $i=0;
+         $debit_id = "";$debit_narration = "";
          foreach($types as $key => $type){
+            if($type=="Debit"){
+               $debit_id = $request->input('account_name')[$key];
+               $debit_narration = isset($request->input('narration')[$key]) ? $request->input('narration')[$key] : '';
+            }
             $rectype = new ReceiptDetails;
             $rectype->receipt_id = $receipt->id;
             $rectype->company_id = Session::get('user_company_id');;
@@ -238,32 +242,59 @@ class ReceiptController extends Controller
             $rectype->credit = isset($credits[$key]) ? $credits[$key] :'0';
             $rectype->narration = $narrations[$key];
             $rectype->status = '1';
-            $rectype->save();
-            //ADD DATA IN Customer ACCOUNT
-            if($i==0){
-               $map_account_id = $account_names['1'];
-            }else{
-               $map_account_id = $account_names['0'];
+            $rectype->save();            
+         }
+         //Account Ledger Entry
+         $debit_arr = [];$credit_arr = [];
+         foreach($request->input('type') as $key => $type){
+            if($type=="Credit"){
+               array_push($credit_arr,array(
+                  'type' => $type,
+                  'account_name' => $request->input('account_name')[$key],
+                  'credit' => $request->input('credit')[$key],
+                  'debit' => 0,
+                  'narration' => isset($request->input('narration')[$key]) ? $request->input('narration')[$key] : '',
+                  'mapped_account_id' => $debit_id
+               ));
+               //Debit Array
+               $accountName = $request->input('account_name')[$key];
+               $creditValue  = $request->input('credit')[$key];
+               if(isset($debit_arr[$accountName])) {
+                     // If already exists, add credit
+                     $debit_arr[$accountName]['debit'] += $creditValue;
+               } else {
+                     // Otherwise, create new
+                     $debit_arr[$accountName] = [
+                        'type' => 'Debit',
+                        'account_name' => $debit_id,
+                        'debit' => $creditValue,
+                        'credit' => 0,
+                        'narration' => $debit_narration,
+                        'mapped_account_id' => $accountName
+                     ];
+               }
             }
+         }
+         $final_arr = array_merge($debit_arr, array_values($credit_arr));
+         foreach ($final_arr as $key => $value) {
             $ledger = new AccountLedger();
-            $ledger->account_id = $account_names[$key];
-            if(isset($debits[$key]) && !empty($debits[$key])){
-               $ledger->debit = $debits[$key];
+            $ledger->account_id = $value['account_name'];
+            if(isset($value['debit']) && !empty($value['debit']) && $value['debit'] != 0){
+               $ledger->debit = $value['debit'];
             }else{
-               $ledger->credit = $credits[$key];
-            }            
-            $ledger->txn_date = $request->input('date');
+               $ledger->credit = $value['credit'];
+            }
             $ledger->series_no = $request->input('series_no');
+            $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
             $ledger->financial_year = Session::get('default_fy');
             $ledger->entry_type = 6;
             $ledger->entry_type_id = $receipt->id;
-            $ledger->entry_type_detail_id = $rectype->id;
-            $ledger->map_account_id = $map_account_id;
+            $ledger->entry_narration = $value['narration'];
+            $ledger->map_account_id = $value['mapped_account_id'];
             $ledger->created_by = Session::get('user_id');
             $ledger->created_at = date('d-m-Y H:i:s');
             $ledger->save();
-            $i++;
          }
          session(['previous_url_receipt' => URL::previous()]);
          return redirect('receipt')->withSuccess('Receipt added successfully!');
@@ -386,8 +417,12 @@ class ReceiptController extends Controller
       $debits = $request->input('debit');
       $credits = $request->input('credit');
       $narrations = $request->input('narration');
-      $i=0;
+      $debit_id = "";$debit_narration = "";
       foreach ($types as $key => $type){
+         if($type=="Debit"){
+            $debit_id = $request->input('account_name')[$key];
+            $debit_narration = isset($request->input('narration')[$key]) ? $request->input('narration')[$key] : '';
+         }
          $paytype = new ReceiptDetails;
          $paytype->receipt_id = $request->receipt_id;
          $paytype->company_id = Session::get('user_company_id');;
@@ -398,30 +433,59 @@ class ReceiptController extends Controller
          $paytype->narration = $narrations[$key];
          $paytype->status = '1';
          $paytype->save();
-         //ADD DATA IN Customer ACCOUNT
-         if($i==0){
-            $map_account_id = $account_names['1'];
-         }else{
-            $map_account_id = $account_names['0'];
+         
+      }
+      //Account Ledger Entry
+      $debit_arr = [];$credit_arr = [];
+      foreach($request->input('type') as $key => $type){
+         if($type=="Credit"){
+            array_push($credit_arr,array(
+               'type' => $type,
+               'account_name' => $request->input('account_name')[$key],
+               'credit' => $request->input('credit')[$key],
+               'debit' => 0,
+               'narration' => isset($request->input('narration')[$key]) ? $request->input('narration')[$key] : '',
+               'mapped_account_id' => $debit_id
+            ));
+               //Debit Array
+               $accountName = $request->input('account_name')[$key];
+               $creditValue  = $request->input('credit')[$key];
+               if(isset($debit_arr[$accountName])) {
+                     // If already exists, add credit
+                     $debit_arr[$accountName]['debit'] += $creditValue;
+               } else {
+                     // Otherwise, create new
+                     $debit_arr[$accountName] = [
+                        'type' => 'Debit',
+                        'account_name' => $debit_id,
+                        'debit' => $creditValue,
+                        'credit' => 0,
+                        'narration' => $debit_narration,
+                        'mapped_account_id' => $accountName
+                     ];
+               }
          }
+      }
+      $final_arr = array_merge($debit_arr, array_values($credit_arr));
+      foreach ($final_arr as $key => $value) {
          $ledger = new AccountLedger();
-         $ledger->account_id = $account_names[$key];
-         if(isset($debits[$key]) && !empty($debits[$key])){
-            $ledger->debit = $debits[$key];
+         $ledger->account_id = $value['account_name'];
+         if(isset($value['debit']) && !empty($value['debit']) && $value['debit'] != 0){
+            $ledger->debit = $value['debit'];
          }else{
-            $ledger->credit = $credits[$key];
-         }            
+            $ledger->credit = $value['credit'];
+         }
          $ledger->series_no = $request->input('series_no');
          $ledger->txn_date = $request->input('date');
          $ledger->company_id = Session::get('user_company_id');
          $ledger->financial_year = Session::get('default_fy');
          $ledger->entry_type = 6;
-         $ledger->entry_type_id = $request->receipt_id;
-         $ledger->map_account_id = $map_account_id;
+         $ledger->entry_type_id = $receipt->id;
+         $ledger->entry_narration = $value['narration'];
+         $ledger->map_account_id = $value['mapped_account_id'];
          $ledger->created_by = Session::get('user_id');
          $ledger->created_at = date('d-m-Y H:i:s');
          $ledger->save();
-         $i++;
       }
       if(!empty(Session::get('redirect_url'))){
          return redirect(Session::get('redirect_url'));
@@ -555,13 +619,14 @@ class ReceiptController extends Controller
                if($bill_date!=""){
                   array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"bill_no"=>$bill_no,"mode"=>$mode,"remark"=>$remark,"txn_arr"=>$txn_arr,"error_arr"=>$error_arr));
                }
+               $debit_count = 0;
                $txn_arr = [];
                $error_arr = [];
                $bill_date = $data[0];
                $series = $data[1];
                $bill_no = $data[2];
                $mode = $data[3];
-               $remark = $remark[4];
+               $remark = $data[4];
                if($mode!=""){
                   if(!in_array($mode,$mode_arr)){
                      array_push($error_arr, "Mode should be ['NEFT','IMPS','RTGS','CASH','CHEQUE'] - Row ".$index);
@@ -598,6 +663,12 @@ class ReceiptController extends Controller
             $credit = trim(str_replace(",","",$credit));
             if($debit=="" && $credit==""){
                array_push($error_arr, 'Debit/Credit Cannot - Row '.$index);
+            }
+             if($debit!="" && $debit!=0){
+               $debit_count++;
+            }
+            if($debit_count>1){
+               array_push($error_arr, 'More than one debit entry found - Row '.$index);
             }
             if($check_account){
                array_push($txn_arr,array("account"=>$check_account->id,"debit"=>$debit,"credit"=>$credit));
@@ -724,165 +795,182 @@ class ReceiptController extends Controller
          //    }
          // }
          if (count($data_arr) > 0) {
-    $company_id = Session::get('user_company_id');
-    $user_id = Session::get('user_id');
-    $financial_year = Session::get('default_fy');
-    $now = Carbon::now();
-
-    foreach (collect($data_arr)->chunk(500) as $chunk) {
-        $receiptInsert = [];
-        $detailsInsert = [];
-        $ledgerInsert = [];
-
-        foreach ($chunk as $value) {
-            if (!empty($value['error_arr'])) {
-                $all_error_arr[] = $value['error_arr'];
-                $failed_invoice_count++;
-                continue;
-            }
-
-            $bill_date = date('Y-m-d', strtotime($value['bill_date']));
-            $series = $value['series'];
-            $bill_no = $value['bill_no'];
-            $remark = $value['remark'];
-            $mode_text = strtoupper(trim($value['mode']));
-            $txn_arr = $value['txn_arr'];
-
-            
-
-            // Skip CHEQUE mode
-            if ($mode_text === 'CHEQUE') {
-                $success_invoice_count++;
-                continue;
-            }
-
-            // Delete old receipt if duplicate exists
-            if ($duplicate_voucher_status == 2) {
-                $check_rec = Receipt::select('id')
-                    ->where('voucher_no', $bill_no)
-                    ->where('series_no', trim($series))
-                    ->where('financial_year', $financial_year)
-                    ->where('delete', '0')
-                    ->where('company_id', $company_id)
-                    ->get();
-
-                foreach ($check_rec as $rec) {
-                    // Soft delete receipt
-                    Receipt::where('id', $rec->id)->update([
-                        'delete' => '1',
-                        'deleted_at' => $now,
-                        'deleted_by' => $user_id,
-                    ]);
-
-                    // Soft delete related details
-                    ReceiptDetails::where('receipt_id', $rec->id)->update([
-                        'delete' => '1',
-                        'deleted_at' => $now,
-                        'deleted_by' => $user_id,
-                    ]);
-
-                    // Soft delete ledger entries
-                    AccountLedger::where('entry_type', 6)
-                        ->where('entry_type_id', $rec->id)
-                        ->update([
-                            'delete_status' => '1',
-                            'deleted_at' => $now,
-                            'deleted_by' => $user_id,
+            $company_id = Session::get('user_company_id');
+            $user_id = Session::get('user_id');
+            $financial_year = Session::get('default_fy');
+            $now = Carbon::now();
+            foreach (collect($data_arr)->chunk(500) as $chunk) {
+               $receiptInsert = [];
+               $detailsInsert = [];
+               $ledgerInsert = [];
+               foreach ($chunk as $value) {
+                  if (!empty($value['error_arr'])) {
+                     $all_error_arr[] = $value['error_arr'];
+                     $failed_invoice_count++;
+                     continue;
+                  }
+                  $bill_date = date('Y-m-d', strtotime($value['bill_date']));
+                  $series = $value['series'];
+                  $bill_no = $value['bill_no'];
+                  $remark = $value['remark'];
+                  $mode_text = strtoupper(trim($value['mode']));
+                  $txn_arr = $value['txn_arr'];
+                  // Skip CHEQUE mode
+                  if($mode_text === 'CHEQUE') {
+                     $success_invoice_count++;
+                     continue;
+                  }
+                  // Delete old receipt if duplicate exists
+                  if($duplicate_voucher_status == 2) {
+                     $check_rec = Receipt::select('id')
+                        ->where('voucher_no', $bill_no)
+                        ->where('series_no', trim($series))
+                        ->where('financial_year', $financial_year)
+                        ->where('delete', '0')
+                        ->where('company_id', $company_id)
+                        ->get();
+                     foreach ($check_rec as $rec) {
+                        // Soft delete receipt
+                        Receipt::where('id', $rec->id)->update([
+                              'delete' => '1',
+                              'deleted_at' => $now,
+                              'deleted_by' => $user_id,
                         ]);
-                }
-            }
-            if($mode_text=="IMPS" || $mode_text=="NEFT" || $mode_text=="RTGS"){
+                        // Soft delete related details
+                        ReceiptDetails::where('receipt_id', $rec->id)->update([
+                              'delete' => '1',
+                              'deleted_at' => $now,
+                              'deleted_by' => $user_id,
+                        ]);
+                        // Soft delete ledger entries
+                        AccountLedger::where('entry_type', 6)
+                              ->where('entry_type_id', $rec->id)
+                              ->update([
+                                 'delete_status' => '1',
+                                 'deleted_at' => $now,
+                                 'deleted_by' => $user_id,
+                              ]);
+                     }
+                  }
+                  if($mode_text=="IMPS" || $mode_text=="NEFT" || $mode_text=="RTGS"){
                      $mode = 0;
                   }else if($mode_text=="CASH"){
                      $mode = 1;
                   }else{
                      $mode = 0;
                   }
-            // Add main receipt entry
-            $receiptInsert[] = [
-                'date' => $bill_date,
-                'voucher_no' => $bill_no,
-                'mode' => $mode,
-                'series_no' => $series,
-                'long_narration' => $remark,
-                'company_id' => $company_id,
-                'financial_year' => $financial_year,
-                'created_at' => $now,
-            ];
+                  // Add main receipt entry
+                  $receiptInsert[] = [
+                     'date' => $bill_date,
+                     'voucher_no' => $bill_no,
+                     'mode' => $mode,
+                     'series_no' => $series,
+                     'long_narration' => $remark,
+                     'company_id' => $company_id,
+                     'financial_year' => $financial_year,
+                     'created_at' => $now,
+                  ];
+               }
+               // Insert receipts & get last inserted ID
+               DB::table('receipts')->insert($receiptInsert);
+               $receipt_ids = DB::table('receipts')
+                     ->latest('id')
+                     ->take(count($receiptInsert))
+                     ->pluck('id')
+                     ->reverse()
+                     ->values()
+                     ->toArray();
+               // Now insert related details and ledgers
+               $i = 0;
+               foreach ($chunk as $value) {
+                  if (!empty($value['error_arr']) || $value['mode'] === 'CHEQUE') {
+                     continue;
+                  }
+                  $receipt_id = $receipt_ids[$i];
+                  $txn_arr = $value['txn_arr'];
+                  $series = $value['series'];
+                  $bill_date = date('Y-m-d', strtotime($value['bill_date']));
+                  $debit_id = "";$debit_narration = "";
+                  foreach ($txn_arr as $k => $txn) {
+                     $type = (!empty($txn['debit']) && $txn['debit'] != "0") ? 'Debit' : 'Credit';
+                     if($type=="Debit"){
+                        $debit_id = $txn['account'];
+                        $debit_narration =  '';
+                     }
+                     $detailsInsert[] = [
+                        'receipt_id' => $receipt_id,
+                        'company_id' => $company_id,
+                        'type' => $type,
+                        'account_name' => $txn['account'],
+                        'debit' => $txn['debit'],
+                        'credit' => $txn['credit'],
+                        'status' => '1',
+                        'created_at' => $now,
+                     ];
+                  }
+                  // Ledger entries
+                  $debit_arr = [];$credit_arr = [];
+                  foreach ($txn_arr as $j => $txn) {
+                     $type = (!empty($txn['debit']) && $txn['debit'] != "0") ? 'Debit' : 'Credit';
+                     if($type=="Credit"){
+                        array_push($credit_arr,array(
+                           'type' => $type,
+                           'account_name' => $txn['account'],
+                           'credit' => $txn['credit'],
+                           'debit' => 0,
+                           'narration' => '',
+                           'mapped_account_id' => $debit_id
+                        ));
+                        //Debit Array
+                        $accountName = $txn['account'];
+                        $creditValue  = $txn['credit'];
+                        if(isset($debit_arr[$accountName])) {
+                              // If already exists, add credit
+                              $debit_arr[$accountName]['debit'] += $creditValue;
+                        }else{
+                           // Otherwise, create new
+                           $debit_arr[$accountName] = [
+                              'type' => 'Debit',
+                              'account_name' => $debit_id,
+                              'debit' => $creditValue,
+                              'credit' => 0,
+                              'narration' => $debit_narration,
+                              'mapped_account_id' => $accountName
+                           ];
+                        }
+                     }
+                  }
+                  $final_arr = array_merge($debit_arr, array_values($credit_arr));
+                  foreach ($final_arr as $key => $value) {
+                     $ledgerInsert[] = [
+                        'debit' => !empty($value['debit']) ? $value['debit'] : null,
+                        'credit' => !empty($value['credit']) ? $value['credit'] : null,
+                        'series_no' => $series,
+                        'account_id' => $value['account_name'],
+                        'txn_date' => $bill_date,
+                        'company_id' => $company_id,
+                        'financial_year' => $financial_year,
+                        'entry_type' => 6,
+                        'entry_type_id' => $receipt_id,
+                        'entry_narration' => $value['narration'],
+                        'map_account_id' => $value['mapped_account_id'],
+                        'created_by' => $user_id,
+                        'created_at' => now(),
+                     ];
+                  }
+                  $success_invoice_count++;
+                  $i++;
+               }
+               // Insert all in batches
+               if (!empty($detailsInsert)) {
+                  DB::table('receipt_details')->insert($detailsInsert);
+               }
+
+               if (!empty($ledgerInsert)) {
+                  DB::table('account_ledger')->insert($ledgerInsert);
+               }
+            }
          }
-
-        // Insert receipts & get last inserted ID
-        DB::table('receipts')->insert($receiptInsert);
-        $receipt_ids = DB::table('receipts')
-            ->latest('id')
-            ->take(count($receiptInsert))
-            ->pluck('id')
-            ->reverse()
-            ->values()
-            ->toArray();
-
-        // Now insert related details and ledgers
-        $i = 0;
-        foreach ($chunk as $value) {
-            if (!empty($value['error_arr']) || $value['mode'] === 'CHEQUE') {
-                continue;
-            }
-
-            $receipt_id = $receipt_ids[$i];
-            $txn_arr = $value['txn_arr'];
-            $series = $value['series'];
-            $bill_date = date('Y-m-d', strtotime($value['bill_date']));
-
-            foreach ($txn_arr as $k => $txn) {
-                $type = (!empty($txn['debit']) && $txn['debit'] != "0") ? 'Debit' : 'Credit';
-
-                $detailsInsert[] = [
-                    'receipt_id' => $receipt_id,
-                    'company_id' => $company_id,
-                    'type' => $type,
-                    'account_name' => $txn['account'],
-                    'debit' => $txn['debit'],
-                    'credit' => $txn['credit'],
-                    'status' => '1',
-                    'created_at' => $now,
-                ];
-            }
-
-            // Ledger entries
-            $map_account_id = $txn_arr[1]['account'] ?? $txn_arr[0]['account'];
-            foreach ($txn_arr as $j => $txn) {
-                $ledgerInsert[] = [
-                    'debit' => !empty($txn['debit']) ? $txn['debit'] : null,
-                    'credit' => !empty($txn['credit']) ? $txn['credit'] : null,
-                    'series_no' => $series,
-                    'account_id' => $txn['account'],
-                    'txn_date' => $bill_date,
-                    'company_id' => $company_id,
-                    'financial_year' => $financial_year,
-                    'entry_type' => 6,
-                    'entry_type_id' => $receipt_id,
-                    'entry_type_detail_id' => 0, // Can be filled if needed later
-                    'map_account_id' => $map_account_id,
-                    'created_by' => $user_id,
-                    'created_at' => now(),
-                ];
-            }
-
-            $success_invoice_count++;
-            $i++;
-        }
-
-        // Insert all in batches
-        if (!empty($detailsInsert)) {
-            DB::table('receipt_details')->insert($detailsInsert);
-        }
-
-        if (!empty($ledgerInsert)) {
-            DB::table('account_ledger')->insert($ledgerInsert);
-        }
-    }
-}
-
       }
       $res = array("total_count"=>$total_invoice_count,"success_count"=>$success_invoice_count,"failed_count"=>$failed_invoice_count,"error_message"=>$all_error_arr);
       $res = array(

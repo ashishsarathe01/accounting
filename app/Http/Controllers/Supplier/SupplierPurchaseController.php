@@ -20,7 +20,7 @@ class SupplierPurchaseController extends Controller
         $purchases = Purchase::with([
             'purchaseDescription' => function ($query) {
                 $query->with([
-                    'item:id,name',
+                    'item:id,name,g_name as group_id',
                     'units:id,name',
                     'parameterColumnInfo' => function ($q2) {
                         $q2->leftjoin('item_paremeter_list as param1','purchase_parameter_info.parameter1_id','=','param1.id');
@@ -31,7 +31,7 @@ class SupplierPurchaseController extends Controller
                         $q2->select('purchase_parameter_info.id', 'purchase_desc_row_id','parameter1_id','parameter2_id','parameter3_id','parameter4_id','parameter5_id','parameter1_value','parameter2_value','parameter3_value','parameter4_value','parameter5_value','param1.paremeter_name as paremeter_name1','param2.paremeter_name as paremeter_name2','param3.paremeter_name as paremeter_name3','param4.paremeter_name as paremeter_name4','param5.paremeter_name as paremeter_name5');
                     }
                 ]);
-                $query->select('id', 'goods_discription', 'qty', 'purchase_id', 'unit');
+                $query->select('id', 'goods_discription', 'qty', 'purchase_id', 'unit','price');
             },
             'account:id,account_name'
         ])->where('company_id',Session::get('user_company_id'))
@@ -43,6 +43,7 @@ class SupplierPurchaseController extends Controller
         $location = SupplierLocation::where('company_id',Session::get('user_company_id'))
                                         ->where('status',1)
                                         ->get();
+        //echo "<pre>"; print_r($purchases->toArray()); die;
         return view('supplier.manage_supplier_purchase', ["purchases" => $purchases,"locations"=>$location]);
     }
     public function getSupplierRateByLocation(Request $request)
@@ -93,6 +94,11 @@ class SupplierPurchaseController extends Controller
         $report->other_contract_rate = $request->other_contract_rate ? $request->other_contract_rate : 0;
         $report->other_difference_amount = $request->other_difference_amount ? $request->other_difference_amount : 0;
 
+        $report->fuel_qty = $request->fuel_qty ? $request->fuel_qty : 0;
+        $report->fuel_bill_rate = $request->fuel_bill_rate ? $request->fuel_bill_rate : 0;
+        $report->fuel_contract_rate = $request->fuel_contract_rate ? $request->fuel_contract_rate : 0;
+        $report->fuel_difference_amount = $request->fuel_difference_amount ? $request->fuel_difference_amount : 0;
+
         $report->other_check = $request->other_check;
         $report->difference_total_amount = $request->difference_total_amount;
 
@@ -123,7 +129,7 @@ class SupplierPurchaseController extends Controller
         $purchases = Purchase::with([
             'purchaseDescription' => function ($query) {
                 $query->with([
-                    'item:id,name',
+                    'item:id,name,g_name as group_id',
                     'units:id,name',
                     'parameterColumnInfo' => function ($q2) {
                         $q2->leftjoin('item_paremeter_list as param1','purchase_parameter_info.parameter1_id','=','param1.id');

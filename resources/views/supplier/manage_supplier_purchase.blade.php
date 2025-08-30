@@ -36,6 +36,7 @@
                      </tr>
                   </thead>
                   <tbody>
+                    @php $group_id = 0; $price = 0;@endphp
                      @foreach($purchases as $key => $value)
                         <tr>
                             <td>{{date('d-m-Y',strtotime($value->date))}}</td>
@@ -45,16 +46,20 @@
                             <td style="text-align:right;">
                                 @php $qty_total = 0; @endphp
                                 @foreach($value->purchaseDescription as $v)
-                                    @php $qty_total = $qty_total + $v->qty; @endphp
+                                    @php 
+                                        $qty_total = $qty_total + $v->qty; 
+                                        $price = $v->price;
+                                    @endphp
                                 @endforeach
                                 @php echo $qty_total; @endphp
                             </td>
                             <td>
                                 @foreach($value->purchaseDescription as $v)
+                                    @php $group_id = $v->item->group_id; @endphp
                                     {{$v->item->name}} ({{$v->qty}} {{$v->units->name}})<br>
                                 @endforeach
                             </td>
-                            <td><button class="btn btn-info report" data-id="{{$value->id}}" data-qty="{{$qty_total}}" data-account_id="{{$value->party}}">Report</button></td>
+                            <td><button class="btn btn-info report" data-id="{{$value->id}}" data-qty="{{$qty_total}}" data-account_id="{{$value->party}}" data-group_id="{{$group_id}}" data-price="{{$price}}">Report</button></td>
                         </tr>
                      @endforeach
                      
@@ -195,54 +200,61 @@
                             </tr>
                         </thead>
                         <tbody id="report_body">
-                            <tr>
+                            <tr id="kraft_i_row">
                                 <td><input type="text" class="form-control" value="Kraft I" readonly></td>
                                 <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="kraft_i_qty" style="text-align: right" data-id="kraft_i"></td>
                                 <td><input type="text" class="form-control calculate" placeholder="Enter Rate" id="kraft_i_bill_rate" style="text-align: right" data-id="kraft_i"></td>
                                 <td><input type="text" class="form-control" id="kraft_i_contract_rate" style="text-align: right" readonly></td>
                                 <td><input type="text" class="form-control" id="kraft_i_difference_amount" data-id="kraft_i" style="text-align: right" readonly></td>
                             </tr>
-                            <tr>
+                            <tr id="kraft_ii_row">
                                 <td><input type="text" class="form-control" value="Kraft II" readonly></td>
                                 <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="kraft_ii_qty" style="text-align: right" data-id="kraft_ii"></td>
                                 <td><input type="text" class="form-control calculate" placeholder="Enter Rate" id="kraft_ii_bill_rate" style="text-align: right" data-id="kraft_ii"></td>
                                 <td><input type="text" class="form-control" id="kraft_ii_contract_rate" style="text-align: right" readonly></td>
                                 <td><input type="text" class="form-control" id="kraft_ii_difference_amount" data-id="kraft_ii" style="text-align: right" readonly></td>
                             </tr>
-                            <tr>
+                            <tr  id="duplex_row">
                                 <td><input type="text" class="form-control" value="Duplex" readonly></td>
                                 <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="duplex_qty" style="text-align: right" data-id="duplex"></td>
                                 <td><input type="text" class="form-control calculate" placeholder="Enter Rate" id="duplex_bill_rate" style="text-align: right" data-id="duplex"></td>
                                 <td><input type="text" class="form-control" id="duplex_contract_rate" style="text-align: right" readonly></td>
                                 <td><input type="text" class="form-control" id="duplex_difference_amount" data-id="duplex" style="text-align: right" readonly></td>
                             </tr>
-                            <tr>
+                            <tr id="poor_row">
                                 <td><input type="text" class="form-control" value="Poor" readonly></td>
                                 <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="poor_qty" style="text-align: right" data-id="poor"></td>
                                 <td><input type="text" class="form-control calculate" placeholder="Enter Rate" id="poor_bill_rate" style="text-align: right" data-id="poor"></td>
                                 <td><input type="text" class="form-control" id="poor_contract_rate" style="text-align: right" readonly></td>
                                 <td><input type="text" class="form-control" id="poor_difference_amount" data-id="poor" style="text-align: right" readonly></td>
                             </tr>
-                            <tr>
+                            <tr id="fuel_row" style="display: none">
+                                <td><input type="text" class="form-control" value="Fuel" readonly></td>
+                                <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="fuel_qty" style="text-align: right" data-id="fuel"></td>
+                                <td><input type="text" class="form-control calculate" placeholder="Enter Rate" id="fuel_bill_rate" style="text-align: right" data-id="fuel"></td>
+                                <td><input type="text" class="form-control" id="fuel_contract_rate" style="text-align: right" readonly></td>
+                                <td><input type="text" class="form-control" id="fuel_difference_amount" data-id="fuel" style="text-align: right" readonly></td>
+                            </tr>
+                            <tr id="cut_row">
                                 <td><input type="text" class="form-control" value="Cut" readonly></td>
                                 <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="cut_qty" style="text-align: right" data-id="cut"></td>
                                 <td><input type="text" class="form-control calculate" placeholder="Enter Rate" id="cut_bill_rate" style="text-align: right" data-id="cut"></td>
                                 <td><input type="text" class="form-control" id="cut_contract_rate" style="text-align: right" readonly></td>
                                 <td><input type="text" class="form-control" id="cut_difference_amount" data-id="cut" style="text-align: right" readonly></td>
                             </tr>
-                            <tr>
+                            <tr id="other_row">
                                 <td><input type="checkbox" id="other_check"></td>
                                 <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="other_qty" style="text-align: right" data-id="other"></td>
                                 <td><input type="text" class="form-control calculate" placeholder="Enter Rate" id="other_bill_rate" style="text-align: right" data-id="other"></td>
                                 <td><input type="text" class="form-control" id="other_contract_rate" style="text-align: right" readonly></td>
                                 <td><input type="text" class="form-control" id="other_difference_amount" data-id="other" style="text-align: right" readonly></td>
                             </tr>
-                            <tr>
+                            <tr >
                                 <td></td>
                                 <td></td>
                                 <td></td>
-                                <td>Difference</td>
-                                <td><input type="text" class="form-control" id="difference_total_amount" style="text-align: right" readonly></td>
+                                <th style="text-align: right">Difference</th>
+                                <th><input type="text" class="form-control" id="difference_total_amount" style="text-align: right" readonly></th>
                             </tr>
                         </tbody>
                     </table>
@@ -264,7 +276,41 @@
         $('.report').on('click', function() {
             var id = $(this).data('id');
             var account_id = $(this).data('account_id');
-            let qty = $(this).data('qty')
+            let qty = $(this).data('qty');
+            let group_id = $(this).data('group_id');
+            let price = $(this).data('price');
+            if(group_id == 18){
+                $("#fuel_row").show();
+
+                $("#kraft_i_row").hide();
+                $("#kraft_ii_row").hide();
+                $("#duplex_row").hide();
+                $("#poor_row").hide();
+
+                $("#kraft_i_qty").val('');
+                $("#kraft_ii_qty").val('');
+                $("#duplex_qty").val('');
+                $("#poor_qty").val('');
+
+                $("#kraft_i_bill_rate").val('');
+                $("#kraft_ii_bill_rate").val('');
+                $("#duplex_bill_rate").val('');
+                $("#poor_bill_rate").val('');
+                $("#fuel_contract_rate").val(price);
+            }else{
+                $("#fuel_row").hide();
+                $("#kraft_i_row").show();
+                $("#kraft_ii_row").show();
+                $("#duplex_row").show();
+                $("#poor_row").show();
+
+                $("#fuel_qty").val('');
+                $("#fuel_bill_rate").val('');
+            }
+            // Reset all fields
+            
+            $("#difference_total_amount").val('');
+           
             $.ajax({
                 url : "{{url('get-location-by-supplier')}}",
                 method : "POST",
@@ -320,8 +366,6 @@
                         $(".calculate").each(function(){
                             $(this).keyup();
                         });
-                        
-                        
                     }
                 });
             }
@@ -415,6 +459,10 @@
                 "other_bill_rate": $("#other_bill_rate").val(),
                 "other_contract_rate": $("#other_contract_rate").val(),
                 "other_difference_amount": $("#other_difference_amount").val(),
+                "fuel_qty": $("#fuel_qty").val(),
+                "fuel_bill_rate": $("#fuel_bill_rate").val(),
+                "fuel_contract_rate": $("#fuel_contract_rate").val(),
+                "fuel_difference_amount": $("#fuel_difference_amount").val(),
                 "difference_total_amount": $("#difference_total_amount").val(),
                 "other_check": other_check,
                 "_token": "{{ csrf_token() }}"
