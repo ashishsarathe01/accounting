@@ -642,6 +642,10 @@
                            <!-- Submenu under Balance Sheet -->
                            <div class="collapse ps-3" id="financialSubmenu">
                               <ul class="nav flex-column">
+                                   
+                                   <li class="py-1 clickable-row-blue">
+                                       <a href="{{ route('supplier-sub-head.index') }}" class="text-blue">Manage Sub Head</a>
+                                    </li>
                                     <li class="py-1 clickable-row-blue">
                                        <a href="{{ route('supplier.index') }}" class="text-blue">Manage Supplier</a>
                                     </li>

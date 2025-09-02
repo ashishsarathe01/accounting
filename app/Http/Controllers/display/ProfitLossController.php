@@ -77,7 +77,7 @@ class ProfitLossController extends Controller{
       //Sale
       $tot_sale_amt = DB::table('sales')
          ->join('sale_descriptions','sales.id','=','sale_descriptions.sale_id')
-         ->where(['sales.delete' => '0','sales.status' => '1', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
+         ->where(['sales.delete' => '0','sales.status' => '1', 'sales.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
          ->whereBetween('date', [$from_date, $to_date])
          ->get()
          ->sum("amount");
@@ -101,7 +101,7 @@ class ProfitLossController extends Controller{
       //Purchase Return
       $tot_purchase_return_amt = DB::table('purchase_returns')
          ->join('purchase_return_descriptions','purchase_returns.id','=','purchase_return_descriptions.purchase_return_id')
-         ->where(['purchase_returns.delete' => '0','purchase_returns.status' => '1', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
+         ->where(['purchase_returns.delete' => '0','purchase_returns.status' => '1', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
          ->whereBetween('date', [$from_date, $to_date])
          ->get()
          ->sum("amount");
@@ -125,7 +125,7 @@ class ProfitLossController extends Controller{
       //Sale Return Type Purchase
       $tot_sale_return_amt_purchase = DB::table('sales_returns')
          ->join('sale_return_descriptions','sales_returns.id','=','sale_return_descriptions.sale_return_id')
-         ->where(['sales_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
+         ->where(['sales_returns.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
          ->whereBetween('date', [$from_date, $to_date])
          ->get()
          ->sum("amount");
@@ -148,7 +148,7 @@ class ProfitLossController extends Controller{
       //Sale Return
       $tot_sale_return_amt = DB::table('sales_returns')
          ->join('sale_return_descriptions','sales_returns.id','=','sale_return_descriptions.sale_return_id')
-         ->where(['sales_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE'])
+         ->where(['sales_returns.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE'])
          ->whereBetween('date', [$from_date, $to_date])
          ->get()
          ->sum("amount");
@@ -171,7 +171,7 @@ class ProfitLossController extends Controller{
       //Purchase Return Type Sale
       $tot_purchase_return_amt_sale = DB::table('purchase_returns')
          ->join('purchase_return_descriptions','purchase_returns.id','=','purchase_return_descriptions.purchase_return_id')
-         ->where(['purchase_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE'])
+         ->where(['purchase_returns.delete' => '0', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE'])
          ->whereBetween('date', [$from_date, $to_date])
          ->get()
          ->sum("amount");
@@ -439,7 +439,7 @@ class ProfitLossController extends Controller{
       //Sale
       $tot_sale_amt = DB::table('sales')
          ->join('sale_descriptions','sales.id','=','sale_descriptions.sale_id')
-         ->where(['sales.delete' => '0','sales.status' => '1', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
+         ->where(['sales.delete' => '0','sales.status' => '1', 'sales.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
          ->whereBetween('date', [$from_date, $to_date])
          ->when(!empty($req_series), function ($query) use ($req_series) {
             return $query->where('sales.series_no', $req_series);
@@ -469,7 +469,7 @@ class ProfitLossController extends Controller{
       //Purchase Return
       $tot_purchase_return_amt = DB::table('purchase_returns')
          ->join('purchase_return_descriptions','purchase_returns.id','=','purchase_return_descriptions.purchase_return_id')
-         ->where(['purchase_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
+         ->where(['purchase_returns.delete' => '0', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
          ->whereBetween('date', [$from_date, $to_date])
          ->when(!empty($req_series), function ($query) use ($req_series) {
             return $query->where('purchase_returns.series_no', $req_series);
@@ -498,7 +498,7 @@ class ProfitLossController extends Controller{
        //Sale Return pURCHASE
       $tot_sale_return_amt_purchase = DB::table('sales_returns')
          ->join('sale_return_descriptions','sales_returns.id','=','sale_return_descriptions.sale_return_id')
-         ->where(['sales_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
+         ->where(['sales_returns.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
          ->whereBetween('date', [$from_date, $to_date])
          ->when(!empty($req_series), function ($query) use ($req_series) {
             return $query->where('sales_returns.series_no', $req_series);
@@ -527,7 +527,7 @@ class ProfitLossController extends Controller{
       //Sale Return
       $tot_sale_return_amt = DB::table('sales_returns')
          ->join('sale_return_descriptions','sales_returns.id','=','sale_return_descriptions.sale_return_id')
-         ->where(['sales_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE'])
+         ->where(['sales_returns.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE'])
          ->whereBetween('date', [$from_date, $to_date])
          ->when(!empty($req_series), function ($query) use ($req_series) {
             return $query->where('sales_returns.series_no', $req_series);
@@ -556,7 +556,7 @@ class ProfitLossController extends Controller{
       //Purchase Return Type Sale
       $tot_purchase_return_amt_sale = DB::table('purchase_returns')
          ->join('purchase_return_descriptions','purchase_returns.id','=','purchase_return_descriptions.purchase_return_id')
-         ->where(['purchase_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE'])
+         ->where(['purchase_returns.delete' => '0', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE'])
          ->whereBetween('date', [$from_date, $to_date])
          ->when(!empty($req_series), function ($query) use ($req_series) {
             return $query->where('purchase_returns.series_no', $req_series);

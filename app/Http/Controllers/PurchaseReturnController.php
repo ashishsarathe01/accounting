@@ -491,6 +491,7 @@ class PurchaseReturnController extends Controller
                $desc->unit = $units[$key];
                $desc->price = $prices[$key];
                $desc->amount = $amounts[$key];
+               $desc->company_id = Session::get('user_company_id');
                $desc->status = '1';
                $desc->save();
                //ADD ITEM LEDGER
@@ -532,6 +533,7 @@ class PurchaseReturnController extends Controller
                $sundry->bill_sundry = $bill;
                $sundry->rate = $tax_rate[$key];
                $sundry->amount = $bill_sundry_amounts[$key];
+               $sundry->company_id = Session::get('user_company_id');
                $sundry->status = '1';
                $sundry->save();
                //ADD DATA IN CGST ACCOUNT
@@ -1490,6 +1492,7 @@ class PurchaseReturnController extends Controller
                $desc->unit = $units[$key];
                $desc->price = $prices[$key];
                $desc->amount = $amounts[$key];
+               $desc->company_id = Session::get('user_company_id');
                $desc->status = '1';
                $desc->save();
                //ADD ITEM LEDGER
@@ -1525,6 +1528,7 @@ class PurchaseReturnController extends Controller
                $sundry->bill_sundry = $bill;
                $sundry->rate = $tax_rate[$key];
                $sundry->amount = $bill_sundry_amounts[$key];
+               $sundry->company_id = Session::get('user_company_id');
                $sundry->status = '1';
                $sundry->save();
                //ADD DATA IN CGST ACCOUNT

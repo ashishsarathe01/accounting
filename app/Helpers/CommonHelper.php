@@ -300,7 +300,7 @@ class CommonHelper
         //Sale
         $tot_sale_amt = DB::table('sales')
                             ->join('sale_descriptions','sales.id','=','sale_descriptions.sale_id')
-                            ->where(['sales.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
+                            ->where(['sales.delete' => '0', 'sales.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
                             ->whereRaw("STR_TO_DATE(sales.date,'%Y-%m-%d')>=STR_TO_DATE('".$from_date."','%Y-%m-%d')")
                             ->whereRaw("STR_TO_DATE(sales.date,'%Y-%m-%d')<=STR_TO_DATE('".$to_date."','%Y-%m-%d')")
                             ->get()
@@ -324,7 +324,7 @@ class CommonHelper
         //Purchase Return
         $tot_purchase_return_amt = DB::table('purchase_returns')
                                         ->join('purchase_return_descriptions','purchase_returns.id','=','purchase_return_descriptions.purchase_return_id')
-                                        ->where(['purchase_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
+                                        ->where(['purchase_returns.delete' => '0', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
                                         ->whereBetween('date', [$from_date, $to_date])
                                         ->get()
                                         ->sum("amount");
@@ -347,7 +347,7 @@ class CommonHelper
          //Sale Return With  PURCHASE
         $tot_sale_return_amt_purchase = DB::table('sales_returns')
          ->join('sale_return_descriptions','sales_returns.id','=','sale_return_descriptions.sale_return_id')
-         ->where(['sales_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
+         ->where(['sales_returns.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
          ->whereBetween('date', [$from_date, $to_date])
          //->get()
          ->sum("amount");
@@ -370,7 +370,7 @@ class CommonHelper
         //Sale Return
         $tot_sale_return_amt = DB::table('sales_returns')
                                     ->join('sale_return_descriptions','sales_returns.id','=','sale_return_descriptions.sale_return_id')
-                                    ->where(['sales_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE'])
+                                    ->where(['sales_returns.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE'])
                                     ->whereBetween('date', [$from_date, $to_date])
                                     ->get()
                                     ->sum("amount");
@@ -393,7 +393,7 @@ class CommonHelper
         //Purchase Return With Sale
         $tot_purchase_return_amt_sale = DB::table('purchase_returns')
             ->join('purchase_return_descriptions','purchase_returns.id','=','purchase_return_descriptions.purchase_return_id')
-            ->where(['purchase_returns.delete' => '0', 'company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE'])
+            ->where(['purchase_returns.delete' => '0', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE'])
             ->whereBetween('date', [$from_date, $to_date])
             ->get()
             ->sum("amount");

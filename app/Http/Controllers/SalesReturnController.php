@@ -522,6 +522,7 @@ class SalesReturnController extends Controller
                $desc->goods_discription = $good;
                $desc->qty = $qtys[$key];
                $desc->unit = $units[$key];
+               $desc->company_id = Session::get('user_company_id');
                $desc->price = $prices[$key];
                $desc->amount = $amounts[$key];
                $desc->status = '1';
@@ -663,6 +664,7 @@ class SalesReturnController extends Controller
                $sundry->sale_return_id = $sale->id;
                $sundry->bill_sundry = $bill;
                $sundry->rate = $tax_rate[$key];
+               $sundry->company_id = Session::get('user_company_id');
                $sundry->amount = $bill_sundry_amounts[$key];
                $sundry->status = '1';
                $sundry->save();
@@ -1598,7 +1600,7 @@ class SalesReturnController extends Controller
    }
    public function update(Request $request){
       Gate::authorize('action-module',69);
-      echo "<pre>";
+     // echo "<pre>";
       // print_r($request->all());die;
       $validated = $request->validate([
          'date' => 'required',
@@ -1708,6 +1710,7 @@ class SalesReturnController extends Controller
                $desc->goods_discription = $good;
                $desc->qty = $qtys[$key];
                $desc->unit = $units[$key];
+               $desc->company_id = Session::get('user_company_id');
                $desc->price = $prices[$key];
                $desc->amount = $amounts[$key];
                $desc->status = '1';
@@ -1742,6 +1745,7 @@ class SalesReturnController extends Controller
                $sundry->sale_return_id = $sale->id;
                $sundry->bill_sundry = $bill;
                $sundry->rate = $tax_rate[$key];
+               $sundry->company_id = Session::get('user_company_id');
                $sundry->amount = $bill_sundry_amounts[$key];
                $sundry->status = '1';
                $sundry->save();
@@ -3669,6 +3673,7 @@ class SalesReturnController extends Controller
                      $desc->qty = $v1['item_weight'];
                      $desc->unit = $item->uid;
                      $desc->price = $v1['price'];
+                     $desc->company_id = Session::get('user_company_id');
                      $desc->amount = $v1['amount'];
                      $desc->status = '1';
                      $desc->save();
@@ -3742,6 +3747,7 @@ class SalesReturnController extends Controller
                               $sundry->bill_sundry = $sundry_id   ;
                               $sundry->rate = $rate;
                               $sundry->amount = $v2;
+                              $sundry->company_id = Session::get('user_company_id');
                               $sundry->status = '1';
                               $sundry->save();
                               //ADD DATA BILL SUNDRY ACCOUNT 

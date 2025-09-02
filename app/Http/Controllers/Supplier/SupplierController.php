@@ -14,7 +14,8 @@ use App\Models\SupplierLocation;
 use App\Models\SupplierLocationRates;
 use App\Models\Accounts;
 use App\Models\AccountGroups;
-
+use App\Models\SupplierSubHead;
+use App\Models\SupplierDifferenceRate;
 class SupplierController extends Controller
 {
     /**
@@ -29,11 +30,16 @@ class SupplierController extends Controller
                                     ->where('company_id',Session::get('user_company_id'))
                                     ->orderBy('name')
                                     ->get();
-        $supplier = Supplier::with(['account','locationRates'])
+        $supplier = Supplier::with(['account'=>function($q){
+                                    $q->select('id','account_name');
+                                },'locationRates'=>function($q1){
+                                    $q1->join('supplier_sub_heads','supplier_location_rates.head_id','=','supplier_sub_heads.id');
+                                    $q1->select('supplier_location_rates.id','parent_id','location','head_rate','name','head_id');
+                                }])
                                 ->select('id','account_id','status')
                                 ->where('company_id',Session::get('user_company_id'))
-                                //->orderBy('name')
                                 ->get();
+        //echo "<pre>";print_r($supplier->toArray());die;
         
         return view('supplier.index',["locations"=>$location,'suppliers'=>$supplier]);
     }
@@ -61,7 +67,12 @@ class SupplierController extends Controller
                               ->select('accounts.id','accounts.account_name')
                               ->orderBy('account_name')
                               ->get(); 
-        return view('supplier.add_supplier',["accounts"=>$accounts]);
+        $heads = SupplierSubHead::with('group')
+                                ->where('company_id',Session::get('user_company_id'))
+                                ->where('status',1)
+                                ->orderBy('sequence')
+                                ->get();
+        return view('supplier.add_supplier',["accounts"=>$accounts,"heads"=>$heads]);
     }
     
     /**
@@ -72,6 +83,7 @@ class SupplierController extends Controller
      */
     public function store(Request $request)
     {
+        //echo "<pre>";print_r($request->all());die;
         $validator = Validator::make($request->all(), [
             'account' => 'required|exists:suppliers,account_id',
             'status' => 'required|in:1,0',
@@ -84,8 +96,7 @@ class SupplierController extends Controller
         if($supplier->save()){
             if($request->has('location')){
                 foreach($request->location as $key => $location){
-                    if(isset($request->kraft_i_rate[$key]) && isset($request->kraft_ii_rate[$key]) && isset($request->duplex_rate[$key]) && isset($request->poor_rate[$key])){
-                        $location = SupplierLocation::firstOrCreate([
+                     $loc = SupplierLocation::firstOrCreate([
                             'id' => $location,
                             'company_id' => Session::get('user_company_id')
                         ],
@@ -93,20 +104,21 @@ class SupplierController extends Controller
                             'name' => $location, // values to set if new row is created
                             'company_id' => Session::get('user_company_id')
                         ]);
-
-                        $locationId = $location->id;
-                        $supplier_location_rates = new SupplierLocationRates;
-                        $supplier_location_rates->parent_id = $supplier->id;
-                        $supplier_location_rates->account_id = $request->account;
-                        $supplier_location_rates->location = $locationId;
-                        $supplier_location_rates->kraft_i_rate = $request->kraft_i_rate[$key];
-                        $supplier_location_rates->kraft_ii_rate = $request->kraft_ii_rate[$key];
-                        $supplier_location_rates->duplex_rate = $request->duplex_rate[$key];
-                        $supplier_location_rates->poor_rate = $request->poor_rate[$key];
-                        $supplier_location_rates->company_id = Session::get('user_company_id');
-                        $supplier_location_rates->created_at = Carbon::now();
-                        $supplier_location_rates->save();
-                    }                    
+                        $locationId = $loc->id;
+                    foreach ($request["head_id_".$key] as $k => $v) {
+                        if(!empty($request["head_rate_".$key][$k])){
+                           
+                            $supplier_location_rates = new SupplierLocationRates;
+                            $supplier_location_rates->parent_id = $supplier->id;
+                            $supplier_location_rates->account_id = $request->account;
+                            $supplier_location_rates->location = $locationId;
+                            $supplier_location_rates->head_id = $v;
+                            $supplier_location_rates->head_rate = $request["head_rate_".$key][$k];
+                            $supplier_location_rates->company_id = Session::get('user_company_id');
+                            $supplier_location_rates->created_at = Carbon::now();
+                            $supplier_location_rates->save();
+                        }
+                    }
                 }
             }
             return redirect()->route('supplier.index')->with('success','Supplier added successfully');
@@ -145,11 +157,15 @@ class SupplierController extends Controller
                               ->select('accounts.id','accounts.account_name')
                               ->orderBy('account_name')
                               ->get(); 
-        $supplier = Supplier::with(['locationRates'])
+        $supplier = Supplier::with(['locationRates'=>function($q1){
+                                    $q1->join('supplier_sub_heads','supplier_location_rates.head_id','=','supplier_sub_heads.id');
+                                    $q1->select('supplier_location_rates.id','parent_id','location','head_rate','name','head_id');
+                                }])
                                 ->select('id','account_id','status')
                                 ->where('id',$id)
-                                //->orderBy('name')
                                 ->first();
+
+        //echo "<pre>";print_r($supplier->toArray());die;
         return view('supplier.edit_supplier',["accounts"=>$accounts,'supplier'=>$supplier]);
     }
 
@@ -233,4 +249,35 @@ class SupplierController extends Controller
             'location' => $location
         ]);
     }
+    public function storeRateDifference(Request $request){
+        $data = json_decode($request->data,true);
+        SupplierDifferenceRate::where('company_id',Session::get('user_company_id'))->delete();
+        foreach ($data as $key => $value) {
+            $diff_rate = new SupplierDifferenceRate;
+            $diff_rate->head_id = $value['head_id'];
+            $diff_rate->head_rate = $value['head_rate'];
+            $diff_rate->head_action = $value['head_action'];
+            $diff_rate->company_id = Session::get('user_company_id');
+            $diff_rate->created_at = Carbon::now();
+            $diff_rate->save();
+        }
+        return response()->json([
+            'status' => 1
+        ]);
+    }
+    public function storeSupplierLocation(Request $request){
+        $location = SupplierLocation::updateOrCreate([
+                            'id' => $request->location_edit_id,
+                            'company_id' => Session::get('user_company_id')
+                    ],
+                    [
+                        'name' => $request->location_name,// values to set if new row is created
+                        'company_id' => Session::get('user_company_id'),
+                        'status' => $request->status
+                    ]);
+        return response()->json([
+            'status' => 1
+        ]);
+    }
+    
 }

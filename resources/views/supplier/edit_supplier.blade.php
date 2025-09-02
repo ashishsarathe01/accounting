@@ -49,42 +49,39 @@ input[type=number] {
                                 @endforeach                                
                             </select>
                         </div>
-                        @php  $location_index = 0;@endphp
-                        @foreach($supplier->locationRates as $key => $value)
+                        @php  
+                            $location_index = 0;
+                            $grouped = [];
+                            foreach ($supplier->locationRates->toArray() as $row) {
+                                $grouped[$row['location']][] = $row;
+                            }
+                        @endphp
+                        @foreach($grouped as $key => $value)
                             <div class="clearfix"></div>
                             {{-- <div class="row mt-3 new-row"> --}}
-                                <div class="mb-3 col-md-3 new-row_{{$key}}">
+                                <div class="mb-3 col-md-3 new-row_{{$location_index}}">
                                     <label for="name" class="form-label font-14 font-heading">Location</label>
-                                    <select class="form-select location" name="location[]" id="location_{{$key}}" data-id="{{$key}}" data-selected="{{$value->location}}" required>
-                                        <option value="">Select Location</option>                                
+                                    <select class="form-select location" name="location[]" id="location_{{$location_index}}" data-id="{{$location_index}}" data-selected="{{$key}}" required>
+                                        <option value="">Select Location</option>
                                         <option value="add_new">Add New</option>
                                     </select>
                                 </div>
-                                <div class="mb-2 col-md-2 new-row_{{$key}}">
-                                    <label for="name" class="form-label font-14 font-heading">KRAFT I RATE</label>
-                                    <input type="number" step="any" class="form-control" name="kraft_i_rate[]" placeholder="Enter KRAFT I RATE" value="{{$value->kraft_i_rate}}" required>
-                                </div>
-                                <div class="mb-2 col-md-2 new-row_{{$key}}">
-                                    <label for="name" class="form-label font-14 font-heading">KRAFT II RATE</label>
-                                    <input type="number" step="any" class="form-control" name="kraft_ii_rate[]" placeholder="Enter KRAFT II RATE" value="{{$value->kraft_ii_rate}}" required>
-                                </div>
-                                <div class="mb-2 col-md-2 new-row_{{$key}}">
-                                    <label for="name" class="form-label font-14 font-heading">DUPLEX RATE</label>
-                                    <input type="number" step="any" class="form-control" name="duplex_rate[]" placeholder="Enter DUPLEX RATE" value="{{$value->duplex_rate}}" required>
-                                </div>
-                                <div class="mb-2 col-md-2 new-row_{{$key}}">
-                                    <label for="name" class="form-label font-14 font-heading">POOR RATE</label>
-                                    <input type="number" step="any" class="form-control" name="poor_rate[]" placeholder="Enter POOR RATE" value="{{$value->poor_rate}}" required>
-                                </div>
-                                <div class="mb-1 col-md-1 d-flex align-items-end new-row_{{$key}}">                                    
-                                    @if($key==0)
+                                @foreach($value as $k => $v)
+                                    <div class="mb-2 col-md-2 new-row_{{$location_index}}">
+                                        <label for="name" class="form-label font-14 font-heading">{{$v['name']}} RATE</label>
+                                        <input type="hidden"  name="head_id_{{$location_index}}[]" value="{{$v['head_id']}}" class="head_id_{{$location_index}}" required>
+                                        <input type="number" step="any" class="form-control head_rate_{{$location_index}}" name="head_rate_{{$location_index}}[]"  value="{{$v['head_rate']}}" required>
+                                    </div>
+                                @endforeach
+                                <div class="mb-1 col-md-1 d-flex align-items-end new-row_{{$location_index}}">
+                                    @if($location_index==0)
                                         <button type="button" class="btn btn-success add_more">+</button>
                                     @else
                                         <button type="button" class="btn btn-danger remove_row1" data-id="{{$key}}">X</button>
                                     @endif                                    
                                 </div>
                             {{-- </div> --}}
-                            @php $location_index = $key; @endphp
+                            @php $location_index++; @endphp
                         @endforeach                        
                         <span class="add_div"></span>
                         <div class="clearfix"></div>
@@ -155,18 +152,7 @@ $(document).ready(function(){
                 <label class="form-label font-14 font-heading">KRAFT I RATE</label>
                 <input type="number" step="any" class="form-control" name="kraft_i_rate[]" placeholder="Enter KRAFT I RATE" required>
             </div>
-            <div class="mb-2 col-md-2">
-                <label class="form-label font-14 font-heading">KRAFT II RATE</label>
-                <input type="number" step="any" class="form-control" name="kraft_ii_rate[]" placeholder="Enter KRAFT II RATE" required>
-            </div>
-            <div class="mb-2 col-md-2">
-                <label class="form-label font-14 font-heading">DUPLEX RATE</label>
-                <input type="number" step="any" class="form-control" name="duplex_rate[]" placeholder="Enter DUPLEX RATE" required>
-            </div>
-            <div class="mb-2 col-md-2">
-                <label class="form-label font-14 font-heading">POOR RATE</label>
-                <input type="number" step="any" class="form-control" name="poor_rate[]" placeholder="Enter POOR RATE" required>
-            </div>
+            
             <div class="mb-1 col-md-1 d-flex align-items-end">
                 <button type="button" class="btn btn-danger remove_row">X</button>
             </div>

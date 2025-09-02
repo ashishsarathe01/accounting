@@ -55,6 +55,8 @@ use App\Http\Controllers\SaleOrderController;
 use App\Http\Controllers\Supplier\SupplierController;
 use App\Http\Controllers\Supplier\SupplierRateLocationWiseController;
 use App\Http\Controllers\Supplier\SupplierPurchaseController;
+use App\Http\Controllers\Supplier\SupplierSubHeadController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -367,7 +369,8 @@ Route::post('import-stock-transfer-process', [StockTransferController::class, 'i
 Route::Resource('sale-order', SaleOrderController::class);
 Route::Resource('supplier', SupplierController::class);
 Route::post('get-supplier-location', [SupplierController::class, 'getSupplierLocation'])->name('get-supplier-location');
-Route::get('manage-supplier-rate', [SupplierRateLocationWiseController::class, 'manageSupplierRate'])->name('manage-supplier-rate');
+Route::post('store-supplier-location', [SupplierController::class, 'storeSupplierLocation'])->name('store-supplier-location');
+Route::get('manage-supplier-rate/{date?}', [SupplierRateLocationWiseController::class, 'manageSupplierRate'])->name('manage-supplier-rate');
 Route::POST('store-supplier-rate', [SupplierRateLocationWiseController::class, 'storeSupplierRate'])->name('store-supplier-rate');
 Route::get('manage-supplier-purchase', [SupplierPurchaseController::class, 'manageSupplierPurchase'])->name('manage-supplier-purchase');
 Route::post('get-supplier-rate-by-location', [SupplierPurchaseController::class, 'getSupplierRateByLocation'])->name('get-supplier-rate-by-location');
@@ -377,5 +380,7 @@ Route::get('complete-supplier-purchase/{id?}', [SupplierPurchaseController::clas
 Route::get('manage-supplier-purchase-report/{id?}/{from_date?}/{to_date?}', [SupplierPurchaseController::class, 'manageSupplierPurchaseReport'])->name('manage-supplier-purchase-report');
 Route::post('view-complete-purchase-info/{id?}', [SupplierPurchaseController::class, 'viewCompletePurchaseInfo'])->name('view-complete-purchase-info');
 Route::post('get-location-by-supplier', [SupplierPurchaseController::class, 'getLocationBySupplier'])->name('get-location-by-supplier');
+Route::Resource('supplier-sub-head', SupplierSubHeadController::class);
+Route::post('store-rate-difference', [SupplierController::class, 'storeRateDifference'])->name('store-rate-difference');
 
 });

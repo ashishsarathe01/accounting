@@ -67,18 +67,18 @@ class AccountLedgerController extends Controller
                               ->orderBy('account_name')
                               ->get();
       if(isset($request->from_date) && !empty($request->from_date) && isset($request->to_date) && !empty($request->to_date)){         
-         $ledger = DB::select(DB::raw("SELECT * FROM account_ledger WHERE account_id='".$party_id."' and entry_type!=-1 and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$request->to_date."', '%Y-%m-%d') and status=1 and delete_status='0' and company_id='".Session::get('user_company_id')."' order by STR_TO_DATE(txn_date, '%Y-%m-%d'),entry_type,entry_type_id"));
-         // $ledger = AccountLedger::where('account_id', $party_id)
-         //                         ->where('entry_type', '!=', -1)
-         //                         ->whereRaw("STR_TO_DATE(txn_date, '%Y-%m-%d') >= STR_TO_DATE(?, '%Y-%m-%d')", [$request->from_date])
-         //                         ->whereRaw("STR_TO_DATE(txn_date, '%Y-%m-%d') <= STR_TO_DATE(?, '%Y-%m-%d')", [$request->to_date])
-         //                         ->where('status', 1)
-         //                         ->where('delete_status', '0')
-         //                         ->where('company_id', Session::get('user_company_id'))
-         //                         ->orderByRaw("STR_TO_DATE(txn_date, '%Y-%m-%d')")
-         //                         ->orderBy('entry_type')
-         //                         ->orderBy('entry_type_id')
-         //                         ->get();
+         // $ledger = DB::select(DB::raw("SELECT * FROM account_ledger WHERE account_id='".$party_id."' and entry_type!=-1 and STR_TO_DATE(txn_date, '%Y-%m-%d')>=STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and STR_TO_DATE(txn_date, '%Y-%m-%d')<=STR_TO_DATE('".$request->to_date."', '%Y-%m-%d') and status=1 and delete_status='0' and company_id='".Session::get('user_company_id')."' order by STR_TO_DATE(txn_date, '%Y-%m-%d'),entry_type,entry_type_id"));
+         $ledger = AccountLedger::where('account_id', $party_id)
+                                 ->where('entry_type', '!=', -1)
+                                 ->whereRaw("STR_TO_DATE(txn_date, '%Y-%m-%d') >= STR_TO_DATE(?, '%Y-%m-%d')", [$request->from_date])
+                                 ->whereRaw("STR_TO_DATE(txn_date, '%Y-%m-%d') <= STR_TO_DATE(?, '%Y-%m-%d')", [$request->to_date])
+                                 ->where('status', 1)
+                                 ->where('delete_status', '0')
+                                 ->where('company_id', Session::get('user_company_id'))
+                                 ->orderByRaw("STR_TO_DATE(txn_date, '%Y-%m-%d')")
+                                 ->orderBy('entry_type')
+                                 ->orderBy('entry_type_id')
+                                 ->get();
       }else{
          $ledger = AccountLedger::where('account_id',$party_id)
                                  ->where('company_id',Session::get('user_company_id'))
@@ -197,7 +197,8 @@ class AccountLedgerController extends Controller
             }
          }
       }
-      if($profitloss_account_status==0){         
+      
+      if($profitloss_account_status==0){
          if(isset($request->from_date) && !empty($request->from_date)){
             $open_ledger = DB::select(DB::raw("SELECT SUM(debit) as debit,SUM(credit) as credit FROM account_ledger WHERE account_id='".$party_id."' and STR_TO_DATE(txn_date, '%Y-%m-%d')<STR_TO_DATE('".$request->from_date."', '%Y-%m-%d') and status=1 and delete_status='0' and company_id='".Session::get('user_company_id')."'"));
             if(count($open_ledger)>0){
@@ -247,7 +248,35 @@ class AccountLedgerController extends Controller
                }
             }
          }
-      }           
+      }else{
+         if(isset($request->from_date) && !empty($request->from_date)){
+            $financial_year = Session::get('default_fy');
+            $y = explode("-",$financial_year);
+            $from_date = $y[0]."-04-01";
+            $from_date = date('Y-m-d',strtotime($from_date));
+
+            $open_ledger = AccountLedger::where('account_id', $party_id)
+               ->where('company_id', Session::get('user_company_id'))
+               ->where('status', '1')
+               ->where('delete_status', '0')
+               ->where('txn_date', '>=', $from_date)
+               ->where('txn_date', '<', $request->from_date)
+               ->selectRaw('SUM(debit) as debit, SUM(credit) as credit')
+               ->first();
+               
+            //print_r($open_ledger->toArray());die;
+            if($open_ledger){
+               
+                  $balance = $open_ledger->debit - $open_ledger->credit;
+                  if($balance<0){
+                     $opening = $balance;
+                  }else{
+                     $opening = $balance;
+                  }
+               
+            }
+         }
+      }
       $ledger = json_decode($collection, true);      
       return view('accountledger/accountledger')->with('party_list', $party_list)->with('ledger', $ledger)->with('party_id', $party_id)->with('opening', $opening);
    }

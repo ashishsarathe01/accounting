@@ -363,6 +363,7 @@ class StockTransferController extends Controller
                 $desc->goods_discription = $good;
                 $desc->qty = $qtys[$key];
                 $desc->unit = $units[$key];
+                $desc->company_id = Session::get('user_company_id');
                 $desc->price = $prices[$key];
                 $desc->amount = $amounts[$key];
                 $desc->save();
@@ -412,6 +413,7 @@ class StockTransferController extends Controller
                 $sundry->bill_sundry = $bill;
                 $sundry->rate = $tax_amts[$key];
                 $sundry->amount = $bill_sundry_amounts[$key];
+                $sundry->company_id = Session::get('user_company_id');
                 $sundry->save();
                 //ADD DATA IN ACCOUNT
                 $billsundry = BillSundrys::where('id', $bill)->first();    
@@ -831,6 +833,7 @@ class StockTransferController extends Controller
                 $desc->goods_discription = $good;
                 $desc->qty = $qtys[$key];
                 $desc->unit = $units[$key];
+                $desc->company_id = Session::get('user_company_id');
                 $desc->price = $prices[$key];
                 $desc->amount = $amounts[$key];
                 $desc->save();
@@ -881,6 +884,7 @@ class StockTransferController extends Controller
                     $sundry->bill_sundry = $bill;
                     $sundry->rate = $tax_amts[$key];
                     $sundry->amount = $bill_sundry_amounts[$key];
+                    $sundry->company_id = Session::get('user_company_id');
                     $sundry->save();
                     //ADD DATA IN ACCOUNT
                      $billsundry = BillSundrys::where('id', $bill)->first();    
@@ -1354,6 +1358,7 @@ class StockTransferController extends Controller
                         $desc->qty = $items['item_qty'];
                         $desc->unit = $item->u_name;
                         $desc->price = $items['price'];
+                        $desc->company_id = Session::get('user_company_id');
                         $desc->amount = $items['amount'];
                         $desc->save();
                         //Remove ITEM LEDGER
@@ -1417,6 +1422,7 @@ class StockTransferController extends Controller
                                     $sundry->bill_sundry = $sundry_id;
                                     $sundry->rate = 0;
                                     $sundry->amount = $v2;
+                                    $sundry->company_id = Session::get('user_company_id');
                                     $sundry->save();
                                     //ADD DATA BILL SUNDRY ACCOUNT 
                                     if($adjust_sale_amt=='No'){

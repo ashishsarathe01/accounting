@@ -53,26 +53,17 @@ input[type=number] {
                         <div class="mb-3 col-md-3">
                             <label for="name" class="form-label font-14 font-heading">Location</label>
                             <select class="form-select location" name="location[]" id="location_1" data-id="1" required>
-                                <option value="">Select Location</option>                                
+                                <option value="">Select Location</option>
                                 <option value="add_new">Add New</option>
                             </select>
                         </div>
-                        <div class="mb-2 col-md-2">
-                            <label for="name" class="form-label font-14 font-heading">KRAFT I RATE</label>
-                            <input type="number" step="any" class="form-control" name="kraft_i_rate[]" placeholder="Enter KRAFT I RATE" required>
-                        </div>
-                        <div class="mb-2 col-md-2">
-                            <label for="name" class="form-label font-14 font-heading">KRAFT II RATE</label>
-                            <input type="number" step="any" class="form-control" name="kraft_ii_rate[]" placeholder="Enter KRAFT II RATE" required>
-                        </div>
-                        <div class="mb-2 col-md-2">
-                            <label for="name" class="form-label font-14 font-heading">DUPLEX RATE</label>
-                            <input type="number" step="any" class="form-control" name="duplex_rate[]" placeholder="Enter DUPLEX RATE" required>
-                        </div>
-                        <div class="mb-2 col-md-2">
-                            <label for="name" class="form-label font-14 font-heading">POOR RATE</label>
-                            <input type="number" step="any" class="form-control" name="poor_rate[]" placeholder="Enter POOR RATE" required>
-                        </div>
+                        @foreach($heads as $key => $value)
+                            <div class="mb-2 col-md-2">
+                                <label for="name" class="form-label font-14 font-heading">{{$value->name}} RATE</label>
+                                <input type="hidden"  name="" value="{{$value->id}}" class="head_id_1" required>
+                                <input type="number" step="any" class="form-control head_rate_1" name="" placeholder="Enter {{$value->name}} RATE" required>
+                            </div>
+                        @endforeach
                         <div class="mb-1 col-md-1">
                             <svg xmlns="http://www.w3.org/2000/svg" data-id="1" class="bg-primary rounded-circle add_more" width="30" height="30" viewBox="0 0 24 24" fill="none" style="cursor: pointer;margin-top:35px" tabindex="0" role="button"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg>
                         </div>
@@ -125,6 +116,7 @@ input[type=number] {
 @include('layouts.footer')
 <script>
 $(document).ready(function(){
+    var heads = @json($heads);
     $( ".select2-single" ).select2({
         matcher: function(params, data) {
             if ($.trim(params.term) === '') {
@@ -159,27 +151,18 @@ $(document).ready(function(){
                 <select class="form-select location" name="location[]" id="location_`+location_index+`" data-id="`+location_index+`" required>
                     `+location_list+`
                 </select>
-            </div>
-            <div class="mb-2 col-md-2">
-                <label class="form-label font-14 font-heading">KRAFT I RATE</label>
-                <input type="number" step="any" class="form-control" name="kraft_i_rate[]" placeholder="Enter KRAFT I RATE" required>
-            </div>
-            <div class="mb-2 col-md-2">
-                <label class="form-label font-14 font-heading">KRAFT II RATE</label>
-                <input type="number" step="any" class="form-control" name="kraft_ii_rate[]" placeholder="Enter KRAFT II RATE" required>
-            </div>
-            <div class="mb-2 col-md-2">
-                <label class="form-label font-14 font-heading">DUPLEX RATE</label>
-                <input type="number" step="any" class="form-control" name="duplex_rate[]" placeholder="Enter DUPLEX RATE" required>
-            </div>
-            <div class="mb-2 col-md-2">
-                <label class="form-label font-14 font-heading">POOR RATE</label>
-                <input type="number" step="any" class="form-control" name="poor_rate[]" placeholder="Enter POOR RATE" required>
-            </div>
-            <div class="mb-1 col-md-1 d-flex align-items-end">
+            </div>`;
+            heads.forEach(function(e){
+                html+=`<div class="mb-2 col-md-2">
+                    <label class="form-label font-14 font-heading">`+e.name+` RATE</label>
+                    <input type="hidden" name="" value="`+e.id+`" required class="head_id_`+location_index+`">
+                    <input type="number" step="any" class="form-control head_rate_`+location_index+`" name="" placeholder="Enter`+e.name+` RATE" required>
+                </div>`;
+            });
+            html+=`<div class="mb-1 col-md-1 d-flex align-items-end">
                 <button type="button" class="btn btn-danger remove_row">X</button>
             </div>
-        </div>`;        
+        </div>`;
         $(this).closest(".row").find(".add_div").append(html);
     });
     // Remove row
@@ -190,6 +173,14 @@ $(document).ready(function(){
         var id = $(this).attr("data-id");
         $("#row_id").val(id);
         var value = $(this).val();
+        if(value!=""){
+            let index = parseInt(id)-1;
+            $(".head_id_"+id).attr('name','head_id_'+index+'[]');
+            $(".head_rate_"+id).attr('name','head_rate_'+index+'[]');
+        }else{
+            $(".head_id_"+id).attr('name','');
+            $(".head_rate_"+id).attr('name','');
+        }        
         if(value == 'add_new'){
             $("#location_modal").modal('show');
         }else{

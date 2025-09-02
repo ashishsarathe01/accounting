@@ -42,6 +42,7 @@
                   <div class="mb-3 col-md-3 parameter_sec" style="display:none;">
                      <label for="no_of_parameter" class="form-label font-14 font-heading">Specify No. of Parameters</label>
                      <select class="form-select" name="no_of_parameter" id="no_of_parameter">
+                        <option value="" >Select One</option>
                         <option value="1" @if($itemsgroup && $itemsgroup->no_of_parameter==1) selected  @endif>1</option>
                         <option value="2" @if($itemsgroup && $itemsgroup->no_of_parameter==2) selected  @endif>2</option>
                         <option value="3" @if($itemsgroup && $itemsgroup->no_of_parameter==3) selected  @endif>3</option>

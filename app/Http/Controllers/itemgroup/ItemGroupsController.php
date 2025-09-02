@@ -91,6 +91,7 @@ class ItemGroupsController extends Controller
                            $item_parameter_predefined_value->predefined_value_alias = $defined_value_alias[$k1];
                         }
                         $item_parameter_predefined_value->parent_id = $item_parameter_list->id;
+                        $item_parameter_predefined_value->com_id = Session::get('user_company_id');
                         $item_parameter_predefined_value->save();
                      }
                   }
@@ -164,6 +165,7 @@ class ItemGroupsController extends Controller
                            $item_parameter_predefined_value->predefined_value_alias = $defined_value_alias[$k1];
                         }
                         $item_parameter_predefined_value->parent_id = $item_parameter_list->id;
+                        $item_parameter_predefined_value->com_id = Session::get('user_company_id');
                         $item_parameter_predefined_value->save();
                      }
                   }

@@ -370,7 +370,7 @@ class SalesController extends Controller
       $sale->series_no = $request->input('series_no');
       $sale->company_id = Session::get('user_company_id');
       $sale->date = $request->input('date');
-      $voucher_prefix = $request->input('voucher_prefix');      
+      $voucher_prefix = $request->input('voucher_prefix');
       $sale->voucher_no_prefix = $voucher_prefix;
       $sale->voucher_no = $voucher_no;
       $sale->party = $request->input('party_id');
@@ -419,6 +419,7 @@ class SalesController extends Controller
             $desc->unit = $units[$key];
             $desc->price = $prices[$key];
             $desc->amount = $amounts[$key];
+            $desc->company_id = Session::get('user_company_id');
             $desc->status = '1';
             $desc->save();
             //ADD ITEM LEDGER
@@ -456,6 +457,7 @@ class SalesController extends Controller
             $sundry->bill_sundry = $bill;
             $sundry->rate = $tax_amts[$key];
             $sundry->amount = $bill_sundry_amounts[$key];
+            $sundry->company_id = Session::get('user_company_id');
             $sundry->status = '1';
             $sundry->save();
             //ADD DATA IN CGST ACCOUNT
@@ -1076,6 +1078,7 @@ class SalesController extends Controller
             $desc->goods_discription = $good;
             $desc->qty = $qtys[$key];
             $desc->unit = $units[$key];
+            $desc->company_id = Session::get('user_company_id');
             $desc->price = $prices[$key];
             $desc->amount = $amounts[$key];
             $desc->status = '1';
@@ -1108,6 +1111,7 @@ class SalesController extends Controller
             $sundry->sale_id = $sale->id;
             $sundry->bill_sundry = $bill;
             $sundry->rate = $tax_amts[$key];
+            $sundry->company_id = Session::get('user_company_id');
             $sundry->amount = $bill_sundry_amounts[$key];
             $sundry->status = '1';
             $sundry->save();
@@ -1195,7 +1199,7 @@ class SalesController extends Controller
          $ledger->map_account_id = $request->input('party');
          $ledger->created_by = Session::get('user_id');
          $ledger->created_at = date('d-m-Y H:i:s');
-         $ledger->save();     
+         $ledger->save();
          if(!empty(Session::get('redirect_url'))){
             return redirect(Session::get('redirect_url'));
          }else{
@@ -1397,7 +1401,7 @@ class SalesController extends Controller
                   }
                   array_push($voucher_arr,$series_no."_".$voucher_no);
                }
-            }            
+            }
             $item_name = $data[14]; 
             $item = ManageItems::select('id','hsn_code')
                         ->where('name',trim($item_name))
@@ -1435,15 +1439,20 @@ class SalesController extends Controller
          $success_invoice_count = 0;
          $failed_invoice_count = 0;
          if(count($data_arr)>0){
-            foreach ($data_arr as $key => $value) {               
+            $override_average_data_arr = [];$new_average_data_arr = [];$smallestDate = null;
+            foreach ($data_arr as $key => $value){
                if(count($value['error_arr'])>0){
                   array_push($all_error_arr,$value['error_arr']);
                   $failed_invoice_count++;
                   continue;
-               }            
+               }
+               $date = date('Y-m-d',strtotime($value['date']));
+               if ($smallestDate === null || strtotime($date) < strtotime($smallestDate)) {
+                  $smallestDate = $date;
+               }
                
                $series_no = $value['series_no'];
-               $date = date('Y-m-d',strtotime($value['date']));
+               
                $voucher_no = $value['voucher_no'];
                $party = $value['party'];
                $material_center = $value['material_center'];
@@ -1490,11 +1499,12 @@ class SalesController extends Controller
                                           ->delete();
                         $itemKiId =  SaleDescription::where('sale_id',$check_invoices_value->id)
                                     ->select('sale_descriptions.goods_description as item_id');
-                        foreach( $itemKiId as $k){
-                           CommonHelper::RewriteItemAverageByItem($check_invoices_value->date,$k->item_id,$series_no);
+                        foreach($itemKiId as $k){
+                           //CommonHelper::RewriteItemAverageByItem($check_invoices_value->date,$k->item_id,$series_no);
+                           array_push($override_average_data_arr,array("item_id"=>$k->item_id,"series"=>$series_no));
                         }
                      }
-                  }             
+                  }
                }
                $item_taxable_amount = 0;
                //Insert Data In Sale Table
@@ -1541,25 +1551,23 @@ class SalesController extends Controller
                $sale->save();
                if($sale->id){  
                   //ITEM DATA INSERT
-                  $tax_arr = [];                  
-                  foreach ($item_arr as $k1 => $v1) {                   
+                  $tax_arr = [];
+                  foreach ($item_arr as $k1 => $v1) {
                      $item = ManageItems::select('manage_items.id','manage_items.gst_rate')
                         ->where('manage_items.name',trim($v1['item_name']))
                         ->where('manage_items.company_id',trim(Session::get('user_company_id')))
-                        ->first();                     
+                        ->first();
                      //TAX GST
                      if($v1['cgst']!="" && $v1['sgst']!=""){
                         array_push($tax_arr,array("gst_rate"=>$item->gst_rate,"cgst"=>$v1['cgst'],"sgst"=>$v1['sgst'],"igst"=>""));
                      }else if($v1['igst']!=""){
                         array_push($tax_arr,array("gst_rate"=>$item->gst_rate,"cgst"=>"","sgst"=>"","igst"=>$v1['igst']));
                      } 
-                  }
-                  
+                  }                  
                   $return = array();
                   foreach($tax_arr as $val) {
                      $return[$val['gst_rate']][] = $val;
                   }
-                     
                   foreach($return as $k5=>$v5) {
                      $tx_rate = $k5;
                      $cgst_rate = 0;$sgst_rate = 0;$igst_rate = 0;                     
@@ -1586,6 +1594,7 @@ class SalesController extends Controller
                         $sundry->bill_sundry = $bill_sundrys->id;
                         $sundry->rate = $tx_rate/2;
                         $sundry->amount = str_replace(",","",$cgst_rate);
+                        $sundry->company_id = Session::get('user_company_id');
                         $sundry->status = '1';
                         $sundry->save();
                         //ADD DATA IN CGST ACCOUNT     
@@ -1613,6 +1622,7 @@ class SalesController extends Controller
                         $sundry->sale_id = $sale->id;
                         $sundry->bill_sundry = $bill_sundrys->id;
                         $sundry->rate = $tx_rate/2;
+                        $sundry->company_id = Session::get('user_company_id');
                         $sundry->amount = str_replace(",","",$sgst_rate);
                         $sundry->status = '1';
                         $sundry->save();
@@ -1642,6 +1652,7 @@ class SalesController extends Controller
                         $sundry->sale_id = $sale->id;
                         $sundry->bill_sundry = $bill_sundrys->id;
                         $sundry->rate = $tx_rate;
+                        $sundry->company_id = Session::get('user_company_id');
                         $sundry->amount = str_replace(",","",$igst_rate);
                         $sundry->status = '1';
                         $sundry->save();
@@ -1676,6 +1687,7 @@ class SalesController extends Controller
                         $desc->goods_discription = $item->id;
                         $desc->qty = $v1['item_weight'];
                         $desc->unit = $item->uid;
+                        $desc->company_id = Session::get('user_company_id');
                         $desc->price = $v1['price'];
                         $desc->amount = str_replace(",","",$v1['amount']);
                         $desc->status = '1';
@@ -1726,6 +1738,7 @@ class SalesController extends Controller
                               $sundry->sale_id = $sale->id;
                               $sundry->bill_sundry = $sundry_id   ;
                               $sundry->rate = 0;
+                              $sundry->company_id = Session::get('user_company_id');
                               $sundry->amount = str_replace(",","",$v2);
                               $sundry->status = '1';
                               $sundry->save();
@@ -1761,7 +1774,7 @@ class SalesController extends Controller
                            }
                            
                         }
-                     }                     
+                     }
                   }
                   foreach ($item_arr as $k1 => $v1) {
                      if(!empty($v1['amount'])){
@@ -1782,7 +1795,9 @@ class SalesController extends Controller
                            $average_detail->company_id = Session::get('user_company_id');
                            $average_detail->created_at = Carbon::now();
                            $average_detail->save();
-                           CommonHelper::RewriteItemAverageByItem($sale->date,$item->id,$series_no);               
+                           //CommonHelper::RewriteItemAverageByItem($sale->date,$item->id,$series_no);
+                           array_push($new_average_data_arr,array("item_id"=>$item->id,"series"=>$series_no));
+                           
             
                      }
                   }
@@ -1821,6 +1836,20 @@ class SalesController extends Controller
                   $update_sale->status = '1';
                   $update_sale->update();
                   $success_invoice_count++;
+               }
+            }
+            if($duplicate_voucher_status==2){
+               if(count($override_average_data_arr)>0){
+                  $override_average_data_arr = array_map("unserialize", array_unique(array_map("serialize", $override_average_data_arr)));
+                  foreach($override_average_data_arr as $value){
+                     CommonHelper::RewriteItemAverageByItem($smallestDate,$value['item_id'],$value['series']);
+                  }
+               }
+            }
+            if(count($new_average_data_arr)>0){
+               $new_average_data_arr = array_map("unserialize", array_unique(array_map("serialize", $new_average_data_arr)));
+               foreach($new_average_data_arr as $value){
+                  CommonHelper::RewriteItemAverageByItem($smallestDate,$value['item_id'],$value['series']);
                }
             }
          }

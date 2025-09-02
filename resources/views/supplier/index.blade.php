@@ -34,37 +34,39 @@
                   </thead>
                   <tbody>              
                     @foreach($suppliers as $key => $supplier)
+                        @php
+                           $grouped = [];
+                           foreach ($supplier->locationRates->toArray() as $row) {
+                                 $grouped[$row['location']][] = $row;
+                           }
+                        @endphp
                         <tr class="font-14 text-body">
                             <td class="w-min-120 border-none ">
                                 <span class="text-body font-12">({{ $supplier->account ? $supplier->account->account_name : '' }})</span>
                             </td>
                             @foreach($locations as $key => $location)
                                 @php
-                                    $rate = $supplier->locationRates->where('location', $location->id)->first();
+                                    // echo "<pre>";
+                                    // print_r($supplier->locationRates->toArray());
+                                    // echo "</pre>";
                                 @endphp
                                 <td class="w-min-120 border-none ">
-                                    @if($rate)
                                     <table class="table table-borderless m-0">
-                                        <tr>
-                                            <td class="font-12 text-body">KRAFT I</td>
-                                            <td class="font-12 text-body">{{ $rate->kraft_i_rate }}</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="font-12 text-body">KRAFT II</td>
-                                            <td class="font-12 text-body">{{ $rate->kraft_ii_rate }}</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="font-12 text-body">DUPLEX</td>
-                                            <td class="font-12 text-body">{{ $rate->duplex_rate }}</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="font-12 text-body">POOR</td>
-                                            <td class="font-12 text-body">{{ $rate->poor_rate }}</td>
-                                        </tr>
+                                       @php 
+                                       if(isset($grouped[$location->id]) && count($grouped[$location->id])>0){ 
+                                          foreach($grouped[$location->id] as $v){ @endphp
+                                             <tr>
+                                                <td class="font-12 text-body">{{$v['name']}}</td>
+                                                <td class="font-12 text-body">{{$v['head_rate']}}</td>
+                                             </tr>
+                                             @php
+                                          }
+                                       }
+                                       @endphp
                                     </table>
-                                    @else
-                                        <div class="font-12 text-body">-</div>
-                                    @endif
+                                   
+                                        {{-- <div class="font-12 text-body">-</div> --}}
+                                    
                                 </td>
                             @endforeach
                             <td class="w-min-120 border-none text-center">
