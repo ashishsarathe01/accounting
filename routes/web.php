@@ -382,5 +382,16 @@ Route::post('view-complete-purchase-info/{id?}', [SupplierPurchaseController::cl
 Route::post('get-location-by-supplier', [SupplierPurchaseController::class, 'getLocationBySupplier'])->name('get-location-by-supplier');
 Route::Resource('supplier-sub-head', SupplierSubHeadController::class);
 Route::post('store-rate-difference', [SupplierController::class, 'storeRateDifference'])->name('store-rate-difference');
+Route::post('rate-by-location', [SupplierRateLocationWiseController::class, 'rateByLocation'])->name('rate-by-location');
+Route::post('get-supplier-bonus', [SupplierController::class, 'getSupplierBonus'])->name('get-supplier-bonus');
+Route::post('reset-supplier-bonus', [SupplierController::class, 'resetSupplierBonus'])->name('reset-supplier-bonus');
+Route::post('update-supplier-purchase-report', [SupplierPurchaseController::class, 'updateSupplierPurchaseReport'])->name('update-supplier-purchase-report');
+Route::post('upload-purchase-image', [SupplierPurchaseController::class, 'uploadPurchaseImage'])->name('upload-purchase-image');
+Route::get('pending-for-approval', [SupplierPurchaseController::class, 'pendingForApproval'])->name('pending-for-approval');
+Route::post('reject-purchase-report', [SupplierPurchaseController::class, 'rejectPurchaseReport'])->name('reject-purchase-report');
+Route::post('approve-purchase-report', [SupplierPurchaseController::class, 'approvePurchaseReport'])->name('approve-purchase-report');
+Route::get('view-approved-purchase-detail/{id}/{from_date}/{to_date}', [SupplierPurchaseController::class, 'viewApprovedPurchaseDetail'])->name('view-approved-purchase-detail');
+Route::post('perform-action-on-purchase', [SupplierPurchaseController::class, 'performActionOnPurchase'])->name('perform-action-on-purchase');
+
 
 });

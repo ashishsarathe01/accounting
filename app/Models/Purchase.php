@@ -19,6 +19,9 @@ class Purchase extends Model
       return $this->hasMany('App\Models\PurchaseDescription','purchase_id','id');
    }
    public function account() {
-       return $this->belongsTo('App\Models\Accounts','party','id');
+      return $this->belongsTo('App\Models\Accounts','party','id');
+   }
+   public function purchaseReport(){
+      return $this->hasMany('App\Models\SupplierPurchaseReport','purchase_id','id');
    }
 }

@@ -16,6 +16,7 @@ use App\Models\Accounts;
 use App\Models\AccountGroups;
 use App\Models\SupplierSubHead;
 use App\Models\SupplierDifferenceRate;
+use App\Models\SupplierBonus;
 class SupplierController extends Controller
 {
     /**
@@ -83,7 +84,7 @@ class SupplierController extends Controller
      */
     public function store(Request $request)
     {
-        //echo "<pre>";print_r($request->all());die;
+        // echo "<pre>";print_r($request->all());die;
         $validator = Validator::make($request->all(), [
             'account' => 'required|exists:suppliers,account_id',
             'status' => 'required|in:1,0',
@@ -96,29 +97,41 @@ class SupplierController extends Controller
         if($supplier->save()){
             if($request->has('location')){
                 foreach($request->location as $key => $location){
-                     $loc = SupplierLocation::firstOrCreate([
-                            'id' => $location,
-                            'company_id' => Session::get('user_company_id')
-                        ],
-                        [
-                            'name' => $location, // values to set if new row is created
-                            'company_id' => Session::get('user_company_id')
-                        ]);
-                        $locationId = $loc->id;
+                    $loc = SupplierLocation::firstOrCreate([
+                        'id' => $location,
+                        'company_id' => Session::get('user_company_id')
+                    ],
+                    [
+                        'name' => $location, // values to set if new row is created
+                        'company_id' => Session::get('user_company_id')
+                    ]);
+                    $locationId = $loc->id;
+                    $bonus = 0;
+                    if(isset($request["bonus_".$key]) && isset($request["bonus_".$key][0]) && !empty($request["bonus_".$key][0])){
+                        $bonus = $request["bonus_".$key][0];
+                    } 
                     foreach ($request["head_id_".$key] as $k => $v) {
                         if(!empty($request["head_rate_".$key][$k])){
-                           
                             $supplier_location_rates = new SupplierLocationRates;
                             $supplier_location_rates->parent_id = $supplier->id;
                             $supplier_location_rates->account_id = $request->account;
                             $supplier_location_rates->location = $locationId;
                             $supplier_location_rates->head_id = $v;
                             $supplier_location_rates->head_rate = $request["head_rate_".$key][$k];
+                            $supplier_location_rates->bonus = $bonus;
                             $supplier_location_rates->company_id = Session::get('user_company_id');
                             $supplier_location_rates->created_at = Carbon::now();
                             $supplier_location_rates->save();
                         }
                     }
+                    $supp_bonus = new SupplierBonus;
+                    $supp_bonus->supplier_id = $supplier->id;
+                    $supp_bonus->account_id = $request->account;
+                    $supp_bonus->location_id = $locationId;
+                    $supp_bonus->bonus = $bonus;
+                    $supp_bonus->company_id = Session::get('user_company_id');
+                    $supp_bonus->created_at = Carbon::now();
+                    $supp_bonus->save();
                 }
             }
             return redirect()->route('supplier.index')->with('success','Supplier added successfully');
@@ -159,14 +172,18 @@ class SupplierController extends Controller
                               ->get(); 
         $supplier = Supplier::with(['locationRates'=>function($q1){
                                     $q1->join('supplier_sub_heads','supplier_location_rates.head_id','=','supplier_sub_heads.id');
-                                    $q1->select('supplier_location_rates.id','parent_id','location','head_rate','name','head_id');
+                                    $q1->select('supplier_location_rates.id','parent_id','location','head_rate','name','head_id','bonus');
                                 }])
                                 ->select('id','account_id','status')
                                 ->where('id',$id)
                                 ->first();
-
+        $heads = SupplierSubHead::with('group')
+                                ->where('company_id',Session::get('user_company_id'))
+                                ->where('status',1)
+                                ->orderBy('sequence')
+                                ->get();
         //echo "<pre>";print_r($supplier->toArray());die;
-        return view('supplier.edit_supplier',["accounts"=>$accounts,'supplier'=>$supplier]);
+        return view('supplier.edit_supplier',["accounts"=>$accounts,'supplier'=>$supplier,'heads'=>$heads]);
     }
 
     /**
@@ -191,29 +208,44 @@ class SupplierController extends Controller
                 SupplierLocationRates::where('parent_id', $supplier->id)
                     ->where('company_id', Session::get('user_company_id'))
                     ->delete(); // Delete existing rates for the supplier
-                foreach($request->location as $key => $location){
-                    if(isset($request->kraft_i_rate[$key]) && isset($request->kraft_ii_rate[$key]) && isset($request->duplex_rate[$key]) && isset($request->poor_rate[$key])){
-                        $location = SupplierLocation::firstOrCreate([
-                            'id' => $location,
-                            'company_id' => Session::get('user_company_id')
-                        ],
-                        [
-                            'name' => $location, // values to set if new row is created
-                            'company_id' => Session::get('user_company_id')
-                        ]);
-                        $locationId = $location->id;
-                        $supplier_location_rates = new SupplierLocationRates;
-                        $supplier_location_rates->parent_id = $supplier->id;
-                        $supplier_location_rates->account_id = $request->account;
-                        $supplier_location_rates->location = $locationId;
-                        $supplier_location_rates->kraft_i_rate = $request->kraft_i_rate[$key];
-                        $supplier_location_rates->kraft_ii_rate = $request->kraft_ii_rate[$key];
-                        $supplier_location_rates->duplex_rate = $request->duplex_rate[$key];
-                        $supplier_location_rates->poor_rate = $request->poor_rate[$key];
-                        $supplier_location_rates->company_id = Session::get('user_company_id');
-                        $supplier_location_rates->created_at = Carbon::now();
-                        $supplier_location_rates->save();
+                    SupplierBonus::where('supplier_id', $supplier->id)->delete();
+                foreach($request->location as $key => $location){                    
+                    $loc = SupplierLocation::firstOrCreate([
+                        'id' => $location,
+                        'company_id' => Session::get('user_company_id')
+                    ],
+                    [
+                        'name' => $location, // values to set if new row is created
+                        'company_id' => Session::get('user_company_id')
+                    ]);
+                    $locationId = $loc->id;
+                    $bonus = 0;
+                    if(isset($request["bonus_".$key]) && isset($request["bonus_".$key][0]) && !empty($request["bonus_".$key][0])){
+                        $bonus = $request["bonus_".$key][0];
                     }
+                    foreach ($request["head_id_".$key] as $k => $v) {
+                        if(!empty($request["head_rate_".$key][$k])){                           
+                            $supplier_location_rates = new SupplierLocationRates;
+                            $supplier_location_rates->parent_id = $supplier->id;
+                            $supplier_location_rates->account_id = $request->account;
+                            $supplier_location_rates->location = $locationId;
+                            $supplier_location_rates->head_id = $v;                            
+                            $supplier_location_rates->head_rate = $request["head_rate_".$key][$k];
+                            $supplier_location_rates->bonus = $bonus;
+                            $supplier_location_rates->company_id = Session::get('user_company_id');
+                            $supplier_location_rates->created_at = Carbon::now();
+                            $supplier_location_rates->save();
+                        }
+                    }
+                    
+                    $supp_bonus = new SupplierBonus;
+                    $supp_bonus->supplier_id = $supplier->id;
+                    $supp_bonus->account_id = $request->account;
+                    $supp_bonus->location_id = $locationId;
+                    $supp_bonus->bonus = $bonus;
+                    $supp_bonus->company_id = Session::get('user_company_id');
+                    $supp_bonus->created_at = Carbon::now();
+                    $supp_bonus->save();
                 }
             }
             return redirect()->route('supplier.index')->with('success','Supplier update successfully');
@@ -278,6 +310,26 @@ class SupplierController extends Controller
         return response()->json([
             'status' => 1
         ]);
+    }
+    public function getSupplierBonus(Request $request){
+        $bonus = SupplierBonus::where('supplier_bonuses.company_id',Session::get('user_company_id'))
+                                ->join('accounts','supplier_bonuses.account_id','=','accounts.id')
+                                ->join('supplier_locations','supplier_bonuses.location_id','=','supplier_locations.id')
+                                ->select('supplier_locations.name','account_name','bonus','account_id')
+                                ->get();
+        return response()->json([
+            'bonus' => $bonus
+        ]);
+    }
+    public function resetSupplierBonus(Request $request){
+        $delete = SupplierBonus::where('company_id',Session::get('user_company_id'))
+                                ->whereIn('account_id',json_decode($request->supplier,true))
+                                ->delete();
+        if($delete){
+            return response()->json([
+                'status' => 1
+            ]);
+        }        
     }
     
 }

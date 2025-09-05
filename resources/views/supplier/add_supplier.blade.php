@@ -58,12 +58,23 @@ input[type=number] {
                             </select>
                         </div>
                         @foreach($heads as $key => $value)
-                            <div class="mb-2 col-md-2">
-                                <label for="name" class="form-label font-14 font-heading">{{$value->name}} RATE</label>
+                            @php                                 
+                                $length = strlen($value->name); 
+                                $col = 1;
+                                if($length>8){
+                                    $col = 2;
+                                }
+                            @endphp
+                            <div class="mb-{{$col}} col-md-{{$col}}">
+                                <label for="name" class="form-label font-14 font-heading">{{$value->name}}</label>
                                 <input type="hidden"  name="" value="{{$value->id}}" class="head_id_1" required>
-                                <input type="number" step="any" class="form-control head_rate_1" name="" placeholder="Enter {{$value->name}} RATE" required>
+                                <input type="number" step="any" class="form-control head_rate_1" name="" placeholder="RATE" required data-head_id="{{$value->id}}">
                             </div>
                         @endforeach
+                        <div class="mb-1 col-md-1">
+                            <label for="bonus" class="form-label font-14 font-heading">Bonus</label>
+                            <input type="number" step="any" class="form-control bonus head_bonus_1"  placeholder="Bonus"  data-index="1">
+                        </div>
                         <div class="mb-1 col-md-1">
                             <svg xmlns="http://www.w3.org/2000/svg" data-id="1" class="bg-primary rounded-circle add_more" width="30" height="30" viewBox="0 0 24 24" fill="none" style="cursor: pointer;margin-top:35px" tabindex="0" role="button"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg>
                         </div>
@@ -153,12 +164,21 @@ $(document).ready(function(){
                 </select>
             </div>`;
             heads.forEach(function(e){
-                html+=`<div class="mb-2 col-md-2">
-                    <label class="form-label font-14 font-heading">`+e.name+` RATE</label>
+                let length = e.name.length; 
+                let col = 1;
+                if(length>8){
+                    col = 2;
+                }
+                html+=`<div class="mb-`+col+` col-md-`+col+`">
+                    <label class="form-label font-14 font-heading">`+e.name+`</label>
                     <input type="hidden" name="" value="`+e.id+`" required class="head_id_`+location_index+`">
-                    <input type="number" step="any" class="form-control head_rate_`+location_index+`" name="" placeholder="Enter`+e.name+` RATE" required>
+                    <input type="number" step="any" class="form-control head_rate_`+location_index+`" name="" placeholder=" RATE" required data-head_id="`+e.id+`">
                 </div>`;
             });
+            html+=`<div class="mb-1 col-md-1">
+                            <label for="bonus" class="form-label font-14 font-heading">Bonus</label>
+                            <input type="number" step="any" class="form-control bonus head_bonus_`+location_index+`"  placeholder="Bonus"  data-index="`+location_index+`">
+                        </div>`;
             html+=`<div class="mb-1 col-md-1 d-flex align-items-end">
                 <button type="button" class="btn btn-danger remove_row">X</button>
             </div>
@@ -177,15 +197,17 @@ $(document).ready(function(){
             let index = parseInt(id)-1;
             $(".head_id_"+id).attr('name','head_id_'+index+'[]');
             $(".head_rate_"+id).attr('name','head_rate_'+index+'[]');
+            $(".head_bonus_"+id).attr('name','bonus_'+index+'[]');
         }else{
             $(".head_id_"+id).attr('name','');
             $(".head_rate_"+id).attr('name','');
+            $(".head_bonus_"+id).attr('name','');
         }        
         if(value == 'add_new'){
             $("#location_modal").modal('show');
         }else{
             if (selected_location_arr.includes($(this).val())) {
-                alert($(this).val()+" Already Selected");
+                alert(" Already Selected");
                 $(this).val('')
                 return;
             }
@@ -193,6 +215,38 @@ $(document).ready(function(){
                 selected_location_arr.push($(this).val())
             });
         }
+        
+        //get rate
+        if(value != 'add_new'){
+            $(".head_rate_"+id).each(function(){
+                $(this).val('');            
+            });
+            $.ajax({
+                url : "{{url('rate-by-location')}}",
+                method : "POST",
+                data: {
+                    _token: '<?php echo csrf_token() ?>',
+                    location_id : value
+                },
+                success:function(res){                   
+                    if(res.rate.length>0){
+                        let grouped = [];
+                        res.rate.forEach(function(e){
+                            grouped[e.head_id] = e.head_rate
+                        });
+                        $(".head_rate_"+id).each(function(){
+                            if(grouped[$(this).attr('data-head_id')]){
+                                $(this).val(grouped[$(this).attr('data-head_id')]);
+                                $(this).attr('data-rate',grouped[$(this).attr('data-head_id')]);
+                            }
+                        });
+                    }
+                    // $(".location").html(location_list);
+                }
+            });
+        }
+        
+        //
     });
     $(".save_location").click(function(){
         var location_name = $("#location_name").val();
@@ -220,13 +274,25 @@ $(document).ready(function(){
                 if(res.location.length>0){
                     location_arr = res.location;
                     res.location.forEach(function(e){
-                    location_list+="<option value="+e.id+">"+e.name+"</option>";
+                        location_list+="<option value="+e.id+">"+e.name+"</option>";
                     });
                 }
                 $(".location").html(location_list);
             }
         });
     }
+    $(document).on('keyup','.bonus',function(){
+        let index = $(this).attr('data-index');
+        let bonus = $(this).val();
+        if(bonus=="" || bonus==null){
+            bonus = 0;
+        }
+        $(".head_rate_"+index).each(function(){
+            if($(this).val()!=""){
+                $(this).val(parseFloat($(this).attr('data-rate')) + parseFloat(bonus));
+            }
+        });
+    })
 });
 
 </script>

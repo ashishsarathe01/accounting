@@ -16,7 +16,8 @@
                     <div class="alert alert-success" role="alert">{{ session('success') }}</div>
                 @endif          
                 <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
-                    <h5 class="transaction-table-title m-0 py-2">List of Supplier</h5>              
+                    <h5 class="transaction-table-title m-0 py-2">List of Supplier</h5>
+                    <button class="btn btn-primary btn-sm d-flex align-items-center supplier_bonus" >Supplier Bonus</button>
                     <a href="{{ route('supplier.create') }}" class="btn btn-xs-primary">ADD
                         <svg class="position-relative ms-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M9.1665 15.8327V10.8327H4.1665V9.16602H9.1665V4.16602H10.8332V9.16602H15.8332V10.8327H10.8332V15.8327H9.1665Z" fill="white" /></svg>
                     </a>
@@ -202,6 +203,30 @@
       </div>
    </div>
 </div>
+<div class="modal fade" id="bonus_modal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+   <div class="modal-dialog modal-lg">
+      <div class="modal-content p-4 border-divider border-radius-8">
+         <div class="modal-header border-0 p-0">
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div>  
+               
+        <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Supplier Bonus</h5>
+        <div class="modal-body">
+        <div class="row">
+            <table class="table table-bordered bonus_tbl">
+                <thead>
+                    <tr>
+                        <th>Supplier Name</th>
+                        <th>Bonus</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        </div>
+    </div>
+   </div>
+</div>
 </body>
 @include('layouts.footer')
 <script>
@@ -214,6 +239,33 @@
    $(document).on("click", ".cancel", function(){
       $("#supplierDeleteModal").modal('hide');
    });
-
+   $(".supplier_bonus").click(function(){
+        $.ajax({
+            url:"{{url('get-supplier-bonus')}}",
+            type:"POST",
+            data:{_token:'{{csrf_token()}}'},
+            success:function(res){
+                if(res!=""){
+                    let arr = [];let html = "";
+                    if(res.bonus.length>0){
+                        const groupedByCategory = Object.groupBy(res.bonus, product => product.account_name);
+                        for (let key in groupedByCategory) {
+                            let bonus = "<table class='table table-bordered'>";
+                            let account_id = "";
+                            groupedByCategory[key].forEach(function(e){
+                                bonus+="<tr><td>"+e.name+"</td><td>"+e.bonus+"</td></tr>";
+                                account_id = e.account_id;
+                            });
+                            bonus+="</table>";
+                            html+="<tr><td>"+key+"</td><td>"+bonus+"</td></tr>";
+                                console.log()
+                        }
+                    }
+                    $(".bonus_tbl tbody").html(html);
+                    $("#bonus_modal").modal('toggle');
+                }
+            }
+        });
+    });
 </script>
 @endsection

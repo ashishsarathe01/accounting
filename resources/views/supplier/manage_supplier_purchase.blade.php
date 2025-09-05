@@ -20,7 +20,8 @@
             
             <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
                <h5 class="transaction-table-title m-0 py-2">Pending Purchase Voucher</h5>
-               <a href="{{route('complete-supplier-purchase')}}"><button class="btn btn-primary btn-sm d-flex align-items-center" >Complete Purchase Voucher</button></a>
+               <a href="{{route('complete-supplier-purchase')}}"><button class="btn btn-primary btn-sm d-flex align-items-center" >Complete Purchase Voucher ({{$compete_purchase}})</button></a>
+               <a href="{{route('pending-for-approval')}}"><button class="btn btn-primary btn-sm d-flex align-items-center" >Pending For Approval ({{$approval_purchase}})</button></a>
             </div>
             <div class="transaction-table bg-white table-view shadow-sm">
                <table class="table-striped table m-0 shadow-sm payment_table">
@@ -59,7 +60,7 @@
                                     {{$v->item->name}} ({{$v->qty}} {{$v->units->name}})<br>
                                 @endforeach
                             </td>
-                            <td><button class="btn btn-info report" data-id="{{$value->id}}" data-qty="{{$qty_total}}" data-account_id="{{$value->party}}" data-group_id="{{$group_id}}" data-price="{{$price}}">Report</button></td>
+                            <td><button class="btn btn-info report" data-id="{{$value->id}}" data-qty="{{$qty_total}}" data-account_id="{{$value->party}}" data-group_id="{{$group_id}}" data-price="{{$price}}" data-account_name="{{$value->account['account_name']}}" data-invoice_date="{{date('d-m-Y',strtotime($value->date))}}" data-invoice_amount="{{$value->total}}" data-invoice_no="{{$value->voucher_no}}">Report</button></td>
                         </tr>
                      @endforeach
                      
@@ -173,6 +174,22 @@
             <br>
             <div class="row">
                 <div class="mb-6 col-md-6">
+                    <label for="name" class="form-label font-14 font-heading">Account Name</label>
+                    <input type="text" id="account_name" class="form-control" readonly>
+                </div> 
+                <div class="mb-2 col-md-2">
+                    <label for="name" class="form-label font-14 font-heading">Invoice No.</label>
+                    <input type="text" id="invoice_no" class="form-control" readonly>
+                </div>
+                <div class="mb-2 col-md-2">
+                    <label for="name" class="form-label font-14 font-heading">Invoice Date</label>
+                    <input type="text" id="invoice_date" class="form-control" readonly>
+                </div>
+                <div class="mb-2 col-md-2">
+                    <label for="name" class="form-label font-14 font-heading">Invoice Amount</label>
+                    <input type="text" id="invoice_amount" class="form-control" readonly>
+                </div>
+                <div class="mb-6 col-md-6">
                     <label for="name" class="form-label font-14 font-heading">Voucher Number</label>
                     <input type="text" id="voucher_no" class="form-control" placeholder="Enter Voucher Number"/>
                     <input type="hidden" id="row_id">
@@ -192,62 +209,43 @@
                     <table class="table table-bordered">
                         <thead>
                             <tr>
-                                <th></th>
-                                <th id="purchase_weight" style="text-align: right"></th>
+                                <th>Head</th>
+                                <th id="purchase_weight" style="text-align: right"></th><input type="hidden" id="pur_weight">
                                 <th style="text-align: right">Bill Rate</th>
                                 <th style="text-align: right">Contract Rate</th>
                                 <th></th>
                             </tr>
                         </thead>
                         <tbody id="report_body">
-                            <tr id="kraft_i_row">
-                                <td><input type="text" class="form-control" value="Kraft I" readonly></td>
-                                <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="kraft_i_qty" style="text-align: right" data-id="kraft_i"></td>
-                                <td><input type="text" class="form-control calculate" placeholder="Enter Rate" id="kraft_i_bill_rate" style="text-align: right" data-id="kraft_i"></td>
-                                <td><input type="text" class="form-control" id="kraft_i_contract_rate" style="text-align: right" readonly></td>
-                                <td><input type="text" class="form-control" id="kraft_i_difference_amount" data-id="kraft_i" style="text-align: right" readonly></td>
-                            </tr>
-                            <tr id="kraft_ii_row">
-                                <td><input type="text" class="form-control" value="Kraft II" readonly></td>
-                                <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="kraft_ii_qty" style="text-align: right" data-id="kraft_ii"></td>
-                                <td><input type="text" class="form-control calculate" placeholder="Enter Rate" id="kraft_ii_bill_rate" style="text-align: right" data-id="kraft_ii"></td>
-                                <td><input type="text" class="form-control" id="kraft_ii_contract_rate" style="text-align: right" readonly></td>
-                                <td><input type="text" class="form-control" id="kraft_ii_difference_amount" data-id="kraft_ii" style="text-align: right" readonly></td>
-                            </tr>
-                            <tr  id="duplex_row">
-                                <td><input type="text" class="form-control" value="Duplex" readonly></td>
-                                <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="duplex_qty" style="text-align: right" data-id="duplex"></td>
-                                <td><input type="text" class="form-control calculate" placeholder="Enter Rate" id="duplex_bill_rate" style="text-align: right" data-id="duplex"></td>
-                                <td><input type="text" class="form-control" id="duplex_contract_rate" style="text-align: right" readonly></td>
-                                <td><input type="text" class="form-control" id="duplex_difference_amount" data-id="duplex" style="text-align: right" readonly></td>
-                            </tr>
-                            <tr id="poor_row">
-                                <td><input type="text" class="form-control" value="Poor" readonly></td>
-                                <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="poor_qty" style="text-align: right" data-id="poor"></td>
-                                <td><input type="text" class="form-control calculate" placeholder="Enter Rate" id="poor_bill_rate" style="text-align: right" data-id="poor"></td>
-                                <td><input type="text" class="form-control" id="poor_contract_rate" style="text-align: right" readonly></td>
-                                <td><input type="text" class="form-control" id="poor_difference_amount" data-id="poor" style="text-align: right" readonly></td>
-                            </tr>
+                            @foreach($heads as $key => $value)
+                                <tr class="head">
+                                    <td><input type="text" class="form-control" value="{{$value->name}}" readonly></td>
+                                    <td><input type="text" class="form-control calculate qty" placeholder="Enter Qty" id="qty_{{$value->id}}" style="text-align: right" data-id="{{$value->id}}"></td>
+                                    <td><input type="text" class="form-control calculate bill_rate" readonly id="bill_rate_{{$value->id}}" style="text-align: right" data-id="{{$value->id}}"></td>
+                                    <td><input type="text" class="form-control contract_rate" id="contract_rate_{{$value->id}}" style="text-align: right" readonly data-id="{{$value->id}}"></td>
+                                    <td><input type="text" class="form-control difference_amount" id="difference_amount_{{$value->id}}" data-id="{{$value->id}}" style="text-align: right" readonly></td>
+                                </tr>
+                            @endforeach
                             <tr id="fuel_row" style="display: none">
                                 <td><input type="text" class="form-control" value="Fuel" readonly></td>
-                                <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="fuel_qty" style="text-align: right" data-id="fuel"></td>
-                                <td><input type="text" class="form-control calculate" placeholder="Enter Rate" id="fuel_bill_rate" style="text-align: right" data-id="fuel"></td>
-                                <td><input type="text" class="form-control" id="fuel_contract_rate" style="text-align: right" readonly></td>
-                                <td><input type="text" class="form-control" id="fuel_difference_amount" data-id="fuel" style="text-align: right" readonly></td>
+                                <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="qty_fuel" style="text-align: right" data-id="fuel"></td>
+                                <td><input type="text" class="form-control calculate bill_rate" readonly id="bill_rate_fuel" style="text-align: right" data-id="fuel"></td>
+                                <td><input type="text" class="form-control" id="contract_rate_fuel" style="text-align: right" readonly></td>
+                                <td><input type="text" class="form-control" id="difference_amount_fuel" data-id="fuel" style="text-align: right" readonly></td>
                             </tr>
                             <tr id="cut_row">
                                 <td><input type="text" class="form-control" value="Cut" readonly></td>
-                                <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="cut_qty" style="text-align: right" data-id="cut"></td>
-                                <td><input type="text" class="form-control calculate" placeholder="Enter Rate" id="cut_bill_rate" style="text-align: right" data-id="cut"></td>
-                                <td><input type="text" class="form-control" id="cut_contract_rate" style="text-align: right" readonly></td>
-                                <td><input type="text" class="form-control" id="cut_difference_amount" data-id="cut" style="text-align: right" readonly></td>
+                                <td><input type="text" class="form-control calculate qty" placeholder="Enter Qty" id="qty_cut" style="text-align: right" data-id="cut"></td>
+                                <td><input type="text" class="form-control calculate bill_rate" readonly id="bill_rate_cut" style="text-align: right" data-id="cut"></td>
+                                <td><input type="text" class="form-control" id="contract_rate_cut" style="text-align: right" readonly></td>
+                                <td><input type="text" class="form-control difference_amount" id="difference_amount_cut" data-id="cut" style="text-align: right" readonly></td>
                             </tr>
-                            <tr id="other_row">
-                                <td><input type="checkbox" id="other_check"></td>
-                                <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="other_qty" style="text-align: right" data-id="other"></td>
-                                <td><input type="text" class="form-control calculate" placeholder="Enter Rate" id="other_bill_rate" style="text-align: right" data-id="other"></td>
-                                <td><input type="text" class="form-control" id="other_contract_rate" style="text-align: right" readonly></td>
-                                <td><input type="text" class="form-control" id="other_difference_amount" data-id="other" style="text-align: right" readonly></td>
+                            <tr id="short_weight_row">
+                                <td><input type="text" class="form-control" value="Short Weight" readonly></td>
+                                <td><input type="text" class="form-control calculate" readonly id="qty_short_weight" style="text-align: right" data-id="short_weight"></td>
+                                <td><input type="text" class="form-control calculate bill_rate" readonly id="bill_rate_short_weight" style="text-align: right" data-id="short_weight"></td>
+                                <td><input type="text" class="form-control" id="contract_rate_short_weight" style="text-align: right" readonly></td>
+                                <td><input type="text" class="form-control difference_amount" id="difference_amount_short_weight" data-id="short_weight" style="text-align: right" readonly></td>
                             </tr>
                             <tr >
                                 <td></td>
@@ -279,31 +277,29 @@
             let qty = $(this).data('qty');
             let group_id = $(this).data('group_id');
             let price = $(this).data('price');
+
+            let account_name = $(this).data('account_name');
+            let invoice_no = $(this).data('invoice_no');
+            let invoice_date = $(this).data('invoice_date');
+            let invoice_amount = $(this).data('invoice_amount');
+
+            $("#account_name").val(account_name);
+            $("#invoice_no").val(invoice_no);
+            $("#invoice_date").val(invoice_date);
+            $("#invoice_amount").val(invoice_amount);
+            $(".bill_rate").val(price);
             if(group_id == 18){
                 $("#fuel_row").show();
-
-                $("#kraft_i_row").hide();
-                $("#kraft_ii_row").hide();
-                $("#duplex_row").hide();
-                $("#poor_row").hide();
-
-                $("#kraft_i_qty").val('');
-                $("#kraft_ii_qty").val('');
-                $("#duplex_qty").val('');
-                $("#poor_qty").val('');
-
-                $("#kraft_i_bill_rate").val('');
-                $("#kraft_ii_bill_rate").val('');
-                $("#duplex_bill_rate").val('');
-                $("#poor_bill_rate").val('');
+                $(".head").hide();
+                $(".contract_rate").each(function(){
+                    $("#qty_"+$(this).attr('data-id')).val('');
+                    $("#difference_amount_"+$(this).attr('data-id')).val('');
+                });
+                
                 $("#fuel_contract_rate").val(price);
             }else{
                 $("#fuel_row").hide();
-                $("#kraft_i_row").show();
-                $("#kraft_ii_row").show();
-                $("#duplex_row").show();
-                $("#poor_row").show();
-
+                $(".head").show();
                 $("#fuel_qty").val('');
                 $("#fuel_bill_rate").val('');
             }
@@ -327,7 +323,8 @@
                         });
                     }
                     $("#location").html(location_list);
-                    $("#purchase_weight").html(qty);
+                    $("#purchase_weight").html("Purchase Weight : "+qty);
+                    $("#pur_weight").val(qty);
                     $("#row_id").val(id);
                     $("#account_id").val(account_id);
                     $("#report_modal").modal('show');
@@ -347,22 +344,31 @@
                         "location": loc_id,
                         "account_id": account_id
                     },
-                    success:function(response){
-                        if(response == null){
-                            $("#kraft_i_contract_rate").val('');
-                            $("#kraft_ii_contract_rate").val('');
-                            $("#duplex_contract_rate").val('');
-                            $("#poor_contract_rate").val('');
-                            $("#cut_contract_rate").val('');
-                            $("#other_contract_rate").val('');
+                    success:function(res){
+                        if(res == null){
+                            $(".contract_rate").each(function(){
+                                if(rate_arr[$(this).attr('data-id')]){
+                                    $(this).val('');
+                                }
+                            });
                             return;
                         }
-                        $("#kraft_i_contract_rate").val(response.kraft_i_rate);
-                        $("#kraft_ii_contract_rate").val(response.kraft_ii_rate);
-                        $("#duplex_contract_rate").val(response.duplex_rate);
-                        $("#poor_contract_rate").val(response.poor_rate);
-                        $("#cut_contract_rate").val(0);
-                        $("#other_contract_rate").val(0);
+                        if(res!=""){
+                            if(res.length>0){
+                                let rate_arr = [];
+                                res.forEach(function(e){
+                                    rate_arr[e.head_id] = e.head_rate;
+                                });
+                                $(".contract_rate").each(function(){
+                                    if(rate_arr[$(this).attr('data-id')]){
+                                        $(this).val(rate_arr[$(this).attr('data-id')]);
+                                    }
+                                });
+                            }
+                        }                        
+                        $("#contract_rate_cut").val(0);
+                        $("#contract_rate_short_weight").val(0);
+
                         $(".calculate").each(function(){
                             $(this).keyup();
                         });
@@ -371,10 +377,30 @@
             }
         });
         $(".calculate").keyup(function(){
+            let short_weight = 0;
+            let qty_weight = 0;
+            let purchase_weight = $("#pur_weight").val();
+            if(purchase_weight==""){
+                purchase_weight = 0;
+            }
+            $(".qty").each(function(){
+                if($(this).val()!=""){
+                    qty_weight = parseFloat(qty_weight) + parseFloat($(this).val());
+                }
+            })
+            short_weight = parseFloat(purchase_weight) - parseFloat(qty_weight);
+            
+            $("#qty_short_weight").css({'color':''})
+            if(parseFloat(short_weight)<0){
+                $("#qty_short_weight").css({'color': 'red'});
+            }
+            $("#qty_short_weight").val(short_weight);
+            $("#difference_amount_short_weight").val(parseFloat(short_weight)*parseFloat($("#bill_rate_short_weight").val()));
+            
             var id = $(this).data('id');
-            var qty = $("#"+id+"_qty").val();
-            var bill_rate = $("#"+id+"_bill_rate").val();
-            var contract_rate = $("#"+id+"_contract_rate").val();
+            var qty = $("#qty_"+id).val();
+            var bill_rate = $("#bill_rate_"+id).val();
+            var contract_rate = $("#contract_rate_"+id).val();
             if(qty == ''){
                 qty = 0;
             }
@@ -386,20 +412,14 @@
             }
             let diff_rate = bill_rate - contract_rate;
             var difference_amount = parseFloat(qty) * parseFloat(diff_rate);
-            $("#"+id+"_difference_amount").val(difference_amount.toFixed(2));
+            $("#difference_amount_"+id).val(difference_amount.toFixed(2));
             calculateTotalDifference();
         });
         function calculateTotalDifference(){
             var total = 0;
-            $("#report_body input[id$='_difference_amount']").each(function(){
+            $(".difference_amount").each(function(){
                 var val = $(this).val();
                 var id = $(this).attr('data-id');
-                if(id=="other"){
-                    var other_check = $("#other_check").is(":checked");
-                    if(!other_check){
-                        val = 0;
-                    }
-                }
                 if(val == ''){
                     val = 0;
                 }
@@ -427,44 +447,17 @@
                 alert("Purchase id not found");
                 return;
             }
-            let other_check = 0;
-            if($("#other_check").is(":checked")){
-                other_check = 1;
-            }
+            let arr = [];
+            $(".bill_rate").each(function(){
+                arr.push({'id':$(this).attr('data-id'),'contract_rate':$("#contract_rate_"+$(this).attr('data-id')).val(),'bill_rate':$(this).val(),'qty':$("#qty_"+$(this).attr('data-id')).val(),'difference_amount':$("#difference_amount_"+$(this).attr('data-id')).val()});
+            });
+            
             var data = {
                 "voucher_no": voucher_no,
                 "location": location_id,
                 "purchase_id": purchase_id,
-                "kraft_i_qty": $("#kraft_i_qty").val(),
-                "kraft_i_bill_rate": $("#kraft_i_bill_rate").val(),
-                "kraft_i_contract_rate": $("#kraft_i_contract_rate").val(),
-                "kraft_i_difference_amount": $("#kraft_i_difference_amount").val(),
-                "kraft_ii_qty": $("#kraft_ii_qty").val(),
-                "kraft_ii_bill_rate": $("#kraft_ii_bill_rate").val(),
-                "kraft_ii_contract_rate": $("#kraft_ii_contract_rate").val(),
-                "kraft_ii_difference_amount": $("#kraft_ii_difference_amount").val(),
-                "duplex_qty": $("#duplex_qty").val(),
-                "duplex_bill_rate": $("#duplex_bill_rate").val(),
-                "duplex_contract_rate": $("#duplex_contract_rate").val(),
-                "duplex_difference_amount": $("#duplex_difference_amount").val(),
-                "poor_qty": $("#poor_qty").val(),
-                "poor_bill_rate": $("#poor_bill_rate").val(),
-                "poor_contract_rate": $("#poor_contract_rate").val(),
-                "poor_difference_amount": $("#poor_difference_amount").val(),
-                "cut_qty": $("#cut_qty").val(),
-                "cut_bill_rate": $("#cut_bill_rate").val(),
-                "cut_contract_rate": $("#cut_contract_rate").val(),
-                "cut_difference_amount": $("#cut_difference_amount").val(),
-                "other_qty": $("#other_qty").val(),
-                "other_bill_rate": $("#other_bill_rate").val(),
-                "other_contract_rate": $("#other_contract_rate").val(),
-                "other_difference_amount": $("#other_difference_amount").val(),
-                "fuel_qty": $("#fuel_qty").val(),
-                "fuel_bill_rate": $("#fuel_bill_rate").val(),
-                "fuel_contract_rate": $("#fuel_contract_rate").val(),
-                "fuel_difference_amount": $("#fuel_difference_amount").val(),
+                "data":JSON.stringify(arr),
                 "difference_total_amount": $("#difference_total_amount").val(),
-                "other_check": other_check,
                 "_token": "{{ csrf_token() }}"
             };
             $.ajax({

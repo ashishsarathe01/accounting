@@ -1305,14 +1305,12 @@ class PurchaseController extends Controller{
                $gst_data = $gst_data->merge($branch);
             }
          }         
-      }
-    
+      }    
       foreach ($gst_data as $key => $value) {
          $series_arr[] = $value->series;
          $material_center_arr[] = $value->mat_center;
          $gst_no_arr[] = $value->gst_no;
-      }      
-       
+      }       
       $series_no = "";
       $file = $request->file('csv_file');
       $filePath = $file->getRealPath();      
@@ -1328,8 +1326,7 @@ class PurchaseController extends Controller{
             $data = array_map('trim', $data);
             // if($data[2]==""){
             //    array_push($error_arr, 'Invoice No. cannot be empty - Row No. '.$index); 
-            // }
-            
+            // }            
             if($data[0]!="" && $data[2]!=""){
                if($series_no!=""){
                   $akey = array_search($series_no, $series_arr);
@@ -1414,7 +1411,7 @@ class PurchaseController extends Controller{
                   }
                   array_push($voucher_arr,$series_no."_".$voucher_no);
                }
-            }            
+            }
             $item_name = $data[14]; 
             $itemc = ManageItems::select('id','hsn_code')
                         ->where('name',trim($item_name))
@@ -1445,7 +1442,6 @@ class PurchaseController extends Controller{
                array_push($data_arr,array("series_no"=>$series_no,"date"=>$date,"voucher_no"=>$voucher_no,"party"=>$party,"material_center"=>$material_center,"grand_total"=>$grand_total,"self_vehicle"=>$self_vehicle,"vehicle_no"=>$vehicle_no,"transport_name"=>$transport_name,"reverse_charge"=>$reverse_charge,"gr_pr_no"=>$gr_pr_no,"station"=>$station,"ewaybill_no"=>$ewaybill_no,"shipping_name"=>$shipping_name,"item_arr"=>$item_arr,"slicedData"=>$slicedData,"merchant_gst"=>$merchant_gst,"error_arr"=>$error_arr));
             }
             $index++;
-
          } 
          fclose($handle);
          $total_invoice_count = count($data_arr);
@@ -1493,32 +1489,31 @@ class PurchaseController extends Controller{
                               ->where('delete','0')
                               ->pluck('id');
                   if($check_invoices){
-                        Purchase::whereIn('id',$check_invoices)
-                                       ->update(['delete'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
-                        PurchaseDescription::whereIn('purchase_id',$check_invoices)
-                                       ->update(['delete'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
-                        AccountLedger::where('entry_type',2)
-                                       ->whereIn('entry_type_id',$check_invoices)
-                                       ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
-                        PurchaseSundry::whereIn('purchase_id',$check_invoices)
-                                       ->update(['delete'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
-                        ItemLedger::where('source',2)
-                                    ->whereIn('source_id',$check_invoices)
+                     Purchase::whereIn('id',$check_invoices)
+                                    ->update(['delete'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
+                     PurchaseDescription::whereIn('purchase_id',$check_invoices)
+                                    ->update(['delete'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
+                     AccountLedger::where('entry_type',2)
+                                    ->whereIn('entry_type_id',$check_invoices)
                                     ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
-                        // Delete old average details for selected purchases
-                            ItemAverageDetail::whereIn('purchase_id', $check_invoices)->delete();
+                     PurchaseSundry::whereIn('purchase_id',$check_invoices)
+                                    ->update(['delete'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
+                     ItemLedger::where('source',2)
+                                 ->whereIn('source_id',$check_invoices)
+                                 ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
+                     // Delete old average details for selected purchases
+                           ItemAverageDetail::whereIn('purchase_id', $check_invoices)->delete();
 
-                        // Get item IDs and corresponding purchase dates for those invoices
-                        $itemKiId = PurchaseDescription::whereIn('purchase_id', $check_invoices)
-                                                        ->join('purchases', 'purchases.id', '=', 'purchase_descriptions.purchase_id')
-                                                         ->select('purchase_descriptions.goods_discription as item_id', 'purchases.date')
-                                                             ->get();
-
-                                        // Recalculate item averages
-                                        foreach ($itemKiId as $k) {
-                                            CommonHelper::RewriteItemAverageByItem($k->date, $k->item_id,$series_no);
-                                        }
-                  }                  
+                     // Get item IDs and corresponding purchase dates for those invoices
+                     $itemKiId = PurchaseDescription::whereIn('purchase_id', $check_invoices)
+                                                      ->join('purchases', 'purchases.id', '=', 'purchase_descriptions.purchase_id')
+                                                      ->select('purchase_descriptions.goods_discription as item_id', 'purchases.date')
+                                                      ->get();
+                     // Recalculate item averages
+                     foreach ($itemKiId as $k) {
+                        CommonHelper::RewriteItemAverageByItem($k->date, $k->item_id,$series_no);
+                     }
+                  }
                }
                $item_taxable_amount = 0;
                //Insert Data In Sale Table
@@ -1684,134 +1679,120 @@ class PurchaseController extends Controller{
                         }
                      }
                   }
-                   foreach ($item_arr as $k1 => $v1) {
+                  foreach ($item_arr as $k1 => $v1) {
                      if (!empty($v1['amount'])) {
-                         // Add item amount (after removing comma)
-                         $item_taxable_amount += str_replace(",", "", $v1['amount']);
+                        // Add item amount (after removing comma)
+                        $item_taxable_amount += str_replace(",", "", $v1['amount']);
                  
-                         // Fetch item with unit info
-                         $item = ManageItems::join('units', 'manage_items.u_name', '=', 'units.id')
-                             ->select('manage_items.id', 'manage_items.hsn_code', 'manage_items.gst_rate', 'units.s_name as unit', 'units.id as uid')
-                             ->where('manage_items.name', trim($v1['item_name']))
-                             ->where('manage_items.company_id', Session::get('user_company_id'))
-                             ->first();
+                        // Fetch item with unit info
+                        $item = ManageItems::join('units', 'manage_items.u_name', '=', 'units.id')
+                                             ->select('manage_items.id', 'manage_items.hsn_code', 'manage_items.gst_rate', 'units.s_name as unit', 'units.id as uid')
+                                             ->where('manage_items.name', trim($v1['item_name']))
+                                             ->where('manage_items.company_id', Session::get('user_company_id'))
+                                             ->first();
                  
-                         // Save item in purchase description
-                         $desc = new PurchaseDescription;
-                         $desc->purchase_id = $purchase->id;
-                         $desc->company_id = Session::get('user_company_id');
-                         $desc->goods_discription = $item->id;
-                         $desc->qty = $v1['item_weight'];
-                         $desc->unit = $item->uid;
-                         $desc->price = $v1['price'];
-                         $desc->amount = str_replace(",", "", $v1['amount']);
-                         $desc->status = '1';
-                         $desc->save();
-                 
-                         // Save item in item ledger
-                         $item_ledger = new ItemLedger();
-                         $item_ledger->item_id = $item->id;
-                         $item_ledger->series_no = $series_no;
-                         $item_ledger->in_weight = $v1['item_weight'];
-                         $item_ledger->txn_date = $date;
-                         $item_ledger->price = $v1['price'];
-                         $item_ledger->total_price = str_replace(",", "", $v1['amount']);
-                         $item_ledger->company_id = Session::get('user_company_id');
-                         $item_ledger->source = 2;
-                         $item_ledger->source_id = $purchase->id;
-                         $item_ledger->created_by = Session::get('user_id');
-                         $item_ledger->created_at = date('Y-m-d H:i:s');
-                         $item_ledger->save();
+                        // Save item in purchase description
+                        $desc = new PurchaseDescription;
+                        $desc->purchase_id = $purchase->id;
+                        $desc->company_id = Session::get('user_company_id');
+                        $desc->goods_discription = $item->id;
+                        $desc->qty = $v1['item_weight'];
+                        $desc->unit = $item->uid;
+                        $desc->price = $v1['price'];
+                        $desc->amount = str_replace(",", "", $v1['amount']);
+                        $desc->status = '1';
+                        $desc->save();                 
+                        // Save item in item ledger
+                        $item_ledger = new ItemLedger();
+                        $item_ledger->item_id = $item->id;
+                        $item_ledger->series_no = $series_no;
+                        $item_ledger->in_weight = $v1['item_weight'];
+                        $item_ledger->txn_date = $date;
+                        $item_ledger->price = $v1['price'];
+                        $item_ledger->total_price = str_replace(",", "", $v1['amount']);
+                        $item_ledger->company_id = Session::get('user_company_id');
+                        $item_ledger->source = 2;
+                        $item_ledger->source_id = $purchase->id;
+                        $item_ledger->created_by = Session::get('user_id');
+                        $item_ledger->created_at = date('Y-m-d H:i:s');
+                        $item_ledger->save();
                      }
-                 }
-                 
-                 // Code for average costing
-                 $update_item_arr = [];
-                 $item_average_arr = [];
-                 $item_average_total = 0;
-                 
-                 foreach ($item_arr as $k1 => $v1) {
+                  }                 
+                  // Code for average costing
+                  $update_item_arr = [];
+                  $item_average_arr = [];
+                  $item_average_total = 0;                 
+                  foreach ($item_arr as $k1 => $v1) {
                      if (!empty($v1['amount'])) {
-                         $item = ManageItems::join('units', 'manage_items.u_name', '=', 'units.id')
-                             ->select('manage_items.id', 'manage_items.hsn_code', 'manage_items.gst_rate', 'units.s_name as unit', 'units.id as uid')
-                             ->where('manage_items.name', trim($v1['item_name']))
-                             ->where('manage_items.company_id', Session::get('user_company_id'))
-                             ->first();
-                 
-                         if (!$item || $v1['item_weight'] == "" || $v1['price'] == "" || $v1['amount'] == "") {
-                             continue;
-                         }
-                 
-                         $amount = str_replace(",", "", $v1['amount']);
-                         $item_average_arr[] = [
+                        $item = ManageItems::join('units', 'manage_items.u_name', '=', 'units.id')
+                                          ->select('manage_items.id', 'manage_items.hsn_code', 'manage_items.gst_rate', 'units.s_name as unit', 'units.id as uid')
+                                          ->where('manage_items.name', trim($v1['item_name']))
+                                          ->where('manage_items.company_id', Session::get('user_company_id'))
+                                          ->first();                 
+                        if(!$item || $v1['item_weight'] == "" || $v1['price'] == "" || $v1['amount'] == "") {
+                           continue;
+                        }                 
+                        $amount = str_replace(",", "", $v1['amount']);
+                        $item_average_arr[] = [
                              "item" => $item->id,
                              "quantity" => $v1['item_weight'],
                              "price" => $v1['price'],
                              "amount" => $amount
-                         ];
-                         $update_item_arr[] = $item->id;
-                         $item_average_total += $amount;
+                        ];
+                        $update_item_arr[] = $item->id;
+                        $item_average_total += $amount;
                      }
-                 }
-                 
-                 // Handle bill sundry (paired as name, value)
-                 $additive_sundry_amount_first = 0;
-                 $subtractive_sundry_amount_first = 0;
-                 $bill_sundry_ids = [];
-                 $bill_sundry_amounts = [];
-                 
-                 foreach ($slicedData as $k2 => $v2) {
-                     $v2 = trim($v2);
-                     if ($v2 !== "" && $v2 !== '0') {
-                         if ($k2 % 2 == 0) {
-                             // Even index: Bill Sundry Name
-                             $bill = BillSundrys::where('delete', '0')
-                                 ->where('status', '1')
-                                 ->where('name', $v2)
-                                 ->whereIn('company_id', [Session::get('user_company_id'), 0])
-                                 ->first();
-                             $bill_sundry_ids[] = $bill ? $bill->id : null;
-                         } else {
-                             // Odd index: Bill Sundry Amount
-                             $bill_sundry_amounts[] = str_replace(",", "", $v2);
-                         }
-                     }else{
-                        if ($k2 % 2 != 0) {
-                           $bill_sundry_amounts[] = 0;
+                  }                 
+                  // Handle bill sundry (paired as name, value)
+                  $additive_sundry_amount_first = 0;
+                  $subtractive_sundry_amount_first = 0;
+                  $bill_sundry_ids = [];
+                  $bill_sundry_amounts = [];                 
+                  foreach ($slicedData as $k2 => $v2) {
+                        $v2 = trim($v2);
+                        if ($v2 !== "" && $v2 !== '0') {
+                           if ($k2 % 2 == 0) {
+                              // Even index: Bill Sundry Name
+                              $bill = BillSundrys::where('delete', '0')
+                                    ->where('status', '1')
+                                    ->where('name', $v2)
+                                    ->whereIn('company_id', [Session::get('user_company_id'), 0])
+                                    ->first();
+                              $bill_sundry_ids[] = $bill ? $bill->id : null;
+                           } else {
+                              // Odd index: Bill Sundry Amount
+                              $bill_sundry_amounts[] = str_replace(",", "", $v2);
+                           }
+                        }else{
+                           if ($k2 % 2 != 0) {
+                              $bill_sundry_amounts[] = 0;
+                           }
                         }
-                     }
-                 }
-                 
-                 // Match bill sundry amounts with their types
-                 
-                 foreach ($bill_sundry_ids as $i => $bill_id) {
-                     if ($bill_id === null || !isset($bill_sundry_amounts[$i])) continue;
-                 
+                  }                 
+                  // Match bill sundry amounts with their types                 
+                  foreach ($bill_sundry_ids as $i => $bill_id) {
+                     if ($bill_id === null || !isset($bill_sundry_amounts[$i])) continue;                 
                      $billsundry = BillSundrys::find($bill_id);
                      $amount = $bill_sundry_amounts[$i];                 
                      if ($billsundry && $billsundry->nature_of_sundry == "OTHER") {
                         //print_r($bill_id."**".$amount);
-                         if ($billsundry->bill_sundry_type == "additive") {
-                             $additive_sundry_amount_first += $amount;
-                         } elseif ($billsundry->bill_sundry_type == "subtractive") {
-                             $subtractive_sundry_amount_first += $amount;
-                         }
+                        if ($billsundry->bill_sundry_type == "additive") {
+                           $additive_sundry_amount_first += $amount;
+                        } elseif ($billsundry->bill_sundry_type == "subtractive") {
+                           $subtractive_sundry_amount_first += $amount;
+                        }
                      }
-                 }
-                 
-                 // Distribute sundry amount to items proportionally
-                 foreach ($item_average_arr as $value) {
+                  }                 
+                  // Distribute sundry amount to items proportionally
+                  foreach ($item_average_arr as $value) {
                      $subtractive_sundry_amount = 0;
-                     $additive_sundry_amount = 0;
-                 
+                     $additive_sundry_amount = 0;                 
                      if ($additive_sundry_amount_first > 0) {
-                         $additive_sundry_amount = ($value['amount'] / $item_average_total) * $additive_sundry_amount_first;
-                     }
-                 
+                        $additive_sundry_amount = ($value['amount'] / $item_average_total) * $additive_sundry_amount_first;
+                     }                 
                      if ($subtractive_sundry_amount_first > 0) {
-                         $subtractive_sundry_amount = ($value['amount'] / $item_average_total) * $subtractive_sundry_amount_first;
-                     }
-                 
+                        $subtractive_sundry_amount = ($value['amount'] / $item_average_total) * $subtractive_sundry_amount_first;
+                     }                 
                      $additive_sundry_amount = round($additive_sundry_amount, 2);
                      $subtractive_sundry_amount = round($subtractive_sundry_amount, 2);
                      $average_amount = $value['amount'] + $additive_sundry_amount - $subtractive_sundry_amount;
@@ -1836,7 +1817,7 @@ class PurchaseController extends Controller{
                  
                      // Update average rate
                      CommonHelper::RewriteItemAverageByItem($date, $value['item'],$series_no);
-                 }
+                  }
                   //Other Bill Sundry
                   $sundry_id = "";
                   $adjust_purchase_amt = "";
@@ -1924,7 +1905,6 @@ class PurchaseController extends Controller{
                   $ledger->created_by = Session::get('user_id');
                   $ledger->created_at = date('d-m-Y H:i:s');
                   $ledger->save();
-
                   $update_sale = Purchase::find($purchase->id);
                   $update_sale->taxable_amt = $item_taxable_amount;
                   $update_sale->status = '1';

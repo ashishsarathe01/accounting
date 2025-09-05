@@ -48,7 +48,7 @@ input[type=number] {
                 @endif
                 <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
                     <h5 class="transaction-table-title m-0 py-2">Manage Supplier Rate</h5>
-                    
+                    <button class="btn btn-primary btn-sm d-flex align-items-center supplier_bonus" >Supplier Bonus</button>
                     <button class="btn btn-primary btn-sm d-flex align-items-center manage_rate_difference" >Manage Rate Difference</button>
                     <button class="btn btn-primary btn-sm d-flex align-items-center manage_location">Manage Location</button>
                 </div>
@@ -75,14 +75,23 @@ input[type=number] {
                                 <input type="hidden" class="form-control" name="location_id[]" value="{{$location->id}}">
                             </div>
                             @foreach($heads as $k => $value)
-                                @php $array_id = $location->id."_".$value->id;@endphp
-                                <div class="mb-2 col-md-2">
+                                @php 
+                                $array_id = $location->id."_".$value->id;
+                                $length = strlen($value->name); 
+                                $col = 1;
+                                if($length>8){
+                                    $col = 2;
+                                }
+                                @endphp
+                                <div  class="mb-{{$col}} col-md-{{$col}}">
                                     @if($key==0)<label for="name" class="form-label font-14 font-heading ">{{$value->name}}</label>@endif
                                     <input type="hidden" name="head_id_{{$location->id}}[]" value="{{$value->id}}">
                                     <input type="number" step="any" class="form-control @if($k==0)first_rate @else other_rate_{{$location->id}} @endif" name="head_value_{{$location->id}}[]" data-location_id="{{$location->id}}" data-head_id="{{$value->id}}" placeholder="Enter {{$value->name}} RATE" required value="<?php if(isset($supplier_rates) &&  isset($supplier_rates[$array_id]) && count($supplier_rates)>0){ echo $supplier_rates[$array_id]; }?>">
                                 </div>
                             @endforeach
+                            <div class="clearfix"></div>
                         @endforeach
+                        
                     </div>
                     <div class="text-start">
                         <button type="submit" class="btn  btn-xs-primary ">
@@ -178,7 +187,7 @@ input[type=number] {
             </div>
             <div class="clearfix"></div>
             @foreach($heads as $k => $value)
-                <div class="mb-2 col-md-2">
+                <div class="mb-4 col-md-4">
                     <input type="text" class="form-control" value="{{$value->name}}" readonly>
                     <input type="hidden"  value="{{$value->id}}" class="head_id">
                 </div>
@@ -241,6 +250,34 @@ input[type=number] {
                 <tbody></tbody>
             </table>
         </div>
+    </div>
+   </div>
+</div>
+<div class="modal fade" id="bonus_modal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+   <div class="modal-dialog modal-lg">
+      <div class="modal-content p-4 border-divider border-radius-8">
+         <div class="modal-header border-0 p-0">
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div>  
+               
+        <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Supplier Bonus</h5>
+        <div class="modal-body">
+        <div class="row">
+            <table class="table table-bordered bonus_tbl">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" class="all_check" value="1"> All</th>
+                        <th>Supplier Name</th>
+                        <th>Bonus</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        </div>
+        <div class="modal-footer">
+        <button type="button" class="btn btn-primary reset_bonus">Reset Bonus</button>
+      </div>
     </div>
    </div>
 </div>
@@ -348,11 +385,75 @@ $(document).ready(function(){
             }
         });
     }
-});
-    $(document).on('click','.set_edit',function(){
-        let id = $(this).attr('data-id');
-        $("#location_name").val($(this).attr('data-name'));
-        $("#location_edit_id").val(id);
+    $(".supplier_bonus").click(function(){
+        $.ajax({
+            url:"{{url('get-supplier-bonus')}}",
+            type:"POST",
+            data:{_token:'{{csrf_token()}}'},
+            success:function(res){
+                if(res!=""){
+                    let arr = [];let html = "";
+                    if(res.bonus.length>0){
+                        const groupedByCategory = Object.groupBy(res.bonus, product => product.account_name);
+                        for (let key in groupedByCategory) {
+                            let bonus = "<table class='table table-bordered'>";
+                            let account_id = "";
+                            groupedByCategory[key].forEach(function(e){
+                                bonus+="<tr><td>"+e.name+"</td><td>"+e.bonus+"</td></tr>";
+                                account_id = e.account_id;
+                            });
+                            bonus+="</table>";
+                            html+="<tr><td><input type='checkbox' value='"+account_id+"' class='bonus_reset_supplier'></td><td>"+key+"</td><td>"+bonus+"</td></tr>";
+                                console.log()
+                        }
+                    }
+                    $(".bonus_tbl tbody").html(html);
+                    $("#bonus_modal").modal('toggle');
+                }
+            }
+        });
     });
+    $(".all_check").click(function(){
+        if($(this).prop('checked')==true){
+            $(".bonus_reset_supplier").prop('checked',true);
+        }else{
+            $(".bonus_reset_supplier").prop('checked',false);
+        }
+    });
+    $(".reset_bonus").click(function(){
+        let check_supplier = [];
+        $(".bonus_reset_supplier").each(function(){
+            if($(this).prop('checked')==true){
+                check_supplier.push($(this).val());
+            }
+        })
+        if(check_supplier.length==0){
+           alert("Please Select Supplier");
+           return;
+        }
+        $.ajax({
+            url:"{{url('reset-supplier-bonus')}}",
+            type:"POST",
+            data:{_token:'{{csrf_token()}}','supplier':JSON.stringify(check_supplier) },
+            
+            success:function(res){
+                if(res!=""){
+                    if(res.status==1){
+                        alert("Reset Successfully");
+                        $("#bonus_modal").modal('toggle');
+                    }
+                }else{
+                    alert("Something went wrong");
+                }
+            }
+        });
+    });
+    
+});
+$(document).on('click','.set_edit',function(){
+    let id = $(this).attr('data-id');
+    $("#location_name").val($(this).attr('data-name'));
+    $("#location_edit_id").val(id);
+});
 </script>
 @endsection

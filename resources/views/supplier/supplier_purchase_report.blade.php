@@ -39,32 +39,33 @@
                <table class="table-bordered table m-0 shadow-sm payment_table">
                   <thead>
                      <tr class=" font-12 text-body bg-light-pink ">
-                        <th class="w-min-120 border-none bg-light-pink text-body">Date </th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Voucher No. </th>
+                        {{-- <th class="w-min-120 border-none bg-light-pink text-body">Date </th>
+                        <th class="w-min-120 border-none bg-light-pink text-body">Voucher No. </th> --}}
                         <th class="w-min-120 border-none bg-light-pink text-body" style="text-align:right;">Actual Amount</th>
                         <th class="w-min-120 border-none bg-light-pink text-body" style="text-align:right;">Difference Amount</th>
                         <th class="w-min-120 border-none bg-light-pink text-body">Action</th>
                      </tr>
                   </thead>
-                  <tbody>
-                    @php $total = 0; $difference_total = 0; @endphp
-                    @foreach($purchases as $key => $value)
+                  <tbody>                    
                         <tr>
-                            <td>{{date('d-m-Y',strtotime($value->date))}}</td>
-                            <td>{{$value->voucher_no}}</td>
-                            <td style="text-align:right;">{{$value->total}}</td>
-                            <td style="text-align:right;">{{$value->difference_total_amount}}</td>
-                            <td><button class="btn btn-info view" data-id="{{$value->id}}">View</button></td>
+                            {{-- <td>{{date('d-m-Y',strtotime($value->date))}}</td>
+                            <td>{{$value->voucher_no}}</td> --}}
+                            <td style="text-align:right;">{{$purchases->total_sum}}</td>
+                            <td style="text-align:right;">{{$purchases->difference_sum}}</td>
+                            <td>
+                              @if(isset($purchases->total_sum))
+                                 <a href="{{route('view-approved-purchase-detail')}}/{{$id}}/{{$from_date}}/{{$to_date}}" target="_blank"><button class="btn btn-info">View</button></a>
+                              @endif
+                              
+                           </td>
                         </tr>
-                        @php $total = $total + $value->total; $difference_total = $difference_total + $value->difference_total_amount; @endphp
-                    @endforeach
-                    <tr>
+                    {{-- <tr>
                         <th></th>
                         <th style="text-align:right;">Total</th>
                         <th style="text-align:right;">{{$total}}</th>
                         <th style="text-align:right;">{{$difference_total}}</th>
                         <td></td>
-                    </tr>
+                    </tr> --}}
                         
                   </tbody>
                </table>
@@ -243,7 +244,8 @@
                                     <td></td>
                                     <td></td>
                                     <td>Difference</td>
-                                    <td><input type="text" class="form-control" id="difference_total_amount" style="text-align: right" readonly></td>
+                                    <td>
+                                       <input type="text" class="form-control" id="difference_total_amount" style="text-align: right" readonly></td>
                                 </tr>
                             </tbody>
                         </table>

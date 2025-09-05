@@ -41,7 +41,7 @@ input[type=number] {
                     @method('PUT')
                     <div class="row">
                         <div class="mb-4 col-md-4">
-                            <label for="name" class="form-label font-14 font-heading">Account</label>
+                            <label for="account" class="form-label font-14 font-heading">Account</label>
                             <select class="form-select select2-single" id="account" name="account" required>
                                 <option value="">Select Account</option>
                                 @foreach($accounts as $key => $account)
@@ -55,34 +55,50 @@ input[type=number] {
                             foreach ($supplier->locationRates->toArray() as $row) {
                                 $grouped[$row['location']][] = $row;
                             }
+                            
                         @endphp
                         @foreach($grouped as $key => $value)
+                            @php $bonus = ""; @endphp
                             <div class="clearfix"></div>
                             {{-- <div class="row mt-3 new-row"> --}}
                                 <div class="mb-3 col-md-3 new-row_{{$location_index}}">
-                                    <label for="name" class="form-label font-14 font-heading">Location</label>
+                                    <label for="location_{{$location_index}}" class="form-label font-14 font-heading">Location</label>
                                     <select class="form-select location" name="location[]" id="location_{{$location_index}}" data-id="{{$location_index}}" data-selected="{{$key}}" required>
                                         <option value="">Select Location</option>
                                         <option value="add_new">Add New</option>
                                     </select>
                                 </div>
                                 @foreach($value as $k => $v)
-                                    <div class="mb-2 col-md-2 new-row_{{$location_index}}">
-                                        <label for="name" class="form-label font-14 font-heading">{{$v['name']}} RATE</label>
+                                    @php
+                                        $length = strlen($v['name']); 
+                                        $col = 1;
+                                        if($length>8){
+                                            $col = 2;
+                                        }
+                                        if(!empty($v['bonus'])){
+                                            $bonus = $v['bonus'];
+                                        }
+                                    @endphp
+                                    <div class="mb-{{$col}} col-md-{{$col}} new-row_{{$location_index}}">
+                                        <label for="head_id_{{$location_index}}" class="form-label font-14 font-heading">{{$v['name']}}</label>
                                         <input type="hidden"  name="head_id_{{$location_index}}[]" value="{{$v['head_id']}}" class="head_id_{{$location_index}}" required>
-                                        <input type="number" step="any" class="form-control head_rate_{{$location_index}}" name="head_rate_{{$location_index}}[]"  value="{{$v['head_rate']}}" required>
+                                        <input type="number" step="any" class="form-control head_rate_{{$location_index}}" name="head_rate_{{$location_index}}[]"  value="{{$v['head_rate']}}" data-rate="{{$v['head_rate']}}" required>
                                     </div>
                                 @endforeach
+                                <div class="mb-1 col-md-1 new-row_{{$location_index}}">
+                                    <label for="bonus" class="form-label font-14 font-heading">Bonus</label>
+                                    <input type="number" step="any" class="form-control bonus head_bonus_{{$location_index}}"  placeholder="Bonus"  data-index="{{$location_index}}" value="{{$bonus}}" name="bonus_{{$location_index}}[]">
+                                </div>
                                 <div class="mb-1 col-md-1 d-flex align-items-end new-row_{{$location_index}}">
                                     @if($location_index==0)
                                         <button type="button" class="btn btn-success add_more">+</button>
                                     @else
-                                        <button type="button" class="btn btn-danger remove_row1" data-id="{{$key}}">X</button>
-                                    @endif                                    
+                                        <button type="button" class="btn btn-danger remove_row1" data-id="{{$location_index}}">X</button>
+                                    @endif
                                 </div>
                             {{-- </div> --}}
                             @php $location_index++; @endphp
-                        @endforeach                        
+                        @endforeach
                         <span class="add_div"></span>
                         <div class="clearfix"></div>
                         <div class="mb-3 col-md-3">
@@ -132,6 +148,7 @@ input[type=number] {
 @include('layouts.footer')
 <script>
 $(document).ready(function(){
+    var heads = @json($heads);
     $( ".select2-single" ).select2();
     let location_index = {{$location_index}};
     let selected_location_arr = [];
@@ -147,13 +164,24 @@ $(document).ready(function(){
                 <select class="form-select location" name="location[]" id="location_`+location_index+`" data-id="`+location_index+`" required>
                     `+location_list+`
                 </select>
-            </div>
-            <div class="mb-2 col-md-2">
-                <label class="form-label font-14 font-heading">KRAFT I RATE</label>
-                <input type="number" step="any" class="form-control" name="kraft_i_rate[]" placeholder="Enter KRAFT I RATE" required>
-            </div>
-            
-            <div class="mb-1 col-md-1 d-flex align-items-end">
+            </div>`;
+            heads.forEach(function(e){
+                let length = e.name.length; 
+                let col = 1;
+                if(length>8){
+                    col = 2;
+                }
+                html+=`<div class="mb-`+col+` col-md-`+col+`">
+                    <label class="form-label font-14 font-heading">`+e.name+`</label>
+                    <input type="hidden" name="" value="`+e.id+`" required class="head_id_`+location_index+`">
+                    <input type="number" step="any" class="form-control head_rate_`+location_index+`" name="" placeholder=" RATE" required data-head_id="`+e.id+`">
+                </div>`;
+            });
+            html+=`<div class="mb-1 col-md-1">
+                            <label for="bonus" class="form-label font-14 font-heading">Bonus</label>
+                            <input type="number" step="any" class="form-control bonus head_bonus_`+location_index+`"  placeholder="Bonus"  data-index="`+location_index+`">
+                        </div>`;
+            html+=`<div class="mb-1 col-md-1 d-flex align-items-end">
                 <button type="button" class="btn btn-danger remove_row">X</button>
             </div>
         </div>`;        
@@ -172,6 +200,16 @@ $(document).ready(function(){
         var id = $(this).attr("data-id");
         $("#row_id").val(id);
         var value = $(this).val();
+        if(value!=""){
+            let index = parseInt(id)-1;
+            $(".head_id_"+id).attr('name','head_id_'+index+'[]');
+            $(".head_rate_"+id).attr('name','head_rate_'+index+'[]');
+            $(".head_bonus_"+id).attr('name','bonus_'+index+'[]');
+        }else{
+            $(".head_id_"+id).attr('name','');
+            $(".head_rate_"+id).attr('name','');
+            $(".head_bonus_"+id).attr('name','');
+        } 
         if(value == 'add_new'){
             $("#location_modal").modal('show');
         }else{
@@ -183,7 +221,35 @@ $(document).ready(function(){
             $(".location").each(function(){
                 selected_location_arr.push($(this).val())
             });
-            console.log(selected_location_arr);
+        }
+        //get rate
+        if(value != 'add_new'){
+            $(".head_rate_"+id).each(function(){
+                $(this).val('');            
+            });
+            $.ajax({
+                url : "{{url('rate-by-location')}}",
+                method : "POST",
+                data: {
+                    _token: '<?php echo csrf_token() ?>',
+                    location_id : value
+                },
+                success:function(res){                   
+                    if(res.rate.length>0){
+                        let grouped = [];
+                        res.rate.forEach(function(e){
+                            grouped[e.head_id] = e.head_rate
+                        });
+                        $(".head_rate_"+id).each(function(){
+                            if(grouped[$(this).attr('data-head_id')]){
+                                $(this).val(grouped[$(this).attr('data-head_id')]);
+                                $(this).attr('data-rate',grouped[$(this).attr('data-head_id')]);
+                            }
+                        });
+                    }
+                    // $(".location").html(location_list);
+                }
+            });
         }
     });
     $(".save_location").click(function(){
@@ -227,6 +293,18 @@ $(document).ready(function(){
             }
         });
     }
+    $(document).on('keyup','.bonus',function(){
+        let index = $(this).attr('data-index');
+        let bonus = $(this).val();
+        if(bonus=="" || bonus==null){
+            bonus = 0;
+        }
+        $(".head_rate_"+index).each(function(){
+            if($(this).val()!=""){
+                $(this).val(parseFloat($(this).attr('data-rate')) + parseFloat(bonus));
+            }
+        });
+    })
 });
 
 </script>

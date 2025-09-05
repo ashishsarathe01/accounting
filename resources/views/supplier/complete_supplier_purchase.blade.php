@@ -3,6 +3,12 @@
 <!-- header-section -->
 @include('layouts.header')
 <!-- list-view-company-section -->
+<style>
+   .unchange_dropdown{
+      pointer-events: none !important;
+      touch-action: none !important;
+   }
+</style>
 <div class="list-of-view-company ">
    <section class="list-of-view-company-section container-fluid">
       <div class="row vh-100">
@@ -27,7 +33,8 @@
                   @endforeach
 
                </select>
-               <a href="{{route('manage-supplier-purchase')}}"><button class="btn btn-primary btn-sm d-flex align-items-center" >Pending Purchase Voucher</button></a>
+               <a href="{{route('manage-supplier-purchase')}}"><button class="btn btn-primary btn-sm d-flex align-items-center" >Pending Purchase Voucher ({{$pending_purchase}})</button></a>
+               <a href="{{route('pending-for-approval')}}"><button class="btn btn-primary btn-sm d-flex align-items-center" >Pending For Approval ({{$approval_purchase}})</button></a>
             </div>
             <div class="transaction-table bg-white table-view shadow-sm">
                <table class="table-striped table m-0 shadow-sm payment_table">
@@ -44,7 +51,7 @@
                      </tr>
                   </thead>
                   <tbody>
-                     @php $group_id = 0; @endphp
+                     @php $group_id = 0; $price = 0;@endphp
                      @foreach($purchases as $key => $value)
                         <tr>
                             <td>{{date('d-m-Y',strtotime($value->date))}}</td>
@@ -55,7 +62,10 @@
                             <td style="text-align:right;">
                                 @php $qty_total = 0; @endphp
                                 @foreach($value->purchaseDescription as $v)
-                                    @php $qty_total = $qty_total + $v->qty; @endphp
+                                    @php $qty_total = $qty_total + $v->qty; 
+                                       $price = $v->price;
+                                    
+                                    @endphp
                                 @endforeach
                                 @php echo $qty_total; @endphp
                             </td>
@@ -65,7 +75,13 @@
                                     {{$v->item->name}} ({{$v->qty}} {{$v->units->name}})<br>
                                 @endforeach
                             </td>
-                            <td><button class="btn btn-info view" data-id="{{$value->id}}" data-group_id="{{$group_id}}" data-qty="{{$qty_total}}">View</button></td>
+                            <td>
+                              <button class="btn btn-info view" data-id="{{$value->id}}" data-group_id="{{$group_id}}" data-qty="{{$qty_total}}" data-account_id="{{$value->party}}" data-price="{{$price}}" data-account_name="{{$value->account['account_name']}}" data-invoice_date="{{date('d-m-Y',strtotime($value->date))}}" data-invoice_amount="{{$value->total}}" data-invoice_no="{{$value->voucher_no}}" data-type="view">View</button>
+
+                              <button class="btn btn-info view" data-id="{{$value->id}}" data-group_id="{{$group_id}}" data-qty="{{$qty_total}}" data-account_id="{{$value->party}}" data-price="{{$price}}" data-account_name="{{$value->account['account_name']}}" data-invoice_date="{{date('d-m-Y',strtotime($value->date))}}" data-invoice_amount="{{$value->total}}" data-invoice_no="{{$value->voucher_no}}" data-type="edit">Edit</button>
+
+                              <button class="btn btn-info upload_image" data-id="{{$value->id}}">Click</button>
+                           </td>
                         </tr>
                      @endforeach
                      
@@ -179,75 +195,79 @@
          <br>
          <div class="row">
             <div class="mb-6 col-md-6">
+               <label for="name" class="form-label font-14 font-heading">Account Name</label>
+               <input type="text" id="account_name" class="form-control" readonly>
+            </div> 
+            <div class="mb-2 col-md-2">
+               <label for="name" class="form-label font-14 font-heading">Invoice No.</label>
+               <input type="text" id="invoice_no" class="form-control" readonly>
+            </div>
+            <div class="mb-2 col-md-2">
+               <label for="name" class="form-label font-14 font-heading">Invoice Date</label>
+               <input type="text" id="invoice_date" class="form-control" readonly>
+            </div>
+            <div class="mb-2 col-md-2">
+               <label for="name" class="form-label font-14 font-heading">Invoice Amount</label>
+               <input type="text" id="invoice_amount" class="form-control" readonly>
+            </div>
+            <div class="mb-6 col-md-6">
                <label for="name" class="form-label font-14 font-heading">Voucher Number</label>
                <input type="text" id="voucher_no" class="form-control"  readonly/>
+               <input type="hidden" id="row_id">
+               <input type="hidden" id="account_id">
             </div> 
             <div class="mb-6 col-md-6">
                <label for="name" class="form-label font-14 font-heading">Area</label>
-               <input type="text" id="location" class="form-control"  readonly/>
+               <select id="location" class="form-select" >
+                  <option value="">Select Area</option>
+                  @foreach($locations as $loc)
+                        <option value="{{$loc->id}}">{{$loc->name}}</option>
+                  @endforeach
+               </select>
             </div>
             <div class="mb-12 col-md-12"></div>
             <div class="mb-12 col-md-12">
                <table class="table table-bordered">
                   <thead>
                      <tr>
-                        <th></th>
-                        <th id="purchase_weight" style="text-align: right"></th>
+                        <th>Head</th>
+                        <th id="purchase_weight" style="text-align: right"></th><input type="hidden" id="pur_weight">
                         <th style="text-align: right">Bill Rate</th>
                         <th style="text-align: right">Contract Rate</th>
                         <th></th>
                      </tr>
                   </thead>
                   <tbody id="report_body">
-                     <tr id="kraft_i_row">
-                        <td><input type="text" class="form-control" value="Kraft I" readonly></td>
-                        <td><input type="text" class="form-control calculate" readonly id="kraft_i_qty" style="text-align: right" data-id="kraft_i"></td>
-                        <td><input type="text" class="form-control calculate" readonly id="kraft_i_bill_rate" style="text-align: right" data-id="kraft_i"></td>
-                        <td><input type="text" class="form-control" id="kraft_i_contract_rate" style="text-align: right" readonly></td>
-                        <td><input type="text" class="form-control" id="kraft_i_difference_amount" data-id="kraft_i" style="text-align: right" readonly></td>
-                     </tr>
-                     <tr id="kraft_ii_row">
-                        <td><input type="text" class="form-control" value="Kraft II" readonly></td>
-                        <td><input type="text" class="form-control calculate" readonly id="kraft_ii_qty" style="text-align: right" data-id="kraft_ii"></td>
-                        <td><input type="text" class="form-control calculate" readonly id="kraft_ii_bill_rate" style="text-align: right" data-id="kraft_ii"></td>
-                        <td><input type="text" class="form-control" id="kraft_ii_contract_rate" style="text-align: right" readonly></td>
-                        <td><input type="text" class="form-control" id="kraft_ii_difference_amount" data-id="kraft_ii" style="text-align: right" readonly></td>
-                     </tr>
-                     <tr id="duplex_row">
-                        <td><input type="text" class="form-control" value="Duplex" readonly></td>
-                        <td><input type="text" class="form-control calculate" readonly id="duplex_qty" style="text-align: right" data-id="duplex"></td>
-                        <td><input type="text" class="form-control calculate" readonly id="duplex_bill_rate" style="text-align: right" data-id="duplex"></td>
-                        <td><input type="text" class="form-control" id="duplex_contract_rate" style="text-align: right" readonly></td>
-                        <td><input type="text" class="form-control" id="duplex_difference_amount" data-id="duplex" style="text-align: right" readonly></td>
-                     </tr>
-                     <tr id="poor_row">
-                        <td><input type="text" class="form-control" value="Poor" readonly></td>
-                        <td><input type="text" class="form-control calculate" readonly id="poor_qty" style="text-align: right" data-id="poor"></td>
-                        <td><input type="text" class="form-control calculate" readonly id="poor_bill_rate" style="text-align: right" data-id="poor"></td>
-                        <td><input type="text" class="form-control" id="poor_contract_rate" style="text-align: right" readonly></td>
-                        <td><input type="text" class="form-control" id="poor_difference_amount" data-id="poor" style="text-align: right" readonly></td>
-                     </tr>
-                     <tr id="fuel_row">
+                     @foreach($heads as $key => $value)
+                        <tr class="head">
+                           <td><input type="text" class="form-control" value="{{$value->name}}" readonly></td>
+                           <td><input type="text" class="form-control calculate qty" placeholder="Enter Qty" id="qty_{{$value->id}}" style="text-align: right" data-id="{{$value->id}}" readonly></td>
+                           <td><input type="text" class="form-control calculate bill_rate" readonly id="bill_rate_{{$value->id}}" style="text-align: right" data-id="{{$value->id}}"></td>
+                           <td><input type="text" class="form-control contract_rate" id="contract_rate_{{$value->id}}" style="text-align: right" readonly data-id="{{$value->id}}"></td>
+                           <td><input type="text" class="form-control difference_amount" id="difference_amount_{{$value->id}}" data-id="{{$value->id}}" style="text-align: right" readonly></td>
+                        </tr>
+                     @endforeach
+                     <tr id="fuel_row" style="display: none">
                         <td><input type="text" class="form-control" value="Fuel" readonly></td>
-                        <td><input type="text" class="form-control calculate" readonly id="fuel_qty" style="text-align: right" data-id="fuel"></td>
-                        <td><input type="text" class="form-control calculate" readonly id="fuel_bill_rate" style="text-align: right" data-id="fuel"></td>
-                        <td><input type="text" class="form-control" id="fuel_contract_rate" style="text-align: right" readonly></td>
-                        <td><input type="text" class="form-control" id="fuel_difference_amount" data-id="fuel" style="text-align: right" readonly></td>
+                        <td><input type="text" class="form-control calculate" placeholder="Enter Qty" id="qty_fuel" style="text-align: right" data-id="fuel" readonly></td>
+                        <td><input type="text" class="form-control calculate bill_rate" readonly id="bill_rate_fuel" style="text-align: right" data-id="fuel"></td>
+                        <td><input type="text" class="form-control" id="contract_rate_fuel" style="text-align: right" readonly></td>
+                        <td><input type="text" class="form-control" id="difference_amount_fuel" data-id="fuel" style="text-align: right" readonly></td>
                      </tr>
                      <tr id="cut_row">
                         <td><input type="text" class="form-control" value="Cut" readonly></td>
-                        <td><input type="text" class="form-control calculate" readonly id="cut_qty" style="text-align: right" data-id="cut"></td>
-                        <td><input type="text" class="form-control calculate" readonly id="cut_bill_rate" style="text-align: right" data-id="cut"></td>
-                        <td><input type="text" class="form-control" id="cut_contract_rate" style="text-align: right" readonly></td>
-                        <td><input type="text" class="form-control" id="cut_difference_amount" data-id="cut" style="text-align: right" readonly></td>
+                        <td><input type="text" class="form-control calculate qty" placeholder="Enter Qty" id="qty_cut" style="text-align: right" data-id="cut" readonly></td>
+                        <td><input type="text" class="form-control calculate bill_rate" readonly id="bill_rate_cut" style="text-align: right" data-id="cut"></td>
+                        <td><input type="text" class="form-control" id="contract_rate_cut" style="text-align: right" readonly></td>
+                        <td><input type="text" class="form-control difference_amount" id="difference_amount_cut" data-id="cut" style="text-align: right" readonly></td>
                      </tr>
-                     <tr id="other_row">
-                        <td><input type="checkbox" id="other_check"></td>
-                        <td><input type="text" class="form-control calculate" readonly id="other_qty" style="text-align: right" data-id="other"></td>
-                        <td><input type="text" class="form-control calculate" readonly id="other_bill_rate" style="text-align: right" data-id="other"></td>
-                        <td><input type="text" class="form-control" id="other_contract_rate" style="text-align: right" readonly></td>
-                        <td><input type="text" class="form-control" id="other_difference_amount" data-id="other" style="text-align: right" readonly></td>
-                     </tr>
+                     <tr id="short_weight_row">
+                        <td><input type="text" class="form-control" value="Short Weight" readonly></td>
+                        <td><input type="text" class="form-control calculate qty" readonly id="qty_short_weight" style="text-align: right" data-id="short_weight" readonly></td>
+                        <td><input type="text" class="form-control calculate bill_rate" readonly id="bill_rate_short_weight" style="text-align: right" data-id="short_weight"></td>
+                        <td><input type="text" class="form-control" id="contract_rate_short_weight" style="text-align: right" readonly></td>
+                        <td><input type="text" class="form-control difference_amount" id="difference_amount_short_weight" data-id="short_weight" style="text-align: right" readonly></td>
+                     </tr>                     
                      <tr>
                         <td></td>
                         <td></td>
@@ -259,9 +279,58 @@
                </table>
             </div>
          </div>
+         <br>
+         <div class="text-start" style="display: none">
+            <button type="button" class="btn  btn-xs-primary save_location">SAVE</button>
+         </div>
       </div>
    </div>
 </div>
+<div class="modal fade" id="imageUploadModal" tabindex="-1" aria-labelledby="imageUploadLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content p-3 border-radius-8">
+      <div class="modal-header border-0">
+        <h5 class="modal-title" id="imageUploadLabel">Upload Images</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        {{-- Upload Form --}}
+        <form action="{{ route('upload-purchase-image') }}" method="POST" enctype="multipart/form-data">
+          @csrf
+          <div id="image-inputs">
+            <div class="mb-3 d-flex align-items-center">
+              <input type="file" name="images[]" class="form-control me-2 image-input" accept="image/*" required>
+              <button type="button" class="btn btn-sm btn-primary add-more">+</button>
+            </div>
+          </div>
+          <input type="hidden" name="image_purchase_id" id="image_purchase_id">
+          {{-- Live Preview Section --}}
+          <div id="preview" class="row g-3"></div>
+
+          <div class="text-end mt-3">
+            <button type="submit" class="btn btn-success">Upload</button>
+          </div>
+        </form>
+
+        {{-- Display Uploaded Images --}}
+        @if(session('images'))
+          <div class="mt-4">
+            <p class="text-success">Images uploaded successfully!</p>
+            <div class="row g-3">
+              @foreach(session('images') as $img)
+                <div class="col-md-4">
+                  <img src="{{ asset('storage/' . $img) }}" class="img-fluid rounded border">
+                </div>
+              @endforeach
+            </div>
+          </div>
+        @endif
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 @include('layouts.footer')
 <script>
@@ -289,91 +358,287 @@
    });    
    $(".view").click(function(){
       let id = $(this).data('id');
+      var account_id = $(this).data('account_id');
+      let type = $(this).data('type');
       let group_id = $(this).data('group_id');
+      let price = $(this).data('price');
       let qty = $(this).data('qty');
+      let account_name = $(this).data('account_name');
+      let invoice_no = $(this).data('invoice_no');
+      let invoice_date = $(this).data('invoice_date');
+      let invoice_amount = $(this).data('invoice_amount');
+      $("#account_name").val(account_name);
+      $("#invoice_no").val(invoice_no);
+      $("#invoice_date").val(invoice_date);
+      $("#invoice_amount").val(invoice_amount);
+      $(".bill_rate").val(price);
+      $(".qty").attr('readonly',true);
+      $(".text-start").hide();
+      $("#location").addClass('unchange_dropdown');
+      if(type=="edit"){
+         $(".qty").attr('readonly',false);
+         $("#qty_short_weight").attr('readonly',true);
+         $(".text-start").show();
+         $("#location").removeClass('unchange_dropdown');
+      }
       if(group_id == 18){
          $("#fuel_row").show();
-
-         $("#kraft_i_row").hide();
-         $("#kraft_ii_row").hide();
-         $("#duplex_row").hide();
-         $("#poor_row").hide();
-
-         $("#kraft_i_qty").val('');
-         $("#kraft_ii_qty").val('');
-         $("#duplex_qty").val('');
-         $("#poor_qty").val('');
-
-         $("#kraft_i_bill_rate").val('');
-         $("#kraft_ii_bill_rate").val('');
-         $("#duplex_bill_rate").val('');
-         $("#poor_bill_rate").val('');
-
+         $(".head").hide();
+         $(".contract_rate").each(function(){
+            $("#qty_"+$(this).attr('data-id')).val('');
+            $("#difference_amount_"+$(this).attr('data-id')).val('');
+         });                
+         $("#fuel_contract_rate").val(price);
       }else{
          $("#fuel_row").hide();
-         $("#kraft_i_row").show();
-         $("#kraft_ii_row").show();
-         $("#duplex_row").show();
-         $("#poor_row").show();
-
+         $(".head").show();
          $("#fuel_qty").val('');
          $("#fuel_bill_rate").val('');
       }
-      $("#purchase_weight").html(qty);
+      $("#purchase_weight").html("Purchase Weight : "+qty);
+      $("#pur_weight").val(qty);
       $.ajax({
-         url:"{{url('view-complete-purchase-info/')}}/"+id,
-         type:"POST",
-         data:{_token:'{{csrf_token()}}'},
+         url : "{{url('get-location-by-supplier')}}",
+         method : "POST",
+         data: {
+            _token: '<?php echo csrf_token() ?>',
+            account_id : account_id
+         },
          success:function(res){
-            if(res!=""){
-               let obj = JSON.parse(res);
-               $("#voucher_no").val(obj.reports.voucher_no);
-               $("#location").val(obj.reports.location_name);
-
-               $("#kraft_i_qty").val(obj.reports.kraft_i_qty);
-               $("#kraft_i_bill_rate").val(obj.reports.kraft_i_bill_rate);
-               $("#kraft_i_contract_rate").val(obj.reports.kraft_i_contract_rate);
-               $("#kraft_i_difference_amount").val(obj.reports.kraft_i_difference_amount);
-
-               $("#kraft_ii_qty").val(obj.reports.kraft_ii_qty);
-               $("#kraft_ii_bill_rate").val(obj.reports.kraft_ii_bill_rate);
-               $("#kraft_ii_contract_rate").val(obj.reports.kraft_ii_contract_rate);
-               $("#kraft_ii_difference_amount").val(obj.reports.kraft_ii_difference_amount);
-
-               $("#duplex_qty").val(obj.reports.duplex_qty);
-               $("#duplex_bill_rate").val(obj.reports.duplex_bill_rate);
-               $("#duplex_contract_rate").val(obj.reports.duplex_contract_rate);
-               $("#duplex_difference_amount").val(obj.reports.duplex_difference_amount);
-
-               $("#poor_qty").val(obj.reports.poor_qty);
-               $("#poor_bill_rate").val(obj.reports.poor_bill_rate);
-               $("#poor_contract_rate").val(obj.reports.poor_contract_rate);
-               $("#poor_difference_amount").val(obj.reports.poor_difference_amount);
-
-               $("#fuel_qty").val(obj.reports.fuel_qty);
-               $("#fuel_bill_rate").val(obj.reports.fuel_bill_rate);
-               $("#fuel_contract_rate").val(obj.reports.fuel_contract_rate);
-               $("#fuel_difference_amount").val(obj.reports.fuel_difference_amount);
-
-               $("#cut_qty").val(obj.reports.cut_qty);
-               $("#cut_bill_rate").val(obj.reports.cut_bill_rate);
-               $("#cut_contract_rate").val(obj.reports.cut_contract_rate);
-               $("#cut_difference_amount").val(obj.reports.cut_difference_amount);
-
-               $("#other_qty").val(obj.reports.other_qty);
-               $("#other_bill_rate").val(obj.reports.other_bill_rate);
-               $("#other_contract_rate").val(obj.reports.other_contract_rate);
-               $("#other_difference_amount").val(obj.reports.other_difference_amount);
-
-               $("#difference_total_amount").val(obj.reports.difference_total_amount);
-               if(obj.reports.other_check==1){
-                  $("#other_check").prop('checked', true);
-               }
+            location_list = "<option value=''>Select Area</option>";
+            if(res.location.length>0){
+               location_arr = res.location;
+               res.location.forEach(function(e){
+               location_list+="<option value="+e.id+">"+e.name+"</option>";
+               });
             }
-            
-            $("#report_modal").modal('show');
+            $("#location").html(location_list);
+            $("#row_id").val(id);
+            $("#account_id").val(account_id);
+            $.ajax({
+               url:"{{url('view-complete-purchase-info/')}}/"+id,
+               type:"POST",
+               data:{_token:'{{csrf_token()}}'},
+               success:function(res){
+                  if(res!=""){
+                     let obj = JSON.parse(res);
+                     let head_data_arr = [];
+                     obj.reports.forEach(element => {                  
+                        $("#difference_total_amount").val(element.difference_total_amount);
+                        $("#voucher_no").val(element.voucher_no);
+                        $("#location").val(element.location);
+                        head_data_arr[element.head_id] = element;
+                     });
+                     $(".qty").each(function(){
+                        let id = $(this).attr('data-id');
+                        if(head_data_arr[id]){                     
+                           $("#qty_"+id).val(head_data_arr[id].head_qty);
+                           $("#bill_rate_"+id).val(head_data_arr[id].head_bill_rate);
+                           $("#contract_rate_"+id).val(head_data_arr[id].head_contract_rate);
+                           $("#difference_amount_"+id).val(head_data_arr[id].head_difference_amount);
+                        }
+                     });               
+                  }            
+                  $("#report_modal").modal('show');
+               }
+            });
          }
       });
    });
+   $("#location").change(function(){
+      var loc_id = $(this).val();
+      var account_id = $("#account_id").val();
+      if(loc_id != ''){
+         $.ajax({
+            url:"{{url('get-supplier-rate-by-location')}}",
+            type:"POST",
+            data:{
+               "_token": "{{ csrf_token() }}",
+               "location": loc_id,
+               "account_id": account_id
+            },
+            success:function(res){
+               if(res == null){
+                  $(".contract_rate").each(function(){
+                     if(rate_arr[$(this).attr('data-id')]){
+                        $(this).val('');
+                     }
+                  });
+                  return;
+               }
+               if(res!=""){
+                  if(res.length>0){
+                     let rate_arr = [];
+                     res.forEach(function(e){
+                        rate_arr[e.head_id] = e.head_rate;
+                     });
+                     $(".contract_rate").each(function(){
+                        if(rate_arr[$(this).attr('data-id')]){
+                           $(this).val(rate_arr[$(this).attr('data-id')]);
+                        }
+                     });
+                  }
+               }
+               $("#contract_rate_cut").val(0);
+               $("#contract_rate_short_weight").val(0);
+               $(".calculate").each(function(){
+                  $(this).keyup();
+               });
+            }
+         });
+      }
+   });
+   $(".calculate").keyup(function(){
+      let short_weight = 0;
+      let qty_weight = 0;
+      let purchase_weight = $("#pur_weight").val();
+      if(purchase_weight==""){
+            purchase_weight = 0;
+      }
+      $(".qty").each(function(){
+         if($(this).val()!="" && $(this).attr('data-id')!="short_weight"){
+            qty_weight = parseFloat(qty_weight) + parseFloat($(this).val());
+         }
+      })
+      short_weight = parseFloat(purchase_weight) - parseFloat(qty_weight);
+      
+      $("#qty_short_weight").css({'color':''})
+      if(parseFloat(short_weight)<0){
+            $("#qty_short_weight").css({'color': 'red'});
+      }
+      $("#qty_short_weight").val(short_weight);
+      $("#difference_amount_short_weight").val(parseFloat(short_weight)*parseFloat($("#bill_rate_short_weight").val()));
+      
+      var id = $(this).data('id');
+      var qty = $("#qty_"+id).val();
+      var bill_rate = $("#bill_rate_"+id).val();
+      var contract_rate = $("#contract_rate_"+id).val();
+      if(qty == ''){
+            qty = 0;
+      }
+      if(bill_rate == ''){
+            bill_rate = 0;
+      }
+      if(contract_rate == ''){
+            contract_rate = 0;
+      }
+      let diff_rate = bill_rate - contract_rate;
+      var difference_amount = parseFloat(qty) * parseFloat(diff_rate);
+      $("#difference_amount_"+id).val(difference_amount.toFixed(2));
+      calculateTotalDifference();
+   });
+   function calculateTotalDifference(){
+      var total = 0;
+      $(".difference_amount").each(function(){
+         var val = $(this).val();
+         var id = $(this).attr('data-id');
+         if(val == ''){
+            val = 0;
+         }
+         total = parseFloat(total) + parseFloat(val);
+      });
+      $("#difference_total_amount").val(total.toFixed(2));
+   }
+   $(".save_location").click(function(){
+      var id = $("#row_id").val();
+      var location_id = $("#location").val();
+      if(location_id == ''){
+         alert("Please select area");
+         return;
+      }
+      var voucher_no = $("#voucher_no").val();
+      if(voucher_no == ''){
+         alert("Please enter voucher no.");
+         return;
+      }
+      var purchase_id = $("#row_id").val();
+      if(purchase_id == ''){
+         alert("Purchase id not found");
+         return;
+      }
+      let arr = [];
+      $(".bill_rate").each(function(){
+         arr.push({'id':$(this).attr('data-id'),'contract_rate':$("#contract_rate_"+$(this).attr('data-id')).val(),'bill_rate':$(this).val(),'qty':$("#qty_"+$(this).attr('data-id')).val(),'difference_amount':$("#difference_amount_"+$(this).attr('data-id')).val()});
+      });
+      var data = {
+         "voucher_no": voucher_no,
+         "location": location_id,
+         "purchase_id": purchase_id,
+         "data":JSON.stringify(arr),
+         "difference_total_amount": $("#difference_total_amount").val(),
+         "_token": "{{ csrf_token() }}"
+      };
+      $.ajax({
+         url:"{{url('update-supplier-purchase-report')}}",
+         type:"POST",
+         data:data,
+         success:function(res){                   
+            response = JSON.parse(res);
+            if(response.status == true){
+               alert(response.message);
+               location.reload();
+            }else{
+               alert(response.message);
+            }
+         }
+      });
+   });
+   $(".upload_image").click(function(){
+      let id = $(this).attr('data-id');
+      $("#image_purchase_id").val(id)
+      $("#imageUploadModal").modal('toggle');
+   });
+   var image_count  = 1;
+   document.addEventListener("DOMContentLoaded", function() {
+  const imageInputs = document.getElementById("image-inputs");
+  const preview = document.getElementById("preview");
+
+  // Add & Remove file inputs
+  imageInputs.addEventListener("click", function(e) {
+    if (e.target.classList.contains("add-more")) {
+      
+      if(image_count==3){
+         alert('Upload Max 3 Image')
+         return;
+      }
+      image_count++;
+      let newInput = `
+        <div class="mb-3 d-flex align-items-center">
+          <input type="file" name="images[]" class="form-control me-2 image-input" accept="image/*" required>
+          <button type="button" class="btn btn-sm btn-danger remove">-</button>
+        </div>`;
+      e.target.closest(".mb-3").insertAdjacentHTML("afterend", newInput);
+    }
+    if (e.target.classList.contains("remove")) {
+      image_count--;
+      e.target.closest(".mb-3").remove();
+      refreshPreview(); // refresh preview after removing
+    }
+  });
+
+  // Live preview for selected images
+  imageInputs.addEventListener("change", function(e) {
+    if (e.target.classList.contains("image-input")) {
+      refreshPreview();
+    }
+  });
+
+  function refreshPreview() {
+    preview.innerHTML = ""; // clear old previews
+    const files = document.querySelectorAll(".image-input");
+    files.forEach(input => {
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          let col = document.createElement("div");
+          col.className = "col-md-3";
+          col.innerHTML = `<img src="${e.target.result}" class="img-fluid rounded border">`;
+          preview.appendChild(col);
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
+    });
+  }
+});
 </script>
 @endsection
