@@ -11,6 +11,7 @@ use App\Models\SupplierLocationRates;
 use App\Models\SupplierSubHead;
 use App\Models\SupplierDifferenceRate;
 use App\Models\SupplierBonus;
+use App\Models\Supplier;
 class SupplierRateLocationWiseController extends Controller
 {
     public function manageSupplierRate($date=null)
@@ -24,30 +25,54 @@ class SupplierRateLocationWiseController extends Controller
                                 ->orderBy('sequence')
                                 ->get();
         $current_date = date('Y-m-d');
+        $latestDate = SupplierRateLocationWise::where('rate_date','<=',$current_date)
+                                                ->where('company_id',Session::get('user_company_id'))
+                                                ->max('rate_date');
+                                                $latestDate1 = "";
+        if($date!="" && $date!=null){
+            $latestDate1 = SupplierRateLocationWise::where('rate_date','<=',$date)
+                                                ->where('company_id',Session::get('user_company_id'))
+                                                ->max('rate_date');
+        }
+                                        
         $supplier_rate = SupplierRateLocationWise::select('location_id','head_id','head_rate','rate_date')
                                                     ->where('company_id',Session::get('user_company_id'))
-                                                    ->when($date, function($q)use($date){
-                                                        $q->where('rate_date',$date);
+                                                    ->when($date, function($q)use($latestDate1){
+                                                        $q->where('rate_date',$latestDate1);
                                                     })
-                                                    ->when($date==null, function($q)use($current_date){
-                                                        $q->where('rate_date','<=',$current_date);
+                                                    ->when($date==null, function($q)use($latestDate){
+                                                        $q->where('rate_date','=',$latestDate);
                                                     })
+                                                    ->orderBy('rate_date','desc')
                                                     ->get();
-                                                    if($date){
-                                                        $current_date = $date;
-                                                    }
+
+        if($date){
+            $current_date = $date;
+        }
+        // echo "<pre>";
+        // echo $date;
+        // print_r($supplier_rate->toArray());
+        // die;
         $advance_rate = SupplierRateLocationWise::select('rate_date')
                                                     ->where('rate_date','>',$current_date)
                                                      ->distinct()
                                                     ->orderBy('rate_date')
                                                     ->pluck('rate_date');
         $result = [];
+        
         $rate_date = $date;
+        
         foreach ($supplier_rate as $row) {
             $key = $row->location_id . "_" . $row->head_id;
             $result[$key] = $row->head_rate;
             $rate_date = $row->rate_date;
         }
+        if($date!="" && $date!=null){
+            if($latestDate1!=$date){
+                $rate_date = $date;
+            }
+        }
+            
         $all_supplier_rate = SupplierRateLocationWise::join('supplier_locations','supplier_rate_location_wises.location_id','=','supplier_locations.id')
                                                     ->join('supplier_sub_heads','supplier_rate_location_wises.head_id','=','supplier_sub_heads.id')
                                                     ->select('supplier_locations.name','supplier_sub_heads.name as head_name','head_rate','rate_date')
@@ -87,25 +112,53 @@ class SupplierRateLocationWiseController extends Controller
                 if($supplier_rate->save()){
                     $supp = SupplierLocationRates::select('id','bonus','account_id')
                                                 ->where('location',$request->location_id[$key])
+                                                //->where('r_date',$request->date)
                                                 ->where('head_id',$v)
                                                 ->get();
-                    foreach ($supp as $k1 => $v1) {
-                        $bonus = 0;
-                        $head_rate = $request["head_value_".$value][$k];
-                        $supp_bonus = SupplierBonus::where('account_id',$v1->account_id)->first();
-                        if($supp_bonus){
-                            $bonus = $v1->bonus;
-                            $head_rate = $head_rate + $bonus;
+                    if(count($supp)>0){
+                        foreach ($supp as $k1 => $v1) {
+                            $bonus = 0;
+                            $head_rate = $request["head_value_".$value][$k];
+                            $supp_bonus = SupplierBonus::where('account_id',$v1->account_id)->first();
+                            if($supp_bonus){
+                                $bonus = $v1->bonus;
+                                $head_rate = $head_rate + $bonus;
+                            }
+                            SupplierLocationRates::where('location',$request->location_id[$key])
+                                                    ->where('id',$v1->id)
+                                                    ->update([
+                                                        'head_rate' => $head_rate,
+                                                        'bonus' =>$bonus,
+                                                        //'r_date'=>$request->date,
+                                                        'updated_at' => Carbon::now(),
+                                                    ]);
                         }
-                        SupplierLocationRates::where('location',$request->location_id[$key])
-                                                ->where('id',$v1->id)
-                                                ->update([
-                                                    'head_rate' => $head_rate,
-                                                    'bonus' =>$bonus,
-                                                    'updated_at' => Carbon::now(),
-                                                ]);
+                    }else{
+                        // $supp = Supplier::where('company_id',Session::get('user_company_id'))
+                        //         ->where('status',1)
+                        //         ->get();
+                        // foreach ($supp as $k2 => $v2) {
+                        //     $bonus = 0;
+                        //     $head_rate = $request["head_value_".$value][$k];
+                        //     $supp_bonus = SupplierBonus::where('account_id',$v2->account_id)->first();
+                        //     if($supp_bonus){
+                        //         $bonus = $supp_bonus->bonus;
+                        //         $head_rate = $head_rate + $bonus;
+                        //     }
+                        //     $supplier_location_rates = new SupplierLocationRates;
+                        //     $supplier_location_rates->parent_id = $v2->id;
+                        //     $supplier_location_rates->account_id = $v2->account_id;
+                        //     $supplier_location_rates->location = $request->location_id[$key];
+                        //     $supplier_location_rates->head_id = $v;
+                        //     $supplier_location_rates->head_rate = $head_rate;
+                        //     $supplier_location_rates->bonus = $bonus;
+                        //     $supplier_location_rates->r_date = $request->date;
+                        //     $supplier_location_rates->company_id = Session::get('user_company_id');
+                        //     $supplier_location_rates->created_at = Carbon::now();
+                        //     $supplier_location_rates->save();
+
+                        // }
                     }
-                    
                 }
             }
             
@@ -122,7 +175,8 @@ class SupplierRateLocationWiseController extends Controller
                                 ->where('rate_date',$latestDate)
                                 ->get();
         return response()->json([
-            'rate' => $rate
+            'rate' => $rate,
+            'latestDate'=> $latestDate
         ]);
     }
     

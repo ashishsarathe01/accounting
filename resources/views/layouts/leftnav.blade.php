@@ -35,7 +35,8 @@
     cursor: pointer;
 }
 </style>
-<aside class="col-lg-2 d-none d-lg-block bg-blue sidebar p-0">
+<aside class="col-lg-2  bg-blue sidebar p-0">
+{{-- <aside class="col-lg-2 d-none d-lg-block bg-blue sidebar p-0"> --}}
    <div class="sidebar-sticky ">
       <div id="accordion">
          <div class="card rounded-0 bg-blue py-20 px-2 border-bottom-divider">

@@ -123,7 +123,7 @@ class CommonHelper
             ItemAverage::where('item_id',$item)
                     ->where('series_no',$series)
                     ->where('stock_date',$date->toDateString())
-                    ->delete();         
+                    ->delete();
             $average_detail = ItemAverageDetail::where('item_id',$item)
                                                 ->where('series_no',$series)
                                                 ->where('entry_date',$date->toDateString())
@@ -133,7 +133,9 @@ class CommonHelper
                 $purchase_amount = $average_detail->sum('purchase_total_amount');
                 $sale_weight = $average_detail->sum('sale_weight');
                 $stock_transfer_weight = $average_detail->sum('stock_transfer_weight');
-                $purchase_return_weight = $average_detail->sum('purchase_return_weight');
+                $purchase_return_weight = $average_detail->sum(function ($item) {
+                    return (float) $item->purchase_return_weight;
+                });
                 $purchase_return_amount = $average_detail->sum('purchase_return_amount');
                 $purchase_return_amount = $purchase_return_amount*2;
                 $sale_return_weight = $average_detail->pluck('sale_return_weight')

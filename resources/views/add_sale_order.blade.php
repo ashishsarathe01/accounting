@@ -64,125 +64,6 @@
                     @csrf
                     <div class="row">
                         <div class="mb-3 col-md-3">
-                            <label for="name" class="form-label font-14 font-heading">Series No. *</label>
-                            <select id="series_no" name="series_no" class="form-select" required autofocus>
-                                <option value="">Select Series</option>                        
-                            </select>
-                            <ul style="color: red;">
-                                @error('series_no'){{$message}}@enderror                        
-                            </ul> 
-                        </div>
-                        <div class="mb-3 col-md-3">
-                            <label for="name" class="form-label font-14 font-heading">Date *</label>
-                            <input type="date" id="date" class="form-control calender-bg-icon calender-placeholder" name="date" value="{{date('Y-m-d')}}" placeholder="Select date" required >
-                            <ul style="color: red;">
-                                @error('date'){{$message}}@enderror                        
-                            </ul> 
-                        </div>
-                        <div class="mb-3 col-md-3">
-                            <label for="name" class="form-label font-14 font-heading">Freight *</label>
-                            <select id="series_no" name="series_no" class="form-select" required autofocus>
-                                <option value="">Select Freight</option>                        
-                            </select>
-                            <ul style="color: red;">
-                                @error('voucher_no'){{$message}}@enderror                        
-                            </ul> 
-                        </div>
-                        <div class="clearfix"></div>
-                        <div class="mb-3 col-md-3">
-                            <label for="name" class="form-label font-14 font-heading">Item *</label>
-                            <select id="series_no" name="series_no" class="form-select" required autofocus>
-                                <option value="">Select Item</option>                        
-                            </select>
-                            <ul style="color: red;">
-                                @error('voucher_no'){{$message}}@enderror                        
-                            </ul> 
-                        </div>
-                        <div class="mb-3 col-md-3">
-                            <label for="name" class="form-label font-14 font-heading">Price *</label>
-                            <input type="text" id="date" class="form-control" name="date" placeholder="Enter Price" required >
-                            <ul style="color: red;">
-                                @error('date'){{$message}}@enderror                        
-                            </ul> 
-                        </div>
-                        <div class="clearfix"></div>
-                        <div class="mb-2 col-md-2" style="margin-left: 40px;">
-                            <label for="name" class="form-label font-14 font-heading">GSM <svg xmlns="http://www.w3.org/2000/svg" data-id="1" class="bg-primary rounded-circle add_gsm" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;" tabindex="0" role="button"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg></label>
-                            <input type="text" id="date" class="form-control" name="date" placeholder="Enter GSM" required >
-                            <ul style="color: red;">
-                                @error('date'){{$message}}@enderror                        
-                            </ul> 
-                        </div>
-                        <div class="clearfix"></div>
-                        <div class="mb-2 col-md-2" style="margin-left: 40px;">
-                            <label for="name" class="form-label font-14 font-heading">SIZES <svg xmlns="http://www.w3.org/2000/svg" data-id="1" class="bg-primary rounded-circle add_gsm" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;" tabindex="0" role="button"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg></label>
-                            <input type="text" id="date" class="form-control" name="date" placeholder="Enter SIZES" required >
-                            <ul style="color: red;">
-                                @error('date'){{$message}}@enderror                        
-                            </ul> 
-                        </div>
-                        <div class="mb-2 col-md-2">
-                            <label for="name" class="form-label font-14 font-heading">REELS</label>
-                            <input type="text" id="date" class="form-control" name="date" placeholder="Enter REELS" required >
-                            <ul style="color: red;">
-                                @error('date'){{$message}}@enderror                        
-                            </ul> 
-                        </div>
-                        <div class="clearfix"></div>
-                        <div class="mb-2 col-md-2" style="margin-left: 40px;">
-                            <input type="text" id="date" class="form-control" name="date" placeholder="Enter SIZES" required >
-                            <ul style="color: red;">
-                                @error('date'){{$message}}@enderror                        
-                            </ul> 
-                        </div>
-                        <div class="mb-2 col-md-2">
-                            <input type="text" id="date" class="form-control" name="date" placeholder="Enter REELS" required >
-                            <ul style="color: red;">
-                                @error('date'){{$message}}@enderror                        
-                            </ul> 
-                        </div>
-                        <div class="clearfix"></div>
-                        <div class="mb-2 col-md-2" style="margin-left: 40px;">
-                            <input type="text" id="date" class="form-control" name="date" placeholder="Enter SIZES" required >
-                            <ul style="color: red;">
-                                @error('date'){{$message}}@enderror                        
-                            </ul> 
-                        </div>
-                        <div class="mb-2 col-md-2" >
-                            <input type="text" id="date" class="form-control" name="date" placeholder="Enter REELS" required >
-                            <ul style="color: red;">
-                                @error('date'){{$message}}@enderror                        
-                            </ul> 
-                        </div>
-                        <div class="clearfix"></div>
-                        <div class="mb-2 col-md-2" style="margin-left: 40px;">
-                            <input type="text" id="date" class="form-control" name="date" placeholder="Enter SIZES" required >
-                            <ul style="color: red;">
-                                @error('date'){{$message}}@enderror                        
-                            </ul> 
-                        </div>
-                        <div class="mb-2 col-md-2" >
-                            <input type="text" id="date" class="form-control" name="date" placeholder="Enter REELS" required >
-                            <ul style="color: red;">
-                                @error('date'){{$message}}@enderror                        
-                            </ul> 
-                        </div>
-                        <div class="clearfix"></div>
-                        <div class="mb-2 col-md-2" style="margin-left: 40px;">
-                            <input type="text" id="date" class="form-control" name="date" placeholder="Enter SIZES" required >
-                            <ul style="color: red;">
-                                @error('date'){{$message}}@enderror                        
-                            </ul> 
-                        </div>
-                        <div class="mb-2 col-md-2">
-                            <input type="text" id="date" class="form-control" name="date" placeholder="Enter REELS" required >
-                            <ul style="color: red;">
-                                @error('date'){{$message}}@enderror                        
-                            </ul> 
-                        </div>
-                        <div class="clearfix"></div>
-                        <p ><button type="button" class="btn btn-info">ADD ITEM</button></p>
-                        <div class="mb-3 col-md-3">
                             <label for="name" class="form-label font-14 font-heading">Bill To *</label>
                             <select id="series_no" name="series_no" class="form-select" required autofocus>
                                 <option value="">Select Account</option>                        
@@ -200,6 +81,106 @@
                                 @error('voucher_no'){{$message}}@enderror                        
                             </ul> 
                         </div>
+                        <div class="mb-3 col-md-3">
+                            <label for="name" class="form-label font-14 font-heading">Deal</label>
+                            <select id="deal" name="deal" class="form-select" required autofocus>
+                                <option value="">Select Deal</option>                        
+                            </select>
+                            <ul style="color: red;">
+                                @error('voucher_no'){{$message}}@enderror                        
+                            </ul> 
+                        </div>
+                        <div class="clearfix"></div>
+                        <div class="mb-3 col-md-3">
+                            <label for="item_1" class="form-label font-14 font-heading">Item *</label>
+                            <select id="item_1" name="item[]" class="form-select item" data-id="1" required autofocus>
+                                <option value="">Select Item</option>
+                            </select>
+                            <ul style="color: red;">
+                                @error('voucher_no'){{$message}}@enderror
+                            </ul> 
+                        </div>
+                        <div class="mb-3 col-md-3">
+                            <label for="price_1" class="form-label font-14 font-heading">Price *</label>
+                            <input type="number" id="price_1" class="form-control price" name="price[]" placeholder="Enter Price" data-id="1" required >
+                            <ul style="color: red;">
+                                @error('date'){{$message}}@enderror
+                            </ul> 
+                        </div>
+                        <div class="mb-3 col-md-3">
+                            <label for="bill_price_1" class="form-label font-14 font-heading">Bill Price <input type="checkbox"></label>
+                            <input type="text" id="bill_price_1" class="form-control" name="bill_price[]" placeholder="Enter Price" readonly data-id="1">
+                            <ul style="color: red;">
+                                @error('date'){{$message}}@enderror
+                            </ul> 
+                        </div>
+                        <div class="mb-3 col-md-3">
+                            <label for="name" class="form-label font-14 font-heading">Freight *</label>
+                            <select id="series_no" name="series_no" class="form-select" required autofocus>
+                                <option value="">Select Freight</option>
+                            </select>
+                            <ul style="color: red;">
+                                @error('voucher_no'){{$message}}@enderror
+                            </ul> 
+                        </div>
+                        <div class="clearfix"></div>
+                        <div class="mb-3 col-md-3">
+                            <label for="unit_1" class="form-label font-14 font-heading">Unit *</label>
+                            <select id="unit_1" name="unit[]" class="form-select unit" data-id="1" required autofocus >
+                                <option value="">Select Unit</option>
+                            </select>
+                            <ul style="color: red;">
+                                @error('voucher_no'){{$message}}@enderror
+                            </ul> 
+                        </div>
+                        <div class="mb-3 col-md-3">
+                            <label for="sub_unit_1" class="form-label font-14 font-heading">Sub Unit *</label>
+                            <select id="sub_unit_1" name="sub_unit[]" class="form-select sub_unit" data-id="1" required autofocus>
+                                <option value="">Select Sub Unit</option>
+                                <option value="INCH">INCH</option>
+                                <option value="CM">CM</option>
+                                <option value="MM">MM</option>
+                            </select>
+                            <ul style="color: red;">
+                                @error('voucher_no'){{$message}}@enderror
+                            </ul> 
+                        </div>
+                        <div class="clearfix"></div>
+                        <div class="mb-3 col-md-3">
+                            <div class="form-group">
+                                <table class="table table-bordered">
+                                    <tr>
+                                    <td style="width: 40%;">GSM <span id="0_1" class="add_gsm" onClick="addGSM(0,1)" style="color:#3c8dbc;cursor: pointer;" >Add GSM</span></td>
+                                    <td> <input type="text" id="gsm_1_1" class="form-control gsm_1" name="gsm[]" placeholder="Enter GSM" required ></td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="form-group">
+                                <table class="table table-bordered" id="table_1_1">
+                                    <tr>
+                                        <td>SIZES</td>
+                                        <td class="reel_name_0">REELS</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <input type="text" id="size_1_1_1" class="form-control size_1 size_1_1" name="size[]" placeholder="SIZES" required >
+                                        </td>
+                                        <td>
+                                            <input type="text" id="reel_1_1_1" class="form-control reel_1 reel_1_1" name="reel[]" placeholder="REELS" required >
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Total</td>
+                                        <td id="total_reel_1_1" class="total_reel">0</td>
+                                    </tr>
+                                </table>
+                                <span id="1_1" class="add_row" onClick="addRow(1,1)" style="color:#3c8dbc;cursor: pointer;" >Add Row</span>
+                            </div>
+                        </div>
+                        <div id="dynamic_gsm_0_1" class="col-md-2"></div>
+                         
+                        <div class="clearfix"></div>
+                        <p ><button type="button" class="btn btn-info">ADD ITEM</button></p>
                     </div>
                     <div class=" d-flex">
                         <div class="ms-auto">
@@ -307,5 +288,24 @@
 </body>
 @include('layouts.footer')
 <script>
+    
+    function addRow(a,b){
+        $("#table_"+a+"_"+b+" tr").eq(-2).before('<tr><td><input type="text" name="size[]"  class="form-control size_1 size_1_1" data-id="'+a+'_'+b+'" placeholder="SIZES"></td><td><input type="number" min="1" class="form-control reel_1 reel_1_1" name="reel[]" placeholder="REELS"></td></tr>');
+   }
+   let row_id=1;
+   function addGSM(id,ids){
+      var text = $("#unit_"+id).val();
+      let a = ids;
+      $("#"+id+"_"+a).hide();
+      a++;
+      $("#dynamic_gsm_"+id+"_"+ids).append('<div class="form-group"><table class="table table-bordered"><tr><td style="width: 50%;">GSM</td><td><input type="text" name="gsm_'+id+'[]" class="text_width gsm_'+id+'"></td></tr></table></div></div><div class="form-group"><table class="table table-bordered" id="table_'+id+'_'+ids+'"><tr><td>SIZES</td><td>'+text+'</td></tr><tr><td><input type="text" name="size_'+id+'_'+ids+'[]" class="text_width checkSize size_class_'+id+'_'+ids+'" data-id="'+id+'_'+ids+'" onkeyup="totalCount('+id+','+ids+')"></td><td><input min="1" type="number" class="reel_'
+      +id+'_'+ids+' text_width" onkeyup="totalCount('+id+','+ids+')" name="reel_'+id+'_'+ids+'[]"></td></tr><tr><td><input type="text" name="size_'+id+'_'+ids+'[]" class="text_width checkSize size_class_'+id+'_'+ids+'" data-id="'+id+'_'+ids+'" onkeyup="totalCount('+id+','+ids+')"></td><td><input type="number" min="1" class="reel_'
+      +id+'_'+ids+' text_width" onkeyup="totalCount('+id+','+ids+')" name="reel_'+id+'_'+ids+'[]"></td></tr> <tr><td><input type="text" name="size_'+id+'_'+ids+'[]" class="text_width checkSize size_class_'+id+'_'+ids+'" data-id="'+id+'_'+ids+'" onkeyup="totalCount('+id+','+ids+')"></td><td><input type="number" min="1" class="reel_'
+      +id+'_'+ids+' text_width" onkeyup="totalCount('+id+','+ids+')" name="reel_'+id+'_'+ids+'[]"></td></tr><tr><td><input type="text"  name="size_'+id+'_'+ids+'[]" class="text_width checkSize size_class_'+id+'_'+ids+'" data-id="'+id+'_'+ids+'" onkeyup="totalCount('+id+','+ids+')"></td><td><input type="number" min="1" class="reel_'
+      +id+'_'+ids+' text_width" onkeyup="totalCount('+id+','+ids+')" name="reel_'+id+'_'+ids+'[]"></td></tr><tr><td><input type="text" name="size_'+id+'_'+ids+'[]" class="text_width checkSize size_class_'+id+'_'+ids+'" data-id="'+id+'_'+ids+'" onkeyup="totalCount('+id+','+ids+')"></td><td><input type="number" min="1" class="reel_'
+      +id+'_'+ids+' text_width" onkeyup="totalCount('+id+','+ids+')" name="reel_'+id+'_'+ids+'[]"></td></tr><tr><td>Total</td><td id="total_'+id+'_'+ids+'" class="total_reel">0</td></tr>  <tr style="display: none" class="approx_weight"><td>Approx Weight</td><td id="app_weight_'+id+'_'+ids+'" class="app_weight">0</td></tr></table> <span id="'+id+'_'+ids+'" class="add_row" onClick="addRow('+id+','+ids+')" style="color:#3c8dbc;cursor: pointer;" >Add Row</span></div>');
+      
+     $("#a_"+id+"_"+ids).append('<div id="dynamic_gsm_'+id+'_'+a+'" class="col-md-2"></div><span id="a_'+id+'_'+a+'"></span><span id="'+id+'_'+a+'" class="add_gsm" onClick="addGSM('+id+','+a+')" style="color:#3c8dbc;cursor: pointer;" >Add GSM</span>');
+   }
 </script>
 @endsection

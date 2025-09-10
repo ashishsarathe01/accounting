@@ -455,7 +455,8 @@
             data:{
                "_token": "{{ csrf_token() }}",
                "location": loc_id,
-               "account_id": account_id
+               "account_id": account_id,
+               "invoice_date":$("#invoice_date").val(),
             },
             success:function(res){
                if(res == null){

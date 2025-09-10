@@ -687,8 +687,10 @@ body {
    });
    function printpage(){
       $('.header-section').addClass('importantRule');
+      $('.sidebar').addClass('importantRule');
       window.print();
       $('.header-section').removeClass('importantRule');
+      $('.sidebar').removeClass('importantRule');
    }
 </script>
 @endsection

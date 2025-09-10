@@ -390,7 +390,7 @@ Route::post('upload-purchase-image', [SupplierPurchaseController::class, 'upload
 Route::get('pending-for-approval', [SupplierPurchaseController::class, 'pendingForApproval'])->name('pending-for-approval');
 Route::post('reject-purchase-report', [SupplierPurchaseController::class, 'rejectPurchaseReport'])->name('reject-purchase-report');
 Route::post('approve-purchase-report', [SupplierPurchaseController::class, 'approvePurchaseReport'])->name('approve-purchase-report');
-Route::get('view-approved-purchase-detail/{id}/{from_date}/{to_date}', [SupplierPurchaseController::class, 'viewApprovedPurchaseDetail'])->name('view-approved-purchase-detail');
+Route::get('view-approved-purchase-detail/{id?}/{from_date?}/{to_date?}', [SupplierPurchaseController::class, 'viewApprovedPurchaseDetail'])->name('view-approved-purchase-detail');
 Route::post('perform-action-on-purchase', [SupplierPurchaseController::class, 'performActionOnPurchase'])->name('perform-action-on-purchase');
 
 

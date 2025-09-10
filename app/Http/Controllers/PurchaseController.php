@@ -110,21 +110,17 @@ class PurchaseController extends Controller{
    public function create(){
       Gate::authorize('action-module',83);
       //Account List
-      $groups = DB::table('account_groups')
-                        ->whereIn('heading', [3,11])
-                        ->where('heading_type','group')
-                        ->where('status','1')
-                        ->where('delete','0')
-                        ->where('company_id',Session::get('user_company_id'))
-                        ->pluck('id');
-      $groups->push(3);
-      $groups->push(11);
+      $group_ids = CommonHelper::getAllChildGroupIds(3,Session::get('user_company_id'));
+        array_push($group_ids, 3);
+        $group_ids = array_merge($group_ids, CommonHelper::getAllChildGroupIds(11,Session::get('user_company_id'))); // Include group 11 as well
+        $group_ids = array_unique($group_ids); // Ensure unique group IDs       
+        array_push($group_ids, 11);
 
       $party_list = Accounts::leftjoin('states','accounts.state','=','states.id')
                               ->where('delete', '=', '0')
                               ->where('status', '=', '1')
                               ->whereIn('company_id', [Session::get('user_company_id'),0])
-                              ->whereIn('under_group',$groups)
+                              ->whereIn('under_group',$group_ids)
                               ->select('accounts.id','accounts.gstin','accounts.address','accounts.pin_code','accounts.account_name','states.state_code')
                               ->orderBy('account_name')
                               ->get();    
@@ -775,21 +771,17 @@ class PurchaseController extends Controller{
                                  ->select(['bill_sundrys.effect_gst_calculation','bill_sundrys.nature_of_sundry','purchase_sundries.*'])
                                  ->where('purchase_id',$id)
                                  ->get();
-      $groups = DB::table('account_groups')
-                     ->whereIn('heading', [3,11])
-                     ->where('heading_type','group')
-                     ->where('status','1')
-                     ->where('delete','0')
-                     ->where('company_id',Session::get('user_company_id'))
-                     ->pluck('id');
-                     $groups->push(3);
-                     $groups->push(11);
+      $group_ids = CommonHelper::getAllChildGroupIds(3,Session::get('user_company_id'));
+        array_push($group_ids, 3);
+        $group_ids = array_merge($group_ids, CommonHelper::getAllChildGroupIds(11,Session::get('user_company_id'))); // Include group 11 as well
+        $group_ids = array_unique($group_ids); // Ensure unique group IDs       
+        array_push($group_ids, 11);
       $party_list = Accounts::select('accounts.*','states.state_code')
                               ->leftjoin('states','accounts.state','=','states.id')
                               ->where('accounts.delete', '=', '0')
                               ->where('accounts.status', '=', '1')
                               ->whereIn('company_id', [Session::get('user_company_id'),0])
-                              ->whereIn('under_group', $groups)
+                              ->whereIn('under_group', $group_ids)
                               ->orderBy('account_name')
                               ->get();
       $manageitems = DB::table('manage_items')->join('units', 'manage_items.u_name', '=', 'units.id')
@@ -1218,7 +1210,7 @@ class PurchaseController extends Controller{
    public function purchaseImportView(Request $request){      
       return view('purchase_import');
    }
-   public function purchaseImportProcess(Request $request) {    
+   public function purchaseImportProcess(Request $request) {
       ini_set('max_execution_time', 600);
       $validator = Validator::make($request->all(), [
          'csv_file' => 'required|file|mimes:csv,txt|max:2048', // Max 2MB, CSV or TXT file
@@ -1451,14 +1443,18 @@ class PurchaseController extends Controller{
          $success_invoice_count = 0;
          $failed_invoice_count = 0;
          if(count($data_arr)>0){
+            $override_average_data_arr = [];$new_average_data_arr = [];$smallestDate = null;
             foreach ($data_arr as $key => $value) {
                if(count($value['error_arr'])>0){
                   array_push($all_error_arr,$value['error_arr']);
                   $failed_invoice_count++;
                   continue;
                }
-               $series_no = $value['series_no'];
                $date = date('Y-m-d',strtotime($value['date']));
+               if ($smallestDate === null || strtotime($date) < strtotime($smallestDate)) {
+                  $smallestDate = $date;
+               }
+               $series_no = $value['series_no'];
                $voucher_no = $value['voucher_no'];
                $party = $value['party'];
                $material_center = $value['material_center'];
@@ -1511,7 +1507,8 @@ class PurchaseController extends Controller{
                                                       ->get();
                      // Recalculate item averages
                      foreach ($itemKiId as $k) {
-                        CommonHelper::RewriteItemAverageByItem($k->date, $k->item_id,$series_no);
+                        //CommonHelper::RewriteItemAverageByItem($k->date, $k->item_id,$series_no);
+                        array_push($override_average_data_arr,array("item_id"=>$k->item_id,"series"=>$series_no,"date"=>$k->date));
                      }
                   }
                }
@@ -1717,7 +1714,7 @@ class PurchaseController extends Controller{
                         $item_ledger->created_at = date('Y-m-d H:i:s');
                         $item_ledger->save();
                      }
-                  }                 
+                  }                   
                   // Code for average costing
                   $update_item_arr = [];
                   $item_average_arr = [];
@@ -1816,7 +1813,8 @@ class PurchaseController extends Controller{
                      $average_detail->save();
                  
                      // Update average rate
-                     CommonHelper::RewriteItemAverageByItem($date, $value['item'],$series_no);
+                     //CommonHelper::RewriteItemAverageByItem($date, $value['item'],$series_no);
+                     array_push($new_average_data_arr,array("item_id"=>$value['item'],"series"=>$series_no,"date"=>$date));
                   }
                   //Other Bill Sundry
                   $sundry_id = "";
@@ -1910,6 +1908,20 @@ class PurchaseController extends Controller{
                   $update_sale->status = '1';
                   $update_sale->update();
                   $success_invoice_count++;
+               }
+            }
+            if($duplicate_voucher_status==2){
+               if(count($override_average_data_arr)>0){
+                  $override_average_data_arr = array_map("unserialize", array_unique(array_map("serialize", $override_average_data_arr)));
+                  foreach($override_average_data_arr as $value){
+                     CommonHelper::RewriteItemAverageByItem($value['date'],$value['item_id'],$value['series']);
+                  }
+               }
+            }
+            if(count($new_average_data_arr)>0){
+               $new_average_data_arr = array_map("unserialize", array_unique(array_map("serialize", $new_average_data_arr)));
+               foreach($new_average_data_arr as $value){
+                  CommonHelper::RewriteItemAverageByItem($value['date'],$value['item_id'],$value['series']);
                }
             }
          }

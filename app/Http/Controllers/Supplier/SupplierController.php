@@ -119,6 +119,7 @@ class SupplierController extends Controller
                             $supplier_location_rates->head_id = $v;
                             $supplier_location_rates->head_rate = $request["head_rate_".$key][$k];
                             $supplier_location_rates->bonus = $bonus;
+                            //$supplier_location_rates->r_date = $request["rate_date"];
                             $supplier_location_rates->company_id = Session::get('user_company_id');
                             $supplier_location_rates->created_at = Carbon::now();
                             $supplier_location_rates->save();

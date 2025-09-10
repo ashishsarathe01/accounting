@@ -27,7 +27,7 @@
                         <input type="date" id="to_date" class="form-control calender-bg-icon calender-placeholder" placeholder="To date" required name="to_date" value="{{ !empty($to_date) ? date('Y-m-d', strtotime($to_date)) : date('Y-m-t')}}">
                      </div>
                     <select class="form-select form-select-sm w-auto ms-md-4 select2-single" aria-label=".form-select-sm example" id="supplier">
-                        <option selected value="">Select Supplier</option>
+                        <option selected value="all">All Supplier</option>
                         @foreach($accounts as $loc)
                             <option value="{{$loc->id}}" @if($loc->id==$id) selected @endif>{{$loc->account_name}}</option>
                         @endforeach
@@ -41,36 +41,96 @@
                      <tr class=" font-12 text-body bg-light-pink ">
                         {{-- <th class="w-min-120 border-none bg-light-pink text-body">Date </th>
                         <th class="w-min-120 border-none bg-light-pink text-body">Voucher No. </th> --}}
+                        <th class="w-min-120 border-none bg-light-pink text-body" style="text-align:right;">Account Name</th>
                         <th class="w-min-120 border-none bg-light-pink text-body" style="text-align:right;">Actual Amount</th>
                         <th class="w-min-120 border-none bg-light-pink text-body" style="text-align:right;">Difference Amount</th>
                         <th class="w-min-120 border-none bg-light-pink text-body">Action</th>
                      </tr>
                   </thead>
-                  <tbody>                    
+                  <tbody>
+                     @php  $qty_total=0;$amount_total=0; @endphp
+                     @foreach($purchases as $key => $value)
+                     @php  $qty_total=$qty_total+$value->total_sum;$amount_total=$amount_total+$value->difference_sum; @endphp
                         <tr>
-                            {{-- <td>{{date('d-m-Y',strtotime($value->date))}}</td>
-                            <td>{{$value->voucher_no}}</td> --}}
-                            <td style="text-align:right;">{{$purchases->total_sum}}</td>
-                            <td style="text-align:right;">{{$purchases->difference_sum}}</td>
-                            <td>
-                              @if(isset($purchases->total_sum))
-                                 <a href="{{route('view-approved-purchase-detail')}}/{{$id}}/{{$from_date}}/{{$to_date}}" target="_blank"><button class="btn btn-info">View</button></a>
-                              @endif
-                              
+                           <td style="text-align:right;">{{$value->account_name}}</td>
+                           <td style="text-align:right;">{{$value->total_sum}}</td>
+                           <td style="text-align:right;">{{$value->difference_sum}}</td>
+                           <td>
+                              @if(isset($value->total_sum))
+                                 <a href="{{route('view-approved-purchase-detail',[$value->party, $from_date, $to_date])}}" target="_blank"><button class="btn btn-info">View</button></a>
+                              @endif                              
                            </td>
                         </tr>
-                    {{-- <tr>
-                        <th></th>
-                        <th style="text-align:right;">Total</th>
-                        <th style="text-align:right;">{{$total}}</th>
-                        <th style="text-align:right;">{{$difference_total}}</th>
-                        <td></td>
-                    </tr> --}}
-                        
+                     @endforeach  
+                     <tr>
+                           <th>Total</th>
+                           <th style="text-align:right;">{{$qty_total}}</th>
+                           <th style="text-align:right;">{{$amount_total}}</th>
+                        </tr>                      
                   </tbody>
                </table>
             </div>
+                   
+            <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
+               <h5 class="transaction-table-title m-0 py-2">Details</h5>               
+            </div>
+            <div class="transaction-table bg-white table-view shadow-sm">
+               <table class="table-bordered table m-0 shadow-sm payment_table">
+                  <thead>
+                     <tr class=" font-12 text-body bg-light-pink ">
+                        <th class="w-min-120 border-none bg-light-pink text-body">Head</th>
+                        <th class="w-min-120 border-none bg-light-pink text-body" style="text-align:right;">Quantity</th>
+                        <th class="w-min-120 border-none bg-light-pink text-body" style="text-align:right;">Amount</th>
+                     </tr>
+                  </thead>
+                  <tbody>
+                     @php $reportArr = []; @endphp
+                     @foreach($purchases_details as $key => $value)
+                        @foreach($value->purchaseReport as $k1 => $v1)
+                           @if($v1->head_qty!="" && $v1->head_qty!=0)
+                              @isset($v1->headInfo->name)
+                                 @php 
+                                    $headName = $v1->headInfo->name;
+                                 @endphp
+                              @else
+                                 @php 
+                                    $headName = $v1->head_id;
+                                 @endphp
+                              @endisset
+                              @php 
+                                 if (!isset($reportArr[$headName])) {
+                                    $reportArr[$headName] = [
+                                       'qty' => 0,
+                                       'amount' => 0,
+                                    ];
+                                 }
+                                 $reportArr[$headName]['qty'] += $v1->head_qty;
+                                 $reportArr[$headName]['amount'] += $v1->head_difference_amount; // assuming `rate` exists
+                               @endphp
+                           @endif                          
+                        @endforeach
+                     @endforeach
+                     @php  $qty_total=0;$amount_total=0; @endphp
+                      
+                     @foreach($reportArr as $key => $value)
+                     @php  $qty_total=$qty_total+$value['qty'];$amount_total=$amount_total+$value['amount']; @endphp
+                        <tr>
+                           <td>{{$key}}</td>
+                           <td style="text-align:right;">{{$value['qty']}}</td>
+                           <td style="text-align:right;">{{$value['amount']}}</td>
+                        </tr>
+                     @endforeach
+                     <tr>
+                           <th>Total</th>
+                           <th style="text-align:right;">{{$qty_total}}</th>
+                           <th style="text-align:right;">{{$amount_total}}</th>
+                        </tr>
+                  </tbody>
+               </table>
+            </div>
+         
          </div>
+         
          <!-- <div class="col-lg-1 d-flex justify-content-center">
             <div class="shortcut-key ">
                <p class="font-14 fw-500 font-heading m-0">Shortcut Keys</p>
@@ -279,12 +339,8 @@
     $(".search_btn").click(function(){
         let supplier = $("#supplier").val();
         let from_date = $("#from_date").val();
-        let to_date = $("#to_date").val();
-        if(supplier == ''){
-            alert('Please select supplier');
-            return false;
-        }
-        window.location = "{{url('manage-supplier-purchase-report/')}}/"+supplier+'/'+from_date+'/'+to_date;
+        let to_date = $("#to_date").val();       
+        window.location = "{{url('manage-supplier-purchase-report/')}}/"+supplier+"/"+from_date+"/"+to_date;
     });
     $(".view").click(function(){
          let id = $(this).data('id');

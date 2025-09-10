@@ -61,36 +61,48 @@
                <div class="alert alert-success" role="alert">
                   {{ session('success')}}
                </div>
-            @endif            
+            @endif
             <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Add Purchase Return/Debit Note</h5>
+            
+            
             <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('purchase-return.store') }}" id="purchaseReturnForm">
                @csrf
+               @isset($_GET['data'])
+                  @php
+                     $action_data = json_decode($_GET['data'],true);
+                     $amount = array_sum(array_column($action_data, 'amount'));
+                     $amount = trim($amount);
+                     $ids = array_column($action_data, 'id');
+                     $ids = json_encode($ids);
+                  @endphp
+                  <input type="hidden" name="purchase_report_id" value="{{$ids}}">
+               @endisset
                <div class="row">
                   <div class="mb-4 col-md-4">
                      <label for="nature" class="form-label font-14 font-heading">NATURE</label>
                      <select id="nature" name="nature" class="form-select" required onChange="sectionHideShow();">
                         <option value="">Select</option>
-                        <option value="WITH GST">WITH GST</option>
+                        <option value="WITH GST" @isset($_GET['data']) selected  @endisset>WITH GST</option>
                         <option value="WITHOUT GST">WITHOUT GST</option>
                      </select>
                      <ul style="color: red;">
-                        @error('date'){{$message}}@enderror                        
+                        @error('date'){{$message}}@enderror
                      </ul> 
                   </div>
                   <div class="mb-4 col-md-4 type_div" style="display:none">
                      <label for="type" class="form-label font-14 font-heading">TYPE</label>
                      <select id="type" name="type" class="form-select" onChange="sectionHideShow()">
                         <option value="">Select</option>
-                        <option value="WITH ITEM">WITH ITEM</option>
+                        <option value="WITH ITEM" >WITH ITEM</option>
                         <option value="WITHOUT ITEM">WITHOUT ITEM</option>
-                        <option value="RATE DIFFERENCE">RATE DIFFERENCE</option>
+                        <option value="RATE DIFFERENCE" @isset($_GET['data']) selected  @endisset>RATE DIFFERENCE</option>
                      </select>
                   </div>
                   <div class="mb-4 col-md-4">
                      <label for="date" class="form-label font-14 font-heading">Date</label>
                      <input type="date" id="date" class="form-control calender-bg-icon calender-placeholder" name="date" value="{{$bill_date}}" placeholder="Select date" required min="{{Session::get('from_date')}}" max="{{Session::get('to_date')}}">
                      <ul style="color: red;">
-                        @error('date'){{$message}}@enderror                        
+                        @error('date'){{$message}}@enderror
                      </ul>
                   </div>
                   <div class="mb-4 col-md-4 account_div">
@@ -98,7 +110,7 @@
                      <select class="form-select select2-single" name="party_id" id="party_id">
                         <option value="">Select Account</option>
                         @foreach($party_list as $party)
-                           <option value="{{$party->id}}" data-state_code="{{$party->state_code}}" data-gstin="{{$party->gstin}}" data-id="{{$party->id}}" data-address="{{$party->address}}, {{$party->pin_code}}">{{$party->account_name}}</option>
+                           <option value="{{$party->id}}" data-state_code="{{$party->state_code}}" data-gstin="{{$party->gstin}}" data-id="{{$party->id}}" data-address="{{$party->address}}, {{$party->pin_code}}" @isset($_GET['account_id']) @if($_GET['account_id']==$party->id) selected @endif @endisset>{{$party->account_name}}</option>
                         @endforeach
                      </select> 
                      <p id="partyaddress" style="font-size: 9px;"></p>
@@ -216,7 +228,7 @@
                               <input type="number" class="price form-control" id="price_tr_1" name="price[]" placeholder="Price" style="text-align:right;" step="0.01"/>
                            </td>
                            <td class="w-min-50">
-                              <input type="number" id="amount_tr_1" class="amount w-100 form-control" name="amount[]" placeholder="Amount" style="text-align:right;" step="0.01"/>
+                              <input type="number" id="amount_tr_1" class="amount w-100 form-control" name="amount[]" placeholder="Amount" style="text-align:right;" step="0.01" value="@isset($_GET['data']){{$amount}}@endisset"/>
                            </td>
                            <td class="">
                               <svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle add_more" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg>
@@ -782,6 +794,8 @@
    var add_more_count = 1;
    var add_more_counts = 1;
    var add_more_bill_sundry_up_count = 2;
+   let get_data = @json(request()->get('data'));
+   
    $(".add_more").click(function() {
       let empty_status = 0;
       $('.goods_items').each(function(){   
@@ -875,32 +889,8 @@
          }
       });
    });
-  $(document).ready(function() {      
-      $('#party_id').select2({
-         placeholder: "Select Account",
-         allowClear: true,
-         width: '100%' // Ensure dropdown matches Bootstrap styling
-      });
-
-      // Move focus to next field after selecting an option
-      $('#party_id').on('select2:select', function (e) {
-         $('#voucher_no').focus();
-      });
-      // Properly initialize Select2 with search enabled
-      $('#voucher_no').select2({
-         placeholder: "Select Account",
-         allowClear: true,
-         width: '100%' // Ensure dropdown matches Bootstrap styling
-      });
-
-      // Move focus to next field after selecting an option
-      $('#voucher_no').on('select2:select', function (e) {
-         $('#series_no').focus();
-      });      
-      // Function to calculate amount and update total sum
-      
-      // Function to calculate amount and update total sum
-      window.calculateAmount = function(key=null) {         
+    // Function to calculate amount and update total sum
+      function calculateAmount(key=null) {  
          customer_gstin = $('#party_id option:selected').attr('data-state_code'); 
          if(customer_gstin==undefined){
             return;
@@ -1279,6 +1269,34 @@
          }
          return;         
       }
+  $(document).ready(function() {
+      $('#party_id').select2({
+         placeholder: "Select Account",
+         allowClear: true,
+         width: '100%' // Ensure dropdown matches Bootstrap styling
+      });
+      if(get_data!=""){
+         sectionHideShow();
+         $("#party_id").trigger('change');
+      }
+      // Move focus to next field after selecting an option
+      $('#party_id').on('select2:select', function (e) {
+         $('#voucher_no').focus();
+      });
+      // Properly initialize Select2 with search enabled
+      $('#voucher_no').select2({
+         placeholder: "Select Account",
+         allowClear: true,
+         width: '100%' // Ensure dropdown matches Bootstrap styling
+      });
+
+      // Move focus to next field after selecting an option
+      $('#voucher_no').on('select2:select', function (e) {
+         $('#series_no').focus();
+      });      
+      // Function to calculate amount and update total sum
+      
+     
         // Calculate amount on input change
         // Calculate amount on input change
         $(document).on('input', '.price',function(){
@@ -1832,7 +1850,7 @@
          });
       }
    });
-   $(document).on('change', '#party_id', function(){  
+   $(document).on('change', '#party_id', function(){
       $("#invoice_id").show();
       $(".other_invoice_div").hide();
       $("#other_invoice_no").val('');
@@ -1865,6 +1883,11 @@
             });
             optionElements += '<option value="OTHER">OTHER</option>';
             $("#voucher_no").append(optionElements);
+            if(get_data!=""){
+               $("#voucher_no").val('OTHER');
+               $("#voucher_no").change();
+               $("#other_invoice_against").val('PURCHASE');
+            }
          }
       });
       calculateAmount();

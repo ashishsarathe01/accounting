@@ -1501,7 +1501,7 @@ class SalesController extends Controller
                                     ->select('sale_descriptions.goods_description as item_id');
                         foreach($itemKiId as $k){
                            //CommonHelper::RewriteItemAverageByItem($check_invoices_value->date,$k->item_id,$series_no);
-                           array_push($override_average_data_arr,array("item_id"=>$k->item_id,"series"=>$series_no));
+                           array_push($override_average_data_arr,array("item_id"=>$k->item_id,"series"=>$series_no,"date"=>$check_invoices_value->date));
                         }
                      }
                   }
@@ -1796,7 +1796,7 @@ class SalesController extends Controller
                            $average_detail->created_at = Carbon::now();
                            $average_detail->save();
                            //CommonHelper::RewriteItemAverageByItem($sale->date,$item->id,$series_no);
-                           array_push($new_average_data_arr,array("item_id"=>$item->id,"series"=>$series_no));
+                           array_push($new_average_data_arr,array("item_id"=>$item->id,"series"=>$series_no,"date"=>$sale->date));
                            
             
                      }
@@ -1842,14 +1842,14 @@ class SalesController extends Controller
                if(count($override_average_data_arr)>0){
                   $override_average_data_arr = array_map("unserialize", array_unique(array_map("serialize", $override_average_data_arr)));
                   foreach($override_average_data_arr as $value){
-                     CommonHelper::RewriteItemAverageByItem($smallestDate,$value['item_id'],$value['series']);
+                     CommonHelper::RewriteItemAverageByItem($value['date'],$value['item_id'],$value['series']);
                   }
                }
             }
             if(count($new_average_data_arr)>0){
                $new_average_data_arr = array_map("unserialize", array_unique(array_map("serialize", $new_average_data_arr)));
                foreach($new_average_data_arr as $value){
-                  CommonHelper::RewriteItemAverageByItem($smallestDate,$value['item_id'],$value['series']);
+                  CommonHelper::RewriteItemAverageByItem($value['date'],$value['item_id'],$value['series']);
                }
             }
          }

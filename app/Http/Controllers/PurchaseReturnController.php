@@ -113,20 +113,16 @@ class PurchaseReturnController extends Controller
      */
    public function create(){
       Gate::authorize('action-module',77);
-      $groups = DB::table('account_groups')
-      ->whereIn('heading', [3,11])
-      ->where('heading_type','group')
-      ->where('status','1')
-      ->where('delete','0')
-      ->where('company_id',Session::get('user_company_id'))
-      ->pluck('id');
-      $groups->push(3);
-      $groups->push(11);
+      $group_ids = CommonHelper::getAllChildGroupIds(3,Session::get('user_company_id'));
+      array_push($group_ids, 3);
+      $group_ids = array_merge($group_ids, CommonHelper::getAllChildGroupIds(11,Session::get('user_company_id'))); // Include group 11 as well
+      $group_ids = array_unique($group_ids); // Ensure unique group IDs       
+      array_push($group_ids, 11);
       $party_list = Accounts::leftjoin('states','accounts.state','=','states.id')
                   ->where('delete', '=', '0')
                   ->where('status', '=', '1')
                   ->whereIn('company_id', [Session::get('user_company_id'),0])
-                  ->whereIn('under_group',$groups)
+                  ->whereIn('under_group',$group_ids)
                   ->select('accounts.id','accounts.gstin','accounts.address','accounts.pin_code','accounts.account_name','states.state_code')
                   ->orderBy('account_name')
                   ->get(); 
@@ -358,7 +354,10 @@ class PurchaseReturnController extends Controller
          'material_center' => 'required',
       ]);
       // echo "<pre>";
-      // print_r($request->all());die;
+      // print_r($request->all());
+      // die;
+      
+      
       //Check Item Empty or not
       if($request->input('nature')=="WITH GST" && ($request->input('type')=="WITH ITEM" || $request->input('type')=="RATE DIFFERENCE")){
          if($request->input('goods_discription')[0]=="" || $request->input('amount')[0]==""){
@@ -473,6 +472,10 @@ class PurchaseReturnController extends Controller
       $purchase->save();
      // $roundoff = $request->input('total')-$request->input('taxable_amt');
       if($purchase->id){
+         if(isset($request->purchase_report_id) && !empty($request->purchase_report_id)){
+            $purchase_report_id = json_decode($request->purchase_report_id,true);
+            Purchase::whereIn('id',$purchase_report_id)->update(['supplier_action_status'=>4,'supplier_action_id'=>$purchase->id,'supplier_action_type'=>'DEBIT NOTE']);
+         }
          if($request->input('nature')=="WITH GST" && ($request->input('type')=="WITH ITEM" || $request->input('type')=="RATE DIFFERENCE")){
             $goods_discriptions = $request->input('goods_discription');
             $qtys = $request->input('qty');
@@ -1267,21 +1270,17 @@ class PurchaseReturnController extends Controller
                                  ->select(['bill_sundrys.effect_gst_calculation','bill_sundrys.nature_of_sundry','purchase_return_sundries.*'])
                                              ->where('purchase_return_id',$id)
                                              ->get();
-      $groups = DB::table('account_groups')
-                     ->whereIn('heading', [3,11])
-                     ->where('heading_type','group')
-                     ->where('status','1')
-                     ->where('delete','0')
-                     ->where('company_id',Session::get('user_company_id'))
-                     ->pluck('id');
-                     $groups->push(3);
-                     $groups->push(11);
+      $group_ids = CommonHelper::getAllChildGroupIds(3,Session::get('user_company_id'));
+      array_push($group_ids, 3);
+      $group_ids = array_merge($group_ids, CommonHelper::getAllChildGroupIds(11,Session::get('user_company_id'))); // Include group 11 as well
+      $group_ids = array_unique($group_ids); // Ensure unique group IDs       
+      array_push($group_ids, 11);
       $party_list = Accounts::select('accounts.*','states.state_code')
                               ->leftjoin('states','accounts.state','=','states.id')
                               ->where('accounts.delete', '=', '0')
                               ->where('accounts.status', '=', '1')
                                ->whereIn('company_id', [Session::get('user_company_id'),0])
-                               ->whereIn('under_group', $groups)
+                               ->whereIn('under_group', $group_ids)
                                ->orderBy('account_name')
                                ->get();
       $companyData = Companies::where('id', Session::get('user_company_id'))->first();      

@@ -288,6 +288,15 @@
             $("#invoice_date").val(invoice_date);
             $("#invoice_amount").val(invoice_amount);
             $(".bill_rate").val(price);
+
+            $("#voucher_no").val('');
+            $(".qty").val('');
+            $("#qty_short_weight").val('');
+            $(".contract_rate").val('');
+            $("#contract_rate_short_weight").val('');
+            $(".difference_amount").val('');
+            $("#difference_amount_short_weight").val('');
+            $("#difference_total_amount").val('');
             if(group_id == 18){
                 $("#fuel_row").show();
                 $(".head").hide();
@@ -342,7 +351,8 @@
                     data:{
                         "_token": "{{ csrf_token() }}",
                         "location": loc_id,
-                        "account_id": account_id
+                        "account_id": account_id,
+                        "invoice_date":$("#invoice_date").val(),
                     },
                     success:function(res){
                         if(res == null){

@@ -8,6 +8,19 @@
       pointer-events: none !important;
       touch-action: none !important;
    }
+   .carousel-control-prev-icon,
+.carousel-control-next-icon {
+    background-color: rgba(0,0,0,0.5); /* semi-transparent black */
+    border-radius: 50%;
+    background-size: 100%, 100%;
+}
+#imageCarousel img {
+    width: 100%;           /* fit the column width */
+    height: 200px;         /* fixed height */
+    object-fit: contain;   /* keep aspect ratio, no cropping */
+    background: #f8f9fa;   /* light gray background so white images are visible */
+    border-radius: 8px;
+}
 </style>
 <div class="list-of-view-company ">
    <section class="list-of-view-company-section container-fluid">
@@ -191,8 +204,8 @@
             <br>
             <div class="row mt-4">
                 <!-- Left side: form + table -->
-                <div class="col-md-9">
-                    <div class="row">
+                 <div class="col-md-8">
+                     <div class="row">
                         <div class="mb-6 col-md-6">
                         <label for="name" class="form-label font-14 font-heading">Account Name</label>
                         <input type="text" id="account_name" class="form-control" readonly>
@@ -279,17 +292,30 @@
                         </div>
                     </div>
                     <br>
-            <div class="text-start">
-                <button class="btn btn-success approve" data-id="">Approve</button>
-                <button class="btn btn-danger reject" data-id="">Reject</button>
-            </div>
-                </div>
+                     <div class="text-start">
+                        <button class="btn btn-success approve" data-id="">Approve</button>
+                        <button class="btn btn-danger reject" data-id="">Reject</button>
+                     </div>
+                  </div>
                 <!-- Right side: images -->
-                <div class="col-md-3">
+                  <div class="col-md-4">
+                     <div id="imageCarousel" class="carousel slide" data-bs-ride="carousel">
+                        <div class="carousel-inner image_div">
+                           
+                        </div>
+                        <button class="carousel-control-prev" type="button" data-bs-target="#imageCarousel" data-bs-slide="prev">
+                           <span class="carousel-control-prev-icon"></span>
+                        </button>
+                        <button class="carousel-control-next" type="button" data-bs-target="#imageCarousel" data-bs-slide="next">
+                           <span class="carousel-control-next-icon"></span>
+                        </button>
+                     </div>
+                  </div>
+                {{-- <div class="col-md-3">
                     <div class="d-flex flex-column gap-2 image_div">
                         
                     </div>
-                </div>
+                </div> --}}
             </div>
             
         </div>
@@ -398,24 +424,32 @@
                                 $("#location").val(element.location);
                                 head_data_arr[element.head_id] = element;
                             });
+                            
                             let purchase_image = "";
-                            if(obj.purchase.image_1!=""){
-                                let image_name = "image_name";
-                                let img_url = '<img src="{{ asset("public/image_name") }}" class="img-fluid rounded border" style="width:50%">';
+                            $(".image_div").html(purchase_image);
+                            if(obj.purchase.image_1!="" && obj.purchase.image_1!=null){                                
+                                //let img_url = '<a href="{{ asset("public/images_names") }}" target="_blank"><img src="{{ asset("public/image_name") }}" class="img-fluid rounded border"></a>';
+                                let img_url = "{{ asset("public/image_name") }}";
                                 img_url = img_url.replace("image_name", obj.purchase.image_1); 
-                                purchase_image+=img_url;
+                                img_url = img_url.replace("images_names", obj.purchase.image_1); 
+                                //purchase_image+=img_url;
+                                purchase_image+='<div class="carousel-item active"><a href="'+img_url+'" target="_blank"><img src="'+img_url+'" class="d-block w-100 rounded"></a></div>';
                             }
-                            if(obj.purchase.image_2!=""){
-                                let image_name = "image_name";
-                                let img_url = '<img src="{{ asset("public/image_name") }}" class="img-fluid rounded border" style="width:50%">';
+                            if(obj.purchase.image_2!="" && obj.purchase.image_2!=null){
+                                //let img_url = '<a href="{{ asset("public/images_names") }}" target="_blank"><img src="{{ asset("public/image_name") }}" class="img-fluid rounded border"></a>';
+                                let img_url = "{{ asset("public/image_name") }}";
                                 img_url = img_url.replace("image_name", obj.purchase.image_2); 
-                                purchase_image+=img_url;
+                                img_url = img_url.replace("images_names", obj.purchase.image_2); 
+                                //purchase_image+=img_url;
+                                purchase_image+='<div class="carousel-item"><a href="'+img_url+'" target="_blank"><img src="'+img_url+'" class="d-block w-100 rounded"></a></div>';
                             }
-                            if(obj.purchase.image_3!=""){
-                                let image_name = "image_name";
-                                let img_url = '<img src="{{ asset("public/image_name") }}" class="img-fluid rounded border" style="width:50%">';
+                            if(obj.purchase.image_3!="" && obj.purchase.image_3!=null){
+                                //let img_url = '<a href="{{ asset("public/images_names") }}" target="_blank"><img src="{{ asset("public/image_name") }}" class="img-fluid rounded border"></a>';
+                                let img_url = "{{ asset("public/image_name") }}";
                                 img_url = img_url.replace("image_name", obj.purchase.image_3); 
-                                purchase_image+=img_url;
+                                img_url = img_url.replace("images_names", obj.purchase.image_3); 
+                                //purchase_image+=img_url;
+                                purchase_image+='<div class="carousel-item"><a href="'+img_url+'" target="_blank"><img src="'+img_url+'" class="d-block w-100 rounded"></a></div>';
                             }
                             $(".image_div").html(purchase_image);
                             $(".qty").each(function(){

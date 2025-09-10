@@ -38,6 +38,7 @@ input[type=number] {
                 </h5>
                 <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('supplier.store') }}">
                     @csrf
+                    <input type="hidden" id="rate_date" name="rate_date">
                     <div class="row">
                         <div class="mb-4 col-md-4">
                             <label for="name" class="form-label font-14 font-heading">Account</label>
@@ -211,6 +212,7 @@ $(document).ready(function(){
                 $(this).val('')
                 return;
             }
+            selected_location_arr = [];
             $(".location").each(function(){
                 selected_location_arr.push($(this).val())
             });
@@ -219,7 +221,7 @@ $(document).ready(function(){
         //get rate
         if(value != 'add_new'){
             $(".head_rate_"+id).each(function(){
-                $(this).val('');            
+                $(this).val('');
             });
             $.ajax({
                 url : "{{url('rate-by-location')}}",
@@ -228,7 +230,7 @@ $(document).ready(function(){
                     _token: '<?php echo csrf_token() ?>',
                     location_id : value
                 },
-                success:function(res){                   
+                success:function(res){
                     if(res.rate.length>0){
                         let grouped = [];
                         res.rate.forEach(function(e){
@@ -240,6 +242,7 @@ $(document).ready(function(){
                                 $(this).attr('data-rate',grouped[$(this).attr('data-head_id')]);
                             }
                         });
+                        $("#rate_date").val(res.latestDate);
                     }
                     // $(".location").html(location_list);
                 }

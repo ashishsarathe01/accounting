@@ -141,7 +141,7 @@
                            <p><span class="width25">Dr. Note No </span>: <span class="lft_mar15">{{$purchase_return->sr_prefix}}</span> </p>
                            <p><span class="width25">Dr. Note Date </span>: <span class="lft_mar15">{{date('d-m-Y',strtotime($purchase_return->date))}}</span> </p>
                            <p><span class="width25">Org. Inv. No. </span>: <span class="lft_mar15">{{$purchase_return->invoice_no}}</span> </p>
-                           <p><span class="width25">Org. Inv. Date </span>: <span class="lft_mar15">{{date('d-m-Y',strtotime($purchase_return->original_invoice_date))}}</span> </p>
+                           <p><span class="width25">Org. Inv. Date </span>: <span class="lft_mar15">@if($purchase_return->original_invoice_date!="") {{date('d-m-Y',strtotime($purchase_return->original_invoice_date))}}@endif</span> </p>
                            
                            
                            <p><span class="width25">Transport </span>: <span class="lft_mar15">{{$purchase_return->transport_name}}</span> </p>

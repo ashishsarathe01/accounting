@@ -82,7 +82,9 @@ input[type=number] {
                                 if($length>8){
                                     $col = 2;
                                 }
+                                
                                 @endphp
+                                
                                 <div  class="mb-{{$col}} col-md-{{$col}}">
                                     @if($key==0)<label for="name" class="form-label font-14 font-heading ">{{$value->name}}</label>@endif
                                     <input type="hidden" name="head_id_{{$location->id}}[]" value="{{$value->id}}">
@@ -327,7 +329,7 @@ $(document).ready(function(){
                 }else{
                     diff = parseFloat(rate) - parseFloat(grouped[$(this).attr('data-head_id')]);
                 }
-                $(this).val(diff);
+                $(this).val(diff.toFixed(2));
             }
         });
     });

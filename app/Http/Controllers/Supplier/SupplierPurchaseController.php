@@ -100,7 +100,7 @@ class SupplierPurchaseController extends Controller
             if($report->save()){
                 Purchase::where('company_id',Session::get('user_company_id'))
                         ->where('id',$request->purchase_id)
-                        ->update(['supplier_action_status' => 1,'supplier_difference_total_amount',$request->difference_total_amount]);
+                        ->update(['supplier_action_status' => 1,'supplier_difference_total_amount'=>$request->difference_total_amount]);
                 
             }
         }
@@ -188,18 +188,65 @@ class SupplierPurchaseController extends Controller
     }
     public function manageSupplierPurchaseReport($id=null, $from_date=null, $to_date=null)
     {
-        $purchases = Purchase::where('purchases.company_id', Session::get('user_company_id'))
-                                ->where('delete','0')
+        $purchases = Purchase::with(['purchaseReport'=>function($q){
+                                    $q->select('purchase_id','voucher_no','location','head_id','head_qty','head_bill_rate','head_contract_rate','head_difference_amount');
+                                    $q->with(['locationInfo'=>function($q1){
+                                        $q1->select('id','name');
+                                    },'headInfo'=>function($q2){
+                                        $q2->select('id','name');
+                                        $q2->orderBy('sequence');
+                                    }
+                                ]);
+                                }])
+                                ->join('accounts','purchases.party','=','accounts.id')
+                                ->where('purchases.company_id', Session::get('user_company_id'))
+                                ->where('purchases.delete','0')
                                 ->where('purchases.status','1')
-                                ->where('supplier_action_status','3')
-                                ->where('purchases.party', $id)
-                                ->whereDate('purchases.date', '>=', date('Y-m-d', strtotime($from_date)))
-                                ->whereDate('purchases.date', '<=', date('Y-m-d', strtotime($to_date)))
+                                ->whereIn('supplier_action_status',['3'])
+                                ->when($id,function($q)use($id,$from_date,$to_date){
+                                    $q->when($id!='all',function($q)use($id,$from_date,$to_date){
+                                        $q->where('purchases.party', $id);
+                                    });
+                                    $q->whereDate('purchases.date', '>=', date('Y-m-d', strtotime($from_date)));
+                                    $q->whereDate('purchases.date', '<=', date('Y-m-d', strtotime($to_date)));
+                                })
                                 ->select(
                                     DB::raw('SUM(purchases.total) as total_sum'),
-                                    DB::raw('SUM(supplier_difference_total_amount) as difference_sum')
+                                    DB::raw('SUM(supplier_difference_total_amount) as difference_sum'),
+                                    'account_name',
+                                    'purchases.party',
+                                    'purchases.id',
                                 )
-                                ->first();
+                                ->groupBy('purchases.party')
+                                ->get();
+        $purchases_details = Purchase::with(['purchaseReport'=>function($q){
+                                    $q->select('purchase_id','voucher_no','location','head_id','head_qty','head_bill_rate','head_contract_rate','head_difference_amount');
+                                    $q->with(['locationInfo'=>function($q1){
+                                        $q1->select('id','name');
+                                    },'headInfo'=>function($q2){
+                                        $q2->select('id','name');
+                                        $q2->orderBy('sequence');
+                                    }]);
+                                }])
+                                ->select('purchases.id','purchases.voucher_no as invoice_no','purchases.total','supplier_difference_total_amount','date')
+                                ->where('purchases.company_id',Session::get('user_company_id'))
+                                ->where('delete','0')
+                                ->where('purchases.status','1')                                
+                                ->where('supplier_action_status','3')
+                                ->when($id,function($q)use($id,$from_date,$to_date){
+                                    $q->when($id!='all',function($q)use($id,$from_date,$to_date){
+                                        $q->where('purchases.party', $id);
+                                    });
+                                    $q->whereDate('purchases.date', '>=', date('Y-m-d', strtotime($from_date)));
+                                    $q->whereDate('purchases.date', '<=', date('Y-m-d', strtotime($to_date)));
+                                })                              
+                                ->orderBy('date','asc')
+                                ->get();
+        // if($id=="42108" && $from_date=="2025-08-01" && $to_date=="2025-09-30"){
+        //     echo "<pre>";
+        //     print_r($purchases_details->toArray());die;
+        // }
+        
         $group_ids = CommonHelper::getAllChildGroupIds(3,Session::get('user_company_id'));
         array_push($group_ids, 3);
         $group_ids = array_merge($group_ids, CommonHelper::getAllChildGroupIds(11,Session::get('user_company_id'))); // Include group 11 as well
@@ -212,7 +259,7 @@ class SupplierPurchaseController extends Controller
                               ->select('accounts.id','accounts.account_name')
                               ->orderBy('account_name')
                               ->get(); 
-        return view('supplier.supplier_purchase_report', ["purchases" => $purchases,"accounts"=>$accounts,"id"=>$id,"from_date"=>$from_date,"to_date"=>$to_date]);
+        return view('supplier.supplier_purchase_report', ["purchases" => $purchases,"accounts"=>$accounts,"id"=>$id,"from_date"=>$from_date,"to_date"=>$to_date,"purchases_details"=>$purchases_details]);
     }
     public function viewCompletePurchaseInfo($id=null)
     {
@@ -270,7 +317,7 @@ class SupplierPurchaseController extends Controller
             if($report->save()){
                 Purchase::where('company_id',Session::get('user_company_id'))
                         ->where('id',$request->purchase_id)
-                        ->update(['supplier_action_status' => 1,'supplier_difference_total_amount',$request->difference_total_amount]);
+                        ->update(['supplier_action_status' => 1,'supplier_difference_total_amount'=>$request->difference_total_amount]);
                 
             }
         }
@@ -293,6 +340,7 @@ class SupplierPurchaseController extends Controller
             foreach ($request->file('images') as $key=>$image) {
                  // Save file
                 $filename = time().'_'.$image->getClientOriginalName();
+                $filename = str_replace(" ","_",$filename);
                 $path = 'purchase_images/'.$filename;
                 $image->move(public_path('purchase_images'), $filename);
                 // Save path in DB 
@@ -432,13 +480,15 @@ class SupplierPurchaseController extends Controller
                                 ->where('purchases.status','1')                                
                                 ->where('supplier_action_status','3')
                                 ->where('purchases.party', $id)
-                                ->whereBetween('purchases.date', [$from_date, $to_date])
+                                ->when($from_date,function($query)use ($from_date,$to_date){
+                                    $query->whereBetween('purchases.date', [$from_date, $to_date]);
+                                })                                
                                 ->orderBy('date','asc')
                                 ->get();
         // echo "<pre>";
         // print_r($purchases->toArray());
         // echo "</pre>";
-        return view('supplier/supplier_purchase_report_detail',['account_name'=>$account->account_name,'from_date'=>$from_date,'to_date'=>$to_date,"purchases"=>$purchases]);
+        return view('supplier/supplier_purchase_report_detail',['account_name'=>$account->account_name,'from_date'=>$from_date,'to_date'=>$to_date,"purchases"=>$purchases,'id'=>$id]);
     }
     public function performActionOnPurchase(Request $request)
     {

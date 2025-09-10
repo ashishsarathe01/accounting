@@ -18,7 +18,7 @@
                </div>
             @endif
             <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
-               <h5 class="transaction-table-title m-0 py-2">Purchase Report ({{$account_name}}) - ({{date('d-m-Y',strtotime($from_date))}} TO {{date('d-m-Y',strtotime($to_date))}})</h5>
+               <h5 class="transaction-table-title m-0 py-2">Purchase Report ({{$account_name}}) @isset($from_date)- ({{date('d-m-Y',strtotime($from_date))}} TO {{date('d-m-Y',strtotime($to_date))}}) @endisset</h5>
                <div class="d-md-flex d-block">
                </div>
             </div>
@@ -81,7 +81,7 @@
                             </tr>
                         @endforeach
                         <tr>
-                            <td colspan="8" style="text-align: center;"><button class="btn btn-info action">Action</button></td>
+                            <td colspan="8" style="text-align: center;"><button class="btn btn-info action" data-action_account_id="{{$id}}">Action</button></td>
                         </tr>
                   </tbody>
                </table>
@@ -213,6 +213,7 @@
                 </div>
             </div>
             <input type="hidden" value="" id="action_data" name="action_data" />
+            <input type="hidden" value="" id="action_account_id" name="action_account_id" />
             <!-- Footer -->
             <div class="modal-footer border-0 p-0 mt-4 justify-content-center">
                <button type="button" class="btn btn-red px-4 perform_action">Submit</button>
@@ -243,11 +244,13 @@
             alert("Please Select Entry");
             return;
         }
+        $("#action_account_id").val($(this).attr('data-action_account_id'));
         $("#action_data").val(JSON.stringify(row_arr));
         $("#action_modal").modal('toggle');
     });
     $(".perform_action").click(function(){
         let action_data = $("#action_data").val();
+        let action_account_id = $("#action_account_id").val();
         let selected_action = $('input[name="action_type"]:checked').val();
         if(!selected_action){
             alert("Choose an Action");
@@ -257,18 +260,26 @@
             alert("Data Required");
             return;
         }
-        $.ajax({
-            url : "{{url('perform-action-on-purchase')}}",
-            method : "POST",
-            data: {
-                _token: '<?php echo csrf_token() ?>',
-                selected_action : selected_action,
-                action_data : action_data
-            },
-            success:function(res){
+        if(action_account_id==""){
+            alert("Account Id Required");
+            return;
+        }
+        
+        if(selected_action=="debit_note"){
+         window.location = "{{url('purchase-return/')}}/create?data="+action_data+"&account_id="+action_account_id
+        }
+      //   $.ajax({
+      //       url : "{{url('perform-action-on-purchase')}}",
+      //       method : "POST",
+      //       data: {
+      //           _token: '<?php echo csrf_token() ?>',
+      //           selected_action : selected_action,
+      //           action_data : action_data
+      //       },
+      //       success:function(res){
                 
-            }
-        });
+      //       }
+      //   });
     });
 </script>
 @endsection

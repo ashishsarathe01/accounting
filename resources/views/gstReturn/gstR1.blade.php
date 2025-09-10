@@ -163,7 +163,7 @@
                     ['title' => '9B - Credit / Debit Notes (Unregistered)', 'route' => route('debitNoteUnreg', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
                     ['title' => '11A(1), 11A(2) - Tax Liability (Advances Received)', 'route' => '#'],
                     ['title' => '11B(1), 11B(2) - Adjustment of Advances', 'route' => '#'],
-                    ['title' => '12 - HSN-wise summary of outward supplies', 'route' => route('hsnSummary', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
+                    ['title' => '12 - HSN-wise summary of outward supplies','count'=>$hsnWiseSummaryCount,'route' => route('hsnSummary', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
                     ['title' => '13 - Documents Issued', 'route' => route('docIssued', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
                     ['title' => '14 - Supplies made through ECO', 'route' => '#'],
                     ['title' => '15 - Supplies U/s 9(5)', 'route' => '#'],
