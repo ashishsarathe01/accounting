@@ -592,7 +592,7 @@ class CommonHelper
     {
         $child_ids = AccountGroups::where('heading', $group_id)
                         ->where('delete', '0')
-                        ->where('heading_type','group')
+                        ->whereIn('heading_type',['group','head'])
                         ->whereIn('company_id', [$company_id, 0])
                         ->pluck('id')
                         ->toArray();

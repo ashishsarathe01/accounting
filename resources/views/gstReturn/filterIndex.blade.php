@@ -21,7 +21,7 @@
                <h5 class="master-table-title m-0 py-2">GSTR-1</h5> 
                 </div>
 
-    <form id="gstr1-form" action="{{ route('gstr1') }}" method="POST">
+    <form id="gstr1-form" action="{{ route('gstr1') }}" method="get">
         @csrf
         <div class="mb-3 col-md-2">
         <label for="series" class="form-label" style="font-size: 1.05rem">Series</label>

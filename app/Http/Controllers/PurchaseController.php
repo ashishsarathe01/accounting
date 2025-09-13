@@ -20,6 +20,7 @@ use App\Models\ItemAverage;
 use App\Models\ItemAverageDetail;
 use App\Models\PurchaseParameterInfo;
 use App\Models\ItemParameterStock;
+use App\Models\SupplierPurchaseVehicleDetail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\URL;
 use Carbon\Carbon;
@@ -107,7 +108,13 @@ class PurchaseController extends Controller{
      *
      * @return \Illuminate\Http\Response
      */
-   public function create(){
+   public function create(Request $request){
+      
+      $rowId     = $request->query('row_id');     // 2
+      $accountId = $request->query('account_id'); // 332
+      $groupId   = $request->query('group_id');   // 1
+      
+     
       Gate::authorize('action-module',83);
       //Account List
       $group_ids = CommonHelper::getAllChildGroupIds(3,Session::get('user_company_id'));
@@ -178,10 +185,13 @@ class PurchaseController extends Controller{
             ->where('manage_items.delete', '=', '0')
             ->where('manage_items.status', '=', '1')
             ->where('manage_items.company_id',Session::get('user_company_id'))
+            ->when($groupId,function($q)use($groupId){
+               $q->where('manage_items.g_name',$groupId);
+            })
             ->orderBy('manage_items.name')
             ->select(['units.s_name as unit', 'manage_items.id','manage_items.u_name','manage_items.gst_rate','manage_items.name','parameterized_stock_status','config_status','item_groups.id as group_id'])
             ->get(); 
-      return view('addPurchase')->with('party_list', $party_list)->with('billsundry', $billsundry)->with('GstSettings', $GstSettings)->with('bill_date', $bill_date)->with('items', $item);
+      return view('addPurchase')->with('party_list', $party_list)->with('billsundry', $billsundry)->with('GstSettings', $GstSettings)->with('bill_date', $bill_date)->with('items', $item)->with('rowId', $rowId)->with('accountId', $accountId)->with('groupId', $groupId);
    }
     /**
      * Store a newly created resource in storage.
@@ -568,10 +578,16 @@ class PurchaseController extends Controller{
             $average_detail->created_at = Carbon::now();
             $average_detail->save();
             CommonHelper::RewriteItemAverageByItem($request->date,$value['item'],$request->input('series_no'));
-            
          }
+         //Update Vehicle Entry Row
+         
          //Item Average Calculation Logic End Here
          session(['previous_url_purchase' => URL::previous()]);
+         if(isset($request->rowId) && !empty($request->rowId)){
+            SupplierPurchaseVehicleDetail::where('id',$request->rowId)->update(['map_purchase_id'=>$purchase->id]);
+            return redirect('manage-purchase-info?id='.$request->rowId);
+            
+         }
          return redirect('purchase')->withSuccess('Purchase voucher added successfully!');
       }else{
          return $this->failedMessage('Something went wrong','purchase/create');

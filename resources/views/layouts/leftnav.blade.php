@@ -643,28 +643,29 @@
                            <!-- Submenu under Balance Sheet -->
                            <div class="collapse ps-3" id="financialSubmenu">
                               <ul class="nav flex-column">
-                                   
-                                   <li class="py-1 clickable-row-blue">
-                                       <a href="{{ route('supplier-sub-head.index') }}" class="text-blue">Manage Sub Head</a>
-                                    </li>
-                                    <li class="py-1 clickable-row-blue">
-                                       <a href="{{ route('supplier.index') }}" class="text-blue">Manage Supplier</a>
-                                    </li>
-                                    <li class="py-1 clickable-row-blue">
-                                       <a href="{{ route('manage-supplier-rate') }}" class="text-blue">Manage Rate</a>
-                                    </li>
-                                    <li class="py-1 clickable-row-blue">
-                                       <a href="{{ route('manage-supplier-purchase') }}" class="text-blue"> Manage Purchase </a>
-                                    </li>
-                                    <li class="py-1 clickable-row-blue">
-                                       <a href="{{ route('manage-supplier-purchase-report') }}" class="text-blue">Report </a>
-                                    </li>
+                                 <li class="py-1 clickable-row-blue">
+                                    <a href="{{ route('supplier-sub-head.index') }}" class="text-blue">Manage Sub Head</a>
+                                 </li>
+                                 <li class="py-1 clickable-row-blue">
+                                    <a href="{{ route('supplier.index') }}" class="text-blue">Manage Supplier</a>
+                                 </li>
+                                 <li class="py-1 clickable-row-blue">
+                                    <a href="{{ route('manage-supplier-rate') }}" class="text-blue">Manage Rate</a>
+                                 </li>
+                                 <li class="py-1 clickable-row-blue">
+                                    <a href="{{ route('manage-supplier-purchase') }}" class="text-blue"> Manage Purchase </a>
+                                 </li>
+                                 <li class="py-1 clickable-row-blue">
+                                    <a href="{{ route('manage-supplier-purchase-report') }}" class="text-blue">Report </a>
+                                 </li>
+                                 <li class="py-1 clickable-row-blue">
+                                    <a href="{{ route('manage-purchase-info') }}" class="text-blue">Purchase Vehicle Entry</a>
+                                 </li>
                               </ul>
                            </div>
-                        </li>                        
+                        </li>
                      </ul>
                   </div>
-                  
                </div>
                @endcan
             <?php 

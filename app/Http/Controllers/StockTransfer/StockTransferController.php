@@ -1430,11 +1430,12 @@ class StockTransferController extends Controller
                                         //From Series Account Ledger
                                         $ledger = new AccountLedger();
                                         $ledger->account_id = $sale_amt_account;
-                                        if($nature_of_sundry=='ROUNDED OFF (-)'){
-                                            $ledger->debit = $v2;
-                                        }else{
-                                            $ledger->credit = $v2;
-                                        }               
+                                        // if($nature_of_sundry=='ROUNDED OFF (-)'){
+                                        //     $ledger->debit = $v2;
+                                        // }else{
+                                        //     $ledger->credit = $v2;
+                                        // }     
+                                        $ledger->credit = $v2;          
                                         $ledger->txn_date = $bill_date;
                                         $ledger->series_no = $from_series;
                                         $ledger->company_id = Session::get('user_company_id');
@@ -1448,11 +1449,12 @@ class StockTransferController extends Controller
                                         //To Series Account Ledger
                                         $ledger = new AccountLedger();
                                         $ledger->account_id = $sale_amt_account;
-                                        if($nature_of_sundry=='ROUNDED OFF (-)'){
-                                            $ledger->debit = $v2;
-                                        }else{
-                                            $ledger->credit = $v2;
-                                        }               
+                                        // if($nature_of_sundry=='ROUNDED OFF (-)'){
+                                        //     $ledger->debit = $v2;
+                                        // }else{
+                                        //     $ledger->credit = $v2;
+                                        // }
+                                        $ledger->debit = $v2;
                                         $ledger->txn_date = $bill_date;
                                         $ledger->series_no = $to_series;
                                         $ledger->company_id = Session::get('user_company_id');

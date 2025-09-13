@@ -674,9 +674,11 @@ public function stockJournal(Request $request)
       }
    }
    public function deleteStockJournal(Request $request){
+      
       Gate::authorize('view-module', 64);
       $id = $request->input('del_id');
       $stock_journal = StockJournal::find($id);
+     
       $delete = StockJournal::where('id',$id)->delete();
       if($delete){
          ItemAverageDetail::where('stock_journal_in_id',$id)

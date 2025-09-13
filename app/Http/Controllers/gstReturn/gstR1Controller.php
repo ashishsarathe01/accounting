@@ -158,6 +158,7 @@ public function gstr1Detail(Request $request)
 
 
     public function gstmain(Request $request){
+        
         $input = $request->all();
         $merchant_gst = $request->series;
         $from_date = $request->from_date;
@@ -1382,6 +1383,17 @@ public function gstr1Detail(Request $request)
             ];
         }
         $hsnWiseSummaryCount  = count($finalData);
+        $turnover_amount = 0;
+        $turnover = DB::table('company_turnovers')
+                        ->select('amount')
+                        ->where('company_id',Session::get('user_company_id'))
+                        ->where('financial_year', Session::get('default_fy'))
+                        ->where('financial_year', $fy)
+                        ->first();
+        if($turnover){
+            $turnover_amount = $turnover->amount;
+        }
+        
         return view('gstReturn.gstR1', [
             // B2B
             'total_taxable_amt' => $summary->total_taxable_amt ?? 0,
@@ -1424,7 +1436,8 @@ public function gstr1Detail(Request $request)
             'totalCreditNotes' => $totalCreditNotes,
             'totalDebitNotes' => $totalCreditNotes,
             'totalNotes' => $totalNotes, // likely 0 unless interstate
-            'hsnWiseSummaryCount' => $hsnWiseSummaryCount 
+            'hsnWiseSummaryCount' => $hsnWiseSummaryCount,
+            'turnover_amount'=>$turnover_amount
     ]);
         
         
@@ -2852,21 +2865,21 @@ public function sendGstr1ToGSTMaster(Request $request){
     $docIssue_index = 1;
     if (count($SalesdocumentSummary) > 0) {
         $docIssue['doc_det'][] = [
-            'doc_num' => $docIssue_index,
+            'doc_num' => 1,
             'docs' => mapSummaryToDocs($SalesdocumentSummary)
         ];
         $docIssue_index++;
     } 
     if (count($CreditNotedocumentSummary) > 0) {
         $docIssue['doc_det'][] = [
-            'doc_num' => $docIssue_index,
+            'doc_num' => 5,
             'docs' => mapSummaryToDocs($CreditNotedocumentSummary)
         ];
         $docIssue_index++;
     }
     if (count($DebitNotedocumentSummary) > 0) {
         $docIssue['doc_det'][] = [
-            'doc_num' => $docIssue_index,
+            'doc_num' => 4,
             'docs' => mapSummaryToDocs($DebitNotedocumentSummary)
         ];
         $docIssue_index++;
@@ -2904,11 +2917,24 @@ public function sendGstr1ToGSTMaster(Request $request){
             );
         return json_encode($response);
     }
+    $turnover = DB::table('company_turnovers')
+                        ->select('amount')
+                        ->where('company_id',Session::get('user_company_id'))
+                        ->where('gstin',$merchant_gst)
+                        ->where('financial_year', Session::get('default_fy'))
+                        ->first();
+    if(!$turnover){
+        $response = array(
+                'status' => false,
+                'message' => 'Please Add Gross TurnOver'
+            );
+        return json_encode($response);
+    }
     if($einvoice_status==1){
         $gstr1_request = array(
             "gstin"=>$merchant_gst,
             "fp"=>date('mY', strtotime($from_date)),
-            "gt"=>30226222,
+            "gt"=>(float)$turnover->amount,
             "cur_gt"=>0,
             "doc_issue"=>$docIssue,
             "hsn"=>$formattedHsnData
@@ -2917,7 +2943,7 @@ public function sendGstr1ToGSTMaster(Request $request){
         $gstr1_request = array(
             "gstin"=>$merchant_gst,
             "fp"=>date('mY', strtotime($from_date)),
-            "gt"=>30226222,
+            "gt"=>(float)$turnover->amount,
             "cur_gt"=>0,
             "b2b"=>$new_arr,
             "cdnr"=>$finalData,
@@ -2927,8 +2953,8 @@ public function sendGstr1ToGSTMaster(Request $request){
         
     }
     
-    echo "<pre>";
-    echo json_encode($gstr1_request);
+    // echo "<pre>";
+    // echo json_encode($gstr1_request);
     //die;
     //Call retsave Api 
     
@@ -3001,10 +3027,61 @@ public function sendGstr1ToGSTMaster(Request $request){
     ));
     $response = curl_exec($curl);
     $err = curl_error($curl);
-    curl_close($curl); 
-    echo "<pre>";
-    print_r($response);
-    die;
+    if($response){
+        $result = json_decode($response);
+        // echo "<pre>";
+        // print_r($result);echo "**".$result->data->reference_id."--".$result->status_cd;
+        // die;
+        if(isset($result->status_cd) && $result->status_cd==1 ){
+            $curl = curl_init();
+            curl_setopt_array($curl, array(
+               CURLOPT_URL => 'https://api.mastergst.com/gstr/retstatus?email=pram92500@gmail.com&gstin='.$merchant_gst.'&returnperiod='.$ret_period.'&refid='.$result->data->reference_id,
+               CURLOPT_RETURNTRANSFER => true,
+               CURLOPT_ENCODING => '',
+               CURLOPT_MAXREDIRS => 10,
+               CURLOPT_TIMEOUT => 0,
+               CURLOPT_FOLLOWLOCATION => true,
+               CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+               CURLOPT_CUSTOMREQUEST => 'GET',
+               //CURLOPT_POSTFIELDS =>json_encode($gstr1_requset),
+               CURLOPT_HTTPHEADER => array(
+                  'gst_username:'.$gst_user_name,
+                  'state_cd:'.$state_code,
+                  'ip_address: 162.241.85.89',
+                  'txn:'.$txn,
+                  'client_id: GSPdea8d6fb-aed1-431a-b589-f1c541424580',
+                  'client_secret: GSP4c44b790-ef11-4725-81d9-5f8504279d67',         
+                  'Content-Type: application/json'
+               ),
+            ));
+            $res = curl_exec($curl);
+            $err = curl_error($curl);
+            curl_close($curl);
+            if($res){
+               $rult = json_decode($res);
+               // echo "<pre>";
+               // print_r($rult);die;
+               if(isset($rult->status_cd) && $rult->status_cd==1){
+                  if($rult->data->status_cd=="P"){                     
+                     echo json_encode(array("status"=>true,"message"=>"Data Saved Successfully."));
+                  }else if($rult->data->status_cd=="IP"){                     
+                     echo json_encode(array("status"=>true,"message"=>"In Processing....Please Wait Processed Within 20 minutes"));
+                  }else{
+                     echo json_encode(array("status"=>false,"message"=>$rult->errorReport));
+                  }                  
+               }else{
+                  echo json_encode(array("status"=>false,"message"=>$rult->errorReport));
+               }
+            }
+        }else{
+            echo json_encode(array("status"=>false,"message"=>$result->error));            
+        }
+    }
+    // curl_close($curl); 
+    // echo "<pre>";
+    
+    // print_r($response);
+    // die;
     // dd($docIssue);
     // return response()->json($docIssue);
 
@@ -5184,15 +5261,37 @@ public function documentIssuedSummary(REQUEST $request){
         ->orderBy('voucher_no_prefix')
         ->get()
         ->groupBy('series_no');
-
+    // echo "<pre>";
+    // print_r($salesGrouped->toArray());
+    // die;
     $SalesdocumentSummary = [];
 
     foreach ($salesGrouped as $series => $records) {
         $total = $records->count();
         $cancelled = $records->where('status', 2)->count();
-        $from = $records->first()->voucher_no_prefix ?? '-';
-        $to = $records->last()->voucher_no_prefix ?? '-';
+        // $from = $records->first()->voucher_no_prefix ?? '-';
+        // $to = $records->last()->voucher_no_prefix ?? '-';
+        // Find min and max voucher_no_prefix numerically
+        // Extract numeric part from voucher_no_prefix
+        // Map voucher_no_prefix with extracted number
+        $voucherMap = $records->map(function ($item) {
+            preg_match('/(\d+)$/', $item->voucher_no_prefix, $matches);
+            return [
+                'original' => $item->voucher_no_prefix,
+                'number'   => isset($matches[1]) ? (int)$matches[1] : null
+            ];
+        })->filter(function ($v) {
+            return $v['number'] !== null;
+        });
 
+        // Find min and max based on number
+        $minVoucher = $voucherMap->sortBy('number')->first();
+        $maxVoucher = $voucherMap->sortByDesc('number')->first();
+
+        $from = $minVoucher['original'] ?? '-';
+        $to   = $maxVoucher['original'] ?? '-';
+
+        
         $SalesdocumentSummary[] = [
             'series_no' => $series ?? '-',
             'from' => $from,
@@ -5258,9 +5357,24 @@ foreach ($allCreditNotes as $series => $records) {
     $DebitNotedocumentSummary = [];
 
 foreach ($allDebitNotes as $series => $records) {
-    $from = $records->first()->sr_prefix ?? '-';
-    $to = $records->last()->sr_prefix ?? '-';
+    // $from = $records->first()->sr_prefix ?? '-';
+    // $to = $records->last()->sr_prefix ?? '-';
+    $voucherMap = $records->map(function ($item) {
+            preg_match('/(\d+)$/', $item->sr_prefix, $matches);
+            return [
+                'original' => $item->sr_prefix,
+                'number'   => isset($matches[1]) ? (int)$matches[1] : null
+            ];
+        })->filter(function ($v) {
+            return $v['number'] !== null;
+        });
 
+        // Find min and max based on number
+        $minVoucher = $voucherMap->sortBy('number')->first();
+        $maxVoucher = $voucherMap->sortByDesc('number')->first();
+
+        $from = $minVoucher['original'] ?? '-';
+        $to   = $maxVoucher['original'] ?? '-';
     // Filter only SALE voucher_type for total and cancelled
     $saleRecords = $records->where('voucher_type', 'SALE')
                            ->where('sr_nature', 'WITH GST');
@@ -5915,6 +6029,27 @@ $payments = DB::table('payments')
                 'sgst' => $salesSGST + $debitSGST - $creditSGST,
             ];
         }
+    }
+
+    public function storeTurnOver(Request $request){
+        DB::table('company_turnovers')->updateOrInsert(
+            ['financial_year' => $request->fy,'company_id'=>$request->company_id,'gstin'=>$request->merchant_gst], // condition
+            [
+                'amount' => $request->amount,
+                'gstin'      => $request->merchant_gst,
+                'company_id'      => $request->company_id,
+                'financial_year'      => $request->fy,
+                'updated_at'      => now(),
+                'created_at'      => now(),
+            ]
+        );
+        $response = array(
+            'status' => true,
+            'message' => 'TurnOver Saved Successfully.',
+        );
+        return json_encode($response);
+
+
     }
 }
 

@@ -545,7 +545,8 @@ class PurchaseReturnController extends Controller
                   $ledger = new AccountLedger();
                   if($purchase->voucher_type=='SALE' && $billsundry->nature_of_sundry!='ROUNDED OFF (-)' && $billsundry->nature_of_sundry!='ROUNDED OFF (+)'){
                      $ledger->account_id = $billsundry->sale_amt_account;
-                     $ledger->debit = $bill_sundry_amounts[$key];
+                     //$ledger->debit = $bill_sundry_amounts[$key];
+                     $ledger->credit = $bill_sundry_amounts[$key];
                   }else if($purchase->voucher_type=='PURCHASE' && $billsundry->nature_of_sundry!='ROUNDED OFF (-)' && $billsundry->nature_of_sundry!='ROUNDED OFF (+)'){
                      $ledger->account_id = $billsundry->purchase_amt_account;
                      $ledger->credit = $bill_sundry_amounts[$key];
@@ -645,13 +646,21 @@ class PurchaseReturnController extends Controller
             $ledger->financial_year = Session::get('default_fy');
             $ledger->entry_type = 4;
             $ledger->entry_type_id = $purchase->id;
-            $ledger->map_account_id = 36;//Purchase
+            if($purchase->voucher_type=="PURCHASE"){
+               $ledger->map_account_id = 36;//Purchase
+            }else{
+               $ledger->map_account_id = 35;//Sale
+            }
             $ledger->created_by = Session::get('user_id');
             $ledger->created_at = date('d-m-Y H:i:s');
             $ledger->save();
             //ADD DATA IN Sale ACCOUNT
             $ledger = new AccountLedger();
-            $ledger->account_id = 36;//Purchase
+            if($purchase->voucher_type=="PURCHASE"){
+               $ledger->account_id = 36;//Purchase
+            }else{
+               $ledger->account_id = 35;//Sale
+            }
             $ledger->series_no = $request->input('series_no');
             $ledger->credit = $request->input('taxable_amt');
             $ledger->txn_date = $request->input('date');
@@ -1536,7 +1545,8 @@ class PurchaseReturnController extends Controller
                   $ledger = new AccountLedger();
                   if($purchase->voucher_type=='SALE' && $billsundry->nature_of_sundry!='ROUNDED OFF (-)' && $billsundry->nature_of_sundry!='ROUNDED OFF (+)'){
                      $ledger->account_id = $billsundry->sale_amt_account;
-                     $ledger->debit = $bill_sundry_amounts[$key];
+                     //$ledger->debit = $bill_sundry_amounts[$key];
+                     $ledger->credit = $bill_sundry_amounts[$key];
                   }else if($purchase->voucher_type=='PURCHASE' && $billsundry->nature_of_sundry!='ROUNDED OFF (-)' && $billsundry->nature_of_sundry!='ROUNDED OFF (+)'){
                      $ledger->account_id = $billsundry->purchase_amt_account;
                      $ledger->credit = $bill_sundry_amounts[$key];
@@ -1644,13 +1654,22 @@ class PurchaseReturnController extends Controller
             $ledger->financial_year = Session::get('default_fy');
             $ledger->entry_type = 4;
             $ledger->entry_type_id = $purchase->id;
-            $ledger->map_account_id = 36;//Purchase
+            if($purchase->voucher_type=="PURCHASE"){
+               $ledger->map_account_id = 36;//Purchase
+            }else{
+               $ledger->map_account_id = 35;//Sale
+            }
             $ledger->created_by = Session::get('user_id');
             $ledger->created_at = date('d-m-Y H:i:s');
             $ledger->save();
             //ADD DATA IN Sale ACCOUNT
             $ledger = new AccountLedger();
-            $ledger->account_id = 36;//Purchase
+            if($purchase->voucher_type=="PURCHASE"){
+               $ledger->account_id = 36;//Purchase
+            }else{
+               $ledger->account_id = 35;//Sale
+            }
+            
             $ledger->credit = $request->input('taxable_amt');
             $ledger->series_no = $request->input('series_no');
             $ledger->txn_date = $request->input('date');
@@ -3577,7 +3596,8 @@ class PurchaseReturnController extends Controller
 
                                  if($purchase->voucher_type=='SALE' && $nature_of_sundry!='ROUNDED OFF (-)' && $nature_of_sundry!='ROUNDED OFF (+)'){
                                     $ledger->account_id = $sale_amt_account;
-                                    $ledger->debit = $v2;
+                                    // $ledger->debit = $v2;
+                                    $ledger->credit = $v2;
                                  }else if($purchase->voucher_type=='PURCHASE' && $nature_of_sundry!='ROUNDED OFF (-)' && $nature_of_sundry!='ROUNDED OFF (+)'){
                                     $ledger->account_id = $purchase_amt_account;
                                     $ledger->credit = $v2;
@@ -3724,13 +3744,21 @@ class PurchaseReturnController extends Controller
                   $ledger->financial_year = $financial_year;
                   $ledger->entry_type = 4;
                   $ledger->entry_type_id = $purchase->id;
-                  $ledger->map_account_id = 36;//Purchase
+                  if($purchase->voucher_type=="PURCHASE"){
+                     $ledger->map_account_id = 36;//Purchase
+                  }else{
+                     $ledger->map_account_id = 35;//Sale
+                  }
                   $ledger->created_by = Session::get('user_id');
                   $ledger->created_at = date('d-m-Y H:i:s');
                   $ledger->save();
                   //ADD DATA IN Sale ACCOUNT
                   $ledger = new AccountLedger();
-                  $ledger->account_id = 36;//Purchase
+                  if($purchase->voucher_type=="PURCHASE"){
+                     $ledger->account_id = 36;//Purchase
+                  }else{
+                     $ledger->account_id = 35;//Sale
+                  }
                   $ledger->series_no = $series_no;
                   $ledger->credit = $item_taxable_amount;
                   $ledger->txn_date = $date;

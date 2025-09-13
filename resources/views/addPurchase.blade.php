@@ -67,6 +67,7 @@
             <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('purchase.store')}}" id="purchaseForm">
                @csrf
                <div class="row">
+                  <input type="hidden" name="rowId" value="{{$rowId}}">
                   <div class="mb-3 col-md-3">
                      <label for="name" class="form-label font-14 font-heading">Series No.</label>
                      <select id="series_no" name="series_no" class="form-select" required autofocus>
@@ -108,7 +109,7 @@
                         <option value="">Select </option>
                         <?php
                         foreach ($party_list as $value) { ?>
-                           <option value="<?php echo $value->id; ?>" data-gstin="<?php echo $value->gstin; ?>" data-address="<?php echo $value->address.",".$value->pin_code; ?>" data-state_code="{{$value->state_code}}"><?php echo $value->account_name; ?></option>
+                           <option value="<?php echo $value->id; ?>" data-gstin="<?php echo $value->gstin; ?>" data-address="<?php echo $value->address.",".$value->pin_code; ?>" data-state_code="{{$value->state_code}}" <?php if(isset($accountId) && $value->id==$accountId){ echo "selected";} ?>><?php echo $value->account_name; ?></option>
                            <?php 
                         } ?>
                      </select>

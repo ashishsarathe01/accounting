@@ -619,7 +619,14 @@ class ItemLedgerController extends Controller
             $series[$s1]->weight = $item1[0]->average_weight;
             $series[$s1]->amount = $item1[0]->amount;
             $series[$s1]->unit = $item1[0]->unit_name;
-            $series[$s1]->price = round($item1[0]->amount/$item1[0]->average_weight,6);
+            if($item1[0]->average_weight!="" && $item1[0]->average_weight!=0){
+               $series[$s1]->price = round($item1[0]->amount/$item1[0]->average_weight,6);
+            }else{
+               $series[$s1]->price = 0;
+            }
+           
+            
+            
          }else{
             $series[$s1]->weight = "";
             $series[$s1]->amount = "";

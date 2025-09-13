@@ -146,39 +146,39 @@
                             </ul> 
                         </div>
                         <div class="clearfix"></div>
-                        <div class="mb-3 col-md-3">
-                            <div class="form-group">
-                                <table class="table table-bordered">
-                                    <tr>
-                                    <td style="width: 40%;">GSM <span id="0_1" class="add_gsm" onClick="addGSM(0,1)" style="color:#3c8dbc;cursor: pointer;" >Add GSM</span></td>
-                                    <td> <input type="text" id="gsm_1_1" class="form-control gsm_1" name="gsm[]" placeholder="Enter GSM" required ></td>
-                                    </tr>
-                                </table>
+                        <div class="row" id="dynamic_gsm_1">
+                            <div class="mb-3 col-md-3">
+                                <div class="form-group">
+                                    <table class="table table-bordered">
+                                        <tr>
+                                        <td style="width: 40%;">GSM <svg style="color: green;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" tabindex="0" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="bg-primary rounded-circle add_gsm" data-item_id="1" data-gsm_id="1" id="add_gsm_1"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/></svg></td>
+                                        <td> <input type="text" id="gsm_1_1" class="form-control gsm_1" name="gsm[]" placeholder="Enter GSM" required ></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="form-group">
+                                    <table class="table table-bordered" id="table_1_1">
+                                        <tr>
+                                            <td>SIZES</td>
+                                            <td class="reel_name_0">REELS</td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <input type="text" id="size_1_1_1" class="form-control size_1 size_1_1" name="size[]" placeholder="SIZES" required >
+                                            </td>
+                                            <td>
+                                                <input type="text" id="reel_1_1_1" class="form-control reel_1 reel_1_1" name="reel[]" placeholder="REELS" required >
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>Total</td>
+                                            <td id="total_reel_1_1" class="total_reel">0</td>
+                                        </tr>
+                                    </table>
+                                    <span id="1_1" class="add_row" onClick="addRow(1,1)" style="color:#3c8dbc;cursor: pointer;" >Add Row</span>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <table class="table table-bordered" id="table_1_1">
-                                    <tr>
-                                        <td>SIZES</td>
-                                        <td class="reel_name_0">REELS</td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            <input type="text" id="size_1_1_1" class="form-control size_1 size_1_1" name="size[]" placeholder="SIZES" required >
-                                        </td>
-                                        <td>
-                                            <input type="text" id="reel_1_1_1" class="form-control reel_1 reel_1_1" name="reel[]" placeholder="REELS" required >
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>Total</td>
-                                        <td id="total_reel_1_1" class="total_reel">0</td>
-                                    </tr>
-                                </table>
-                                <span id="1_1" class="add_row" onClick="addRow(1,1)" style="color:#3c8dbc;cursor: pointer;" >Add Row</span>
-                            </div>
-                        </div>
-                        <div id="dynamic_gsm_0_1" class="col-md-2"></div>
-                         
+                        </div>                         
                         <div class="clearfix"></div>
                         <p ><button type="button" class="btn btn-info">ADD ITEM</button></p>
                     </div>
@@ -287,25 +287,48 @@
 </div>
 </body>
 @include('layouts.footer')
-<script>
-    
-    function addRow(a,b){
+<script>    
+    function addRow(a,b){        
         $("#table_"+a+"_"+b+" tr").eq(-2).before('<tr><td><input type="text" name="size[]"  class="form-control size_1 size_1_1" data-id="'+a+'_'+b+'" placeholder="SIZES"></td><td><input type="number" min="1" class="form-control reel_1 reel_1_1" name="reel[]" placeholder="REELS"></td></tr>');
-   }
-   let row_id=1;
-   function addGSM(id,ids){
-      var text = $("#unit_"+id).val();
-      let a = ids;
-      $("#"+id+"_"+a).hide();
-      a++;
-      $("#dynamic_gsm_"+id+"_"+ids).append('<div class="form-group"><table class="table table-bordered"><tr><td style="width: 50%;">GSM</td><td><input type="text" name="gsm_'+id+'[]" class="text_width gsm_'+id+'"></td></tr></table></div></div><div class="form-group"><table class="table table-bordered" id="table_'+id+'_'+ids+'"><tr><td>SIZES</td><td>'+text+'</td></tr><tr><td><input type="text" name="size_'+id+'_'+ids+'[]" class="text_width checkSize size_class_'+id+'_'+ids+'" data-id="'+id+'_'+ids+'" onkeyup="totalCount('+id+','+ids+')"></td><td><input min="1" type="number" class="reel_'
-      +id+'_'+ids+' text_width" onkeyup="totalCount('+id+','+ids+')" name="reel_'+id+'_'+ids+'[]"></td></tr><tr><td><input type="text" name="size_'+id+'_'+ids+'[]" class="text_width checkSize size_class_'+id+'_'+ids+'" data-id="'+id+'_'+ids+'" onkeyup="totalCount('+id+','+ids+')"></td><td><input type="number" min="1" class="reel_'
-      +id+'_'+ids+' text_width" onkeyup="totalCount('+id+','+ids+')" name="reel_'+id+'_'+ids+'[]"></td></tr> <tr><td><input type="text" name="size_'+id+'_'+ids+'[]" class="text_width checkSize size_class_'+id+'_'+ids+'" data-id="'+id+'_'+ids+'" onkeyup="totalCount('+id+','+ids+')"></td><td><input type="number" min="1" class="reel_'
-      +id+'_'+ids+' text_width" onkeyup="totalCount('+id+','+ids+')" name="reel_'+id+'_'+ids+'[]"></td></tr><tr><td><input type="text"  name="size_'+id+'_'+ids+'[]" class="text_width checkSize size_class_'+id+'_'+ids+'" data-id="'+id+'_'+ids+'" onkeyup="totalCount('+id+','+ids+')"></td><td><input type="number" min="1" class="reel_'
-      +id+'_'+ids+' text_width" onkeyup="totalCount('+id+','+ids+')" name="reel_'+id+'_'+ids+'[]"></td></tr><tr><td><input type="text" name="size_'+id+'_'+ids+'[]" class="text_width checkSize size_class_'+id+'_'+ids+'" data-id="'+id+'_'+ids+'" onkeyup="totalCount('+id+','+ids+')"></td><td><input type="number" min="1" class="reel_'
-      +id+'_'+ids+' text_width" onkeyup="totalCount('+id+','+ids+')" name="reel_'+id+'_'+ids+'[]"></td></tr><tr><td>Total</td><td id="total_'+id+'_'+ids+'" class="total_reel">0</td></tr>  <tr style="display: none" class="approx_weight"><td>Approx Weight</td><td id="app_weight_'+id+'_'+ids+'" class="app_weight">0</td></tr></table> <span id="'+id+'_'+ids+'" class="add_row" onClick="addRow('+id+','+ids+')" style="color:#3c8dbc;cursor: pointer;" >Add Row</span></div>');
-      
-     $("#a_"+id+"_"+ids).append('<div id="dynamic_gsm_'+id+'_'+a+'" class="col-md-2"></div><span id="a_'+id+'_'+a+'"></span><span id="'+id+'_'+a+'" class="add_gsm" onClick="addGSM('+id+','+a+')" style="color:#3c8dbc;cursor: pointer;" >Add GSM</span>');
-   }
+    }
+    $(document).on('click','.add_gsm',function(){
+        let item_id = $(this).attr('data-item_id');
+        let gsm_id = $(this).attr('data-gsm_id');
+        $("#add_gsm_"+item_id).attr('data-item_id',item_id);
+        gsm_id++;
+        var text = $("#unit_"+item_id).val();
+        $("#add_gsm_"+item_id).attr('data-gsm_id',gsm_id);
+        $("#dynamic_gsm_"+item_id).append(`<div class="mb-3 col-md-3">
+            <div class="form-group">
+                <table class="table table-bordered">
+                    <tr>
+                    <td style="width: 40%;">GSM</td>
+                    <td> <input type="text" id="gsm_`+item_id+`_`+gsm_id+`" class="form-control gsm_`+item_id+`" name="gsm[]" placeholder="Enter GSM" required ></td>
+                    </tr>
+                </table>
+            </div>
+            <div class="form-group">
+                <table class="table table-bordered" id="table_`+item_id+`_`+gsm_id+`">
+                    <tr>
+                        <td>SIZES</td>
+                        <td class="reel_name_0">REELS</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <input type="text" id="size_1_1_1" class="form-control size_1 size_1_1" name="size[]" placeholder="SIZES" required >
+                        </td>
+                        <td>
+                            <input type="text" id="reel_1_1_1" class="form-control reel_1 reel_1_1" name="reel[]" placeholder="REELS" required >
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Total</td>
+                        <td id="total_reel_`+item_id+`_`+gsm_id+`" class="total_reel">0</td>
+                    </tr>
+                </table>
+                <span id="1_1" class="add_row" onClick="addRow(`+item_id+`,`+gsm_id+`)" style="color:#3c8dbc;cursor: pointer;" >Add Row</span>
+            </div>
+        </div>`);
+    });
 </script>
 @endsection

@@ -146,12 +146,10 @@
     }
     
 </style>
-
 <div class="list-of-view-company">
     <section class="list-of-view-company-section container-fluid">
         <div class="row vh-100">
             @include('layouts.leftnav')
-
             @php
                 $cards = [
                     ['title' => '4A, 4B, 6B, 6C - B2B, SEZ, DE Invoices', 'count' => $saleCountB2B, 'route' => route('gst.b2b.detailed.billwise', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
@@ -169,7 +167,6 @@
                     ['title' => '15 - Supplies U/s 9(5)', 'route' => '#'],
                 ];
             @endphp
-
             <!-- Main content column -->
             <div class="col-md-10 col-sm-12 px-4">
                 <div class="container-fluid">
@@ -187,532 +184,499 @@
                             <a class="nav-link" id="fill-tab-3" data-bs-toggle="tab" href="#fill-tabpanel-3" role="tab" aria-controls="fill-tabpanel-2" aria-selected="false">RECONCILIATION</a>
                         </li>
                     </ul>
-
                     <!-- Header section -->
                     <div class="container mt-4">
                         <div class="tab-content mt-4">
-                                                    <div class="tab-pane active" id="fill-tabpanel-0" role="tabpanel" aria-labelledby="fill-tab-0">
-                                                        <div id="view2" class="view-content" style="height:100vh;">
-
-                                                            <!-- Section Header -->
-                                                            <div class="bg-primary text-white px-3 py-2 mb-3 fw-bold rounded-top">
-                                                                GSTR-1 Portal
+                            <div class="tab-pane active" id="fill-tabpanel-0" role="tabpanel" aria-labelledby="fill-tab-0">
+                                <div id="view2" class="view-content" style="height:100vh;">
+                                    <div class="bg-primary text-white px-3 py-2 mb-3 fw-bold rounded-top">
+                                        GSTR-1 Portal
+                                    </div>
+                                    <!-- B2B Summary -->
+                                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom:10px;">
+                                        <h4 style="margin: 0;">B2B</h4>
+                                        <label style="margin-left: 15px; cursor: pointer; display: flex; align-items: center; gap: 5px;"><input type="checkbox" id="detailedCheckbox" onchange="togglePartySummary()"/>detailed</label>
+                                    </div>
+                                    <table border="1" cellpadding="8" cellspacing="0" style="width:100%;">
+                                        <thead>
+                                            <tr style="border:1px solid black; background-color:rgb(65, 205, 230); color:white; cursor: pointer;">
+                                                <th style="border:1px solid black; font-size:15px;">GSTIN</th>
+                                                <th style="border:1px solid black; font-size:15px;">Party Name</th>
+                                                <th style="border:1px solid black; font-size:15px;">Portal Total (₹)</th>
+                                                <th style="border:1px solid black; font-size:15px;">Books Total (₹)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @php
+                                                $total_api_value_inv = 0;
+                                                $total_db_value_inv = 0;
+                                                $anyMismatch = false;
+                                            @endphp
+                                            <!-- Summary rows (hidden initially) -->
+                                            <tbody id="party-summary" style="display: none;">
+                                                @foreach($invoiceSummaries as $index => $summary)
+                                                    @php 
+                                                        $total_api_value_inv += $summary['total_value'];
+                                                        $total_db_value_inv += $summary['db_value'];
+                                                        if (!$summary['match']) $anyMismatch = true;
+                                                    @endphp
+                                                    <tr class="clickable-row" onclick="toggleDetails({{ $index }})" style="color: {{ $summary['match'] ? 'green' : 'red' }};">
+                                                        <td style="border:1px solid black; font-size:15px;">{{ $summary['gstin'] }}</td>
+                                                        <td style="border:1px solid black; font-size:15px;">{{ $summary['ctin'] }}</td>
+                                                        <td style="border:1px solid black; font-size:15px;">{{ formatIndianNumber($summary['total_value'], 2) }}</td>
+                                                        <td style="border:1px solid black; font-size:15px;">{{ formatIndianNumber($summary['db_value'], 2) }}</td>
+                                                    </tr>
+                                                    <!-- Expandable Invoice Details -->
+                                                    <tr id="details-{{ $index }}" style="display: none;">
+                                                        <td colspan="4">
+                                                            <div style="padding: 10px; background-color: #cce5ff;">
+                                                                <strong>Matched Invoices</strong>
+                                                                <table border="1" width="100%" cellpadding="5">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th>Invoice No</th>
+                                                                            <th>Portal Value</th>
+                                                                            <th>Books Value</th>
+                                                                            <th>Match</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        @forelse($summary['matched_invoices'] as $inv)
+                                                                            <tr style="color: {{ $inv['match'] ? 'green' : 'red' }}">
+                                                                                <td style="border:1px solid black">{{ $inv['invoice_no'] }}</td>
+                                                                                <td style="border:1px solid black">{{ formatIndianNumber($inv['api_value'], 2) }}</td>
+                                                                                <td style="border:1px solid black">{{ formatIndianNumber($inv['db_value'], 2) }}</td>
+                                                                                <td style="border:1px solid black">{{ $inv['match'] ? '✔️' : '❌' }}</td>
+                                                                            </tr>
+                                                                        @empty
+                                                                            <tr><td colspan="4">No matching invoices.</td></tr>
+                                                                        @endforelse
+                                                                    </tbody>
+                                                                </table>
+                                                                <br>
+                                                                <strong>Only on Portal</strong>
+                                                                <table border="1" width="100%" cellpadding="5">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th>Invoice No</th>
+                                                                            <th>API Value</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        @forelse($summary['only_in_api'] as $inv)
+                                                                            <tr style="color: red;">
+                                                                                <td>{{ $inv['invoice_no'] }}</td>
+                                                                                <td>{{ formatIndianNumber($inv['api_value'], 2) }}</td>
+                                                                            </tr>
+                                                                        @empty
+                                                                            <tr><td colspan="2">None</td></tr>
+                                                                        @endforelse
+                                                                    </tbody>
+                                                                </table><br>
+                                                                <strong>Only in Books</strong>
+                                                                <table border="1" width="100%" cellpadding="5">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th>Invoice No</th>
+                                                                            <th>DB Value</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        @forelse($summary['only_in_books'] as $inv)
+                                                                            <tr style="color: red;">
+                                                                                <td>{{ $inv['invoice_no'] }}</td>
+                                                                                <td>{{ formatIndianNumber($inv['db_value'], 2) }}</td>
+                                                                            </tr>
+                                                                        @empty
+                                                                            <tr><td colspan="2">None</td></tr>
+                                                                        @endforelse
+                                                                    </tbody>
+                                                                </table>
                                                             </div>
+                                                        </td>
+                                                    </tr>
+                                                @endforeach 
+                                            </tbody>
+                                            <!-- Total Summary Row -->
+                                            <tr style="color:{{ $anyMismatch ? 'red' : 'green' }};">
+                                                <td colspan="2" style="border:1px solid black; text-align:center; font-weight: bold;">Total</td>
+                                                <td style="border:1px solid black; font-weight: bold;">{{ formatIndianNumber($total_api_value_inv, 2) }}</td>
+                                                <td style="border:1px solid black; font-weight: bold;">{{ formatIndianNumber($total_db_value_inv, 2) }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    <!-- ✅ Credit Note Registered Section -->
+                                    <div style="margin-bottom:10px;display: flex; align-items: center; gap: 10px; margin-top:30px;">
+                                        <h4 style="margin-bottom: 0;">Credit Note Registered</h4>
+                                        <label style="margin-left: 15px; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                                            <input type="checkbox" id="creditNoteDetailedCheckbox" onchange="toggleCreditNoteSummary()" />
+                                            Detailed
+                                        </label>
+                                    </div>
+                                    <table border="1" cellpadding="8" cellspacing="0" style="width:100%;">
+                                        <thead>
+                                            <tr style="background-color: rgb(65, 205, 230); color:white;">
+                                                <th style="border:1px solid black; font-size:15px;">GSTIN</th>
+                                                <th style="border:1px solid black;">Party Name</th>
+                                                <th style="border:1px solid black;">Portal Total (₹)</th>
+                                                <th style="border:1px solid black;">Books Total (₹)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @php $grand_api_total = 0;
+                                                    $grand_books_total = 0;
+                                                    $anyMismatchCr = false;
+                                            @endphp
+                                                <tbody id="credit-note-summary" style="display: none;">
+                                            @foreach ($creditNoteSummaries as $index => $group)
+                                                @php $grand_api_total += $group['total_value'];
+                                                    $grand_books_total += $group['db_value'];
+                                                    if (!$group['match']) $anyMismatchCr = true;
+                                                @endphp
 
-                                                            <!-- B2B Summary -->
-                                                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom:10px;">
-                                                                <h4 style="margin: 0;">B2B</h4>
-                                                                <label style="margin-left: 15px; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                                                                    <input type="checkbox" id="detailedCheckbox" onchange="togglePartySummary()" />
-                                                                    detailed
-                                                                </label>
-                                                            </div>
+                                                <tr onclick="toggleCreditNoteDetails('cdnr{{ $index }}')" style="cursor:pointer; color: {{ $group['match'] ? 'green' : 'red' }};">
+                                                    <td style="border:1px solid black;">{{ $group['gstin'] }}</td>
+                                                    <td style="border:1px solid black;">{{ $group['ctin'] }}</td>
+                                                    <td style="border:1px solid black;">{{ formatIndianNumber($group['total_value'], 2) }}</td>
+                                                    <td style="border:1px solid black;">{{ formatIndianNumber($group['db_value'], 2) }}</td>
+                                                </tr>
 
-                                                            <table border="1" cellpadding="8" cellspacing="0" style="width:100%;">
+                                                {{-- Expandable row --}}
+                                                <tr id="details-cdnr{{ $index }}" style="display: none;">
+                                                    <td colspan="3">
+                                                        <div style="padding: 10px; background-color: #cce5ff;">
+                                                            <strong>Matched Credit Notes</strong>
+                                                            <table border="1" width="100%" cellpadding="5">
                                                                 <thead>
-                                                                    <tr style="border:1px solid black; background-color:rgb(65, 205, 230); color:white; cursor: pointer;">
-                                                                        <th style="border:1px solid black; font-size:15px;">GSTIN</th>
-                                                                        <th style="border:1px solid black; font-size:15px;">Party Name</th>
-                                                                        <th style="border:1px solid black; font-size:15px;">Portal Total (₹)</th>
-                                                                        <th style="border:1px solid black; font-size:15px;">Books Total (₹)</th>
+                                                                    <tr>
+                                                                        <th>Note No</th>
+                                                                        <th>API Value</th>
+                                                                        <th>Books Value</th>
+                                                                        <th>Match</th>
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody>
-                                                                    @php
-                                                                        $total_api_value_inv = 0;
-                                                                        $total_db_value_inv = 0;
-                                                                        $anyMismatch = false;
-                                                                    @endphp
-
-                                                                    <!-- Summary rows (hidden initially) -->
-                                                                    <tbody id="party-summary" style="display: none;">
-                                                                        @foreach($invoiceSummaries as $index => $summary)
-                                                                            @php 
-                                                                                $total_api_value_inv += $summary['total_value'];
-                                                                                $total_db_value_inv += $summary['db_value'];
-                                                                                if (!$summary['match']) $anyMismatch = true;
-                                                                            @endphp
-
-                                                                            <tr class="clickable-row" onclick="toggleDetails({{ $index }})" style="color: {{ $summary['match'] ? 'green' : 'red' }};">
-                                                                                <td style="border:1px solid black; font-size:15px;">{{ $summary['gstin'] }}</td>
-                                                                                <td style="border:1px solid black; font-size:15px;">{{ $summary['ctin'] }}</td>
-                                                                                <td style="border:1px solid black; font-size:15px;">{{ formatIndianNumber($summary['total_value'], 2) }}</td>
-                                                                                <td style="border:1px solid black; font-size:15px;">{{ formatIndianNumber($summary['db_value'], 2) }}</td>
-                                                                            </tr>
-
-                                                                            <!-- Expandable Invoice Details -->
-                                                                            <tr id="details-{{ $index }}" style="display: none;">
-                                                                                <td colspan="4">
-                                                                                    <div style="padding: 10px; background-color: #cce5ff;">
-                                                                                        <strong>Matched Invoices</strong>
-                                                                                        <table border="1" width="100%" cellpadding="5">
-                                                                                            <thead>
-                                                                                                <tr>
-                                                                                                    <th>Invoice No</th>
-                                                                                                    <th>Portal Value</th>
-                                                                                                    <th>Books Value</th>
-                                                                                                    <th>Match</th>
-                                                                                                </tr>
-                                                                                            </thead>
-                                                                                            <tbody>
-                                                                                                @forelse($summary['matched_invoices'] as $inv)
-                                                                                                    <tr style="color: {{ $inv['match'] ? 'green' : 'red' }}">
-                                                                                                        <td style="border:1px solid black">{{ $inv['invoice_no'] }}</td>
-                                                                                                        <td style="border:1px solid black">{{ formatIndianNumber($inv['api_value'], 2) }}</td>
-                                                                                                        <td style="border:1px solid black">{{ formatIndianNumber($inv['db_value'], 2) }}</td>
-                                                                                                        <td style="border:1px solid black">{{ $inv['match'] ? '✔️' : '❌' }}</td>
-                                                                                                    </tr>
-                                                                                                @empty
-                                                                                                    <tr><td colspan="4">No matching invoices.</td></tr>
-                                                                                                @endforelse
-                                                                                            </tbody>
-                                                                                        </table>
-
-                                                                                        <br>
-
-                                                                                        <strong>Only on Portal</strong>
-                                                                                        <table border="1" width="100%" cellpadding="5">
-                                                                                            <thead>
-                                                                                                <tr>
-                                                                                                    <th>Invoice No</th>
-                                                                                                    <th>API Value</th>
-                                                                                                </tr>
-                                                                                            </thead>
-                                                                                            <tbody>
-                                                                                                @forelse($summary['only_in_api'] as $inv)
-                                                                                                    <tr style="color: red;">
-                                                                                                        <td>{{ $inv['invoice_no'] }}</td>
-                                                                                                        <td>{{ formatIndianNumber($inv['api_value'], 2) }}</td>
-                                                                                                    </tr>
-                                                                                                @empty
-                                                                                                    <tr><td colspan="2">None</td></tr>
-                                                                                                @endforelse
-                                                                                            </tbody>
-                                                                                        </table>
-
-                                                                                        <br>
-
-                                                                                        <strong>Only in Books</strong>
-                                                                                        <table border="1" width="100%" cellpadding="5">
-                                                                                            <thead>
-                                                                                                <tr>
-                                                                                                    <th>Invoice No</th>
-                                                                                                    <th>DB Value</th>
-                                                                                                </tr>
-                                                                                            </thead>
-                                                                                            <tbody>
-                                                                                                @forelse($summary['only_in_books'] as $inv)
-                                                                                                    <tr style="color: red;">
-                                                                                                        <td>{{ $inv['invoice_no'] }}</td>
-                                                                                                        <td>{{ formatIndianNumber($inv['db_value'], 2) }}</td>
-                                                                                                    </tr>
-                                                                                                @empty
-                                                                                                    <tr><td colspan="2">None</td></tr>
-                                                                                                @endforelse
-                                                                                            </tbody>
-                                                                                        </table>
-                                                                                    </div>
-                                                                                </td>
-                                                                            </tr>
-                                                                        @endforeach 
-                                                                    </tbody>
-
-                                                                    <!-- Total Summary Row -->
-                                                                    <tr style="color:{{ $anyMismatch ? 'red' : 'green' }};">
-                                                                        <td colspan="2" style="border:1px solid black; text-align:center; font-weight: bold;">Total</td>
-                                                                        <td style="border:1px solid black; font-weight: bold;">{{ formatIndianNumber($total_api_value_inv, 2) }}</td>
-                                                                        <td style="border:1px solid black; font-weight: bold;">{{ formatIndianNumber($total_db_value_inv, 2) }}</td>
-                                                                    </tr>
+                                                                    @forelse($group['matched_invoices'] as $note)
+                                                                        <tr style="color: {{ $note['match'] ? 'green' : 'red' }}">
+                                                                            <td style="border:1px solid black">{{ $note['invoice_no'] }}</td>
+                                                                            <td style="border:1px solid black">{{ formatIndianNumber($note['api_value'], 2) }}</td>
+                                                                            <td style="border:1px solid black">{{ formatIndianNumber($note['db_value'], 2) }}</td>
+                                                                            <td style="border:1px solid black">{{ $note['match'] ? '✔️' : '❌' }}</td>
+                                                                        </tr>
+                                                                    @empty
+                                                                        <tr><td colspan="4">No matched credit notes.</td></tr>
+                                                                    @endforelse
                                                                 </tbody>
                                                             </table>
 
+                                                            <br>
 
-
-
-
-
-                                                            <!-- ✅ Credit Note Registered Section -->
-                                                           <div style="margin-bottom:10px;display: flex; align-items: center; gap: 10px; margin-top:30px;">
-                                                                <h4 style="margin-bottom: 0;">Credit Note Registered</h4>
-                                                                <label style="margin-left: 15px; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                                                                    <input type="checkbox" id="creditNoteDetailedCheckbox" onchange="toggleCreditNoteSummary()" />
-                                                                    Detailed
-                                                                </label>
-                                                            </div>
-
-                                                            <table border="1" cellpadding="8" cellspacing="0" style="width:100%;">
+                                                            <strong>Only on Portal</strong>
+                                                            <table border="1" width="100%" cellpadding="5">
                                                                 <thead>
-                                                                    <tr style="background-color: rgb(65, 205, 230); color:white;">
-                                                                        <th style="border:1px solid black; font-size:15px;">GSTIN</th>
-                                                                        <th style="border:1px solid black;">Party Name</th>
-                                                                        <th style="border:1px solid black;">Portal Total (₹)</th>
-                                                                        <th style="border:1px solid black;">Books Total (₹)</th>
+                                                                    <tr>
+                                                                        <th>Note No</th>
+                                                                        <th>Total Value</th>
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody>
-                                                                    @php $grand_api_total = 0;
-                                                                         $grand_books_total = 0;
-                                                                         $anyMismatchCr = false;
-                                                                    @endphp
-                                                                       <tbody id="credit-note-summary" style="display: none;">
-                                                                    @foreach ($creditNoteSummaries as $index => $group)
-                                                                        @php $grand_api_total += $group['total_value'];
-                                                                            $grand_books_total += $group['db_value'];
-                                                                            if (!$group['match']) $anyMismatchCr = true;
-                                                                        @endphp
-
-                                                                        <tr onclick="toggleCreditNoteDetails('cdnr{{ $index }}')" style="cursor:pointer; color: {{ $group['match'] ? 'green' : 'red' }};">
-                                                                            <td style="border:1px solid black;">{{ $group['gstin'] }}</td>
-                                                                            <td style="border:1px solid black;">{{ $group['ctin'] }}</td>
-                                                                            <td style="border:1px solid black;">{{ formatIndianNumber($group['total_value'], 2) }}</td>
-                                                                            <td style="border:1px solid black;">{{ formatIndianNumber($group['db_value'], 2) }}</td>
+                                                                    @forelse($group['only_in_api'] as $note)
+                                                                        <tr style="color: red;">
+                                                                            <td>{{ $note['invoice_no'] }}</td>
+                                                                            <td>{{ formatIndianNumber($note['api_value'], 2) }}</td>
                                                                         </tr>
-
-                                                                        {{-- Expandable row --}}
-                                                                        <tr id="details-cdnr{{ $index }}" style="display: none;">
-                                                                            <td colspan="3">
-                                                                                <div style="padding: 10px; background-color: #cce5ff;">
-                                                                                    <strong>Matched Credit Notes</strong>
-                                                                                    <table border="1" width="100%" cellpadding="5">
-                                                                                        <thead>
-                                                                                            <tr>
-                                                                                                <th>Note No</th>
-                                                                                                <th>API Value</th>
-                                                                                                <th>Books Value</th>
-                                                                                                <th>Match</th>
-                                                                                            </tr>
-                                                                                        </thead>
-                                                                                        <tbody>
-                                                                                            @forelse($group['matched_invoices'] as $note)
-                                                                                                <tr style="color: {{ $note['match'] ? 'green' : 'red' }}">
-                                                                                                    <td style="border:1px solid black">{{ $note['invoice_no'] }}</td>
-                                                                                                    <td style="border:1px solid black">{{ formatIndianNumber($note['api_value'], 2) }}</td>
-                                                                                                    <td style="border:1px solid black">{{ formatIndianNumber($note['db_value'], 2) }}</td>
-                                                                                                    <td style="border:1px solid black">{{ $note['match'] ? '✔️' : '❌' }}</td>
-                                                                                                </tr>
-                                                                                            @empty
-                                                                                                <tr><td colspan="4">No matched credit notes.</td></tr>
-                                                                                            @endforelse
-                                                                                        </tbody>
-                                                                                    </table>
-
-                                                                                    <br>
-
-                                                                                    <strong>Only on Portal</strong>
-                                                                                    <table border="1" width="100%" cellpadding="5">
-                                                                                        <thead>
-                                                                                            <tr>
-                                                                                                <th>Note No</th>
-                                                                                                <th>Total Value</th>
-                                                                                            </tr>
-                                                                                        </thead>
-                                                                                        <tbody>
-                                                                                            @forelse($group['only_in_api'] as $note)
-                                                                                                <tr style="color: red;">
-                                                                                                    <td>{{ $note['invoice_no'] }}</td>
-                                                                                                    <td>{{ formatIndianNumber($note['api_value'], 2) }}</td>
-                                                                                                </tr>
-                                                                                            @empty
-                                                                                                <tr><td colspan="2">None</td></tr>
-                                                                                            @endforelse
-                                                                                        </tbody>
-                                                                                    </table>
-
-                                                                                    <br>
-
-                                                                                    <strong>Only in Books</strong>
-                                                                                    <table border="1" width="100%" cellpadding="5">
-                                                                                        <thead>
-                                                                                            <tr>
-                                                                                                <th>Note No</th>
-                                                                                                <th>Total Value</th>
-                                                                                            </tr>
-                                                                                        </thead>
-                                                                                        <tbody>
-                                                                                            @forelse($group['only_in_books'] as $note)
-                                                                                                <tr style="color: red;">
-                                                                                                    <td>{{ $note['invoice_no'] }}</td>
-                                                                                                    <td>{{ formatIndianNumber($note['db_value'], 2) }}</td>
-                                                                                                </tr>
-                                                                                            @empty
-                                                                                                <tr><td colspan="2">None</td></tr>
-                                                                                            @endforelse
-                                                                                        </tbody>
-                                                                                    </table>
-                                                                                </div>
-                                                                            </td>
-                                                                        </tr>
-                                                                    @endforeach
-                                                                    </tbody>
-
-                                                                    {{-- Grand Total Row --}}
-                                                                    <tr style="color:{{ $anyMismatch ? 'red' : 'green' }};">
-                                                                        <td colspan=2 style="text-align:center; font-weight: bold; border:1px solid black;">Grand Total</td>
-                                                                        <td style="font-weight: bold; border:1px solid black;">{{ formatIndianNumber($grand_api_total, 2) }}</td>
-                                                                        <td style="font-weight: bold; border:1px solid black;">{{ formatIndianNumber($grand_books_total, 2) }}</td> 
-                                                                    </tr>
+                                                                    @empty
+                                                                        <tr><td colspan="2">None</td></tr>
+                                                                    @endforelse
                                                                 </tbody>
                                                             </table>
 
+                                                            <br>
 
-
-                                                          <div style="margin-bottom:10px; display: flex; align-items: center; gap: 10px; margin-top:30px;">
-                                                                                <h4 style="margin-bottom: 0;">Debit Note Registered</h4>
-                                                                                <label style="margin-left: 15px; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                                                                                    <input type="checkbox" id="debitNoteDetailedCheckbox" onchange="toggleDebitNoteSummary()" />
-                                                                                    Detailed
-                                                                                </label>
-                                                                            </div>
-
-                                                                            <table border="1" cellpadding="8" cellspacing="0" style="width:100%;">
-                                                                                <thead>
-                                                                                    <tr style="background-color: rgb(65, 205, 230); color:white;">
-                                                                                        <th style="border:1px solid black; font-size:15px;">GSTIN</th>
-                                                                                        <th style="border:1px solid black;">Party Name</th>
-                                                                                        <th style="border:1px solid black;">Portal Total (₹)</th>
-                                                                                        <th style="border:1px solid black;">Books Total (₹)</th>
-                                                                                    </tr>
-                                                                                </thead>
-                                                                                <tbody>
-                                                                                    @php
-                                                                                        $grand_api_total = 0;
-                                                                                        $grand_books_total = 0;
-                                                                                    @endphp
-
-                                                                                    <tbody id="debit-note-summary" style="display: none;">
-                                                                                    @foreach ($debitNoteSummaries as $index => $group)
-                                                                                        @php
-                                                                                            $grand_api_total += $group['total_value'];
-                                                                                            $grand_books_total += $group['db_value'];
-                                                                                        @endphp
-
-                                                                                        <tr onclick="toggleDebitNoteDetails('dnr{{ $index }}')" style="cursor:pointer; color: {{ $group['match'] ? 'green' : 'red' }};">
-                                                                                            <td style="border:1px solid black;">{{ $group['gstin'] }}</td>
-                                                                                            <td style="border:1px solid black;">{{ $group['ctin'] }}</td>
-                                                                                            <td style="border:1px solid black;">{{ formatIndianNumber($group['total_value'], 2) }}</td>
-                                                                                            <td style="border:1px solid black;">{{ formatIndianNumber($group['db_value'], 2) }}</td>
-                                                                                        </tr>
-
-                                                                                        {{-- Expandable Row --}}
-                                                                                        <tr id="details-dnr{{ $index }}" style="display: none;">
-                                                                                            <td colspan="4">
-                                                                                                <div style="padding: 10px; background-color: #cce5ff;">
-                                                                                                    <strong>Matched Debit Notes</strong>
-                                                                                                    <table border="1" width="100%" cellpadding="5">
-                                                                                                        <thead>
-                                                                                                            <tr>
-                                                                                                                <th>Note No</th>
-                                                                                                                <th>API Value</th>
-                                                                                                                <th>Books Value</th>
-                                                                                                                <th>Match</th>
-                                                                                                            </tr>
-                                                                                                        </thead>
-                                                                                                        <tbody>
-                                                                                                            @forelse($group['matched_invoices'] as $note)
-                                                                                                                <tr style="color: {{ $note['match'] ? 'green' : 'red' }}">
-                                                                                                                    <td style="border:1px solid black;">{{ $note['invoice_no'] }}</td>
-                                                                                                                    <td style="border:1px solid black;">{{ formatIndianNumber($note['api_value'], 2) }}</td>
-                                                                                                                    <td style="border:1px solid black;">{{ formatIndianNumber($note['db_value'], 2) }}</td>
-                                                                                                                    <td style="border:1px solid black;">{{ $note['match'] ? '✔️' : '❌' }}</td>
-                                                                                                                </tr>
-                                                                                                            @empty
-                                                                                                                <tr><td colspan="4">No matched debit notes.</td></tr>
-                                                                                                            @endforelse
-                                                                                                        </tbody>
-                                                                                                    </table>
-
-                                                                                                    <br>
-
-                                                                                                    <strong>Only on Portal</strong>
-                                                                                                    <table border="1" width="100%" cellpadding="5">
-                                                                                                        <thead>
-                                                                                                            <tr>
-                                                                                                                <th>Note No</th>
-                                                                                                                <th>Total Value</th>
-                                                                                                            </tr>
-                                                                                                        </thead>
-                                                                                                        <tbody>
-                                                                                                            @forelse($group['only_in_api'] as $note)
-                                                                                                                <tr style="color: red;">
-                                                                                                                    <td>{{ $note['invoice_no'] }}</td>
-                                                                                                                    <td>{{ formatIndianNumber($note['api_value'], 2) }}</td>
-                                                                                                                </tr>
-                                                                                                            @empty
-                                                                                                                <tr><td colspan="2">None</td></tr>
-                                                                                                            @endforelse
-                                                                                                        </tbody>
-                                                                                                    </table>
-
-                                                                                                    <br>
-
-                                                                                                    <strong>Only in Books</strong>
-                                                                                                    <table border="1" width="100%" cellpadding="5">
-                                                                                                        <thead>
-                                                                                                            <tr>
-                                                                                                                <th>Note No</th>
-                                                                                                                <th>Total Value</th>
-                                                                                                            </tr>
-                                                                                                        </thead>
-                                                                                                        <tbody>
-                                                                                                            @forelse($group['only_in_books'] as $note)
-                                                                                                                <tr style="color: red;">
-                                                                                                                    <td>{{ $note['invoice_no'] }}</td>
-                                                                                                                    <td>{{ formatIndianNumber($note['db_value'], 2) }}</td>
-                                                                                                                </tr>
-                                                                                                            @empty
-                                                                                                                <tr><td colspan="2">None</td></tr>
-                                                                                                            @endforelse
-                                                                                                        </tbody>
-                                                                                                    </table>
-                                                                                                </div>
-                                                                                            </td>
-                                                                                        </tr>
-                                                                                    @endforeach
-                                                                                    </tbody>
-
-                                                                                    {{-- Grand Total Row --}}
-                                                                                    <tr style="color: {{ $anyMismatch ? 'red' : 'green' }};">
-                                                                                        <td colspan="2" style="text-align:center; font-weight: bold; border:1px solid black;">Grand Total</td>
-                                                                                        <td style="font-weight: bold; border:1px solid black;">{{ formatIndianNumber($grand_api_total, 2) }}</td>
-                                                                                        <td style="font-weight: bold; border:1px solid black;">{{ formatIndianNumber($grand_books_total, 2) }}</td>
-                                                                                    </tr>
-                                                                                </tbody>
-                                                                            </table>
-
-
+                                                            <strong>Only in Books</strong>
+                                                            <table border="1" width="100%" cellpadding="5">
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th>Note No</th>
+                                                                        <th>Total Value</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    @forelse($group['only_in_books'] as $note)
+                                                                        <tr style="color: red;">
+                                                                            <td>{{ $note['invoice_no'] }}</td>
+                                                                            <td>{{ formatIndianNumber($note['db_value'], 2) }}</td>
+                                                                        </tr>
+                                                                    @empty
+                                                                        <tr><td colspan="2">None</td></tr>
+                                                                    @endforelse
+                                                                </tbody>
+                                                            </table>
                                                         </div>
-                                                    </div>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                            </tbody>
 
+                                            {{-- Grand Total Row --}}
+                                            <tr style="color:{{ $anyMismatch ? 'red' : 'green' }};">
+                                                <td colspan=2 style="text-align:center; font-weight: bold; border:1px solid black;">Grand Total</td>
+                                                <td style="font-weight: bold; border:1px solid black;">{{ formatIndianNumber($grand_api_total, 2) }}</td>
+                                                <td style="font-weight: bold; border:1px solid black;">{{ formatIndianNumber($grand_books_total, 2) }}</td> 
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    <div style="margin-bottom:10px; display: flex; align-items: center; gap: 10px; margin-top:30px;">
+                                        <h4 style="margin-bottom: 0;">Debit Note Registered</h4>
+                                        <label style="margin-left: 15px; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                                            <input type="checkbox" id="debitNoteDetailedCheckbox" onchange="toggleDebitNoteSummary()" />
+                                            Detailed
+                                        </label>
+                                    </div>
+                                    <table border="1" cellpadding="8" cellspacing="0" style="width:100%;">
+                                        <thead>
+                                            <tr style="background-color: rgb(65, 205, 230); color:white;">
+                                                <th style="border:1px solid black; font-size:15px;">GSTIN</th>
+                                                <th style="border:1px solid black;">Party Name</th>
+                                                <th style="border:1px solid black;">Portal Total (₹)</th>
+                                                <th style="border:1px solid black;">Books Total (₹)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @php
+                                                $grand_api_total = 0;
+                                                $grand_books_total = 0;
+                                            @endphp
 
+                                            <tbody id="debit-note-summary" style="display: none;">
+                                            @foreach ($debitNoteSummaries as $index => $group)
+                                                @php
+                                                    $grand_api_total += $group['total_value'];
+                                                    $grand_books_total += $group['db_value'];
+                                                @endphp
 
+                                                <tr onclick="toggleDebitNoteDetails('dnr{{ $index }}')" style="cursor:pointer; color: {{ $group['match'] ? 'green' : 'red' }};">
+                                                    <td style="border:1px solid black;">{{ $group['gstin'] }}</td>
+                                                    <td style="border:1px solid black;">{{ $group['ctin'] }}</td>
+                                                    <td style="border:1px solid black;">{{ formatIndianNumber($group['total_value'], 2) }}</td>
+                                                    <td style="border:1px solid black;">{{ formatIndianNumber($group['db_value'], 2) }}</td>
+                                                </tr>
 
-                                                    <!-- second view -->
-                                                    <div class="tab-pane" id="fill-tabpanel-1" role="tabpanel" aria-labelledby="fill-tab-1">
-                                                        <div class="card mb-3 shadow-sm border-0">
-                                                            <div class="card-body p-0">
-                                                                <!-- Header Banner -->
-                                                                <div class="gstr-header d-flex justify-content-between align-items-center px-3 py-2">
-                                                                    <h5 class="mb-0 text-white fw-bold">GSTR-1 - Details of outward supplies of goods or services</h5>
-                                                                    <div class="d-flex gap-2">
-                                                                        <button class="btn btn-sm btn-primary">E-INVOICE ADVISORY</button>
-                                                                        <button class="btn btn-sm btn-primary">
-                                                                            HELP <i class="fas fa-question-circle ms-1"></i>
-                                                                        </button>
-                                                                        <button class="btn btn-sm btn-primary">
-                                                                            <i class="fas fa-sync-alt"></i>
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
+                                                {{-- Expandable Row --}}
+                                                <tr id="details-dnr{{ $index }}" style="display: none;">
+                                                    <td colspan="4">
+                                                        <div style="padding: 10px; background-color: #cce5ff;">
+                                                            <strong>Matched Debit Notes</strong>
+                                                            <table border="1" width="100%" cellpadding="5">
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th>Note No</th>
+                                                                        <th>API Value</th>
+                                                                        <th>Books Value</th>
+                                                                        <th>Match</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    @forelse($group['matched_invoices'] as $note)
+                                                                        <tr style="color: {{ $note['match'] ? 'green' : 'red' }}">
+                                                                            <td style="border:1px solid black;">{{ $note['invoice_no'] }}</td>
+                                                                            <td style="border:1px solid black;">{{ formatIndianNumber($note['api_value'], 2) }}</td>
+                                                                            <td style="border:1px solid black;">{{ formatIndianNumber($note['db_value'], 2) }}</td>
+                                                                            <td style="border:1px solid black;">{{ $note['match'] ? '✔️' : '❌' }}</td>
+                                                                        </tr>
+                                                                    @empty
+                                                                        <tr><td colspan="4">No matched debit notes.</td></tr>
+                                                                    @endforelse
+                                                                </tbody>
+                                                            </table>
 
-                                                                <!-- White Info Row -->
-                                                                <div class="bg-white px-3 py-3">
-                                                                    <div class="row g-2">
-                                                                        <div class="col-md-4"><strong>GSTIN -</strong> {{$merchant_gst}}</div>
-                                                                        <div class="col-md-4"><strong>Legal Name -</strong> {{$comp_details->legal_name}}</div>
-                                                                        <div class="col-md-4"><strong>Trade Name -</strong>  {{$comp_details->company_name}}</div>
-                                                                        <div class="col-md-4"><strong>FY -</strong> 20{{$fy}}</div>
-                                                                        @php
-                                                                            use Carbon\Carbon;
-                                                                            $from = Carbon::parse($from_date);
-                                                                            $to = Carbon::parse($to_date);
-                                                                        @endphp
-                                                                        <div class="col-md-4">
-                                                                            <strong>Tax Period -</strong>
-                                                                            @if($from->format('F Y') === $to->format('F Y'))
-                                                                                {{ $from->format('F Y') }}
-                                                                            @else
-                                                                                {{ $from->format('F Y') }} to {{ $to->format('F Y') }}
-                                                                            @endif
-                                                                        </div>
-                                                                        <div class="col-md-4"><strong>Status -</strong> Not Filed</div>
-                                                                        <div class="col-md-4 text-danger">
-                                                                            <i class="fas fa-circle text-danger me-1" style="font-size: 8px;"></i> * Indicates Mandatory Fields
-                                                                        </div>
-                                                                        @php
-                                                                            $from = Carbon::parse($from_date);
-                                                                            $dueDate = $from->copy()->addMonth()->day(11); // 11th of next month
-                                                                        @endphp
-                                                                        <div class="col-md-4">
-                                                                            <strong>Due Date -</strong> {{ $dueDate->format('d/m/Y') }}
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
+                                                            <br>
+
+                                                            <strong>Only on Portal</strong>
+                                                            <table border="1" width="100%" cellpadding="5">
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th>Note No</th>
+                                                                        <th>Total Value</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    @forelse($group['only_in_api'] as $note)
+                                                                        <tr style="color: red;">
+                                                                            <td>{{ $note['invoice_no'] }}</td>
+                                                                            <td>{{ formatIndianNumber($note['api_value'], 2) }}</td>
+                                                                        </tr>
+                                                                    @empty
+                                                                        <tr><td colspan="2">None</td></tr>
+                                                                    @endforelse
+                                                                </tbody>
+                                                            </table>
+
+                                                            <br>
+
+                                                            <strong>Only in Books</strong>
+                                                            <table border="1" width="100%" cellpadding="5">
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th>Note No</th>
+                                                                        <th>Total Value</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    @forelse($group['only_in_books'] as $note)
+                                                                        <tr style="color: red;">
+                                                                            <td>{{ $note['invoice_no'] }}</td>
+                                                                            <td>{{ formatIndianNumber($note['db_value'], 2) }}</td>
+                                                                        </tr>
+                                                                    @empty
+                                                                        <tr><td colspan="2">None</td></tr>
+                                                                    @endforelse
+                                                                </tbody>
+                                                            </table>
                                                         </div>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                            </tbody>
 
-                                                        <!-- Toggle buttons -->
-                                                        <div class="bg-white py-2 px-3 border mb-3">
-                                                            <div class="form-check">
-                                                                <input type="checkbox" class="form-check-input" id="fileNil">
-                                                                <label class="form-check-label fw-semibold" for="fileNil">File Nil GSTR-1</label>
-                                                            </div>
+                                            {{-- Grand Total Row --}}
+                                            <tr style="color: {{ $anyMismatch ? 'red' : 'green' }};">
+                                                <td colspan="2" style="text-align:center; font-weight: bold; border:1px solid black;">Grand Total</td>
+                                                <td style="font-weight: bold; border:1px solid black;">{{ formatIndianNumber($grand_api_total, 2) }}</td>
+                                                <td style="font-weight: bold; border:1px solid black;">{{ formatIndianNumber($grand_books_total, 2) }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <!-- second view -->
+                            <div class="tab-pane" id="fill-tabpanel-1" role="tabpanel" aria-labelledby="fill-tab-1">
+                                <div class="card mb-3 shadow-sm border-0">
+                                    <div class="card-body p-0">
+                                        <!-- Header Banner -->
+                                        <div class="gstr-header d-flex justify-content-between align-items-center px-3 py-2">
+                                            <h5 class="mb-0 text-white fw-bold">GSTR-1 - Details of outward supplies of goods or services</h5>
+                                            <div class="d-flex gap-2">
+                                                <button class="btn btn-sm btn-primary">E-INVOICE ADVISORY</button>
+                                                <button class="btn btn-sm btn-primary">
+                                                    HELP <i class="fas fa-question-circle ms-1"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-sync-alt"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- White Info Row -->
+                                        <div class="bg-white px-3 py-3">
+                                            <div class="row g-2">
+                                                <div class="col-md-4"><strong>GSTIN -</strong> {{$merchant_gst}}</div>
+                                                <div class="col-md-4"><strong>Legal Name -</strong> {{$comp_details->legal_name}}</div>
+                                                <div class="col-md-4"><strong>Trade Name -</strong>  {{$comp_details->company_name}}</div>
+                                                <div class="col-md-4"><strong>FY -</strong> 20{{$fy}}</div>
+                                                @php
+                                                    use Carbon\Carbon;
+                                                    $from = Carbon::parse($from_date);
+                                                    $to = Carbon::parse($to_date);
+                                                @endphp
+                                                <div class="col-md-4">
+                                                    <strong>Tax Period -</strong>
+                                                    @if($from->format('F Y') === $to->format('F Y'))
+                                                        {{ $from->format('F Y') }}
+                                                    @else
+                                                        {{ $from->format('F Y') }} to {{ $to->format('F Y') }}
+                                                    @endif
+                                                </div>
+                                                <div class="col-md-4"><strong>Status -</strong> Not Filed</div>
+                                                <div class="col-md-4 text-danger">
+                                                    <i class="fas fa-circle text-danger me-1" style="font-size: 8px;"></i> * Indicates Mandatory Fields
+                                                </div>
+                                                @php
+                                                    $from = Carbon::parse($from_date);
+                                                    $dueDate = $from->copy()->addMonth()->day(11); // 11th of next month
+                                                @endphp
+                                                <div class="col-md-4">
+                                                    <strong>Due Date -</strong> {{ $dueDate->format('d/m/Y') }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Toggle buttons -->
+                                <div class="bg-white py-2 px-3 border mb-3">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="fileNil">
+                                        <label class="form-check-label fw-semibold" for="fileNil">File Nil GSTR-1</label>
+                                    </div>
+                                </div>
+
+                                <!-- First view (Detailed) -->
+                                <div id="view1" class="view-content active">
+                                    <div class="bg-primary text-white px-3 py-2 fw-bold rounded-top">
+                                        ADD RECORD DETAILS
+                                    </div>
+                                    <!-- Cards -->
+                                    <div class="row bg-white py-3 px-2 rounded-bottom justify-content-start">
+                                        @foreach ($cards as $card)
+                                            <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                                                <a href="{{ $card['route'] }}" class="text-decoration-none">
+                                                    <div class="card gst-dashboard-card shadow-sm border-0 h-100 text-center">
+                                                        <div class="gst-dashboard-header d-flex align-items-center justify-content-center">
+                                                            <h6 class="gst-dashboard-title m-0">{{ $card['title'] }}</h6>
                                                         </div>
-
-                                                        <!-- First view (Detailed) -->
-                                                        <div id="view1" class="view-content active">
-                                                            <div class="bg-primary text-white px-3 py-2 fw-bold rounded-top">
-                                                                ADD RECORD DETAILS
-                                                            </div>
-
-                                                            <!-- Cards -->
-                                                            <div class="row bg-white py-3 px-2 rounded-bottom justify-content-start">
-                                                                @foreach ($cards as $card)
-                                                                    <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
-                                                                        <a href="{{ $card['route'] }}" class="text-decoration-none">
-                                                                            <div class="card gst-dashboard-card shadow-sm border-0 h-100 text-center">
-                                                                                <div class="gst-dashboard-header d-flex align-items-center justify-content-center">
-                                                                                    <h6 class="gst-dashboard-title m-0">{{ $card['title'] }}</h6>
-                                                                                </div>
-                                                                                <div class="gst-dashboard-body d-flex flex-column justify-content-center align-items-center py-3">
-                                                                                    <div class="gst-dashboard-count d-flex align-items-center">
-                                                                                        <img src="//static.gst.gov.in/uiassets/images/processed.png" class="check-icon me-2" alt="check icon">
-                                                                                        <span class="count-value">{{ $card['count'] ?? '0' }}</span>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </a>
-                                                                    </div>
-                                                                @endforeach
-                                                            </div>
-                                                        </div>
-
-                                                         <form method="POST" action="{{ route('gstr1.send') }}">
-                                                                @csrf
-                                                                <input type="hidden" name="merchant_gst" value="{{ $merchant_gst }}">
-                                                                <input type="hidden" name="company_id" value="{{ $company_id }}">
-                                                                <input type="hidden" name="from_date" value="{{ $from_date }}">
-                                                                <input type="hidden" name="to_date" value="{{ $to_date }}">
-                                                                <button class="btn btn-primary align-left" type="submit">Send to GST Portal</button>
-                                                            </form>
-                                                    </div>
-
-                                                    <!-- view third -->
-                                                    <div class="tab-pane" id="fill-tabpanel-2" role="tabpanel" aria-labelledby="fill-tab-2">
-                                                        <div id="view2" class="view-content" style="height:100vh;">
-                                                                        <!-- Section Header -->
-                                                                        <div class="bg-primary text-white px-3 py-2 fw-bold rounded-top">
-                                                                            GSTR-1 Filing
-                                                                        </div>
-
-                                                                        <!-- Summary content will go here -->
-                                                                        <div class="row bg-white py-3 px-2 rounded-bottom justify-content-center">
-                                                                        </div>
-                                                        </div>
-                                                    </div>
-
-                                                                                        <!-- third view (Summary) -->
-                                                    <div class="tab-pane" id="fill-tabpanel-3" role="tabpanel" aria-labelledby="fill-tab-3">
-                                                        <div id="view2" class="view-content" style="height:100vh;">
-                                                            <!-- Section Header -->
-                                                            <div class="bg-primary text-white px-3 py-2 fw-bold rounded-top">
-                                                                GSTR-1 Books Reconciliation With GSTR-1 Portal
-                                                            </div>
-
-                                                            <!-- Summary content will go here -->
-                                                            <div class="row bg-white py-3 px-2 rounded-bottom justify-content-center">
+                                                        <div class="gst-dashboard-body d-flex flex-column justify-content-center align-items-center py-3">
+                                                            <div class="gst-dashboard-count d-flex align-items-center">
+                                                                <img src="//static.gst.gov.in/uiassets/images/processed.png" class="check-icon me-2" alt="check icon">
+                                                                <span class="count-value">{{ $card['count'] ?? '0' }}</span>
                                                             </div>
                                                         </div>
                                                     </div>
+                                                </a>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                                    <strong id="show_to">Gross Turnover : {{formatIndianNumber($turnover_amount)}}  (FY : @php echo $fy; @endphp)</strong>
+                                    <button class="btn btn-info add_turnover" type="button" >@empty($turnover_amount) Add Gross Turnover (@php echo $fy; @endphp) @else Update Gross Turnover  @endempty</button>
+                                    
+                                
+                                <br><br>
+                                <form method="POST" action="{{ route('gstr1.send') }}" id="gst_portal_form">
+                                    @csrf
+                                    <input type="hidden" name="merchant_gst" value="{{ $merchant_gst }}">
+                                    <input type="hidden" name="company_id" value="{{ $company_id }}">
+                                    <input type="hidden" name="from_date" value="{{ $from_date }}">
+                                    <input type="hidden" name="to_date" value="{{ $to_date }}">
+                                    <button class="btn btn-primary align-left" type="submit">Send to GST Portal</button>
+                                </form>
+                                
+                            </div>
+                            <!-- view third -->
+                            <div class="tab-pane" id="fill-tabpanel-2" role="tabpanel" aria-labelledby="fill-tab-2">
+                                <div id="view2" class="view-content" style="height:100vh;">
+                                    <!-- Section Header -->
+                                    <div class="bg-primary text-white px-3 py-2 fw-bold rounded-top">
+                                        GSTR-1 Filing
+                                    </div>
+
+                                    <!-- Summary content will go here -->
+                                    <div class="row bg-white py-3 px-2 rounded-bottom justify-content-center">
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- third view (Summary) -->
+                            <div class="tab-pane" id="fill-tabpanel-3" role="tabpanel" aria-labelledby="fill-tab-3">
+                                <div id="view2" class="view-content" style="height:100vh;">
+                                    <!-- Section Header -->
+                                    <div class="bg-primary text-white px-3 py-2 fw-bold rounded-top">
+                                        GSTR-1 Books Reconciliation With GSTR-1 Portal
+                                    </div>
+
+                                    <!-- Summary content will go here -->
+                                    <div class="row bg-white py-3 px-2 rounded-bottom justify-content-center">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -720,6 +684,27 @@
         </div>
     </section>
 </div>
+<div class="modal fade" id="turnover_modal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+   <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content p-4 border-divider border-radius-8">
+            <div class="modal-header border-0 p-0">
+               <h5 class="modal-title">Turnover</h5>
+               <button type="button" class="btn-close close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+               <div class="mb-3">
+                  <label for="turnover_amount" class="form-label">Turnover Amount</label>
+                  <input type="number" step="0.01" name="turnovers_amount" id="turnovers_amount" class="form-control" required placeholder="Enter Turnover Amount" value="@if($turnover_amount){{$turnover_amount}}@endif">
+               </div>
+            </div>            
+            <div class="modal-footer border-0 mx-auto p-0">
+               <button type="button" class="btn btn-border-body close" data-bs-dismiss="modal">CANCEL</button>
+               <button type="button" class="ms-3 btn btn-red save_turnover">SUBMIT</button>
+            </div>
+      </div>
+   </div>
+</div>
+
 </body>
 @include('layouts.footer')
 
@@ -861,7 +846,78 @@ function toggleDebitNoteSummary() {
         }
     }
 }
-
+    var turnover_amount = @json($turnover_amount);
+    $('#gst_portal_form').on('submit', function(e){
+        e.preventDefault(); // prevent normal form submit
+        
+        
+        if(turnover_amount==0 || turnover_amount==""){
+            alert("Please Add Gross Turnover");
+            return;
+        }
+        let form = $(this);
+        let url = form.attr('action');
+        let formData = form.serialize(); // get all form data
+        $.ajax({
+            url: url,
+            type: "POST",
+            data: formData,
+            success: function(response){
+                if(response!=""){
+                    let obj = JSON.parse(response);
+                    if(obj.status==true){
+                        alert(obj.message);
+                    }else if(obj.message==false){
+                        alert(obj.message);
+                    }else{
+                        alert("Something went wrong.");
+                    }
+                }else{
+                    alert("Something went wrong.");
+                }
+            },
+            error: function(xhr){
+                // handle error
+                alert("Something went wrong.");
+                console.log(xhr.responseText);
+            }
+        });
+    });
+    $(".add_turnover").click(function(){
+        $("#turnover_modal").modal('toggle');
+    });
+    $(".save_turnover").click(function(){
+        let amount = $("#turnovers_amount").val();
+        if(amount=="" || amount==0){
+            alert("Please Enter Turnover Amount");
+            return;
+        }
+        $.ajax({
+            url: '{{url("store-turnover")}}',
+            async: false,
+            type: 'POST',
+            dataType: 'JSON',
+            data: {
+                _token: '<?php echo csrf_token() ?>',
+                amount: amount,
+                merchant_gst : '<?php echo $merchant_gst; ?>',
+                company_id : '<?php echo $company_id; ?>',
+                fy : '<?php echo $fy; ?>',
+            },
+            success: function(data) {
+                if(data.status==true){
+                    alert(data.message);
+                    $("#show_to").html('Gross Turnover : '+amount+'  (FY : @php echo $fy; @endphp)');
+                    turnover_amount = amount;
+                    $("#turnover_modal").modal('toggle');
+                }else{
+                    alert("Something Went Wrong.")
+                }
+            }
+        });
+        
+    });
+    
     </script>
 
 @endsection

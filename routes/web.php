@@ -332,7 +332,7 @@ Route::Resource('payment', PaymentController::class);
    Route::post('cancel-einvoice', [SalesController::class, 'cancelEinvoice']);
    Route::post('cancel-ewaybill', [SalesController::class, 'cancelEwayBill']);
    Route::post('get-item-average-details', [ItemLedgerController::class, 'itemAverageDetails']);
-  Route::post('/gstr1', [gstR1Controller::class, 'gstmain'])->name('gstr1');
+  Route::get('/gstr1', [gstR1Controller::class, 'gstmain'])->name('gstr1');
   Route::get('/gst/b2c-normal-statewise', [gstR1Controller::class, 'B2Cstatewise'])->name('gst.b2c.normal.statewise');
   Route::get('/gst/b2b-detailed-billwise', [gstR1Controller::class, 'B2Bdetailed'])->name('gst.b2b.detailed.billwise');
   Route::get('/gst/b2c-large-detailed', [gstR1Controller::class, 'b2cLargedetailed'])->name('gst.b2c.large.detailed');
@@ -392,6 +392,12 @@ Route::post('reject-purchase-report', [SupplierPurchaseController::class, 'rejec
 Route::post('approve-purchase-report', [SupplierPurchaseController::class, 'approvePurchaseReport'])->name('approve-purchase-report');
 Route::get('view-approved-purchase-detail/{id?}/{from_date?}/{to_date?}', [SupplierPurchaseController::class, 'viewApprovedPurchaseDetail'])->name('view-approved-purchase-detail');
 Route::post('perform-action-on-purchase', [SupplierPurchaseController::class, 'performActionOnPurchase'])->name('perform-action-on-purchase');
-
+Route::post('store-turnover', [gstR1Controller::class, 'storeTurnOver'])->name('store-turnover');
+Route::get('manage-purchase-info', [SupplierPurchaseController::class, 'managePurchaseInfo'])->name('manage-purchase-info');
+Route::get('add-purchase-info', [SupplierPurchaseController::class, 'addPurchaseInfo'])->name('add-purchase-info');
+Route::post('store-purchase-info', [SupplierPurchaseController::class, 'storePurchaseInfo'])->name('store-purchase-info');
+Route::get('edit-purchase-info/{id}', [SupplierPurchaseController::class, 'editPurchaseInfo'])->name('edit-purchase-info');
+Route::post('update-purchase-info/{id}', [SupplierPurchaseController::class, 'updatePurchaseInfo'])->name('update-purchase-info');
+Route::post('delete-purchase-info', [SupplierPurchaseController::class, 'deletePurchaseInfo'])->name('delete-purchase-info');
 
 });
