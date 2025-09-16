@@ -250,33 +250,7 @@ class CommonHelper
         //Purchase
 
         $company_id = Session::get('user_company_id');
-        // $result = DB::table('purchases')
-        //                 ->join('purchase_descriptions', 'purchases.id', '=', 'purchase_descriptions.purchase_id')
-        //                 ->leftJoin('purchase_sundries', function ($join) {
-        //                     $join->on('purchases.id', '=', 'purchase_sundries.purchase_id');
-                                
-        //                 })
-        //                 ->leftJoin('bill_sundrys', function ($join) {
-        //                     $join->on('purchase_sundries.bill_sundry', '=', 'purchase_sundries.id')
-        //                             ->where('bill_sundrys.adjust_purchase_amt', '=', 'Yes');
-                                
-        //                 })                        
-        //                 ->where([
-        //                     'purchases.delete' => 0,
-        //                     'purchases.company_id' => $company_id,
-        //                     'purchases.financial_year' => $financial_year,
-        //                 ])
-        //                 ->whereBetween('purchases.date', [$from_date, $to_date])
-        //                 ->selectRaw("
-        //                     SUM(purchase_descriptions.amount) as base_amount,
-        //                     SUM(CASE 
-        //                         WHEN bill_sundry_type = 'additive' THEN purchase_sundries.amount
-        //                         WHEN bill_sundry_type = 'subtractive' THEN -purchase_sundries.amount
-        //                         ELSE 0 END) as adjustment_amount
-        //                 ")
-        //                 ->first();
-        // $tot_purchase_amt = ($result->base_amount ?? 0) + ($result->adjustment_amount ?? 0);
-
+        
         $tot_purchase_amt = DB::table('purchases')
                             ->join('purchase_descriptions','purchases.id','=','purchase_descriptions.purchase_id')
                             ->where(['purchases.delete' => '0', 'purchases.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
@@ -302,7 +276,7 @@ class CommonHelper
         //Sale
         $tot_sale_amt = DB::table('sales')
                             ->join('sale_descriptions','sales.id','=','sale_descriptions.sale_id')
-                            ->where(['sales.delete' => '0', 'sales.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
+                            ->where(['sales.delete' => '0','sales.status' => '1', 'sales.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
                             ->whereRaw("STR_TO_DATE(sales.date,'%Y-%m-%d')>=STR_TO_DATE('".$from_date."','%Y-%m-%d')")
                             ->whereRaw("STR_TO_DATE(sales.date,'%Y-%m-%d')<=STR_TO_DATE('".$to_date."','%Y-%m-%d')")
                             ->get()

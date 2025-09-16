@@ -52,12 +52,12 @@
                      @foreach($purchases as $key => $value)
                      @php  $qty_total=$qty_total+$value->total_sum;$amount_total=$amount_total+$value->difference_sum; @endphp
                         <tr>
-                           <td style="text-align:right;">{{$value->account_name}}</td>
+                           <td style="text-align:right;">{{$value->accountInfo->account_name}}</td>
                            <td style="text-align:right;">{{$value->total_sum}}</td>
                            <td style="text-align:right;">{{$value->difference_sum}}</td>
                            <td>
                               @if(isset($value->total_sum))
-                                 <a href="{{route('view-approved-purchase-detail',[$value->party, $from_date, $to_date])}}" target="_blank"><button class="btn btn-info">View</button></a>
+                                 <a href="{{route('view-approved-purchase-detail',[$value->account_id, $from_date, $to_date])}}" target="_blank"><button class="btn btn-info">View</button></a>
                               @endif                              
                            </td>
                         </tr>

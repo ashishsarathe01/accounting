@@ -9,6 +9,23 @@ input::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
 }
+ .unchange_dropdown{
+      pointer-events: none !important;
+      touch-action: none !important;
+   }
+   .carousel-control-prev-icon,
+.carousel-control-next-icon {
+    background-color: rgba(0,0,0,0.5); /* semi-transparent black */
+    border-radius: 50%;
+    background-size: 100%, 100%;
+}
+#imageCarousel img {
+    width: 100%;           /* fit the column width */
+    height: 200px;         /* fixed height */
+    object-fit: contain;   /* keep aspect ratio, no cropping */
+    background: #f8f9fa;   /* light gray background so white images are visible */
+    border-radius: 8px;
+}
 </style>
 <div class="list-of-view-company ">
    <section class="list-of-view-company-section container-fluid">
@@ -33,6 +50,7 @@ input::-webkit-inner-spin-button {
                <table class="table-striped table m-0 shadow-sm payment_table">
                   <thead>
                      <tr class=" font-12 text-body bg-light-pink ">
+                        <th class="w-min-120 border-none bg-light-pink text-body">Date</th>
                         <th class="w-min-120 border-none bg-light-pink text-body">Vehicle No.</th>
                         <th class="w-min-120 border-none bg-light-pink text-body">Group</th>
                         <th class="w-min-120 border-none bg-light-pink text-body">Account Name </th>
@@ -43,6 +61,7 @@ input::-webkit-inner-spin-button {
                   <tbody>
                     @foreach($pending_report as $key => $value)
                         <tr>
+                            <td>@if($value->entry_date) {{date('d-m-Y',strtotime($value->entry_date))}} @endif</td>
                             <td>{{$value->vehicle_no}}</td>
                             <td>{{$value->group_name}}</td>
                             <td>{{$value->account_name}}</td>
@@ -52,7 +71,7 @@ input::-webkit-inner-spin-button {
                                 <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $value->id; ?>">
                                     <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
                                 </button>
-                                <img src="{{ URL::asset('public/assets/imgs/start.svg')}}" class="px-1 start" alt="" style="width: 30px;cursor:pointer;" id="start_btn_{{$value->id}}"  data-gross_weight="{{$value->gross_weight}}" data-account_id="{{$value->account_id}}" data-id="<?php echo $value->id; ?>" data-group_id="<?php echo $value->group_id; ?>" data-map_purchase_id="<?php echo $value->map_purchase_id; ?>" data-price="<?php echo $value->price; ?>" data-purchase_amount="<?php echo $value->purchase_amount; ?>" data-purchase_date="<?php echo $value->purchase_date; ?>" data-purchase_voucher_no="<?php echo $value->purchase_voucher_no; ?>" data-status="0">
+                                <img src="{{ URL::asset('public/assets/imgs/start.svg')}}" class="px-1 start" alt="" style="width: 30px;cursor:pointer;" id="start_btn_{{$value->id}}"  data-gross_weight="{{$value->gross_weight}}" data-account_id="{{$value->account_id}}" data-id="<?php echo $value->id; ?>" data-group_id="<?php echo $value->group_id; ?>" data-map_purchase_id="<?php echo $value->map_purchase_id; ?>" data-price="<?php echo $value->price; ?>" data-purchase_amount="<?php echo $value->purchase_amount; ?>" data-purchase_date="<?php echo $value->purchase_date; ?>" data-purchase_voucher_no="<?php echo $value->purchase_voucher_no; ?>" data-status="0" data-vehicle_no="{{$value->vehicle_no}}" data-entry_date="{{$value->entry_date}}" data-purchase_qty="<?php echo $value->purchase_qty; ?>">
                             </td>
                         </tr>
                     @endforeach
@@ -67,6 +86,7 @@ input::-webkit-inner-spin-button {
                <table class="table-striped table m-0 shadow-sm payment_table">
                   <thead>
                      <tr class=" font-12 text-body bg-light-pink ">
+                        <th class="w-min-120 border-none bg-light-pink text-body">Date</th>
                         <th class="w-min-120 border-none bg-light-pink text-body">Vehicle No.</th>
                         <th class="w-min-120 border-none bg-light-pink text-body">Group</th>
                         <th class="w-min-120 border-none bg-light-pink text-body">Account Name </th>
@@ -77,12 +97,13 @@ input::-webkit-inner-spin-button {
                   <tbody>
                     @foreach($in_process_report as $key => $value)
                         <tr>
+                            <td>@if($value->entry_date) {{date('d-m-Y',strtotime($value->entry_date))}} @endif</td>
                             <td>{{$value->vehicle_no}}</td>
                             <td>{{$value->group_name}}</td>
                             <td>{{$value->account_name}}</td>
                             <td>{{$value->gross_weight}}</td>
                             <td class="w-min-120 text-center">
-                                <img src="{{ URL::asset('public/assets/imgs/start.svg')}}" class="px-1 start" alt="" style="width: 30px;cursor:pointer;" id="start_btn_{{$value->id}}" data-gross_weight="{{$value->gross_weight}}" data-account_id="{{$value->account_id}}" data-id="<?php echo $value->id; ?>" data-group_id="<?php echo $value->group_id; ?>" data-map_purchase_id="<?php echo $value->map_purchase_id; ?>" data-price="<?php echo $value->price; ?>" data-purchase_amount="<?php echo $value->purchase_amount; ?>" data-purchase_date="<?php echo $value->purchase_date; ?>" data-purchase_voucher_no="<?php echo $value->purchase_voucher_no; ?>" data-status="1">
+                                <img src="{{ URL::asset('public/assets/imgs/start.svg')}}" class="px-1 start" alt="" style="width: 30px;cursor:pointer;" id="start_btn_{{$value->id}}" data-gross_weight="{{$value->gross_weight}}" data-account_id="{{$value->account_id}}" data-id="<?php echo $value->id; ?>" data-group_id="<?php echo $value->group_id; ?>" data-map_purchase_id="<?php echo $value->map_purchase_id; ?>" data-price="<?php echo $value->price; ?>" data-purchase_amount="<?php echo $value->purchase_amount; ?>" data-purchase_date="<?php echo $value->purchase_date; ?>" data-purchase_voucher_no="<?php echo $value->purchase_voucher_no; ?>" data-status="1" data-vehicle_no="{{$value->vehicle_no}}" data-purchase_qty="<?php echo $value->purchase_qty; ?>" data-entry_date="{{$value->entry_date}}">
                             </td>
                         </tr>
                     @endforeach
@@ -97,6 +118,7 @@ input::-webkit-inner-spin-button {
                <table class="table-striped table m-0 shadow-sm payment_table">
                   <thead>
                      <tr class=" font-12 text-body bg-light-pink ">
+                        <th class="w-min-120 border-none bg-light-pink text-body">Date</th>
                         <th class="w-min-120 border-none bg-light-pink text-body">Vehicle No.</th>
                         <th class="w-min-120 border-none bg-light-pink text-body">Group</th>
                         <th class="w-min-120 border-none bg-light-pink text-body">Account Name </th>
@@ -107,13 +129,14 @@ input::-webkit-inner-spin-button {
                   <tbody>
                     @foreach($complete_report as $key => $value)
                         <tr>
+                            <td>@if($value->entry_date) {{date('d-m-Y',strtotime($value->entry_date))}} @endif</td>
                             <td>{{$value->vehicle_no}}</td>
                             <td>{{$value->group_name}}</td>
                             <td>{{$value->account_name}}</td>
                             <td>{{$value->gross_weight}}</td>
                             <td class="w-min-120 text-center">
                                 <button class="btn btn-info upload_image" data-id="{{$value->id}}">Click</button>
-                                <button class="btn btn-info start" data-gross_weight="{{$value->gross_weight}}" data-account_id="{{$value->account_id}}" data-id="<?php echo $value->id; ?>" data-group_id="<?php echo $value->group_id; ?>" data-map_purchase_id="<?php echo $value->map_purchase_id; ?>" data-price="<?php echo $value->price; ?>" data-purchase_amount="<?php echo $value->purchase_amount; ?>" data-purchase_date="<?php echo $value->purchase_date; ?>" data-purchase_voucher_no="<?php echo $value->purchase_voucher_no; ?>" data-status="2">View</button>
+                                <button class="btn btn-info start" data-gross_weight="{{$value->gross_weight}}" data-account_id="{{$value->account_id}}" data-id="<?php echo $value->id; ?>" data-group_id="<?php echo $value->group_id; ?>" data-map_purchase_id="<?php echo $value->map_purchase_id; ?>" data-price="<?php echo $value->price; ?>" data-purchase_amount="<?php echo $value->purchase_amount; ?>" data-purchase_date="<?php echo $value->purchase_date; ?>" data-purchase_voucher_no="<?php echo $value->purchase_voucher_no; ?>" data-status="2" data-vehicle_no="{{$value->vehicle_no}}" data-purchase_qty="<?php echo $value->purchase_qty; ?>" data-entry_date="{{$value->entry_date}}">View</button>
                             </td>
                         </tr>
                     @endforeach
@@ -128,6 +151,7 @@ input::-webkit-inner-spin-button {
                <table class="table-striped table m-0 shadow-sm payment_table">
                   <thead>
                      <tr class=" font-12 text-body bg-light-pink ">
+                        <th class="w-min-120 border-none bg-light-pink text-body">Date</th>
                         <th class="w-min-120 border-none bg-light-pink text-body">Vehicle No.</th>
                         <th class="w-min-120 border-none bg-light-pink text-body">Group</th>
                         <th class="w-min-120 border-none bg-light-pink text-body">Account Name </th>
@@ -138,12 +162,13 @@ input::-webkit-inner-spin-button {
                   <tbody>
                     @foreach($pending_for_approval_report as $key => $value)
                         <tr>
+                            <td>@if($value->entry_date) {{date('d-m-Y',strtotime($value->entry_date))}} @endif</td>
                             <td>{{$value->vehicle_no}}</td>
                             <td>{{$value->group_name}}</td>
                             <td>{{$value->account_name}}</td>
                             <td>{{$value->gross_weight}}</td>
                             <td class="w-min-120 text-center">
-                                <button class="btn btn-info start" data-gross_weight="{{$value->gross_weight}}" data-account_id="{{$value->account_id}}" data-id="<?php echo $value->id; ?>" data-group_id="<?php echo $value->group_id; ?>" data-map_purchase_id="<?php echo $value->map_purchase_id; ?>" data-price="<?php echo $value->price; ?>" data-purchase_amount="<?php echo $value->purchase_amount; ?>" data-purchase_date="<?php echo $value->purchase_date; ?>" data-purchase_voucher_no="<?php echo $value->purchase_voucher_no; ?>" data-status="2">View</button>
+                                <button class="btn btn-info start" data-gross_weight="{{$value->gross_weight}}" data-account_id="{{$value->account_id}}" data-id="<?php echo $value->id; ?>" data-group_id="<?php echo $value->group_id; ?>" data-map_purchase_id="<?php echo $value->map_purchase_id; ?>" data-price="<?php echo $value->price; ?>" data-purchase_amount="<?php echo $value->purchase_amount; ?>" data-purchase_date="<?php echo $value->purchase_date; ?>" data-purchase_voucher_no="<?php echo $value->purchase_voucher_no; ?>" data-status="3" data-vehicle_no="{{$value->vehicle_no}}" data-purchase_qty="<?php echo $value->purchase_qty; ?>" data-entry_date="{{$value->entry_date}}">View</button>
                             </td>
                         </tr>
                     @endforeach
@@ -284,13 +309,29 @@ input::-webkit-inner-spin-button {
             <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Report</h5>
             <br>
             <div class="row">
-                <div class="mb-6 col-md-6">
+                <div class="mb-3 col-md-3">
                     <label for="account_id" class="form-label font-14 font-heading">Account Name</label>
-                    <select id="account_id" class="form-select">
+                    <select id="account_id" class="form-select unchange_dropdown">
                         @foreach($accounts as $key => $value)
                             <option value="{{$value->id}}">{{$value->account_name}}</option>
                         @endforeach
                     </select>
+                </div>
+                <div class="mb-3 col-md-3">
+                    <label for="entry_date" class="form-label font-14 font-heading">Date</label>
+                    <input type="date" id="entry_date" class="form-control" readonly/>
+                </div>
+                <div class="mb-3 col-md-3">
+                    <label for="item_group" class="form-label font-14 font-heading">Item Group</label>
+                    <select id="group_id" class="form-select unchange_dropdown">
+                        @foreach($item_groups as $key => $value)
+                            <option value="{{$value->id}}">{{$value->group_name}}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="mb-3 col-md-3">
+                    <label for="vehicle_no" class="form-label font-14 font-heading">Vehicle No.</label>
+                    <input type="text" id="vehicle_no" class="form-control" readonly/>
                 </div>
                 <div class="mb-3 col-md-3">
                     <label for="tare_weight" class="form-label font-14 font-heading">Gross Weight</label>
@@ -317,16 +358,20 @@ input::-webkit-inner-spin-button {
                     <a href="" id="bill_url"><button class="btn btn-info" style="margin-top: 28px;">Add Bill</button></a>
                 </div>
                 <div class="mb-12 col-md-12"></div>
-                <div class="mb-4 col-md-4 purchase_div">
-                    <label for="purchase_invoice_no" class="form-label font-14 font-heading">Purchase Invoive No.</label>
+                <div class="mb-3 col-md-3 purchase_div">
+                    <label for="purchase_invoice_no" class="form-label font-14 font-heading">Purchase Invoice No.</label>
                     <input type="text" id="purchase_invoice_no" class="form-control" readonly/>
                 </div>
-                <div class="mb-4 col-md-4 purchase_div">
-                    <label for="purchase_invoice_date" class="form-label font-14 font-heading">Purchase Invoive Date</label>
+                <div class="mb-3 col-md-3 purchase_div">
+                    <label for="purchase_invoice_date" class="form-label font-14 font-heading">Purchase Invoice Date</label>
                     <input type="text" id="purchase_invoice_date" class="form-control" readonly/>
                 </div>
-                <div class="mb-4 col-md-4 purchase_div">
-                    <label for="purchase_invoice_amount" class="form-label font-14 font-heading">Purchase Invoive Amount</label>
+                <div class="mb-3 col-md-3 purchase_div">
+                    <label for="purchase_invoice_qty" class="form-label font-14 font-heading">Purchase Invoice Qty</label>
+                    <input type="text" id="purchase_invoice_qty" class="form-control" readonly/>
+                </div>
+                <div class="mb-3 col-md-3 purchase_div">
+                    <label for="purchase_invoice_amount" class="form-label font-14 font-heading">Purchase Invoice Amount</label>
                     <input type="text" id="purchase_invoice_amount" class="form-control" readonly/>
                 </div>
                 <br>
@@ -403,7 +448,8 @@ input::-webkit-inner-spin-button {
                 <button type="button" class="btn  btn-xs-primary save_location">
                     SAVE
                 </button>
-                 <button class="btn btn-success approve" style="display: none">Approve</button>
+                <button class="btn btn-success approve" style="display: none">Approve</button>
+                {{-- <button class="btn btn-success approve" style="display: none">Edit</button> --}}
                         {{-- <button class="btn btn-danger reject" data-id="">Reject</button> --}}
             </div>
         </div>
@@ -430,7 +476,6 @@ input::-webkit-inner-spin-button {
           <input type="hidden" name="image_purchase_id" id="image_purchase_id">
           {{-- Live Preview Section --}}
           <div id="preview" class="row g-3"></div>
-
           <div class="text-end mt-3">
             <button type="submit" class="btn btn-success">Upload</button>
           </div>
@@ -481,20 +526,43 @@ input::-webkit-inner-spin-button {
         let purchase_voucher_no = $(this).attr('data-purchase_voucher_no');
         let purchase_date = $(this).attr('data-purchase_date');
         let purchase_amount = $(this).attr('data-purchase_amount');
+        let purchase_qty = $(this).attr('data-purchase_qty');
         let price = $(this).attr('data-price');
         let status = $(this).attr('data-status');
-
+        let vehicle_no = $(this).attr('data-vehicle_no');
+        let entry_date = $(this).attr('data-entry_date');
+        $(".qty").attr('readonly',false);
+        if(status==3){
+            $(".qty").attr('readonly',true);
+        }
         $(".approve").attr('data-id',id);
         $("#account_id").val(account_id);
         $("#row_id").val(id);
         $("#gross_weight").val(gross_weight);
+        $("#vehicle_no").val(vehicle_no);
+        $("#group_id").val(group_id);
+        $("#entry_date").val(entry_date);
         $(".purchase_div").hide();
+
+        if(status==0){
+            $("#voucher_no").val('');
+            $(".qty").val('');
+            $("#qty_short_weight").val('');
+            $(".contract_rate").val('');
+            $("#contract_rate_short_weight").val('');
+            $(".difference_amount").val('');
+            $("#difference_amount_short_weight").val('');
+            $("#difference_total_amount").val('');
+            $("#tare_weight").val('');
+        }
+        
         if(map_purchase_id!=""){
             $("#bill_url").hide();
             $(".bill_rate").val(price);
             $("#purchase_invoice_no").val(purchase_voucher_no);
             $("#purchase_invoice_date").val(purchase_date);
             $("#purchase_invoice_amount").val(purchase_amount);
+            $("#purchase_invoice_qty").val(purchase_qty);
             $("#bill_url").attr('href','');
             $(".purchase_div").show();
         }else{
@@ -601,7 +669,7 @@ input::-webkit-inner-spin-button {
                                 $(this).keyup();
                             });
 
-                            if(status==2 || status==3){
+                            if(status==3){
                                 $(".save_location").hide();
                             }
                             // $("#bill_url").hide();
@@ -623,7 +691,7 @@ input::-webkit-inner-spin-button {
                     "_token": "{{ csrf_token() }}",
                     "location": loc_id,
                     "account_id": account_id,
-                    "invoice_date":$("#invoice_date").val(),
+                    "date":$("#entry_date").val(),
                 },
                 success:function(res){
                     if(res == null){
@@ -664,17 +732,16 @@ input::-webkit-inner-spin-button {
         if(net_weight==""){
             net_weight = 0;
         }
+        let purchase_invoice_qty = $("#purchase_invoice_qty").val();
+        if(purchase_invoice_qty==""){
+            purchase_invoice_qty = 0;
+        }
         $(".qty").each(function(){
             if($(this).val()!=""){
                 qty_weight = parseFloat(qty_weight) + parseFloat($(this).val());
             }
         })
-        short_weight = parseFloat(net_weight) - parseFloat(qty_weight);
-        
-        $("#qty_short_weight").css({'color':''})
-        if(parseFloat(short_weight)<0){
-            $("#qty_short_weight").css({'color': 'red'});
-        }
+        short_weight = parseFloat(purchase_invoice_qty) - parseFloat(net_weight);
         $("#qty_short_weight").val(short_weight);
         let bill_rate_short_weight = $("#bill_rate_short_weight").val();
         if(bill_rate_short_weight==undefined || bill_rate_short_weight==""){
@@ -750,6 +817,17 @@ input::-webkit-inner-spin-button {
             alert("Please enter tare weight");
             return;
         }
+        let qty_total = 0;
+        $(".qty").each(function(){
+            if($(this).val()!=""){
+                qty_total = parseFloat(qty_total) + parseFloat($(this).val());
+            }
+        });
+        let net_weight = $("#net_weight").val();
+        if(parseFloat(qty_total)!=parseFloat(net_weight)){
+            alert("Total head quantity must be equal to net quantity.")
+            return;
+        }
         let arr = [];
         $(".bill_rate").each(function(){
             arr.push({'id':$(this).attr('data-id'),'contract_rate':$("#contract_rate_"+$(this).attr('data-id')).val(),'bill_rate':$(this).val(),'qty':$("#qty_"+$(this).attr('data-id')).val(),'difference_amount':$("#difference_amount_"+$(this).attr('data-id')).val()});
@@ -768,7 +846,7 @@ input::-webkit-inner-spin-button {
             url:"{{url('store-supplier-purchase-report')}}",
             type:"POST",
             data:data,
-            success:function(res){                   
+            success:function(res){
                 response = JSON.parse(res);
                 if(response.status == true){
                     alert(response.message);
@@ -857,5 +935,19 @@ input::-webkit-inner-spin-button {
             });
         }
     });
+    $(".qty").keyup(function(){
+        let qty_total = 0;
+        $(".save_location").show();
+        $(".qty").each(function(){
+            if($(this).val()!=""){
+                qty_total = parseFloat(qty_total) + parseFloat($(this).val());
+            }
+        });
+        let net_weight = $("#net_weight").val();
+        if(parseFloat(qty_total)!=parseFloat(net_weight)){
+            $(".save_location").hide();
+        }
+    })
+    
 </script>
 @endsection

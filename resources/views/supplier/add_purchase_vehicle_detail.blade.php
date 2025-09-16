@@ -40,6 +40,11 @@ input[type=number] {
                     @csrf
                     <div class="row">
                         <div class="mb-3 col-md-3">
+                            <label for="date" class="form-label font-14 font-heading">Date</label>
+                            <input type="date" class="form-control"  id="date" name="date" required value="{{date('Y-m-d')}}">
+                        </div>
+                        <div class="clearfix"></div>
+                        <div class="mb-3 col-md-3">
                             <label for="vehicle_bo" class="form-label font-14 font-heading">Vehicle No.</label>
                             <input type="text" class="form-control"  placeholder="Enter Vehicle No." id="vehicle_no" name="vehicle_no" required>
                         </div>

@@ -47,8 +47,12 @@ input[type=number] {
                                 @foreach($accounts as $key => $account)
                                     <option value="{{$account->id}}">{{$account->account_name}}</option>
                                 @endforeach
-                                
                             </select>
+                        </div>
+                        <div class="clearfix"></div>
+                        <div class="mb-3 col-md-3">
+                            <label for="name" class="form-label font-14 font-heading">Date</label>
+                            <input type="date" class="form-control" id="date" name="date" value="" required>
                         </div>
                         <div class="clearfix"></div>
                         <div class="mb-3 col-md-3">
@@ -127,6 +131,7 @@ input[type=number] {
 </body>
 @include('layouts.footer')
 <script>
+    var selected_location_arr = [];
 $(document).ready(function(){
     var heads = @json($heads);
     $( ".select2-single" ).select2({
@@ -150,7 +155,7 @@ $(document).ready(function(){
     });
 
     let location_index = 1;
-    let selected_location_arr = [];
+    
     var location_list = "<option value=''>Select Location</option>";
     location_list+="<option value='add_new'>Add New</option>";
     getLocationList();
@@ -194,6 +199,12 @@ $(document).ready(function(){
         var id = $(this).attr("data-id");
         $("#row_id").val(id);
         var value = $(this).val();
+        var date = $("#date").val();
+        if(date==""){
+            alert("Please Select Date");
+            $(this).val('');
+            return;
+        }
         if(value!=""){
             let index = parseInt(id)-1;
             $(".head_id_"+id).attr('name','head_id_'+index+'[]');
@@ -207,6 +218,7 @@ $(document).ready(function(){
         if(value == 'add_new'){
             $("#location_modal").modal('show');
         }else{
+            console.log(selected_location_arr);
             if (selected_location_arr.includes($(this).val())) {
                 alert(" Already Selected");
                 $(this).val('')
@@ -228,7 +240,8 @@ $(document).ready(function(){
                 method : "POST",
                 data: {
                     _token: '<?php echo csrf_token() ?>',
-                    location_id : value
+                    location_id : value,
+                    date : $("#date").val()
                 },
                 success:function(res){
                     if(res.rate.length>0){
@@ -297,6 +310,12 @@ $(document).ready(function(){
         });
     })
 });
-
+$("#date").change(function(){
+    
+    $(".location").each(function(){
+        selected_location_arr = [];
+        $(this).change();
+    });
+})
 </script>
 @endsection

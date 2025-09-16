@@ -802,7 +802,7 @@ class StockTransferController extends Controller
             $desc_item_arr = StockTransferDescription::where('stock_transfer_id',$id)->pluck('goods_discription')->toArray();
             ItemAverageDetail::where('stock_transfer_in_id',$id)
                            ->where('type','STOCK TRANSFER IN')
-                           ->delete();    
+                           ->delete();
             ItemAverageDetail::where('stock_transfer_id',$id)
                            ->where('type','STOCK TRANSFER OUT')
                            ->delete();
@@ -888,37 +888,36 @@ class StockTransferController extends Controller
                     $sundry->save();
                     //ADD DATA IN ACCOUNT
                      $billsundry = BillSundrys::where('id', $bill)->first();    
-                if($billsundry->adjust_sale_amt=='No'){
-                   $ledger = new AccountLedger();
-                   $ledger->account_id = $billsundry->sale_amt_account;
-                   $ledger->credit = $bill_sundry_amounts[$key];
-                   $ledger->txn_date = $request->input('date');
-                   $ledger->company_id = Session::get('user_company_id');
-                   $ledger->financial_year = Session::get('default_fy');
-                   $ledger->entry_type = 11;
-                   $ledger->entry_type_id = $stock_transfer->id;
-                   //$ledger->map_account_id = $request->input('party_id');
-                   $ledger->series_no = $request->input('from_series');
-                   $ledger->created_by = Session::get('user_id');
-                   $ledger->created_at = date('d-m-Y H:i:s');
-                   $ledger->save();
-                }  
-
-                if($billsundry->adjust_sale_amt=='No'){
-                   $ledger = new AccountLedger();
-                   $ledger->account_id = $billsundry->sale_amt_account;
-                   $ledger->debit = $bill_sundry_amounts[$key];
-                   $ledger->txn_date = $request->input('date');
-                   $ledger->company_id = Session::get('user_company_id');
-                   $ledger->financial_year = Session::get('default_fy');
-                   $ledger->entry_type = 11;
-                   $ledger->entry_type_id = $stock_transfer->id;
-                   //$ledger->map_account_id = $request->input('party_id');
-                   $ledger->series_no = $request->input('to_series');
-                   $ledger->created_by = Session::get('user_id');
-                   $ledger->created_at = date('d-m-Y H:i:s');
-                   $ledger->save();
-                }  
+                    if($billsundry->adjust_sale_amt=='No'){
+                        $ledger = new AccountLedger();
+                        $ledger->account_id = $billsundry->sale_amt_account;
+                        $ledger->credit = $bill_sundry_amounts[$key];
+                        $ledger->txn_date = $request->input('date');
+                        $ledger->company_id = Session::get('user_company_id');
+                        $ledger->financial_year = Session::get('default_fy');
+                        $ledger->entry_type = 11;
+                        $ledger->entry_type_id = $stock_transfer->id;
+                        //$ledger->map_account_id = $request->input('party_id');
+                        $ledger->series_no = $request->input('from_series');
+                        $ledger->created_by = Session::get('user_id');
+                        $ledger->created_at = date('d-m-Y H:i:s');
+                        $ledger->save();
+                    }
+                    if($billsundry->adjust_sale_amt=='No'){
+                        $ledger = new AccountLedger();
+                        $ledger->account_id = $billsundry->sale_amt_account;
+                        $ledger->debit = $bill_sundry_amounts[$key];
+                        $ledger->txn_date = $request->input('date');
+                        $ledger->company_id = Session::get('user_company_id');
+                        $ledger->financial_year = Session::get('default_fy');
+                        $ledger->entry_type = 11;
+                        $ledger->entry_type_id = $stock_transfer->id;
+                        //$ledger->map_account_id = $request->input('party_id');
+                        $ledger->series_no = $request->input('to_series');
+                        $ledger->created_by = Session::get('user_id');
+                        $ledger->created_at = date('d-m-Y H:i:s');
+                        $ledger->save();
+                    }  
                     if($billsundry->nature_of_sundry=="OTHER"){
                         if($billsundry->bill_sundry_type=="additive"){
                             $additive_sundry_amount_first = $additive_sundry_amount_first + $bill_sundry_amounts[$key];
@@ -979,7 +978,7 @@ class StockTransferController extends Controller
             }
             foreach ($desc_item_arr as $key => $value) {
                 if(!array_key_exists($value, $sale_item_array)){
-                   CommonHelper::RewriteItemAverageByItem($request->date,$value);
+                   CommonHelper::RewriteItemAverageByItem($request->date,$value,$request->input('series_no'));
                 }
              }
              session(['previous_url_stock_transfer_edit' => URL::previous()]);
@@ -1137,7 +1136,7 @@ class StockTransferController extends Controller
                $index++;
                continue;
             }
-            if($data[0]!="" && $data[2]!=""){        
+            if($data[0]!="" && $data[2]!=""){
                 if($bill_date!=""){
                     $akey = array_search($series, $series_arr);
                     $merchant_gst = $gst_no_arr[$akey];
@@ -1426,7 +1425,12 @@ class StockTransferController extends Controller
                                     $sundry->save();
                                     //ADD DATA BILL SUNDRY ACCOUNT 
                                     if($adjust_sale_amt=='No'){
-                                        $grand_total = $grand_total + $v2;
+                                        if($bill_sundry_type=='additive'){
+                                            $grand_total = $grand_total + $v2;
+                                        }else if($bill_sundry_type=='subtractive'){
+                                            $grand_total = $grand_total - $v2;
+                                        }
+                                        
                                         //From Series Account Ledger
                                         $ledger = new AccountLedger();
                                         $ledger->account_id = $sale_amt_account;

@@ -90,7 +90,7 @@ input[type=number]::-webkit-outer-spin-button {
                            <p class="d-flex m-0">Purchase
                               <span class="ms-auto">
                                  @php
-                                    echo formatIndianNumber($data['tot_purchase_amt']-$data['tot_purchase_return_amt']+$data['tot_sale_return_amt_purchase'],2);
+                                    echo formatIndianNumber($data['tot_purchase_amt'] - $data['tot_purchase_return_amt'] + $data['tot_sale_return_amt_purchase'],2);
                                  @endphp
                               </span>
                            </p>

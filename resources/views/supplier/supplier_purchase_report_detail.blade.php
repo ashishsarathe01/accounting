@@ -39,13 +39,13 @@
                   <tbody>
                         @foreach($purchases as $key => $value)
                             <tr>
-                                <td><input type="checkbox" class="check_row" data-id="{{$value->id}}" data-amount="{{$value->supplier_difference_total_amount}}"></td>
+                                <td><input type="checkbox" class="check_row" data-id="{{$value->id}}" data-amount="{{$value->difference_total_amount}}"></td>
                                 <td>{{date('d-m-Y',strtotime($value->date))}}</td>
                                 <td>{{$value->invoice_no}}</td>
                                 <td style="text-align:right;">{{$value->total}}</td>
-                                <td>{{$value->purchaseReport[0]->voucher_no}}</td>
-                                <td>{{$value->purchaseReport[0]->locationInfo->name}}</td>
-                                <td style="text-align:right;">{{$value->supplier_difference_total_amount}}</td>
+                                <td>{{$value->voucher_no}}</td>
+                                <td>{{$value->locationInfo->name}}</td>
+                                <td style="text-align:right;">{{$value->difference_total_amount}}</td>
                                 <td>
                                     <table class="table table-bordered">
                                         <thead>

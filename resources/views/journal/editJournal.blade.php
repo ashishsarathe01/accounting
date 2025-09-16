@@ -527,6 +527,7 @@
                      
                    });
                    cr = parseFloat(cr) + parseFloat($("#credit_" + id).val());
+                   cr = cr.toFixed(2);
                    credit_count++
                 }else if($(this).val() == "Debit" && $("#debit_" + id).val() != "" && $("#account_" + id).val() != "") {
                    form_data.push({
@@ -537,6 +538,8 @@
                       "remark": $("#narration_" + id).val()
                    });
                    dr = parseFloat(dr) + parseFloat($("#debit_" + id).val());
+                   dr = dr.toFixed(2);
+                   
                     debit_count++;
                 }
              }else{
@@ -560,7 +563,8 @@
          //    alert("Not Allowed - You cannot enter multiple debits and credits simultaneously.");
          //    return false;
          // }
-          if(cr != dr && claim_gst_status=="NO") {
+
+          if(parseFloat(cr)!= parseFloat(dr) && claim_gst_status=="NO") {
              alert("Debit and credit amounts should be equal.");
              return false;
           }         

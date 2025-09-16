@@ -37,6 +37,7 @@ input[type=number] {
                     Edit Supplier
                 </h5>
                 <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('supplier.update',$supplier->id) }}">
+                    
                     @csrf
                     @method('PUT')
                     <div class="row">
@@ -49,14 +50,21 @@ input[type=number] {
                                 @endforeach                                
                             </select>
                         </div>
+                        <div class="clearfix"></div>
+                        
                         @php  
-                            $location_index = 0;
+                            $location_index = 0;$r_date = "";
                             $grouped = [];
-                            foreach ($supplier->locationRates->toArray() as $row) {
+                            foreach ($supplier->latestLocationRate->toArray() as $row) {
                                 $grouped[$row['location']][] = $row;
+                                $r_date = $row['r_date'];
                             }
-                            
                         @endphp
+                        <div class="mb-3 col-md-3">
+                            <label for="name" class="form-label font-14 font-heading">Date</label>
+                            <input type="date" class="form-control" id="date" name="date" value="{{$r_date}}" required>
+                        </div>
+                        <input type="hidden" id="rate_date" name="rate_date" value="{{$r_date}}">
                         @foreach($grouped as $key => $value)
                             @php $bonus = ""; @endphp
                             <div class="clearfix"></div>
@@ -82,7 +90,7 @@ input[type=number] {
                                     <div class="mb-{{$col}} col-md-{{$col}} new-row_{{$location_index}}">
                                         <label for="head_id_{{$location_index}}" class="form-label font-14 font-heading">{{$v['name']}}</label>
                                         <input type="hidden"  name="head_id_{{$location_index}}[]" value="{{$v['head_id']}}" class="head_id_{{$location_index}}" required>
-                                        <input type="number" step="any" class="form-control head_rate_{{$location_index}}" name="head_rate_{{$location_index}}[]"  value="{{$v['head_rate']}}" data-rate="{{$v['head_rate']}}" required>
+                                        <input type="number" step="any" class="form-control head_rate_{{$location_index}}" name="head_rate_{{$location_index}}[]"  value="{{$v['head_rate']}}" data-rate="{{$v['head_rate']}}" required data-head_id="{{$v['head_id']}}">
                                     </div>
                                 @endforeach
                                 <div class="mb-1 col-md-1 new-row_{{$location_index}}">
@@ -151,7 +159,7 @@ $(document).ready(function(){
     var heads = @json($heads);
     $( ".select2-single" ).select2();
     let location_index = {{$location_index}};
-    let selected_location_arr = [];
+    var selected_location_arr = [];
     var location_list = "<option value=''>Select Location</option>";
     location_list+="<option value='add_new'>Add New</option>";
     getLocationList();
@@ -214,10 +222,11 @@ $(document).ready(function(){
             $("#location_modal").modal('show');
         }else{
             if (selected_location_arr.includes($(this).val())) {
-                alert($(this).val()+" Already Selected");
-                $(this).val('')
-                return;
+                // alert("Already Selected");
+                // $(this).val('')
+                // return;
             }
+            selected_location_arr = [];
             $(".location").each(function(){
                 selected_location_arr.push($(this).val())
             });
@@ -232,7 +241,8 @@ $(document).ready(function(){
                 method : "POST",
                 data: {
                     _token: '<?php echo csrf_token() ?>',
-                    location_id : value
+                    location_id : value,
+                    date : $("#date").val()
                 },
                 success:function(res){                   
                     if(res.rate.length>0){
@@ -242,10 +252,16 @@ $(document).ready(function(){
                         });
                         $(".head_rate_"+id).each(function(){
                             if(grouped[$(this).attr('data-head_id')]){
-                                $(this).val(grouped[$(this).attr('data-head_id')]);
+                                let head_bonus = $(".head_bonus_"+id).val();
+                                let hrate = grouped[$(this).attr('data-head_id')];
+                                if(head_bonus!=""){
+                                    hrate = parseFloat(hrate) + parseFloat(head_bonus);
+                                }
+                                $(this).val(hrate);
                                 $(this).attr('data-rate',grouped[$(this).attr('data-head_id')]);
                             }
                         });
+                        $("#rate_date").val(res.latestDate);
                     }
                     // $(".location").html(location_list);
                 }
@@ -306,6 +322,11 @@ $(document).ready(function(){
         });
     })
 });
-
+$("#date").change(function(){
+    selected_location_arr = [];
+    $(".location").each(function(){       
+        $(this).change();
+    });
+})
 </script>
 @endsection

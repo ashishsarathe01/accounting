@@ -31,16 +31,28 @@ class SupplierController extends Controller
                                     ->where('company_id',Session::get('user_company_id'))
                                     ->orderBy('name')
                                     ->get();
-        $supplier = Supplier::with(['account'=>function($q){
-                                    $q->select('id','account_name');
-                                },'locationRates'=>function($q1){
-                                    $q1->join('supplier_sub_heads','supplier_location_rates.head_id','=','supplier_sub_heads.id');
-                                    $q1->select('supplier_location_rates.id','parent_id','location','head_rate','name','head_id');
-                                }])
-                                ->select('id','account_id','status')
-                                ->where('company_id',Session::get('user_company_id'))
-                                ->get();
-        //echo "<pre>";print_r($supplier->toArray());die;
+        $supplier = Supplier::with([
+                                'account:id,account_name',
+                                'latestLocationRate' => function ($q) {
+                                    $q->join('supplier_sub_heads', 'supplier_location_rates.head_id', '=', 'supplier_sub_heads.id')
+                                    ->select(
+                                        'supplier_location_rates.id',
+                                        'supplier_location_rates.parent_id',
+                                        'location',
+                                        'head_rate',
+                                        'supplier_sub_heads.name',
+                                        'supplier_location_rates.head_id',
+                                        'r_date',
+                                        'supplier_sub_heads.id',
+                                        'supplier_location_rates.r_date'
+                                    );
+                                }
+                            ])
+                            ->select('id', 'account_id', 'status')
+                            ->where('company_id', Session::get('user_company_id'))
+                            ->get();
+
+        // echo "<pre>";print_r($supplier->toArray());die;
         
         return view('supplier.index',["locations"=>$location,'suppliers'=>$supplier]);
     }
@@ -119,7 +131,7 @@ class SupplierController extends Controller
                             $supplier_location_rates->head_id = $v;
                             $supplier_location_rates->head_rate = $request["head_rate_".$key][$k];
                             $supplier_location_rates->bonus = $bonus;
-                            //$supplier_location_rates->r_date = $request["rate_date"];
+                            $supplier_location_rates->r_date = $request["rate_date"];
                             $supplier_location_rates->company_id = Session::get('user_company_id');
                             $supplier_location_rates->created_at = Carbon::now();
                             $supplier_location_rates->save();
@@ -170,11 +182,27 @@ class SupplierController extends Controller
                               ->whereIn('under_group',$group_ids)
                               ->select('accounts.id','accounts.account_name')
                               ->orderBy('account_name')
-                              ->get(); 
-        $supplier = Supplier::with(['locationRates'=>function($q1){
-                                    $q1->join('supplier_sub_heads','supplier_location_rates.head_id','=','supplier_sub_heads.id');
-                                    $q1->select('supplier_location_rates.id','parent_id','location','head_rate','name','head_id','bonus');
-                                }])
+                              ->get();
+        $supplier = Supplier::with([
+                                'account:id,account_name',
+                                'latestLocationRate' => function ($q) {
+                                    $q->join('supplier_sub_heads', 'supplier_location_rates.head_id', '=', 'supplier_sub_heads.id')
+                                    ->select(
+                                        'supplier_location_rates.id',
+                                        'supplier_location_rates.parent_id',
+                                        'location',
+                                        'head_id',
+                                        'r_date',
+                                        'head_rate',
+                                        'supplier_sub_heads.name',
+                                        'supplier_location_rates.head_id',
+                                        'r_date',
+                                        'supplier_sub_heads.id',
+                                        'supplier_location_rates.r_date',
+                                        'bonus'
+                                    );
+                                }
+                            ])
                                 ->select('id','account_id','status')
                                 ->where('id',$id)
                                 ->first();
@@ -183,7 +211,7 @@ class SupplierController extends Controller
                                 ->where('status',1)
                                 ->orderBy('sequence')
                                 ->get();
-        //echo "<pre>";print_r($supplier->toArray());die;
+        // echo "<pre>";print_r($supplier->toArray());die;
         return view('supplier.edit_supplier',["accounts"=>$accounts,'supplier'=>$supplier,'heads'=>$heads]);
     }
 
@@ -207,6 +235,7 @@ class SupplierController extends Controller
         if($supplier->save()){
             if($request->has('location')){
                 SupplierLocationRates::where('parent_id', $supplier->id)
+                    ->where('r_date', $request->rate_date)
                     ->where('company_id', Session::get('user_company_id'))
                     ->delete(); // Delete existing rates for the supplier
                     SupplierBonus::where('supplier_id', $supplier->id)->delete();
@@ -225,12 +254,13 @@ class SupplierController extends Controller
                         $bonus = $request["bonus_".$key][0];
                     }
                     foreach ($request["head_id_".$key] as $k => $v) {
-                        if(!empty($request["head_rate_".$key][$k])){                           
+                        if(!empty($request["head_rate_".$key][$k])){
                             $supplier_location_rates = new SupplierLocationRates;
                             $supplier_location_rates->parent_id = $supplier->id;
                             $supplier_location_rates->account_id = $request->account;
                             $supplier_location_rates->location = $locationId;
-                            $supplier_location_rates->head_id = $v;                            
+                            $supplier_location_rates->head_id = $v;
+                            $supplier_location_rates->r_date = $request->rate_date;
                             $supplier_location_rates->head_rate = $request["head_rate_".$key][$k];
                             $supplier_location_rates->bonus = $bonus;
                             $supplier_location_rates->company_id = Session::get('user_company_id');

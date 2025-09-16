@@ -129,14 +129,27 @@ class MerchantEmployeeController extends Controller{
       return redirect($url)->withError($msg);
    }
    public function employeePrivileges($id){
+      
       Gate::authorize('action-module', 36);
+      
       $assign_privilege = PrivilegesModuleMapping::where('employee_id',$id)->pluck('module_id')->toArray();
       $privileges = PrivilegesModule::select('id','module_name','parent_id')
                                        ->where('status',1)
                                        ->get()
                                        ->toArray();
       $tree = $this->buildTree($privileges);
-      $company = Companies::select('id','company_name')->where('user_id', Auth::id())->where('status','1')->where('delete','0')->get();
+      if(Session::get('user_type')=="OWNER"){
+         $user_id = Session::get('user_id');
+      }else if(Session::get('user_type')=="EMPLOYEE"){
+         $user = Companies::select('user_id')->where('id', Session::get('user_company_id'))->first();
+         $user_id = $user->user_id;
+      }
+      $company = Companies::select('id','company_name')
+                           ->where('user_id', $user_id)
+                           ->where('status','1')
+                           ->where('delete','0')
+                           ->get();
+      
       return view('merchant_employee_privileges',["privileges"=>$tree,"employee_id"=>$id,"company"=>$company]);
    }
    function buildTree(array $elements, $parentId = null) {

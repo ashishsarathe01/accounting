@@ -52,356 +52,146 @@ class ProfitLossController extends Controller{
          $to_date = date('Y-m-d',strtotime($to_date));
       }
       
-      $purchaseIds = DB::table('purchases')
-                  ->where([
-                     'delete' => '0',
-                     'status' => '1',
-                     'company_id' => Session::get('user_company_id'),
-                     'financial_year' => $financial_year,
-                  ])
-                  ->whereBetween('date', [$from_date, $to_date])
-                  ->pluck('id');  // get only IDs
-
-      $tot_purchase_amt = DB::table('purchase_descriptions')
-                     ->whereIn('purchase_id', $purchaseIds)
-                     ->sum('amount');
-     
-      // $tot_purchase_sundry_amt = 0;
-      // $purchase_sundry = DB::table('purchases')
-      //    ->join('purchase_sundries','purchases.id','=','purchase_sundries.purchase_id')
-      //    ->join('bill_sundrys','purchase_sundries.bill_sundry','=','bill_sundrys.id')
-      //    ->where(['purchases.delete' => '0','purchases.status' => '1', 'purchases.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
-      //    ->whereBetween('date', [$from_date, $to_date])
-      //    ->select('bill_sundry_type','amount')
-      //    ->get();
-      // if(count($purchase_sundry)>0){
-      //    foreach ($purchase_sundry as $key => $value) {
-      //       if($value->bill_sundry_type=="additive"){
-      //          $tot_purchase_sundry_amt = $tot_purchase_sundry_amt + $value->amount;
-      //       }else if($value->bill_sundry_type=="subtractive"){
-      //          $tot_purchase_sundry_amt = $tot_purchase_sundry_amt - $value->amount;
-      //       }
-      //    }
-      // }
-      
-      $tot_purchase_sundry_amt = DB::table('purchases')
-            ->join('purchase_sundries', 'purchases.id', '=', 'purchase_sundries.purchase_id')
-            ->join('bill_sundrys', 'purchase_sundries.bill_sundry', '=', 'bill_sundrys.id')
-            ->where([
-               'purchases.delete' => '0',
-               'purchases.status' => '1',
-               'purchases.company_id' => Session::get('user_company_id'),
-               'purchases.financial_year' => $financial_year,
-               'adjust_purchase_amt' => 'Yes',
-            ])
+     $tot_purchase_amt = DB::table('purchases')
+                            ->join('purchase_descriptions','purchases.id','=','purchase_descriptions.purchase_id')
+                            ->where(['purchases.delete' => '0', 'purchases.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
+                            ->whereBetween('date', [$from_date, $to_date])
+                            ->get()
+                            ->sum("amount");
+        $purchase_sundry = DB::table('purchases')
+                            ->join('purchase_sundries','purchases.id','=','purchase_sundries.purchase_id')
+                            ->join('bill_sundrys','purchase_sundries.bill_sundry','=','bill_sundrys.id')
+                            ->where(['purchases.delete' => '0', 'purchases.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
+                            ->whereBetween('date', [$from_date, $to_date])
+                            ->select('bill_sundry_type','amount')
+                            ->get();
+                            $tot_purchase_sundry_amt = 0;
+        if(count($purchase_sundry)>0){
+            foreach ($purchase_sundry as $key => $value) {
+                if($value->bill_sundry_type=="additive"){
+                    $tot_purchase_sundry_amt = $tot_purchase_sundry_amt + $value->amount;
+                }else if($value->bill_sundry_type=="subtractive"){
+                    $tot_purchase_sundry_amt = $tot_purchase_sundry_amt - $value->amount;
+                }
+            }
+        }
+        //Sale
+        $tot_sale_amt = DB::table('sales')
+                            ->join('sale_descriptions','sales.id','=','sale_descriptions.sale_id')
+                            ->where(['sales.delete' => '0','sales.status' => '1', 'sales.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
+                            ->whereRaw("STR_TO_DATE(sales.date,'%Y-%m-%d')>=STR_TO_DATE('".$from_date."','%Y-%m-%d')")
+                            ->whereRaw("STR_TO_DATE(sales.date,'%Y-%m-%d')<=STR_TO_DATE('".$to_date."','%Y-%m-%d')")
+                            ->get()
+                            ->sum("amount");
+        $sale_sundry = DB::table('sales')
+                            ->join('sale_sundries','sales.id','=','sale_sundries.sale_id')
+                            ->join('bill_sundrys','sale_sundries.bill_sundry','=','bill_sundrys.id')
+                            ->where(['sales.delete' => '0', 'sales.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
+                            ->whereBetween('date', [$from_date, $to_date])
+                            ->select('bill_sundry_type','amount')
+                            ->get();
+                            $tot_sale_sundry_amt =0;
+        if(count($sale_sundry)>0){
+            foreach ($sale_sundry as $key => $value) {
+                if($value->bill_sundry_type=="additive"){
+                    $tot_sale_sundry_amt = $tot_sale_sundry_amt + $value->amount;
+                }else if($value->bill_sundry_type=="subtractive"){
+                    $tot_sale_sundry_amt = $tot_sale_sundry_amt - $value->amount;
+                }
+            }
+        }
+        //Purchase Return
+        $tot_purchase_return_amt = DB::table('purchase_returns')
+                                        ->join('purchase_return_descriptions','purchase_returns.id','=','purchase_return_descriptions.purchase_return_id')
+                                        ->where(['purchase_returns.delete' => '0', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
+                                        ->whereBetween('date', [$from_date, $to_date])
+                                        ->get()
+                                        ->sum("amount");
+        $purchase_return_sundry = DB::table('purchase_returns')
+                                        ->join('purchase_return_sundries','purchase_returns.id','=','purchase_return_sundries.purchase_return_id')
+                                        ->join('bill_sundrys','purchase_return_sundries.bill_sundry','=','bill_sundrys.id')
+                                        ->where(['purchase_returns.delete' => '0', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes','voucher_type'=>'PURCHASE'])
+                                        ->whereBetween('date', [$from_date, $to_date])
+                                        ->select('bill_sundry_type','amount')
+                                        ->get();
+        if(count($purchase_return_sundry)>0){
+            foreach ($purchase_return_sundry as $key => $value) {
+                if($value->bill_sundry_type=="additive"){
+                    $tot_purchase_return_amt = $tot_purchase_return_amt + $value->amount;
+                }else if($value->bill_sundry_type=="subtractive"){
+                    $tot_purchase_return_amt = $tot_purchase_return_amt - $value->amount;
+                }
+            }
+        }
+         //Sale Return With  PURCHASE
+        $tot_sale_return_amt_purchase = DB::table('sales_returns')
+         ->join('sale_return_descriptions','sales_returns.id','=','sale_return_descriptions.sale_return_id')
+         ->where(['sales_returns.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
+         ->whereBetween('date', [$from_date, $to_date])
+         //->get()
+         ->sum("amount");
+        $sale_return_sundry_purchase = DB::table('sales_returns')
+            ->join('sale_return_sundries','sales_returns.id','=','sale_return_sundries.sale_return_id')
+            ->join('bill_sundrys','sale_return_sundries.bill_sundry','=','bill_sundrys.id')
+            ->where(['sales_returns.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes','voucher_type'=>'PURCHASE'])
             ->whereBetween('date', [$from_date, $to_date])
-            ->selectRaw("
-               SUM(
-                     CASE 
-                        WHEN bill_sundry_type = 'additive' THEN amount 
-                        WHEN bill_sundry_type = 'subtractive' THEN -amount 
-                        ELSE 0 
-                     END
-               ) as total
-            ")
-            ->value('total');
- 
-     
-      //Sale
-      $saleIds = DB::table('sales')
-                  ->where([
-                     'delete' => '0',
-                     'status' => '1',
-                     'company_id' => Session::get('user_company_id'),
-                     'financial_year' => $financial_year,
-                  ])
-                  ->whereBetween('date', [$from_date, $to_date])
-                  ->pluck('id');  // get only IDs
-
-      $tot_sale_amt = DB::table('sale_descriptions')
-                     ->whereIn('sale_id', $saleIds)
-                     ->sum('amount');
-      
-      // $tot_sale_sundry_amt = 0;
-      // $sale_sundry = DB::table('sales')
-      //    ->join('sale_sundries','sales.id','=','sale_sundries.sale_id')
-      //    ->join('bill_sundrys','sale_sundries.bill_sundry','=','bill_sundrys.id')
-      //    ->where(['sales.delete' => '0','sales.status' => '1', 'sales.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
-      //    ->whereBetween('date', [$from_date, $to_date])
-      //    ->select('bill_sundry_type','amount')
-      //    ->get();
-      // if(count($sale_sundry)>0){
-      //    foreach ($sale_sundry as $key => $value) {
-      //       if($value->bill_sundry_type=="additive"){
-      //          $tot_sale_sundry_amt = $tot_sale_sundry_amt + $value->amount;
-      //       }else if($value->bill_sundry_type=="subtractive"){
-      //          $tot_sale_sundry_amt = $tot_sale_sundry_amt - $value->amount;
-      //       }
-      //    }
-      // }
-      $tot_sale_sundry_amt = DB::table('sales')
-               ->join('sale_sundries', 'sales.id', '=', 'sale_sundries.sale_id')
-               ->join('bill_sundrys', 'sale_sundries.bill_sundry', '=', 'bill_sundrys.id')
-               ->where([
-                  'sales.delete' => '0',
-                  'sales.status' => '1',
-                  'sales.company_id' => Session::get('user_company_id'),
-                  'sales.financial_year' => $financial_year,
-                  'adjust_purchase_amt' => 'Yes',
-               ])
-               ->whereBetween('date', [$from_date, $to_date])
-               ->selectRaw("
-                  SUM(
-                        CASE 
-                           WHEN bill_sundry_type = 'additive' THEN amount 
-                           WHEN bill_sundry_type = 'subtractive' THEN -amount 
-                           ELSE 0 
-                        END
-                  ) as total
-               ")
-               ->value('total');
-
-      
-      //Purchase Return
-      $purchaseReturnIds = DB::table('purchase_returns')
-                  ->where([
-                     'delete' => '0',
-                     'status' => '1',
-                     'company_id' => Session::get('user_company_id'),
-                     'financial_year' => $financial_year,
-                     'voucher_type'=>'PURCHASE'
-                  ])
-                  ->whereBetween('date', [$from_date, $to_date])
-                  ->pluck('id');  // get only IDs
-
-      $tot_purchase_return_amt = DB::table('purchase_return_descriptions')
-                     ->whereIn('purchase_return_id', $purchaseReturnIds)
-                     ->sum('amount');
-
-      // $tot_purchase_return_amt = DB::table('purchase_returns')
-      //    ->join('purchase_return_descriptions','purchase_returns.id','=','purchase_return_descriptions.purchase_return_id')
-      //    ->where(['purchase_returns.delete' => '0','purchase_returns.status' => '1', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
-      //    ->whereBetween('date', [$from_date, $to_date])
-      //    ->get()
-      //    ->sum("amount");
-      // $purchase_return_sundry = DB::table('purchase_returns')
-      //    ->join('purchase_return_sundries','purchase_returns.id','=','purchase_return_sundries.purchase_return_id')
-      //    ->join('bill_sundrys','purchase_return_sundries.bill_sundry','=','bill_sundrys.id')
-      //    ->where(['purchase_returns.delete' => '0','purchase_returns.status' => '1', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE','adjust_purchase_amt'=>'Yes'])
-      //    ->whereBetween('date', [$from_date, $to_date])
-      //    ->select('bill_sundry_type','amount')
-      //    ->get();
-      // if(count($purchase_return_sundry)>0){
-      //    foreach ($purchase_return_sundry as $key => $value) {
-      //       if($value->bill_sundry_type=="additive"){
-      //          $tot_purchase_return_amt = $tot_purchase_return_amt + $value->amount;
-      //       }else if($value->bill_sundry_type=="subtractive"){
-      //          $tot_purchase_return_amt = $tot_purchase_return_amt - $value->amount;
-      //       }
-      //    }
-      // }
-      $tot_purchase_return_amt = DB::table('purchase_returns')
-    ->join('purchase_return_sundries', 'purchase_returns.id', '=', 'purchase_return_sundries.purchase_return_id')
-    ->join('bill_sundrys', 'purchase_return_sundries.bill_sundry', '=', 'bill_sundrys.id')
-    ->where([
-        'purchase_returns.delete' => '0',
-        'purchase_returns.status' => '1',
-        'purchase_returns.company_id' => Session::get('user_company_id'),
-        'purchase_returns.financial_year' => $financial_year,
-        'voucher_type' => 'PURCHASE',
-        'adjust_purchase_amt' => 'Yes',
-    ])
-    ->whereBetween('purchase_returns.date', [$from_date, $to_date])
-    ->selectRaw("
-        SUM(
-            CASE 
-                WHEN bill_sundry_type = 'additive' THEN amount 
-                WHEN bill_sundry_type = 'subtractive' THEN -amount 
-                ELSE 0 
-            END
-        ) as total
-    ")
-    ->value('total');
-
-   
-      //Sale Return Type Purchase
-      $saleReturnIds = DB::table('sales_returns')
-                  ->where([
-                     'delete' => '0',
-                     'status' => '1',
-                     'company_id' => Session::get('user_company_id'),
-                     'financial_year' => $financial_year,
-                     'voucher_type'=>'PURCHASE'
-                  ])
-                  ->whereBetween('date', [$from_date, $to_date])
-                  ->pluck('id');  // get only IDs
-
-      $tot_sale_return_amt_purchase = DB::table('sale_return_descriptions')
-                     ->whereIn('sale_return_id', $saleReturnIds)
-                     ->sum('amount');
-
-      // $tot_sale_return_amt_purchase = DB::table('sales_returns')
-      //    ->join('sale_return_descriptions','sales_returns.id','=','sale_return_descriptions.sale_return_id')
-      //    ->where(['sales_returns.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
-      //    ->whereBetween('date', [$from_date, $to_date])
-      //    ->get()
-      //    ->sum("amount");
-      // $sale_return_sundry_purchase = DB::table('sales_returns')
-      //    ->join('sale_return_sundries','sales_returns.id','=','sale_return_sundries.sale_return_id')
-      //    ->join('bill_sundrys','sale_return_sundries.bill_sundry','=','bill_sundrys.id')
-      //    ->where(['sales_returns.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes','voucher_type'=>'PURCHASE'])
-      //    ->whereBetween('date', [$from_date, $to_date])
-      //    ->select('bill_sundry_type','amount')
-      //    ->get();
-      // if(count($sale_return_sundry_purchase)>0){
-      //    foreach ($sale_return_sundry_purchase as $key => $value) {
-      //       if($value->bill_sundry_type=="additive"){
-      //          $tot_sale_return_amt_purchase = $tot_sale_return_amt_purchase + $value->amount;
-      //       }else if($value->bill_sundry_type=="subtractive"){
-      //          $tot_sale_return_amt_purchase = $tot_sale_return_amt_purchase - $value->amount;
-      //       }
-      //    }
-      // }
-      $tot_sale_return_amt_purchase = DB::table('sales_returns')
-    ->join('sale_return_sundries', 'sales_returns.id', '=', 'sale_return_sundries.sale_return_id')
-    ->join('bill_sundrys', 'sale_return_sundries.bill_sundry', '=', 'bill_sundrys.id')
-    ->where([
-        'sales_returns.delete' => '0',
-        'sales_returns.company_id' => Session::get('user_company_id'),
-        'sales_returns.financial_year' => $financial_year,
-        'adjust_purchase_amt' => 'Yes',
-        'voucher_type' => 'PURCHASE',
-    ])
-    ->whereBetween('sales_returns.date', [$from_date, $to_date])
-    ->selectRaw("
-        SUM(
-            CASE 
-                WHEN bill_sundry_type = 'additive' THEN amount 
-                WHEN bill_sundry_type = 'subtractive' THEN -amount 
-                ELSE 0 
-            END
-        ) as total
-    ")
-    ->value('total');
-
-      //Sale Return
-      $saleReturnIds = DB::table('sales_returns')
-                  ->where([
-                     'delete' => '0',
-                     'status' => '1',
-                     'company_id' => Session::get('user_company_id'),
-                     'financial_year' => $financial_year,
-                     'voucher_type'=>'SALE'
-                  ])
-                  ->whereBetween('date', [$from_date, $to_date])
-                  ->pluck('id');  // get only IDs
-
-      $tot_sale_return_amt = DB::table('sale_return_descriptions')
-                     ->whereIn('sale_return_id', $saleReturnIds)
-                     ->sum('amount');
-      // $tot_sale_return_amt = DB::table('sales_returns')
-      //    ->join('sale_return_descriptions','sales_returns.id','=','sale_return_descriptions.sale_return_id')
-      //    ->where(['sales_returns.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE'])
-      //    ->whereBetween('date', [$from_date, $to_date])
-      //    ->get()
-      //    ->sum("amount");
-      // $sale_return_sundry = DB::table('sales_returns')
-      //    ->join('sale_return_sundries','sales_returns.id','=','sale_return_sundries.sale_return_id')
-      //    ->join('bill_sundrys','sale_return_sundries.bill_sundry','=','bill_sundrys.id')
-      //    ->where(['sales_returns.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes','voucher_type'=>'SALE'])
-      //    ->whereBetween('date', [$from_date, $to_date])
-      //    ->select('bill_sundry_type','amount')
-      //    ->get();
-      // if(count($sale_return_sundry)>0){
-      //    foreach ($sale_return_sundry as $key => $value) {
-      //       if($value->bill_sundry_type=="additive"){
-      //          $tot_sale_return_amt = $tot_sale_return_amt + $value->amount;
-      //       }else if($value->bill_sundry_type=="subtractive"){
-      //          $tot_sale_return_amt = $tot_sale_return_amt - $value->amount;
-      //       }
-      //    }
-      // }
-      $tot_sale_return_amt = DB::table('sales_returns')
-    ->join('sale_return_sundries', 'sales_returns.id', '=', 'sale_return_sundries.sale_return_id')
-    ->join('bill_sundrys', 'sale_return_sundries.bill_sundry', '=', 'bill_sundrys.id')
-    ->where([
-        'sales_returns.delete' => '0',
-        'sales_returns.company_id' => Session::get('user_company_id'),
-        'sales_returns.financial_year' => $financial_year,
-        'adjust_purchase_amt' => 'Yes',
-        'voucher_type' => 'SALE',
-    ])
-    ->whereBetween('sales_returns.date', [$from_date, $to_date])
-    ->selectRaw("
-        SUM(
-            CASE 
-                WHEN bill_sundry_type = 'additive' THEN amount
-                WHEN bill_sundry_type = 'subtractive' THEN -amount
-                ELSE 0
-            END
-        ) as total
-    ")
-    ->value('total');
-
-      //Purchase Return Type Sale
-      $purchaseReturnIds = DB::table('purchase_returns')
-                  ->where([
-                     'delete' => '0',
-                     'status' => '1',
-                     'company_id' => Session::get('user_company_id'),
-                     'financial_year' => $financial_year,
-                     'voucher_type'=>'SALE'
-                  ])
-                  ->whereBetween('date', [$from_date, $to_date])
-                  ->pluck('id');  // get only IDs
-
-      $tot_purchase_return_amt_sale = DB::table('purchase_return_descriptions')
-                     ->whereIn('purchase_return_id', $purchaseReturnIds)
-                     ->sum('amount');
-      // $tot_purchase_return_amt_sale = DB::table('purchase_returns')
-      //    ->join('purchase_return_descriptions','purchase_returns.id','=','purchase_return_descriptions.purchase_return_id')
-      //    ->where(['purchase_returns.delete' => '0', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE'])
-      //    ->whereBetween('date', [$from_date, $to_date])
-      //    ->get()
-      //    ->sum("amount");
-      
-      // $purchase_return_sundry_sale = DB::table('purchase_returns')
-      //    ->join('purchase_return_sundries','purchase_returns.id','=','purchase_return_sundries.purchase_return_id')
-      //    ->join('bill_sundrys','purchase_return_sundries.bill_sundry','=','bill_sundrys.id')
-      //    ->where(['purchase_returns.delete' => '0', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE','adjust_purchase_amt'=>'Yes'])
-      //    ->whereBetween('date', [$from_date, $to_date])
-      //    ->select('bill_sundry_type','amount')
-      //    ->get();
-      // if(count($purchase_return_sundry_sale)>0){
-      //    foreach ($purchase_return_sundry_sale as $key => $value) {
-      //       if($value->bill_sundry_type=="additive"){
-      //          $tot_purchase_return_amt_sale = $tot_purchase_return_amt_sale + $value->amount;
-      //       }else if($value->bill_sundry_type=="subtractive"){
-      //          $tot_purchase_return_amt_sale = $tot_purchase_return_amt_sale - $value->amount;
-      //       }
-      //    }
-      // }
-      $tot_purchase_return_amt_sale = DB::table('purchase_returns')
-    ->join('purchase_return_sundries', 'purchase_returns.id', '=', 'purchase_return_sundries.purchase_return_id')
-    ->join('bill_sundrys', 'purchase_return_sundries.bill_sundry', '=', 'bill_sundrys.id')
-    ->where([
-        'purchase_returns.delete' => '0',
-        'purchase_returns.company_id' => Session::get('user_company_id'),
-        'purchase_returns.financial_year' => $financial_year,
-        'voucher_type' => 'SALE',
-        'adjust_purchase_amt' => 'Yes',
-    ])
-    ->whereBetween('purchase_returns.date', [$from_date, $to_date])
-    ->selectRaw("
-        SUM(
-            CASE 
-                WHEN bill_sundry_type = 'additive' THEN amount
-                WHEN bill_sundry_type = 'subtractive' THEN -amount
-                ELSE 0
-            END
-        ) as total
-    ")
-    ->value('total');
+            ->select('bill_sundry_type','amount')
+            ->get();
+        if(count($sale_return_sundry_purchase)>0){
+            foreach ($sale_return_sundry_purchase as $key => $value) {
+                if($value->bill_sundry_type=="additive"){
+                $tot_sale_return_amt_purchase = $tot_sale_return_amt_purchase + $value->amount;
+                }else if($value->bill_sundry_type=="subtractive"){
+                $tot_sale_return_amt_purchase = $tot_sale_return_amt_purchase - $value->amount;
+                }
+            }
+        }
+        //Sale Return
+        $tot_sale_return_amt = DB::table('sales_returns')
+                                    ->join('sale_return_descriptions','sales_returns.id','=','sale_return_descriptions.sale_return_id')
+                                    ->where(['sales_returns.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE'])
+                                    ->whereBetween('date', [$from_date, $to_date])
+                                    ->get()
+                                    ->sum("amount");
+        $sale_return_sundry = DB::table('sales_returns')
+                                    ->join('sale_return_sundries','sales_returns.id','=','sale_return_sundries.sale_return_id')
+                                    ->join('bill_sundrys','sale_return_sundries.bill_sundry','=','bill_sundrys.id')
+                                    ->where(['sales_returns.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes','voucher_type'=>'SALE'])
+                                    ->whereBetween('date', [$from_date, $to_date])
+                                    ->select('bill_sundry_type','amount')
+                                    ->get();
+        if(count($sale_return_sundry)>0){
+            foreach ($sale_return_sundry as $key => $value) {
+                if($value->bill_sundry_type=="additive"){
+                    $tot_sale_return_amt = $tot_sale_return_amt + $value->amount;
+                }else if($value->bill_sundry_type=="subtractive"){
+                    $tot_sale_return_amt = $tot_sale_return_amt - $value->amount;
+                }
+            }
+        }
+        //Purchase Return With Sale
+        $tot_purchase_return_amt_sale = DB::table('purchase_returns')
+            ->join('purchase_return_descriptions','purchase_returns.id','=','purchase_return_descriptions.purchase_return_id')
+            ->where(['purchase_returns.delete' => '0', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE'])
+            ->whereBetween('date', [$from_date, $to_date])
+            ->get()
+            ->sum("amount");
+        $purchase_return_sundry_sale = DB::table('purchase_returns')
+            ->join('purchase_return_sundries','purchase_returns.id','=','purchase_return_sundries.purchase_return_id')
+            ->join('bill_sundrys','purchase_return_sundries.bill_sundry','=','bill_sundrys.id')
+            ->where(['purchase_returns.delete' => '0', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE','adjust_purchase_amt'=>'Yes'])
+            ->whereBetween('date', [$from_date, $to_date])
+            ->select('bill_sundry_type','amount')
+            ->get();
+        if(count($purchase_return_sundry_sale)>0){
+            foreach ($purchase_return_sundry_sale as $key => $value) {
+                if($value->bill_sundry_type=="additive"){
+                $tot_purchase_return_amt_sale = $tot_purchase_return_amt_sale + $value->amount;
+                }else if($value->bill_sundry_type=="subtractive"){
+                $tot_purchase_return_amt_sale = $tot_purchase_return_amt_sale - $value->amount;
+                }
+            }
+        }
 // die;
       //Direct Expensess
       $direct_expenses_account_id = Accounts::where('under_group','12')
@@ -595,6 +385,7 @@ class ProfitLossController extends Controller{
                ->where('form_source','profitloss')
                ->select('journals.id','series_no','voucher_no','long_narration')
                ->get();
+      //echo $tot_purchase_amt."+".$tot_purchase_sundry_amt;die;
       return  view('display/profitLoss')->with('data', ['tot_purchase_amt' => $tot_purchase_amt+$tot_purchase_sundry_amt, 'tot_sale_amt' => $tot_sale_amt+$tot_sale_sundry_amt, 'tot_purchase_return_amt' => $tot_purchase_return_amt,'tot_sale_return_amt_purchase'=>$tot_sale_return_amt_purchase, 'tot_sale_return_amt' => $tot_sale_return_amt,'tot_purchase_return_amt_sale'=>$tot_purchase_return_amt_sale,'financial_year' => $financial_year,'direct_expenses' => $direct_expenses,'direct_income' => $direct_income,'opening_stock' => $opening_stock,'closing_stock' => $closing_stock,'indirect_expenses' => $indirect_expenses,'indirect_income' => $indirect_income,'series'=>''])->with('from_date',$from_date)->with('to_date',$to_date)->with('opening_stock',$opening_stock)->with('indirect_expenses_credit',$indirect_expenses_credit)->with('direct_expenses_credit',$direct_expenses_credit)->with('debit_indirect_income',$debit_indirect_income)->with('debit_direct_income',$debit_direct_income)->with('current_year',$current_year)->with('mat_series',$mat_series)->with('party_list',$party_list)->with('journal',$journal);
    }
    public function filter(Request $request){

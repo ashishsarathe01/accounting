@@ -644,7 +644,7 @@ class BalanceSheetController extends Controller{
                                  $q1->where('delete_status','0');
                                  $q1->where('company_id',Session::get('user_company_id'));
                               })->where(function($q2) use ($to_date){
-                                 $q2->where('txn_date', '<=', $to_date);
+                                 $q2->whereRaw("STR_TO_DATE(txn_date,'%Y-%m-%d')<=STR_TO_DATE('".$to_date."','%Y-%m-%d')");
                                  $q2->orWhere('entry_type','-1');
                               });                                 
                             }], 'debit')
@@ -655,7 +655,7 @@ class BalanceSheetController extends Controller{
                                  $q1->where('delete_status','0');
                                  $q1->where('company_id',Session::get('user_company_id'));
                               })->where(function($q2) use ($to_date){
-                                 $q2->where('txn_date', '<=', $to_date);
+                                 $q2->whereRaw("STR_TO_DATE(txn_date,'%Y-%m-%d')<=STR_TO_DATE('".$to_date."','%Y-%m-%d')");
                                  $q2->orWhere('entry_type','-1');
                               });                                 
                             }], 'credit')

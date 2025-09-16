@@ -26,6 +26,7 @@ use App\Models\State;
 use App\Models\ItemParameterStock;
 use App\Models\Sales;
 use App\Models\ManageItems;
+use App\Models\SupplierPurchaseVehicleDetail;
 use Carbon\Carbon;
 use DB;
 use Session;
@@ -474,7 +475,7 @@ class PurchaseReturnController extends Controller
       if($purchase->id){
          if(isset($request->purchase_report_id) && !empty($request->purchase_report_id)){
             $purchase_report_id = json_decode($request->purchase_report_id,true);
-            Purchase::whereIn('id',$purchase_report_id)->update(['supplier_action_status'=>4,'supplier_action_id'=>$purchase->id,'supplier_action_type'=>'DEBIT NOTE']);
+            SupplierPurchaseVehicleDetail::whereIn('id',$purchase_report_id)->update(['status'=>5,'action_id'=>$purchase->id,'action_type'=>'DEBIT NOTE']);
          }
          if($request->input('nature')=="WITH GST" && ($request->input('type')=="WITH ITEM" || $request->input('type')=="RATE DIFFERENCE")){
             $goods_discriptions = $request->input('goods_discription');
@@ -671,7 +672,7 @@ class PurchaseReturnController extends Controller
             $ledger->map_account_id = $request->input('party_id');
             $ledger->created_by = Session::get('user_id');
             $ledger->created_at = date('d-m-Y H:i:s');
-            $ledger->save();   
+            $ledger->save();
             return redirect('purchase-return-invoice/'.$purchase->id)->withSuccess('Purchase return added successfully!');
          }else if($request->input('nature')=="WITH GST" && $request->input('type')=="WITHOUT ITEM"){
             //Ledger Entry

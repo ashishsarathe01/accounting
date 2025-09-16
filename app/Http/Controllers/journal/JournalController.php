@@ -261,6 +261,12 @@ public function index(Request $request)
             $joundetail->status = '1';
             $joundetail->save();
             //Ledger Entry
+            $vendor_mapp_id = "";
+            foreach ($request->input('item') as $key => $item){
+               if($key==0){
+                  $vendor_mapp_id = $item;
+               }
+            }
             $ledger = new AccountLedger();
             $ledger->account_id = $request->input('vendor');
             $ledger->series_no = $request->input('series_no');
@@ -269,7 +275,7 @@ public function index(Request $request)
             $ledger->company_id = Session::get('user_company_id');
             $ledger->financial_year = Session::get('default_fy');
             $ledger->entry_type = 7;
-            $ledger->map_account_id = $request->input('vendor');
+            $ledger->map_account_id = $vendor_mapp_id;
             $ledger->entry_type_id = $journal->id;
             $ledger->entry_type_detail_id = $joundetail->id;
             $ledger->created_by = Session::get('user_id');
@@ -287,18 +293,18 @@ public function index(Request $request)
             $joundetail = new JournalDetails;
             $joundetail->journal_id = $journal->id;
             $joundetail->company_id = Session::get('user_company_id');
-            if($billsundry->bill_sundry_type=='subtractive'){
+            if($round_off<0){
+               $joundetail->credit = abs($round_off);
+               $joundetail->type = "Credit";               
+            }else{
                $joundetail->debit = abs($round_off);
                $joundetail->type = "Debit";
-            }else{
-               $joundetail->credit = abs($round_off);
-               $joundetail->type = "Credit";
             }            
             $joundetail->account_name = $billsundry->sale_amt_account;
             $joundetail->status = '1';
             $joundetail->save();
             $ledger = new AccountLedger();
-            if($billsundry->bill_sundry_type=='subtractive'){
+            if($round_off>=0){
                $ledger->debit = abs($round_off);
             }else{
                $ledger->credit = abs($round_off);
@@ -309,7 +315,7 @@ public function index(Request $request)
             $ledger->company_id = Session::get('user_company_id');
             $ledger->financial_year = Session::get('default_fy');
             $ledger->entry_type = 7;
-            $ledger->map_account_id = $billsundry->sale_amt_account;
+            $ledger->map_account_id = $request->input('vendor');
             $ledger->entry_type_id = $journal->id;
             $ledger->entry_type_detail_id = $joundetail->id;
             $ledger->created_by = Session::get('user_id');
@@ -336,7 +342,7 @@ public function index(Request $request)
                $ledger->company_id = Session::get('user_company_id');
                $ledger->financial_year = Session::get('default_fy');
                $ledger->entry_type = 7;
-               $ledger->map_account_id = $item;
+               $ledger->map_account_id = $request->input('vendor');
                $ledger->entry_type_id = $journal->id;
                $ledger->entry_type_detail_id = $joundetail->id;
                $ledger->created_by = Session::get('user_id');
@@ -371,7 +377,7 @@ public function index(Request $request)
                $ledger->company_id = Session::get('user_company_id');
                $ledger->financial_year = Session::get('default_fy');
                $ledger->entry_type = 7;
-               $ledger->map_account_id = $account_name;
+               $ledger->map_account_id = $request->input('vendor');
                $ledger->entry_type_id = $journal->id;
                $ledger->entry_type_detail_id = $joundetail->id;
                $ledger->created_by = Session::get('user_id');
@@ -415,7 +421,7 @@ public function index(Request $request)
                $ledger->company_id = Session::get('user_company_id');
                $ledger->financial_year = Session::get('default_fy');
                $ledger->entry_type = 7;
-               $ledger->map_account_id = $cgst_account_name;
+               $ledger->map_account_id = $request->input('vendor');
                $ledger->entry_type_id = $journal->id;
                $ledger->entry_type_detail_id = $joundetail->id;
                $ledger->created_by = Session::get('user_id');
@@ -438,7 +444,7 @@ public function index(Request $request)
                $ledger->company_id = Session::get('user_company_id');
                $ledger->financial_year = Session::get('default_fy');
                $ledger->entry_type = 7;
-               $ledger->map_account_id = $sgst_account_name;
+               $ledger->map_account_id = $request->input('vendor');
                $ledger->entry_type_id = $journal->id;
                $ledger->entry_type_detail_id = $joundetail->id;
                $ledger->created_by = Session::get('user_id');
@@ -753,6 +759,12 @@ public function index(Request $request)
          $joundetail->status = '1';
          $joundetail->save();
          //Ledger Entry
+         $vendor_mapp_id = "";
+         foreach ($request->input('item') as $key => $item){
+            if($key==0){
+               $vendor_mapp_id = $item;
+            }
+         }
          $ledger = new AccountLedger();
          $ledger->account_id = $request->input('vendor');
          $ledger->credit = $request->input('total_amount');  
@@ -761,7 +773,7 @@ public function index(Request $request)
          $ledger->company_id = Session::get('user_company_id');
          $ledger->financial_year = Session::get('default_fy');
          $ledger->entry_type = 7;
-         $ledger->map_account_id = $request->input('vendor');
+         $ledger->map_account_id = $vendor_mapp_id;
          $ledger->entry_type_id = $request->journal_id;
          $ledger->created_by = Session::get('user_id');
          $ledger->created_at = date('d-m-Y H:i:s');
@@ -781,18 +793,18 @@ public function index(Request $request)
          $joundetail = new JournalDetails;
          $joundetail->journal_id = $request->journal_id;
          $joundetail->company_id = Session::get('user_company_id');
-         if($billsundry->bill_sundry_type=='subtractive'){
+         if($round_off<0){
+            $joundetail->credit = abs($round_off);
+            $joundetail->type = "Credit";               
+         }else{
             $joundetail->debit = abs($round_off);
             $joundetail->type = "Debit";
-         }else{
-            $joundetail->credit = abs($round_off);
-            $joundetail->type = "Credit";
          }            
          $joundetail->account_name = $billsundry->sale_amt_account;
          $joundetail->status = '1';
          $joundetail->save();
          $ledger = new AccountLedger();
-         if($billsundry->bill_sundry_type=='subtractive'){
+         if($round_off>=0){
             $ledger->debit = abs($round_off);
          }else{
             $ledger->credit = abs($round_off);
@@ -803,7 +815,7 @@ public function index(Request $request)
          $ledger->company_id = Session::get('user_company_id');
          $ledger->financial_year = Session::get('default_fy');
          $ledger->entry_type = 7;
-         $ledger->map_account_id = $billsundry->sale_amt_account;
+         $ledger->map_account_id = $request->input('vendor');
          $ledger->entry_type_id = $request->journal_id;
          $ledger->entry_type_detail_id = $joundetail->id;
          $ledger->created_by = Session::get('user_id');
@@ -830,7 +842,7 @@ public function index(Request $request)
             $ledger->company_id = Session::get('user_company_id');
             $ledger->financial_year = Session::get('default_fy');
             $ledger->entry_type = 7;
-            $ledger->map_account_id = $item;
+            $ledger->map_account_id = $request->input('vendor');
             $ledger->entry_type_id = $request->journal_id;
             $ledger->created_by = Session::get('user_id');
             $ledger->created_at = date('d-m-Y H:i:s');
@@ -865,7 +877,7 @@ public function index(Request $request)
             $ledger->company_id = Session::get('user_company_id');
             $ledger->financial_year = Session::get('default_fy');
             $ledger->entry_type = 7;
-            $ledger->map_account_id = $account_name;
+            $ledger->map_account_id = $request->input('vendor');
             $ledger->entry_type_id = $request->journal_id;
             $ledger->created_by = Session::get('user_id');
             $ledger->created_at = date('d-m-Y H:i:s');
@@ -908,7 +920,7 @@ public function index(Request $request)
             $ledger->company_id = Session::get('user_company_id');
             $ledger->financial_year = Session::get('default_fy');
             $ledger->entry_type = 7;
-            $ledger->map_account_id = $cgst_account_name;
+            $ledger->map_account_id = $request->input('vendor');
             $ledger->entry_type_id = $request->journal_id;
             $ledger->created_by = Session::get('user_id');
             $ledger->created_at = date('d-m-Y H:i:s');
@@ -930,7 +942,7 @@ public function index(Request $request)
             $ledger->company_id = Session::get('user_company_id');
             $ledger->financial_year = Session::get('default_fy');
             $ledger->entry_type = 7;
-            $ledger->map_account_id = $sgst_account_name;
+            $ledger->map_account_id = $request->input('vendor');
             $ledger->entry_type_id = $request->journal_id;
             $ledger->created_by = Session::get('user_id');
             $ledger->created_at = date('d-m-Y H:i:s');
@@ -1128,8 +1140,8 @@ public function index(Request $request)
       $all_error_arr = [];
       $mode_arr = ['NEFT','RGTS','IMPS','CHEQUE','CASH'];
       if($duplicate_voucher_status==0){
-         $file = $request->file('csv_file');  
-         $filePath = $file->getRealPath();      
+         $file = $request->file('csv_file');
+         $filePath = $file->getRealPath();
          $final_result = array();
          if(($handle = fopen($filePath, 'r')) !== false) {
             $header = fgetcsv($handle, 10000, ",");
@@ -1342,7 +1354,7 @@ public function index(Request $request)
                $journal->remark = $remark;
                $journal->long_narration = $remark;
                if($claim_gst=="YES"){
-                  $journal->invoice_no = $invoice_no;                  
+                  $journal->invoice_no = $invoice_no;$vendor_mapp_id = "";
                   $net_amount = 0;$vendor = "";$igst = 0;$cgst = 0;$sgst = 0;$total_amount = 0;$tax_amount = 0;
                   foreach($txn_arr as $key => $data){      
                      if($data['credit'] && $data['credit']!="" && $data['credit']!="0"){
@@ -1353,8 +1365,10 @@ public function index(Request $request)
                   foreach($txn_arr as $key => $data){
                      if($data['debit'] && $data['debit']!="" && $data['debit']!="0"){
                         $net_amount = $net_amount + $data['debit'];
-                        if(substr($merchant_gst, 0, 2)!=$account_state_code){
-                           
+                        if($vendor_mapp_id==""){
+                           $vendor_mapp_id = $data['account'];
+                        }
+                        if(substr($merchant_gst, 0, 2)!=$account_state_code){                           
                            $igst = ($data['debit']*$data['gst_rate'])/100;
                            $tax_amount = $tax_amount + $igst;
                         }else{
@@ -1408,7 +1422,7 @@ public function index(Request $request)
                      $ledger->company_id = Session::get('user_company_id');
                      $ledger->financial_year = Session::get('default_fy');
                      $ledger->entry_type = 7;
-                     $ledger->map_account_id = $vendor;
+                     $ledger->map_account_id = $vendor_mapp_id;
                      $ledger->entry_type_id = $journal->id;
                      $ledger->entry_type_detail_id = $joundetail->id;
                      $ledger->created_by = Session::get('user_id');
@@ -1424,44 +1438,42 @@ public function index(Request $request)
                      //Round Off Entry
                      if($round_off !=0){
                         if($round_off<0){               
-                        $billsundry = BillSundrys::where('id',8)->first();
-                     }else{               
-                        $billsundry = BillSundrys::where('id',9)->first();
-                     }            
-                     $joundetail = new JournalDetails;
-                     $joundetail->journal_id = $journal->id;
-                     $joundetail->company_id = Session::get('user_company_id');
-                     if($round_off>=0){
-                        $joundetail->debit = abs($round_off);
-                        $joundetail->type = "Debit";
-                     }else{
-                        $joundetail->credit = abs($round_off);
-                        $joundetail->type = "Credit";
-                     }            
-                     $joundetail->account_name = $billsundry->sale_amt_account;
-                     $joundetail->status = '1';
-                     $joundetail->save();
-                     $ledger = new AccountLedger();
-                     if($round_off>=0){
-                        $ledger->debit = abs($round_off);
-                     }else{
-                        $ledger->credit = abs($round_off);
+                           $billsundry = BillSundrys::where('id',8)->first();
+                        }else{               
+                           $billsundry = BillSundrys::where('id',9)->first();
+                        }            
+                        $joundetail = new JournalDetails;
+                        $joundetail->journal_id = $journal->id;
+                        $joundetail->company_id = Session::get('user_company_id');
+                        if($round_off>=0){
+                           $joundetail->debit = abs($round_off);
+                           $joundetail->type = "Debit";
+                        }else{
+                           $joundetail->credit = abs($round_off);
+                           $joundetail->type = "Credit";
+                        }            
+                        $joundetail->account_name = $billsundry->sale_amt_account;
+                        $joundetail->status = '1';
+                        $joundetail->save();
+                        $ledger = new AccountLedger();
+                        if($round_off>=0){
+                           $ledger->debit = abs($round_off);
+                        }else{
+                           $ledger->credit = abs($round_off);
+                        }
+                        $ledger->account_id = $billsundry->sale_amt_account;
+                        $ledger->series_no = $series;
+                        $ledger->txn_date = date('Y-m-d',strtotime($bill_date));
+                        $ledger->company_id = Session::get('user_company_id');
+                        $ledger->financial_year = Session::get('default_fy');
+                        $ledger->entry_type = 7;
+                        $ledger->map_account_id = $vendor;
+                        $ledger->entry_type_id = $journal->id;
+                        $ledger->entry_type_detail_id = $joundetail->id;
+                        $ledger->created_by = Session::get('user_id');
+                        $ledger->created_at = date('d-m-Y H:i:s');
+                        $ledger->save();
                      }
-                     $ledger->account_id = $billsundry->sale_amt_account;
-                     $ledger->series_no = $series;
-                     $ledger->txn_date = date('Y-m-d',strtotime($bill_date));
-                     $ledger->company_id = Session::get('user_company_id');
-                     $ledger->financial_year = Session::get('default_fy');
-                     $ledger->entry_type = 7;
-                     $ledger->map_account_id = $billsundry->sale_amt_account;
-                     $ledger->entry_type_id = $journal->id;
-                     $ledger->entry_type_detail_id = $joundetail->id;
-                     $ledger->created_by = Session::get('user_id');
-                     $ledger->created_at = date('d-m-Y H:i:s');
-                     $ledger->save();
-                     }
-                     
-
                      foreach ($txn_arr as $key => $item){
                         if($item['debit'] && $item['debit']!="" && $item['debit']!="0"){
                            $percentage = $item['gst_rate'];
@@ -1484,7 +1496,7 @@ public function index(Request $request)
                            $ledger->company_id = Session::get('user_company_id');
                            $ledger->financial_year = Session::get('default_fy');
                            $ledger->entry_type = 7;
-                           $ledger->map_account_id = $item['account'];
+                           $ledger->map_account_id = $vendor;
                            $ledger->entry_type_id = $journal->id;
                            $ledger->entry_type_detail_id = $joundetail->id;
                            $ledger->created_by = Session::get('user_id');
@@ -1520,7 +1532,7 @@ public function index(Request $request)
                         $ledger->company_id = Session::get('user_company_id');
                         $ledger->financial_year = Session::get('default_fy');
                         $ledger->entry_type = 7;
-                        $ledger->map_account_id = $account_name;
+                        $ledger->map_account_id = $vendor;
                         $ledger->entry_type_id = $journal->id;
                         $ledger->entry_type_detail_id = $joundetail->id;
                         $ledger->created_by = Session::get('user_id');
@@ -1564,7 +1576,7 @@ public function index(Request $request)
                         $ledger->company_id = Session::get('user_company_id');
                         $ledger->financial_year = Session::get('default_fy');
                         $ledger->entry_type = 7;
-                        $ledger->map_account_id = $cgst_account_name;
+                        $ledger->map_account_id = $vendor;
                         $ledger->entry_type_id = $journal->id;
                         $ledger->entry_type_detail_id = $joundetail->id;
                         $ledger->created_by = Session::get('user_id');
@@ -1587,7 +1599,7 @@ public function index(Request $request)
                         $ledger->company_id = Session::get('user_company_id');
                         $ledger->financial_year = Session::get('default_fy');
                         $ledger->entry_type = 7;
-                        $ledger->map_account_id = $sgst_account_name;
+                        $ledger->map_account_id = $vendor;
                         $ledger->entry_type_id = $journal->id;
                         $ledger->entry_type_detail_id = $joundetail->id;
                         $ledger->created_by = Session::get('user_id');

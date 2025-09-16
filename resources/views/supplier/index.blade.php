@@ -26,31 +26,29 @@
                     <table class="table-striped table m-0 shadow-sm receipt_table">
                   <thead>
                      <tr class=" font-12 text-body bg-light-pink ">
-                        <th class="w-min-120 border-none bg-light-pink text-body">Supplier Name </th>
+                        <th class="w-min-120 border-none bg-light-pink text-body">Supplier Name</th>
                         @foreach($locations as $key => $location)
                             <th class="w-min-120 border-none bg-light-pink text-body">{{$location->name}}</th>
                         @endforeach
                         <th class="w-min-120 border-none bg-light-pink text-body text-center">Action </th>
                      </tr>
                   </thead>
-                  <tbody>              
-                    @foreach($suppliers as $key => $supplier)
-                        @php
-                           $grouped = [];
-                           foreach ($supplier->locationRates->toArray() as $row) {
-                                 $grouped[$row['location']][] = $row;
+                  <tbody>
+                     @foreach($suppliers as $key => $supplier)
+                        @php                             
+                           $grouped = [];$r_date = "";
+                           foreach ($supplier->latestLocationRate->toArray() as $row) {
+                              $grouped[$row['location']][] = $row;
+                              $r_date = $row['r_date'];
                            }
+                           
                         @endphp
                         <tr class="font-14 text-body">
                             <td class="w-min-120 border-none ">
                                 <span class="text-body font-12">({{ $supplier->account ? $supplier->account->account_name : '' }})</span>
                             </td>
+                            <td>{{date('d-m-Y',strtotime($r_date))}}</td>
                             @foreach($locations as $key => $location)
-                                @php
-                                    // echo "<pre>";
-                                    // print_r($supplier->locationRates->toArray());
-                                    // echo "</pre>";
-                                @endphp
                                 <td class="w-min-120 border-none ">
                                     <table class="table table-borderless m-0">
                                        @php 

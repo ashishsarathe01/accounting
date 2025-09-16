@@ -653,14 +653,15 @@
                                     <a href="{{ route('manage-supplier-rate') }}" class="text-blue">Manage Rate</a>
                                  </li>
                                  <li class="py-1 clickable-row-blue">
-                                    <a href="{{ route('manage-supplier-purchase') }}" class="text-blue"> Manage Purchase </a>
+                                    <a href="{{ route('manage-purchase-info') }}" class="text-blue">Purchase Vehicle Entry</a>
                                  </li>
+                                 {{-- <li class="py-1 clickable-row-blue">
+                                    <a href="{{ route('manage-supplier-purchase') }}" class="text-blue"> Manage Purchase </a>
+                                 </li> --}}
                                  <li class="py-1 clickable-row-blue">
                                     <a href="{{ route('manage-supplier-purchase-report') }}" class="text-blue">Report </a>
                                  </li>
-                                 <li class="py-1 clickable-row-blue">
-                                    <a href="{{ route('manage-purchase-info') }}" class="text-blue">Purchase Vehicle Entry</a>
-                                 </li>
+                                 
                               </ul>
                            </div>
                         </li>
