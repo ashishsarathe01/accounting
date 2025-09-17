@@ -34,7 +34,7 @@ class AccountsController extends Controller{
             $status = ['0'];
          }else if($request->filter=="InComplete"){
             $incomplete_status = ['1'];
-         }
+         } 
      }
       $com_id = Session::get('user_company_id');
       $account = DB::table('accounts')
