@@ -80,7 +80,7 @@
                <div class="row">
                   <div class="mb-4 col-md-4">
                      <label for="nature" class="form-label font-14 font-heading">NATURE</label>
-                     <select id="nature" name="nature" class="form-select select2-single" required onChange="sectionHideShow();" autofocus>
+                     <select id="nature" name="nature" class="form-select" required onChange="sectionHideShow();">
                         <option value="">Select</option>
                         <option value="WITH GST" @isset($_GET['data']) selected  @endisset>WITH GST</option>
                         <option value="WITHOUT GST">WITHOUT GST</option>
