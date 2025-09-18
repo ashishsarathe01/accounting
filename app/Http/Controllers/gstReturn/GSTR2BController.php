@@ -926,6 +926,7 @@ class GSTR2BController extends Controller
         
     }
     public function rejectEntry(Request $request){
+        ini_set('serialize_precision','-1');
         $request->validate([
             'gstin' => 'required',
             'ctin' => 'required',
@@ -940,28 +941,249 @@ class GSTR2BController extends Controller
             'cess' => 'nullable|numeric|min:0',
             'irn' => 'nullable|string'
         ]);
-        RejectedGstr2b::create([
-            'company_id' => Session::get('user_company_id'),
-            'company_gstin' => $request->gstin,
-            'ctin' => $request->ctin,
-            'type' => $request->type,
-            'invoice_number' => $request->invoice,
-            'invoice_date' => date('Y-m-d',strtotime($request->date)),
-            'total_amount' => $request->total_amount,
-            'taxable_amount' => $request->taxable_amount,
-            'igst' => $request->igst,
-            'cgst' => $request->cgst,
-            'sgst' => $request->sgst,
-            'cess' => $request->cess,
-            'irn' => $request->irn,
-            'remark' => $request->remark,
-            'gstr2b_month' => $request->gstr2b_month,
-        ]);
-        $response = array(
-            'status' => true,
-            'message' => 'Rejected Successfully'
-        );
-        return json_encode($response);
+        $txn = "";
+        //Get GST Username
+        $merchant_gst = $request->gstin;
+        $company = Companies::select('gst_config_type')
+                                ->where('id', Session::get('user_company_id'))
+                                ->first();
+        if($company->gst_config_type == "single_gst"){
+            $gst = DB::table('gst_settings')
+                            ->select('gst_username','einvoice')
+                            ->where([
+                                'company_id' => Session::get('user_company_id'),
+                                'gst_no' => $merchant_gst
+                            ])
+                            ->first();
+            $gst_user_name = $gst->gst_username;
+            $einvoice_status = $gst->einvoice;
+        }else if($company->gst_config_type == "multiple_gst"){            
+            $gst = DB::table('gst_settings_multiple')
+                            ->select('gst_username','einvoice')
+                            ->where([
+                                'company_id' => Session::get('user_company_id'),
+                                'gst_no' => $merchant_gst
+                            ])
+                            ->first();
+            $gst_user_name = $gst->gst_username;
+            $einvoice_status = $gst->einvoice;
+        }
+        $gstr2b_month = $request->gstr2b_month;
+        $gstr2b_month = $gstr2b_month."-01";
+        $ret_period = date('mY',strtotime($gstr2b_month));
+        $state_code = substr($merchant_gst,0,2);
+        if($request->type=="b2b_invoices"){
+            //b2b_credit_note,b2b_debit_note
+            $b2b_arr = array(
+                "stin" => $request->ctin,
+                "inum" => $request->invoice,
+                "inv_typ" => "R",
+                "action"=>"R",
+                "srcform" => "R1",
+                "rtnprd" => $ret_period,
+                "idt" => $request->date,
+                "val" => (float)$request->total_amount,
+                "pos" => $state_code,
+                "txval" => (float)$request->taxable_amount,
+                "iamt" => (float)$request->igst,
+                "camt" => (float)$request->cgst,
+                "samt" => (float)$request->sgst,
+                "cess" => 0,
+                "prev_status" => "N");
+            $b2b = ["b2b"=>array($b2b_arr)];
+            $request_payload = array(
+                "rtin"=>$merchant_gst,
+                "reqtyp"=>"SAVE",
+                "invdata"=>$b2b
+            );
+        }else if($request->type=="b2b_credit_note"){
+            $b2b_arr = array(
+                "stin" => $request->ctin,
+                "nt_num" => $request->invoice,
+                "inv_typ" => "R",
+                "action"=>"R",
+                "srcform" => "R1",
+                "rtnprd" => $ret_period,
+                "nt_dt" => $request->date,
+                "val" => (float)$request->total_amount,
+                "pos" => $state_code,
+                "txval" => (float)$request->taxable_amount,
+                "iamt" => (float)$request->igst,
+                "camt" => (float)$request->cgst,
+                "samt" => (float)$request->sgst,
+                "cess" => 0,
+                "prev_status" => "N");
+            $b2b = ["b2bcn"=>array($b2b_arr)];
+            $request_payload = array(
+                "rtin"=>$merchant_gst,
+                "reqtyp"=>"SAVE",
+                "invdata"=>$b2b
+            );
+        }else if($request->type=="b2b_debit_note"){
+            $b2b_arr = array(
+                "stin" => $request->ctin,
+                "nt_num" => $request->invoice,
+                "inv_typ" => "R",
+                "action"=>"R",
+                "srcform" => "R1",
+                "rtnprd" => $ret_period,
+                "nt_dt" => $request->date,
+                "val" => (float)$request->total_amount,
+                "pos" => $state_code,
+                "txval" => (float)$request->taxable_amount,
+                "iamt" => (float)$request->igst,
+                "camt" => (float)$request->cgst,
+                "samt" => (float)$request->sgst,
+                "cess" => 0,
+                "prev_status" => "N");
+            $b2b = ["b2bdn"=>array($b2b_arr)];
+            $request_payload = array(
+                "rtin"=>$merchant_gst,
+                "reqtyp"=>"SAVE",
+                "invdata"=>$b2b
+            );
+        }
+                
+        // echo "<pre>";
+        // print_r(json_encode($request_payload));
+        // die;
+        $gst_token = gstToken::select('txn','created_at')
+                        ->where('company_gstin',$merchant_gst)
+                        ->where('company_id',Session::get('user_company_id'))
+                        ->where('status',1)
+                        ->orderBy('id','desc')
+                        ->first();
+        if($gst_token){
+            $token_expiry = date('d-m-Y H:i:s',strtotime('+6 hour',strtotime($gst_token->created_at)));
+            $current_time = date('d-m-Y H:i:s');
+            if(strtotime($token_expiry)<strtotime($current_time)){
+                $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$merchant_gst);
+                if($token_res==0){
+                    $response = array(
+                        'status' => false,
+                        'message' => 'Something Went Wrong In Token Generation'
+                    );
+                    return json_encode($response);
+                }
+                $response = array(
+                    'status' => true,
+                    'message' => 'TOKEN-OTP'
+                );
+                return json_encode($response);
+            }
+            $txn = $gst_token->txn;
+        }else{
+            $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$merchant_gst);
+            if($token_res==0){
+                    $response = array(
+                        'status' => false,
+                        'message' => 'Something Went Wrong In Token Generation'
+                    );
+                    return json_encode($response);
+                }
+            $response = array(
+                    'status' => true,
+                    'message' => 'TOKEN-OTP'
+            );
+            return json_encode($response);
+        }
+        $curl = curl_init();
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => 'https://api.mastergst.com/ims/save?email=pram92500@gmail.com',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'PUT',
+            CURLOPT_POSTFIELDS =>json_encode($request_payload),
+            CURLOPT_HTTPHEADER => array(
+                'gstin:'.$merchant_gst,
+                'ret_period:'.$ret_period,
+                'gst_username:'.$gst_user_name,
+                'state_cd:'.$state_code,
+                'ip_address: 162.241.85.89',
+                'txn:'.$txn,
+                'client_id: GSPdea8d6fb-aed1-431a-b589-f1c541424580',
+                'client_secret: GSP4c44b790-ef11-4725-81d9-5f8504279d67',        
+                'Content-Type: application/json'
+            ),
+        ));
+        $response = curl_exec($curl);
+        $err = curl_error($curl);
+        if($response){
+            $result = json_decode($response);
+            // echo "<pre>";
+            // print_r($result);
+            // die; 
+            if(isset($result->status_cd) && $result->status_cd==1 ){
+                $reference_id = $result->data->reference_id;
+                $curl = curl_init();
+                curl_setopt_array($curl, array(
+                    CURLOPT_URL => 'https://api.mastergst.com/ims/status?email=pram92500@gmail.com&gstin='.$merchant_gst.'&int_tran_id='.$reference_id,
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_ENCODING => '',
+                    CURLOPT_MAXREDIRS => 10,
+                    CURLOPT_TIMEOUT => 0,
+                    CURLOPT_FOLLOWLOCATION => true,
+                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                    CURLOPT_CUSTOMREQUEST => 'GET',
+                    //CURLOPT_POSTFIELDS =>json_encode($gstr1_requset),
+                    CURLOPT_HTTPHEADER => array(
+                        'gst_username:'.$gst_user_name,
+                        'state_cd:'.$state_code,
+                        'ip_address: 162.241.85.89',
+                        'txn:'.$txn,
+                        'client_id: GSPdea8d6fb-aed1-431a-b589-f1c541424580',
+                        'client_secret: GSP4c44b790-ef11-4725-81d9-5f8504279d67',         
+                        'Content-Type: application/json'
+                    ),
+                ));
+                $res = curl_exec($curl);
+                $err = curl_error($curl);
+                curl_close($curl);
+                if($res){
+                    $rult = json_decode($res);
+                    // echo "<pre>";
+                    // print_r($rult);die;
+                    if(isset($rult->status_cd) && $rult->status_cd==1){
+                        if($rult->data->status_cd=="P"){
+                            RejectedGstr2b::create([
+                                'company_id' => Session::get('user_company_id'),
+                                'company_gstin' => $request->gstin,
+                                'ctin' => $request->ctin,
+                                'type' => $request->type,
+                                'invoice_number' => $request->invoice,
+                                'invoice_date' => date('Y-m-d',strtotime($request->date)),
+                                'total_amount' => $request->total_amount,
+                                'taxable_amount' => $request->taxable_amount,
+                                'igst' => $request->igst,
+                                'cgst' => $request->cgst,
+                                'sgst' => $request->sgst,
+                                'cess' => $request->cess,
+                                'irn' => $request->irn,
+                                'remark' => $request->remark,
+                                'gstr2b_month' => $request->gstr2b_month,
+                            ]);         
+                            return json_encode(array("status"=>true,"message"=>"Data Saved Successfully."));
+                        }else if($rult->data->status_cd=="IP"){
+                            return json_encode(array("status"=>true,"message"=>"In Processing....Please Wait Processed Within 20 minutes"));
+                        }else{
+                            return json_encode(array("status"=>false,"message"=>$rult->errorReport));
+                        }                  
+                    }else{
+                        return json_encode(array("status"=>false,"message"=>$rult->errorReport));
+                    }
+                }
+            }else{
+                $response = array(
+                    'status' => false,
+                    'message' => 'Something Went Wrong.- API Issue'
+                );
+                return json_encode($response);
+            }
+        }        
     }
     public function getUnlinkedCdnr(Request $request){
         $credit_note = SalesReturn::select('sr_prefix','series_no','total','date','id','gstr2b_invoice_id')

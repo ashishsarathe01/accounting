@@ -103,7 +103,8 @@ input::-webkit-inner-spin-button {
                             <td>{{$value->account_name}}</td>
                             <td>{{$value->gross_weight}}</td>
                             <td class="w-min-120 text-center">
-                                <img src="{{ URL::asset('public/assets/imgs/start.svg')}}" class="px-1 start" alt="" style="width: 30px;cursor:pointer;" id="start_btn_{{$value->id}}" data-gross_weight="{{$value->gross_weight}}" data-account_id="{{$value->account_id}}" data-id="<?php echo $value->id; ?>" data-group_id="<?php echo $value->group_id; ?>" data-map_purchase_id="<?php echo $value->map_purchase_id; ?>" data-price="<?php echo $value->price; ?>" data-purchase_amount="<?php echo $value->purchase_amount; ?>" data-purchase_date="<?php echo $value->purchase_date; ?>" data-purchase_voucher_no="<?php echo $value->purchase_voucher_no; ?>" data-status="1" data-vehicle_no="{{$value->vehicle_no}}" data-purchase_qty="<?php echo $value->purchase_qty; ?>" data-entry_date="{{$value->entry_date}}">
+                                 <button class="btn btn-info upload_image" data-id="{{$value->id}}">Click</button>
+                                 <img src="{{ URL::asset('public/assets/imgs/start.svg')}}" class="px-1 start" alt="" style="width: 30px;cursor:pointer;" id="start_btn_{{$value->id}}" data-gross_weight="{{$value->gross_weight}}" data-account_id="{{$value->account_id}}" data-id="<?php echo $value->id; ?>" data-group_id="<?php echo $value->group_id; ?>" data-map_purchase_id="<?php echo $value->map_purchase_id; ?>" data-price="<?php echo $value->price; ?>" data-purchase_amount="<?php echo $value->purchase_amount; ?>" data-purchase_date="<?php echo $value->purchase_date; ?>" data-purchase_voucher_no="<?php echo $value->purchase_voucher_no; ?>" data-status="1" data-vehicle_no="{{$value->vehicle_no}}" data-purchase_qty="<?php echo $value->purchase_qty; ?>" data-entry_date="{{$value->entry_date}}">
                             </td>
                         </tr>
                     @endforeach
@@ -111,40 +112,8 @@ input::-webkit-inner-spin-button {
                   </tbody>
                </table>
             </div>
+            
             <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
-               <h5 class="transaction-table-title m-0 py-2">Completed</h5>
-            </div>
-            <div class="transaction-table bg-white table-view shadow-sm">
-               <table class="table-striped table m-0 shadow-sm payment_table">
-                  <thead>
-                     <tr class=" font-12 text-body bg-light-pink ">
-                        <th class="w-min-120 border-none bg-light-pink text-body">Date</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Vehicle No.</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Group</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Account Name </th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Gross Weight</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body text-center">Action </th>
-                     </tr>
-                  </thead>
-                  <tbody>
-                    @foreach($complete_report as $key => $value)
-                        <tr>
-                            <td>@if($value->entry_date) {{date('d-m-Y',strtotime($value->entry_date))}} @endif</td>
-                            <td>{{$value->vehicle_no}}</td>
-                            <td>{{$value->group_name}}</td>
-                            <td>{{$value->account_name}}</td>
-                            <td>{{$value->gross_weight}}</td>
-                            <td class="w-min-120 text-center">
-                                <button class="btn btn-info upload_image" data-id="{{$value->id}}">Click</button>
-                                <button class="btn btn-info start" data-gross_weight="{{$value->gross_weight}}" data-account_id="{{$value->account_id}}" data-id="<?php echo $value->id; ?>" data-group_id="<?php echo $value->group_id; ?>" data-map_purchase_id="<?php echo $value->map_purchase_id; ?>" data-price="<?php echo $value->price; ?>" data-purchase_amount="<?php echo $value->purchase_amount; ?>" data-purchase_date="<?php echo $value->purchase_date; ?>" data-purchase_voucher_no="<?php echo $value->purchase_voucher_no; ?>" data-status="2" data-vehicle_no="{{$value->vehicle_no}}" data-purchase_qty="<?php echo $value->purchase_qty; ?>" data-entry_date="{{$value->entry_date}}">View</button>
-                            </td>
-                        </tr>
-                    @endforeach
-                     
-                  </tbody>
-               </table>
-            </div>
-             <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
                <h5 class="transaction-table-title m-0 py-2">Pending For Approval</h5>
             </div>
             <div class="transaction-table bg-white table-view shadow-sm">
@@ -168,11 +137,42 @@ input::-webkit-inner-spin-button {
                             <td>{{$value->account_name}}</td>
                             <td>{{$value->gross_weight}}</td>
                             <td class="w-min-120 text-center">
-                                <button class="btn btn-info start" data-gross_weight="{{$value->gross_weight}}" data-account_id="{{$value->account_id}}" data-id="<?php echo $value->id; ?>" data-group_id="<?php echo $value->group_id; ?>" data-map_purchase_id="<?php echo $value->map_purchase_id; ?>" data-price="<?php echo $value->price; ?>" data-purchase_amount="<?php echo $value->purchase_amount; ?>" data-purchase_date="<?php echo $value->purchase_date; ?>" data-purchase_voucher_no="<?php echo $value->purchase_voucher_no; ?>" data-status="3" data-vehicle_no="{{$value->vehicle_no}}" data-purchase_qty="<?php echo $value->purchase_qty; ?>" data-entry_date="{{$value->entry_date}}">View</button>
+                                <button class="btn btn-info start" data-gross_weight="{{$value->gross_weight}}" data-account_id="{{$value->account_id}}" data-id="<?php echo $value->id; ?>" data-group_id="<?php echo $value->group_id; ?>" data-map_purchase_id="<?php echo $value->map_purchase_id; ?>" data-price="<?php echo $value->price; ?>" data-purchase_amount="<?php echo $value->purchase_amount; ?>" data-purchase_date="<?php echo $value->purchase_date; ?>" data-purchase_voucher_no="<?php echo $value->purchase_voucher_no; ?>" data-status="2" data-vehicle_no="{{$value->vehicle_no}}" data-purchase_qty="<?php echo $value->purchase_qty; ?>" data-entry_date="{{$value->entry_date}}">View</button>
                             </td>
                         </tr>
                     @endforeach
                      
+                  </tbody>
+               </table>
+            </div>
+            <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
+               <h5 class="transaction-table-title m-0 py-2">Approved</h5>
+            </div>
+            <div class="transaction-table bg-white table-view shadow-sm">
+               <table class="table-striped table m-0 shadow-sm payment_table">
+                  <thead>
+                     <tr class=" font-12 text-body bg-light-pink ">
+                        <th class="w-min-120 border-none bg-light-pink text-body">Date</th>
+                        <th class="w-min-120 border-none bg-light-pink text-body">Vehicle No.</th>
+                        <th class="w-min-120 border-none bg-light-pink text-body">Group</th>
+                        <th class="w-min-120 border-none bg-light-pink text-body">Account Name </th>
+                        <th class="w-min-120 border-none bg-light-pink text-body">Gross Weight</th>
+                        <th class="w-min-120 border-none bg-light-pink text-body text-center">Action </th>
+                     </tr>
+                  </thead>
+                  <tbody>
+                    @foreach($approved_report as $key => $value)
+                        <tr>
+                            <td>@if($value->entry_date) {{date('d-m-Y',strtotime($value->entry_date))}} @endif</td>
+                            <td>{{$value->vehicle_no}}</td>
+                            <td>{{$value->group_name}}</td>
+                            <td>{{$value->account_name}}</td>
+                            <td>{{$value->gross_weight}}</td>
+                            <td class="w-min-120 text-center">
+                                <button class="btn btn-info start" data-gross_weight="{{$value->gross_weight}}" data-account_id="{{$value->account_id}}" data-id="<?php echo $value->id; ?>" data-group_id="<?php echo $value->group_id; ?>" data-map_purchase_id="<?php echo $value->map_purchase_id; ?>" data-price="<?php echo $value->price; ?>" data-purchase_amount="<?php echo $value->purchase_amount; ?>" data-purchase_date="<?php echo $value->purchase_date; ?>" data-purchase_voucher_no="<?php echo $value->purchase_voucher_no; ?>" data-status="3" data-vehicle_no="{{$value->vehicle_no}}" data-purchase_qty="<?php echo $value->purchase_qty; ?>" data-entry_date="{{$value->entry_date}}">View</button>
+                            </td>
+                        </tr>
+                    @endforeach                     
                   </tbody>
                </table>
             </div>
@@ -342,8 +342,8 @@ input::-webkit-inner-spin-button {
                     <input type="number" step="any" min="1" id="tare_weight" class="form-control" placeholder="Tare Weight"/>
                 </div> 
                 <div class="mb-3 col-md-3">
-                    <label for="voucher_no" class="form-label font-14 font-heading">Voucher Number</label>
-                    <input type="text" id="voucher_no" class="form-control" placeholder="Voucher Number"/>
+                    <label for="voucher_no" class="form-label font-14 font-heading">Slip Number</label>
+                    <input type="text" id="voucher_no" class="form-control" placeholder="Slip Number"/>
                 </div> 
                 <div class="mb-3 col-md-3">
                     <label for="location" class="form-label font-14 font-heading">Area</label>
@@ -502,6 +502,7 @@ input::-webkit-inner-spin-button {
 @include('layouts.footer')
 <script>
     let open_id = "{{ request('id') }}";
+    var modal_open_status = 0;
     $(document).ready(function(){
         if(open_id!=""){
             $("#start_btn_"+open_id).trigger('click');
@@ -516,7 +517,9 @@ input::-webkit-inner-spin-button {
         $("#delete_subhead").modal("hide");
     });
     $(".start").click(function(){
+        
         $("#imageCarousel").hide();
+       
         $(".approve").hide();
         let id = $(this).attr("data-id");
         let account_id = $(this).attr('data-account_id');
@@ -535,8 +538,10 @@ input::-webkit-inner-spin-button {
         if(status==3){
             $(".qty").attr('readonly',true);
         }
-        $(".approve").attr('data-id',id);
+        $(".approve").attr('data-id',id);        
         $("#account_id").val(account_id);
+        $("#account_id").attr('data-id',id);  
+        $("#entry_date").attr('data-id',id);
         $("#row_id").val(id);
         $("#gross_weight").val(gross_weight);
         $("#vehicle_no").val(vehicle_no);
@@ -544,7 +549,7 @@ input::-webkit-inner-spin-button {
         $("#entry_date").val(entry_date);
         $(".purchase_div").hide();
 
-        if(status==0){
+        if((status==0 || status==1) && purchase_amount=="" && modal_open_status==0){
             $("#voucher_no").val('');
             $(".qty").val('');
             $("#qty_short_weight").val('');
@@ -554,8 +559,19 @@ input::-webkit-inner-spin-button {
             $("#difference_amount_short_weight").val('');
             $("#difference_total_amount").val('');
             $("#tare_weight").val('');
+        }else if(modal_open_status==1){
+            $(".contract_rate").val('');
         }
-        
+        $("#entry_date").attr('readonly',true);
+        $("#vehicle_no").attr('readonly',true);
+        $("#group_id").addClass('unchange_dropdown');
+        $("#account_id").addClass('unchange_dropdown');
+        if((status==0 || status==1) && purchase_amount==""){
+            $("#entry_date").attr('readonly',false);
+            $("#vehicle_no").attr('readonly',false);
+            $("#group_id").removeClass('unchange_dropdown');
+            $("#account_id").removeClass('unchange_dropdown');
+        }
         if(map_purchase_id!=""){
             $("#bill_url").hide();
             $(".bill_rate").val(price);
@@ -582,6 +598,7 @@ input::-webkit-inner-spin-button {
                 account_id : account_id
             },
             success:function(res){
+                
                 location_list = "<option value=''>Select Area</option>";
                 if(res.location.length>0){
                     location_arr = res.location;
@@ -599,12 +616,20 @@ input::-webkit-inner-spin-button {
                         if(res!=""){
                             let obj = JSON.parse(res);
                             if(obj.purchase==null){
+                                if(modal_open_status==0){
+                           
+                            $("#report_modal").modal('toggle');
+                        }else if(modal_open_status==1){
+                            modal_open_status = 0;
+                        }
                                 return;
                             }
                             let head_data_arr = [];
                             $("#difference_total_amount").val(obj.purchase.difference_total_amount);
                             $("#voucher_no").val(obj.purchase.voucher_no);
-                            $("#location").val(obj.purchase.location);
+                            if(modal_open_status==0){                                
+                                $("#location").val(obj.purchase.location);
+                            }                           
                             $("#tare_weight").val(obj.purchase.tare_weight);
                             let gross_weight = $("#gross_weight").val();
                             let tare_weight = $("#tare_weight").val();
@@ -650,9 +675,13 @@ input::-webkit-inner-spin-button {
                                     $("#qty_"+id).val(head_data_arr[id].head_qty);
                                     if(status!=1){
                                         $("#bill_rate_"+id).val(head_data_arr[id].head_bill_rate);
-                                    }                                    
-                                    $("#contract_rate_"+id).val(head_data_arr[id].head_contract_rate);
-                                    $("#difference_amount_"+id).val(head_data_arr[id].head_difference_amount);
+                                    }
+                                    if(modal_open_status==0){
+                                        $("#contract_rate_"+id).val(head_data_arr[id].head_contract_rate);
+                                        $("#difference_amount_"+id).val(head_data_arr[id].head_difference_amount);
+                                    }
+                                    
+                                    
                                 }
                             });
                             let short_weight_id = "short_weight";
@@ -672,11 +701,19 @@ input::-webkit-inner-spin-button {
                             if(status==3){
                                 $(".save_location").hide();
                             }
-                            // $("#bill_url").hide();
+                            // $("#bill_url").hide();                            
+                            if(modal_open_status==0){
+                            
+                                $("#report_modal").modal('toggle');
+                            }else if(modal_open_status==1){
+                                modal_open_status = 0;
+                            }
                         }
+                        
                     }
                 });
-                $("#report_modal").modal('toggle');
+               
+                
             }
         });
     });
@@ -804,7 +841,7 @@ input::-webkit-inner-spin-button {
         }
         var voucher_no = $("#voucher_no").val();
         if(voucher_no == ''){
-            alert("Please enter voucher no.");
+            alert("Please enter Slip Number");
             return;
         }
         var purchase_id = $("#row_id").val();
@@ -832,12 +869,19 @@ input::-webkit-inner-spin-button {
         $(".bill_rate").each(function(){
             arr.push({'id':$(this).attr('data-id'),'contract_rate':$("#contract_rate_"+$(this).attr('data-id')).val(),'bill_rate':$(this).val(),'qty':$("#qty_"+$(this).attr('data-id')).val(),'difference_amount':$("#difference_amount_"+$(this).attr('data-id')).val()});
         });
-        
+        let account_id = $("#account_id").val();
+        let entry_date = $("#entry_date").val();
+        let group_id = $("#group_id").val();
+        let vehicle_no = $("#vehicle_no").val();
         var data = {
             "voucher_no": voucher_no,
             "location": location_id,
             "purchase_id": purchase_id,
             "tare_weight": tare_weight,
+            "account_id": account_id,
+            "entry_date": entry_date,
+            "group_id": group_id,
+            "vehicle_no": vehicle_no,
             "data":JSON.stringify(arr),
             "difference_total_amount": $("#difference_total_amount").val(),
             "_token": "{{ csrf_token() }}"
@@ -948,6 +992,16 @@ input::-webkit-inner-spin-button {
             $(".save_location").hide();
         }
     })
+    $("#account_id").change(function(){
+        modal_open_status = 1;
+        $("#start_btn_"+$(this).attr('data-id')).attr('data-account_id',$(this).val());
+       $("#start_btn_"+$(this).attr('data-id')).click();
+    });
+    $("#entry_date").change(function(){
+        modal_open_status = 1;
+        $("#start_btn_"+$(this).attr('data-id')).attr('data-entry_date',$(this).val());
+        $("#start_btn_"+$(this).attr('data-id')).click();
+    });
     
 </script>
 @endsection

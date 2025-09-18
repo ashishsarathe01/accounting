@@ -164,7 +164,7 @@
                            </td>
                            <td style="text-align: right;">
                               <?php 
-                              $$tot_blance = round($tot_blance, 2);
+                              $tot_blance = round($tot_blance, 2);
                              
                               if($tot_blance<0){
                                  //echo abs($tot_blance). ' Cr';

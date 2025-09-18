@@ -103,13 +103,13 @@
                         <div class="mb-4 col-md-4">
                             <label for="name" class="form-label font-14 font-heading">TO MATERIAL CENTRE</label>
                             <select name="material_center_to" id="material_center_to" class="form-select" required>
-                                <option value="{{$stock_transfer->material_center_to}}">{{$stock_transfer->material_center_to}}</option>                                
+                                <option value="{{$stock_transfer->material_center_to}}" data-series="{{$stock_transfer->series_no_to}}">{{$stock_transfer->material_center_to}}</option>                                
                             </select>
                             <ul style="color: red;">
                                 @error('material_center_to'){{$message}}@enderror                        
                             </ul>
                         </div>
-                        <input type="hidden" name="to_series" id="to_series">
+                        <input type="hidden" name="to_series" id="to_series" value="{{$stock_transfer->series_no_to}}">
                     </div>
                     <div class="transaction-table transaction-main-table bg-white table-view shadow-sm border-radius-8 mb-4">
                         <table id="example11" class="table-striped table m-0 shadow-sm table-bordered">
@@ -671,5 +671,8 @@
     $(".save_transport_info").click(function(){
         $("#transport_info_modal").modal('toggle');
     });    
+    $("#material_center_to").change(function(){
+        $("#to_series").val($('option:selected', this).attr('data-series'));
+    });
 </script>
 @endsection

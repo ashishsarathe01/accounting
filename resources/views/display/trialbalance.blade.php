@@ -65,7 +65,11 @@
                            @endphp
                         @foreach($account as $value)
                            @php 
-                              $balance = $value['debit'] - $value['credit']; 
+                              //$balance = $value['debit'] - $value['credit']; 
+                              $balance = round($value['debit'] - $value['credit'], 2);
+                              if($value['id']==40128){
+                                 //echo $value['debit']."**".$value['credit']."**".$balance;
+                              }
                               if($balance==0){
                                  continue;
                               }
