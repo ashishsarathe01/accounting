@@ -72,6 +72,7 @@ foreach ($manageitems as $value) {
             <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('purchase.update')}}" id="purchaseForm">
                @csrf
                <div class="row">
+                  <input type="hidden" name="rowId" value="{{$rowId}}">
                   <input type="hidden" name="purchase_edit_id" value="{{$purchase->id}}">
                   <div class="mb-3 col-md-3">
                      <label for="name" class="form-label font-14 font-heading">Series No.</label>

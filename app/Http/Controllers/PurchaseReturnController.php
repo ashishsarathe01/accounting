@@ -475,7 +475,7 @@ class PurchaseReturnController extends Controller
       if($purchase->id){
          if(isset($request->purchase_report_id) && !empty($request->purchase_report_id)){
             $purchase_report_id = json_decode($request->purchase_report_id,true);
-            SupplierPurchaseVehicleDetail::whereIn('id',$purchase_report_id)->update(['status'=>5,'action_id'=>$purchase->id,'action_type'=>'DEBIT NOTE']);
+            SupplierPurchaseVehicleDetail::whereIn('id',$purchase_report_id)->update(['status'=>4,'action_id'=>$purchase->id,'action_type'=>'DEBIT NOTE']);
          }
          if($request->input('nature')=="WITH GST" && ($request->input('type')=="WITH ITEM" || $request->input('type')=="RATE DIFFERENCE")){
             $goods_discriptions = $request->input('goods_discription');
