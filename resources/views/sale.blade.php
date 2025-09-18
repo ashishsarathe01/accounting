@@ -87,7 +87,7 @@
                                     }
                               } 
                               if($value->status=='1'){?>
-                                 <button type="button" class="border-0 bg-transparent" onclick="location.href='{{ url('sale-invoice/' . $value->sales_id) }}'"><img src="{{ asset('public/assets/imgs/eye-icon.svg') }}" class="px-1" alt=""></button>
+                                 <a title="View Invoice" href="{{ url('sale-invoice/' . $value->sales_id) }}" target="_blank"><img src="{{ asset('public/assets/imgs/eye-icon.svg') }}" class="px-1" alt="View Invoice"></a>
                                  <?php 
                               }
                               if($value->status=='2'){?>

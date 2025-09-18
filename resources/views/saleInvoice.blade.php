@@ -114,7 +114,7 @@ body {
             <div class="d-md-flex justify-content-between py-4 px-2 align-items-center header-section">
                <div class="d-md-flex d-block noprint">
                   <div class="calender-administrator my-2 my-md-0  w-min-230 noprint">
-                     <button type="button" class="btn btn-danger" onclick="redirectBack()">QUIT</button>
+                      <button type="button" class="btn btn-danger" onclick="window.location='{{ url()->previous() }}'">QUIT</button>
                      <button class="btn btn-info" onclick="printpage();">Print</button>
                      <?php 
                     if ( in_array(date('Y-m', strtotime($sale_detail->date)), $month_arr) && $sale_detail->e_invoice_status == 0 && $sale_detail->e_waybill_status == 0) {?>
