@@ -9,7 +9,6 @@ use Session;
 use DB;
 use App\Models\State;
 use App\Models\BillSundrys;
-use App\Helpers\CommonHelper;
 use App\Models\Companies;
 use App\Models\gstToken;
 
@@ -123,29 +122,7 @@ class GSTR3BController extends Controller
                 return json_encode($response);
             }      
   $email = 'pram92500@gmail.com'; // ✅ Registered MasterGST email    
- $response1 = Http::withHeaders([
-            'Accept'        => 'application/json',
-            'gst_username'  => $gst_user_name,
-            'state_cd'      => $state_code,
-            'ip_address'    => '152.25.59.138',
-            'txn'           => $txn,
-            'client_id'     => 'GSPdea8d6fb-aed1-431a-b589-f1c541424580',
-            'client_secret' => 'GSP4c44b790-ef11-4725-81d9-5f8504279d67',
-        ])->get('https://api.mastergst.com/gstr3b/autoliab', [
-            'gstin'     => $merchant_gst,
-            'retperiod' => $month,
-            'email'     => $email,
-        ]);
-
-        if ($response1->failed()) {
-            abort(500, 'GST API request failed.');
-        }
-
-        $json = $response1->json(); // Parses response body as array :contentReference[oaicite:1]{index=1}
-
-        $data1 = $json['data']['r3bautopop']['liabitc'] ?? [];
-
-        $url = "https://api.mastergst.com/gstr3b/retsum";
+  $url = "https://api.mastergst.com/gstr3b/retsum";
     
     $response = Http::withHeaders([
         'Accept' => 'application/json',
@@ -161,11 +138,8 @@ class GSTR3BController extends Controller
         'email' => $email,
     ]);
 
- $data = isset($response) ? $response->json() : [];
-
-        
-
-        return view('gstReturn.GSTR3B', ['data1' => $data1,'data' => $data, 'merchant_gst' => $merchant_gst, 'from_date' =>  $from_date , 'to_date' =>  $to_date ]);
+    $data = $response->json();
+        return view('gstReturn.GSTR3B', ['data' => $data['data'], 'merchant_gst' => $merchant_gst, 'from_date' =>  $from_date , 'to_date' =>  $to_date ]);
     
     
      }
@@ -256,7 +230,7 @@ class GSTR3BController extends Controller
             }      
   $email = 'pram92500@gmail.com';
 
-    $url = "https://api.mastergst.com/gstr3b/retsum";
+     $url = "https://api.mastergst.com/gstr3b/retsum";
     
     $response = Http::withHeaders([
         'Accept' => 'application/json',
@@ -272,9 +246,7 @@ class GSTR3BController extends Controller
         'email' => $email,
     ]);
 
- $data = isset($response) ? $response->json() : [];
-
-  
+    $data = $response->json();
 
 
 
@@ -302,7 +274,6 @@ class GSTR3BController extends Controller
         $data1 = $json['data']['r3bautopop']['liabitc'] ?? [];
 
     
-      
 
        $company_id = Session::get('user_company_id');
        
@@ -477,7 +448,7 @@ class GSTR3BController extends Controller
                 'manage_items.gst_rate',
                 'sale_return_descriptions.amount',
                 'units.unit_code',
-                'manage_items.hsn_code',
+                'manage_items.hsn_code'
             )
             ->get();
 
@@ -496,7 +467,7 @@ class GSTR3BController extends Controller
                 'manage_items.gst_rate',
                 'sale_return_descriptions.amount',
                 'units.unit_code',
-                'manage_items.hsn_code',
+                'manage_items.hsn_code'
             )
             ->get();
 
@@ -782,9 +753,7 @@ class GSTR3BController extends Controller
         $net_note_igst = $igst_debit - $igst_credit;
         $net_note_cgst = $cgst_debit - $cgst_credit;
         $net_note_sgst = $sgst_debit - $sgst_credit;
-
-        
-    return  view('gstReturn.gst3b_outward_table' , ['data' => $data, 'data1' => $data1 ,'taxable_value_sale' => $taxable_value_sale , 'cgst_sale' => $cgst_sale , 'sgst_sale' => $sgst_sale , 'igst_sale' => $igst_sale , 'net_note_taxable' => $net_note_taxable , 'net_note_igst' => $net_note_igst , 'net_note_cgst' => $net_note_cgst , 'net_note_sgst' => $net_note_sgst ,'series' => $merchant_gst, 'from_date' =>  $from_date , 'to_date' =>  $to_date]);
+    return  view('gstReturn.gst3b_outward_table' , ['data' => $data['data'], 'data1' => $data1 ,'taxable_value_sale' => $taxable_value_sale , 'cgst_sale' => $cgst_sale , 'sgst_sale' => $sgst_sale , 'igst_sale' => $igst_sale , 'net_note_taxable' => $net_note_taxable , 'net_note_igst' => $net_note_igst , 'net_note_cgst' => $net_note_cgst , 'net_note_sgst' => $net_note_sgst ,'series' => $merchant_gst, 'from_date' =>  $from_date , 'to_date' =>  $to_date]);
 
   }
 
@@ -792,98 +761,18 @@ class GSTR3BController extends Controller
 
   public function itcDetails(Request $request){
 
-    $merchant_gst = $request->series;
-        $from_date = $request->from_date;
-        $to_date = $request->to_date;
-         $from = \DateTime::createFromFormat('Y-m-d', $from_date);
-       $month = $from->format('mY'); // MMYYYY => 042025
-       $company = Companies::select('gst_config_type')
-                                ->where('id', Session::get('user_company_id'))
-                                ->first();
-        if($company->gst_config_type == "single_gst"){
-            $gst = DB::table('gst_settings')
-                            ->select('gst_username')
-                            ->where([
-                                'company_id' => Session::get('user_company_id'),
-                                'gst_no' => $request->series
-                            ])
-                            ->first();
-            $gst_user_name = $gst->gst_username;
-        }else if($company->gst_config_type == "multiple_gst"){            
-            $gst = DB::table('gst_settings_multiple')
-                            ->select('gst_username')
-                            ->where([
-                                'company_id' => Session::get('user_company_id'),
-                                'gst_no' => $request->series
-                            ])
-                            ->first();
-            $gst_user_name = $gst->gst_username;
-        }
-        if($gst_user_name==""){
-            $response = array(
-                    'status' => false,
-                    'message' => 'Please Enter GST User Name In GST Configuration.'
-                );
-            return json_encode($response);
-        }
-        
-    $state_code = substr(trim($request->series), 0, 2); // e.g., "07"
-
-     $gst_token = gstToken::select('txn','created_at')
-                                ->where('company_gstin',$request->series)
-                                ->where('company_id',Session::get('user_company_id'))
-                                ->where('status',1)
-                                ->orderBy('id','desc')
-                                ->first();
-            if($gst_token){
-                $token_expiry = date('d-m-Y H:i:s',strtotime('+6 hour',strtotime($gst_token->created_at)));
-                $current_time = date('d-m-Y H:i:s');
-                if(strtotime($token_expiry)<strtotime($current_time)){
-                    $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
-                    if($token_res==0){
-                        $response = array(
-                            'status' => false,
-                            'message' => 'Something Went Wrong In Token Generation'
-                        );
-                        return json_encode($response);
-                    }
-                    $response = array(
-                        'status' => true,
-                        'message' => 'TOKEN-OTP'
-                    );
-                    return json_encode($response);
-                }
-                $txn = $gst_token->txn;
-            }else{
-                $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
-                if($token_res==0){
-                        $response = array(
-                            'status' => false,
-                            'message' => 'Something Went Wrong In Token Generation'
-                        );
-                        return json_encode($response);
-                    }
-                $response = array(
-                        'status' => true,
-                        'message' => 'TOKEN-OTP'
-                );
-                return json_encode($response);
-            }      
-  $email = 'pram92500@gmail.com';
-
-
 $response = Http::withHeaders([
             'Accept'        => 'application/json',
-            'gst_username'  =>  $gst_user_name,
-            'state_cd'      =>  $state_code,
+            'gst_username'  => 'KRAFTPAPER1991',
+            'state_cd'      => '07',
             'ip_address'    => '152.25.59.138',
-            'txn'           =>  $txn,
+            'txn'           => '3396251fbb8446ac9ba89cca8a1ac862',
             'client_id'     => 'GSPdea8d6fb-aed1-431a-b589-f1c541424580',
             'client_secret' => 'GSP4c44b790-ef11-4725-81d9-5f8504279d67',
         ])->get('https://api.mastergst.com/gstr3b/autoliab', [
-            'gstin'     => $merchant_gst,
-            'retperiod' => $month,
-            'email'     => $email,
+            'gstin'     => '07AAJCK4433F1ZM',
+            'retperiod' => '042025',
+            'email'     => 'pram92500@gmail.com',
         ]);
 
         if ($response->failed()) {
@@ -895,9 +784,10 @@ $response = Http::withHeaders([
         $data = $json['data']['r3bautopop']['liabitc'] ?? [];
 
 
-
-
-      $company_id = session::get('user_company_id');
+       $company_id = Session::get('user_company_id');
+       $merchant_gst = $request->series;
+        $from_date = $request->from_date;
+        $to_date = $request->to_date;
 
          $sundries = BillSundrys::where('company_id', $company_id)->get()->keyBy('id');
 
@@ -913,8 +803,9 @@ $response = Http::withHeaders([
         if ($saleIds->isEmpty()) {
             // No sales for this type, return early
             $finalData = [];
-         
+            return;
         }
+        
 
         // ----- SALES ITEMS -----
         $items_sale = DB::table('purchase_descriptions')
@@ -973,7 +864,7 @@ $response = Http::withHeaders([
         $sgst_sale = 0;
         $igst_sale =0;
         foreach ($items_sale as $item) {
-            $sale_id = $item->sale_id;
+            $sale_id = $item->purchase_id;
             $state = $item->state_name;
             $rate = $item->gst_rate;
             $amount = $item->amount;
