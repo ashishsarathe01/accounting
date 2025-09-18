@@ -665,6 +665,26 @@
                               </ul>
                            </div>
                         </li>
+                        <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue" style="border: 1px solid #007bff;">
+                           <!-- Toggle for Balance Sheet submenu -->
+                           <a class="text-decoration-none d-flex text-blue collapsed"
+                              href="#"
+                              data-bs-toggle="collapse"
+                              data-bs-target="#saleOrderSubmenu"
+                              aria-expanded="false"
+                              aria-controls="saleOrderSubmenu"> 
+                              Sale Order
+                              <i class="arrow-icon fa fa-chevron-down ms-auto"></i>
+                           </a>
+                           <!-- Submenu under Balance Sheet -->
+                           <div class="collapse ps-3" id="saleOrderSubmenu">
+                              <ul class="nav flex-column">
+                                 <li class="py-1 clickable-row-blue">
+                                    <a href="{{ route('sale-order.index') }}" class="text-blue">Manage Sale Order</a>
+                                 </li>
+                              </ul>
+                           </div>
+                        </li>
                      </ul>
                   </div>
                </div>
