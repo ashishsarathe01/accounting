@@ -385,7 +385,7 @@
                                                       <a href="{{ route('gst2b') }}" class="text-blue">GSTR-2B</a>
                                                    </li>
                                                    <li class="py-1" style="">
-                                                      <a href="{{ route('gstr3B.view') }}" class="text-blue">GSTR-3B</a>
+                                                      <a href="{{ route('report.filter.data.3b') }}" class="text-blue">GSTR-3B</a>
                                                    </li>
                                                    <li class="py-1" style="">
                                                       <a href="javascript:void(0)" class="text-blue">GSTR-9</a>
@@ -634,14 +634,14 @@
                            <a class="text-decoration-none d-flex text-blue collapsed"
                               href="#"
                               data-bs-toggle="collapse"
-                              data-bs-target="#financialSubmenu"
+                              data-bs-target="#purchaseSubmenu"
                               aria-expanded="false"
-                              aria-controls="financialSubmenu"> 
+                              aria-controls="purchaseSubmenu"> 
                               Purchase Management
                               <i class="arrow-icon fa fa-chevron-down ms-auto"></i>
                            </a>
                            <!-- Submenu under Balance Sheet -->
-                           <div class="collapse ps-3" id="financialSubmenu">
+                           <div class="collapse ps-3" id="purchaseSubmenu">
                               <ul class="nav flex-column">
                                  <li class="py-1 clickable-row-blue">
                                     <a href="{{ route('supplier-sub-head.index') }}" class="text-blue">Manage Sub Head</a>

@@ -88,7 +88,9 @@ class SupplierPurchaseController extends Controller
             $purchase_vehicle->status = 1;
         }else if($purchase_vehicle->status==1 && !empty($purchase_vehicle->map_purchase_id) && ($purchase_vehicle->image_1!='' || $purchase_vehicle->image_2!='' || $purchase_vehicle->image_2!='')){
             $purchase_vehicle->status = 2;
-        }        
+        }else if($purchase_vehicle->status==3){
+            $purchase_vehicle->status = 2;
+        }
         $purchase_vehicle->account_id = $request->account_id;
         $purchase_vehicle->entry_date = $request->entry_date;
         $purchase_vehicle->group_id = $request->group_id;
@@ -204,14 +206,14 @@ class SupplierPurchaseController extends Controller
         $purchases = SupplierPurchaseVehicleDetail::with(['purchaseReport'=>function($q){
                                     $q->select('purchase_id','head_id','head_qty','head_bill_rate','head_contract_rate','head_difference_amount');
                                     },'locationInfo'=>function($q1){
-                                        $q1->select('id','name');                                    
+                                        $q1->select('id','name');
                                     },'accountInfo'=>function($q3){
                                         $q3->select('id','account_name');
                                     }
                                 ])
                                 ->join('purchases','supplier_purchase_vehicle_details.map_purchase_id','=','purchases.id')
                                 ->where('supplier_purchase_vehicle_details.company_id', Session::get('user_company_id'))
-                                ->whereIn('supplier_purchase_vehicle_details.status',['4'])
+                                ->whereIn('supplier_purchase_vehicle_details.status',['3'])
                                 ->when($id,function($q)use($id,$from_date,$to_date){
                                     $q->when($id!='all',function($q)use($id,$from_date,$to_date){
                                         $q->where('account_id', $id);
@@ -249,7 +251,7 @@ class SupplierPurchaseController extends Controller
                                 ->join('purchases','supplier_purchase_vehicle_details.map_purchase_id','=','purchases.id')
                                 ->select('supplier_purchase_vehicle_details.id','difference_total_amount')
                                 ->where('supplier_purchase_vehicle_details.company_id',Session::get('user_company_id'))                  
-                                ->where('supplier_purchase_vehicle_details.status','4')
+                                ->where('supplier_purchase_vehicle_details.status','3')
                                 ->when($id,function($q)use($id,$from_date,$to_date){
                                     $q->when($id!='all',function($q)use($id,$from_date,$to_date){
                                         $q->where('account_id', $id);
@@ -501,7 +503,7 @@ class SupplierPurchaseController extends Controller
                                 ->join('purchases','supplier_purchase_vehicle_details.map_purchase_id','=','purchases.id')
                                 ->select('supplier_purchase_vehicle_details.id','purchases.voucher_no as invoice_no','purchases.total','difference_total_amount','date','supplier_purchase_vehicle_details.voucher_no','location')
                                 ->where('supplier_purchase_vehicle_details.company_id',Session::get('user_company_id'))
-                                ->where('supplier_purchase_vehicle_details.status','4')
+                                ->where('supplier_purchase_vehicle_details.status','3')
                                 ->where('supplier_purchase_vehicle_details.account_id', $id)
                                 ->when($from_date,function($query)use ($from_date,$to_date){
                                     $query->whereBetween('purchases.date', [$from_date, $to_date]);

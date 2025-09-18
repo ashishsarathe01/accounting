@@ -113,16 +113,14 @@ class PurchaseController extends Controller{
       $rowId     = $request->query('row_id');     // 2
       $accountId = $request->query('account_id'); // 332
       $groupId   = $request->query('group_id');   // 1
-      
      
       Gate::authorize('action-module',83);
       //Account List
       $group_ids = CommonHelper::getAllChildGroupIds(3,Session::get('user_company_id'));
-        array_push($group_ids, 3);
-        $group_ids = array_merge($group_ids, CommonHelper::getAllChildGroupIds(11,Session::get('user_company_id'))); // Include group 11 as well
-        $group_ids = array_unique($group_ids); // Ensure unique group IDs       
-        array_push($group_ids, 11);
-
+      array_push($group_ids, 3);
+      $group_ids = array_merge($group_ids, CommonHelper::getAllChildGroupIds(11,Session::get('user_company_id'))); // Include group 11 as well
+      $group_ids = array_unique($group_ids); // Ensure unique group IDs       
+      array_push($group_ids, 11);
       $party_list = Accounts::leftjoin('states','accounts.state','=','states.id')
                               ->where('delete', '=', '0')
                               ->where('status', '=', '1')
@@ -758,8 +756,9 @@ class PurchaseController extends Controller{
    public function failedMessage($msg,$url){
       return redirect($url)->withError($msg);
    }
-   public function purchaseEdit($id){
+   public function purchaseEdit(Request $request,$id){
       Gate::authorize('action-module',57);
+      $rowId     = $request->query('row_id'); 
       $purchase = Purchase::where('id',$id)->first();
       $PurchaseDescription = PurchaseDescription::with(['parameterColumnInfo'=>function($q){
                               $q->leftjoin('item_paremeter_list as p1', 'purchase_parameter_info.parameter1_id', '=', 'p1.id')
@@ -866,7 +865,7 @@ class PurchaseController extends Controller{
       if($check_stock){
          $stock_status = 0;
       }
-      return view('editPurchase')->with('party_list', $party_list)->with('manageitems', $manageitems)->with('billsundry', $billsundry)->with('mat_center', $mat_center)->with('GstSettings', $GstSettings)->with('mat_series', $mat_series)->with('purchase', $purchase)->with('PurchaseDescription', $PurchaseDescription)->with('PurchaseSundry', $PurchaseSundry)->with("stock_status",$stock_status);
+      return view('editPurchase')->with('party_list', $party_list)->with('manageitems', $manageitems)->with('billsundry', $billsundry)->with('mat_center', $mat_center)->with('GstSettings', $GstSettings)->with('mat_series', $mat_series)->with('purchase', $purchase)->with('PurchaseDescription', $PurchaseDescription)->with('PurchaseSundry', $PurchaseSundry)->with("stock_status",$stock_status)->with('rowId',$rowId);
    }
    public function update(Request $request){
       // echo "<pre>";
@@ -1211,7 +1210,11 @@ class PurchaseController extends Controller{
          $ledger->map_account_id = $request->input('party');
          $ledger->created_by = Session::get('user_id');
          $ledger->created_at = date('d-m-Y H:i:s');
-         $ledger->save();    
+         $ledger->save();
+         if(isset($request->rowId) && !empty($request->rowId)){
+            SupplierPurchaseVehicleDetail::where('id',$request->rowId)->update(['status'=>2]);
+            return redirect('manage-purchase-info?id='.$request->rowId);
+         }
          if(!empty(Session::get('redirect_url'))){
             return redirect(Session::get('redirect_url'));
          }else{

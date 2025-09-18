@@ -77,7 +77,7 @@
             <div class="transaction-table bg-white table-view shadow-sm">
                <table class="table-bordered table m-0 shadow-sm payment_table">
                   <thead>
-                     <tr class=" font-12 text-body bg-light-pink ">
+                     <tr class=" font-12 text-body bg-light-pink">
                         <th class="w-min-120 border-none bg-light-pink text-body">Head</th>
                         <th class="w-min-120 border-none bg-light-pink text-body" style="text-align:right;">Quantity</th>
                         <th class="w-min-120 border-none bg-light-pink text-body" style="text-align:right;">Amount</th>

@@ -86,53 +86,29 @@
                                                             </td>
                                                         </tr>
                                                         <tr>
-                                                            @php
-                                                                $main_outward_txval = $data1['sup_details']['osup_3_1a']['subtotal']['txval'] ?? 0;
-                                                                $reverse_txval = $data['data']['sup_details']['isup_rev']['txval']  ?? 0;
-                                                                $total_txval = $main_outward_txval + $reverse_txval;
-
-                                                                $main_outward_iamt = $data1['sup_details']['osup_3_1a']['subtotal']['iamt'] ?? 0;
-                                                                $reverse_iamt = $data['data']['sup_details']['isup_rev']['iamt']  ?? 0;
-                                                                $total_iamt = $main_outward_iamt + $reverse_iamt;
-
-                                                                $main_outward_camt = $data1['sup_details']['osup_3_1a']['subtotal']['camt'] ?? 0;
-                                                                $reverse_camt = $data['data']['sup_details']['isup_rev']['camt']  ?? 0;
-                                                                $total_camt = $main_outward_camt + $reverse_camt;
-
-                                                                $main_outward_samt = $data1['sup_details']['osup_3_1a']['subtotal']['samt'] ?? 0;
-                                                                $reverse_samt = $data['data']['sup_details']['isup_rev']['samt']  ?? 0;
-                                                                $total_samt = $main_outward_samt + $reverse_samt;
-
-                                                                $main_outward_csamt = $data1['sup_details']['osup_3_1a']['subtotal']['csamt'] ?? 0;
-                                                                $reverse_csamt = $data['data']['sup_details']['isup_rev']['csamt']  ?? 0;
-                                                                $total_csamt = $main_outward_csamt + $reverse_csamt;
-                                                            @endphp
-
                                                             <td>Taxable</td>
                                                             <td>₹00.00</td>
-                                                            <td>₹{{ formatIndianNumber($total_txval, 2) }}</td>
-
-
+                                                            <td>₹{{ formatIndianNumber($data['sup_details']['osup_det']['txval'] ?? 0, 2) }}</td>
                                                         </tr>
                                                         <tr>
                                                             <td>Integrated Tax</td>
                                                             <td>₹17,280.00</td>
-                                                            <td>₹{{ formatIndianNumber($total_iamt ?? 0, 2) }}</td>
+                                                            <td>₹{{ formatIndianNumber($data['sup_details']['osup_det']['iamt'] ?? 0, 2) }}</td>
                                                         </tr>
                                                         <tr>
                                                             <td>Central Tax</td>
                                                             <td>₹0.00</td>
-                                                            <td>₹{{ formatIndianNumber($total_camt ?? 0, 2) }}</td>
+                                                            <td>₹{{ formatIndianNumber($data['sup_details']['osup_det']['camt'] ?? 0, 2) }}</td>
                                                         </tr>
                                                         <tr>
                                                             <td>State/UT Tax</td>
                                                             <td>₹0.00</td>
-                                                            <td>₹{{ formatIndianNumber($total_samt ?? 0, 2) }}</td>
+                                                            <td>₹{{ formatIndianNumber($data['sup_details']['osup_det']['samt'] ?? 0, 2) }}</td>
                                                         </tr>
                                                         <tr>
                                                             <td>CESS</td>
                                                             <td>₹0.00</td>
-                                                            <td>₹{{ formatIndianNumber($total_csamt ?? 0, 2) }}</td>
+                                                            <td>₹{{ formatIndianNumber($data['sup_details']['osup_det']['csamt'] ?? 0, 2) }}</td>
                                                         </tr>
 
                                                                 <tr>
@@ -153,22 +129,22 @@
                                                         <tr>
                                                             <td>Integrated Tax</td>
                                                             <td>₹0.00</td>
-                                                            <td>₹{{ formatIndianNumber($data1['sup_details']['osup_n9']['iamt'] ?? 0, 2) }}</td>
+                                                            <td>₹{{ formatIndianNumber($data['sup_details']['osup_n9']['iamt'] ?? 0, 2) }}</td>
                                                         </tr>
                                                         <tr>
                                                             <td>Central Tax</td>
                                                             <td>₹0.00</td>
-                                                            <td>₹{{ formatIndianNumber($data1['sup_details']['osup_n9']['camt'] ?? 0, 2) }}</td>
+                                                            <td>₹{{ formatIndianNumber($data['sup_details']['osup_n9']['camt'] ?? 0, 2) }}</td>
                                                         </tr>
                                                         <tr>
                                                             <td>State/UT Tax</td>
                                                             <td>₹0.00</td>
-                                                            <td>₹{{ formatIndianNumber($data1['sup_details']['osup_n9']['samt'] ?? 0, 2) }}</td>
+                                                            <td>₹{{ formatIndianNumber($data['sup_details']['osup_n9']['samt'] ?? 0, 2) }}</td>
                                                         </tr>
                                                         <tr>
                                                             <td>CESS</td>
                                                             <td>₹0.00</td>
-                                                            <td>₹{{ formatIndianNumber($data1['sup_details']['osup_n9']['csamt'] ?? 0, 2) }}</td>
+                                                            <td>₹{{ formatIndianNumber($data['sup_details']['osup_n9']['csamt'] ?? 0, 2) }}</td>
                                                         </tr>
 
                                                         <tr>
@@ -189,12 +165,12 @@
                                                         <tr>
                                                             <td>Taxable Value</td>
                                                             <td>₹0.00</td>
-                                                            <td>₹{{ formatIndianNumber($data1['sup_details']['isup_details']['txval'] ?? 0, 2) }}</td>
+                                                            <td>₹{{ formatIndianNumber($data['sup_details']['isup_details']['txval'] ?? 0, 2) }}</td>
                                                         </tr>
                                                         <tr>
                                                             <td>Integrated Tax</td>
                                                             <td>₹0.00</td>
-                                                            <td>₹{{ formatIndianNumber($data1['sup_details']['isup_details']['iamt'] ?? 0, 2) }}</td>
+                                                            <td>₹{{ formatIndianNumber($data['sup_details']['isup_details']['iamt'] ?? 0, 2) }}</td>
                                                         </tr>
 
                                                                 <tr>
@@ -227,22 +203,22 @@
                                                         <tr>
                                                             <td>Integrated Tax</td>
                                                             <td>₹2,345.34</td>
-                                                            <td>₹{{ formatIndianNumber($data1['elgitc']['itc4a5']['subtotal']['iamt'] ?? 0, 2) }}</td>
+                                                            <td>₹{{ formatIndianNumber($data['itc_elg']['itc_net']['iamt'] ?? 0, 2) }}</td>
                                                         </tr>
                                                         <tr>
                                                             <td>Central Tax</td>
                                                             <td>₹-3.89</td>
-                                                            <td>₹{{ formatIndianNumber($data1['elgitc']['itc4a5']['subtotal']['camt'] ?? 0, 2) }}</td>
+                                                            <td>₹{{ formatIndianNumber($data['itc_elg']['itc_net']['camt'] ?? 0, 2) }}</td>
                                                         </tr>
                                                         <tr>
                                                             <td>State/UT Tax</td>
                                                             <td>₹-3.89</td>
-                                                            <td>₹{{ formatIndianNumber($data1['elgitc']['itc4a5']['subtotal']['samt'] ?? 0, 2) }}</td>
+                                                            <td>₹{{ formatIndianNumber($data['itc_elg']['itc_net']['samt'] ?? 0, 2) }}</td>
                                                         </tr>
                                                         <tr>
                                                             <td>CESS</td>
                                                             <td>₹0.00</td>
-                                                            <td>₹{{ formatIndianNumber($data1['elgitc']['itc4a5']['subtotal']['csamt'] ?? 0, 2) }}</td>
+                                                            <td>₹{{ formatIndianNumber($data['itc_elg']['itc_net']['csamt'] ?? 0, 2) }}</td>
                                                         </tr>
 
                                                                 <tr>
@@ -263,12 +239,12 @@
                                                         <tr>
                                                             <td>Inter-state supplies</td>
                                                             <td>₹0.00</td>
-                                                            <td>₹{{ formatIndianNumber($data1['inward_sup']['isup']['inter'] ?? 0, 2) }}</td>
+                                                            <td>₹{{ formatIndianNumber($data['inward_sup']['isup']['inter'] ?? 0, 2) }}</td>
                                                         </tr>
                                                         <tr>
                                                             <td>Intra-state supplies</td>
                                                             <td>₹0.00</td>
-                                                            <td>₹{{ formatIndianNumber($data1['inward_sup']['isup']['intra'] ?? 0, 2) }}</td>
+                                                            <td>₹{{ formatIndianNumber($data['inward_sup']['isup']['intra'] ?? 0, 2) }}</td>
                                                         </tr>
 
                                                         <tr>
@@ -289,22 +265,22 @@
                                                         <tr>
                                                             <td>Integrated Tax</td>
                                                             <td>₹0.00</td>
-                                                            <td>₹{{ formatIndianNumber($data1['interest_latefee']['intr']['iamt'] ?? 0, 2) }}</td>
+                                                            <td>₹{{ formatIndianNumber($data['interest_latefee']['intr']['iamt'] ?? 0, 2) }}</td>
                                                         </tr>
                                                         <tr>
                                                             <td>Central Tax</td>
                                                             <td>₹0.00</td>
-                                                            <td>₹{{ formatIndianNumber($data1['interest_latefee']['intr']['camt'] ?? 0, 2) }}</td>
+                                                            <td>₹{{ formatIndianNumber($data['interest_latefee']['intr']['camt'] ?? 0, 2) }}</td>
                                                         </tr>
                                                         <tr>
                                                             <td>State/UT Tax</td>
                                                             <td>₹0.00</td>
-                                                            <td>₹{{ formatIndianNumber($data1['interest_latefee']['intr']['samt'] ?? 0, 2) }}</td>
+                                                            <td>₹{{ formatIndianNumber($data['interest_latefee']['intr']['samt'] ?? 0, 2) }}</td>
                                                         </tr>
                                                         <tr>
                                                             <td>CESS</td>
                                                             <td>₹0.00</td>
-                                                            <td>₹{{ formatIndianNumber($data1['interest_latefee']['intr']['csamt'] ?? 0, 2) }}</td>
+                                                            <td>₹{{ formatIndianNumber($data['interest_latefee']['intr']['csamt'] ?? 0, 2) }}</td>
                                                         </tr>
 
 
@@ -326,17 +302,17 @@
                                                         <tr>
                                                             <td>Balance Liability</td>
                                                             <td>₹0.00</td>
-                                                            <td>₹{{ formatIndianNumber($data1['tax_pay']['bal_liab'] ?? 0, 2) }}</td>
+                                                            <td>₹{{ formatIndianNumber($data['tax_pay']['bal_liab'] ?? 0, 2) }}</td>
                                                         </tr>
                                                         <tr>
                                                             <td>Paid through Cash</td>
                                                             <td>₹14,943.00</td>
-                                                            <td>₹{{ formatIndianNumber($data1['tax_pay']['cash_paid'] ?? 0, 2) }}</td>
+                                                            <td>₹{{ formatIndianNumber($data['tax_pay']['cash_paid'] ?? 0, 2) }}</td>
                                                         </tr>
                                                         <tr>
                                                             <td>Paid through Credit</td>
                                                             <td>₹2,345.00</td>
-                                                            <td>₹{{ formatIndianNumber($data1['tax_pay']['itc_availed'] ?? 0, 2) }}</td>
+                                                            <td>₹{{ formatIndianNumber($data['tax_pay']['itc_availed'] ?? 0, 2) }}</td>
                                                         </tr>
                                                     </tbody>
                                                 </table>

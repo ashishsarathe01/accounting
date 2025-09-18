@@ -356,8 +356,11 @@ Route::get('/report/debitnote/Unreg', [gstR1Controller::class, 'combinedNoteUnre
 Route::get('/report/hsn', [gstR1Controller::class, 'hsnSummary'])->name('hsnSummary');
 Route::get('/document-summary', [gstR1Controller::class, 'documentIssuedSummary'])->name('docIssued');
 Route::get('/gstr1/view', [GstR1Controller::class, 'showView'])->name('gstr1.view');
-Route::post('/gstr1-detail', [GSTR1Controller::class, 'gstr1Detail'])->name('gstr1-detail');
-Route::get('/gstr3b/view', [GstR3BController::class, 'index'])->name('gstr3B.view');
+Route::post('/gstr1-detail', [GstR1Controller::class, 'gstr1Detail'])->name('gstr1-detail');
+Route::get('/gstr3b/view', [GSTR3BController::class, 'index'])->name('gstr3B.view');
+ Route::get('/report/filter/3b', [GSTR3BController::class, 'filterform'])->name('report.filter.data.3b');
+ Route::get('/gstr3b/view/outwarddetails', [GSTR3BController::class, 'OutwardDetails'])->name('OutwardDetails.view');
+ Route::get('/gstr3b/view/itcdetails', [GSTR3BController::class, 'itcDetails'])->name('itcDetails.view');
 Route::get('/settings', [SettingsController::class, 'index'])->name('viewSettings');
 Route::post('/gstr1/send-to-gstmaster', [Gstr1Controller::class, 'sendGstr1ToGSTMaster'])->name('gstr1.send');
 Route::get('debit-note-import-view', [PurchaseReturnController::class, 'debitNoteImportView'])->name('debit-note-import-view');

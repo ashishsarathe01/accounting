@@ -249,8 +249,10 @@ class GSTR2BController extends Controller
                                         ->where('status','1')
                                         ->where('delete','0')
                                         ->sum('total');
+
+
                 $journal_book_data = Journal::select('total_amount')
-                                        ->where('vendor_gstin',$ctin)
+                                        ->where('vensdor_gstin',$ctin)
                                         ->where('company_id',Session::get('user_company_id'))
                                         ->where('merchant_gst',$request->gstin)
                                         ->where('claim_gst_status','YES')
