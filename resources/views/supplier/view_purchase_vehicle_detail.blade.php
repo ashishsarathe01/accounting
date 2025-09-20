@@ -130,7 +130,7 @@ input::-webkit-inner-spin-button {
                   </thead>
                   <tbody>
                     @foreach($pending_for_approval_report as $key => $value)
-                        <tr>
+                        <tr @if($value->reapproval==1) style="background:grey" @endif>
                             <td>@if($value->entry_date) {{date('d-m-Y',strtotime($value->entry_date))}} @endif</td>
                             <td>{{$value->vehicle_no}}</td>
                             <td>{{$value->group_name}}</td>
@@ -172,7 +172,7 @@ input::-webkit-inner-spin-button {
                                 <button class="btn btn-info start" data-gross_weight="{{$value->gross_weight}}" data-account_id="{{$value->account_id}}" id="start_btn_{{$value->id}}" data-id="<?php echo $value->id; ?>" data-group_id="<?php echo $value->group_id; ?>" data-map_purchase_id="<?php echo $value->map_purchase_id; ?>" data-price="<?php echo $value->price; ?>" data-purchase_amount="<?php echo $value->purchase_amount; ?>" data-purchase_date="<?php echo $value->purchase_date; ?>" data-purchase_voucher_no="<?php echo $value->purchase_voucher_no; ?>" data-status="3" data-vehicle_no="{{$value->vehicle_no}}" data-purchase_qty="<?php echo $value->purchase_qty; ?>" data-entry_date="{{$value->entry_date}}">View</button>
                             </td>
                         </tr>
-                    @endforeach                     
+                    @endforeach
                   </tbody>
                </table>
             </div>
@@ -679,7 +679,7 @@ input::-webkit-inner-spin-button {
                                 if(head_data_arr[id]){
                                     $("#qty_"+id).val(head_data_arr[id].head_qty);
                                     if(status!=1){
-                                        $("#bill_rate_"+id).val(head_data_arr[id].head_bill_rate);
+                                        $("#bill_rate_"+id).val(price);
                                     }
                                     if(modal_open_status==0){
                                         $("#contract_rate_"+id).val(head_data_arr[id].head_contract_rate);
@@ -691,7 +691,7 @@ input::-webkit-inner-spin-button {
                             if(head_data_arr[short_weight_id]){
                                 $("#qty_"+short_weight_id).val(head_data_arr[short_weight_id].head_qty);
                                 if(status!=1){
-                                    $("#bill_rate_"+short_weight_id).val(head_data_arr[short_weight_id].head_bill_rate);
+                                    $("#bill_rate_"+short_weight_id).val(price);
                                 } 
                                 
                                 $("#contract_rate_"+short_weight_id).val(head_data_arr[short_weight_id].head_contract_rate);
@@ -704,12 +704,14 @@ input::-webkit-inner-spin-button {
                             if(status==3){
                                 //$(".save_location").hide();
                             }
-                            // $("#bill_url").hide();                            
+                            // $("#bill_url").hide();
                             if(modal_open_status==0){
-                            
                                 $("#report_modal").modal('toggle');
                             }else if(modal_open_status==1){
                                 modal_open_status = 0;
+                            }
+                            if(open_id!=""){
+                                $(".save_location").click();
                             }
                         }
                         
@@ -897,7 +899,10 @@ input::-webkit-inner-spin-button {
                 response = JSON.parse(res);
                 if(response.status == true){
                     alert(response.message);
-                    window.location = "manage-purchase-info";
+                    
+                        window.location = "manage-purchase-info";
+                    
+                    
                 }else{
                     alert(response.message);
                     

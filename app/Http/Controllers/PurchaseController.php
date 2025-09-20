@@ -1212,7 +1212,13 @@ class PurchaseController extends Controller{
          $ledger->created_at = date('d-m-Y H:i:s');
          $ledger->save();
          if(isset($request->rowId) && !empty($request->rowId)){
-            SupplierPurchaseVehicleDetail::where('id',$request->rowId)->update(['status'=>2]);
+            $supplier = SupplierPurchaseVehicleDetail::find($request->rowId);
+            if($supplier->status==2){
+               $reapproval = 0;
+            }else if($supplier->status==3){
+               $reapproval = 1;
+            }
+            SupplierPurchaseVehicleDetail::where('id',$request->rowId)->update(['status'=>2,'reapproval'=>$reapproval]);
             return redirect('manage-purchase-info?id='.$request->rowId);
          }
          if(!empty(Session::get('redirect_url'))){
@@ -1546,7 +1552,7 @@ class PurchaseController extends Controller{
                $purchase->voucher_no = $voucher_no;
                $purchase->party = $account->id;
                $purchase->material_center = $material_center;
-               //$sale->taxable_amt = $request->input('taxable_amt');//
+               $purchase->merchant_gst = $merchant_gst;//
                $purchase->total = $grand_total;
                $purchase->self_vehicle = $self_vehicle;
                $purchase->vehicle_no = $vehicle_no;
@@ -1892,7 +1898,7 @@ class PurchaseController extends Controller{
                               }
                            }
                         }
-                     }                     
+                     }
                   }
                   //ADD DATA IN Customer ACCOUNT
                   $ledger = new AccountLedger();

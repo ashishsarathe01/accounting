@@ -90,6 +90,7 @@ class SupplierPurchaseController extends Controller
             $purchase_vehicle->status = 2;
         }else if($purchase_vehicle->status==3){
             $purchase_vehicle->status = 2;
+            $purchase_vehicle->reapproval = 1;
         }
         $purchase_vehicle->account_id = $request->account_id;
         $purchase_vehicle->entry_date = $request->entry_date;
@@ -480,6 +481,7 @@ class SupplierPurchaseController extends Controller
     {
         $purchase = SupplierPurchaseVehicleDetail::find($request->purchase_id);
         $purchase->status = 3;
+        $purchase->reapproval = 0;
         $purchase->approved_by = Session::get('user_id');
         if($purchase->save()){
             $response = array(
@@ -542,6 +544,7 @@ class SupplierPurchaseController extends Controller
                     'purchases.date as purchase_date',
                     'purchases.total as purchase_amount',
                     'entry_date',
+                    'reapproval',
                     DB::raw('(SELECT sum(qty) FROM purchase_descriptions WHERE purchase_descriptions.purchase_id = purchases.id) as purchase_qty'),
                     DB::raw('(SELECT price FROM purchase_descriptions WHERE purchase_descriptions.purchase_id = purchases.id LIMIT 1) as price')
                 )
@@ -564,6 +567,7 @@ class SupplierPurchaseController extends Controller
                     'purchases.date as purchase_date',
                     'purchases.total as purchase_amount',
                     'entry_date',
+                    'reapproval',
                     DB::raw('(SELECT sum(qty) FROM purchase_descriptions WHERE purchase_descriptions.purchase_id = purchases.id) as purchase_qty'),
                     DB::raw('(SELECT price FROM purchase_descriptions WHERE purchase_descriptions.purchase_id = purchases.id LIMIT 1) as price')
                 )
@@ -586,6 +590,7 @@ class SupplierPurchaseController extends Controller
                     'purchases.date as purchase_date',
                     'purchases.total as purchase_amount',
                     'entry_date',
+                    'reapproval',
                     DB::raw('(SELECT sum(qty) FROM purchase_descriptions WHERE purchase_descriptions.purchase_id = purchases.id) as purchase_qty'),
                     DB::raw('(SELECT price FROM purchase_descriptions WHERE purchase_descriptions.purchase_id = purchases.id LIMIT 1) as price')
                 )
@@ -608,6 +613,7 @@ class SupplierPurchaseController extends Controller
                     'purchases.date as purchase_date',
                     'purchases.total as purchase_amount',
                     'entry_date',
+                    'reapproval',
                     DB::raw('(SELECT sum(qty) FROM purchase_descriptions WHERE purchase_descriptions.purchase_id = purchases.id) as purchase_qty'),
                     DB::raw('(SELECT price FROM purchase_descriptions WHERE purchase_descriptions.purchase_id = purchases.id LIMIT 1) as price')
                 )
@@ -630,6 +636,7 @@ class SupplierPurchaseController extends Controller
                     'purchases.date as purchase_date',
                     'purchases.total as purchase_amount',
                     'entry_date',
+                    'reapproval',
                     DB::raw('(SELECT sum(qty) FROM purchase_descriptions WHERE purchase_descriptions.purchase_id = purchases.id) as purchase_qty'),
                     DB::raw('(SELECT price FROM purchase_descriptions WHERE purchase_descriptions.purchase_id = purchases.id LIMIT 1) as price')
                 )

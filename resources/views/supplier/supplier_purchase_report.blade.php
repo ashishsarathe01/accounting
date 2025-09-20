@@ -57,7 +57,7 @@
                            <td style="text-align:right;">{{$value->difference_sum}}</td>
                            <td>
                               @if(isset($value->total_sum))
-                                 <a href="{{route('view-approved-purchase-detail',[$value->account_id, $from_date, $to_date])}}" target="_blank"><button class="btn btn-info">View</button></a>
+                                 <a href="{{route('view-approved-purchase-detail',[$value->account_id, $from_date, $to_date])}}"><button class="btn btn-info">View</button></a>
                               @endif                              
                            </td>
                         </tr>

@@ -19,6 +19,7 @@
             @endif
             <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
                <h5 class="transaction-table-title m-0 py-2">Purchase Report ({{$account_name}}) @isset($from_date)- ({{date('d-m-Y',strtotime($from_date))}} TO {{date('d-m-Y',strtotime($to_date))}}) @endisset</h5>
+               <a href="{{route('manage-supplier-purchase-report')}}"><button class="btn btn-info" style="float:right">Back</button></a>
                <div class="d-md-flex d-block">
                </div>
             </div>
@@ -47,7 +48,9 @@
                                 <td>{{$value->locationInfo->name}}</td>
                                 <td style="text-align:right;">{{$value->difference_total_amount}}</td>
                                 <td>
-                                    <table class="table table-bordered">
+                                    @php 
+                                    $view_html = "";                                    
+                                    $view_html.='<table class="table table-bordered">
                                         <thead>
                                             <tr>
                                                 <td>Head</td>
@@ -57,26 +60,28 @@
                                                 <td>Difference Amount</td>
                                             </tr>
                                         </thead>
-                                        <tbody>
-                                            @foreach($value->purchaseReport as $key => $value)
-                                                @if($value->head_qty!="" && $value->head_qty!=0)
-                                                    <tr>
-                                                        <td>
-                                                            @isset($value->headInfo->name)
-                                                                {{$value->headInfo->name}}
-                                                            @else
-                                                                {{$value->head_id}}
-                                                            @endisset
-                                                        </td>
-                                                        <td>{{$value->head_qty}}</td>
-                                                        <td style="text-align:right;">{{$value->head_bill_rate}}</td>
-                                                        <td style="text-align:right;">{{$value->head_contract_rate}}</td>
-                                                        <td style="text-align:right;">{{$value->head_difference_amount}}</td>
-                                                    </tr>
-                                                @endif
-                                            @endforeach
-                                        </tbody>
-                                    </table>
+                                        <tbody>';                                          
+                                          foreach($value->purchaseReport as $key => $v){
+                                             if($v->head_qty!="" && $v->head_qty!=0){
+                                                $view_html.='<tr><td>';
+                                                   if(isset($v->headInfo->name)){
+                                                         $view_html.=$v->headInfo->name;
+                                                   }else{
+                                                      $view_html.=$v->head_id;
+                                                   }
+                                                   $view_html.='</td>';
+                                                   $view_html.='<td>'.$v->head_qty.'</td>';
+                                                   $view_html.='<td style="text-align:right;">'.$v->head_bill_rate.'</td>';
+                                                   $view_html.='<td style="text-align:right;">'.$v->head_contract_rate.'</td>';
+                                                   $view_html.='<td style="text-align:right;">'.$v->head_difference_amount.'</td>';
+                                                   $view_html.='</tr>';
+                                             }
+                                          }
+                                          $view_html.='<tr><th></th><th></th><th></th><th></th><th style="text-align:right;">'.$value->difference_total_amount.'</th></tr>';
+                                        $view_html.='</tbody>
+                                    </table>';
+                                    @endphp
+                                    <button class="btn btn-info view_detail" data-html="{{$view_html}}">View</button>
                                 </div>
                             </tr>
                         @endforeach
@@ -221,7 +226,21 @@
       </div>
    </div>
 </div>
-
+<div class="modal fade" id="view_detail_modal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content p-4 border-divider border-radius-8 shadow-sm">
+            <div class="modal-header border-0 p-0">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <h5 class="mb-4 fw-semibold">Details</h5>
+                <div class="d-flex flex-column gap-3 text-start detail_div">
+                    
+                </div>
+            </div>
+      </div>
+   </div>
+</div>
 
 </div>
 </body>
@@ -280,6 +299,12 @@
                 
       //       }
       //   });
+    });
+
+    $(".view_detail").click(function(){
+      let html = $(this).attr('data-html');
+      $(".detail_div").html(html);
+      $("#view_detail_modal").modal('toggle');
     });
 </script>
 @endsection
