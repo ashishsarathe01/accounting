@@ -401,7 +401,6 @@ Route::post('store-purchase-info', [SupplierPurchaseController::class, 'storePur
 Route::get('edit-purchase-info/{id}', [SupplierPurchaseController::class, 'editPurchaseInfo'])->name('edit-purchase-info');
 Route::post('update-purchase-info/{id}', [SupplierPurchaseController::class, 'updatePurchaseInfo'])->name('update-purchase-info');
 Route::post('delete-purchase-info', [SupplierPurchaseController::class, 'deletePurchaseInfo'])->name('delete-purchase-info');
-Route::get('sale-order/create', [SaleOrderController::class, 'create'])->name('sale-order.create');
 Route::get('/sale-order', [SaleOrderController::class, 'index'])->name('sale-order.index');
 Route::get('sale-order/settings', [SaleOrderController::class, 'saleOrderSetting'])->name('sale-order.settings');
 Route::post('sale-order/settings/update', [SaleOrderController::class, 'updateSaleOrderSettings'])->name('sale-order.settings.update');

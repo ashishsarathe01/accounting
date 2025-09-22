@@ -29,9 +29,10 @@
                             <div class="mb-2 border-bottom pb-2">
                                 <label class="d-flex align-items-center group-label">
                                     @if($group->items->count() > 0)
-                                        <input type="checkbox" class="group-checkbox me-2" data-group="{{ $group->id }}" disabled>
-                                        <strong>{{ $group->group_name }}</strong>
+                                        <input type="checkbox" class="group-checkbox me-2" data-group="{{ $group->id }}" enabled>
                                         <span class="toggle-items cursor-pointer ms-2" data-group="{{ $group->id }}">[+]</span>
+                                        <strong>{{ $group->group_name }}</strong>
+                                        
                                     @else
                                         <strong>{{ $group->group_name }}</strong>
                                     @endif

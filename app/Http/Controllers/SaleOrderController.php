@@ -31,11 +31,65 @@ class SaleOrderController extends Controller
             $query->whereDate('date', '<=', $to_date);
         }
 
-        $sales = $query->orderBy('date', 'desc')->get();
+        $sales = $query->where('company_id', $company_id)->orderBy('id', 'desc')->get();
+      
 
         return view('sale_order', compact('sales', 'from_date', 'to_date'));
     }
 
+    public function create()
+    {
+        return view('add_sale_order');
+    }
+
+
+     public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'bill_to' => 'required',
+            'ship_to' => 'required',
+            'item.*'  => 'required',
+            'price.*' => 'required|numeric',
+            'unit.*'  => 'required',
+            'gsm.*'   => 'required',
+            'size.*'  => 'required',
+            'reel.*'  => 'required|numeric',
+        ]);
+
+        $saleOrder = new SaleOrder();
+        $saleOrder->bill_to = $request->bill_to;
+        $saleOrder->ship_to = $request->ship_to;
+        $saleOrder->deal    = $request->deal;
+        $saleOrder->company_id = auth()->user()->company_id ?? Session::get('user_company_id');
+        $saleOrder->save();
+
+        // Save Items
+        $items = $request->item;
+        $prices = $request->price;
+        $units = $request->unit;
+        $gsms = $request->gsm;
+        $sizes = $request->size;
+        $reels = $request->reel;
+
+        $gsmIndex = 0;
+        for($i = 0; $i < count($items); $i++) {
+            // Each item
+            $saleOrder->items()->create([
+                'item_id' => $items[$i],
+                'price'   => $prices[$i],
+                'unit_id' => $units[$i],
+                'gsm'     => $gsms[$gsmIndex],
+                'size'    => $sizes[$gsmIndex],
+                'reel'    => $reels[$gsmIndex],
+            ]);
+            $gsmIndex++;
+        }
+
+        return redirect()->route('sale-order.index')->with('success', 'Sale order added successfully!');
+    }
+
+    // Sale Order List
+ 
     /**
      * Show Sale Order Settings page
      */
