@@ -7,10 +7,14 @@
          @include('layouts.leftnav')
          <!-- view-table-Content -->
          <div class="col-md-12 ml-sm-auto  col-lg-10 px-md-4 bg-mint">
-            @if(session('error'))
-               <div class="alert alert-danger" role="alert"> {{session('error')}}</div>
-            @endif
-            @if(session('success'))
+           @if(session('error'))
+                     <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        {{ session('error') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                     </div>
+                  @endif
+   
+                  @if(session('success'))
                <div class="alert alert-success" role="alert">
                   {{ session('success') }}
                </div>

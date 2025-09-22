@@ -99,7 +99,7 @@ foreach ($manageitems as $value) {
                   </div>
                   <div class="mb-3 col-md-3">
                      <label for="name" class="form-label font-14 font-heading">Voucher No. *</label>
-                     <input type="text" class="form-control" name="voucher_no" placeholder="Enter Invoice No." value="{{$purchase->voucher_no}}">
+                     <input type="text" class="form-control" id="voucher_no" name="voucher_no" placeholder="Enter Invoice No." value="{{$purchase->voucher_no}}">
                      <ul style="color: red;">
                        @error('voucher_no'){{$message}}@enderror                        
                      </ul> 
@@ -2138,5 +2138,54 @@ foreach ($manageitems as $value) {
       $("#quantity_tr_"+$("#parameter_modal_id").val()).attr('readonly',true);
       $("#parameter_modal").modal('toggle');
    });
+
+
+
+     $(document).ready(function() {
+     let isDuplicateVoucher = false;
+    function checkDuplicateVoucher(callback = null) {
+        let voucher_no = $('#voucher_no').val();
+        let party_id = $('#party').val();
+        let financial_year = '{{ Session::get("default_fy") }}'; // or your session variable
+
+        if(voucher_no !== '' && party_id !== '') {
+            $.ajax({
+                url: '{{ route("check.duplicate.voucher") }}',
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    voucher_no: voucher_no,
+                    party_id: party_id,
+                    financial_year: financial_year
+                },
+                success: function(response) {
+                    if(response.exists) {
+                        alert('Voucher number "' + voucher_no + '" already exists for this party in this financial year.');
+                        alert('hello');
+                        $('#voucher_no').val('');
+                        $('#voucher_no').focus();
+                        isDuplicateVoucher = true;
+                        return false;
+                    } else {
+                        isDuplicateVoucher = false;
+                    }
+                    if(callback) callback();
+                }
+            });
+        } else {
+            isDuplicateVoucher = false;
+            if(callback) callback();
+        }
+    }
+
+    // Trigger AJAX when voucher or party changes
+    $('#voucher_no, #party').on('change', function() {
+        checkDuplicateVoucher();
+    });
+
+    // Prevent form submission if duplicate exists
+    
+});
+
 </script>
 @endsection

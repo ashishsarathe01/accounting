@@ -370,11 +370,11 @@ class AccountsController extends Controller{
    public function delete(Request $request){
       Gate::authorize('view-module', 42);
       $exist = AccountLedger::where('account_id', $request->account_id)
-      ->where('source', '!=', -1)
+      ->where('entry_type', '!=', -1)
       ->where('delete_status', '=', '0')
       ->first();
       if($exist){
-         return redirect('account')->withErrors('Account cannot be deleted. Transactions exist.');
+         return redirect('account')->with('error', 'Account cannot be deleted. Transactions exist.');
       }
       $account =  Accounts::find($request->account_id);
       $account->delete = '1';

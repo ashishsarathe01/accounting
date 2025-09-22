@@ -750,7 +750,7 @@ class PurchaseController extends Controller{
                      ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
          //Delete item Stock 
         ItemParameterStock::where('stock_in_id',$request->purchase_id)->where('stock_in_type','PURCHASE')->delete();
-         return redirect('purchase')->withSuccess('Sale deleted successfully!');
+         return redirect('purchase')->withSuccess('Purchase deleted successfully!');
       }
    }
    public function failedMessage($msg,$url){
@@ -1960,4 +1960,19 @@ class PurchaseController extends Controller{
       return json_encode($res);
       return view('sale_import')->with('upload_log',1)->with('total_count',$total_invoice_count)->with('success_count',$success_invoice_count)->with('failed_count',$failed_invoice_count)->with('error_message',$all_error_arr);
    }
+
+
+   public function checkDuplicateVoucher(Request $request)
+{
+    $exists = \DB::table('purchases')
+                ->where('voucher_no', $request->voucher_no)
+                ->where('party', $request->party_id)
+                ->where('financial_year', $request->financial_year)
+                ->where('delete','0')
+                ->exists();
+
+    return response()->json(['exists' => $exists]);
+}
+
+
 }
