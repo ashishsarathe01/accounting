@@ -682,6 +682,9 @@
                                  <li class="py-1 clickable-row-blue">
                                     <a href="{{ route('sale-order.index') }}" class="text-blue">Manage Sale Order</a>
                                  </li>
+                                  <li class="py-1 clickable-row-blue">
+                                    <a href="{{ route('sale-order.settings') }}" class="text-blue">Sales Order Settings</a>
+                                 </li>
                               </ul>
                            </div>
                         </li>

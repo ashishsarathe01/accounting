@@ -785,7 +785,7 @@
                <div class=" d-flex">                  
                   <div class="ms-auto">
                      <input type="submit" value="SAVE" class="btn btn-xs-primary " id="saleReturnBtn">
-                     <a href="{{ route('sale-return.index') }}" class="btn  btn-black ">QUIT</a>
+                     <a href="{{ url()->previous() }}" class="btn  btn-black ">QUIT</a>
                   </div>
                   <input type="hidden" clas="max_sale_descrption" name="max_sale_descrption" value="1" id="max_sale_descrption">
                   <input type="hidden" name="max_sale_sundry" id="max_sale_sundry" value="1" />
