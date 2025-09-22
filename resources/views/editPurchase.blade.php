@@ -2142,11 +2142,13 @@ foreach ($manageitems as $value) {
 
 
      $(document).ready(function() {
-     let isDuplicateVoucher = false;
+    let isDuplicateVoucher = false;
+
     function checkDuplicateVoucher(callback = null) {
         let voucher_no = $('#voucher_no').val();
         let party_id = $('#party').val();
-        let financial_year = '{{ Session::get("default_fy") }}'; // or your session variable
+        let financial_year = '{{ Session::get("default_fy") }}';
+        let purchase_id = '{{ $purchase->id ?? "" }}'; // pass id in edit mode
 
         if(voucher_no !== '' && party_id !== '') {
             $.ajax({
@@ -2156,12 +2158,12 @@ foreach ($manageitems as $value) {
                     _token: '{{ csrf_token() }}',
                     voucher_no: voucher_no,
                     party_id: party_id,
-                    financial_year: financial_year
+                    financial_year: financial_year,
+                    purchase_id: purchase_id // send current purchase id
                 },
                 success: function(response) {
                     if(response.exists) {
                         alert('Voucher number "' + voucher_no + '" already exists for this party in this financial year.');
-                        alert('hello');
                         $('#voucher_no').val('');
                         $('#voucher_no').focus();
                         isDuplicateVoucher = true;
@@ -2178,13 +2180,13 @@ foreach ($manageitems as $value) {
         }
     }
 
-    // Trigger AJAX when voucher or party changes
+    // Run on change
     $('#voucher_no, #party').on('change', function() {
         checkDuplicateVoucher();
     });
 
-    // Prevent form submission if duplicate exists
-    
+    // Also run once on page load (for edit mode check)
+    checkDuplicateVoucher();
 });
 
 </script>
