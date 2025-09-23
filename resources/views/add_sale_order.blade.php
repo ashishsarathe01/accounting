@@ -5,7 +5,7 @@
 <style>
     .remove-item-btn {
         position: absolute;
-        top: 10px;
+        top: 155px;
         right: 10px;
     }
     .remove-gsm-btn {
@@ -58,12 +58,14 @@
                         @endforeach
                             </select>
                         </div>
-                        <div class="col-md-3">
-                            <label>Deal</label>
-                            <select name="deal" class="form-select">
-                                <option value="">Select Deal</option>
-                                {{-- Fill options dynamically as needed --}}
+                        <div class="mb-3 col-md-3">
+                            <label for="name" class="form-label font-14 font-heading">Deal</label>
+                            <select id="deal" name="deal" class="form-select" required autofocus>
+                                <option value="">Select Deal</option>                        
                             </select>
+                            <ul style="color: red;">
+                                @error('voucher_no'){{$message}}@enderror                        
+                            </ul> 
                         </div>
                     </div>
 
@@ -94,6 +96,22 @@
                                     <label>Price *</label>
                                     <input type="number" name="price[]" class="form-control" placeholder="Enter Price" required>
                                 </div>
+                                <div class="mb-3 col-md-3">
+                                    <label for="bill_price_1" class="form-label font-14 font-heading">Bill Price <input type="checkbox"></label>
+                                    <input type="text" id="bill_price_1" class="form-control" name="bill_price[]" placeholder="Enter Price" readonly data-id="1">
+                                    <ul style="color: red;">
+                                        @error('date'){{$message}}@enderror
+                                     </ul> 
+                                </div>
+                                <div class="mb-3 col-md-3">
+                                    <label for="name" class="form-label font-14 font-heading">Freight *</label>
+                                    <select id="series_no" name="series_no" class="form-select" required autofocus>
+                                        <option value="">Select Freight</option>
+                                    </select>
+                                    <ul style="color: red;">
+                                        @error('voucher_no'){{$message}}@enderror
+                                    </ul> 
+                                </div>
                                 <div class="col-md-3 mb-3">
                                     <label>Unit *</label>
                                     <select name="unit[]" class="form-select" required>
@@ -104,6 +122,18 @@
                                             @endforeach
                                         @endif
                                     </select>
+                                </div>
+                                <div class="mb-3 col-md-3">
+                                    <label for="sub_unit_1" class="form-label font-14 font-heading">Sub Unit *</label>
+                                    <select id="sub_unit_1" name="sub_unit[]" class="form-select sub_unit" data-id="1" required autofocus>
+                                        <option value="">Select Sub Unit</option>
+                                        <option value="INCH">INCH</option>
+                                        <option value="CM">CM</option>
+                                        <option value="MM">MM</option>
+                                    </select>
+                                    <ul style="color: red;">
+                                        @error('voucher_no'){{$message}}@enderror
+                                    </ul> 
                                 </div>
                             </div>
 
