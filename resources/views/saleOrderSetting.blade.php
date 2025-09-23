@@ -27,23 +27,23 @@
                         <h6 style="font-size:1.3rem;">Items (Grouped)</h6>
                         @foreach($groups as $group)
                             <div class="mb-2 border-bottom pb-2">
-                                <label class="d-flex align-items-center group-label">
+                                <div class="d-flex align-items-center group-label">
                                     @if($group->items->count() > 0)
-                                        <input type="checkbox" class="group-checkbox me-2" data-group="{{ $group->id }}" enabled>
-                                        <span class="toggle-items cursor-pointer ms-2" data-group="{{ $group->id }}">[+]</span>
-                                        <strong>{{ $group->group_name }}</strong>
-                                        
+                                        <input type="checkbox" class="group-checkbox me-2" data-group="{{ $group->id }}">
+                                        <span class="toggle-items ms-2 cursor-pointer" data-group="{{ $group->id }}">[+]</span>
+                                        <strong class="ms-2">{{ $group->group_name }}</strong>
                                     @else
                                         <strong>{{ $group->group_name }}</strong>
                                     @endif
-                                </label>
+                                </div>
 
                                 @if($group->items->count() > 0)
                                     <div class="ms-4 items-list" id="group-{{ $group->id }}" style="display:none;">
                                         @foreach($group->items as $item)
                                             <div>
-                                                <input type="checkbox" name="items[]" value="{{ $item->id }}" class="item-checkbox" data-group="{{ $group->id }}"
-                                                @if(in_array($item->id, $selectedItems)) checked @endif>
+                                                <input type="checkbox" name="items[]" value="{{ $item->id }}" 
+                                                       class="item-checkbox" data-group="{{ $group->id }}"
+                                                       @if(in_array($item->id, $selectedItems)) checked @endif>
                                                 {{ $item->name }}
                                             </div>
                                         @endforeach
@@ -56,7 +56,7 @@
                     <div class="mb-4">
                         <h6 style="font-size:1.3rem;">Units</h6>
                         @foreach($units as $unit)
-                            <div style="font-size:1.25rem;"> <!-- same as items -->
+                            <div style="font-size:1.25rem;">
                                 <input type="checkbox" name="units[]" value="{{ $unit->id }}" class="unit-checkbox"
                                 @if(in_array($unit->id, $selectedUnits)) checked @endif>
                                 {{ $unit->name }}
@@ -109,9 +109,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 itemsDiv.style.display = 'none';
                 this.textContent = '[+]';
             }
-
-            // Update group checkbox based on currently checked items
-            updateGroupCheckbox(groupId);
         });
     });
 
@@ -121,13 +118,26 @@ document.addEventListener('DOMContentLoaded', function () {
         let groupCheckbox = document.querySelector(`.group-checkbox[data-group="${groupId}"]`);
         if (itemCheckboxes.length === 0) return;
         let allChecked = Array.from(itemCheckboxes).every(cb => cb.checked);
+        let someChecked = Array.from(itemCheckboxes).some(cb => cb.checked);
+
         groupCheckbox.checked = allChecked;
+        groupCheckbox.indeterminate = !allChecked && someChecked;
     }
 
     // When an item checkbox changes, update group checkbox
     document.querySelectorAll('.items-list .item-checkbox').forEach(function(itemCb) {
         itemCb.addEventListener('change', function() {
             let groupId = this.dataset.group;
+            updateGroupCheckbox(groupId);
+        });
+    });
+
+    // When group checkbox changes, update all items in the group
+    document.querySelectorAll('.group-checkbox').forEach(function(groupCb) {
+        groupCb.addEventListener('change', function() {
+            let groupId = this.dataset.group;
+            let itemCheckboxes = document.querySelectorAll(`#group-${groupId} .item-checkbox`);
+            itemCheckboxes.forEach(cb => cb.checked = groupCb.checked);
             updateGroupCheckbox(groupId);
         });
     });

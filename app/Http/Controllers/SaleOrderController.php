@@ -8,7 +8,10 @@ use App\Models\ItemGroups;
 use App\Models\ManageItems;
 use App\Models\Units;
 use App\Models\SaleOrder;
+use App\Models\Accounts;
 use Session;
+use DB;
+
 
 class SaleOrderController extends Controller
 {
@@ -31,19 +34,70 @@ class SaleOrderController extends Controller
             $query->whereDate('date', '<=', $to_date);
         }
 
-        $sales = $query->where('company_id', $company_id)->orderBy('id', 'desc')->get();
-      
+        $sales = $query->orderBy('id', 'desc')->get();
 
         return view('sale_order', compact('sales', 'from_date', 'to_date'));
     }
 
+    /**
+     * Show Add Sale Order page
+     */
     public function create()
     {
-        return view('add_sale_order');
+        $company_id = auth()->user()->company_id ?? Session::get('user_company_id');
+
+        // Get only items allowed in sale-order-settings
+        $allowedItemIds = SaleOrderSetting::where('company_id', $company_id)
+                            ->where('setting_type', 'ITEM')
+                            ->pluck('item_id')
+                            ->toArray();
+
+        $groups = ItemGroups::with(['items' => function($query) use ($company_id, $allowedItemIds) {
+            $query->where('company_id', $company_id)
+                  ->where('delete', '0')
+                  ->where('status', '1')
+                  ->whereIn('id', $allowedItemIds);
+        }])
+        ->where('company_id', $company_id)
+        ->get();
+
+         $groups1 = DB::table('account_groups')
+                        ->whereIn('heading', [3,11])
+                        ->where('heading_type','group')
+                        ->where('status','1')
+                        ->where('delete','0')
+                        ->where('company_id',Session::get('user_company_id'))
+                        ->pluck('id');
+      $groups1->push(3);
+      $groups1->push(11);
+      $party_list = Accounts::with('otherAddress')
+                              ->leftjoin('states','accounts.state','=','states.id')
+                              ->where('delete', '=', '0')
+                              ->where('status', '=', '1')
+                              ->whereIn('company_id', [Session::get('user_company_id'),0])
+                              ->whereIn('under_group',$groups1)
+                              ->select('accounts.id','accounts.gstin','accounts.address','accounts.pin_code','accounts.account_name','states.state_code')
+                              ->orderBy('account_name')
+                              ->get(); 
+        // Get only units allowed in sale-order-settings
+        $allowedUnitIds = SaleOrderSetting::where('company_id', $company_id)
+                            ->where('setting_type', 'UNIT')
+                            ->pluck('item_id')
+                            ->toArray();
+
+        $units = Units::where('company_id', $company_id)
+                      ->where('delete', '0')
+                      ->where('status', '1')
+                      ->whereIn('id', $allowedUnitIds)
+                      ->get();
+
+        return view('add_sale_order', compact('groups', 'units','party_list'));
     }
 
-
-     public function store(Request $request)
+    /**
+     * Store a new Sale Order
+     */
+    public function store(Request $request)
     {
         $validated = $request->validate([
             'bill_to' => 'required',
@@ -64,16 +118,15 @@ class SaleOrderController extends Controller
         $saleOrder->save();
 
         // Save Items
-        $items = $request->item;
+        $items  = $request->item;
         $prices = $request->price;
-        $units = $request->unit;
-        $gsms = $request->gsm;
-        $sizes = $request->size;
-        $reels = $request->reel;
+        $units  = $request->unit;
+        $gsms   = $request->gsm;
+        $sizes  = $request->size;
+        $reels  = $request->reel;
 
         $gsmIndex = 0;
         for($i = 0; $i < count($items); $i++) {
-            // Each item
             $saleOrder->items()->create([
                 'item_id' => $items[$i],
                 'price'   => $prices[$i],
@@ -88,8 +141,6 @@ class SaleOrderController extends Controller
         return redirect()->route('sale-order.index')->with('success', 'Sale order added successfully!');
     }
 
-    // Sale Order List
- 
     /**
      * Show Sale Order Settings page
      */
@@ -97,28 +148,22 @@ class SaleOrderController extends Controller
     {
         $company_id = auth()->user()->company_id ?? Session::get('user_company_id');
 
-        // Get groups with their items
         $groups = ItemGroups::with(['items' => function($query) use ($company_id) {
             $query->where('company_id', $company_id)
                   ->where('delete', '0')
                   ->where('status', '1');
-        }])
-        ->where('company_id', $company_id)
-        ->get();
+        }])->where('company_id', $company_id)->get();
 
-        // Units
         $units = Units::where('company_id', $company_id)
                       ->where('delete', '0')
                       ->where('status', '1')
                       ->get();
 
-        // Selected items
         $selectedItems = SaleOrderSetting::where('company_id', $company_id)
                             ->where('setting_type', 'ITEM')
                             ->pluck('item_id')
                             ->toArray();
 
-        // Selected units
         $selectedUnits = SaleOrderSetting::where('company_id', $company_id)
                             ->where('setting_type', 'UNIT')
                             ->pluck('item_id')

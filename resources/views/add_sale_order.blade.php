@@ -42,20 +42,27 @@
                     <div class="row mb-3">
                         <div class="col-md-3">
                             <label>Bill To *</label>
-                            <select name="bill_to" class="form-select" required>
+                            <select name="bill_to" class="form-select select2-single" required>
                                 <option value="">Select Account</option>
+                                 @foreach($party_list as $party)
+                           <option value="{{$party->id}}" data-state_code="{{$party->state_code}}" data-gstin="{{$party->gstin}}" data-id="{{$party->id}}" data-address="{{$party->address}}, {{$party->pin_code}}" data-other_address="{{$party->otherAddress}}">{{$party->account_name}}</option>
+                        @endforeach
                             </select>
                         </div>
                         <div class="col-md-3">
                             <label>Ship To *</label>
-                            <select name="ship_to" class="form-select" required>
+                            <select name="ship_to" class="form-select select2-single" required>
                                 <option value="">Select Account</option>
+                                 @foreach($party_list as $party)
+                           <option value="{{$party->id}}" data-state_code="{{$party->state_code}}" data-gstin="{{$party->gstin}}" data-id="{{$party->id}}" data-address="{{$party->address}}, {{$party->pin_code}}" data-other_address="{{$party->otherAddress}}">{{$party->account_name}}</option>
+                        @endforeach
                             </select>
                         </div>
                         <div class="col-md-3">
                             <label>Deal</label>
                             <select name="deal" class="form-select">
                                 <option value="">Select Deal</option>
+                                {{-- Fill options dynamically as needed --}}
                             </select>
                         </div>
                     </div>
@@ -68,15 +75,17 @@
                             <div class="row">
                                 <div class="col-md-3 mb-3">
                                     <label>Item *</label>
-                                    <select name="item[]" class="form-select" required>
+                                    <select name="item[]" class="form-select select2-single" required>
                                         <option value="">Select Item</option>
                                         @if(isset($groups))
                                             @foreach($groups as $group)
-                                                <optgroup label="{{ $group->name }}">
-                                                    @foreach($group->items as $item)
-                                                        <option value="{{ $item->id }}">{{ $item->name }}</option>
-                                                    @endforeach
-                                                </optgroup>
+                                                @if($group->items->count() > 0)
+                                                    <optgroup label="{{ $group->name }}">
+                                                        @foreach($group->items as $item)
+                                                            <option value="{{ $item->id }}">{{ $item->name }}</option>
+                                                        @endforeach
+                                                    </optgroup>
+                                                @endif
                                             @endforeach
                                         @endif
                                     </select>
@@ -148,6 +157,12 @@
 <!-- JS for dynamic form -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
+
+    $(document).ready(function() {
+    $('.select2-single').select2({
+        width: '100%' // Optional: ensures full width
+    });
+});
 $(document).ready(function() {
     let itemIndex = $("#items_container .item-section").length;
 
