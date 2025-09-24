@@ -11,7 +11,7 @@ class Purchase extends Model
    public function purchaseSundry() {
       return $this->hasMany('App\Models\PurchaseSundry','purchase_id','id')
                   ->join('bill_sundrys', 'purchase_sundries.bill_sundry', '=', 'bill_sundrys.id')
-                  ->select('purchase_sundries.id','purchase_sundries.purchase_id','purchase_sundries.bill_sundry','purchase_sundries.amount', 'bill_sundrys.bill_sundry_type','bill_sundrys.adjust_sale_amt');
+                  ->select('purchase_sundries.id','purchase_sundries.purchase_id','purchase_sundries.bill_sundry','purchase_sundries.amount', 'bill_sundrys.bill_sundry_type','bill_sundrys.adjust_sale_amt','bill_sundrys.nature_of_sundry');
 
       //->select(['id', 'purchase_id', 'bill_sundry','amount']);
    }

@@ -2129,7 +2129,7 @@ class SalesController extends Controller
                "Discount"=> null,
                "PreTaxVal"=> null,
                "AssAmt"=> (float)$item_total,
-               "GstRt"=> 12,
+               "GstRt"=> 18,
                "SgstAmt"=>(float)round($item_sgst,2),
                "IgstAmt"=>(float)round($item_igst,2),
                "CgstAmt"=>(float)round($item_cgst,2),

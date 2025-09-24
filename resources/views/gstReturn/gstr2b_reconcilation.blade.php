@@ -50,6 +50,8 @@
        margin: 0; 
    }
 </style>
+
+</div>
 <div class="list-of-view-company ">
    <section class="list-of-view-company-section container-fluid">
       <div class="row vh-100">
@@ -63,42 +65,55 @@
                   {{ session('success') }}
                </div>
             @endif
-            <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">GSTR2B</h5>
-            <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm">
-               <div class="row">
-                  <div class="mb-3 col-md-3">
-                     <label for="month" class="form-label font-14 font-heading">Month</label>
-                     <input type="month" class="form-control" name="month" id="month" required value="{{date('Y-m', strtotime('-1 month'))}}"/>
-                  </div>
-                  <div class="mb-3 col-md-3">
-                     <label for="gstin" class="form-label font-14 font-heading">GSTIN</label>
-                     <select class="form-select" id="gstin">
-                        @foreach ($gst as $value)
-                           <option value="{{$value->gst_no}}">{{$value->gst_no}}</option>
-                        @endforeach
-                     </select>
-                  </div>
-                  <div class="mb-3 col-md-3">
-                     <button type="button" class="btn btn-xs-primary submit_btn" style="margin-top: 20px;">SUBMIT</button>
-                  </div>
-               </div>
-            </form>
-            <div id="gst_div" style="display: none">
-               <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">GSTR2B <button class="btn btn-info reconciliation">Reconciliation</button></h5> 
-               <table class="table table-ordered bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm gst_table">
-                  <thead>
-                     <tr>
-                        <th>Account Name</th>
+            @php
+            $date = DateTime::createFromFormat("Y-m", $month);
+            @endphp
+            <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Reconciliation for the month of  {{$date->format("F")}} </h5>
+            <table class="table table-ordered bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm gst_table">
+                <thead>
+                    <tr>
+                        <th>Particulars</th>
                         <th style='text-align:right'>Amount</th>
-                        <th style='text-align:right'>Book Amount</th>
-                     </tr>
-                  </thead>
-                  <tbody style="font-size: 15px;">
-                     
-                  </tbody>
-               </table>
-            </div>
-            
+                    </tr>
+                </thead>
+                <tbody style="font-size: 15px;">
+                    <tr style="cursor: pointer" class="reconciliation_details" data-type="only_in_portal" data-month="{{$month}}" data-gstin="{{$gstin}}">
+                        <td>Input On Portal</td>
+                        <td style='text-align:right'>{{formatIndianNumber($total_val_on_portal_but_not_in_book)}}</td>
+                    </tr>
+                    <tr style="cursor: pointer" class="reconciliation_details" data-type="only_in_book" data-month="{{$month}}" data-gstin="{{$gstin}}">
+                        <td>Only In books</td>
+                        <td style='text-align:right'>{{formatIndianNumber($total_val_only_in_book)}}</td>
+                    </tr>
+                    <tr>
+                        <th>Total</th>
+                        <th style='text-align:right'>{{formatIndianNumber($total_val_on_portal_but_not_in_book+$total_val_only_in_book)}}</th>
+                    </tr>
+                </tbody>
+            </table>
+            <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Aggregate Reconciliation from April upto date</h5>
+            <table class="table table-ordered bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm gst_table">
+                <thead>
+                    <tr>
+                        <th>Particulars</th>
+                        <th style='text-align:right'>Amount</th>
+                    </tr>
+                </thead>
+                <tbody style="font-size: 15px;">
+                    <tr style="cursor: pointer" class="reconciliation_details" data-type="only_in_portal_all" data-month="{{$month}}" data-gstin="{{$gstin}}">
+                        <td>Input On Portal</td>
+                        <td style='text-align:right'>{{formatIndianNumber($total_val_on_portal_but_not_in_book1)}}</td>
+                    </tr>
+                    <tr style="cursor: pointer" class="reconciliation_details" data-type="only_in_book_all" data-month="{{$month}}" data-gstin="{{$gstin}}">
+                        <td>Only In books</td>
+                        <td style='text-align:right'>{{formatIndianNumber($total_book_value_only_in_book)}}</td>
+                    </tr>
+                    <tr>
+                        <th>Total</th>
+                        <th style='text-align:right'>{{formatIndianNumber($total_val_on_portal_but_not_in_book1+$total_book_value_only_in_book)}}</th>
+                    </tr>
+                </tbody>
+            </table>
          </div>
          <div class="col-lg-1 d-none d-lg-flex justify-content-center px-1">
             <div class="shortcut-key w-100">
@@ -193,22 +208,33 @@
       </div>
    </section>
 </div>
-<div class="modal fade" id="otpModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-   <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content p-4 border-divider border-radius-8">
-         <div class="modal-header border-0 p-0">
-            <p><h5 class="modal-title">OTP Verification</h5></p>
-            <button type="button" class="btn-close close" data-bs-dismiss="modal" aria-label="Close"></button>
-         </div>
-         <div class="modal-body">
-            <div class="form-group">
-               <input type="text" class="form-control" id="otp" placeholder="Enter OTP">
-               <input type="hidden" id="fgstin">
+<div class="modal fade" id="reconciliationModal" tabindex="-1" aria-labelledby="remarkModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title reconcilation-modal-title">Reconcilation </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-         </div>
-         <div class="modal-footer border-0 mx-auto p-0">
-            <button type="button" class="btn btn-border-body close" data-bs-dismiss="modal">CANCEL</button>
-            <button type="button" class="ms-3 btn btn-red verify_otp">SUBMIT</button>
+            <div class="modal-body">
+                <table class="table table-bordered table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Account</th>
+                        <th>Invoice No.</th>
+                        <th>Invoice Date</th>
+                        <th style="text-align: right">Portal Amount</th>
+                        <th style="text-align: right">Book Amount</th>
+                        <th style="text-align: right">Taxable Amount</th>
+                        <th style="text-align: right">IGST Amount</th>
+                        <th style="text-align: right">CGST Amount</th>
+                        <th style="text-align: right">SGST Amount</th>
+                        <th style="text-align: right">CESS Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="reconciliation_table_body">
+                  <!-- Content will be populated via AJAX -->
+                </tbody>
+            </table> 
          </div>
       </div>
    </div>
@@ -216,111 +242,40 @@
 </body>
 @include('layouts.footer')
 <script>
-   $(document).ready(function(){
-      $(".submit_btn").click(function(){
-         let month = $("#month").val();
-         let gstin = $("#gstin").val();
-         getGSTR2BData(month,gstin);
-      });
-      $(".verify_otp").click(function(){
-         let otp = $("#otp").val();
-         let fgstin = $("#fgstin").val();
-         let month = $("#month").val();
-         let gstin = $("#gstin").val();
-         if(otp==""){
-            alert("Please Enter Otp");
-            return;
-         }
-         $.ajax({
-            url : "{{route('verify-gst-token-otp')}}",
-            method : 'post',
-            data : {
-               _token : '{{ csrf_token() }}',
-               otp : otp,
-               gstin : fgstin
-            },
-            success : function(res){
-               if(res!=""){
-                  let obj = JSON.parse(res);
-                  if(obj.status==true){
-                     getGSTR2BData(month,gstin)
-                  }else{
-                     alert(obj.message);
-                  }
-               }else{
-                  alert("Something Went Wrong.Please Try Again.");
-               }
-            }
-         });
-      });
-      $(".reconciliation").click(function(){
-         let month = $("#month").val();
-         let gstin = $("#gstin").val();
-         let url = "{{url('gstr2b-reconciliation-data')}}/month/gstin";
-         url = url.replace('month',month);
-         url = url.replace('gstin',gstin);
-         window.location = url;
-         
-      });
-   });
-   function getGSTR2BData(month,gstin){
-      $.ajax({
-         url : "{{route('gstr2b-detail')}}",
-         method : 'post',
-         data : {
-            _token : '{{ csrf_token() }}',
-            month : month,
-            gstin : gstin
-         },
-         success : function(res){
-            if(res!=""){
-               let obj = JSON.parse(res);
-               if(obj.status==true){
-                  if(obj.message=="TOKEN-OTP"){
-                     $("#fgstin").val(gstin);
-                     $("#otpModal").modal('toggle');
-                  }else if(obj.message=="SUCCESS"){
-                     // $("#otpModal").modal('toggle');
-                     alert("OTP Verified Successfully");
-                     getGSTR2BData(month,gstin);
-                  }else if(obj.message=="GSTR2B"){
-                     $(".gst_head").html('GSTR2B');
-                     let html = "";let total_amount = 0;let total_book_amount = 0;
-                     obj.data.forEach(element => {
-                        let baseUrl = "{{ url('/gstr2b-all-info') }}";
-                        let fullUrl = `${baseUrl}/${month}/${gstin}/${element.ctin}`;
-                        let color = '';
-                        if(element.amount!=element.book_value){
-                           color = 'style="color:red;"';
-                        }
-                        html+="<tr style='cursor:pointer;'><td><a "+color+" href='"+fullUrl+"'>"+element.trdnm+" ("+element.ctin+")</a></td><td style='text-align:right'><a "+color+" href='"+fullUrl+"'>"+Number(element.amount).toLocaleString('en-IN', {
-                                       minimumFractionDigits: 2,
-                                       maximumFractionDigits: 2
-                                       })+"</a></td><td style='text-align:right'><a "+color+" href='"+fullUrl+"'>"+Number(element.book_value).toLocaleString('en-IN', {
-                                       minimumFractionDigits: 2,
-                                       maximumFractionDigits: 2
-                                       })+"</a></td></tr>";
-                        total_amount += parseFloat(element.amount);
-                        total_book_amount += parseFloat(element.book_value);
-                     });
-                     html+="<tr><th>Total</th><th style='text-align:right'>"+Number(total_amount).toLocaleString('en-IN', {
-                           minimumFractionDigits: 2,
-                           maximumFractionDigits: 2
-                           })+"</th><th style='text-align:right'>"+Number(total_book_amount).toLocaleString('en-IN', {
-                           minimumFractionDigits: 2,
-                           maximumFractionDigits: 2
-                           })+"</th></tr>";
-                     $(".gst_table tbody").html(html);
-                     $("#gst_div").show();
-                  }
-               }else{
-                  alert(obj.message);
-               }
-            }else{
-               alert("Something Went Wrong.Please Try Again.");
-            }
-         }
-      });
-   }
+    $(document).ready(function(){
+        $(".reconciliation_details").click(function(){
+            var type = $(this).data('type');
+            var month = $(this).data('month');
+            var gstin = $(this).data('gstin');
+            $("#cover-spin").show();
+            $.ajax({
+                url: "{{ url('gstr2b-reconciliation-detail') }}",
+                method: 'POST',
+                data: {'type': type,'month':month,'gstin':gstin},
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') // Add this if CSRF token is needed
+                },
+                success: function (response) {
+                    let res = JSON.parse(response);
+                    let tbody = "";
+                    if(type=="only_in_portal" || type=="only_in_portal_all"){
+                        tbody = res.only_in_portal;
+                    }else if(type=="only_in_book" || type=="only_in_book_all"){
+                        tbody = res.only_in_book;
+                    }                    
+                    $(".reconcilation-modal-title").html(type=="only_in_portal"?"Input On Portal":"Only In Books");
+                    $("#reconciliation_table_body").html(tbody);
+                    //reconciliation_table_body
+                    $("#reconciliationModal").modal('show');
+                    $("#cover-spin").hide();
+                },
+                error: function() {
+                    alert('An error occurred while fetching the data.');
+                }
+            });
+           
+            
+        });      
+    });
 </script>
 @endsection

@@ -72,9 +72,10 @@
                   <a class="nav-link" id="fill-tab-1" data-bs-toggle="tab" href="#fill-tabpanel-1" role="tab" aria-controls="fill-tabpanel-1" aria-selected="false"><h5 class="px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius" style="text-align: center;">B2BA</h5></a>
                </li>
             </ul>
+            
             <div class="tab-content pt-5" id="tab-content">
                 <div class="tab-pane active" id="fill-tabpanel-0" role="tabpanel" aria-labelledby="fill-tab-0">
-                    <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm" style="text-align: center;">B2B-Invoices</h5>
+                    <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm" style="text-align: center;">B2B Matched Invoices</h5>
                     <div class="table-responsive">
                          <table class="table table-bordered table-striped table-hover">
                             <thead>
@@ -92,9 +93,56 @@
                                 <th>Action</th>
                              </tr>
                             </thead>
-                            <tbody>{!!$b2b_invoices!!}</tbody>
+                            <tbody>{!!$b2b_invoices_matched!!}</tbody>
                          </table>
                     </div>
+                    @empty(!$b2b_invoices_on_portal_but_not_in_book)
+                     <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm" style="text-align: center;">B2B Only On Portal But Not In Books Invoices</h5>
+                     <div class="table-responsive">
+                           <table class="table table-bordered table-striped table-hover">
+                              <thead>
+                              <tr>
+                                 <th></th>
+                                 <th>Invoice No.</th>
+                                 <th>Invoice Date</th>
+                                 <th style="text-align: right">Invoice Value</th>
+                                 <th style="text-align: right">Book Value</th>
+                                 <th style="text-align: right">Taxable Value</th>
+                                 <th style="text-align: right">IGST</th>
+                                 <th style="text-align: right">CGST</th>
+                                 <th style="text-align: right">SGST</th>
+                                 <th style="text-align: right">Cess</th>
+                                 <th>Action</th>
+                              </tr>
+                              </thead>
+                              <tbody>{!!$b2b_invoices_on_portal_but_not_in_book!!}</tbody>
+                           </table>
+                     </div>
+                    @endempty
+                     @empty(!$b2b_invoices_only_in_book)
+                     <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm" style="text-align: center;">B2B Only In Books But Not Portal Invoices</h5>
+                     <div class="table-responsive">
+                           <table class="table table-bordered table-striped table-hover">
+                              <thead>
+                              <tr>
+                                 <th></th>
+                                 <th>Invoice No.</th>
+                                 <th>Invoice Date</th>
+                                 <th style="text-align: right">Invoice Value</th>
+                                 <th style="text-align: right">Book Value</th>
+                                 <th style="text-align: right">Taxable Value</th>
+                                 <th style="text-align: right">IGST</th>
+                                 <th style="text-align: right">CGST</th>
+                                 <th style="text-align: right">SGST</th>
+                                 <th style="text-align: right">Cess</th>
+                                 <th>Action</th>
+                              </tr>
+                              </thead>
+                              <tbody>{!!$b2b_invoices_only_in_book!!}</tbody>
+                           </table>
+                     </div>
+                    @endempty
+                    
                     <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm" style="text-align: center;">B2B-Debit notes</h5>
                     <div class="table-responsive">
                          <table class="table table-bordered table-striped table-hover">
@@ -351,35 +399,63 @@
   </div>
 </div>
 <div class="modal fade" id="linkCDNRModal" tabindex="-1" aria-labelledby="remarkModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="linkModalLabel"></h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-         <table class="table table-bordered table-striped table-hover">
-            <thead>
-               <tr>
-                  <th></th>
-                  <th>Invoice No.</th>
-                  <th>Invoice Date</th>
-                  <th style="text-align: right">Series</th>
-                  <th style="text-align: right">Amount</th>
-               </tr>
-            </thead>
-            <tbody id="cdnr_table_body">
-               <!-- Content will be populated via AJAX -->
-            </tbody>
-         </table>
-         
+   <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+         <div class="modal-header">
+            <h5 class="modal-title" id="linkModalLabel"></h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div>
+         <div class="modal-body">
+            <table class="table table-bordered table-striped table-hover">
+               <thead>
+                  <tr>
+                     <th></th>
+                     <th>Invoice No.</th>
+                     <th>Invoice Date</th>
+                     <th style="text-align: right">Series</th>
+                     <th style="text-align: right">Amount</th>
+                  </tr>
+               </thead>
+               <tbody id="cdnr_table_body">
+                  <!-- Content will be populated via AJAX -->
+               </tbody>
+            </table>         
             <div class="modal-footer border-0 mx-auto p-0">
-            <button type="button" class="btn btn-border-body close" data-bs-dismiss="modal">CANCEL</button>
-            <button type="button" class="ms-3 btn btn-red link_btn_action">SUBMIT</button>
+               <button type="button" class="btn btn-border-body close" data-bs-dismiss="modal">CANCEL</button>
+               <button type="button" class="ms-3 btn btn-red link_btn_action">SUBMIT</button>
+            </div>
          </div>
       </div>
-    </div>
-  </div>
+   </div>
+</div>
+<div class="modal fade" id="linkInvoiceModal" tabindex="-1" aria-labelledby="remarkModalLabel" aria-hidden="true">
+   <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+         <div class="modal-header">
+            <h5 class="modal-title">Link Invoice</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div>
+         <div class="modal-body">
+            <table class="table table-bordered table-striped table-hover">
+               <thead>
+                  <tr>
+                     <th></th>
+                     <th>Invoice No.</th>
+                     <th>Invoice Date</th>
+                     <th style="text-align: right">Amount</th>
+                  </tr>
+               </thead>
+               <tbody id="invoice_table_body">
+                  <!-- Content will be populated via AJAX -->
+               </tbody>
+            </table>         
+            <div class="modal-footer border-0 mx-auto p-0">
+               <button type="button" class="btn btn-border-body close" data-bs-dismiss="modal">CANCEL</button>
+               <button type="button" class="ms-3 btn btn-red link_invoice_btn_action">SUBMIT</button>
+            </div>
+         </div>
+      </div>
+   </div>
 </div>
 </body>
 @include('layouts.footer')
@@ -389,8 +465,10 @@
       let type = $(this).data('type');
       if($(this).is(':checked')){
          $("#"+type+''+id).hide();
+         $("."+type+''+id).hide();
       }else{
          $("#"+type+''+id).show();
+         $("."+type+''+id).show();
       }
    });
    $(document).on('click','.reject_btn',function(){
@@ -524,7 +602,7 @@
             error: function (xhr) {
                alert('An error occurred while linking the CDNR.');
             }
-         });      
+         });
    };
    $(document).on('click','.link_btn_action',function(){
       link_btn_action();
@@ -554,6 +632,70 @@
          });
       }
    });
-
+   $(document).on('click','.link_invoice_btn',function(){
+      let ctin = $(this).data('ctin');
+      let gstin = $(this).data('gstin');
+      let month = $(this).data('month');
+      let invoice = $(this).data('invoice');
+      $.ajax({
+         url: "{{ route('get-unlink-invoice-entry') }}", // Replace with your actual route
+         method: 'POST',
+         data: {'ctin': ctin, 'gstin': gstin,'month':month,'invoice':invoice},
+         headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') // Add this if CSRF token is needed
+         },
+         success: function (response) {
+            let res = JSON.parse(response);
+            $("#invoice_table_body").html('');
+            $.each(res.data, function(index, value) {
+               $checked = '';
+               if(value.gstr2b_invoice_id!="" && value.gstr2b_invoice_id!=null){
+                  $checked = 'checked';
+               }
+               $("#invoice_table_body").append('<tr><td><input type="checkbox" class="link_invoice_check" data-id="'+value.id+'" '+$checked+'></td><td>'+value.voucher_no+'</td><td>'+value.date+'</td><td style="text-align: right">'+value.total+'</td></tr>');
+            });
+            $(".link_invoice_btn_action").data('invoice_no',invoice);
+            $('#linkInvoiceModal').modal('show');
+         },
+         error: function (xhr) {
+            alert('An error occurred while linking the entry.');
+         }
+      });
+      $(document).on('click','.link_invoice_btn_action',function(){
+         link_invoice_btn_action();
+      });
+      link_invoice_btn_action = function() {
+         let invoice_no = $('.link_invoice_btn_action').data('invoice_no');
+         let selected_ids = [];
+         $('.link_invoice_check:checked').each(function() {
+            selected_ids.push($(this).data('id'));
+         });
+         if(selected_ids.length==0) {
+            alert('Please select at least one entry to link.');
+            return;
+         }
+         $.ajax({
+            url: "{{ route('link-gstr2b-invoice-entry') }}", // Replace with your actual route
+            method: 'POST',
+            data: {'ids': selected_ids, 'gstin': '{{ $gstin }}', 'ctin': '{{ $ctin }}', 'month': '{{ $month }}', 'invoice_no': invoice_no },
+            headers: {
+               'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') // Add this if CSRF token is needed
+            },
+            success: function (response) {
+               let res = JSON.parse(response);
+               if(res.status==true) {
+                  alert('linked successfully.');
+                  $('#linkInvoiceModal').modal('hide'); 
+                  location.reload(); // Reload the page to reflect changes
+               } else {
+                  alert('Failed to link CDNR');
+               }
+            },
+            error: function (xhr) {
+               alert('An error occurred while linking the CDNR.');
+            }
+         });
+      };
+   });
 </script>
 @endsection

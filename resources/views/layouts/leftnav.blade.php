@@ -665,6 +665,7 @@
                               </ul>
                            </div>
                         </li>
+                        
                         <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue" style="border: 1px solid #007bff;">
                            <!-- Toggle for Balance Sheet submenu -->
                            <a class="text-decoration-none d-flex text-blue collapsed"
