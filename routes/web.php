@@ -56,6 +56,7 @@ use App\Http\Controllers\Supplier\SupplierController;
 use App\Http\Controllers\Supplier\SupplierRateLocationWiseController;
 use App\Http\Controllers\Supplier\SupplierPurchaseController;
 use App\Http\Controllers\Supplier\SupplierSubHeadController;
+use App\Http\Controllers\AdminModuleController\ManageUserController;
 
 
 /*
@@ -88,7 +89,14 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
       Route::Resource('/merchant-privilege',MerchantPrivilegesController::class)->name('*','merchant-privilege');
       Route::get('/merchant-module-permission/{id?}',[MerchantModulePermissionController::class, 'index'])->name('merchant-module-permission');
       Route::post('/store-merchant-module',[MerchantModulePermissionController::class, 'storeMerchantModule'])->name('store-merchant-module');
-      
+      Route::resource('manageUser', ManageUserController::class);
+      Route::get('manage-users', [ManageUserController::class,'index'])->name('manageUser.index');
+      Route::get('manage-users/create', [ManageUserController::class,'create'])->name('manageUser.create');
+      Route::post('manage-users/store', [ManageUserController::class,'store'])->name('manageUser.store');
+      Route::get('manage-users/{id}/edit', [ManageUserController::class,'edit'])->name('manageUser.edit');
+      Route::put('manage-users/{id}/update', [ManageUserController::class,'update'])->name('manageUser.update');
+      Route::delete('manage-users/{id}/delete', [ManageUserController::class,'destroy'])->name('manageUser.destroy');
+
    });
 });
 

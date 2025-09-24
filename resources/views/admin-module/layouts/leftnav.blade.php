@@ -51,6 +51,19 @@
                </ul>
             </div>
          </div>
+         <div class="card  bg-blue pt-2 px-2 rounded-0 aside-bottom-divider">
+            <div class="card-header py-12 px-2 border-0 d-flex rounded-0" id="administratorHeading">
+               <a class="nav-link text-white font-14 dropdown-icon-img d-flex fw-500  p-0 collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#adminCollapse1" aria-expanded="true" aria-controls="adminCollapse">
+               <img src="{{ URL::asset('public/assets/imgs/administrator.svg')}}" class="me-2" alt="">Manage User</a>
+            </div>
+            <div id="adminCollapse1" class="collapse" aria-labelledby="administratorHeading" data-bs-parent="#accordion">
+               <ul class="nav flex-column">
+                  <li class="font-14  fw-500 m-0 py-12 px-2  border-radius-4 bg-white">
+                     <a class=" text-decoration-none  d-flex  text-blue" href="{{ route('admin.manageUser.index') }}">User Master</a>
+                  </li>
+               </ul>
+            </div>
+         </div>
       </div>
    </div>
 </aside>
