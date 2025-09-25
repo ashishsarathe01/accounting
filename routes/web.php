@@ -95,7 +95,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
       Route::post('manage-users/store', [ManageUserController::class,'store'])->name('manageUser.store');
       Route::get('manage-users/{id}/edit', [ManageUserController::class,'edit'])->name('manageUser.edit');
       Route::put('manage-users/{id}/update', [ManageUserController::class,'update'])->name('manageUser.update');
-      Route::delete('manage-users/{id}/delete', [ManageUserController::class,'destroy'])->name('manageUser.destroy');
+      Route::delete('manage-users/{id}', [ManageUserController::class, 'destroy'])->name('manageUser.destroy');
+      Route::get('manage-users/{id}/privileges', [ManageUserController::class,'privileges'])->name('manageUser.privileges');
+      Route::post('manage-users/set-privileges', [ManageUserController::class,'setUserPrivileges'])->name('manageUser.setUserPrivileges');
 
    });
 });

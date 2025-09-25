@@ -5,23 +5,21 @@ namespace App\Http\Controllers\AdminModuleController;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use DB;
+use Carbon\Carbon;
 
 class ManageUserController extends Controller
 {
-    // List all users
     public function index()
     {
-        $users = DB::table('admin_users')->get();
+        $users = DB::table('admin_users')->where('status', '!=', 2)->get();
         return view('admin-module.manageUser.user', compact('users'));
     }
 
-    // Add user form
     public function create()
     {
         return view('admin-module.manageUser.create');
     }
 
-    // Store new user
     public function store(Request $request)
     {
         $request->validate([
@@ -43,7 +41,6 @@ class ManageUserController extends Controller
             'present_address','permanent_address','date_of_appointment','status'
         ]);
 
-        // Handle Aadhar file upload
         if ($request->hasFile('aadhar_image')) {
             $file = $request->file('aadhar_image');
             $filename = time().'_'.$file->getClientOriginalName();
@@ -52,18 +49,15 @@ class ManageUserController extends Controller
         }
 
         DB::table('admin_users')->insert($data);
-
         return redirect()->route('admin.manageUser.index')->with('success','User added successfully');
     }
 
-    // Edit user form
     public function edit($id)
     {
         $user = DB::table('admin_users')->where('id',$id)->first();
         return view('admin-module.manageUser.edit', compact('user'));
     }
 
-    // Update user
     public function update(Request $request, $id)
     {
         $request->validate([
@@ -85,7 +79,6 @@ class ManageUserController extends Controller
             'present_address','permanent_address','date_of_appointment','status'
         ]);
 
-        // Handle Aadhar file upload
         if ($request->hasFile('aadhar_image')) {
             $file = $request->file('aadhar_image');
             $filename = time().'_'.$file->getClientOriginalName();
@@ -94,14 +87,76 @@ class ManageUserController extends Controller
         }
 
         DB::table('admin_users')->where('id',$id)->update($data);
-
         return redirect()->route('admin.manageUser.index')->with('success','User updated successfully');
     }
 
-    // Delete user
     public function destroy($id)
     {
-        DB::table('admin_users')->where('id',$id)->delete();
-        return redirect()->route('admin.manageUser.index')->with('success','User deleted successfully');
+        $user = DB::table('admin_users')->where('id', $id)->first();
+        if (!$user) {
+            return redirect()->route('admin.manageUser.index')->with('error', 'Invalid user selected.');
+        }
+        DB::table('admin_users')->where('id', $id)->update(['status' => 2]);
+        return redirect()->route('admin.manageUser.index')->with('success', 'User deleted successfully.');
+    }
+
+    // ----------------------- Privileges -----------------------
+
+    public function privileges($id)
+    {
+        $user = DB::table('admin_users')->where('id', $id)->first();
+        $modules = DB::table('privileges_modules')->where('status',1)->get()->toArray();
+        $modules = json_decode(json_encode($modules), true);
+
+        $tree = $this->buildTree($modules);
+
+        $assigned = DB::table('admin_user_privileges_module_mappings')
+                      ->where('user_id', $id)
+                      ->pluck('module_id')
+                      ->toArray();
+
+        return view('admin-module.manageUser.privileges', [
+            'user' => $user,
+            'privileges' => $tree,
+            'assigned' => $assigned
+        ]);
+    }
+
+    public function setUserPrivileges(Request $request)
+    {
+        $user_id = $request->user_id;
+
+        $selected = $request->privileges ?? [];
+
+        // Delete unselected privileges
+        DB::table('admin_user_privileges_module_mappings')
+            ->where('user_id', $user_id)
+            ->whereNotIn('module_id', $selected)
+            ->delete();
+
+        // Insert or ignore selected privileges
+        foreach ($selected as $module_id) {
+            DB::table('admin_user_privileges_module_mappings')->updateOrInsert(
+                ['user_id' => $user_id, 'module_id' => $module_id],
+                ['status' => 1, 'created_at' => Carbon::now()]
+            );
+        }
+
+        return redirect()->route('admin.manageUser.privileges', $user_id)->with('success','Privileges updated successfully.');
+    }
+
+    private function buildTree(array $elements, $parentId = null)
+    {
+        $branch = [];
+        foreach ($elements as $element) {
+            if ($element['parent_id'] == $parentId) {
+                $children = $this->buildTree($elements, $element['id']);
+                if ($children) {
+                    $element['children'] = $children;
+                }
+                $branch[] = $element;
+            }
+        }
+        return $branch;
     }
 }
