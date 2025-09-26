@@ -100,14 +100,12 @@ class ManageUserController extends Controller
         return redirect()->route('admin.manageUser.index')->with('success', 'User deleted successfully.');
     }
 
-    // ----------------------- Privileges -----------------------
-
+     // ----------------------- Privileges -----------------------
     public function privileges($id)
     {
         $user = DB::table('admin_users')->where('id', $id)->first();
         $modules = DB::table('privileges_modules')->where('status',1)->get()->toArray();
         $modules = json_decode(json_encode($modules), true);
-
         $tree = $this->buildTree($modules);
 
         $assigned = DB::table('admin_user_privileges_module_mappings')
@@ -125,16 +123,13 @@ class ManageUserController extends Controller
     public function setUserPrivileges(Request $request)
     {
         $user_id = $request->user_id;
-
         $selected = $request->privileges ?? [];
 
-        // Delete unselected privileges
         DB::table('admin_user_privileges_module_mappings')
             ->where('user_id', $user_id)
             ->whereNotIn('module_id', $selected)
             ->delete();
 
-        // Insert or ignore selected privileges
         foreach ($selected as $module_id) {
             DB::table('admin_user_privileges_module_mappings')->updateOrInsert(
                 ['user_id' => $user_id, 'module_id' => $module_id],
@@ -142,7 +137,8 @@ class ManageUserController extends Controller
             );
         }
 
-        return redirect()->route('admin.manageUser.privileges', $user_id)->with('success','Privileges updated successfully.');
+        return redirect()->route('admin.manageUser.privileges', $user_id)
+                         ->with('success','Privileges updated successfully.');
     }
 
     private function buildTree(array $elements, $parentId = null)
@@ -151,12 +147,48 @@ class ManageUserController extends Controller
         foreach ($elements as $element) {
             if ($element['parent_id'] == $parentId) {
                 $children = $this->buildTree($elements, $element['id']);
-                if ($children) {
-                    $element['children'] = $children;
-                }
+                if ($children) { $element['children'] = $children; }
                 $branch[] = $element;
             }
         }
         return $branch;
+    }
+
+    // ----------------------- Assign Companies -----------------------
+    public function assignCompanies($id)
+    {
+        $user = DB::table('admin_users')->where('id', $id)->first();
+
+        $merchants = DB::table('users')->where('status','1')->get()->map(function($merchant) {
+            $merchant->company = DB::table('companies')->where('user_id', $merchant->id)->get();
+            return $merchant;
+        });
+
+        $assigned = DB::table('assign_companies')->where('admin_users_id', $id)
+                    ->pluck('comp_id')->toArray();
+
+        return view('admin-module.manageUser.assign_companies', compact('user','merchants','assigned'));
+    }
+
+    public function storeAssignCompanies(Request $request)
+    {
+        $admin_user_id = $request->admin_user_id;
+        $merchant_companies = $request->merchant_companies ?? [];
+
+        DB::table('assign_companies')->where('admin_users_id', $admin_user_id)->delete();
+
+        foreach ($merchant_companies as $merchant_id => $company_ids) {
+            foreach ($company_ids as $comp_id) {
+                DB::table('assign_companies')->insert([
+                    'comp_id' => $comp_id,
+                    'merchant_id' => $merchant_id,
+                    'admin_users_id' => $admin_user_id,
+                    'created_at' => now()
+                ]);
+            }
+        }
+
+        return redirect()->route('admin.manageUser.assignCompanies', $admin_user_id)
+                         ->with('success', 'Companies assigned successfully.');
     }
 }
