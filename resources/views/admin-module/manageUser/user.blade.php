@@ -105,9 +105,10 @@
 
 <script>
 $(document).ready(function() {
+    // Update Delete Form action to use the new route
     $(".delete").click(function() {
         var id = $(this).data("id");
-        var url = "{{ url('admin/manage-users') }}/" + id;
+        var url = "{{ url('admin/manageUser') }}/" + id; // Updated to match route for admins table
         $("#deleteForm").attr("action", url);
         $("#delete_user").modal("show");
     });

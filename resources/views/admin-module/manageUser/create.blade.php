@@ -9,7 +9,6 @@
 
             <div class="col-md-12 ml-sm-auto col-lg-10 px-md-4 bg-mint">
 
-                {{-- Flash messages --}}
                 @if (session('error'))
                     <div class="alert alert-danger" role="alert">{{ session('error') }}</div>
                 @endif
@@ -17,7 +16,6 @@
                     <div class="alert alert-success" role="alert">{{ session('success') }}</div>
                 @endif
 
-                {{-- Breadcrumb --}}
                 <nav>
                     <ol class="breadcrumb m-0 py-4 px-2 px-md-0 font-12">
                         <li class="breadcrumb-item">Dashboard</li>
@@ -26,7 +24,6 @@
                     </ol>
                 </nav>
 
-                {{-- Form Card --}}
                 <div class="bg-white p-4 shadow-sm border-radius-8">
                     <form action="{{ route('admin.manageUser.store') }}" method="POST" enctype="multipart/form-data">
                         @csrf
@@ -111,7 +108,6 @@
 @include('layouts.footer')
 
 <script>
-    // Copy Present Address to Permanent Address
     document.getElementById('same_as_present').addEventListener('change', function() {
         if(this.checked){
             document.getElementById('permanent_address').value = document.querySelector('textarea[name="present_address"]').value;
