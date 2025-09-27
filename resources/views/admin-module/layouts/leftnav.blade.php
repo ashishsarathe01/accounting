@@ -45,6 +45,10 @@
                      </a>
                   </li>
                   <li class="font-14  fw-500 m-0 py-12 px-2  ">
+                     <a class=" text-decoration-none  d-flex   text-white" href="{{ route('admin.admin-privilege.index') }}">Admin Panel Privileges
+                     </a>
+                  </li>
+                  <li class="font-14  fw-500 m-0 py-12 px-2  ">
                      <a class=" text-decoration-none  d-flex   text-white" href="{{ route('admin.merchant-module-permission') }}">Merchant Modules Permission
                      </a>
                   </li>

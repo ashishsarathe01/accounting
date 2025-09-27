@@ -197,4 +197,46 @@ class ManageUserController extends Controller
         return redirect()->route('admin.manageUser.assignCompanies', $admin_user_id)
                          ->with('success', 'Companies assigned successfully.');
     }
+
+    // ----------------------- Admin Panel Privileges -----------------------
+    public function adminPrivileges($id)
+    {
+        $user = DB::table('admins')->where('id', $id)->first();
+        $modules = DB::table('admin_privileges_modules')->where('status',1)->get()->toArray();
+        $modules = json_decode(json_encode($modules), true);
+        $tree = $this->buildTree($modules);
+
+        $assigned = DB::table('admin_privileges_module_mappings')
+                      ->where('employee_id', $id)
+                      ->pluck('module_id')
+                      ->toArray();
+
+        return view('admin-module.manageUser.admin_privileges', [
+            'user' => $user,
+            'privileges' => $tree,
+            'assigned' => $assigned
+        ]);
+    }
+
+    public function saveAdminPrivileges(Request $request, $id)
+    {
+        $selected = $request->privileges ?? [];
+
+        // Delete unchecked
+        DB::table('admin_privileges_module_mappings')
+            ->where('employee_id', $id)
+            ->whereNotIn('module_id', $selected)
+            ->delete();
+
+        // Insert/update checked
+        foreach ($selected as $module_id) {
+            DB::table('admin_privileges_module_mappings')->updateOrInsert(
+                ['employee_id' => $id, 'module_id' => $module_id],
+                ['status' => 1, 'created_at' => Carbon::now()]
+            );
+        }
+
+        return redirect()->route('admin.manageUser.adminPrivileges', $id)
+                         ->with('success','Admin Panel Privileges updated successfully.');
+    }
 }
