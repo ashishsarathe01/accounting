@@ -57,6 +57,8 @@ use App\Http\Controllers\Supplier\SupplierRateLocationWiseController;
 use App\Http\Controllers\Supplier\SupplierPurchaseController;
 use App\Http\Controllers\Supplier\SupplierSubHeadController;
 use App\Http\Controllers\AdminModuleController\ManageUserController;
+use App\Http\Controllers\AdminModuleController\AdminPrivilegesController;
+
 
 
 /*
@@ -100,8 +102,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
       Route::post('manage-users/set-privileges', [ManageUserController::class,'setUserPrivileges'])->name('manageUser.setUserPrivileges');
       Route::get('manage-users/{id}/assign-companies', [ManageUserController::class, 'assignCompanies'])->name('manageUser.assignCompanies');
       Route::post('manage-users/assign-companies', [ManageUserController::class, 'storeAssignCompanies'])->name('manageUser.storeAssignCompanies');
-
-
+      Route::resource('/admin-privilege', AdminPrivilegesController::class)->name('*','admin-privilege');
+      Route::get('manage-users/{id}/admin-privileges', [ManageUserController::class, 'adminPrivileges'])->name('manageUser.adminPrivileges');
+      Route::post('manage-users/{id}/admin-privileges/save', [ManageUserController::class, 'saveAdminPrivileges'])->name('manageUser.saveAdminPrivileges');
 
  });
 });

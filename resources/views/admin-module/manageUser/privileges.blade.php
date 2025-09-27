@@ -15,9 +15,14 @@
 
                 <div class="d-flex justify-content-between align-items-center table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">
                     <h5 class="m-0">Set Privileges for: {{ $user->name }}</h5>
-                    <a href="{{ route('admin.manageUser.assignCompanies', $user->id) }}" class="btn btn-xs-primary">
-                        Assign Companies
-                    </a>
+                    <div class="d-flex gap-2">
+                        <a href="{{ route('admin.manageUser.adminPrivileges', $user->id) }}" class="btn btn-xs-secondary">
+                            Set Admin Panel Privileges
+                        </a>
+                        <a href="{{ route('admin.manageUser.assignCompanies', $user->id) }}" class="btn btn-xs-primary">
+                            Assign Companies
+                        </a>
+                    </div>
                 </div>
 
                 <!-- Box container for privileges -->
