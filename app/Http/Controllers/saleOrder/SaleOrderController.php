@@ -1,7 +1,6 @@
 <?php
-
-namespace App\Http\Controllers;
-
+namespace App\Http\Controllers\saleOrder;
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\SaleOrderSetting;
 use App\Models\ItemGroups;
@@ -9,6 +8,8 @@ use App\Models\ManageItems;
 use App\Models\Units;
 use App\Models\SaleOrder;
 use App\Models\Accounts;
+use App\Models\Companies;
+use App\Models\SaleInvoiceConfiguration;
 use Session;
 use DB;
 
@@ -24,19 +25,21 @@ class SaleOrderController extends Controller
 
         $from_date = $request->input('from_date');
         $to_date   = $request->input('to_date');
+        $saleOrder = SaleOrder::with([
+                            'billTo:id,account_name','shippTo:id,account_name'
+                            ])->where('company_id', $company_id)
+                            ->get();
+        // if ($from_date) {
+        //     $saleOrder->whereDate('date', '>=', $from_date);
+        // }
+        // if ($to_date) {
+        //     $saleOrder->whereDate('date', '<=', $to_date);
+        // }
 
-        $query = SaleOrder::where('company_id', $company_id);
-
-        if ($from_date) {
-            $query->whereDate('date', '>=', $from_date);
-        }
-        if ($to_date) {
-            $query->whereDate('date', '<=', $to_date);
-        }
-
-        $sales = $query->orderBy('id', 'desc')->get();
-
-        return view('sale_order', compact('sales', 'from_date', 'to_date'));
+        //$saleOrder->orderBy('id', 'desc')->get();
+        // echo "<pre>";
+        // print_r($saleOrder->toArray()); exit;
+        return view('saleorder/sale_order',["saleOrder"=>$saleOrder, 'from_date' => $from_date, 'to_date' => $to_date]);
     }
 
     /**
@@ -91,7 +94,7 @@ class SaleOrderController extends Controller
                       ->whereIn('id', $allowedUnitIds)
                       ->get();
 
-        return view('add_sale_order', compact('groups', 'units','party_list'));
+        return view('saleorder/add_sale_order', compact('groups', 'units','party_list'));
     }
 
     /**
@@ -109,34 +112,83 @@ class SaleOrderController extends Controller
             'size.*'  => 'required',
             'reel.*'  => 'required|numeric',
         ]);
+        // echo "<pre>";
+        // print_r($request->all()); exit;
 
-        $saleOrder = new SaleOrder();
-        $saleOrder->bill_to = $request->bill_to;
-        $saleOrder->ship_to = $request->ship_to;
-        $saleOrder->deal    = $request->deal;
-        $saleOrder->company_id = auth()->user()->company_id ?? Session::get('user_company_id');
-        $saleOrder->save();
+        DB::transaction(function() use ($request) {
 
-        // Save Items
-        $items  = $request->item;
-        $prices = $request->price;
-        $units  = $request->unit;
-        $gsms   = $request->gsm;
-        $sizes  = $request->size;
-        $reels  = $request->reel;
+        // 1. Create Sale Order
+        $saleOrder = SaleOrder::create([
+            'bill_to' => $request->bill_to,
+            'shipp_to' => $request->ship_to,
+            'deal'    => $request->deal,
+            'freight' => $request->freight ?? null,
+            'created_by' => auth()->id(),
+            'company_id' => Session::get('user_company_id'),
+        ]);
 
-        $gsmIndex = 0;
-        for($i = 0; $i < count($items); $i++) {
-            $saleOrder->items()->create([
-                'item_id' => $items[$i],
-                'price'   => $prices[$i],
-                'unit_id' => $units[$i],
-                'gsm'     => $gsms[$gsmIndex],
-                'size'    => $sizes[$gsmIndex],
-                'reel'    => $reels[$gsmIndex],
-            ]);
-            $gsmIndex++;
+        // 2. Loop Items
+        foreach ($request->items as $item) {
+            if(empty($item['item_id'])) {
+                continue; // Skip if item_id is missing
+            }
+            $validGsms = collect($item['gsms'] ?? [])->filter(function ($gsm) {
+        if (empty($gsm['gsm']) || empty($gsm['details'])) {
+            return false;
         }
+        // at least one detail with size + reel
+        return collect($gsm['details'])->contains(function ($d) {
+            return !empty($d['size']) && !empty($d['reel']);
+        });
+    });
+
+    if ($validGsms->isEmpty()) {
+        continue; // skip item if no valid gsm
+    }
+            $orderItem = $saleOrder->items()->create([
+                'item_id'    => $item['item_id'],
+                'price'      => $item['price'],
+                'bill_price' => $item['bill_price'] ?? null,
+                'unit'    => $item['unit'],
+                'sub_unit'   => $item['sub_unit'],
+                'company_id' => Session::get('user_company_id'),
+            ]);
+
+            // 3. Loop GSMs
+            foreach ($item['gsms'] as $gsm) {
+                if(empty($gsm['gsm'])) {
+                    continue; // Skip if item_id is missing
+                }
+                if (
+    empty($gsm['details']) ||
+    collect($gsm['details'])->filter(function ($d) {
+        return !empty($d['size']) && !empty($d['reel']);
+    })->count() < 1
+) {
+    continue;
+}
+                $gsmRow = $orderItem->gsms()->create([
+                    'sale_orders_id' => $saleOrder->id,
+                    'gsm' => $gsm['gsm'],
+                    'company_id' => Session::get('user_company_id'),
+                ]);
+
+                // 4. Loop Sizes/Reels
+                foreach ($gsm['details'] as $detail) {
+                    if(empty($detail['size']) || empty($detail['reel'])) {
+                        continue; // Skip if item_id is missing
+                    }
+                    $gsmRow->details()->create([
+                        'sale_orders_id' => $saleOrder->id,
+                        'sale_orders_item_id' => $orderItem->id,
+                        'size' => $detail['size'],
+                        'quantity' => $detail['reel'],
+                        'company_id' => Session::get('user_company_id'),
+                    ]);
+                }
+            }
+        }
+    });
 
         return redirect()->route('sale-order.index')->with('success', 'Sale order added successfully!');
     }
@@ -144,6 +196,27 @@ class SaleOrderController extends Controller
     /**
      * Show Sale Order Settings page
      */
+    public function show($id)
+    {   
+        $company_data = Companies::join('states','companies.state','=','states.id')
+                        ->where('companies.id', Session::get('user_company_id'))
+                        ->select(['companies.*','states.name as sname'])
+                        ->first();
+        $saleOrder = SaleOrder::with([
+                            'billTo:id,account_name,gstin,address,pin_code,state,pan',
+                            'shippTo:id,account_name,gstin,address,pin_code,state,pan',
+                            'orderCreatedBy:id,name',
+                            'items.item:id,name,hsn_code',
+                            'items.unitMaster:id,s_name',
+                            'items.gsms.details',
+                            
+                            ])->where('id', $id)
+                            ->first();
+        $configuration = SaleInvoiceConfiguration::with(['terms','banks'])->where('company_id',Session::get('user_company_id'))->first();
+        // echo "<pre>";
+        // print_r($saleOrder->toArray()); exit;
+        return view('saleorder/view_sale_order',["saleOrder"=>$saleOrder, 'company_data'=>$company_data,'configuration'=>$configuration]);
+    }
     public function saleOrderSetting()
     {
         $company_id = auth()->user()->company_id ?? Session::get('user_company_id');
@@ -169,7 +242,7 @@ class SaleOrderController extends Controller
                             ->pluck('item_id')
                             ->toArray();
 
-        return view('saleOrderSetting', compact('groups', 'units', 'selectedItems', 'selectedUnits'));
+        return view('saleorder/saleOrderSetting', compact('groups', 'units', 'selectedItems', 'selectedUnits'));
     }
 
     /**

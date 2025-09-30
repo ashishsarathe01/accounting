@@ -20,6 +20,7 @@ use App\Http\Controllers\API\PurchaseController;
 use App\Http\Controllers\API\ModuleController;
 use App\Http\Controllers\API\GstSettingController;
 use App\Http\Controllers\API\AjaxController;
+use App\Http\Controllers\API\SupplierController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -45,149 +46,147 @@ Route::post('generate-mpin',[AuthController::class,'generateMpin']);
 Route::post('reset-mpin',[AuthController::class,'resetMpin']);
 Route::post('login-with-mpin',[AuthController::class,'loginWithMpin']);
 
- Route::middleware('auth:api')->group(function()
- {
+Route::middleware('auth:api')->group(function(){
     Route::get('get-user',[AuthController::class,'userInfo']);
+    /*********** Settings ***********/
 
-/*********** Settings ***********/
+    Route::get('module-list',[ModuleController::class,'moduleList']);
+    Route::get('user-assigned-modules',[ModuleController::class,'getAssignedModules']);
+    Route::post('update-user-privilege',[ModuleController::class,'assignModule']);
 
-Route::get('module-list',[ModuleController::class,'moduleList']);
-Route::get('user-assigned-modules',[ModuleController::class,'getAssignedModules']);
-Route::post('update-user-privilege',[ModuleController::class,'assignModule']);
+    // GST Configuration
+    Route::post('gst-configuration-list',[GstSettingController::class,'gstConfigurationList']);
+    Route::post('gst-configuration-branch-list',[GstSettingController::class,'gstConfigurationBranchList']);
+    Route::post('add-gst-configuration',[GstSettingController::class,'store']);
+    Route::post('add-gst-configuration-branch',[GstSettingController::class,'add_branch']);
+    Route::post('update-gst-configuration',[GstSettingController::class,'updateGstSetting']);
+    Route::post('update-gst-configuration-branch',[GstSettingController::class,'updateGstBranch']);
+    /*********** Company ***********/
 
-// GST Configuration
+    // Company info
+    Route::post('create-company',[CompanyController::class,'createCompany']);
+    Route::post('company-detail',[CompanyController::class,'companyDetail']);
+    Route::post('company-listing',[CompanyController::class,'companyListing']);
+    Route::post('update-company-details',[CompanyController::class,'updateCompanyDetails']);
 
-Route::post('gst-configuration-list',[GstSettingController::class,'gstConfigurationList']);
-Route::post('gst-configuration-branch-list',[GstSettingController::class,'gstConfigurationBranchList']);
-Route::post('add-gst-configuration',[GstSettingController::class,'store']);
-Route::post('add-gst-configuration-branch',[GstSettingController::class,'add_branch']);
-Route::post('update-gst-configuration',[GstSettingController::class,'updateGstSetting']);
-Route::post('update-gst-configuration-branch',[GstSettingController::class,'updateGstBranch']);
+    // GST
+    Route::post('verify-gst',[ThirdPartyController::class,'verifyGst']);
 
+    // Owners
+    Route::post('create-owner',[OwnerController::class,'createOwner']);
+    Route::post('owner-listing',[OwnerController::class,'ownerListing']);
+    Route::post('update-owner',[OwnerController::class,'updateOwner']);
+    Route::post('owner-resigning',[OwnerController::class,'ownerResigning']);
 
-/*********** Company ***********/
+    // Partners
+    Route::post('joint-partner-listing',[OwnerController::class,'jointPartnerListing']);
+    Route::post('resigned-partner-listing',[OwnerController::class,'resignedPartnerListing']);
 
-// Company info
-Route::post('create-company',[CompanyController::class,'createCompany']);
-Route::post('company-detail',[CompanyController::class,'companyDetail']);
-Route::post('company-listing',[CompanyController::class,'companyListing']);
-Route::post('update-company-details',[CompanyController::class,'updateCompanyDetails']);
+    // Share Holders
+    Route::post('create-shareholder',[ShareholderController::class,'createShareholder']);
+    Route::post('shareholder-listing',[ShareholderController::class,'shareholderListing']);
+    Route::post('update-shareholder',[ShareholderController::class,'updateShareholder']);
 
-// GST
-Route::post('verify-gst',[ThirdPartyController::class,'verifyGst']);
+    // Share Transfers
+    Route::post('create-share-transfer',[ShareTransferController::class,'createShareTransfer']);
+    Route::post('share-transfer-listing',[ShareTransferController::class,'shareTransferListing']);
+    Route::post('update-share-transfer',[ShareTransferController::class,'updateShareTransfer']);
 
+    // Bank
+    Route::post('create-bank',[BankController::class,'createBank']);
+    Route::post('bank-listing',[BankController::class,'bankListing']);
+    Route::post('update-bank',[BankController::class,'updateBank']);
+    /********* Administrator/Master *********/
 
+    // Heading
+    Route::post('add-heading',[AccountHeadingController::class,'createAccountHeading']);
+    Route::get('heading-list',[AccountHeadingController::class,'headingList']);
+    Route::post('get-heading',[AccountHeadingController::class,'edit']);
+    Route::post('update-heading',[AccountHeadingController::class,'updateAccountHeading']);
+    Route::post('delete-heading',[AccountHeadingController::class,'deleteAccountHeading']);
 
-// Owners
-Route::post('create-owner',[OwnerController::class,'createOwner']);
-Route::post('owner-listing',[OwnerController::class,'ownerListing']);
-Route::post('update-owner',[OwnerController::class,'updateOwner']);
-Route::post('owner-resigning',[OwnerController::class,'ownerResigning']);
+    // Account Groups
 
-// Partners
-Route::post('joint-partner-listing',[OwnerController::class,'jointPartnerListing']);
-Route::post('resigned-partner-listing',[OwnerController::class,'resignedPartnerListing']);
+    Route::post('add-account-group',[AccountGroupsController::class,'createAccountGroup']);
+    Route::get('account-groups-list',[AccountGroupsController::class,'accountGroupsList']);
+    Route::post('get-account-group',[AccountGroupsController::class,'edit']);
+    Route::post('update-account-group',[AccountGroupsController::class,'updateAccountGroup']);
+    Route::post('delete-account-group',[AccountGroupsController::class,'deleteAccountGroup']);
 
-// Share Holders
-Route::post('create-shareholder',[ShareholderController::class,'createShareholder']);
-Route::post('shareholder-listing',[ShareholderController::class,'shareholderListing']);
-Route::post('update-shareholder',[ShareholderController::class,'updateShareholder']);
+    // Accounts
 
-// Share Transfers
-Route::post('create-share-transfer',[ShareTransferController::class,'createShareTransfer']);
-Route::post('share-transfer-listing',[ShareTransferController::class,'shareTransferListing']);
-Route::post('update-share-transfer',[ShareTransferController::class,'updateShareTransfer']);
+    Route::post('add-account',[AccountsController::class,'createAccount']);
+    Route::get('account-list',[AccountsController::class,'accountList']);
+    Route::post('get-account',[AccountsController::class,'GetAccountbyId']);
+    Route::post('update-account',[AccountsController::class,'updateAccount']);
+    Route::post('delete-account',[AccountsController::class,'deleteAccount']);
 
+    // Units
 
-// Bank
-Route::post('create-bank',[BankController::class,'createBank']);
-Route::post('bank-listing',[BankController::class,'bankListing']);
-Route::post('update-bank',[BankController::class,'updateBank']);
+    Route::post('add-unit',[UnitsController::class,'createUnit']);
+    Route::get('unit-list',[UnitsController::class,'unitList']);
+    Route::post('get-unit',[UnitsController::class,'GetUnitbyId']);
+    Route::post('update-unit',[UnitsController::class,'updateUnit']);
+    Route::post('delete-unit',[UnitsController::class,'deleteUnit']);
 
+    // Item Group
 
+    Route::post('add-item-group',[ItemGroupsController::class,'createItemGroup']);
+    Route::get('item-group-list',[ItemGroupsController::class,'itemGroupList']);
+    Route::post('get-item-group',[ItemGroupsController::class,'GetItemGroupbyId']);
+    Route::post('update-item-group',[ItemGroupsController::class,'updateItemGroup']);
+    Route::post('delete-item-group',[ItemGroupsController::class,'deleteItemGroup']);
 
+    // Items
 
+    Route::post('add-item',[ManageItemsController::class,'createItem']);
+    Route::get('item-list',[ManageItemsController::class,'itemList']);
+    Route::post('get-item',[ManageItemsController::class,'GetItembyId']);
+    Route::post('update-item',[ManageItemsController::class,'updateItem']);
+    Route::post('delete-item',[ManageItemsController::class,'deleteItem']);
 
+    //  Bill Sundry
 
-/********* Administrator/Master *********/
-
-// Heading
-Route::post('add-heading',[AccountHeadingController::class,'createAccountHeading']);
-Route::get('heading-list',[AccountHeadingController::class,'headingList']);
-Route::post('get-heading',[AccountHeadingController::class,'edit']);
-Route::post('update-heading',[AccountHeadingController::class,'updateAccountHeading']);
-Route::post('delete-heading',[AccountHeadingController::class,'deleteAccountHeading']);
-
-// Account Groups
-
-Route::post('add-account-group',[AccountGroupsController::class,'createAccountGroup']);
-Route::get('account-groups-list',[AccountGroupsController::class,'accountGroupsList']);
-Route::post('get-account-group',[AccountGroupsController::class,'edit']);
-Route::post('update-account-group',[AccountGroupsController::class,'updateAccountGroup']);
-Route::post('delete-account-group',[AccountGroupsController::class,'deleteAccountGroup']);
-
-// Accounts
-
-Route::post('add-account',[AccountsController::class,'createAccount']);
-Route::get('account-list',[AccountsController::class,'accountList']);
-Route::post('get-account',[AccountsController::class,'GetAccountbyId']);
-Route::post('update-account',[AccountsController::class,'updateAccount']);
-Route::post('delete-account',[AccountsController::class,'deleteAccount']);
-
-// Units
-
-Route::post('add-unit',[UnitsController::class,'createUnit']);
-Route::get('unit-list',[UnitsController::class,'unitList']);
-Route::post('get-unit',[UnitsController::class,'GetUnitbyId']);
-Route::post('update-unit',[UnitsController::class,'updateUnit']);
-Route::post('delete-unit',[UnitsController::class,'deleteUnit']);
-
-// Item Group
-
-Route::post('add-item-group',[ItemGroupsController::class,'createItemGroup']);
-Route::get('item-group-list',[ItemGroupsController::class,'itemGroupList']);
-Route::post('get-item-group',[ItemGroupsController::class,'GetItemGroupbyId']);
-Route::post('update-item-group',[ItemGroupsController::class,'updateItemGroup']);
-Route::post('delete-item-group',[ItemGroupsController::class,'deleteItemGroup']);
-
-// Items
-
-Route::post('add-item',[ManageItemsController::class,'createItem']);
-Route::get('item-list',[ManageItemsController::class,'itemList']);
-Route::post('get-item',[ManageItemsController::class,'GetItembyId']);
-Route::post('update-item',[ManageItemsController::class,'updateItem']);
-Route::post('delete-item',[ManageItemsController::class,'deleteItem']);
-
-//  Bill Sundry
-
-Route::post('add-bill-sundry',[BillSundrysController::class,'createBillSundry']);
-Route::get('bill-sundry-list',[BillSundrysController::class,'billSundryList']);
-Route::post('get-bill-sundry',[BillSundrysController::class,'GetBillSundrybyId']);
-Route::post('update-bill-sundry',[BillSundrysController::class,'updateBillSundry']);
-Route::post('delete-bill-sundry',[BillSundrysController::class,'deleteBillSundry']);
+    Route::post('add-bill-sundry',[BillSundrysController::class,'createBillSundry']);
+    Route::get('bill-sundry-list',[BillSundrysController::class,'billSundryList']);
+    Route::post('get-bill-sundry',[BillSundrysController::class,'GetBillSundrybyId']);
+    Route::post('update-bill-sundry',[BillSundrysController::class,'updateBillSundry']);
+    Route::post('delete-bill-sundry',[BillSundrysController::class,'deleteBillSundry']);
 
 
-/********* Transactions *********/
+    /********* Transactions *********/
 
-// Sales
+    // Sales
 
-Route::post('add-sales-voucher',[SalesController::class,'createSalesVoucher']);
-Route::get('sales-voucher-list',[SalesController::class,'SalesVoucherList']);
-Route::post('get-sales-voucher',[SalesController::class,'GetSalesVoucherbyId']);
-Route::post('update-sales-voucher',[SalesController::class,'updateSalesVoucher']);
-Route::post('delete-sales-voucher',[SalesController::class,'deleteSalesVoucher']);
+    Route::post('add-sales-voucher',[SalesController::class,'createSalesVoucher']);
+    Route::get('sales-voucher-list',[SalesController::class,'SalesVoucherList']);
+    Route::post('get-sales-voucher',[SalesController::class,'GetSalesVoucherbyId']);
+    Route::post('update-sales-voucher',[SalesController::class,'updateSalesVoucher']);
+    Route::post('delete-sales-voucher',[SalesController::class,'deleteSalesVoucher']);
 
-// Ajax Calculations
+    // Ajax Calculations
 
-Route::post('get-items-calculation',[AjaxController::class,'getItemDetails']);
+    Route::post('get-items-calculation',[AjaxController::class,'getItemDetails']);
 
-// Purchase
+    // Purchase
 
-Route::post('add-purchase-voucher',[PurchaseController::class,'createPurchaseVoucher']);
-Route::get('purchase-voucher-list',[PurchaseController::class,'PurchaseVoucherList']);
-Route::post('get-purchase-voucher',[PurchaseController::class,'GetPurchaseVoucherbyId']);
-Route::post('update-purchase-voucher',[PurchaseController::class,'updatePurchaseVoucher']);
-Route::post('delete-purchase-voucher',[PurchaseController::class,'deletePurchaseVoucher']);
+    Route::post('add-purchase-voucher',[PurchaseController::class,'createPurchaseVoucher']);
+    Route::get('purchase-voucher-list',[PurchaseController::class,'PurchaseVoucherList']);
+    Route::post('get-purchase-voucher',[PurchaseController::class,'GetPurchaseVoucherbyId']);
+    Route::post('update-purchase-voucher',[PurchaseController::class,'updatePurchaseVoucher']);
+    Route::post('delete-purchase-voucher',[PurchaseController::class,'deletePurchaseVoucher']);
 
-    
+    //Suppliers Purchase Management
+    Route::post('account-list',[SupplierController::class,'accountList']);
+    Route::post('add-purchase-vehicle-entry',[SupplierController::class,'addPurchaseVehicleEntry']);
+    Route::post('edit-purchase-vehicle-entry',[SupplierController::class,'editPurchaseVehicleEntry']);
+    Route::post('delete-purchase-vehicle-entry',[SupplierController::class,'deletePurchaseVehicleEntry']);
+    Route::post('purchase-vehicle-entry-list',[SupplierController::class,'purchaseVehicleEntryList']);
+    Route::post('supplier-head-list',[SupplierController::class,'supplierHeadList']);
+    Route::post('location-by-account',[SupplierController::class,'locationByAccount']);
+    Route::post('head-contract-rate-by-location',[SupplierController::class,'headContractRateByLocation']);
+    Route::post('store-supplier-purchase-report',[SupplierController::class,'storeSupplierPurchaseReport']);
+    Route::post('view-supplier-purchase-report',[SupplierController::class,'viewSupplierPurchaseReport']);
+    Route::post('upload-report-image',[SupplierController::class,'uploadReportImage']);
+    Route::post('approve-report',[SupplierController::class,'approveReport']);
  });

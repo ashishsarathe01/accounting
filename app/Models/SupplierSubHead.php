@@ -12,4 +12,8 @@ class SupplierSubHead extends Model
     {
         return $this->belongsTo(ItemGroups::class, 'group_id');
     }
+    public function report()
+    {
+        return $this->hasMany(SupplierPurchaseReport::class, 'head_id');
+    }
 }

@@ -5,9 +5,11 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use App\Helpers\CommonHelper;
 use App\Models\State;
 use App\Models\Accounts;
 use App\Models\AccountGroups;
+use App\Models\Supplier;
 use Carbon\Carbon;
 use DB;
 
@@ -218,7 +220,8 @@ class AccountsController extends Controller
             return response()->json(['code' => 200, 'message' => 'Account has been deleted successfully!']);
         }
     }
-
+    
+    
     /**
      * Generates failed response and message.
      */

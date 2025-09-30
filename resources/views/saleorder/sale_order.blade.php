@@ -46,23 +46,26 @@
                   <thead>
                      <tr class=" font-12 text-body bg-light-pink ">
                         <th class="">Date </th>
-                        <th class="">Vch/Bill No </th>
-                        <th class="">Party Name</th>
-                        <th style="text-align: right;">Amount </th>
+                        <th class="">Bill To</th>
+                        <th class="">Shipp To</th>
+                        <th style="text-align: right;">Freight</th>
+                        <th style="text-align: right;">Status</th>
                         <th class="w-min-120 border-none bg-light-pink text-body text-center">Action</th>
                      </tr>
                   </thead>
                   <tbody>
-                     
-                     <tr class="font-14 font-heading bg-white">
-                        <td class="w-min-120 fw-bold font-heading">TOTAL</td>
-                        <td class="w-min-120"></td>
-                        <td class="w-min-120 "></td>
-                        <td class="w-min-120 fw-bold font-heading" style="text-align: right;">
-                           
-                        </td>
-                        <td class="w-min-120 text-center"></td>
-                     </tr>
+                     @foreach ($saleOrder as $value)
+                        <tr>
+                           <td>{{date('d-m-Y',strtotime($value->created_at))}}</td>
+                           <td>{{$value->billTo->account_name}}</td>
+                           <td>{{$value->shippTo->account_name}}</td>
+                           <td style="text-align: right;">@if($value->freight==1) YES  @else NO @endif</td>
+                           <td style="text-align: right;">@if($value->status==0) PENDING  @else  @endif</td>
+                           <td style="text-align: center;">
+                              <a href="{{route('sale-order.show',$value->id)}}"><button class="btn btn-info">View</button></a>
+                           </td>
+                        </tr>
+                     @endforeach
                   </tbody>
                </table>
             </div>

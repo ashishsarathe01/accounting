@@ -31,7 +31,7 @@ class ItemGroupsController extends Controller
             return response()->json($validator->errors(), 422);
         }
 
-        $ItemGroups = ItemGroups::select('item_groups.*',DB::raw('(select company_name from companies where companies.id = item_groups.company_id limit 1) as company_name'))->where(['delete'=>'0','company_id'=>$request->company_id])->get();
+        $ItemGroups = ItemGroups::select('item_groups.id','item_groups.company_id','item_groups.group_name','item_groups.parameterized_stock_status','item_groups.config_status','item_groups.no_of_parameter','item_groups.alternative_qty',DB::raw('(select company_name from companies where companies.id = item_groups.company_id limit 1) as company_name'))->where(['delete'=>'0','company_id'=>$request->company_id])->get();
 
          if ($ItemGroups) {
             return response()->json([

@@ -51,7 +51,7 @@ use App\Http\Controllers\gstReturn\GSTR2BController;
 use App\Http\Controllers\gstReturn\GSTR2AController;
 use App\Http\Controllers\gstReturn\GSTR3BController;
 use App\Http\Controllers\ParameterizedStockController;
-use App\Http\Controllers\SaleOrderController;
+use App\Http\Controllers\saleOrder\SaleOrderController;
 use App\Http\Controllers\Supplier\SupplierController;
 use App\Http\Controllers\Supplier\SupplierRateLocationWiseController;
 use App\Http\Controllers\Supplier\SupplierPurchaseController;
