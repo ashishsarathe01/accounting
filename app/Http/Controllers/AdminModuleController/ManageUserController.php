@@ -4,8 +4,10 @@ namespace App\Http\Controllers\AdminModuleController;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Models\Admin;
 use DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Hash;
 
 class ManageUserController extends Controller
 {
@@ -39,10 +41,7 @@ class ManageUserController extends Controller
             'status'=>'required'
         ]);
 
-        $data = $request->only([
-            'name','mobile','email','marital_status','gender','dob','aadhar_id',
-            'present_address','permanent_address','date_of_appointment','status'
-        ]);
+       
 
         if ($request->hasFile('aadhar_image')) {
             $file = $request->file('aadhar_image');
@@ -51,7 +50,30 @@ class ManageUserController extends Controller
             $data['aadhar_image'] = $filename;
         }
 
-        DB::table('admins')->insert($data);
+
+
+                    // create a new Admin instance
+                    $admin = new Admin;
+
+                    $admin->name = $request->input('name');
+                    $admin->mobile = $request->input('mobile');
+                    $admin->email = $request->input('email');
+                    $admin->marital_status = $request->input('marital_status');
+                    $admin->gender = $request->input('gender');
+                    $admin->dob = $request->input('dob');
+                    $admin->aadhar_id = $request->input('aadhar_id');
+                    $admin->present_address = $request->input('present_address');
+                    $admin->permanent_address = $request->input('permanent_address');
+                    $admin->date_of_appointment = $request->input('date_of_appointment');
+                    $admin->status = $request->input('status');
+
+                    // hash the mobile number as password before saving
+                    $admin->password = Hash::make($request->input('mobile'));
+
+                    // save the record
+                    $admin->save();
+
+
         return redirect()->route('admin.manageUser.index')->with('success','User added successfully');
     }
 
