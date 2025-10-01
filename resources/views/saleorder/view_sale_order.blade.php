@@ -100,8 +100,7 @@
       </td>
       <td colspan="4">
          <p><span class="width25">Date </span>: <span class="lft_mar15">{{date('d-m-Y',strtotime($saleOrder->created_at))}}</span> </p>
-         <p>&nbsp;</p>
-         {{-- <p><span class="width25">PO NO</span>: <span class="lft_mar15">SHUKLA09264</span> </p> --}}
+         <p><span class="width25">Sale Order No.</span> : <span class="lft_mar15">{{$saleOrder->sale_order_no}}</span> </p>
       </td>
    </tr>
    <tr class="rowFont">

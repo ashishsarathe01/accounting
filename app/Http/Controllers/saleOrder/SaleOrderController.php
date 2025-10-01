@@ -93,6 +93,14 @@ class SaleOrderController extends Controller
                       ->where('status', '1')
                       ->whereIn('id', $allowedUnitIds)
                       ->get();
+        $units = Units::select('units.*', 'sale-order-settings.unit_type')
+                    ->join('sale-order-settings', 'sale-order-settings.item_id', '=', 'units.id')
+                    ->where('units.company_id', $company_id)
+                    ->where('units.delete', '0')
+                    ->where('units.status', '1')
+                    ->where('sale-order-settings.company_id', $company_id)
+                    ->where('sale-order-settings.setting_type', 'UNIT')
+                    ->get();
 
         return view('saleorder/add_sale_order', compact('groups', 'units','party_list'));
     }
@@ -118,10 +126,31 @@ class SaleOrderController extends Controller
         DB::transaction(function() use ($request) {
 
         // 1. Create Sale Order
+        $sale_order = SaleOrder::select('sale_order_no')
+                ->where('company_id', Session::get('user_company_id'))
+                ->where('created_at', 'LIKE', date('Y-m-d').'%')
+                ->orderBy('id', 'desc')
+                ->first();
+        if($sale_order){
+            $new_order_no = substr($sale_order->sale_order_no,-4);
+            if($new_order_no==""){
+                $new_order_no = '0001';
+            }else{
+                $new_order_no = $new_order_no + 1;
+                $new_order_no = sprintf("%'04d", $new_order_no);
+            }
+        }else{
+            $new_order_no = '0001';
+        }
+        $sale_order_no = "SO".date("dmY").$new_order_no;
+        //$sale_order_no = "SO".str_pad((SaleOrder::where('company_id', Session::get('user_company_id'))->max('id') + 1), 6, '0', STR_PAD_LEFT);
         $saleOrder = SaleOrder::create([
             'bill_to' => $request->bill_to,
             'shipp_to' => $request->ship_to,
             'deal'    => $request->deal,
+            'purchase_order_no'    => $request->purchase_order_no,
+            'sale_order_no'    => $sale_order_no,
+            'purchase_order_date'    => $request->purchase_order_date,
             'freight' => $request->freight ?? null,
             'created_by' => auth()->id(),
             'company_id' => Session::get('user_company_id'),
@@ -250,6 +279,7 @@ class SaleOrderController extends Controller
      */
     public function updateSaleOrderSettings(Request $request)
     {
+        
         $company_id = auth()->user()->company_id ?? Session::get('user_company_id');
 
         // --- Handle Items ---
@@ -284,27 +314,27 @@ class SaleOrderController extends Controller
         $newUnits = $request->input('units', []);
         $existingUnits = SaleOrderSetting::where('company_id', $company_id)
                             ->where('setting_type', 'UNIT')
-                            ->pluck('item_id')
-                            ->toArray();
+                            ->delete('item_id');
 
-        $toAddUnits = array_diff($newUnits, $existingUnits);
-        foreach ($toAddUnits as $unit_id) {
+        //$toAddUnits = array_diff($newUnits, $existingUnits);
+        foreach ($newUnits as $unit_id) {
             SaleOrderSetting::create([
                 'company_id'   => $company_id,
                 'item_id'      => $unit_id,
+                'unit_type' => $request->input('unit_type_'.$unit_id) ?? null,
                 'setting_type' => 'UNIT',
                 'setting_for'  => 'SALE ORDER',
                 'status'       => 1,
             ]);
         }
 
-        $toRemoveUnits = array_diff($existingUnits, $newUnits);
-        if (!empty($toRemoveUnits)) {
-            SaleOrderSetting::where('company_id', $company_id)
-                ->where('setting_type', 'UNIT')
-                ->whereIn('item_id', $toRemoveUnits)
-                ->delete();
-        }
+        // $toRemoveUnits = array_diff($existingUnits, $newUnits);
+        // if (!empty($toRemoveUnits)) {
+        //     SaleOrderSetting::where('company_id', $company_id)
+        //         ->where('setting_type', 'UNIT')
+        //         ->whereIn('item_id', $toRemoveUnits)
+        //         ->delete();
+        // }
 
         return redirect()->route('sale-order.settings')
             ->with('success', 'Settings updated successfully.');

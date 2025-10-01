@@ -86,13 +86,23 @@
                             </ul> 
                         </div>
                     </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label for="purchase_order_no" class="form-label font-14 font-heading">Purchase Order No.</label>
+                            <input type="text" name="purchase_order_no" id="purchase_order_no" class="form-control" placeholder="Purchase Order No">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="purchase_order_date" class="form-label font-14 font-heading">Purchase Order Date</label>
+                            <input type="date" name="purchase_order_date" id="purchase_order_date" class="form-control">
+                        </div>
+                    </div>
                     <!-- Items Container -->
                     <div id="items_container">
                         <div class="item-section border rounded p-2 mb-3 position-relative" id="item_section_1">
                             <svg style="color: red; cursor: pointer; margin-right: 8px;float:right" xmlns="http://www.w3.org/2000/svg" tabindex="0" width="35" height="35" fill="currentColor" class="bi bi-file-minus-fill remove-item-btn" viewBox="0 0 16 16" onclick="removeItem(1)"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1" /></svg> 
                             <div class="row">
                                 <div class="col-md-3 mb-3">
-                                    <label>Item *</label>
+                                    <label class="form-label font-14 font-heading">Item *</label>
                                     <select name="items[1][item_id]" class="form-select select2-single" required>
                                         <option value="">Select Item</option>
                                         @if(isset($groups))
@@ -109,8 +119,8 @@
                                     </select>
                                 </div>
                                 <div class="col-md-3 mb-3">
-                                    <label>Price *</label>
-                                    <input type="number" name="items[1][price]" class="form-control" placeholder="Enter Price" required>
+                                    <label for="price_1" class="form-label font-14 font-heading">Price *</label>
+                                    <input type="number" name="items[1][price]" class="form-control" placeholder="Enter Price" required id="price_1" step="0.01" min="0">
                                 </div>
                                 <div class="mb-3 col-md-3">
                                     <label for="bill_price_1" class="form-label font-14 font-heading">Bill Price <input type="checkbox" class="bill_price_check" data-id="1" value="1"></label>
@@ -131,12 +141,12 @@
                                     </ul> 
                                 </div>
                                 <div class="col-md-3 mb-3">
-                                    <label>Unit *</label>
-                                    <select name="items[1][unit]" class="form-select" required>
+                                    <label for="unit_1" class="form-label font-14 font-heading">Unit *</label>
+                                    <select name="items[1][unit]" class="form-select unit" required id="unit_1" data-id="1">
                                         <option value="">Select Unit</option>
                                         @if(isset($units))
                                             @foreach($units as $unit)
-                                                <option value="{{ $unit->id }}">{{ $unit->name }}</option>
+                                                <option value="{{ $unit->id }}" data-name="{{ $unit->name }}" data-unit_type="{{ $unit->unit_type }}">{{ $unit->name }}</option>
                                             @endforeach
                                         @endif
                                     </select>
@@ -166,46 +176,50 @@
                                                 </svg>
                                                
                                             </td>
-                                            <td><input type="text" name="items[1][gsms][1][gsm]" class="form-control" placeholder="Enter GSM" required></td>
+                                            <td><input type="text" name="items[1][gsms][1][gsm]" class="form-control gsm_1" placeholder="Enter GSM" required></td>
                                         </tr>
                                     </table>
                                     <table class="table table-bordered" id="table_1_1">
                                         <tr>
                                             <td>SIZES</td>
-                                            <td>REELS</td>
+                                            <td class="qty_title_1">REELS</td>
                                         </tr>
                                         @php $row_index = 0;@endphp
                                         @while ($row_index < 5) 
                                             <tr>
-                                                <td><input type="text" name="items[1][gsms][1][details][{{ $row_index }}][size]" class="form-control" placeholder="SIZES" ></td>
-                                                <td><input type="number" name="items[1][gsms][1][details][{{ $row_index }}][reel]" class="form-control" placeholder="REELS" ></td>
+                                                <td><input type="text" name="items[1][gsms][1][details][{{ $row_index }}][size]" class="form-control size size_1_1" placeholder="SIZES" onkeyup="approxCalculation(1,1)"></td>
+                                                <td><input type="number" name="items[1][gsms][1][details][{{ $row_index }}][reel]" class="form-control quantity quantity_1_1" placeholder="REELS" data-item_id="1" data-gsm_id="1" data-quantity_id="{{ $row_index }}" onkeyup="approxCalculation(1,1)"></td>
                                             </tr>
                                             @php $row_index++; @endphp
-                                            
                                         @endwhile
-                                        {{-- <tr>
-                                            <td><input type="text" name="items[1][gsms][1][details][0][size]" class="form-control" placeholder="SIZES" required></td>
-                                            <td><input type="number" name="items[1][gsms][1][details][0][reel]" class="form-control" placeholder="REELS" required></td>
-                                        </tr> --}}
+                                        <tr>
+                                            <th style="text-align: center">Total</th>
+                                            <td>
+                                                <input type="number" class="form-control quantity_total" id="quantity_total_1_1" placeholder="0" readonly>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th style="text-align: center">Approx Qty</th>
+                                            <td>
+                                                <input type="number" class="form-control approx" id="approx_qty_1_1" placeholder="0" readonly id="approx_qty_1_1">
+                                            </td>
+                                        </tr>
                                     </table>
                                     <span class="add_row" data-item="1" data-gsm="1" style="color:#3c8dbc;cursor:pointer;">Add Row</span>
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    <p><svg id="add_item_btn" 
-     width="36" height="36" viewBox="0 0 24 24" 
-     xmlns="http://www.w3.org/2000/svg" cursor="pointer">
-  <!-- circle background -->
-  <circle cx="12" cy="12" r="12" fill="#007bff"/>
-  <!-- plus sign -->
-  <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/>
-</svg>
-
-                        
-                                            </p>
-
+                    <p>
+                        <svg id="add_item_btn" 
+                        width="36" height="36" viewBox="0 0 24 24" 
+                        xmlns="http://www.w3.org/2000/svg" cursor="pointer">
+                        <!-- circle background -->
+                        <circle cx="12" cy="12" r="12" fill="#007bff"/>
+                        <!-- plus sign -->
+                        <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/>
+                        </svg>
+                    </p>
                     <div class="d-flex">
                         <div class="ms-auto">
                             <input type="submit" value="SAVE" class="btn btn-primary">
@@ -246,21 +260,40 @@ $(document).ready(function() {
         newSection.find(".remove-item-btn").attr("onclick", "removeItem(" + itemIndex + ")");
         newSection.find(".bill_price_check").attr("data-id",itemIndex);
         newSection.find(".bill_price").attr("id","bill_price_"+itemIndex);
-        newSection.find(".bill_price").attr("data-id",itemIndex);
+        newSection.find("#unit_1").attr("data-id",itemIndex);
+        newSection.find("#sub_unit_1").attr("data-id",itemIndex);
+        newSection.find("#unit_1").attr("id","unit_"+itemIndex);
+        newSection.find("#sub_unit_1").attr("id","sub_unit_"+itemIndex);
+
+        
+
         newSection.find(".freight_div").remove("");
+        newSection.find(".bill_price").attr("id","bill_price_"+itemIndex);
         let detailsRows = '';
         for (let row_index = 0; row_index < 5; row_index++) {
             detailsRows += `
                 <tr>
                     <td>
-                        <input type="text" name="items[${itemIndex}][gsms][1}][details][${row_index}][size]" class="form-control" placeholder="SIZES" >
+                        <input type="text" name="items[${itemIndex}][gsms][1}][details][${row_index}][size]" class="form-control  size size_${itemIndex}_1" placeholder="SIZES" onkeyup="approxCalculation(${itemIndex},1)">
                     </td>
                     <td>
-                        <input type="number" name="items[${itemIndex}][gsms][1][details][${row_index}][reel]" class="form-control" placeholder="REELS" >
+                        <input type="number" name="items[${itemIndex}][gsms][1][details][${row_index}][reel]" class="form-control quantity quantity_${itemIndex}_1" data-item_id="${itemIndex}" data-gsm_id="1" data-quantity_id="${row_index}" placeholder="REELS" onkeyup="approxCalculation(${itemIndex},1)">
                     </td>
                 </tr>
             `;
         }
+        detailsRows += `<tr>
+                        <th style="text-align: center">Total</th>
+                        <td>
+                            <input type="number" class="form-control quantity_total" id="quantity_total_${itemIndex}_1" placeholder="0" readonly>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th style="text-align: center">Approx Qty</th>
+                        <td>
+                            <input type="number"  class="form-control approx" placeholder="0" id="approx_qty_${itemIndex}_1" readonly>
+                        </td>
+                    </tr>`;
         newSection.find("[id^='dynamic_gsm_']").attr("id", "dynamic_gsm_" + itemIndex).html(`
             <div class="col-md-3 gsm-block" id="gsm_block_${itemIndex}_1">
                 <table class="table table-bordered">
@@ -268,13 +301,13 @@ $(document).ready(function() {
                         <td style="width: 40%;">GSM
                            <svg style="color: green;cursor:pointer;" class="bg-primary rounded-circle add_gsm" data-item_id="${itemIndex}" data-gsm_id="1" width="24" height="24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/></svg>
                         </td>
-                        <td><input type="text" name="items[${itemIndex}][gsms][1][gsm]" class="form-control" placeholder="Enter GSM" required></td>
+                        <td><input type="text" name="items[${itemIndex}][gsms][1][gsm]" class="form-control gsm_${itemIndex}" placeholder="Enter GSM" required></td>
                     </tr>
                 </table>
                 <table class="table table-bordered" id="table_${itemIndex}_1">
                     <tr>
                         <td>SIZES</td>
-                        <td>REELS</td>
+                        <td class="qty_title_${itemIndex}">REELS</td>
                     </tr>`+
                     detailsRows+
                 `</table>
@@ -287,6 +320,7 @@ $(document).ready(function() {
                 name = name.replace(/items\[\d+\]/, "items[" + itemIndex + "]");
                 $(this).attr("name", name).val("");
             }
+            
         });
         $("#items_container").append(newSection);
         newSection.find(".select2-single").select2({
@@ -309,19 +343,33 @@ $(document).ready(function() {
         let item_id = $(this).data("item_id");
         let gsm_id = parseInt($(this).data("gsm_id")) + 1;
         $(this).data("gsm_id", gsm_id);
+
+        let unit_name = $("#unit_"+item_id+" option:selected").attr("data-name");
         let detailsRows = '';
         for (let row_index = 0; row_index < 5; row_index++) {
             detailsRows += `
                 <tr>
                     <td>
-                        <input type="text" name="items[${item_id}][gsms][${gsm_id}][details][${row_index}][size]" class="form-control" placeholder="SIZES" >
+                        <input type="text" name="items[${item_id}][gsms][${gsm_id}][details][${row_index}][size]" class="form-control  size size_${item_id}_${gsm_id}" placeholder="SIZES" onkeyup="approxCalculation(${item_id},${gsm_id})">
                     </td>
                     <td>
-                        <input type="number" name="items[${item_id}][gsms][${gsm_id}][details][${row_index}][reel]" class="form-control" placeholder="REELS" >
+                        <input type="number" name="items[${item_id}][gsms][${gsm_id}][details][${row_index}][reel]" class="form-control quantity quantity_${item_id}_${gsm_id}" data-item_id="${item_id}" data-gsm_id="${gsm_id}" data-quantity_id="${row_index}" placeholder="${unit_name}" onkeyup="approxCalculation(${item_id},${gsm_id})">
                     </td>
                 </tr>
             `;
         }
+        detailsRows += `<tr>
+            <th style="text-align: center">Total</th>
+            <td>
+                <input type="number" class="form-control quantity_total" id="quantity_total_${item_id}_${gsm_id}" placeholder="0" readonly>
+            </td>
+        </tr>
+        <tr>
+            <th style="text-align: center">Approx Qty</th>
+            <td>
+                <input type="number" class="form-control approx" placeholder="0" id="approx_qty_${item_id}_${gsm_id}" readonly>
+            </td>
+        </tr>`;
         $("#dynamic_gsm_" + item_id).append(`
             <div class="col-md-3 gsm-block" id="gsm_block_${item_id}_${gsm_id}">
                 <table class="table table-bordered">
@@ -330,13 +378,13 @@ $(document).ready(function() {
                             
                            <svg style="color: red; cursor: pointer; margin-right: 8px;" xmlns="http://www.w3.org/2000/svg" tabindex="0" width="24" height="24" fill="currentColor" class="bi bi-file-minus-fill remove-gsm-btn" viewBox="0 0 16 16" onclick="removeGsm(${item_id},${gsm_id})"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1" /></svg>
                         </td>
-                        <td><input type="text" name="items[${item_id}][gsms][${gsm_id}][gsm]" class="form-control" placeholder="Enter GSM" required></td>
+                        <td><input type="text" name="items[${item_id}][gsms][${gsm_id}][gsm]" class="form-control gsm_${item_id}" placeholder="Enter GSM" required></td>
                     </tr>
                 </table>
                 <table class="table table-bordered" id="table_${item_id}_${gsm_id}">
                     <tr>
                         <td>SIZES</td>
-                        <td>REELS</td>
+                        <td class="qty_title_${item_id}">${unit_name}</td>
                     </tr>`+
                     detailsRows+`
                 </table>
@@ -367,12 +415,11 @@ $(document).ready(function() {
         let itemId = $(this).data("item");
         let gsmId = $(this).data("gsm");
         let table = $("#table_" + itemId + "_" + gsmId);
-        let rowIndex = table.find("tr").length - 1; // exclude header row
-        // table.find("tr").eq(1).before(`
-        table.find("tbody").append(`
+        let rowIndex = table.find("tr").length - 3; // exclude header row
+        table.find("tr").eq(-2).before(`
             <tr>
-                <td><input type="text" name="items[${itemId}][gsms][${gsmId}][details][${rowIndex}][size]" class="form-control" placeholder="SIZES" ></td>
-                <td><input type="number" name="items[${itemId}][gsms][${gsmId}][details][${rowIndex}][reel]" class="form-control" placeholder="REELS" ></td>
+                <td><input type="text" name="items[${itemId}][gsms][${gsmId}][details][${rowIndex}][size]" class="form-control  size size_${itemId}_${gsmId}" placeholder="SIZES" onkeyup="approxCalculation(${itemId},${gsmId})"></td>
+                <td><input type="number" name="items[${itemId}][gsms][${gsmId}][details][${rowIndex}][reel]" class="form-control" placeholder="REELS" onkeyup="approxCalculation(${itemId},${gsmId})"></td>
             </tr>
         `);
     });
@@ -408,6 +455,103 @@ $(document).on('click', '.bill_price_check', function() {
         $("#bill_price_"+id).prop("readonly", true);
         $("#bill_price_"+id).val('');
     }
+});
+$(document).on('keyup', '.quantity', function() {
+    var item_id = $(this).data("item_id");
+    var gsm_id = $(this).data("gsm_id");
+    var quantity_id = $(this).data("quantity_id");
+    var total = 0;
+    // Calculate total for this GSM block
+    $(".quantity_"+item_id+"_"+gsm_id).each(function() {
+        var val = parseFloat($(this).val());
+        if (!isNaN(val)) {
+            total += val;
+        }
+    });   
+    // Update the total field for this GSM block
+    $("#quantity_total_" + item_id + "_" + gsm_id).val(total);
+});
+function approxCalculation(item_id,gsm_id){
+    let kg_per_inch = 15;
+    var total_qty = 0;
+    var reelArr = [];
+    var sizeArr = [];
+    $(".quantity_"+item_id+"_"+gsm_id).each(function(e,i) {
+        if($(this).val()==''){
+            reelArr.push(0);
+        }else{
+            reelArr.push($(this).val());
+        }
+        if($(this).val()!=''){
+            total_qty = parseInt(total_qty) + parseInt($(this).val()); 
+        }
+    });
+    $(".size_"+item_id+"_"+gsm_id).each(function(e,i) {
+        if($(this).val()==''){
+            sizeArr.push(0);
+        }else{
+            sizeArr.push($(this).val());
+        }    
+    });
+    let approx_qty = 0;
+    if($("#unit_"+item_id+" option:selected").attr("data-unit_type")=='REEL'){
+        for(let i=0;i<reelArr.length;i++){
+            approx_qty = approx_qty + reelArr[i] * sizeArr[i] * kg_per_inch;
+        }
+    }else{
+        for(let i=0;i<reelArr.length;i++){
+            if(reelArr[i]!=""){
+                approx_qty = approx_qty + reelArr[i]/(sizeArr[i] * kg_per_inch);
+            }
+        }
+    }
+    if($("#unit_"+item_id+" option:selected").attr("data-unit_type")=='REEL' && kg_per_inch!=''){
+        //totalWeight = Math.round(totalWeight / 100) * 100;   
+        if($("#sub_unit_"+item_id).val()=="CM"){
+            approx_qty = approx_qty/ 2.54;
+        }else if($("#sub_unit_"+item_id).val()=="MM"){
+            approx_qty = approx_qty/ 25.4;
+        }
+        approx_qty = Math.round(approx_qty / 100) * 100;
+        $("#approx_qty_"+item_id+"_"+gsm_id).val(approx_qty);
+    }else if($("#unit_"+item_id+" option:selected").attr("data-unit_type")=='KG' && kg_per_inch!=''){
+        approx_qty = Math.round(approx_qty);
+        $("#approx_qty_"+item_id+"_"+gsm_id).val(approx_qty);
+    }
+    return;
+    let total_w = 0;
+    $(".app_weight").each(function() {
+        total_w = parseInt(total_w)+parseInt($(this).html());
+    });
+    $("#total_"+a+"_"+b).html(c);
+    let total_r = 0;
+    $(".total_reel").each(function() {
+        total_r=parseInt(total_r)+parseInt($(this).html());
+    });
+    if(total_w!=0){
+        $("#total_reel").html(total_r+' ('+total_w+')');
+    }else{
+        $("#total_reel").html(total_r);
+    }
+}
+$(document).on('change','.sub_unit',function(){
+    var id = $(this).attr('data-id');
+    let ind = 1;
+    $(".gsm_"+id).each(function(){
+        approxCalculation(id,ind);
+        ind++;
+    });
+});
+$(document).on('change','.unit',function(){
+    var id = $(this).attr('data-id');
+    var name = $(this).find("option:selected").attr("data-name");
+    let ind = 1;
+    $(".gsm_"+id).each(function(){
+        approxCalculation(id,ind);
+        $(".qty_title_"+id).html(name);
+        $(".quantity_"+id+"_"+ind).attr('placeholder',name);
+        ind++;
+    });
 });
 </script>
 @endsection

@@ -45,7 +45,10 @@
                <table class="table-striped table m-0 shadow-sm sale_table">
                   <thead>
                      <tr class=" font-12 text-body bg-light-pink ">
-                        <th class="">Date </th>
+                        <th style="width: 9%;">Date </th>
+                        <th class="">Sale Order No.</th>
+                        <th class="">Purchase Order No.</th>
+                        <th class="">Purchase Order Date</th>
                         <th class="">Bill To</th>
                         <th class="">Shipp To</th>
                         <th style="text-align: right;">Freight</th>
@@ -57,6 +60,9 @@
                      @foreach ($saleOrder as $value)
                         <tr>
                            <td>{{date('d-m-Y',strtotime($value->created_at))}}</td>
+                           <td>{{$value->sale_order_no}}</td>
+                           <td>{{$value->purchase_order_no}}</td>
+                           <td>@empty(!$value->purchase_order_date) {{date('d-m-Y',strtotime($value->purchase_order_date))}} @endempty  </td>
                            <td>{{$value->billTo->account_name}}</td>
                            <td>{{$value->shippTo->account_name}}</td>
                            <td style="text-align: right;">@if($value->freight==1) YES  @else NO @endif</td>

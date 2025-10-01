@@ -12,6 +12,7 @@ class SaleOrderSetting extends Model
         'item_id',
         'setting_type',
         'setting_for',
+        'unit_type',
         'company_id',
         'status',
     ];

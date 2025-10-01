@@ -22,7 +22,6 @@
 
                 <form action="{{ route('sale-order.settings.update') }}" method="POST">
                     @csrf
-
                     <div class="mb-4">
                         <h6 style="font-size:1.3rem;">Items (Grouped)</h6>
                         @foreach($groups as $group)
@@ -52,7 +51,6 @@
                             </div>
                         @endforeach
                     </div>
-
                     <div class="mb-4">
                         <h6 style="font-size:1.3rem;">Units</h6>
                         @foreach($units as $unit)
@@ -60,10 +58,11 @@
                                 <input type="checkbox" name="units[]" value="{{ $unit->id }}" class="unit-checkbox"
                                 @if(in_array($unit->id, $selectedUnits)) checked @endif>
                                 {{ $unit->name }}
+
+                                <input type="radio" name="unit_type_{{ $unit->id }}" value="REEL"> REEL <input type="radio" name="unit_type_{{ $unit->id }}" value="KG"> KG
                             </div>
                         @endforeach
                     </div>
-
                     <div class="mb-3 text-start">
                         <button type="submit" class="btn btn-primary px-4">Save Settings</button>
                     </div>

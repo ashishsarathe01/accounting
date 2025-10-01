@@ -12,7 +12,7 @@ class SaleOrder extends Model
     // Explicitly tell Laravel to use the 'sales' table
     
 
-    protected $fillable = ['bill_to','shipp_to','deal_id','freight','company_id','created_by','created_at'];
+    protected $fillable = ['sale_order_no','purchase_order_no','purchase_order_date','bill_to','shipp_to','deal_id','freight','company_id','created_by','created_at'];
     public function items() {
         return $this->hasMany(SaleOrderItem::class);
     }
