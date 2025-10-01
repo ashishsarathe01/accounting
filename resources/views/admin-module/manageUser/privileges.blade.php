@@ -88,17 +88,17 @@ document.querySelectorAll('input[type="checkbox"]').forEach(function(chk) {
         const children = li.querySelectorAll('ul input[type="checkbox"]');
         children.forEach(c => c.checked = this.checked);
 
-        // Update parent checkboxes recursively
-        function updateParent(el) {
-            const parentLi = el.closest('ul')?.closest('li');
-            if (parentLi) {
-                const parentChk = parentLi.querySelector('input[type="checkbox"]');
-                const siblings = Array.from(el.closest('ul').querySelectorAll('input[type="checkbox"]'));
-                parentChk.checked = siblings.every(s => s.checked);
-                updateParent(parentLi);
-            }
-        }
-        updateParent(this);
+        // // Update parent checkboxes recursively
+        // function updateParent(el) {
+        //     const parentLi = el.closest('ul')?.closest('li');
+        //     if (parentLi) {
+        //         const parentChk = parentLi.querySelector('input[type="checkbox"]');
+        //         const siblings = Array.from(el.closest('ul').querySelectorAll('input[type="checkbox"]'));
+        //         parentChk.checked = siblings.every(s => s.checked);
+        //         updateParent(parentLi);
+        //     }
+        // }
+        // updateParent(this);
     });
 });
 </script>

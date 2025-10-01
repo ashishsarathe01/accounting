@@ -4,6 +4,7 @@ namespace App\Providers;
 use App\Models\User;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
+use Session;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -26,27 +27,28 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
         Gate::define('action-module', function (User $user, $module_id) {
-            if ($user->type=="OWNER") {
+            if ($user->type=="OWNER" && !Session::get('admin_id')) {
                 return true;
             }
+            
             return $user->hasPrivilege($module_id, 'delete');
         });
         Gate::define('view-module', function (User $user, $module_id) {
-            if ($user->type=="OWNER") {
+            if ($user->type=="OWNER" && !Session::get('admin_id')) {
                 return true;
             }
             return $user->hasPrivilege($module_id, 'view');
         });
 
         Gate::define('create-module', function (User $user, $module_id) {
-            if ($user->type=="OWNER") {
+            if ($user->type=="OWNER" && !Session::get('admin_id')) {
                 return true;
             }
             return $user->hasPrivilege($module_id, 'create');
         });
 
         Gate::define('update-module', function (User $user, $module_id) {
-            if ($user->type=="OWNER") {
+            if ($user->type=="OWNER" && !Session::get('admin_id')) {
                 return true;
             }
             return $user->hasPrivilege($module_id, 'edit');

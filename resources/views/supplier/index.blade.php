@@ -18,9 +18,11 @@
                 <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
                     <h5 class="transaction-table-title m-0 py-2">List of Supplier</h5>
                     <button class="btn btn-primary btn-sm d-flex align-items-center supplier_bonus" >Supplier Bonus</button>
-                    <a href="{{ route('supplier.create') }}" class="btn btn-xs-primary">ADD
-                        <svg class="position-relative ms-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M9.1665 15.8327V10.8327H4.1665V9.16602H9.1665V4.16602H10.8332V9.16602H15.8332V10.8327H10.8332V15.8327H9.1665Z" fill="white" /></svg>
-                    </a>
+                     @can('view-module', 104)
+                        <a href="{{ route('supplier.create') }}" class="btn btn-xs-primary">ADD
+                              <svg class="position-relative ms-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M9.1665 15.8327V10.8327H4.1665V9.16602H9.1665V4.16602H10.8332V9.16602H15.8332V10.8327H10.8332V15.8327H9.1665Z" fill="white" /></svg>
+                        </a>
+                     @endcan
                 </div>
                 <div class="transaction-table bg-white table-view shadow-sm">
                     <table class="table-striped table m-0 shadow-sm receipt_table">
@@ -69,10 +71,14 @@
                                 </td>
                             @endforeach
                             <td class="w-min-120 border-none text-center">
+                              @can('view-module', 105)
                                 <a href="{{ URL::to('supplier/'.$supplier->id.'/edit') }}">  <img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
                                  <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $supplier->id;?>">
+                                 @endcan
+                                    @can('view-module', 106)
                                     <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
                                  </button>
+                                 @endcan
                             </td>
                     @endforeach                    
                   </tbody>

@@ -13,6 +13,7 @@ use App\Models\PrivilegesModuleMapping;
 use App\Helpers\CommonHelper;
 use Hash;
 use Session;
+use DB;
 class AuthController extends Controller{
    public function index(){
       if(Session::get('user_id') && !empty(Session::get('user_id'))){
@@ -337,13 +338,26 @@ class AuthController extends Controller{
         if (Auth::check()) {
          if(Session::get('user_type')=="OWNER"){
             $user_id = Session::get('user_id');
+            if(Session::get('admin_id') && Session::get('admin_id')!=''){
+            
+            $assign_company = DB::table('assign_companies')
+                        ->where('admin_users_id', Session::get('admin_id'))
+                        ->where('merchant_id', $user_id)
+                        ->pluck('comp_id')
+                        ->toArray();
+                        
+            $company_list = Companies::where('user_id', $user_id)->whereIn('id',$assign_company)->get();
+            
+         }else{
             $company_list = Companies::where('user_id', $user_id)->get();
+         }
+           
          }else if(Session::get('user_type')=="EMPLOYEE"){
             $assign_company = PrivilegesModuleMapping::where('employee_id',Session('user_id'))->pluck('company_id')->toArray();
             $user = Companies::select('user_id')->where('id', Session::get('user_company_id'))->first();
             $company_list = Companies::where('user_id', $user->user_id)->whereIn('id',$assign_company)->get();
          }
-            
+        
             
             return view('dashboard/dashboard')->with('company_list', $company_list);
         }

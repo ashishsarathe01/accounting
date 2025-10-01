@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\View;
 use App\Models\Companies;
 use App\Models\PrivilegesModuleMapping;
 use Session;
-
+use DB;
 class HeaderDataMiddleware
 {
     /**
@@ -21,7 +21,20 @@ class HeaderDataMiddleware
    public function handle(Request $request, Closure $next){
       if(Session::get('user_type')=="OWNER"){
          $user_id = Session::get('user_id');
-         $company_list = Companies::where('user_id', $user_id)->get();
+         if(Session::get('admin_id') && Session::get('admin_id')!=''){
+            
+            $assign_company = DB::table('assign_companies')
+                        ->where('admin_users_id', Session::get('admin_id'))
+                        ->where('merchant_id', $user_id)
+                        ->pluck('comp_id')
+                        ->toArray();
+                        
+            $company_list = Companies::where('user_id', $user_id)->whereIn('id',$assign_company)->get();
+            
+         }else{
+            $company_list = Companies::where('user_id', $user_id)->get();
+         }
+         
       }else if(Session::get('user_type')=="EMPLOYEE"){
          $assign_company = PrivilegesModuleMapping::where('employee_id',Session('user_id'))->pluck('company_id')->toArray();
          

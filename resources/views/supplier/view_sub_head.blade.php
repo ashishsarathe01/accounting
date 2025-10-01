@@ -21,12 +21,13 @@
                <h5 class="table-title m-0 py-2 ">
                   List of Sub Head
                </h5>
-               
-                  <a href="{{ route('supplier-sub-head.create') }}" class="btn btn-xs-primary">ADD
-                     <svg class="position-relative ms-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
-                        <path d="M9.1665 15.8327V10.8327H4.1665V9.16602H9.1665V4.16602H10.8332V9.16602H15.8332V10.8327H10.8332V15.8327H9.1665Z" fill="white" />
-                     </svg>
-                  </a>
+                @can('view-module', 102)
+                    <a href="{{ route('supplier-sub-head.create') }}" class="btn btn-xs-primary">ADD
+                        <svg class="position-relative ms-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M9.1665 15.8327V10.8327H4.1665V9.16602H9.1665V4.16602H10.8332V9.16602H15.8332V10.8327H10.8332V15.8327H9.1665Z" fill="white" />
+                        </svg>
+                    </a>
+                @endcan
                
                
             </div>
@@ -49,7 +50,9 @@
                             <td class="w-min-120">{{$value->sequence}}</td>
                             <td class="w-min-120">@if($value->status==1) Enable @else Disable @endif</td>
                             <td class="w-min-120 text-center">
+                                @can('view-module', 103)
                                 <a href="{{ URL::to('supplier-sub-head/' . $value->id . '/edit') }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
+                                @endcan
                                 {{-- <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $value->id; ?>">
                                     <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
                                 </button> --}}

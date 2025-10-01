@@ -48,9 +48,15 @@ input[type=number] {
                 @endif
                 <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
                     <h5 class="transaction-table-title m-0 py-2">Manage Supplier Rate</h5>
-                    <button class="btn btn-primary btn-sm d-flex align-items-center supplier_bonus" >Supplier Bonus</button>
-                    <button class="btn btn-primary btn-sm d-flex align-items-center manage_rate_difference" >Manage Rate Difference</button>
-                    <button class="btn btn-primary btn-sm d-flex align-items-center manage_location">Manage Location</button>
+                    @can('view-module', 107)
+                        <button class="btn btn-primary btn-sm d-flex align-items-center supplier_bonus" >Supplier Bonus</button>
+                    @endcan
+                    @can('view-module', 108)
+                        <button class="btn btn-primary btn-sm d-flex align-items-center manage_rate_difference" >Manage Rate Difference</button>
+                    @endcan
+                    @can('view-module', 109)
+                        <button class="btn btn-primary btn-sm d-flex align-items-center manage_location">Manage Location</button>
+                    @endcan
                 </div>
                 <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('store-supplier-rate') }}">
                     @csrf

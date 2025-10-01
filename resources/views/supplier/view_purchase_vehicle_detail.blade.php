@@ -41,141 +41,147 @@ input::-webkit-inner-spin-button {
                   {{ session('success') }}
                </div>
             @endif
-            
-            <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
-               <h5 class="transaction-table-title m-0 py-2">Pending</h5>               
-               <a href="{{route('add-purchase-info')}}"><button class="btn btn-primary btn-sm d-flex align-items-center" >ADD</button></a>
-            </div>
-            <div class="transaction-table bg-white table-view shadow-sm">
-               <table class="table-striped table m-0 shadow-sm payment_table">
-                  <thead>
-                     <tr class=" font-12 text-body bg-light-pink ">
-                        <th class="w-min-120 border-none bg-light-pink text-body">Date</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Vehicle No.</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Group</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Account Name </th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Gross Weight</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body text-center">Action </th>
-                     </tr>
-                  </thead>
-                  <tbody>
-                    @foreach($pending_report as $key => $value)
-                        <tr>
-                            <td>@if($value->entry_date) {{date('d-m-Y',strtotime($value->entry_date))}} @endif</td>
-                            <td>{{$value->vehicle_no}}</td>
-                            <td>{{$value->group_name}}</td>
-                            <td>{{$value->account_name}}</td>
-                            <td>{{$value->gross_weight}}</td>
-                            <td class="w-min-120 text-center">
-                                <a href="{{ URL::to('edit-purchase-info/' . $value->id) }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
-                                <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $value->id; ?>">
-                                    <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
-                                </button>
-                                <img src="{{ URL::asset('public/assets/imgs/start.svg')}}" class="px-1 start" alt="" style="width: 30px;cursor:pointer;" id="start_btn_{{$value->id}}"  data-gross_weight="{{$value->gross_weight}}" data-account_id="{{$value->account_id}}" data-id="<?php echo $value->id; ?>" data-group_id="<?php echo $value->group_id; ?>" data-map_purchase_id="<?php echo $value->map_purchase_id; ?>" data-price="<?php echo $value->price; ?>" data-purchase_amount="<?php echo $value->purchase_amount; ?>" data-purchase_date="<?php echo $value->purchase_date; ?>" data-purchase_voucher_no="<?php echo $value->purchase_voucher_no; ?>" data-status="0" data-vehicle_no="{{$value->vehicle_no}}" data-entry_date="{{$value->entry_date}}" data-purchase_qty="<?php echo $value->purchase_qty; ?>">
-                            </td>
+            @can('view-module', 110)
+                <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
+                <h5 class="transaction-table-title m-0 py-2">Pending</h5>               
+                <a href="{{route('add-purchase-info')}}"><button class="btn btn-primary btn-sm d-flex align-items-center" >ADD</button></a>
+                </div>
+                <div class="transaction-table bg-white table-view shadow-sm">
+                <table class="table-striped table m-0 shadow-sm payment_table">
+                    <thead>
+                        <tr class=" font-12 text-body bg-light-pink ">
+                            <th class="w-min-120 border-none bg-light-pink text-body">Date</th>
+                            <th class="w-min-120 border-none bg-light-pink text-body">Vehicle No.</th>
+                            <th class="w-min-120 border-none bg-light-pink text-body">Group</th>
+                            <th class="w-min-120 border-none bg-light-pink text-body">Account Name </th>
+                            <th class="w-min-120 border-none bg-light-pink text-body">Gross Weight</th>
+                            <th class="w-min-120 border-none bg-light-pink text-body text-center">Action </th>
                         </tr>
-                    @endforeach
-                     
-                  </tbody>
-               </table>
-            </div>
-            <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
-               <h5 class="transaction-table-title m-0 py-2">In Process</h5>
-            </div>
-            <div class="transaction-table bg-white table-view shadow-sm">
-               <table class="table-striped table m-0 shadow-sm payment_table">
-                  <thead>
-                     <tr class=" font-12 text-body bg-light-pink ">
-                        <th class="w-min-120 border-none bg-light-pink text-body">Date</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Vehicle No.</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Group</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Account Name </th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Gross Weight</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body text-center">Action </th>
-                     </tr>
-                  </thead>
-                  <tbody>
-                    @foreach($in_process_report as $key => $value)
-                        <tr>
-                            <td>@if($value->entry_date) {{date('d-m-Y',strtotime($value->entry_date))}} @endif</td>
-                            <td>{{$value->vehicle_no}}</td>
-                            <td>{{$value->group_name}}</td>
-                            <td>{{$value->account_name}}</td>
-                            <td>{{$value->gross_weight}}</td>
-                            <td class="w-min-120 text-center">
-                                 <button class="btn btn-info upload_image" data-id="{{$value->id}}">Click</button>
-                                 <img src="{{ URL::asset('public/assets/imgs/start.svg')}}" class="px-1 start" alt="" style="width: 30px;cursor:pointer;" id="start_btn_{{$value->id}}" data-gross_weight="{{$value->gross_weight}}" data-account_id="{{$value->account_id}}" data-id="<?php echo $value->id; ?>" data-group_id="<?php echo $value->group_id; ?>" data-map_purchase_id="<?php echo $value->map_purchase_id; ?>" data-price="<?php echo $value->price; ?>" data-purchase_amount="<?php echo $value->purchase_amount; ?>" data-purchase_date="<?php echo $value->purchase_date; ?>" data-purchase_voucher_no="<?php echo $value->purchase_voucher_no; ?>" data-status="1" data-vehicle_no="{{$value->vehicle_no}}" data-purchase_qty="<?php echo $value->purchase_qty; ?>" data-entry_date="{{$value->entry_date}}">
-                            </td>
+                    </thead>
+                    <tbody>
+                        @foreach($pending_report as $key => $value)
+                            <tr>
+                                <td>@if($value->entry_date) {{date('d-m-Y',strtotime($value->entry_date))}} @endif</td>
+                                <td>{{$value->vehicle_no}}</td>
+                                <td>{{$value->group_name}}</td>
+                                <td>{{$value->account_name}}</td>
+                                <td>{{$value->gross_weight}}</td>
+                                <td class="w-min-120 text-center">
+                                    <a href="{{ URL::to('edit-purchase-info/' . $value->id) }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
+                                    <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $value->id; ?>">
+                                        <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
+                                    </button>
+                                    <img src="{{ URL::asset('public/assets/imgs/start.svg')}}" class="px-1 start" alt="" style="width: 30px;cursor:pointer;" id="start_btn_{{$value->id}}"  data-gross_weight="{{$value->gross_weight}}" data-account_id="{{$value->account_id}}" data-id="<?php echo $value->id; ?>" data-group_id="<?php echo $value->group_id; ?>" data-map_purchase_id="<?php echo $value->map_purchase_id; ?>" data-price="<?php echo $value->price; ?>" data-purchase_amount="<?php echo $value->purchase_amount; ?>" data-purchase_date="<?php echo $value->purchase_date; ?>" data-purchase_voucher_no="<?php echo $value->purchase_voucher_no; ?>" data-status="0" data-vehicle_no="{{$value->vehicle_no}}" data-entry_date="{{$value->entry_date}}" data-purchase_qty="<?php echo $value->purchase_qty; ?>">
+                                </td>
+                            </tr>
+                        @endforeach
+                        
+                    </tbody>
+                </table>
+                </div>
+            @endcan
+            @can('view-module', 111)
+                <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
+                <h5 class="transaction-table-title m-0 py-2">In Process</h5>
+                </div>
+                <div class="transaction-table bg-white table-view shadow-sm">
+                <table class="table-striped table m-0 shadow-sm payment_table">
+                    <thead>
+                        <tr class=" font-12 text-body bg-light-pink ">
+                            <th class="w-min-120 border-none bg-light-pink text-body">Date</th>
+                            <th class="w-min-120 border-none bg-light-pink text-body">Vehicle No.</th>
+                            <th class="w-min-120 border-none bg-light-pink text-body">Group</th>
+                            <th class="w-min-120 border-none bg-light-pink text-body">Account Name </th>
+                            <th class="w-min-120 border-none bg-light-pink text-body">Gross Weight</th>
+                            <th class="w-min-120 border-none bg-light-pink text-body text-center">Action </th>
                         </tr>
-                    @endforeach
-                     
-                  </tbody>
-               </table>
-            </div>
-            
-            <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
-               <h5 class="transaction-table-title m-0 py-2">Pending For Approval</h5>
-            </div>
-            <div class="transaction-table bg-white table-view shadow-sm">
-               <table class="table-striped table m-0 shadow-sm payment_table">
-                  <thead>
-                     <tr class=" font-12 text-body bg-light-pink ">
-                        <th class="w-min-120 border-none bg-light-pink text-body">Date</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Vehicle No.</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Group</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Account Name </th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Gross Weight</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body text-center">Action </th>
-                     </tr>
-                  </thead>
-                  <tbody>
-                    @foreach($pending_for_approval_report as $key => $value)
-                        <tr @if($value->reapproval==1) style="background:grey" @endif>
-                            <td>@if($value->entry_date) {{date('d-m-Y',strtotime($value->entry_date))}} @endif</td>
-                            <td>{{$value->vehicle_no}}</td>
-                            <td>{{$value->group_name}}</td>
-                            <td>{{$value->account_name}}</td>
-                            <td>{{$value->gross_weight}}</td>
-                            <td class="w-min-120 text-center">
-                                <button class="btn btn-info start" data-gross_weight="{{$value->gross_weight}}" data-account_id="{{$value->account_id}}" id="start_btn_{{$value->id}}" data-id="<?php echo $value->id; ?>" data-group_id="<?php echo $value->group_id; ?>" data-map_purchase_id="<?php echo $value->map_purchase_id; ?>" data-price="<?php echo $value->price; ?>" data-purchase_amount="<?php echo $value->purchase_amount; ?>" data-purchase_date="<?php echo $value->purchase_date; ?>" data-purchase_voucher_no="<?php echo $value->purchase_voucher_no; ?>" data-status="2" data-vehicle_no="{{$value->vehicle_no}}" data-purchase_qty="<?php echo $value->purchase_qty; ?>" data-entry_date="{{$value->entry_date}}">View</button>
-                            </td>
+                    </thead>
+                    <tbody>
+                        @foreach($in_process_report as $key => $value)
+                            <tr>
+                                <td>@if($value->entry_date) {{date('d-m-Y',strtotime($value->entry_date))}} @endif</td>
+                                <td>{{$value->vehicle_no}}</td>
+                                <td>{{$value->group_name}}</td>
+                                <td>{{$value->account_name}}</td>
+                                <td>{{$value->gross_weight}}</td>
+                                <td class="w-min-120 text-center">
+                                    <button class="btn btn-info upload_image" data-id="{{$value->id}}">Click</button>
+                                    <img src="{{ URL::asset('public/assets/imgs/start.svg')}}" class="px-1 start" alt="" style="width: 30px;cursor:pointer;" id="start_btn_{{$value->id}}" data-gross_weight="{{$value->gross_weight}}" data-account_id="{{$value->account_id}}" data-id="<?php echo $value->id; ?>" data-group_id="<?php echo $value->group_id; ?>" data-map_purchase_id="<?php echo $value->map_purchase_id; ?>" data-price="<?php echo $value->price; ?>" data-purchase_amount="<?php echo $value->purchase_amount; ?>" data-purchase_date="<?php echo $value->purchase_date; ?>" data-purchase_voucher_no="<?php echo $value->purchase_voucher_no; ?>" data-status="1" data-vehicle_no="{{$value->vehicle_no}}" data-purchase_qty="<?php echo $value->purchase_qty; ?>" data-entry_date="{{$value->entry_date}}">
+                                </td>
+                            </tr>
+                        @endforeach
+                        
+                    </tbody>
+                </table>
+                </div>
+            @endcan
+            @can('view-module', 112)
+                <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
+                <h5 class="transaction-table-title m-0 py-2">Pending For Approval</h5>
+                </div>
+                <div class="transaction-table bg-white table-view shadow-sm">
+                <table class="table-striped table m-0 shadow-sm payment_table">
+                    <thead>
+                        <tr class=" font-12 text-body bg-light-pink ">
+                            <th class="w-min-120 border-none bg-light-pink text-body">Date</th>
+                            <th class="w-min-120 border-none bg-light-pink text-body">Vehicle No.</th>
+                            <th class="w-min-120 border-none bg-light-pink text-body">Group</th>
+                            <th class="w-min-120 border-none bg-light-pink text-body">Account Name </th>
+                            <th class="w-min-120 border-none bg-light-pink text-body">Gross Weight</th>
+                            <th class="w-min-120 border-none bg-light-pink text-body text-center">Action </th>
                         </tr>
-                    @endforeach
-                     
-                  </tbody>
-               </table>
-            </div>
-            <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
-               <h5 class="transaction-table-title m-0 py-2">Approved</h5>
-            </div>
-            <div class="transaction-table bg-white table-view shadow-sm">
-               <table class="table-striped table m-0 shadow-sm payment_table">
-                  <thead>
-                     <tr class=" font-12 text-body bg-light-pink ">
-                        <th class="w-min-120 border-none bg-light-pink text-body">Date</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Vehicle No.</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Group</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Account Name </th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Gross Weight</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body text-center">Action </th>
-                     </tr>
-                  </thead>
-                  <tbody>
-                    @foreach($approved_report as $key => $value)
-                        <tr>
-                            <td>@if($value->entry_date) {{date('d-m-Y',strtotime($value->entry_date))}} @endif</td>
-                            <td>{{$value->vehicle_no}}</td>
-                            <td>{{$value->group_name}}</td>
-                            <td>{{$value->account_name}}</td>
-                            <td>{{$value->gross_weight}}</td>
-                            <td class="w-min-120 text-center">
-                                <button class="btn btn-info start" data-gross_weight="{{$value->gross_weight}}" data-account_id="{{$value->account_id}}" id="start_btn_{{$value->id}}" data-id="<?php echo $value->id; ?>" data-group_id="<?php echo $value->group_id; ?>" data-map_purchase_id="<?php echo $value->map_purchase_id; ?>" data-price="<?php echo $value->price; ?>" data-purchase_amount="<?php echo $value->purchase_amount; ?>" data-purchase_date="<?php echo $value->purchase_date; ?>" data-purchase_voucher_no="<?php echo $value->purchase_voucher_no; ?>" data-status="3" data-vehicle_no="{{$value->vehicle_no}}" data-purchase_qty="<?php echo $value->purchase_qty; ?>" data-entry_date="{{$value->entry_date}}">View</button>
-                            </td>
+                    </thead>
+                    <tbody>
+                        @foreach($pending_for_approval_report as $key => $value)
+                            <tr @if($value->reapproval==1) style="background:grey" @endif>
+                                <td>@if($value->entry_date) {{date('d-m-Y',strtotime($value->entry_date))}} @endif</td>
+                                <td>{{$value->vehicle_no}}</td>
+                                <td>{{$value->group_name}}</td>
+                                <td>{{$value->account_name}}</td>
+                                <td>{{$value->gross_weight}}</td>
+                                <td class="w-min-120 text-center">
+                                    <button class="btn btn-info start" data-gross_weight="{{$value->gross_weight}}" data-account_id="{{$value->account_id}}" id="start_btn_{{$value->id}}" data-id="<?php echo $value->id; ?>" data-group_id="<?php echo $value->group_id; ?>" data-map_purchase_id="<?php echo $value->map_purchase_id; ?>" data-price="<?php echo $value->price; ?>" data-purchase_amount="<?php echo $value->purchase_amount; ?>" data-purchase_date="<?php echo $value->purchase_date; ?>" data-purchase_voucher_no="<?php echo $value->purchase_voucher_no; ?>" data-status="2" data-vehicle_no="{{$value->vehicle_no}}" data-purchase_qty="<?php echo $value->purchase_qty; ?>" data-entry_date="{{$value->entry_date}}">View</button>
+                                </td>
+                            </tr>
+                        @endforeach
+                        
+                    </tbody>
+                </table>
+                </div>
+            @endcan
+            @can('view-module', 113)
+                <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
+                <h5 class="transaction-table-title m-0 py-2">Approved</h5>
+                </div>
+                <div class="transaction-table bg-white table-view shadow-sm">
+                <table class="table-striped table m-0 shadow-sm payment_table">
+                    <thead>
+                        <tr class=" font-12 text-body bg-light-pink ">
+                            <th class="w-min-120 border-none bg-light-pink text-body">Date</th>
+                            <th class="w-min-120 border-none bg-light-pink text-body">Vehicle No.</th>
+                            <th class="w-min-120 border-none bg-light-pink text-body">Group</th>
+                            <th class="w-min-120 border-none bg-light-pink text-body">Account Name </th>
+                            <th class="w-min-120 border-none bg-light-pink text-body">Gross Weight</th>
+                            <th class="w-min-120 border-none bg-light-pink text-body text-center">Action </th>
                         </tr>
-                    @endforeach
-                  </tbody>
-               </table>
-            </div>
+                    </thead>
+                    <tbody>
+                        @foreach($approved_report as $key => $value)
+                            <tr>
+                                <td>@if($value->entry_date) {{date('d-m-Y',strtotime($value->entry_date))}} @endif</td>
+                                <td>{{$value->vehicle_no}}</td>
+                                <td>{{$value->group_name}}</td>
+                                <td>{{$value->account_name}}</td>
+                                <td>{{$value->gross_weight}}</td>
+                                <td class="w-min-120 text-center">
+                                    <button class="btn btn-info start" data-gross_weight="{{$value->gross_weight}}" data-account_id="{{$value->account_id}}" id="start_btn_{{$value->id}}" data-id="<?php echo $value->id; ?>" data-group_id="<?php echo $value->group_id; ?>" data-map_purchase_id="<?php echo $value->map_purchase_id; ?>" data-price="<?php echo $value->price; ?>" data-purchase_amount="<?php echo $value->purchase_amount; ?>" data-purchase_date="<?php echo $value->purchase_date; ?>" data-purchase_voucher_no="<?php echo $value->purchase_voucher_no; ?>" data-status="3" data-vehicle_no="{{$value->vehicle_no}}" data-purchase_qty="<?php echo $value->purchase_qty; ?>" data-entry_date="{{$value->entry_date}}">View</button>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+                </div>
+            @endcan
          </div>
          <!-- <div class="col-lg-1 d-flex justify-content-center">
             <div class="shortcut-key ">

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Session;
+use DB;
 
 class User extends Authenticatable
 {
@@ -44,10 +45,19 @@ class User extends Authenticatable
     }
     public function hasPrivilege($module_id, $action)
     {
-        $priv = \App\Models\PrivilegesModuleMapping::where('employee_id', $this->id)
-            ->where('module_id', $module_id)
-            ->where('company_id', Session()->get('user_company_id'))
-            ->first();
+        
+            if ($this->type=="OWNER" && Session::get('admin_id')!="") {
+                
+                $priv = DB::table('admin_user_privileges_module_mappings')->where('user_id', Session::get('admin_id'))
+                    ->where('module_id', $module_id)
+                    ->first();
+            }else{
+                $priv = \App\Models\PrivilegesModuleMapping::where('employee_id', $this->id)
+                    ->where('module_id', $module_id)
+                    ->where('company_id', Session()->get('user_company_id'))
+                    ->first();
+            }
+        
 
         return $priv;
     }

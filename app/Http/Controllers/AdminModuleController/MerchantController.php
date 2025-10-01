@@ -129,24 +129,33 @@ class MerchantController extends Controller
     public function loginMerchant(Request $request)
     {
         // Find user by ID
+        $admin_id = Session::get('admin_id');
+        $admin_type = Session::get('type');
         Auth::logout();
         $user = User::where('id', $request->id)->first();
-
         if ($user) {
             Auth::login($user);
-            $user_data  = auth()->user();              
-            $from_date = "";$to_date = "";            
-
-            $company = Companies::where('user_id', $user_data->id)
+            $user_data  = auth()->user();
+            $from_date = "";$to_date = "";
+            $assign_company = DB::table('assign_companies')
+                        ->where('admin_users_id', $admin_id)
+                        ->where('merchant_id', $user_data->id)
+                        ->first();
+            if($assign_company){
+                $company = Companies::where('user_id', $user_data->id)
+                        ->where('id',$assign_company->comp_id)
+                        ->first();
+            }else{
+                $company = Companies::where('user_id', $user_data->id)
                         ->where('default_company', '1')
                         ->first();
-
+            }
+            
             if($company){
                 $y = explode("-",$company->default_fy);
                 $from_date = date('Y-m-d',strtotime($y[0]."-04-01"));
                 $to_date   = date('Y-m-d',strtotime($y[1]."-03-31"));
-            }            
-
+            }
             Session::put([
                 'user_id' => $user_data->id,
                 'user_name' => $user_data->name,
@@ -158,6 +167,8 @@ class MerchantController extends Controller
                 'user_type' => $user_data->type,
                 'to_date' => $to_date,
                 'user_company_id' => isset($company) ? $company->id : '',
+                'admin_id' => $admin_id,
+                'admin_type' => $admin_type,
             ]);
 
             $response = [

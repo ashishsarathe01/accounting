@@ -619,80 +619,90 @@
                </div>               
             @endcan
             @can('module-permission',1)
-            <div class="card bg-blue pt-2 px-2 rounded-0 aside-bottom-divider">
-                  <div class="card-header py-12 px-2 border-0 rounded-0 d-flex" id="displayHeading">
-                     <a class="nav-link text-white font-14 fw-500 dropdown-icon-img p-0 collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#businessCollapse" aria-expanded="true" aria-controls="businessCollapse">
-                        <img src="{{ URL::asset('public/assets/imgs/display.svg')}}" class="me-2" alt="">
-                              Business Management
-                     </a>
+               @can('view-module', 94)
+                  <div class="card bg-blue pt-2 px-2 rounded-0 aside-bottom-divider">
+                     <div class="card-header py-12 px-2 border-0 rounded-0 d-flex" id="displayHeading">
+                        <a class="nav-link text-white font-14 fw-500 dropdown-icon-img p-0 collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#businessCollapse" aria-expanded="true" aria-controls="businessCollapse">
+                           <img src="{{ URL::asset('public/assets/imgs/display.svg')}}" class="me-2" alt="">
+                                 Business Management
+                        </a>
+                     </div>                     
+                     <div id="businessCollapse" class="collapse" aria-labelledby="displayHeading" data-bs-parent="#accordion">
+                        <ul class="nav flex-column">
+                           @can('view-module', 95)
+                              <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue" style="border: 1px solid #007bff;">
+                                 <!-- Toggle for Balance Sheet submenu -->
+                                 <a class="text-decoration-none d-flex text-blue collapsed"
+                                    href="#"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#purchaseSubmenu"
+                                    aria-expanded="false"
+                                    aria-controls="purchaseSubmenu"> 
+                                    Purchase Management
+                                    <i class="arrow-icon fa fa-chevron-down ms-auto"></i>
+                                 </a>
+                                 <!-- Submenu under Balance Sheet -->
+                                 <div class="collapse ps-3" id="purchaseSubmenu">
+                                    <ul class="nav flex-column">
+                                       @can('view-module', 97)
+                                          <li class="py-1 clickable-row-blue">
+                                             <a href="{{ route('supplier-sub-head.index') }}" class="text-blue">Manage Sub Head</a>
+                                          </li>
+                                       @endcan
+                                       @can('view-module', 98)
+                                          <li class="py-1 clickable-row-blue">
+                                             <a href="{{ route('supplier.index') }}" class="text-blue">Manage Supplier</a>
+                                          </li>
+                                       @endcan
+                                       @can('view-module', 99)
+                                          <li class="py-1 clickable-row-blue">
+                                             <a href="{{ route('manage-supplier-rate') }}" class="text-blue">Manage Rate</a>
+                                          </li>
+                                       @endcan
+                                       @can('view-module', 100)
+                                          <li class="py-1 clickable-row-blue">
+                                             <a href="{{ route('manage-purchase-info') }}" class="text-blue">Purchase Vehicle Entry</a>
+                                          </li>
+                                       @endcan
+                                       @can('view-module', 101)                                       
+                                          <li class="py-1 clickable-row-blue">
+                                             <a href="{{ route('manage-supplier-purchase-report') }}" class="text-blue">Report </a>
+                                          </li>
+                                       @endcan
+                                    </ul>
+                                 </div>
+                              </li>
+                           @endcan
+                           @can('view-module', 96)
+                              <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue" style="border: 1px solid #007bff;">
+                                 <!-- Toggle for Balance Sheet submenu -->
+                                 <a class="text-decoration-none d-flex text-blue collapsed"
+                                    href="#"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#saleOrderSubmenu"
+                                    aria-expanded="false"
+                                    aria-controls="saleOrderSubmenu"> 
+                                    Sale Order
+                                    <i class="arrow-icon fa fa-chevron-down ms-auto"></i>
+                                 </a>
+                                 <!-- Submenu under Balance Sheet -->
+                                 <div class="collapse ps-3" id="saleOrderSubmenu">
+                                    <ul class="nav flex-column">
+                                       <li class="py-1 clickable-row-blue">
+                                          <a href="{{ route('sale-order.index') }}" class="text-blue">Manage Sale Order</a>
+                                       </li>
+                                       <li class="py-1 clickable-row-blue">
+                                          <a href="{{ route('sale-order.settings') }}" class="text-blue">Sales Order Settings</a>
+                                       </li>
+                                    </ul>
+                                 </div>
+                              </li>
+                           @endcan
+                        </ul>
+                     </div>
                   </div>
-                  
-                  <div id="businessCollapse" class="collapse" aria-labelledby="displayHeading" data-bs-parent="#accordion">
-                     <ul class="nav flex-column">
-                        <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue" style="border: 1px solid #007bff;">
-                           <!-- Toggle for Balance Sheet submenu -->
-                           <a class="text-decoration-none d-flex text-blue collapsed"
-                              href="#"
-                              data-bs-toggle="collapse"
-                              data-bs-target="#purchaseSubmenu"
-                              aria-expanded="false"
-                              aria-controls="purchaseSubmenu"> 
-                              Purchase Management
-                              <i class="arrow-icon fa fa-chevron-down ms-auto"></i>
-                           </a>
-                           <!-- Submenu under Balance Sheet -->
-                           <div class="collapse ps-3" id="purchaseSubmenu">
-                              <ul class="nav flex-column">
-                                 <li class="py-1 clickable-row-blue">
-                                    <a href="{{ route('supplier-sub-head.index') }}" class="text-blue">Manage Sub Head</a>
-                                 </li>
-                                 <li class="py-1 clickable-row-blue">
-                                    <a href="{{ route('supplier.index') }}" class="text-blue">Manage Supplier</a>
-                                 </li>
-                                 <li class="py-1 clickable-row-blue">
-                                    <a href="{{ route('manage-supplier-rate') }}" class="text-blue">Manage Rate</a>
-                                 </li>
-                                 <li class="py-1 clickable-row-blue">
-                                    <a href="{{ route('manage-purchase-info') }}" class="text-blue">Purchase Vehicle Entry</a>
-                                 </li>
-                                 {{-- <li class="py-1 clickable-row-blue">
-                                    <a href="{{ route('manage-supplier-purchase') }}" class="text-blue"> Manage Purchase </a>
-                                 </li> --}}
-                                 <li class="py-1 clickable-row-blue">
-                                    <a href="{{ route('manage-supplier-purchase-report') }}" class="text-blue">Report </a>
-                                 </li>
-                                 
-                              </ul>
-                           </div>
-                        </li>
-                        
-                        <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue" style="border: 1px solid #007bff;">
-                           <!-- Toggle for Balance Sheet submenu -->
-                           <a class="text-decoration-none d-flex text-blue collapsed"
-                              href="#"
-                              data-bs-toggle="collapse"
-                              data-bs-target="#saleOrderSubmenu"
-                              aria-expanded="false"
-                              aria-controls="saleOrderSubmenu"> 
-                              Sale Order
-                              <i class="arrow-icon fa fa-chevron-down ms-auto"></i>
-                           </a>
-                           <!-- Submenu under Balance Sheet -->
-                           <div class="collapse ps-3" id="saleOrderSubmenu">
-                              <ul class="nav flex-column">
-                                 <li class="py-1 clickable-row-blue">
-                                    <a href="{{ route('sale-order.index') }}" class="text-blue">Manage Sale Order</a>
-                                 </li>
-                                  <li class="py-1 clickable-row-blue">
-                                    <a href="{{ route('sale-order.settings') }}" class="text-blue">Sales Order Settings</a>
-                                 </li>
-                              </ul>
-                           </div>
-                        </li>
-                     </ul>
-                  </div>
-               </div>
                @endcan
+            @endcan
             <?php 
          } ?>
       </div>
