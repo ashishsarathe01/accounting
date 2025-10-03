@@ -59,7 +59,7 @@
                                 @if(in_array($unit->id, $selectedUnits)) checked @endif>
                                 {{ $unit->name }}
 
-                                <input type="radio" name="unit_type_{{ $unit->id }}" value="REEL"> REEL <input type="radio" name="unit_type_{{ $unit->id }}" value="KG"> KG
+                                <input type="radio" name="unit_type_{{ $unit->id }}" value="REEL" @if(isset($selectedUnitsType[$unit->id]) && $selectedUnitsType[$unit->id]=="REEL" ) checked @endif> REEL <input type="radio" name="unit_type_{{ $unit->id }}" value="KG" @if(isset($selectedUnitsType[$unit->id]) && $selectedUnitsType[$unit->id]=="KG" ) checked @endif> KG
                             </div>
                         @endforeach
                     </div>

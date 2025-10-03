@@ -12,6 +12,7 @@ use App\Models\Companies;
 use App\Models\SaleInvoiceConfiguration;
 use Session;
 use DB;
+use Carbon\Carbon;
 
 
 class SaleOrderController extends Controller
@@ -71,9 +72,9 @@ class SaleOrderController extends Controller
                         ->where('delete','0')
                         ->where('company_id',Session::get('user_company_id'))
                         ->pluck('id');
-      $groups1->push(3);
-      $groups1->push(11);
-      $party_list = Accounts::with('otherAddress')
+        $groups1->push(3);
+        $groups1->push(11);
+        $party_list = Accounts::with('otherAddress')
                               ->leftjoin('states','accounts.state','=','states.id')
                               ->where('delete', '=', '0')
                               ->where('status', '=', '1')
@@ -122,103 +123,92 @@ class SaleOrderController extends Controller
         ]);
         // echo "<pre>";
         // print_r($request->all()); exit;
-
         DB::transaction(function() use ($request) {
-
-        // 1. Create Sale Order
-        $sale_order = SaleOrder::select('sale_order_no')
-                ->where('company_id', Session::get('user_company_id'))
-                ->where('created_at', 'LIKE', date('Y-m-d').'%')
-                ->orderBy('id', 'desc')
-                ->first();
-        if($sale_order){
-            $new_order_no = substr($sale_order->sale_order_no,-4);
-            if($new_order_no==""){
-                $new_order_no = '0001';
+            // 1. Create Sale Order
+            $sale_order = SaleOrder::select('sale_order_no')
+                    ->where('company_id', Session::get('user_company_id'))
+                    ->where('created_at', 'LIKE', date('Y-m-d').'%')
+                    ->orderBy('id', 'desc')
+                    ->first();
+            if($sale_order){
+                $new_order_no = substr($sale_order->sale_order_no,-4);
+                if($new_order_no==""){
+                    $new_order_no = '0001';
+                }else{
+                    $new_order_no = $new_order_no + 1;
+                    $new_order_no = sprintf("%'04d", $new_order_no);
+                }
             }else{
-                $new_order_no = $new_order_no + 1;
-                $new_order_no = sprintf("%'04d", $new_order_no);
+                $new_order_no = '0001';
             }
-        }else{
-            $new_order_no = '0001';
-        }
-        $sale_order_no = "SO".date("dmY").$new_order_no;
-        //$sale_order_no = "SO".str_pad((SaleOrder::where('company_id', Session::get('user_company_id'))->max('id') + 1), 6, '0', STR_PAD_LEFT);
-        $saleOrder = SaleOrder::create([
-            'bill_to' => $request->bill_to,
-            'shipp_to' => $request->ship_to,
-            'deal'    => $request->deal,
-            'purchase_order_no'    => $request->purchase_order_no,
-            'sale_order_no'    => $sale_order_no,
-            'purchase_order_date'    => $request->purchase_order_date,
-            'freight' => $request->freight ?? null,
-            'created_by' => auth()->id(),
-            'company_id' => Session::get('user_company_id'),
-        ]);
-
-        // 2. Loop Items
-        foreach ($request->items as $item) {
-            if(empty($item['item_id'])) {
-                continue; // Skip if item_id is missing
-            }
-            $validGsms = collect($item['gsms'] ?? [])->filter(function ($gsm) {
-        if (empty($gsm['gsm']) || empty($gsm['details'])) {
-            return false;
-        }
-        // at least one detail with size + reel
-        return collect($gsm['details'])->contains(function ($d) {
-            return !empty($d['size']) && !empty($d['reel']);
-        });
-    });
-
-    if ($validGsms->isEmpty()) {
-        continue; // skip item if no valid gsm
-    }
-            $orderItem = $saleOrder->items()->create([
-                'item_id'    => $item['item_id'],
-                'price'      => $item['price'],
-                'bill_price' => $item['bill_price'] ?? null,
-                'unit'    => $item['unit'],
-                'sub_unit'   => $item['sub_unit'],
+            $sale_order_no = "SO".date("dmY").$new_order_no;
+            $saleOrder = SaleOrder::create([
+                'bill_to' => $request->bill_to,
+                'shipp_to' => $request->ship_to,
+                'deal'    => $request->deal,
+                'purchase_order_no'    => $request->purchase_order_no,
+                'sale_order_no'    => $sale_order_no,
+                'purchase_order_date'    => $request->purchase_order_date,
+                'freight' => $request->freight ?? null,
+                'created_by' => auth()->id(),
                 'company_id' => Session::get('user_company_id'),
             ]);
-
-            // 3. Loop GSMs
-            foreach ($item['gsms'] as $gsm) {
-                if(empty($gsm['gsm'])) {
+            // 2. Loop Items
+            foreach ($request->items as $item) {
+                if(empty($item['item_id'])) {
                     continue; // Skip if item_id is missing
                 }
-                if (
-    empty($gsm['details']) ||
-    collect($gsm['details'])->filter(function ($d) {
-        return !empty($d['size']) && !empty($d['reel']);
-    })->count() < 1
-) {
-    continue;
-}
-                $gsmRow = $orderItem->gsms()->create([
-                    'sale_orders_id' => $saleOrder->id,
-                    'gsm' => $gsm['gsm'],
+                $validGsms = collect($item['gsms'] ?? [])->filter(function ($gsm) {
+                    if (empty($gsm['gsm']) || empty($gsm['details'])) {
+                        return false;
+                    }
+                    // at least one detail with size + reel
+                    return collect($gsm['details'])->contains(function ($d) {
+                        return !empty($d['size']) && !empty($d['reel']);
+                    });
+                });
+                if ($validGsms->isEmpty()) {
+                    continue; // skip item if no valid gsm
+                }
+                $orderItem = $saleOrder->items()->create([
+                    'item_id'    => $item['item_id'],
+                    'price'      => $item['price'],
+                    'bill_price' => $item['bill_price'] ?? null,
+                    'unit'    => $item['unit'],
+                    'sub_unit'   => $item['sub_unit'],
                     'company_id' => Session::get('user_company_id'),
                 ]);
-
-                // 4. Loop Sizes/Reels
-                foreach ($gsm['details'] as $detail) {
-                    if(empty($detail['size']) || empty($detail['reel'])) {
+                // 3. Loop GSMs
+                foreach ($item['gsms'] as $gsm) {
+                    if(empty($gsm['gsm'])) {
                         continue; // Skip if item_id is missing
                     }
-                    $gsmRow->details()->create([
+                    if (empty($gsm['details']) || collect($gsm['details'])->filter(function ($d) {
+                            return !empty($d['size']) && !empty($d['reel']);
+                        })->count() < 1 ) {
+                        continue;
+                    }
+                    $gsmRow = $orderItem->gsms()->create([
                         'sale_orders_id' => $saleOrder->id,
-                        'sale_orders_item_id' => $orderItem->id,
-                        'size' => $detail['size'],
-                        'quantity' => $detail['reel'],
+                        'gsm' => $gsm['gsm'],
                         'company_id' => Session::get('user_company_id'),
                     ]);
+                    // 4. Loop Sizes/Reels
+                    foreach ($gsm['details'] as $detail) {
+                        if(empty($detail['size']) || empty($detail['reel'])) {
+                            continue; // Skip if item_id is missing
+                        }
+                        $gsmRow->details()->create([
+                            'sale_orders_id' => $saleOrder->id,
+                            'sale_orders_item_id' => $orderItem->id,
+                            'size' => $detail['size'],
+                            'quantity' => $detail['reel'],
+                            'company_id' => Session::get('user_company_id'),
+                        ]);
+                    }
                 }
             }
-        }
-    });
-
+        });
         return redirect()->route('sale-order.index')->with('success', 'Sale order added successfully!');
     }
 
@@ -270,10 +260,175 @@ class SaleOrderController extends Controller
                             ->where('setting_type', 'UNIT')
                             ->pluck('item_id')
                             ->toArray();
-
-        return view('saleorder/saleOrderSetting', compact('groups', 'units', 'selectedItems', 'selectedUnits'));
+        $selectedUnitsType = SaleOrderSetting::where('company_id', $company_id)
+                            ->where('setting_type', 'UNIT')
+                            ->pluck('unit_type','item_id')
+                            ->toArray();
+                            
+        return view('saleorder/saleOrderSetting', compact('groups', 'units', 'selectedItems', 'selectedUnits','selectedUnitsType'));
     }
+    public function edit($id)
+    {
+        $company_id = auth()->user()->company_id ?? Session::get('user_company_id');
 
+        // Get only items allowed in sale-order-settings
+        $allowedItemIds = SaleOrderSetting::where('company_id', $company_id)
+                            ->where('setting_type', 'ITEM')
+                            ->pluck('item_id')
+                            ->toArray();
+
+        $groups = ItemGroups::with(['items' => function($query) use ($company_id, $allowedItemIds) {
+            $query->where('company_id', $company_id)
+                  ->where('delete', '0')
+                  ->where('status', '1')
+                  ->whereIn('id', $allowedItemIds);
+        }])
+        ->where('company_id', $company_id)
+        ->get();
+
+         $groups1 = DB::table('account_groups')
+                        ->whereIn('heading', [3,11])
+                        ->where('heading_type','group')
+                        ->where('status','1')
+                        ->where('delete','0')
+                        ->where('company_id',Session::get('user_company_id'))
+                        ->pluck('id');
+        $groups1->push(3);
+        $groups1->push(11);
+        $party_list = Accounts::with('otherAddress')
+                              ->leftjoin('states','accounts.state','=','states.id')
+                              ->where('delete', '=', '0')
+                              ->where('status', '=', '1')
+                              ->whereIn('company_id', [Session::get('user_company_id'),0])
+                              ->whereIn('under_group',$groups1)
+                              ->select('accounts.id','accounts.gstin','accounts.address','accounts.pin_code','accounts.account_name','states.state_code')
+                              ->orderBy('account_name')
+                              ->get(); 
+        // Get only units allowed in sale-order-settings
+        $allowedUnitIds = SaleOrderSetting::where('company_id', $company_id)
+                            ->where('setting_type', 'UNIT')
+                            ->pluck('item_id')
+                            ->toArray();
+
+        $units = Units::where('company_id', $company_id)
+                      ->where('delete', '0')
+                      ->where('status', '1')
+                      ->whereIn('id', $allowedUnitIds)
+                      ->get();
+        $units = Units::select('units.*', 'sale-order-settings.unit_type')
+                    ->join('sale-order-settings', 'sale-order-settings.item_id', '=', 'units.id')
+                    ->where('units.company_id', $company_id)
+                    ->where('units.delete', '0')
+                    ->where('units.status', '1')
+                    ->where('sale-order-settings.company_id', $company_id)
+                    ->where('sale-order-settings.setting_type', 'UNIT')
+                    ->get();
+        $saleOrder = SaleOrder::with([
+                            'billTo:id,account_name,gstin,address,pin_code,state,pan',
+                            'shippTo:id,account_name,gstin,address,pin_code,state,pan',
+                            'orderCreatedBy:id,name',
+                            'items.item:id,name,hsn_code',
+                            'items.unitMaster:id,s_name',
+                            'items.gsms.details',
+                            
+                            ])->where('id', $id)
+                            ->first();
+        return view('saleorder/edit_sale_order', compact('groups', 'units','party_list','saleOrder'));
+    }
+    public function update(Request $request,$id){
+        $validated = $request->validate([
+            'bill_to' => 'required',
+            'ship_to' => 'required',
+            'item.*'  => 'required',
+            'price.*' => 'required|numeric',
+            'unit.*'  => 'required',
+            'gsm.*'   => 'required',
+            'size.*'  => 'required',
+            'reel.*'  => 'required|numeric',
+        ]);
+        // echo "<pre>";
+        // print_r($request->all()); exit;
+        DB::transaction(function() use ($request,$id) {
+            // 1. Create Sale Order
+            $saleOrder = SaleOrder::find($id);
+            $saleOrder->bill_to = $request->bill_to;
+            $saleOrder->shipp_to = $request->ship_to;
+            $saleOrder->deal_id   = $request->deal;
+            $saleOrder->purchase_order_no    = $request->purchase_order_no;
+            $saleOrder->purchase_order_date    = $request->purchase_order_date;
+            $saleOrder->freight = $request->freight ?? null;
+            $saleOrder->updated_at    = Carbon::now();
+            $saleOrder->updated_by = auth()->id();
+            if($saleOrder->save()){
+                $saleOrder->items()->delete();
+                $saleOrder->items()->with('gsms')->get()->each(function ($item) {
+                    $item->gsms()->delete();
+                });
+                $saleOrder->items()->with('gsms.details')->get()->each(function ($item) {
+                    $item->gsms->each(function ($gsm) {
+                        $gsm->details()->delete();
+                    });
+                });
+                // 2. Loop Items
+                foreach ($request->items as $item) {
+                    if(empty($item['item_id'])) {
+                        continue; // Skip if item_id is missing
+                    }
+                    $validGsms = collect($item['gsms'] ?? [])->filter(function ($gsm) {
+                        if (empty($gsm['gsm']) || empty($gsm['details'])) {
+                            return false;
+                        }
+                        // at least one detail with size + reel
+                        return collect($gsm['details'])->contains(function ($d) {
+                            return !empty($d['size']) && !empty($d['reel']);
+                        });
+                    });
+                    if ($validGsms->isEmpty()) {
+                        continue; // skip item if no valid gsm
+                    }
+                    $orderItem = $saleOrder->items()->create([
+                        'item_id'    => $item['item_id'],
+                        'price'      => $item['price'],
+                        'bill_price' => $item['bill_price'] ?? null,
+                        'unit'    => $item['unit'],
+                        'sub_unit'   => $item['sub_unit'],
+                        'company_id' => Session::get('user_company_id'),
+                    ]);
+                    // 3. Loop GSMs
+                    foreach ($item['gsms'] as $gsm) {
+                        if(empty($gsm['gsm'])) {
+                            continue; // Skip if item_id is missing
+                        }
+                        if (empty($gsm['details']) || collect($gsm['details'])->filter(function ($d) {
+                                return !empty($d['size']) && !empty($d['reel']);
+                            })->count() < 1 ) {
+                            continue;
+                        }
+                        $gsmRow = $orderItem->gsms()->create([
+                            'sale_orders_id' => $saleOrder->id,
+                            'gsm' => $gsm['gsm'],
+                            'company_id' => Session::get('user_company_id'),
+                        ]);
+                        // 4. Loop Sizes/Reels
+                        foreach ($gsm['details'] as $detail) {
+                            if(empty($detail['size']) || empty($detail['reel'])) {
+                                continue; // Skip if item_id is missing
+                            }
+                            $gsmRow->details()->create([
+                                'sale_orders_id' => $saleOrder->id,
+                                'sale_orders_item_id' => $orderItem->id,
+                                'size' => $detail['size'],
+                                'quantity' => $detail['reel'],
+                                'company_id' => Session::get('user_company_id'),
+                            ]);
+                        }
+                    }
+                }
+            }
+            
+        });
+        return redirect()->route('sale-order.index')->with('success', 'Sale order added successfully!');
+    }
     /**
      * Update Sale Order Settings (items + units)
      */
@@ -339,4 +494,19 @@ class SaleOrderController extends Controller
         return redirect()->route('sale-order.settings')
             ->with('success', 'Settings updated successfully.');
     }
+    public function saleOrderStart(Request $request)
+    {
+        $saleOrder = SaleOrder::with([
+                            'billTo:id,account_name,gstin,address,pin_code,state,pan',
+                            'shippTo:id,account_name,gstin,address,pin_code,state,pan',
+                            'orderCreatedBy:id,name',
+                            'items.item:id,name,hsn_code',
+                            'items.unitMaster:id,s_name',
+                            'items.gsms.details',
+                            
+                            ])->where('id', $request->id)
+                            ->first();
+        return view('saleorder/processOrder/start_sale_order',["saleOrder"=>$saleOrder]);
+    }
+    
 }

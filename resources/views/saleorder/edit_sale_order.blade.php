@@ -50,18 +50,18 @@
                     <div class="alert alert-success">{{ session('success') }}</div>
                 @endif
 
-                <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Add Sale Order</h5>
+                <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Edit Sale Order</h5>
 
-                <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('sale-order.store')}}" id="saleOrderForm">
+                <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('sale-order.update',$saleOrder->id)}}" id="saleOrderForm">
                     @csrf
-
+                    @method('PUT')
                     <div class="row mb-3">
                         <div class="col-md-3">
                             <label for="bill_to" class="form-label font-14 font-heading">Bill To *</label>
                             <select name="bill_to" class="form-select select2-single" id="bill_to" required>
                                 <option value="">Select Account</option>
                                  @foreach($party_list as $party)
-                                    <option value="{{$party->id}}" data-state_code="{{$party->state_code}}" data-gstin="{{$party->gstin}}" data-id="{{$party->id}}" data-address="{{$party->address}}, {{$party->pin_code}}" data-other_address="{{$party->otherAddress}}">{{$party->account_name}}</option>
+                                    <option value="{{$party->id}}" @if($party->id==$saleOrder->billTo->id) selected  @endif data-state_code="{{$party->state_code}}" data-gstin="{{$party->gstin}}" data-id="{{$party->id}}" data-address="{{$party->address}}, {{$party->pin_code}}" data-other_address="{{$party->otherAddress}}">{{$party->account_name}}</option>
                                 @endforeach
                             </select>
                             <p id="bill_to_address" style="font-size: 10px;"></p>
@@ -71,7 +71,7 @@
                             <select name="ship_to" id="ship_to" class="form-select select2-single" required>
                                 <option value="">Select Account</option>
                                  @foreach($party_list as $party)
-                                    <option value="{{$party->id}}" data-state_code="{{$party->state_code}}" data-gstin="{{$party->gstin}}" data-id="{{$party->id}}" data-address="{{$party->address}}, {{$party->pin_code}}" data-other_address="{{$party->otherAddress}}">{{$party->account_name}}</option>
+                                    <option value="{{$party->id}}" @if($party->id==$saleOrder->shippTo->id) selected  @endif data-state_code="{{$party->state_code}}" data-gstin="{{$party->gstin}}" data-id="{{$party->id}}" data-address="{{$party->address}}, {{$party->pin_code}}" data-other_address="{{$party->otherAddress}}">{{$party->account_name}}</option>
                                 @endforeach
                             </select>
                             <p id="shipp_to_address" style="font-size: 10px;"></p>
@@ -89,125 +89,141 @@
                     <div class="row mb-3">
                         <div class="col-md-3">
                             <label for="purchase_order_no" class="form-label font-14 font-heading">Purchase Order No.</label>
-                            <input type="text" name="purchase_order_no" id="purchase_order_no" class="form-control" placeholder="Purchase Order No">
+                            <input type="text" name="purchase_order_no" id="purchase_order_no" class="form-control" placeholder="Purchase Order No" value="{{$saleOrder->purchase_order_no}}">
                         </div>
                         <div class="col-md-3">
                             <label for="purchase_order_date" class="form-label font-14 font-heading">Purchase Order Date</label>
-                            <input type="date" name="purchase_order_date" id="purchase_order_date" class="form-control">
+                            <input type="date" name="purchase_order_date" id="purchase_order_date" class="form-control" value="{{$saleOrder->purchase_order_date}}">
                         </div>
                     </div>
                     <!-- Items Container -->
                     <div id="items_container">
-                        <div class="item-section border rounded p-2 mb-3 position-relative" id="item_section_1">
-                            <svg style="color: red; cursor: pointer; margin-right: 8px;float:right" xmlns="http://www.w3.org/2000/svg" tabindex="0" width="35" height="35" fill="currentColor" class="bi bi-file-minus-fill remove-item-btn" viewBox="0 0 16 16" onclick="removeItem(1)"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1" /></svg> 
-                            <div class="row">
-                                <div class="col-md-3 mb-3">
-                                    <label class="form-label font-14 font-heading">Item *</label>
-                                    <select name="items[1][item_id]" class="form-select select2-single" required>
-                                        <option value="">Select Item</option>
-                                        @if(isset($groups))
-                                            @foreach($groups as $group)
-                                                @if($group->items->count() > 0)
-                                                    <optgroup label="{{ $group->name }}">
-                                                        @foreach($group->items as $item)
-                                                            <option value="{{ $item->id }}">{{ $item->name }}</option>
-                                                        @endforeach
-                                                    </optgroup>
-                                                @endif
-                                            @endforeach
-                                        @endif
-                                    </select>
+                        @php $item_index = 1; @endphp
+                        @foreach($saleOrder->items as $key => $value)
+                            <div class="item-section border rounded p-2 mb-3 position-relative" id="item_section_{{$item_index}}">
+                                <svg style="color: red; cursor: pointer; margin-right: 8px;float:right" xmlns="http://www.w3.org/2000/svg" tabindex="0" width="35" height="35" fill="currentColor" class="bi bi-file-minus-fill remove-item-btn" viewBox="0 0 16 16" onclick="removeItem({{$item_index}})"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1" /></svg> 
+                                <div class="row">
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label font-14 font-heading">Item *</label>
+                                        <select name="items[{{$item_index}}][item_id]" class="form-select select2-single" required>
+                                            <option value="">Select Item</option>
+                                            @if(isset($groups))
+                                                @foreach($groups as $group)
+                                                    @if($group->items->count() > 0)
+                                                        <optgroup label="{{ $group->name }}">
+                                                            @foreach($group->items as $item)
+                                                                <option value="{{ $item->id }}" @if($value->item_id==$item->id) selected @endif>{{ $item->name }}</option>
+                                                            @endforeach
+                                                        </optgroup>
+                                                    @endif
+                                                @endforeach
+                                            @endif
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label for="price_{{$item_index}}" class="form-label font-14 font-heading">Price *</label>
+                                        <input type="number" name="items[{{$item_index}}][price]" class="form-control" placeholder="Enter Price" required id="price_{{$item_index}}" step="0.01" min="0" value="{{$value->price}}">
+                                    </div>
+                                    <div class="mb-3 col-md-3">
+                                        <label for="bill_price_{{$item_index}}" class="form-label font-14 font-heading">Bill Price <input type="checkbox" class="bill_price_check" data-id="{{$item_index}}" value=""></label>
+                                        <input type="text" id="bill_price_{{$item_index}}" class="form-control bill_price" name="items[{{$item_index}}][bill_price]" placeholder="Enter Price" readonly data-id="{{$item_index}}" value="{{$value->bill_price}}">
+                                        <ul style="color: red;">
+                                            @error('date'){{$message}}@enderror
+                                        </ul> 
+                                    </div>
+                                    
+                                        <div class="mb-3 col-md-3">
+                                            @if($item_index==1)
+                                            <label for="freight" class="form-label font-14 font-heading freight_div">Freight *</label>
+                                            <select id="freight" name="freight" class="form-select freight_div" required autofocus>
+                                                <option value="">Select Freight</option>
+                                                <option value="Yes" @if($saleOrder->freight=="Yes") selected @endif>Yes</option>
+                                                <option value="No" @if($saleOrder->freight=="No") selected @endif>No</option>
+                                            </select>
+                                            <ul style="color: red;">
+                                                @error('voucher_no'){{$message}}@enderror
+                                            </ul> 
+                                            @endif
+                                        </div>
+                                    
+                                    <div class="col-md-3 mb-3">
+                                        <label for="unit_{{$item_index}}" class="form-label font-14 font-heading">Unit *</label>
+                                        <select name="items[{{$item_index}}][unit]" class="form-select unit" required id="unit_{{$item_index}}" data-id="{{$item_index}}">
+                                            <option value="">Select Unit</option>
+                                            @if(isset($units))
+                                                @foreach($units as $unit)
+                                                    <option value="{{ $unit->id }}" data-name="{{ $unit->name }}" data-unit_type="{{ $unit->unit_type }}" @if($value->unit==$unit->id) selected @endif>{{ $unit->name }}</option>
+                                                @endforeach
+                                            @endif
+                                        </select>
+                                    </div>
+                                    <div class="mb-3 col-md-3">
+                                        <label for="sub_unit_{{$item_index}}" class="form-label font-14 font-heading">Sub Unit *</label>
+                                        <select id="sub_unit_{{$item_index}}" name="items[{{$item_index}}][sub_unit]" class="form-select sub_unit" data-id="{{$item_index}}" required autofocus>
+                                            <option value="">Select Sub Unit</option>
+                                            <option value="INCH" @if($value->sub_unit=="INCH") selected @endif>INCH</option>
+                                            <option value="CM" @if($value->sub_unit=="CM") selected @endif>CM</option>
+                                            <option value="MM" @if($value->sub_unit=="MM") selected @endif>MM</option>
+                                        </select>
+                                        <ul style="color: red;">
+                                            @error('voucher_no'){{$message}}@enderror
+                                        </ul> 
+                                    </div>
                                 </div>
-                                <div class="col-md-3 mb-3">
-                                    <label for="price_1" class="form-label font-14 font-heading">Price *</label>
-                                    <input type="number" name="items[1][price]" class="form-control" placeholder="Enter Price" required id="price_1" step="0.01" min="0">
-                                </div>
-                                <div class="mb-3 col-md-3">
-                                    <label for="bill_price_1" class="form-label font-14 font-heading">Bill Price <input type="checkbox" class="bill_price_check" data-id="1" value="1"></label>
-                                    <input type="text" id="bill_price_1" class="form-control bill_price" name="items[1][bill_price]" placeholder="Enter Price" readonly data-id="1">
-                                    <ul style="color: red;">
-                                        @error('date'){{$message}}@enderror
-                                     </ul> 
-                                </div>
-                                <div class="mb-3 col-md-3">
-                                    <label for="freight" class="form-label font-14 font-heading freight_div">Freight *</label>
-                                    <select id="freight" name="freight" class="form-select freight_div" required autofocus>
-                                        <option value="">Select Freight</option>
-                                        <option value="Yes">Yes</option>
-                                        <option value="No">No</option>
-                                    </select>
-                                    <ul style="color: red;">
-                                        @error('voucher_no'){{$message}}@enderror
-                                    </ul> 
-                                </div>
-                                <div class="col-md-3 mb-3">
-                                    <label for="unit_1" class="form-label font-14 font-heading">Unit *</label>
-                                    <select name="items[1][unit]" class="form-select unit" required id="unit_1" data-id="1">
-                                        <option value="">Select Unit</option>
-                                        @if(isset($units))
-                                            @foreach($units as $unit)
-                                                <option value="{{ $unit->id }}" data-name="{{ $unit->name }}" data-unit_type="{{ $unit->unit_type }}">{{ $unit->name }}</option>
-                                            @endforeach
-                                        @endif
-                                    </select>
-                                </div>
-                                <div class="mb-3 col-md-3">
-                                    <label for="sub_unit_1" class="form-label font-14 font-heading">Sub Unit *</label>
-                                    <select id="sub_unit_1" name="items[1][sub_unit]" class="form-select sub_unit" data-id="1" required autofocus>
-                                        <option value="">Select Sub Unit</option>
-                                        <option value="INCH">INCH</option>
-                                        <option value="CM">CM</option>
-                                        <option value="MM">MM</option>
-                                    </select>
-                                    <ul style="color: red;">
-                                        @error('voucher_no'){{$message}}@enderror
-                                    </ul> 
+
+                                <!-- GSM / Sizes / Reels -->
+                                <div class="row" id="dynamic_gsm_{{$item_index}}">
+                                    @php $gsm_index = 1;@endphp
+                                    @foreach($value->gsms as $k1 => $gsm)
+                                        <div class="col-md-3 gsm-block" id="gsm_block_{{$item_index}}_{{$gsm_index}}">
+                                            <table class="table table-bordered">
+                                                <tr>
+                                                    <td style="width: 40%;">GSM
+                                                        @if($gsm_index==1)
+                                                            <svg style="color: green;cursor:pointer;" class="bg-primary rounded-circle add_gsm" data-item_id="{{$item_index}}" data-gsm_id="{{count($value->gsms)}}" width="24" height="24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/></svg>
+                                                        @else
+                                                            <svg style="color: red; cursor: pointer; margin-right: 8px;" xmlns="http://www.w3.org/2000/svg" tabindex="0" width="24" height="24" fill="currentColor" class="bi bi-file-minus-fill remove-gsm-btn" viewBox="0 0 16 16" onclick="removeGsm({{$item_index}},{{$gsm_index}})"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1" /></svg>
+                                                        @endif
+                                                        
+                                                    
+                                                    </td>
+                                                    <td><input type="text" name="items[{{$item_index}}][gsms][{{$gsm_index}}][gsm]" class="form-control gsm gsm_{{$gsm_index}}" placeholder="Enter GSM" required value="{{$gsm->gsm}}" data-item_id="{{$item_index}}" data-gsm_id="{{$gsm_index}}"></td>
+                                                </tr>
+                                            </table>
+                                            <table class="table table-bordered" id="table_{{$item_index}}_{{$gsm_index}}">
+                                                <tr>
+                                                    <td>SIZES</td>
+                                                    <td class="qty_title_{{$gsm_index}}">{{$value->unitMaster->s_name}}</td>
+                                                </tr>
+                                                @php $row_index = 0;@endphp
+                                                @foreach($gsm->details as $k2 => $detail)
+                                                    <tr>
+                                                        <td><input type="text" name="items[{{$item_index}}][gsms][{{$gsm_index}}][details][{{ $k2 }}][size]" class="form-control size size_{{$item_index}}_{{$gsm_index}}" placeholder="SIZES" onkeyup="approxCalculation({{$item_index}},{{$gsm_index}})" value="{{$detail->size}}"></td>
+                                                        <td><input type="number" name="items[{{$item_index}}][gsms][{{$gsm_index}}][details][{{ $k2 }}][reel]" class="form-control quantity quantity_{{$item_index}}_{{$gsm_index}}" placeholder="REELS" data-item_id="{{$item_index}}" data-gsm_id="{{$gsm_index}}" data-quantity_id="{{ $k2 }}" onkeyup="approxCalculation({{$item_index}},{{$gsm_index}})" value="{{$detail->quantity}}"></td>
+                                                    </tr>
+                                                    @php $row_index++; @endphp
+                                                @endforeach
+                                                <tr>
+                                                    <th style="text-align: center">Total</th>
+                                                    <td>
+                                                        <input type="number" class="form-control quantity_total" id="quantity_total_{{$item_index}}_{{$gsm_index}}" placeholder="0" readonly>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <th style="text-align: center">Approx Qty</th>
+                                                    <td>
+                                                        <input type="number" class="form-control approx" id="approx_qty_{{$item_index}}_{{$gsm_index}}" placeholder="0" readonly>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                            <span class="add_row" data-item="{{$item_index}}" data-gsm="{{$gsm_index}}" style="color:#3c8dbc;cursor:pointer;">Add Row</span>
+                                        </div>
+                                        @php $gsm_index++;@endphp
+                                    @endforeach
                                 </div>
                             </div>
-                            <!-- GSM / Sizes / Reels -->
-                            <div class="row" id="dynamic_gsm_1">
-                                <div class="col-md-3 gsm-block" id="gsm_block_1_1">
-                                    <table class="table table-bordered">
-                                        <tr>
-                                            <td style="width: 40%;">GSM
-                                                <svg style="color: green;cursor:pointer;" class="bg-primary rounded-circle add_gsm" data-item_id="1" data-gsm_id="1" width="24" height="24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                                                    <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/>
-                                                </svg>
-                                               
-                                            </td>
-                                            <td><input type="text" name="items[1][gsms][1][gsm]" class="form-control gsm_1" placeholder="Enter GSM" required></td>
-                                        </tr>
-                                    </table>
-                                    <table class="table table-bordered" id="table_1_1">
-                                        <tr>
-                                            <td>SIZES</td>
-                                            <td class="qty_title_1">REELS</td>
-                                        </tr>
-                                        @php $row_index = 0;@endphp
-                                        @while ($row_index < 5) 
-                                            <tr>
-                                                <td><input type="text" name="items[1][gsms][1][details][{{ $row_index }}][size]" class="form-control size size_1_1" placeholder="SIZES" onkeyup="approxCalculation(1,1)"></td>
-                                                <td><input type="number" name="items[1][gsms][1][details][{{ $row_index }}][reel]" class="form-control quantity quantity_1_1" placeholder="REELS" data-item_id="1" data-gsm_id="1" data-quantity_id="{{ $row_index }}" onkeyup="approxCalculation(1,1)"></td>
-                                            </tr>
-                                            @php $row_index++; @endphp
-                                        @endwhile
-                                        <tr>
-                                            <th style="text-align: center">Total</th>
-                                            <td>
-                                                <input type="number" class="form-control quantity_total" id="quantity_total_1_1" placeholder="0" readonly>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <th style="text-align: center">Approx Qty</th>
-                                            <td>
-                                                <input type="number" class="form-control approx" id="approx_qty_1_1" placeholder="0" readonly id="approx_qty_1_1">
-                                            </td>
-                                        </tr>
-                                    </table>
-                                    <span class="add_row" data-item="1" data-gsm="1" style="color:#3c8dbc;cursor:pointer;">Add Row</span>
-                                </div>
-                            </div>
-                        </div>
+                            @php $item_index++ @endphp
+                        @endforeach
                     </div>
                     <p>
                         <svg id="add_item_btn" 
@@ -236,17 +252,23 @@
 
 <script>
 
+
 $(document).ready(function() {
+    
     $('.select2-single').select2({
         width: '100%' // Optional: ensures full width
     });
-});
-$(document).ready(function() {
+    $(".quantity").each(function(){
+        $(this).trigger('keyup');
+    });     
+    $(".gsm").each(function(){
+        var item_id = $(this).data("item_id");
+        var gsm_id = $(this).data("gsm_id");
+        approxCalculation(item_id,gsm_id);
+    });
     let itemIndex = $("#items_container .item-section").length;
-    
     // Add Item
     $(document).on("click", "#add_item_btn", function() {
-        
         itemIndex++;
         let newSection = $("#item_section_1").clone();
 
@@ -254,7 +276,6 @@ $(document).ready(function() {
         newSection.find(".select2").remove();        // remove the generated Select2 container
         newSection.find("select").removeAttr("data-select2-id").show(); 
         newSection.find("input, select").val("");
-
         newSection.attr("id", "item_section_" + itemIndex);
         newSection.find(".remove-item-btn").attr("onclick", "removeItem(" + itemIndex + ")");
         newSection.find(".bill_price_check").attr("data-id",itemIndex);
@@ -263,9 +284,6 @@ $(document).ready(function() {
         newSection.find("#sub_unit_1").attr("data-id",itemIndex);
         newSection.find("#unit_1").attr("id","unit_"+itemIndex);
         newSection.find("#sub_unit_1").attr("id","sub_unit_"+itemIndex);
-
-        
-
         newSection.find(".freight_div").remove("");
         newSection.find(".bill_price").attr("id","bill_price_"+itemIndex);
         let detailsRows = '';
@@ -300,7 +318,7 @@ $(document).ready(function() {
                         <td style="width: 40%;">GSM
                            <svg style="color: green;cursor:pointer;" class="bg-primary rounded-circle add_gsm" data-item_id="${itemIndex}" data-gsm_id="1" width="24" height="24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/></svg>
                         </td>
-                        <td><input type="text" name="items[${itemIndex}][gsms][1][gsm]" class="form-control gsm_${itemIndex}" placeholder="Enter GSM" required></td>
+                        <td><input type="text" name="items[${itemIndex}][gsms][1][gsm]" class="form-control gsm gsm_${itemIndex}" placeholder="Enter GSM" required data-item_id="${itemIndex}" data-gsm_id="1"></td>
                     </tr>
                 </table>
                 <table class="table table-bordered" id="table_${itemIndex}_1">
@@ -318,13 +336,12 @@ $(document).ready(function() {
             if (name) {
                 name = name.replace(/items\[\d+\]/, "items[" + itemIndex + "]");
                 $(this).attr("name", name).val("");
-            }
-            
+            }            
         });
         $("#items_container").append(newSection);
         newSection.find(".select2-single").select2({
-        width: '100%' // or any config you used initially
-    });
+            width: '100%' // or any config you used initially
+        });
         updateGsmButtons(itemIndex);
     });
 
@@ -377,7 +394,7 @@ $(document).ready(function() {
                             
                            <svg style="color: red; cursor: pointer; margin-right: 8px;" xmlns="http://www.w3.org/2000/svg" tabindex="0" width="24" height="24" fill="currentColor" class="bi bi-file-minus-fill remove-gsm-btn" viewBox="0 0 16 16" onclick="removeGsm(${item_id},${gsm_id})"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1" /></svg>
                         </td>
-                        <td><input type="text" name="items[${item_id}][gsms][${gsm_id}][gsm]" class="form-control gsm_${item_id}" placeholder="Enter GSM" required></td>
+                        <td><input type="text" name="items[${item_id}][gsms][${gsm_id}][gsm]" class="form-control gsm gsm_${item_id}" placeholder="Enter GSM" required data-item_id="${item_id}" data-gsm_id="${gsm_id}"></td>
                     </tr>
                 </table>
                 <table class="table table-bordered" id="table_${item_id}_${gsm_id}">

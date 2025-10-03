@@ -68,7 +68,9 @@
                            <td style="text-align: right;">@if($value->freight==1) YES  @else NO @endif</td>
                            <td style="text-align: right;">@if($value->status==0) PENDING  @else  @endif</td>
                            <td style="text-align: center;">
-                              <a href="{{route('sale-order.show',$value->id)}}"><button class="btn btn-info">View</button></a>
+                              <a href="{{ URL::to('sale-order/'.$value->id.'/edit') }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
+                              <a href="{{route('sale-order.show',$value->id)}}"><img src="{{ URL::asset('public/assets/imgs/eye-icon.svg')}}" class="px-1" alt=""></a>
+                              <a href="{{route('sale-order-start',$value->id)}}"><img src="{{ URL::asset('public/assets/imgs/start.svg')}}" class="px-1 start" alt="" style="width: 30px;cursor:pointer;"></a>
                            </td>
                         </tr>
                      @endforeach

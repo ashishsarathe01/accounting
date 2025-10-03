@@ -427,6 +427,6 @@ Route::get('sale-order/settings', [SaleOrderController::class, 'saleOrderSetting
 Route::post('sale-order/settings/update', [SaleOrderController::class, 'updateSaleOrderSettings'])->name('sale-order.settings.update');
 Route::Resource('sale-order', SaleOrderController::class);
 Route::post('/check-duplicate-voucher', [PurchaseController::class, 'checkDuplicateVoucher'])->name('check.duplicate.voucher');
-
+Route::get('sale-order-start/{id}', [SaleOrderController::class, 'saleOrderStart'])->name('sale-order-start');
 
 });

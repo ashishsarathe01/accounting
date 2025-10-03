@@ -109,8 +109,8 @@
             data:{ _token:_token,id:id},
             success:function(data){
                let obj = JSON.parse(data);
-               if(obj.status ==true){                  
-                  window.open('{{ url('dashboard') }}', '_blank');
+               if(obj.status ==true){
+                  window.open("{{ url('dashboard') }}", "_self");
                   //window.location.href = "http://localhost/meri-accounting/";
                }else if(obj.status == 'false'){
                   alert(obj.message);
