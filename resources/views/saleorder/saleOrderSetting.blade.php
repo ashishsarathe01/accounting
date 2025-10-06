@@ -22,6 +22,8 @@
 
                 <form action="{{ route('sale-order.settings.update') }}" method="POST">
                     @csrf
+
+                    <!-- Items Section -->
                     <div class="mb-4">
                         <h6 style="font-size:1.3rem;">Items (Grouped)</h6>
                         @foreach($groups as $group)
@@ -51,18 +53,50 @@
                             </div>
                         @endforeach
                     </div>
+
+                    <!-- Units Section -->
                     <div class="mb-4">
                         <h6 style="font-size:1.3rem;">Units</h6>
-                        @foreach($units as $unit)
-                            <div style="font-size:1.25rem;">
-                                <input type="checkbox" name="units[]" value="{{ $unit->id }}" class="unit-checkbox"
-                                @if(in_array($unit->id, $selectedUnits)) checked @endif>
-                                {{ $unit->name }}
+                        <div class="table-responsive">
+                            <table class="table table-bordered align-middle" style="font-size:1.1rem;">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width:50%;">Unit</th>
+                                        <th style="width:50%;">Unit Types</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($units as $unit)
+                                    <tr>
+                                        <!-- Unit checkbox -->
+                                        <td>
+                                            <div class="form-check">
+                                                <input type="checkbox" name="units[]" value="{{ $unit->id }}" class="form-check-input unit-checkbox"
+                                                @if(in_array($unit->id, $selectedUnits)) checked @endif>
+                                                <label class="form-check-label">{{ $unit->name }}</label>
+                                            </div>
+                                        </td>
 
-                                <input type="radio" name="unit_type_{{ $unit->id }}" value="REEL" @if(isset($selectedUnitsType[$unit->id]) && $selectedUnitsType[$unit->id]=="REEL" ) checked @endif> REEL <input type="radio" name="unit_type_{{ $unit->id }}" value="KG" @if(isset($selectedUnitsType[$unit->id]) && $selectedUnitsType[$unit->id]=="KG" ) checked @endif> KG
-                            </div>
-                        @endforeach
+                                        <!-- Unit type radio buttons -->
+                                        <td>
+                                            <div class="form-check form-check-inline">
+                                                <input type="radio" name="unit_type_{{ $unit->id }}" value="REEL" class="form-check-input"
+                                                @if(isset($selectedUnitsType[$unit->id]) && $selectedUnitsType[$unit->id]=="REEL") checked @endif>
+                                                <label class="form-check-label">REEL</label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input type="radio" name="unit_type_{{ $unit->id }}" value="KG" class="form-check-input"
+                                                @if(isset($selectedUnitsType[$unit->id]) && $selectedUnitsType[$unit->id]=="KG") checked @endif>
+                                                <label class="form-check-label">KG</label>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
+
                     <div class="mb-3 text-start">
                         <button type="submit" class="btn btn-primary px-4">Save Settings</button>
                     </div>
@@ -77,7 +111,7 @@
 
 <style>
     .group-label strong {
-        font-size: 1.5rem; /* increased size */
+        font-size: 1.5rem; /* increased size for group labels */
     }
     .toggle-items {
         font-size: 1.5rem;
@@ -88,9 +122,12 @@
     .unit-checkbox {
         font-size: 1.5rem; /* same as items */
     }
-    input[type="checkbox"] {
-        transform: scale(1.2);
-        margin-right: 0.5rem;
+
+    /* Smaller checkboxes and radio buttons for Units table */
+    .table input[type="checkbox"],
+    .table input[type="radio"] {
+        transform: scale(0.9);
+        margin-right: 0.3rem;
     }
 </style>
 
