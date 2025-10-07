@@ -2145,6 +2145,7 @@ foreach ($manageitems as $value) {
     let isDuplicateVoucher = false;
 
     function checkDuplicateVoucher(callback = null) {
+      return true; 
         let voucher_no = $('#voucher_no').val();
         let party_id = $('#party').val();
         let financial_year = '{{ Session::get("default_fy") }}';
@@ -2152,7 +2153,8 @@ foreach ($manageitems as $value) {
 
         if(voucher_no !== '' && party_id !== '') {
             $.ajax({
-                url: '{{ route("check.duplicate.voucher") }}',
+               //  url: '{{ route("check.duplicate.voucher") }}',
+                url: '',
                 type: 'POST',
                 data: {
                     _token: '{{ csrf_token() }}',

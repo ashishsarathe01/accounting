@@ -117,9 +117,20 @@ class SupplierRateLocationWiseController extends Controller
         }
         if($save_status==1){
             $supplier = Supplier::where('company_id',Session('user_company_id'))->get();
-            foreach ($supplier as $k2 => $v2) {
-                SupplierLocationRates::where('r_date',$request->date)->where('status',1)->delete();
+            foreach ($supplier as $k2 => $v2) {                
                 foreach ($request->location_id as $key => $value) {
+                    $check_supp = SupplierLocationRates::where('account_id',$v2->account_id)
+                                         ->where('location',$request->location_id[$key])
+                                        ->where('status',1)
+                                        ->count();
+                    if($check_supp==0){
+                        continue;
+                    }
+                    SupplierLocationRates::where('r_date',$request->date)
+                                        ->where('account_id',$v2->account_id)
+                                        ->where('location',$request->location_id[$key])
+                                        ->where('status',1)
+                                        ->delete();
                     foreach ($request["head_id_".$value] as $k => $v) {
                         $bonus = 0;
                         $head_rate = $request["head_value_".$value][$k];

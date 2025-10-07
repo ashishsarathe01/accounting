@@ -502,10 +502,13 @@ class SaleOrderController extends Controller
                             'orderCreatedBy:id,name',
                             'items.item:id,name,hsn_code',
                             'items.unitMaster:id,s_name',
+                            'items.SaleOrderSettingUnitMaster:item_id,unit_type',
                             'items.gsms.details',
                             
                             ])->where('id', $request->id)
                             ->first();
+        // echo "<pre>";
+        // print_r($saleOrder->toArray());die;
         return view('saleorder/processOrder/start_sale_order',["saleOrder"=>$saleOrder]);
     }
     

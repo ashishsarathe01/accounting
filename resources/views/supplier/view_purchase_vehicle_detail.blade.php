@@ -93,6 +93,8 @@ input::-webkit-inner-spin-button {
                             <th class="w-min-120 border-none bg-light-pink text-body">Group</th>
                             <th class="w-min-120 border-none bg-light-pink text-body">Account Name </th>
                             <th class="w-min-120 border-none bg-light-pink text-body">Gross Weight</th>
+                            <th class="w-min-120 border-none bg-light-pink text-body">Slip No.</th>
+                            <th></th>
                             <th class="w-min-120 border-none bg-light-pink text-body text-center">Action </th>
                         </tr>
                     </thead>
@@ -104,9 +106,14 @@ input::-webkit-inner-spin-button {
                                 <td>{{$value->group_name}}</td>
                                 <td>{{$value->account_name}}</td>
                                 <td>{{$value->gross_weight}}</td>
+                                <td>{{$value->voucher_no}}</td>
+                                <td> @if($value->purchase_voucher_no=="") <img src="{{ URL::asset('public/assets/imgs/purchase-order-24.png')}}" >  @endif
+                                    @if($value->image_1=="") <img src="{{ URL::asset('public/assets/imgs/file-jpg-color-red-icon.png')}}" > @endif</td>
                                 <td class="w-min-120 text-center">
+                                    
                                     <button class="btn btn-info upload_image" data-id="{{$value->id}}">Click</button>
                                     <img src="{{ URL::asset('public/assets/imgs/start.svg')}}" class="px-1 start" alt="" style="width: 30px;cursor:pointer;" id="start_btn_{{$value->id}}" data-gross_weight="{{$value->gross_weight}}" data-account_id="{{$value->account_id}}" data-id="<?php echo $value->id; ?>" data-group_id="<?php echo $value->group_id; ?>" data-map_purchase_id="<?php echo $value->map_purchase_id; ?>" data-price="<?php echo $value->price; ?>" data-purchase_amount="<?php echo $value->purchase_amount; ?>" data-purchase_date="<?php echo $value->purchase_date; ?>" data-purchase_voucher_no="<?php echo $value->purchase_voucher_no; ?>" data-status="1" data-vehicle_no="{{$value->vehicle_no}}" data-purchase_qty="<?php echo $value->purchase_qty; ?>" data-entry_date="{{$value->entry_date}}">
+                                   
                                 </td>
                             </tr>
                         @endforeach
@@ -475,7 +482,7 @@ input::-webkit-inner-spin-button {
           @csrf
           <div id="image-inputs">
             <div class="mb-3 d-flex align-items-center">
-              <input type="file" name="images[]" class="form-control me-2 image-input" accept="image/*" required>
+              <input type="file" name="images[]" class="form-control me-2 image-input" accept="image/*" capture="environment" required>
               <button type="button" class="btn btn-sm btn-primary add-more">+</button>
             </div>
           </div>
@@ -935,7 +942,7 @@ input::-webkit-inner-spin-button {
                 image_count++;
                 let newInput = `
                 <div class="mb-3 d-flex align-items-center">
-                <input type="file" name="images[]" class="form-control me-2 image-input" accept="image/*" required>
+                <input type="file" name="images[]" class="form-control me-2 image-input" accept="image/*" capture="environment" required>
                 <button type="button" class="btn btn-sm btn-danger remove">-</button>
                 </div>`;
                 e.target.closest(".mb-3").insertAdjacentHTML("afterend", newInput);

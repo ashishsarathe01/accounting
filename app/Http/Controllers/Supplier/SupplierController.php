@@ -45,7 +45,7 @@ class SupplierController extends Controller
                                         'r_date',
                                         'supplier_sub_heads.id',
                                         'supplier_location_rates.r_date'
-                                    );
+                                    )->orderBy('r_date','desc');
                                 }
                             ])
                             ->select('id', 'account_id', 'status')

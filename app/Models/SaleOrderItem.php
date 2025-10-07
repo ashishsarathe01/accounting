@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
+use Session;
 class SaleOrderItem extends Model
 {
     use HasFactory;
@@ -21,4 +21,11 @@ class SaleOrderItem extends Model
         {
             return $this->belongsTo(Units::class, 'unit', 'id');
         }
+        public function SaleOrderSettingUnitMaster()
+        {
+            return $this->belongsTo(SaleOrderSetting::class,'unit','item_id')
+                        ->where('setting_type','UNIT')
+                        ->where('company_id',Session::get('user_company_id'));
+        }
+        
 }

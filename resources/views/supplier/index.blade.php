@@ -24,11 +24,12 @@
                         </a>
                      @endcan
                 </div>
-                <div class="transaction-table bg-white table-view shadow-sm">
+                <div class="transaction-table bg-white table-view shadow-sm" style="overflow: scroll;">
                     <table class="table-striped table m-0 shadow-sm receipt_table">
                   <thead>
                      <tr class=" font-12 text-body bg-light-pink ">
                         <th class="w-min-120 border-none bg-light-pink text-body">Supplier Name</th>
+                        <th class="w-min-120 border-none bg-light-pink text-body">Date</th>
                         @foreach($locations as $key => $location)
                             <th class="w-min-120 border-none bg-light-pink text-body">{{$location->name}}</th>
                         @endforeach

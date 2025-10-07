@@ -181,7 +181,7 @@ $(document).ready(function(){
                 }
                 html+=`<div class="mb-`+col+` col-md-`+col+`">
                     <label class="form-label font-14 font-heading">`+e.name+`</label>
-                    <input type="hidden" name="" value="`+e.id+`" required class="head_id_`+location_index+`">
+                    <input type="hidden" name="head_id_`+location_index+`[]" value="`+e.id+`" required class="head_id_`+location_index+`">
                     <input type="number" step="any" class="form-control head_rate_`+location_index+`" name="" placeholder=" RATE" required data-head_id="`+e.id+`">
                 </div>`;
             });
@@ -209,7 +209,12 @@ $(document).ready(function(){
         $("#row_id").val(id);
         var value = $(this).val();
         if(value!=""){
-            let index = parseInt(id)-1;
+            let index = parseInt(id);
+            
+            if(parseInt(id)!=0){
+                //index = parseInt(id)-1;
+            }
+            
             $(".head_id_"+id).attr('name','head_id_'+index+'[]');
             $(".head_rate_"+id).attr('name','head_rate_'+index+'[]');
             $(".head_bonus_"+id).attr('name','bonus_'+index+'[]');

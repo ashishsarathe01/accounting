@@ -18,6 +18,7 @@ use App\Models\Accounts;
 use App\Models\SupplierSubHead;
 use App\Models\ItemGroups;
 use App\Models\SupplierPurchaseVehicleDetail;
+use App\Models\SupplierRateLocationWise;
 
 class SupplierPurchaseController extends Controller
 {
@@ -69,12 +70,30 @@ class SupplierPurchaseController extends Controller
     }
     public function getSupplierRateByLocation(Request $request)
     {
-        $rate = SupplierLocationRates::select('head_id','head_rate')
+        $supplier_max_date = SupplierLocationRates::where('company_id',Session::get('user_company_id'))
+                                        ->where('location',$request->location)
+                                        ->where('account_id',$request->account_id)
+                                        ->where('r_date','<=',$request->date)
+                                        ->max('r_date');
+        $max_date = SupplierRateLocationWise::where('company_id',Session::get('user_company_id'))
+                                        ->where('location_id',$request->location)
+                                        ->where('rate_date','<=',$request->date)
+                                        ->max('rate_date');
+        if($max_date>$supplier_max_date){
+            $rate = SupplierRateLocationWise::select('head_id','head_rate')
+                                        ->where('company_id',Session::get('user_company_id'))
+                                        ->where('rate_date','<=',$request->date)
+                                        ->where('location_id',$request->location)
+                                        ->get();
+        }else{
+            $rate = SupplierLocationRates::select('head_id','head_rate')
                                         ->where('company_id',Session::get('user_company_id'))
                                         ->where('account_id',$request->account_id)
                                         ->where('r_date','<=',$request->date)
                                         ->where('location',$request->location)
                                         ->get();
+        }
+        
         return response()->json($rate);
     }
     public function storeSupplierPurchaseReport(Request $request)
@@ -352,13 +371,13 @@ class SupplierPurchaseController extends Controller
     public function uploadPurchaseImage(Request $request)
     {
         // validate
-        $request->validate([
-            'images.*' => 'required|image|mimes:jpg,jpeg,png,gif|max:2048',
-        ]);
-
+        // $request->validate([
+        //     'images.*' => 'required|image|mimes:jpg,jpeg,png,gif|max:2048',
+        // ]);
+        
         $paths = [];
         $purchase_vehicle = SupplierPurchaseVehicleDetail::find($request->image_purchase_id);
-        if ($request->hasFile('images')) {
+        //if ($request->hasFile('images')) {
             foreach ($request->file('images') as $key=>$image) {
                  // Save file
                 $filename = time().'_'.$image->getClientOriginalName();
@@ -382,7 +401,7 @@ class SupplierPurchaseController extends Controller
                 $purchase_vehicle->completed_by = Session::get('user_id');
                 $purchase_vehicle->save();
             }
-        }
+        //}
         
         return redirect()->route('manage-purchase-info')->with('success','Image Uploaded Successfully');
     }
@@ -558,10 +577,14 @@ class SupplierPurchaseController extends Controller
                     'supplier_purchase_vehicle_details.id',
                     'gross_weight',
                     'supplier_purchase_vehicle_details.vehicle_no',
+                    'supplier_purchase_vehicle_details.voucher_no',
                     'accounts.account_name',
                     'item_groups.group_name',
                     'supplier_purchase_vehicle_details.account_id',
                     'supplier_purchase_vehicle_details.group_id',
+                    'supplier_purchase_vehicle_details.image_1',
+                    'supplier_purchase_vehicle_details.image_2',
+                    'supplier_purchase_vehicle_details.image_3',
                     'map_purchase_id',
                     'purchases.voucher_no as purchase_voucher_no',
                     'purchases.date as purchase_date',

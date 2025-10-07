@@ -28,6 +28,7 @@ use App\Models\ItemAverage;
 use App\Models\ItemAverageDetail;
 use App\Models\AccountOtherAddress;
 use App\Models\ItemParameterStock;
+use App\Models\SaleOrder;
 use App\Helpers\CommonHelper;
 use Illuminate\Support\Facades\URL;
 use DB;
@@ -116,13 +117,24 @@ class SalesController extends Controller
      * @return \Illuminate\Http\Response
      */
 
-   public function create(){
+   public function create(Request $request){
       Gate::authorize('action-module',85);
       $financial_year = Session::get('default_fy');    
       $companyData = Companies::where('id', Session::get('user_company_id'))->first();
       //Ashish Code Start Here
       // echo "<pre>";
       //invoice_prefix
+      //Sale Order Data
+      $bill_to_id     = $request->query('bill_to_id');     // 2
+      $shipp_to_id = $request->query('shipp_to_id'); // 332
+      $freight   = $request->query('freight');   // 1
+      $sale_order_id = $request->query('sale_order_id');
+      $sale_order_items = [];
+      if($request->query('item_arr')){
+         $sale_order_items = json_decode($request->query('item_arr'),true);
+      }
+      
+      
       if($companyData->gst_config_type == "single_gst"){
          $GstSettings = DB::table('gst_settings')
                            ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])
@@ -299,7 +311,7 @@ class SalesController extends Controller
          $item[$key]->available_item = $available_item;
       }
       
-      return view('addSale')->with('party_list', $party_list)->with('billsundry', $billsundry)->with('bill_date', $bill_date)->with('GstSettings', $GstSettings)->with('item', $item);
+      return view('addSale')->with('party_list', $party_list)->with('billsundry', $billsundry)->with('bill_date', $bill_date)->with('GstSettings', $GstSettings)->with('item', $item)->with('bill_to_id', $bill_to_id)->with('shipp_to_id', $shipp_to_id)->with('freight', $freight)->with('sale_order_id', $sale_order_id)->with('sale_order_items',$sale_order_items);
    }   
    public function store(Request $request){
       Gate::authorize('action-module',85);
@@ -600,43 +612,38 @@ class SalesController extends Controller
          $ledger->save();
          //ADD DATA IN Sale ACCOUNT
          $SaleLgr=0;
-            if($sale->id){
-               $goods_discriptions = $request->input('goods_discription');
-               $qtys = $request->input('qty');
-               $units = $request->input('units');
-               $prices = $request->input('price');
-               $amounts = $request->input('amount');
-               $item_parameters = $request->input('item_parameters');
-               foreach($goods_discriptions as $key => $good){
-                  if($good=="" || $qtys[$key]=="" || $units[$key]=="" || $prices[$key]=="" || $amounts[$key]==""){
-                     continue;
-                  }
-                  $SaleLgr += $amounts[$key];
-                  
-               }}
-               
-               $bill_sundrys = $request->input('bill_sundry');
-               $tax_amts = $request->input('tax_rate');
-               $bill_sundry_amounts = $request->input('bill_sundry_amount');
-               foreach($bill_sundrys as $key => $bill){
-                  if($bill_sundry_amounts[$key]=="" || $bill==""){
-                     continue;
-                  }
-               
-                
-                  //ADD DATA IN CGST ACCOUNT
-                  $billsundry = BillSundrys::where('id', $bill)->first();
-      
-                  if($billsundry->adjust_sale_amt=='Yes'){
-                     if( $billsundry->bill_sundry_type=="additive"){
-                        $SaleLgr += $bill_sundry_amounts[$key];
-                     }else if( $billsundry->bill_sundry_type=="subtractive"){
-                        $SaleLgr -= $bill_sundry_amounts[$key];
-                     }          
-                    
-                     
-                  }
+         if($sale->id){
+            $goods_discriptions = $request->input('goods_discription');
+            $qtys = $request->input('qty');
+            $units = $request->input('units');
+            $prices = $request->input('price');
+            $amounts = $request->input('amount');
+            $item_parameters = $request->input('item_parameters');
+            foreach($goods_discriptions as $key => $good){
+               if($good=="" || $qtys[$key]=="" || $units[$key]=="" || $prices[$key]=="" || $amounts[$key]==""){
+                  continue;
                }
+               $SaleLgr += $amounts[$key];
+               
+            }
+         }               
+         $bill_sundrys = $request->input('bill_sundry');
+         $tax_amts = $request->input('tax_rate');
+         $bill_sundry_amounts = $request->input('bill_sundry_amount');
+         foreach($bill_sundrys as $key => $bill){
+            if($bill_sundry_amounts[$key]=="" || $bill==""){
+               continue;
+            }            
+            //ADD DATA IN CGST ACCOUNT
+            $billsundry = BillSundrys::where('id', $bill)->first();
+            if($billsundry->adjust_sale_amt=='Yes'){
+               if( $billsundry->bill_sundry_type=="additive"){
+                  $SaleLgr += $bill_sundry_amounts[$key];
+               }else if( $billsundry->bill_sundry_type=="subtractive"){
+                  $SaleLgr -= $bill_sundry_amounts[$key];
+               }
+            }
+         }
          $ledger = new AccountLedger();
          $ledger->account_id = 35;//Sales Account
          $ledger->credit = $SaleLgr;
@@ -650,6 +657,33 @@ class SalesController extends Controller
          $ledger->created_by = Session::get('user_id');
          $ledger->created_at = date('d-m-Y H:i:s');
          $ledger->save();
+
+         //Update Sale Order Id
+         if($request->sale_order_id!=""){
+            Sales::where('id',$sale->id)->update(['sale_order_id'=>$request->sale_order_id]);
+            $saleOrder = SaleOrder::with('items.gsms.details')
+                                 ->where('id', $request->sale_order_id)
+                                 ->first();
+            if ($saleOrder) {
+               // Update sale order
+               $saleOrder->update(['status' => 1]);
+
+               // Update items
+               foreach ($saleOrder->items as $item) {
+                  $item->update(['status' => 1]);
+
+                  // Update GSMs
+                  foreach ($item->gsms as $gsm) {
+                        $gsm->update(['status' => 1]);
+                        // Update GSM details
+                        foreach ($gsm->details as $detail) {
+                           $detail->update(['status' => 1]);
+                        }
+                  }
+               }
+            }
+         }
+         
          session(['previous_url' => URL::previous()]);
          return redirect('sale-invoice/'.$sale->id)->withSuccess('Sale voucher added successfully!');
       }else{

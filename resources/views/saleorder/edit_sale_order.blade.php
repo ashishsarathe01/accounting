@@ -291,7 +291,7 @@ $(document).ready(function() {
             detailsRows += `
                 <tr>
                     <td>
-                        <input type="text" name="items[${itemIndex}][gsms][1}][details][${row_index}][size]" class="form-control  size size_${itemIndex}_1" placeholder="SIZES" onkeyup="approxCalculation(${itemIndex},1)">
+                        <input type="text" name="items[${itemIndex}][gsms][1][details][${row_index}][size]" class="form-control  size size_${itemIndex}_1" placeholder="SIZES" onkeyup="approxCalculation(${itemIndex},1)">
                     </td>
                     <td>
                         <input type="number" name="items[${itemIndex}][gsms][1][details][${row_index}][reel]" class="form-control quantity quantity_${itemIndex}_1" data-item_id="${itemIndex}" data-gsm_id="1" data-quantity_id="${row_index}" placeholder="REELS" onkeyup="approxCalculation(${itemIndex},1)">

@@ -47,7 +47,6 @@ class User extends Authenticatable
     {
         
             if ($this->type=="OWNER" && Session::get('admin_id')!="") {
-                
                 $priv = DB::table('admin_user_privileges_module_mappings')->where('user_id', Session::get('admin_id'))
                     ->where('module_id', $module_id)
                     ->first();
