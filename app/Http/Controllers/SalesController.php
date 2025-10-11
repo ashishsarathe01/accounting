@@ -29,6 +29,10 @@ use App\Models\ItemAverageDetail;
 use App\Models\AccountOtherAddress;
 use App\Models\ItemParameterStock;
 use App\Models\SaleOrder;
+use App\Models\SaleOrderItem;
+use App\Models\SaleOrderItemGsm;
+use App\Models\SaleOrderItemWeight;
+use App\Models\SaleOrderItemGsmSize;
 use App\Helpers\CommonHelper;
 use Illuminate\Support\Facades\URL;
 use DB;
@@ -129,11 +133,16 @@ class SalesController extends Controller
       $shipp_to_id = $request->query('shipp_to_id'); // 332
       $freight   = $request->query('freight');   // 1
       $sale_order_id = $request->query('sale_order_id');
+      $new_order = $request->query('new_order');
       $sale_order_items = [];
       if($request->query('item_arr')){
          $sale_order_items = json_decode($request->query('item_arr'),true);
       }
       
+      $sale_enter_data = [];
+      if($request->query('item_arr')){
+         $sale_enter_data = $request->query('sale_enter_data');
+      } 
       
       if($companyData->gst_config_type == "single_gst"){
          $GstSettings = DB::table('gst_settings')
@@ -180,7 +189,7 @@ class SalesController extends Controller
                         ->where('financial_year','=',$financial_year)
                         ->where('series_no','=',$value->series)
                         ->where('delete','=','0')
-                        ->max("date");         
+                        ->max("date");
                         if(!$voucher_no){
                            if($series_configuration && $series_configuration->manual_numbering=="NO" && $series_configuration->invoice_start!=""){
                               $GstSettings[$key]->invoice_start_from =  sprintf("%'03d",$series_configuration->invoice_start);
@@ -311,7 +320,7 @@ class SalesController extends Controller
          $item[$key]->available_item = $available_item;
       }
       
-      return view('addSale')->with('party_list', $party_list)->with('billsundry', $billsundry)->with('bill_date', $bill_date)->with('GstSettings', $GstSettings)->with('item', $item)->with('bill_to_id', $bill_to_id)->with('shipp_to_id', $shipp_to_id)->with('freight', $freight)->with('sale_order_id', $sale_order_id)->with('sale_order_items',$sale_order_items);
+      return view('addSale')->with('party_list', $party_list)->with('billsundry', $billsundry)->with('bill_date', $bill_date)->with('GstSettings', $GstSettings)->with('item', $item)->with('bill_to_id', $bill_to_id)->with('shipp_to_id', $shipp_to_id)->with('freight', $freight)->with('sale_order_id', $sale_order_id)->with('sale_order_items',$sale_order_items)->with('sale_enter_data',$sale_enter_data)->with('new_order',$new_order);
    }   
    public function store(Request $request){
       Gate::authorize('action-module',85);
@@ -326,8 +335,7 @@ class SalesController extends Controller
       ]); 
 
       //echo "<pre>";
-      //print_r($request->all());
-      
+      //print_r($request->all());      
       //die;
       //Check Item Empty or not
       if($request->input('goods_discription')[0]=="" || $request->input('qty')[0]=="" || $request->input('price')[0]=="" || $request->input('amount')[0]==""){
@@ -658,7 +666,7 @@ class SalesController extends Controller
          $ledger->created_at = date('d-m-Y H:i:s');
          $ledger->save();
 
-         //Update Sale Order Id
+         //Update Sale Order Id Code ...................
          if($request->sale_order_id!=""){
             Sales::where('id',$sale->id)->update(['sale_order_id'=>$request->sale_order_id]);
             $saleOrder = SaleOrder::with('items.gsms.details')
@@ -667,11 +675,9 @@ class SalesController extends Controller
             if ($saleOrder) {
                // Update sale order
                $saleOrder->update(['status' => 1]);
-
                // Update items
                foreach ($saleOrder->items as $item) {
                   $item->update(['status' => 1]);
-
                   // Update GSMs
                   foreach ($item->gsms as $gsm) {
                         $gsm->update(['status' => 1]);
@@ -679,6 +685,125 @@ class SalesController extends Controller
                         foreach ($gsm->details as $detail) {
                            $detail->update(['status' => 1]);
                         }
+                  }
+               }
+            }
+            $sale_enter_data = json_decode($request->sale_enter_data,true);
+            $grouped = [];
+            foreach ($sale_enter_data as $item) {
+               $key = $item['detail_row_id'];
+               $grouped[$key][] = $item;
+            }
+            $new_order_arr = [];
+            foreach($grouped as $k=>$val){
+               $enter_qty = 0;
+               foreach($val as $k1=>$val1){
+                  if(!empty($val1['enter_qty'])){
+                     if(count($val1['reel_weight_arr'])==0){
+                        $enter_qty = $enter_qty + $val1['enter_qty'];
+                        $sale_order_item_weight = new SaleOrderItemWeight;
+                        $sale_order_item_weight->sale_order_id = $request->sale_order_id;
+                        $sale_order_item_weight->sale_order_item_row_id = $val1['detail_row_id'];
+                        $sale_order_item_weight->weight = $val1['enter_qty'];
+                        $sale_order_item_weight->company_id = Session::get('user_company_id');
+                        $sale_order_item_weight->created_at = Carbon::now();
+                        $sale_order_item_weight->save();
+                     }else{
+                        $enter_qty = $enter_qty + count($val1['reel_weight_arr']);
+                        foreach($val1['reel_weight_arr'] as $val2){
+                           $sale_order_item_weight = new SaleOrderItemWeight;
+                           $sale_order_item_weight->sale_order_id = $request->sale_order_id;
+                           $sale_order_item_weight->sale_order_item_row_id = $val1['detail_row_id'];
+                           $sale_order_item_weight->weight = $val2;
+                           $sale_order_item_weight->company_id = Session::get('user_company_id');
+                           $sale_order_item_weight->created_at = Carbon::now();
+                           $sale_order_item_weight->save();
+                        }
+                     }
+                  }
+               }
+               $sale_order_gsm_size = SaleOrderItemGsmSize::find($k);
+               $sale_order_gsm_size->sale_order_qty = $enter_qty;
+               $sale_order_gsm_size->update();
+               $remaining_qty = $sale_order_gsm_size->quantity - $enter_qty;
+               if($remaining_qty>0){
+                  array_push($new_order_arr,array("id"=>$k,"sale_order_item_id"=>$sale_order_gsm_size->sale_order_item_id,"sale_order_item_gsm_id"=>$sale_order_gsm_size->sale_order_item_gsm_id,"quantity"=>$remaining_qty));
+               }
+            }
+            if($request->new_order==1){
+               if(count($new_order_arr)>0){
+                  $sale_order = SaleOrder::find($request->sale_order_id);
+                   
+                  if (preg_match('/-(\d+)$/', $sale_order->sale_order_no, $matches)) {
+                     // If found, increment the number
+                     $nextNumber = $matches[1] + 1;
+                     // Replace the old suffix with the new one
+                     $new_sale_order_no = preg_replace('/-\d+$/', '-' . $nextNumber, $sale_order->sale_order_no);
+                  } else {
+                     // If no suffix found, start with -1
+                     $new_sale_order_no = $sale_order->sale_order_no . '-1';
+                  }
+                  
+                  $new_sale_order = new SaleOrder;
+                  $new_sale_order->sale_order_no = $new_sale_order_no;
+                  $new_sale_order->purchase_order_no = $sale_order->purchase_order_no;
+                  $new_sale_order->purchase_order_date = $sale_order->purchase_order_date;
+                  $new_sale_order->bill_to = $sale_order->bill_to;
+                  $new_sale_order->shipp_to = $sale_order->shipp_to;
+                  $new_sale_order->freight = $sale_order->freight;
+                  $new_sale_order->parent_order_no = $sale_order->sale_order_no;
+                  $new_sale_order->company_id = Session::get('user_company_id');
+                  $new_sale_order->created_by = auth()->id();
+                  $new_sale_order->created_at = Carbon::now();
+                  if($new_sale_order->save()){
+                     $item_check_arr = [];$gsm_check_arr = [];
+                     foreach($new_order_arr as $nk=>$nval){
+                        if(isset($item_check_arr[$nval['sale_order_item_id']]) && $item_check_arr[$nval['sale_order_item_id']]!=""){
+                           $new_sale_order_item_id = $item_check_arr[$nval['sale_order_item_id']];
+                        }else{
+                           $sale_order_item = SaleOrderItem::find($nval['sale_order_item_id']);
+                           $new_sale_order_item = new SaleOrderItem;
+                           $new_sale_order_item->sale_order_id = $new_sale_order->id;
+                           $new_sale_order_item->item_id = $sale_order_item->item_id;
+                           $new_sale_order_item->price = $sale_order_item->price;
+                           $new_sale_order_item->bill_price = $sale_order_item->bill_price;
+                           $new_sale_order_item->unit = $sale_order_item->unit;
+                           $new_sale_order_item->sub_unit = $sale_order_item->sub_unit;
+                           $new_sale_order_item->company_id = Session::get('user_company_id');
+                           $new_sale_order_item->created_at = Carbon::now();
+                           $new_sale_order_item->save();
+                           $item_check_arr[$nval['sale_order_item_id']] = $new_sale_order_item->id;
+                           $new_sale_order_item_id = $new_sale_order_item->id;
+                        }                  
+                        if($new_sale_order_item_id){
+                           if(isset($gsm_check_arr[$nval['sale_order_item_gsm_id']]) && $gsm_check_arr[$nval['sale_order_item_gsm_id']]!=""){
+                              $new_sale_order_item_gsm_id = $gsm_check_arr[$nval['sale_order_item_gsm_id']];
+                           }else{
+                              $sale_order_item_gsm = SaleOrderItemGSM::find($nval['sale_order_item_gsm_id']);
+                              $new_sale_order_item_gsm = new SaleOrderItemGSM;
+                              $new_sale_order_item_gsm->sale_orders_id = $new_sale_order->id;
+                              $new_sale_order_item_gsm->sale_order_item_id = $new_sale_order_item_id;
+                              $new_sale_order_item_gsm->gsm = $sale_order_item_gsm->gsm;
+                              $new_sale_order_item_gsm->company_id = Session::get('user_company_id');
+                              $new_sale_order_item_gsm->created_at = Carbon::now();
+                              $new_sale_order_item_gsm->save();
+                              $gsm_check_arr[$nval['sale_order_item_gsm_id']] = $new_sale_order_item_gsm->id;
+                              $new_sale_order_item_gsm_id = $new_sale_order_item_gsm->id;
+                           }
+                           if($new_sale_order_item_gsm_id){                        
+                              $sale_order_item_gsm_size = SaleOrderItemGsmSize::find($nval['id']);
+                              $new_sale_order_item_gsm_size = new SaleOrderItemGsmSize;
+                              $new_sale_order_item_gsm_size->sale_orders_id = $new_sale_order->id;
+                              $new_sale_order_item_gsm_size->sale_order_item_id = $new_sale_order_item->id;
+                              $new_sale_order_item_gsm_size->sale_order_item_gsm_id = $new_sale_order_item_gsm_id;
+                              $new_sale_order_item_gsm_size->size = $sale_order_item_gsm_size->size;
+                              $new_sale_order_item_gsm_size->quantity = $nval['quantity'];
+                              $new_sale_order_item_gsm_size->company_id = Session::get('user_company_id');
+                              $new_sale_order_item_gsm_size->created_at = Carbon::now();
+                              $new_sale_order_item_gsm_size->save();
+                           }
+                        }
+                     }
                   }
                }
             }

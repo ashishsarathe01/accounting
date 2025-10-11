@@ -51,9 +51,16 @@ input[type=number] {
                                 @foreach($item_groups as $key => $group)
                                     <option value="{{$group->id}}" @if($purchase_info->group_id==$group->id) selected @endif>{{$group->group_name}}</option>
                                 @endforeach
-                                
                             </select>
                         </div>
+                        <div class="clearfix"></div>
+                        <div class="mb-3 col-md-3">
+                            <label for="item" class="form-label font-14 font-heading">Item</label>
+                            <select class="form-select" name="item" id="item" required>
+                                <option value="">Select Item</option>
+                               
+                            </select>
+                        </div>                        
                         <div class="clearfix"></div>
                         <div class="mb-3 col-md-3">
                             <label for="gross_weight" class="form-label font-14 font-heading">Gross Weight</label>
@@ -107,6 +114,7 @@ input[type=number] {
 </body>
 @include('layouts.footer')
 <script>
+    var item_id = "{{$purchase_info->item_id}}";
     $(document).ready(function(){
         $( ".select2-single" ).select2({
             matcher: function(params, data) {
@@ -127,6 +135,38 @@ input[type=number] {
                 return null;
             }
         });
+        $("#group").change();
     });
+    $("#group").change(function(){
+        let group_id = $(this).val();
+        getItem(group_id);
+    });
+    function getItem(group_id){
+        $.ajax({
+            url : "{{url('item-by-group')}}",
+            method : "POST",
+            data: {
+                _token: '<?php echo csrf_token() ?>',
+                group_id : group_id
+            },
+            success:function(obj){
+                if(obj!=""){
+                    let res = JSON.parse(obj);
+                    if(res.data.length>0){
+                        let html = "<option value=''>Select Item</option>";
+                        res.data.forEach(function(e){
+                            let selected = "";
+                            if(item_id==e.id){
+                                selected = "selected";
+                            }
+                            html+='<option value="'+e.id+'" '+selected+'>'+e.name+'</option>';
+                        });
+                        $("#item").html(html);
+                    }
+                }
+                
+            }
+        });
+    }
 </script>
 @endsection

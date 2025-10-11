@@ -58,109 +58,192 @@ input[type=number] {
                         <button class="btn btn-primary btn-sm d-flex align-items-center manage_location">Manage Location</button>
                     @endcan
                 </div>
-                <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('store-supplier-rate') }}">
-                    @csrf
-                    <div class="row">
-                        <div class="mb-3 col-md-3">
-                            <label for="name" class="form-label font-14 font-heading">Date</label>
-                            <input type="date" class="form-control" id="date" name="date" value="{{$rate_date}}" required>
-                        </div>
-                        <div class="mb-9 col-md-9">
-                            @if(count($advance_rate)>0)
-                                <p class="blink">Already Set Rate</p>
-                                @foreach($advance_rate as $key => $value)
-                                    <a href="{{route('manage-supplier-rate')}}/{{$value}}"><button type="button" class="btn btn-info">{{date('d-m-Y',strtotime($value))}}</button></a>
-                                @endforeach
-                            @endif
-                        </div>
-                        <div class="clearfix"></div>
-                        @foreach($locations as $key => $location)
-                            <div class="mb-4 col-md-4">
-                                @if($key==0)<label for="name" class="form-label font-14 font-heading">Location</label>@endif
-                                <input type="text" class="form-control" name="location[]" value="{{$location->name}}" readonly>
-                                <input type="hidden" class="form-control" name="location_id[]" value="{{$location->id}}">
-                            </div>
-                            @foreach($heads as $k => $value)
-                                @php 
-                                $array_id = $location->id."_".$value->id;
-                                $length = strlen($value->name); 
-                                $col = 1;
-                                if($length>8){
-                                    $col = 2;
-                                }
-                                
-                                @endphp
-                                
-                                <div  class="mb-{{$col}} col-md-{{$col}}">
-                                    @if($key==0)<label for="name" class="form-label font-14 font-heading ">{{$value->name}}</label>@endif
-                                    <input type="hidden" name="head_id_{{$location->id}}[]" value="{{$value->id}}">
-                                    <input type="number" step="any" class="form-control @if($k==0)first_rate @else other_rate_{{$location->id}} @endif" name="head_value_{{$location->id}}[]" data-location_id="{{$location->id}}" data-head_id="{{$value->id}}" placeholder="Enter {{$value->name}} RATE" required value="<?php if(isset($supplier_rates) &&  isset($supplier_rates[$array_id]) && count($supplier_rates)>0){ echo $supplier_rates[$array_id]; }?>">
-                                </div>
-                            @endforeach
-                            <div class="clearfix"></div>
-                        @endforeach
-                        
-                    </div>
-                    <div class="text-start">
-                        <button type="submit" class="btn  btn-xs-primary ">
-                            SUBMIT
-                        </button>
-                    </div>
-                </form>
-                <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">
-                    View Supplier Rate
-                </h5>
-                <div class="bg-white table-view shadow-sm">
-                <table class="table table-striped table m-0 shadow-sm">
-                    <thead>
-                        <tr class=" font-12 text-body bg-light-pink ">
-                            <th class="w-min-120 border-none bg-light-pink text-body">Date</th>
-                            <th class="w-min-120 border-none bg-light-pink text-body ">Rates</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($all_rate as $key => $value)
-                            @php 
-                                $ressult = [];
-                                foreach ($value as $row) {
-                                    $ressult[$row['name']][] = $row;
-                                }
-                                // echo "<pre>";
-                                //     print_r($ressult);
-                                //     echo "</pre>";
-                            @endphp
-                            <tr>
-                                <td>{{date('d-m-Y',strtotime($key))}}</td>
-                                <td>
-                                    <table class="table table-borderd">
-                                        <thead>
-                                            <tr>
-                                                <th>Location</th>
-                                                @foreach($ressult as $k => $v)                                                   
-                                                    @foreach($v as $k1 => $v1)
-                                                        <th>{{$v1['head_name']}}</th>
-                                                    @endforeach
-                                                    @break
+                <ul class="nav nav-fill nav-tabs" role="tablist">
+                    @foreach($group_list as $key => $value)
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link @if($key==0) active @endif" id="fill-tab-{{$value->item_id}}" data-bs-toggle="tab" href="#fill-tabpanel-{{$value->item_id}}" role="tab" aria-controls="fill-tabpanel-{{$value->item_id}}" aria-selected="true"><h4>{{$value->group_type}}</h4></a>
+                        </li>
+                   @endforeach
+                </ul>
+                <div class="tab-content pt-5" id="tab-content">
+                    @foreach($group_list as $key => $value)
+                        <div class="tab-pane @if($key==0) active @endif" id="fill-tabpanel-{{$value->item_id}}" role="tabpanel" aria-labelledby="fill-tab-{{$value->item_id}}">
+                            @if($value->group_type=="WASTE KRAFT")
+                                <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('store-supplier-rate') }}">
+                                    @csrf
+                                    <div class="row">
+                                        <div class="mb-3 col-md-3">
+                                            <label for="name" class="form-label font-14 font-heading">Date</label>
+                                            <input type="date" class="form-control" id="date" name="date" value="{{$rate_date}}" required>
+                                        </div>
+                                        <div class="mb-9 col-md-9">
+                                            @if(count($advance_rate)>0)
+                                                <p class="blink">Already Set Rate</p>
+                                                @foreach($advance_rate as $key => $value)
+                                                    <a href="{{route('manage-supplier-rate')}}/{{$value}}"><button type="button" class="btn btn-info">{{date('d-m-Y',strtotime($value))}}</button></a>
                                                 @endforeach
+                                            @endif
+                                        </div>
+                                        <div class="clearfix"></div>
+                                        @foreach($locations as $key => $location)
+                                            <div class="mb-4 col-md-4">
+                                                @if($key==0)<label for="name" class="form-label font-14 font-heading">Location</label>@endif
+                                                <input type="text" class="form-control" name="location[]" value="{{$location->name}}" readonly>
+                                                <input type="hidden" class="form-control" name="location_id[]" value="{{$location->id}}">
+                                            </div>
+                                            @foreach($heads as $k => $value)
+                                                @php 
+                                                $array_id = $location->id."_".$value->id;
+                                                $length = strlen($value->name); 
+                                                $col = 1;
+                                                if($length>8){
+                                                    $col = 2;
+                                                }
+                                                
+                                                @endphp
+                                                
+                                                <div  class="mb-{{$col}} col-md-{{$col}}">
+                                                    @if($key==0)<label for="name" class="form-label font-14 font-heading ">{{$value->name}}</label>@endif
+                                                    <input type="hidden" name="head_id_{{$location->id}}[]" value="{{$value->id}}">
+                                                    <input type="number" step="any" class="form-control @if($k==0)first_rate @else other_rate_{{$location->id}} @endif" name="head_value_{{$location->id}}[]" data-location_id="{{$location->id}}" data-head_id="{{$value->id}}" placeholder="Enter {{$value->name}} RATE" required value="<?php if(isset($supplier_rates) &&  isset($supplier_rates[$array_id]) && count($supplier_rates)>0){ echo $supplier_rates[$array_id]; }?>">
+                                                </div>
+                                            @endforeach
+                                            <div class="clearfix"></div>
+                                        @endforeach
+                                        
+                                    </div>
+                                    <div class="text-start">
+                                        <button type="submit" class="btn  btn-xs-primary ">
+                                            SUBMIT
+                                        </button>
+                                    </div>
+                                </form>
+                                <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">
+                                    View Supplier Rate
+                                </h5>
+                                <div class="bg-white table-view shadow-sm">
+                                    <table class="table table-striped table m-0 shadow-sm">
+                                        <thead>
+                                            <tr class=" font-12 text-body bg-light-pink ">
+                                                <th class="w-min-120 border-none bg-light-pink text-body">Date</th>
+                                                <th class="w-min-120 border-none bg-light-pink text-body ">Rates</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach($ressult as $k => $v)
+                                            @foreach($all_rate as $key => $value)
+                                                @php 
+                                                    $ressult = [];
+                                                    foreach ($value as $row) {
+                                                        $ressult[$row['name']][] = $row;
+                                                    }
+                                                    // echo "<pre>";
+                                                    //     print_r($ressult);
+                                                    //     echo "</pre>";
+                                                @endphp
                                                 <tr>
-                                                    <td>{{$k}}</td>
-                                                    @foreach($v as $k1 => $v1)
-                                                        {{-- <td>{{$v1['head_name']}}</td> --}}
-                                                        <td>{{$v1['head_rate']}}</td>
-                                                    @endforeach                                                    
+                                                    <td>{{date('d-m-Y',strtotime($key))}}</td>
+                                                    <td>
+                                                        <table class="table table-borderd">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Location</th>
+                                                                    @foreach($ressult as $k => $v)                                                   
+                                                                        @foreach($v as $k1 => $v1)
+                                                                            <th>{{$v1['head_name']}}</th>
+                                                                        @endforeach
+                                                                        @break
+                                                                    @endforeach
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                @foreach($ressult as $k => $v)
+                                                                    <tr>
+                                                                        <td>{{$k}}</td>
+                                                                        @foreach($v as $k1 => $v1)
+                                                                            {{-- <td>{{$v1['head_name']}}</td> --}}
+                                                                            <td>{{$v1['head_rate']}}</td>
+                                                                        @endforeach                                                    
+                                                                    </tr>
+                                                                @endforeach
+                                                            </tbody>
+                                                        </table>                                    
+                                                    </td>
                                                 </tr>
                                             @endforeach
                                         </tbody>
-                                    </table>                                    
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                                    </table>
+                                </div>
+                            @elseif($value->group_type=="BOILER FUEL")
+                                <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('store-fuel-item-rate') }}">
+                                    @csrf
+                                    <div class="row">
+                                        <div class="mb-3 col-md-3">
+                                            <label for="name" class="form-label font-14 font-heading">Date</label>
+                                            <input type="date" class="form-control" id="fuel_date" name="fuel_date" value="{{$fuel_date}}" required>
+                                        </div>
+                                        <div class="clearfix"></div>
+                                        @foreach($items as $key => $item)
+                                            <div class="mb-4 col-md-4">
+                                                @if($key==0)<label for="name" class="form-label font-14 font-heading">Item</label>@endif
+                                                <input type="text" class="form-control" value="{{$item->name}}" readonly>
+                                                <input type="hidden" class="form-control" name="item_id[]" value="{{$item->id}}">
+                                            </div>
+                                            <div class="mb-2 col-md-2">
+                                                @if($key==0)<label for="name" class="form-label font-14 font-heading">Price</label>@endif
+                                                <input type="text" class="form-control" name="item_price[]" placeholder="Price" value="@if(isset($fuelresult[$item->id])){{$fuelresult[$item->id]}} @endif">
+                                            </div>
+                                            <div class="clearfix"></div>
+                                        @endforeach
+                                    </div>
+                                    <div class="text-start">
+                                        <button type="submit" class="btn  btn-xs-primary ">
+                                            SUBMIT
+                                        </button>
+                                    </div>
+                                </form>
+                                <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">
+                                    View Supplier Rate
+                                </h5>
+                                <div class="bg-white table-view shadow-sm">
+                                    <table class="table table-striped table m-0 shadow-sm">
+                                        <thead>
+                                            <tr class=" font-12 text-body bg-light-pink ">
+                                                <th class="w-min-120 border-none bg-light-pink text-body">Date</th>
+                                                <th class="w-min-120 border-none bg-light-pink text-body ">Rates</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            
+                                            @foreach($all_fuel_item_rate as $key => $value)
+                                                
+                                                <tr>
+                                                    <td>{{date('d-m-Y',strtotime($key))}}</td>
+                                                    <td>
+                                                        <table class="table table-borderd">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Item</th>
+                                                                    <th>Price</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                @foreach($value as $k => $v)
+                                                                    <tr>
+                                                                        <td>{{$v['item_name']}}</td>
+                                                                        <td>{{$v['item_price']}}</td>
+                                                                    </tr>
+                                                                @endforeach
+                                                            </tbody>
+                                                        </table>                                    
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @endif
+                        </div>                            
+                    @endforeach
                 </div>
             </div>
         </div>
@@ -342,6 +425,10 @@ $(document).ready(function(){
     $("#date").change(function(){
         window.location = "{{ url('manage-supplier-rate') }}/" + $(this).val();
     });
+    $("#fuel_date").change(function(){
+        window.location = "{{ url('manage-supplier-rate') }}/" + $(this).val();
+    });
+    
     $(".manage_location").click(function(){
         getLocation();
         $("#location_modal").modal('toggle');
@@ -462,6 +549,23 @@ $(document).on('click','.set_edit',function(){
     let id = $(this).attr('data-id');
     $("#location_name").val($(this).attr('data-name'));
     $("#location_edit_id").val(id);
+});
+document.addEventListener('DOMContentLoaded', function () {
+    // Restore the last active tab from localStorage
+    let activeTab = localStorage.getItem('activeTab');
+    if (activeTab) {
+        let triggerEl = document.querySelector(`[data-bs-toggle="tab"][href="${activeTab}"]`);
+        if (triggerEl) {
+            new bootstrap.Tab(triggerEl).show();
+        }
+    }
+
+    // Save the active tab on click
+    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function (event) {
+            localStorage.setItem('activeTab', event.target.getAttribute('href'));
+        });
+    });
 });
 </script>
 @endsection

@@ -88,8 +88,8 @@
                                 <div class="row">
                                     <div class="col-md-3 mb-3">
                                         <label class="form-label font-14 font-heading">Item</label>
-                                        <input type="text" class="form-control" value="{{$value->item->name}}" readonly>
-                                        <input type="hidden" class="item" value="{{$value->item->id}}">
+                                        <input type="text" class="form-control" value="{{$value->item->name}}" readonly id="item_id_{{$item_index}}">
+                                        <input type="hidden" class="item" value="{{$value->item->id}}" data-item_index="{{$item_index}}">
                                     </div>
                                     <div class="col-md-3 mb-3">
                                         <label for="price_1" class="form-label font-14 font-heading">Price</label>
@@ -124,7 +124,11 @@
                                                     <td class="qty_title_1">{{$value->unitMaster->s_name}}</td>
                                                     <td></td>
                                                 </tr>
-                                                @php $qty_total = 0; $detail_index = 1; @endphp
+                                                @php $qty_total = 0; $detail_index = 1; 
+                                                
+                                                @endphp
+                                                
+                                                
                                                 @foreach($gsm->details as $k2 => $detail)
                                                      <tr>
                                                         <td>
@@ -134,12 +138,12 @@
                                                             <input type="number" name="items[1][gsms][1][details][{{ $k2 }}][reel]" class="form-control quantity quantity_1_1" value="{{$detail->quantity}}" data-item_id="1" data-gsm_id="1" data-quantity_id="{{ $k2 }}" onkeyup="approxCalculation(1,1)" readonly>
                                                         </td>
                                                         <td @if($value->SaleOrderSettingUnitMaster->unit_type=="REEL") style="display: inline-flex" @endif>
-                                                            <input type="text" class="form-control order_quantity @if($value->SaleOrderSettingUnitMaster->unit_type=="KG") order_weight_kg_{{$item_index}}_{{$gsm_index}} order_weight_kg_{{$item_index}}_{{$gsm_index}}_{{$detail_index}}" @endif data-actual_qty="{{$detail->quantity}}" data-unit_type="{{$value->SaleOrderSettingUnitMaster->unit_type}}" data-item_index="{{$item_index}}" data-gsm_index="{{$gsm_index}}" data-detail_index="{{$detail_index}}" placeholder="{{$value->unitMaster->s_name}}">
+                                                            <input type="text" class="form-control order_quantity @if($value->SaleOrderSettingUnitMaster->unit_type=="KG") order_weight_kg_{{$item_index}}_{{$gsm_index}} order_weight_kg_{{$item_index}}_{{$gsm_index}}_{{$detail_index}} order_weight_detail_kg_{{$detail->id}}@endif" data-actual_qty="{{$detail->quantity}}" data-unit_type="{{$value->SaleOrderSettingUnitMaster->unit_type}}" data-item_index="{{$item_index}}" data-gsm_index="{{$gsm_index}}" data-detail_index="{{$detail_index}}" placeholder="{{$value->unitMaster->s_name}}" data-detail_row_id="{{$detail->id}}">
 
                                                             @if($value->SaleOrderSettingUnitMaster->unit_type=="REEL")
                                                                 <span id="weight_box_{{$item_index}}_{{$gsm_index}}_{{$detail_index}}"></span>
                                                             @elseif($value->SaleOrderSettingUnitMaster->unit_type=="KG")
-                                                                <svg style="color: green;cursor:pointer;margin-left:5px;float:right" class="bg-primary rounded-circle add_weight" data-item_index="{{$item_index}}" data-gsm_index="{{$gsm_index}}" data-detail_index="{{$detail_index}}" data-actual_qty="{{$detail->quantity}}" width="24" height="24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/></svg>
+                                                                <svg style="color: green;cursor:pointer;margin-left:5px;float:right" class="bg-primary rounded-circle add_weight" data-item_index="{{$item_index}}" data-gsm_index="{{$gsm_index}}" data-detail_index="{{$detail_index}}" data-actual_qty="{{$detail->quantity}}" data-detail_row_id="{{$detail->id}}" width="24" height="24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/></svg>
                                                                 <span id="weight_box_{{$item_index}}_{{$gsm_index}}_{{$detail_index}}"></span>
                                                             @endif
                                                             
@@ -152,7 +156,7 @@
                                                     <td>
                                                         <input type="number" class="form-control quantity_total" id="quantity_total_1_1" value="{{$qty_total}}" readonly>
                                                     </td>
-                                                    <td><input type="number" class="form-control order_quantity_total_{{$value->item->id}}" id="order_quantity_total_{{$item_index}}_{{$gsm_index}}"  readonly></td>
+                                                    <td><input type="number" class="form-control order_quantity_total_{{$item_index}}" id="order_quantity_total_{{$item_index}}_{{$gsm_index}}"  readonly></td>
                                                 </tr>
                                             </table>
                                             {{-- <span class="add_row" data-item="1" data-gsm="1" style="color:#3c8dbc;cursor:pointer;">Add Row</span> --}}
@@ -168,7 +172,7 @@
                     </div>
                     <div class="d-flex">
                         <div class="ms-auto">
-                            {{-- <input type="button" value="SAVE" class="btn btn-primary start_order"> --}}
+                            <input type="button" value="SAVE" class="btn btn-primary start_order">
                             <a href="{{ url()->previous() }}" class="btn btn-secondary">QUIT</a>
                         </div>
                     </div>
@@ -177,18 +181,39 @@
         </div>
     </section>
 </div>
-
+<div class="modal fade" id="pendingOrderModal" tabindex="-1" aria-labelledby="imageUploadLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content p-3 border-radius-8">
+            <div class="modal-header border-0">
+                <h5 class="modal-title" id="imageUploadLabel">Pending Order</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="image-inputs">
+                    <div class="mb-3 align-items-center">
+                        <strong>Are you want to create order for pending items?</strong>  <br><input type="radio" name="order_confirmation" value="1"> Yes <input type="radio" name="order_confirmation" value="0"> No
+                        <input type="hidden" id="sale_order_url">
+                    </div>
+                </div>
+                <div class="text-end mt-3">
+                    <button type="buttom" class="btn btn-success confirmation_btn">Submit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 @include('layouts.footer')
 
 <script>
-$(document).ready(function(){    
+$(document).ready(function(){
     $(".add_weight").click(function(){
         let item_index = $(this).attr('data-item_index');
         let gsm_index = $(this).attr('data-gsm_index');
         let detail_index = $(this).attr('data-detail_index');
         let actual_qty = $(this).attr('data-actual_qty');
+        let detail_row_id = $(this).attr('data-detail_row_id');
         weight_box_html = "";
-        weight_box_html+="<input type='text' class='form-control order_quantity order_weight_kg_"+item_index+"_"+gsm_index+" order_weight_kg_"+item_index+"_"+gsm_index+"_"+detail_index+" style='margin-left: 6px;' placeholder='KG' data-item_index='"+item_index+"' data-gsm_index='"+gsm_index+"' data-detail_index='"+detail_index+"' data-actual_qty='"+actual_qty+"' data-unit_type='KG'>";
+        weight_box_html+="<input type='text' class='form-control order_quantity order_weight_kg_"+item_index+"_"+gsm_index+" order_weight_kg_"+item_index+"_"+gsm_index+"_"+detail_index+" order_weight_detail_kg_"+detail_row_id+"' style='margin-left: 6px;' placeholder='KG' data-item_index='"+item_index+"' data-gsm_index='"+gsm_index+"' data-detail_index='"+detail_index+"' data-actual_qty='"+actual_qty+"' data-detail_row_id='"+detail_row_id+"' data-unit_type='KG'>";
         $("#weight_box_"+item_index+"_"+gsm_index+"_"+detail_index).append(weight_box_html);
     });
     $(".start_order").click(function(){
@@ -196,19 +221,85 @@ $(document).ready(function(){
         let shipp_to_id = $("#shipp_to_id").val();
         let freight = $("#freight").val();
         let item_arr = [];
-        let sale_order_id = "{{$saleOrder->id}}"
+        let sale_order_id = "{{$saleOrder->id}}";
+        
         $(".item").each(function(){
             let item_id = $(this).val();
+            let item_index = $(this).attr('data-item_index');
             let price = $("#price_"+item_id).val();
             let total_weight = 0;
-            $(".order_quantity_total_" + item_id).each(function() {
+            $(".order_quantity_total_" + item_index).each(function() {
                 let val = parseFloat($(this).val()) || 0;
                 total_weight += val;
             });
-            item_arr.push({'item_id':item_id,'price':price,'total_weight':total_weight})
+            if(total_weight>0){
+                item_arr.push({'item_id':item_id,'price':price,'total_weight':total_weight})
+            }
+            
         });
-        window.location = "{{url('sale/create')}}?bill_to_id="+bill_to_id+"&shipp_to_id="+shipp_to_id+"&freight="+freight+"&item_arr="+JSON.stringify(item_arr)+"&sale_order_id="+sale_order_id;
-    })
+        let sale_enter_data = [];let pending_order_html = "";pending_order_status = 0;
+        $(".order_quantity").each(function(){
+            let item_index = $(this).attr('data-item_index');
+            let gsm_index = $(this).attr('data-gsm_index');
+            let detail_index = $(this).attr('data-detail_index');
+            let unit_type = $(this).attr('data-unit_type');
+            let detail_row_id = $(this).attr('data-detail_row_id');
+            let actual_qty = $(this).attr('data-actual_qty');
+            let enter_qty = $(this).val();
+            let reel_weight_arr = [];
+            //if(enter_qty!=""){
+                if(unit_type=="REEL"){
+                    $(".reel_weight_detail_row_"+detail_row_id).each(function(){
+                        if($(this).val()!=""){
+                            reel_weight_arr.push($(this).val());
+                        }
+                    });
+                }
+                sale_enter_data.push({'detail_row_id':detail_row_id,'enter_qty':enter_qty,'reel_weight_arr':reel_weight_arr});
+            //}
+            //Pending Order
+            if(unit_type=="REEL"){
+                let detail_row = 0;
+                $(".reel_weight_detail_row_"+detail_row_id).each(function(){
+                    if($(this).val()!=""){
+                        detail_row++;
+                    }
+                });
+                if(actual_qty>detail_row){
+                    //pending_order_html+="<tr><td>Item</td><td>"+$("#item_id_"+item_index).val()+"</td></tr>";
+                    pending_order_status = 1;
+                }
+            }else{
+                let order_weight_detail_kg_sum = 0;
+                $(".order_weight_detail_kg_"+detail_row_id).each(function(){
+                    if($(this).val()!=""){
+                        order_weight_detail_kg_sum = parseFloat(order_weight_detail_kg_sum) + parseFloat($(this).val());
+                    }
+                });
+                if(actual_qty>order_weight_detail_kg_sum){
+                    //pending_order_html+="<tr><td>Item</td><td>"+$("#item_id_"+item_index).val()+"</td></tr>";
+                    pending_order_status = 1;
+                }
+            }
+        });
+        
+        let sale_order_url = "{{url('sale/create')}}?bill_to_id="+bill_to_id+"&shipp_to_id="+shipp_to_id+"&sale_order_id="+sale_order_id+"&freight="+freight+"&item_arr="+JSON.stringify(item_arr)+"&sale_enter_data="+JSON.stringify(sale_enter_data);
+        if(pending_order_status==1){
+            $("#sale_order_url").val(sale_order_url);
+            $("#pendingOrderModal").modal('toggle');
+            return;
+        }       
+        window.location = sale_order_url+"&new_order=0";
+    });
+    $(".confirmation_btn").click(function(){
+        var selected = $('input[name="order_confirmation"]:checked').val();
+        let sale_order_url = $("#sale_order_url").val();
+        if(selected=="" || selected==undefined){
+            alert("Please select radio button option")
+            return;
+        }
+        window.location = sale_order_url+"&new_order="+selected;
+    });
 });
 $(document).on('keyup','.order_quantity',function(){
     let unit_type = $(this).attr('data-unit_type');
@@ -217,25 +308,26 @@ $(document).on('keyup','.order_quantity',function(){
     let gsm_index = $(this).attr('data-gsm_index');
     let detail_index = $(this).attr('data-detail_index');
     let order_qty = $(this).val();
+    let detail_row_id = $(this).attr('data-detail_row_id');
     if(unit_type=="REEL" && order_qty>actual_qty){
-        $(this).val('');
-        alert("Invalid Quantity");
-        return;
+        //alert("Invalid Quantity");
+        // $(this).val('');
+        // return;
     }else if(unit_type=="KG"){
         let weight_total = 0;
         $(".order_weight_kg_"+item_index+"_"+gsm_index+"_"+detail_index).each(function(){
             weight_total = parseFloat(weight_total) + parseFloat($(this).val());
         });
-        if(actual_qty<weight_total){
-            $(this).val('');
-            alert("Invalid Quantity");
-            return;
+        if(actual_qty<weight_total){            
+            //alert("Invalid Quantity");
+            // $(this).val('');
+            // return;
         }
     }
     if(unit_type=="REEL"){ 
         let weight_box_html = "";
         while(order_qty>0){
-            weight_box_html+="<input type='text' class='form-control reel_weight reel_weight_"+item_index+"_"+gsm_index+"' style='margin-left: 6px;' placeholder='Weight' data-item_index='"+item_index+"' data-gsm_index='"+gsm_index+"' data-detail_index='"+detail_index+"' data-actual_qty='"+actual_qty+"' data-unit_type='REEL'><br>";
+            weight_box_html+="<input type='text' class='form-control reel_weight reel_weight_"+item_index+"_"+gsm_index+" reel_weight_detail_row_"+detail_row_id+"' style='margin-left: 6px;' placeholder='Weight' data-item_index='"+item_index+"' data-gsm_index='"+gsm_index+"' data-detail_index='"+detail_index+"' data-actual_qty='"+actual_qty+"' data-unit_type='REEL'><br>";
             order_qty--
         }
         $("#weight_box_"+item_index+"_"+gsm_index+"_"+detail_index).html(weight_box_html);
@@ -249,8 +341,7 @@ $(document).on('keyup','.reel_weight',function(){
     $(".reel_weight_"+item_index+"_"+gsm_index).each(function(){
         if($(this).val()!=""){
             total = parseFloat(total) + parseFloat($(this).val());
-        }
-        
+        }        
     });
     $("#order_quantity_total_"+item_index+"_"+gsm_index).val(total)
 });

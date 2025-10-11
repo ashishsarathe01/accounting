@@ -12,6 +12,37 @@
        appearance: none;
        margin: 0; 
    }
+   .select2-container--default .select2-selection--single {
+  height: 50px !important;          /* increased for full text visibility */
+  border: 1px solid #ced4da !important;
+  border-radius: 0.4rem !important;    
+  display: flex;
+  align-items: center;
+  padding: 0 0.75rem;               /* extra horizontal padding for text */
+  font-size: 1rem;
+  box-sizing: border-box;           /* ensures padding doesn't cut text */
+}
+
+/* Text inside */
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+  color: #495057 !important;  
+  line-height: 50px !important;    /* match container height for vertical centering */
+  white-space: nowrap;              /* prevents wrapping inside the box */
+  overflow: hidden;
+  text-overflow: ellipsis;         /* shows ... if text is too long */
+}
+
+/* Arrow dropdown */
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+  height: 100% !important;
+  display: flex;
+  align-items: center;
+  right: 8px;
+}
+.select2-selection__clear {
+    display: none !important;
+}
+
 </style>
 <div class="list-of-view-company ">
    <section class="list-of-view-company-section container-fluid">
@@ -108,7 +139,7 @@
             </td>
 
             <td>
-                <select class="form-select select2-single account-dropdown" id="account_{{ $i }}" name="account_name[]" required>
+                <select class="form-select select2-single account-dropdown" data-id="{{ $i }}" id="account_{{ $i }}" name="account_name[]" required>
                     <option value="">Select</option>
 
                     @if($value->type == "Debit")
@@ -147,7 +178,7 @@
             </td>
 
             <td>
-                <svg style="color: red; cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="{{ $i }}" viewBox="0 0 16 16">
+                <svg style="color: red; cursor: pointer;" tabindex="0" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="{{ $i }}" viewBox="0 0 16 16">
                     <path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/>
                 </svg>
             </td>
@@ -160,7 +191,7 @@
                      <div class="plus-icon">
                         <tr class="font-14 font-heading bg-white">
                            <td class="w-min-120 " colspan="7">
-                              <a class="add_more"><svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;">
+                              <a class="add_more"><svg xmlns="http://www.w3.org/2000/svg" tabindex="0" class="bg-primary rounded-circle" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;">
                                  <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg></a>
                            </td>
                         </tr>
@@ -462,7 +493,91 @@ $(document).ready(function () {
         $('.account-dropdown').select2('close'); // Force close dropdown to refresh filtered list
     });
 });
+$(document).ready(function () {
+  // Initialize all select2 dropdowns with the same class
+  $('.select2-single').select2({
+    placeholder: "Select",
+    allowClear: true,
+    width: '100%'
+  });
 
+  // When user selects an option in `type_x`, move focus to `account_x`
+  $(document).on('select2:select select2:unselect select2:close', 'select[id^="type_"]', function (e) {
+    const id = $(this).data('id'); // e.g. 1, 2, 3 ...
+    const selectedValue = $(this).val();
+    const previousValue = $(this).data('previousValue');
+
+    // If first time OR same value OR any selection, move focus
+    if (!previousValue || selectedValue === previousValue) {
+      $(`#account_${id}`).focus(); // focus on the corresponding account select
+    }
+
+    // Update previous value
+    $(this).data('previousValue', selectedValue);
+  });
+});
+$(document).ready(function () {
+  // Initialize all select2 dropdowns with the same class
+  $('.select2-single').select2({
+    placeholder: "Select",
+    allowClear: true,
+    width: '100%'
+  });
+
+  // When user selects an option in `type_x`, move focus to `account_x`
+  $(document).on('select2:select select2:unselect select2:close', 'select[id^="account_"]', function (e) {
+    const id = $(this).data('id'); // e.g. 1, 2, 3 ...
+    const selectedValue = $(this).val();
+    const previousValue = $(this).data('previousValue');
+
+    // If first time OR same value OR any selection, move focus
+    if (!previousValue || selectedValue === previousValue) {
+      $(`#debit_${id}`).focus(); // focus on the corresponding account select
+    }
+
+    // Update previous value
+    $(this).data('previousValue', selectedValue);
+  });
+});
+
+    $(".add_more").on('keydown', function(event) {
+      if (event.key === "Enter") {
+        event.preventDefault(); // prevent default behavior
+        $(this).click(); // trigger click event (which submits)
+      }
+    });
+      $(".remove").on('keydown', function(event) {
+      if (event.key === "Enter") {
+        event.preventDefault(); // prevent default behavior
+        $(this).click(); // trigger click event (which submits)
+      }
+    });
+    const submitBtn = document.querySelector('.submit_data');
+
+// Function to change color
+function setGreen() {
+    submitBtn.style.backgroundColor = 'green';
+}
+
+// Function to reset color
+function resetColor() {
+    submitBtn.style.backgroundColor = ''; // original color
+}
+
+// Mouse hover
+submitBtn.addEventListener('mouseenter', setGreen);
+submitBtn.addEventListener('mouseleave', resetColor);
+
+// Keyboard focus (tab)
+submitBtn.addEventListener('focus', setGreen);
+submitBtn.addEventListener('blur', resetColor);
+submitBtn.addEventListener('blur', resetColor);
+    $(".submit_data").on('keydown', function(event) {
+      if (event.key === "Enter") {
+        event.preventDefault(); // prevent default behavior
+        $(this).click(); // trigger click event (which submits)
+      }
+    });
 
 </script>
 @endsection

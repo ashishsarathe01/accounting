@@ -15,77 +15,142 @@
                 @if (session('success'))
                     <div class="alert alert-success" role="alert">{{ session('success') }}</div>
                 @endif          
-                <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
-                    <h5 class="transaction-table-title m-0 py-2">List of Supplier</h5>
-                    <button class="btn btn-primary btn-sm d-flex align-items-center supplier_bonus" >Supplier Bonus</button>
-                     @can('view-module', 104)
-                        <a href="{{ route('supplier.create') }}" class="btn btn-xs-primary">ADD
-                              <svg class="position-relative ms-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M9.1665 15.8327V10.8327H4.1665V9.16602H9.1665V4.16602H10.8332V9.16602H15.8332V10.8327H10.8332V15.8327H9.1665Z" fill="white" /></svg>
-                        </a>
-                     @endcan
-                </div>
-                <div class="transaction-table bg-white table-view shadow-sm" style="overflow: scroll;">
-                    <table class="table-striped table m-0 shadow-sm receipt_table">
-                  <thead>
-                     <tr class=" font-12 text-body bg-light-pink ">
-                        <th class="w-min-120 border-none bg-light-pink text-body">Supplier Name</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Date</th>
-                        @foreach($locations as $key => $location)
-                            <th class="w-min-120 border-none bg-light-pink text-body">{{$location->name}}</th>
-                        @endforeach
-                        <th class="w-min-120 border-none bg-light-pink text-body text-center">Action </th>
-                     </tr>
-                  </thead>
-                  <tbody>
-                     @foreach($suppliers as $key => $supplier)
-                        @php                             
-                           $grouped = [];$r_date = "";
-                           foreach ($supplier->latestLocationRate->toArray() as $row) {
-                              $grouped[$row['location']][] = $row;
-                              $r_date = $row['r_date'];
-                           }
-                           
-                        @endphp
-                        <tr class="font-14 text-body">
-                            <td class="w-min-120 border-none ">
-                                <span class="text-body font-12">({{ $supplier->account ? $supplier->account->account_name : '' }})</span>
-                            </td>
-                            <td>{{date('d-m-Y',strtotime($r_date))}}</td>
-                            @foreach($locations as $key => $location)
-                                <td class="w-min-120 border-none ">
-                                    <table class="table table-borderless m-0">
-                                       @php 
-                                       if(isset($grouped[$location->id]) && count($grouped[$location->id])>0){ 
-                                          foreach($grouped[$location->id] as $v){ @endphp
-                                             <tr>
-                                                <td class="font-12 text-body">{{$v['name']}}</td>
-                                                <td class="font-12 text-body">{{$v['head_rate']}}</td>
-                                             </tr>
-                                             @php
+               <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
+                  <h5 class="transaction-table-title m-0 py-2">List of Supplier</h5>
+                  <button class="btn btn-primary btn-sm d-flex align-items-center supplier_bonus" >Supplier Bonus</button>
+                  <div class="d-md-flex d-block"> 
+                     <input type="text" id="search" class="form-control" placeholder="Search">
+                  </div>
+                  @can('view-module', 104)
+                     <a href="{{ route('supplier.create') }}" class="btn btn-xs-primary">ADD
+                           <svg class="position-relative ms-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M9.1665 15.8327V10.8327H4.1665V9.16602H9.1665V4.16602H10.8332V9.16602H15.8332V10.8327H10.8332V15.8327H9.1665Z" fill="white" /></svg>
+                     </a>
+                  @endcan
+               </div>
+               <ul class="nav nav-fill nav-tabs" role="tablist">
+                  @foreach($group_list as $key => $value)
+                     <li class="nav-item" role="presentation">
+                        <a class="nav-link @if($key==0) active @endif" id="fill-tab-{{$value->item_id}}" data-bs-toggle="tab" href="#fill-tabpanel-{{$value->item_id}}" role="tab" aria-controls="fill-tabpanel-{{$value->item_id}}" aria-selected="true"><h4>{{$value->group_type}}</h4></a>
+                     </li>
+                  @endforeach
+               </ul>
+               <div class="tab-content pt-5" id="tab-content">
+                  @foreach($group_list as $key => $value)
+                     <div class="tab-pane @if($key==0) active @endif" id="fill-tabpanel-{{$value->item_id}}" role="tabpanel" aria-labelledby="fill-tab-{{$value->item_id}}">
+                        <div class="transaction-table bg-white table-view shadow-sm" style="overflow: scroll;">
+                           @if($value->group_type=="WASTE KRAFT")
+                              <table class="table-striped table m-0 shadow-sm supplier_table">
+                                 <thead>
+                                    <tr class=" font-12 text-body bg-light-pink ">
+                                       <th class="w-min-120 border-none bg-light-pink text-body">Supplier Name</th>
+                                       <th class="w-min-120 border-none bg-light-pink text-body">Date</th>
+                                       @foreach($locations as $key => $location)
+                                          <th class="w-min-120 border-none bg-light-pink text-body">{{$location->name}}</th>
+                                       @endforeach
+                                       <th class="w-min-120 border-none bg-light-pink text-body text-center">Action </th>
+                                    </tr>
+                                 </thead>
+                                 <tbody>
+                                    @foreach($suppliers as $key => $supplier)
+                                       @php                             
+                                          $grouped = [];$r_date = "";
+                                          foreach ($supplier->latestLocationRate->toArray() as $row) {
+                                             $grouped[$row['location']][] = $row;
+                                             $r_date = $row['r_date'];
                                           }
-                                       }
+                                          
                                        @endphp
-                                    </table>
-                                   
-                                        {{-- <div class="font-12 text-body">-</div> --}}
-                                    
-                                </td>
-                            @endforeach
-                            <td class="w-min-120 border-none text-center">
-                              @can('view-module', 105)
-                                <a href="{{ URL::to('supplier/'.$supplier->id.'/edit') }}">  <img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
-                                 <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $supplier->id;?>">
-                                 @endcan
-                                    @can('view-module', 106)
-                                    <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
-                                 </button>
-                                 @endcan
-                            </td>
-                    @endforeach                    
-                  </tbody>
-               </table>
+                                       <tr class="font-14 text-body">
+                                          <td class="w-min-120 border-none ">
+                                             <span class="text-body font-12">({{ $supplier->account ? $supplier->account->account_name : '' }})</span>
+                                          </td>
+                                          <td>{{date('d-m-Y',strtotime($r_date))}}</td>
+                                          @foreach($locations as $key => $location)
+                                             <td class="w-min-120 border-none ">
+                                                   <table class="table table-borderless m-0">
+                                                      @php 
+                                                      if(isset($grouped[$location->id]) && count($grouped[$location->id])>0){ 
+                                                         foreach($grouped[$location->id] as $v){ @endphp
+                                                            <tr>
+                                                               <td class="font-12 text-body">{{$v['name']}}</td>
+                                                               <td class="font-12 text-body">{{$v['head_rate']}}</td>
+                                                            </tr>
+                                                            @php
+                                                         }
+                                                      }
+                                                      @endphp
+                                                   </table>
+                                                
+                                                      {{-- <div class="font-12 text-body">-</div> --}}
+                                                   
+                                             </td>
+                                          @endforeach
+                                          <td class="w-min-120 border-none text-center">
+                                             @can('view-module', 105)
+                                             <a href="{{ URL::to('supplier/'.$supplier->id.'/edit') }}">  <img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
+                                                <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $supplier->id;?>" data-type="Waste">
+                                                @endcan
+                                                   @can('view-module', 106)
+                                                   <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
+                                                </button>
+                                                @endcan
+                                          </td>
+                                 @endforeach
+                                 </tbody>
+                              </table>
+                           @elseif($value->group_type=="BOILER FUEL")
+                              <table class="table-striped table m-0 shadow-sm supplier_table">
+                                 <thead>
+                                    <tr class=" font-12 text-body bg-light-pink ">
+                                       <th class="w-min-120 border-none bg-light-pink text-body">Supplier Name</th>
+                                       <th class="w-min-120 border-none bg-light-pink text-body">Date</th>
+                                       <th class="w-min-120 border-none bg-light-pink text-body">Items</th>
+                                       <th class="w-min-120 border-none bg-light-pink text-body text-center">Action </th>
+                                    </tr>
+                                 </thead>
+                                 <tbody>
+                                    @foreach($fuel_supplier as $key => $supplier)
+                                       <tr class="font-14 text-body">
+                                          <td class="w-min-120 border-none ">
+                                             <span class="text-body font-12">({{ $supplier->account ? $supplier->account->account_name : '' }})</span>
+                                          </td>
+                                          <td>{{date('d-m-Y',strtotime($supplier->itemRates[0]->price_date))}}</td>
+                                          <td>
+                                             <table class="table table-bordered">
+                                                <thead>
+                                                   <th>Item</th>
+                                                   <th>Rate</th>
+                                                </thead>
+                                                <tbody>
+                                                   @foreach ($supplier->itemRates as $item)
+                                                      <tr>
+                                                         <td>{{$item->name}}</td>
+                                                         <td>{{$item->price}}</td>
+                                                      </tr>
+                                                   @endforeach
+                                                </tbody>
+                                             </table>
+                                          </td>
+                                          <td class="w-min-120 border-none text-center">
+                                             @can('view-module', 105)
+                                                <a href="{{ URL::to('fuel-supplier/'.$supplier->id.'/edit') }}">  <img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
+                                                <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $supplier->id;?>" data-type="Fuel">
+                                                @endcan
+                                                   @can('view-module', 106)
+                                                   <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
+                                                </button>
+                                             @endcan
+                                          </td>
+                                       </tr>
+                                    @endforeach
+                                 </tbody>
+                              </table>
+                           @endif
+                        </div>
+                     </div>
+                  @endforeach
+               </div>
             </div>
-         </div>
          <!-- <div class="col-lg-1 d-flex justify-content-center">
             <div class="shortcut-key ">
                <p class="font-14 fw-500 font-heading m-0">Shortcut Keys</p>
@@ -236,7 +301,12 @@
 @include('layouts.footer')
 <script>
    $(document).on("click", ".delete", function(){
-      let url = "{{ route('supplier.destroy','id')}}";
+      let url = "";
+      if($(this).attr('data-type')=="Waste"){
+          url = "{{ route('supplier.destroy','id')}}";
+      }else{
+         url = "{{ route('fuel-supplier.destroy','id')}}";
+      }      
       url = url.replace('id', $(this).attr('data-id'));
       $("#deleteForm").attr('action', url);
       $("#supplierDeleteModal").modal('show');
@@ -270,6 +340,58 @@
                     $("#bonus_modal").modal('toggle');
                 }
             }
+        });
+    });
+   $("#search").on("keyup", function () {
+    var value = $(this).val().toLowerCase().trim();
+    var table = $(".supplier_table");
+    var rows = table.find("> tbody > tr"); // only top-level rows
+    var anyVisible = false;
+
+    rows.each(function () {
+        var row = $(this);
+
+        // Clone row and remove nested tables before getting text
+        var mainText = row.clone()
+            .find("table") // find inner tables
+            .remove()      // remove them from the clone
+            .end()
+            .text()
+            .toLowerCase()
+            .trim();
+
+        // Get text from inner tables separately
+        var innerText = row.find("table").text().toLowerCase().trim();
+
+        // Combine both
+        var fullText = mainText + " " + innerText;
+
+        // Match check
+        var match = fullText.indexOf(value) !== -1;
+
+        // Toggle only the main supplier row
+        row.toggle(match);
+        if (match) anyVisible = true;
+    });
+
+    // Hide or show entire table
+    table.toggle(anyVisible);
+});
+document.addEventListener('DOMContentLoaded', function () {
+        // Restore the last active tab from localStorage
+        let activeTab = localStorage.getItem('addSupplierActiveTab');
+        if (activeTab) {
+            let triggerEl = document.querySelector(`[data-bs-toggle="tab"][href="${activeTab}"]`);
+            if (triggerEl) {
+                new bootstrap.Tab(triggerEl).show();
+            }
+        }
+
+        // Save the active tab on click
+        document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+            tab.addEventListener('shown.bs.tab', function (event) {
+                localStorage.setItem('addSupplierActiveTab', event.target.getAttribute('href'));
+            });
         });
     });
 </script>

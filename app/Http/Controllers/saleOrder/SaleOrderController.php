@@ -29,6 +29,7 @@ class SaleOrderController extends Controller
         $saleOrder = SaleOrder::with([
                             'billTo:id,account_name','shippTo:id,account_name'
                             ])->where('company_id', $company_id)
+                            ->where('status',0)
                             ->get();
         // if ($from_date) {
         //     $saleOrder->whereDate('date', '>=', $from_date);
@@ -128,6 +129,7 @@ class SaleOrderController extends Controller
             $sale_order = SaleOrder::select('sale_order_no')
                     ->where('company_id', Session::get('user_company_id'))
                     ->where('created_at', 'LIKE', date('Y-m-d').'%')
+                    ->where('parent_order_no',null)
                     ->orderBy('id', 'desc')
                     ->first();
             if($sale_order){
@@ -200,7 +202,7 @@ class SaleOrderController extends Controller
                         }
                         $gsmRow->details()->create([
                             'sale_orders_id' => $saleOrder->id,
-                            'sale_orders_item_id' => $orderItem->id,
+                            'sale_order_item_id' => $orderItem->id,
                             'size' => $detail['size'],
                             'quantity' => $detail['reel'],
                             'company_id' => Session::get('user_company_id'),
@@ -416,7 +418,7 @@ class SaleOrderController extends Controller
                             }
                             $gsmRow->details()->create([
                                 'sale_orders_id' => $saleOrder->id,
-                                'sale_orders_item_id' => $orderItem->id,
+                                'sale_order_item_id' => $orderItem->id,
                                 'size' => $detail['size'],
                                 'quantity' => $detail['reel'],
                                 'company_id' => Session::get('user_company_id'),

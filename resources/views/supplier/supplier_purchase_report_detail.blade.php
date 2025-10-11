@@ -45,7 +45,7 @@
                                 <td>{{$value->invoice_no}}</td>
                                 <td style="text-align:right;">{{$value->total}}</td>
                                 <td>{{$value->voucher_no}}</td>
-                                <td>{{$value->locationInfo->name}}</td>
+                                <td>@if(isset($value->locationInfo)) {{$value->locationInfo->name}} @endif</td>
                                 <td style="text-align:right;">{{$value->difference_total_amount}}</td>
                                 <td>
                                     @php 
@@ -86,7 +86,10 @@
                             </tr>
                         @endforeach
                         <tr>
-                            <td colspan="8" style="text-align: center;"><button class="btn btn-info action" data-action_account_id="{{$id}}">Action</button></td>
+                           <td colspan="8" style="text-align: center;">
+                              <button class="btn btn-info action" data-action_account_id="{{$id}}">Action</button>
+                              <button class="btn btn-secondary print_selected">Print Selected</button>
+                           </td>
                         </tr>
                   </tbody>
                </table>
@@ -246,65 +249,129 @@
 </body>
 @include('layouts.footer')
 <script>
-    $(".all_check").click(function(){
-        $(".check_row").prop('checked',false);
-        if($(this).prop('checked')==true){
-            $(".check_row").prop('checked',true);
-        }
-    });
-    $(".action").click(function(){
-        let row_arr = [];
-        $(".check_row").each(function(){
-            if($(this).prop('checked')==true){
-                row_arr.push({'id':$(this).attr('data-id'),'amount':$(this).attr('data-amount')});
-            }
-        });
-        if(row_arr.length==0){
-            alert("Please Select Entry");
-            return;
-        }
-        $("#action_account_id").val($(this).attr('data-action_account_id'));
-        $("#action_data").val(JSON.stringify(row_arr));
-        $("#action_modal").modal('toggle');
-    });
-    $(".perform_action").click(function(){
-        let action_data = $("#action_data").val();
-        let action_account_id = $("#action_account_id").val();
-        let selected_action = $('input[name="action_type"]:checked').val();
-        if(!selected_action){
-            alert("Choose an Action");
-            return;
-        }
-        if(action_data==""){
-            alert("Data Required");
-            return;
-        }
-        if(action_account_id==""){
-            alert("Account Id Required");
-            return;
-        }
-        
-        if(selected_action=="debit_note"){
+   $(".all_check").click(function(){
+      $(".check_row").prop('checked',false);
+      if($(this).prop('checked')==true){
+         $(".check_row").prop('checked',true);
+      }
+   });
+   $(".action").click(function(){
+      let row_arr = [];
+      $(".check_row").each(function(){
+         if($(this).prop('checked')==true){
+            row_arr.push({'id':$(this).attr('data-id'),'amount':$(this).attr('data-amount')});
+         }
+      });
+      if(row_arr.length==0){
+         alert("Please Select Entry");
+         return;
+      }
+      $("#action_account_id").val($(this).attr('data-action_account_id'));
+      $("#action_data").val(JSON.stringify(row_arr));
+      $("#action_modal").modal('toggle');
+   });
+   $(".perform_action").click(function(){
+      let action_data = $("#action_data").val();
+      let action_account_id = $("#action_account_id").val();
+      let selected_action = $('input[name="action_type"]:checked').val();
+      if(!selected_action){
+         alert("Choose an Action");
+         return;
+      }
+      if(action_data==""){
+         alert("Data Required");
+         return;
+      }
+      if(action_account_id==""){
+         alert("Account Id Required");
+         return;
+      }        
+      if(selected_action=="debit_note"){
          window.location = "{{url('purchase-return/')}}/create?data="+action_data+"&account_id="+action_account_id
-        }
-      //   $.ajax({
-      //       url : "{{url('perform-action-on-purchase')}}",
-      //       method : "POST",
-      //       data: {
-      //           _token: '<?php echo csrf_token() ?>',
-      //           selected_action : selected_action,
-      //           action_data : action_data
-      //       },
-      //       success:function(res){
-                
-      //       }
-      //   });
-    });
-
-    $(".view_detail").click(function(){
+      }
+   });
+   $(".view_detail").click(function(){
       let html = $(this).attr('data-html');
       $(".detail_div").html(html);
       $("#view_detail_modal").modal('toggle');
-    });
+   });
+   $(".print_selected").click(function () {
+      var selectedRows = [];
+      let account_name = "{{$account_name}}";
+      $(".check_row:checked").each(function () {
+         var row = $(this).closest("tr");
+         var rowData = {
+            date: row.find("td:eq(1)").text().trim(),
+            invoice_no: row.find("td:eq(2)").text().trim(),
+            invoice_amount: row.find("td:eq(3)").text().trim(),
+            voucher_no: row.find("td:eq(4)").text().trim(),
+            area: row.find("td:eq(5)").text().trim(),
+            difference: row.find("td:eq(6)").text().trim()
+         };
+         selectedRows.push(rowData);
+      });
+      if (selectedRows.length === 0) {
+         alert("Please select at least one row to print.");
+         return;
+      }
+      // Build print HTML
+      var printWindow = window.open("", "_blank");
+      var html = `
+         <html>
+         <head>
+               <title>Purchase Report</title>
+               <style>
+                  @page { size: auto;  margin: 0mm; }
+                  body { font-family: Arial, sans-serif; margin: 20px; }
+                  table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                  th, td { border: 1px solid #333; padding: 8px; text-align: left; }
+                  th { background-color: #f2f2f2; }
+                  h2 { text-align: center; }
+               </style>
+         </head>
+         <body>
+               <h2>Purchase Report - ${account_name}</h2>
+               <table>
+                  <thead>
+                     <tr>
+                           <th>Invoice Date</th>
+                           <th>Invoice No.</th>
+                           <th style="text-align:right;">Invoice Amount</th>
+                           <th>Voucher Number</th>
+                           <th>Area</th>
+                           <th style="text-align:right;">Difference</th>
+                     </tr>
+                  </thead>
+                  <tbody>`;
+      let total = 0;
+      selectedRows.forEach(function (row) {
+         total = parseFloat(total) + parseFloat(row.difference);
+         html += `
+               <tr>
+                  <td>${row.date}</td>
+                  <td>${row.invoice_no}</td>
+                  <td style="text-align:right;">${row.invoice_amount}</td>
+                  <td>${row.voucher_no}</td>
+                  <td>${row.area}</td>
+                  <td style="text-align:right;">${row.difference}</td>
+               </tr>`;
+      });
+      html += `<tr>
+                  <td></td>
+                  <td></td>
+                  <td style="text-align:right;"></td>
+                  <td></td>
+                  <th>Total</th>
+                  <th style="text-align:right;">${total}</th>
+               </tr>
+               </tbody>
+            </table>
+      </body>
+      </html>`;
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+   });
 </script>
 @endsection

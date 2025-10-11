@@ -15,6 +15,7 @@ class SaleOrderSetting extends Model
         'unit_type',
         'company_id',
         'status',
+        'group_type'
     ];
 
     public $timestamps = true; // so created_at/updated_at auto-fill

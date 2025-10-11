@@ -8,7 +8,7 @@ use Session;
 class SaleOrderItem extends Model
 {
     use HasFactory;
-    protected $fillable = ['sale_order_id','item_id','price','bill_price','unit','sub_unit','company_id','created_at'];
+    protected $fillable = ['sale_order_id','item_id','price','bill_price','unit','sub_unit','company_id','created_at','status'];
     public function gsms() {
         return $this->hasMany(SaleOrderItemGsm::class);
     }

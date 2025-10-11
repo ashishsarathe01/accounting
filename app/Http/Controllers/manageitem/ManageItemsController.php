@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers\manageitem;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -7,6 +6,7 @@ use App\Models\ManageItems;
 use App\Models\AccountGroups;
 use App\Models\ItemGroups;
 use App\Models\Units;
+use App\Models\item_gst_rate;
 use App\Models\ItemLedger;
 use App\Models\StockJournal;
 use App\Models\StockJournalDetail;
@@ -138,6 +138,7 @@ class ManageItemsController extends Controller
       }
       // echo "<pre>";
       // print_r($request->all());die;
+
       $items = new ManageItems;
       $items->company_id =  Session::get('user_company_id');
       $items->name = $request->input('name');
@@ -145,7 +146,6 @@ class ManageItemsController extends Controller
       $items->g_name = $request->input('g_name');
       $items->u_name = $request->input('u_name');
       $items->hsn_code = $request->input('hsn_code');
-      $items->gst_rate = $request->input('gst_rate');
       $items->item_type = $request->input('item_type');
       $items->status = $request->input('status');
       $items->section = $request->input('section');
@@ -155,6 +155,18 @@ class ManageItemsController extends Controller
       // $items->opening_balance = $request->input('opening_balance');
       // $items->opening_balance_type = $request->input('opening_balance_type');
       $items->save();
+
+      $gst_rate = new item_gst_rate;
+      $gst_rate->item_id = $items->id;
+      $gst_rate->gst_rate = $request->input('gst_rate');
+      $gst_rate->item_type = $request->input('item_type');
+      $gst_rate->comp_id = Session::get('user_company_id');
+      $gst_rate->effective_from = '2017-07-01';
+      $gst_rate->save();
+
+      $items->gst_rate = $gst_rate->id;
+      $items->save();
+
       if($items->id) {
          $series = $request->input('series');
          $opening_amount = $request->input('opening_amount');
@@ -226,6 +238,8 @@ class ManageItemsController extends Controller
          }         
       }
         $manageitems = ManageItems::find($id);
+        $gst_rate = $manageitems->gst_rate;
+        $item_gst_rate = item_gst_rate::find($gst_rate);
         $series_open = ItemBalanceBySeries::select('series','opening_amount','opening_quantity','type')->where('item_id',$id)->get();
       $grouped = $series_open->groupBy('series')->toArray();
       foreach ($series as $key => $value) {
@@ -242,7 +256,7 @@ class ManageItemsController extends Controller
         $com_id = Session::get('user_company_id');
         $itemGroups = ItemGroups::where('delete', '=', '0')->where('company_id', $com_id)->get();
         $accountunit = Units::where('delete', '=', '0')->where('company_id', $com_id)->get();
-        return view('manageitem/editAccountManageItems')->with('accountunit', $accountunit)->with('itemGroups', $itemGroups)->with('manageitems', $manageitems)->with('series',$series);
+        return view('manageitem/editAccountManageItems')->with('accountunit', $accountunit)->with('itemGroups', $itemGroups)->with('manageitems', $manageitems)->with('series',$series)->with('item_gst_rate',$item_gst_rate);
     }
     /**
      * Update the specified resource in storage.
@@ -261,6 +275,7 @@ class ManageItemsController extends Controller
       if ($validator->fails()) {
          return response()->json($validator->errors(), 422);
       }
+     
       $items =  ManageItems::find($request->mangeitem_id);
       $items->name = $request->input('name');
       $items->p_name = $request->input('p_name');
@@ -270,11 +285,35 @@ class ManageItemsController extends Controller
       // $items->opening_balance_qt_type = $request->input('opening_balance_qt_type');
       // $items->opening_balance = $request->input('opening_balance');
       // $items->opening_balance_type = $request->input('opening_balance_type');
-      $items->gst_rate = $request->input('gst_rate');
       $items->item_type = $request->input('item_type');
       $items->hsn_code = $request->input('hsn_code');
       $items->status = $request->input('status');
       $items->updated_at = Carbon::now();
+
+      $gst_rate = item_gst_rate::find($items->gst_rate);
+      if($gst_rate){
+         if($request->input('gst_rate')!==$gst_rate->gst_rate){
+            $item_gst_rate = new item_gst_rate;
+            $item_gst_rate->item_id = $items->id;
+            $item_gst_rate->gst_rate = $request->input('gst_rate');
+            $item_gst_rate->item_type = $request->input('item_type');
+            $item_gst_rate->comp_id = Session::get('user_company_id');
+            $item_gst_rate->effective_from = $request->input('with_effect_from');
+            $item_gst_rate->save();
+            $items->gst_rate = $item_gst_rate->id;
+         }
+      }else{
+         $item_gst_rate = new item_gst_rate;
+         $item_gst_rate->item_id = $items->id;
+         $item_gst_rate->gst_rate = $request->input('gst_rate');
+         $item_gst_rate->item_type = $request->input('item_type');
+         $item_gst_rate->comp_id = Session::get('user_company_id');
+         $item_gst_rate->effective_from = $request->input('with_effect_from');
+         $item_gst_rate->save();
+         $items->gst_rate = $item_gst_rate->id;
+      }
+     
+
       if($items->update()){
          ItemBalanceBySeries::where('item_id',$items->id)->delete();
          ItemLedger::where('item_id',$items->id)->where('source','-1')->delete();

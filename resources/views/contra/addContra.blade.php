@@ -4,7 +4,8 @@
 @include('layouts.header')
 <!-- list-view-company-section -->
 <style type="text/css">
-   .form-control {
+   
+  .form-control {
       height: 52px;
    }
    input[type=number]::-webkit-inner-spin-button, 
@@ -14,6 +15,17 @@
        appearance: none;
        margin: 0; 
    }
+   
+   .select2-container--default .select2-selection--single {
+  height: 50px !important;          /* increased for full text visibility */
+  border: 1px solid #ced4da !important;
+  border-radius: 0.4rem !important;    
+  display: flex;
+  align-items: center;
+  padding: 0 0.75rem;               /* extra horizontal padding for text */
+  font-size: 1rem;
+  box-sizing: border-box;           /* ensures padding doesn't cut text */
+}
 </style>
 <div class="list-of-view-company ">
     <section class="list-of-view-company-section container-fluid">
@@ -91,7 +103,7 @@
                                         </select>
                                     </td>
                                     <td class="">
-                                        <select class="form-select" id="account_1" name="account_name[]" required>
+                                        <select class="form-select select2-single" id="account_1" name="account_name[]" required>
                                             <option value="">Select</option>
                                             <?php
                                             foreach ($party_list as $value) { ?>
@@ -119,7 +131,7 @@
                                         </select>
                                     </td>
                                     <td class="">
-                                        <select class="form-select" id="account_2" name="account_name[]" required>
+                                        <select class="form-select select2-single" id="account_2" name="account_name[]" required>
                                             <option value="">Select</option>
                                             <?php
                                             foreach ($party_list as $value) { ?>
@@ -143,7 +155,7 @@
                                 <tr class="font-14 font-heading bg-white">
                                     <!-- icon 3 tr ma joi aavi nathi rahyo -->
                                     <td class="w-min-120 " colspan="7">
-                                        {{-- <a class="add_more"><svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;">
+                                        {{-- <a class="add_more"><svg xmlns="http://www.w3.org/2000/svg" tabindex="0" class="bg-primary rounded-circle" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;">
                                                 <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" />
                                             </svg></a> --}}
                                     </td>
@@ -447,5 +459,84 @@
       debitTotal();
       creditTotal();
    });
+       $(".add_more").on('keydown', function(event) {
+      if (event.key === "Enter") {
+        event.preventDefault(); // prevent default behavior
+        $(this).click(); // trigger click event (which submits)
+      }
+    });
+         // When user selects an option in `type_x`, move focus to `account_x`
+  $(document).on('select2:select select2:unselect select2:close', 'select[id^="account_"]', function (e) {
+    const id = $(this).data('id'); // e.g. 1, 2, 3 ...
+    const selectedValue = $(this).val();
+    const previousValue = $(this).data('previousValue');
+
+    // If first time OR same value OR any selection, move focus
+    if (!previousValue || selectedValue === previousValue) {
+      $(`#debit_${id}`).focus(); // focus on the corresponding account select
+    }
+
+    // Update previous value
+    $(this).data('previousValue', selectedValue);
+  });
+
+
+  // When user selects an option in `type_x`, move focus to `account_x`
+  $(document).on('select2:select select2:unselect select2:close', 'select[id^="account_"]', function (e) {
+    const id = $(this).data('id'); // e.g. 1, 2, 3 ...
+    const selectedValue = $(this).val();
+    const previousValue = $(this).data('previousValue');
+
+    // If first time OR same value OR any selection, move focus
+    if (!previousValue || selectedValue === previousValue) {
+      $(`#debit_${id}`).focus(); // focus on the corresponding account select
+    }
+
+    // Update previous value
+    $(this).data('previousValue', selectedValue);
+  });
+
+
+    $(".add_more").on('keydown', function(event) {
+      if (event.key === "Enter") {
+        event.preventDefault(); // prevent default behavior
+        $(this).click(); // trigger click event (which submits)
+      }
+    });
+  $(".remove").on('keydown', function(event) {
+      if (event.key === "Enter") {
+        event.preventDefault(); // prevent default behavior
+        $(this).click(); // trigger click event (which submits)
+      }
+    });
+const submitBtn = document.querySelector('.submit_data');
+
+// Function to change color
+function setGreen() {
+    submitBtn.style.backgroundColor = 'green';
+}
+
+// Function to reset color
+function resetColor() {
+    submitBtn.style.backgroundColor = ''; // original color
+}
+
+// Mouse hover
+submitBtn.addEventListener('mouseenter', setGreen);
+submitBtn.addEventListener('mouseleave', resetColor);
+
+// Keyboard focus (tab)
+submitBtn.addEventListener('focus', setGreen);
+submitBtn.addEventListener('blur', resetColor);
+
+
+submitBtn.addEventListener('blur', resetColor);
+    $(".submit_data").on('keydown', function(event) {
+      if (event.key === "Enter") {
+        event.preventDefault(); // prevent default behavior
+        $(this).click(); // trigger click event (which submits)
+      }
+    });
+  
 </script>
 @endsection
