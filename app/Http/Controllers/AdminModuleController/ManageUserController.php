@@ -140,6 +140,7 @@ class ManageUserController extends Controller
         $data['updated_at'] = now();
 
         DB::table('admins')->where('id', $id)->update($data);
+
         return redirect()->route('admin.manageUser.index')->with('success','User updated successfully');
     }
 
