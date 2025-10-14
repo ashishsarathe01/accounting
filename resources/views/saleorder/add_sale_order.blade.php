@@ -95,6 +95,18 @@
                             <label for="purchase_order_date" class="form-label font-14 font-heading">Purchase Order Date</label>
                             <input type="date" name="purchase_order_date" id="purchase_order_date" class="form-control">
                         </div>
+                    
+                        <div class="mb-3 col-md-3">
+                                    <label for="freight" class="form-label font-14 font-heading freight_div">Freight *</label>
+                                    <select id="freight" name="freight" class="form-select freight_div" required autofocus>
+                                        <option value="">Select Freight</option>
+                                        <option value="Yes">Yes</option>
+                                        <option value="No">No</option>
+                                    </select>
+                                    <ul style="color: red;">
+                                        @error('voucher_no'){{$message}}@enderror
+                                    </ul> 
+                        </div>
                     </div>
                     <!-- Items Container -->
                     <div id="items_container">
@@ -129,17 +141,7 @@
                                         @error('date'){{$message}}@enderror
                                      </ul> 
                                 </div>
-                                <div class="mb-3 col-md-3">
-                                    <label for="freight" class="form-label font-14 font-heading freight_div">Freight *</label>
-                                    <select id="freight" name="freight" class="form-select freight_div" required autofocus>
-                                        <option value="">Select Freight</option>
-                                        <option value="Yes">Yes</option>
-                                        <option value="No">No</option>
-                                    </select>
-                                    <ul style="color: red;">
-                                        @error('voucher_no'){{$message}}@enderror
-                                    </ul> 
-                                </div>
+                            
                                 <div class="col-md-3 mb-3">
                                     <label for="unit_1" class="form-label font-14 font-heading">Unit *</label>
                                     <select name="items[1][unit]" class="form-select unit" required id="unit_1" data-id="1">

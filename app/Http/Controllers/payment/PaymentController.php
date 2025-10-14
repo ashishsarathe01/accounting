@@ -25,35 +25,41 @@ class PaymentController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-   public function index(Request $request){
-      Gate::authorize('action-module', 15);
-      $input = $request->all();
-      $from_date = null;
-      $to_date = null;
-      // If user selected date range
-      if(!empty($input['from_date']) && !empty($input['to_date'])) {
-         $from_date = date('d-m-Y', strtotime($input['from_date']));
-         $to_date = date('d-m-Y', strtotime($input['to_date']));
-         session(['payment_from_date' => $from_date, 'payment_to_date' => $to_date]);
-      }elseif (session()->has('payment_from_date') && session()->has('payment_to_date')) {
-         $from_date = session('payment_from_date');
-         $to_date = session('payment_to_date');
-      }
-      Session::put('redirect_url', '');
-      // Financial Year logic
-      $financial_year = Session::get('default_fy');
-      $y = explode("-", $financial_year);
-      $from = DateTime::createFromFormat('y', $y[0])->format('Y');
-      $to = DateTime::createFromFormat('y', $y[1])->format('Y');
-      $month_arr = [
-         $from . '-04', $from . '-05', $from . '-06', $from . '-07',
-         $from . '-08', $from . '-09', $from . '-10', $from . '-11',
-         $from . '-12', $to . '-01', $to . '-02', $to . '-03'
-      ];
-      $com_id = Session::get('user_company_id');
-      // Start query
-      $query = DB::table('payment_details')
-         ->select(
+   public function index(Request $request)
+   {
+    Gate::authorize('action-module', 15);
+    $input = $request->all();
+    $from_date = null;
+    $to_date = null;
+
+    // Date range handling
+    if (!empty($input['from_date']) && !empty($input['to_date'])) {
+        $from_date = date('d-m-Y', strtotime($input['from_date']));
+        $to_date = date('d-m-Y', strtotime($input['to_date']));
+        session(['payment_from_date' => $from_date, 'payment_to_date' => $to_date]);
+    } elseif (session()->has('payment_from_date') && session()->has('payment_to_date')) {
+        $from_date = session('payment_from_date');
+        $to_date = session('payment_to_date');
+    }
+
+    Session::put('redirect_url', '');
+
+    // Financial Year logic
+    $financial_year = Session::get('default_fy');
+    $y = explode("-", $financial_year);
+    $from = DateTime::createFromFormat('y', $y[0])->format('Y');
+    $to = DateTime::createFromFormat('y', $y[1])->format('Y');
+    $month_arr = [
+        $from . '-04', $from . '-05', $from . '-06', $from . '-07',
+        $from . '-08', $from . '-09', $from . '-10', $from . '-11',
+        $from . '-12', $to . '-01', $to . '-02', $to . '-03'
+    ];
+
+    $com_id = Session::get('user_company_id');
+
+    // Base query
+    $query = DB::table('payment_details')
+        ->select(
             'payments.series_no',
             'payments.id as pay_id',
             'payments.date',
@@ -61,35 +67,38 @@ class PaymentController extends Controller
             'accounts.account_name as acc_name',
             'payment_details.*',
             'payments.voucher_no'
-         )
-         ->join('payments', 'payment_details.payment_id', '=', 'payments.id')
-         ->join('accounts', 'payment_details.account_name', '=', 'accounts.id')
-         ->where('payment_details.company_id', $com_id)
-         ->where('payments.delete', '0')
-         ->where('payment_details.debit', '!=', '')
-         ->where('payment_details.debit', '!=', '0');
-      // Apply date filter if dates are provided
-      if($from_date && $to_date) {
-         $query->whereRaw("
+        )
+        ->join('payments', 'payment_details.payment_id', '=', 'payments.id')
+        ->join('accounts', 'payment_details.account_name', '=', 'accounts.id')
+        ->where('payment_details.company_id', $com_id)
+        ->where('payments.delete', '0')
+        ->where('payment_details.debit', '!=', '')
+        ->where('payment_details.debit', '!=', '0');
+
+    if ($from_date && $to_date) {
+        $query->whereRaw("
             STR_TO_DATE(payments.date,'%Y-%m-%d') >= STR_TO_DATE('" . date('Y-m-d', strtotime($from_date)) . "','%Y-%m-%d')
             AND STR_TO_DATE(payments.date,'%Y-%m-%d') <= STR_TO_DATE('" . date('Y-m-d', strtotime($to_date)) . "','%Y-%m-%d')
-         ");
-         $query->orderBy('payments.date', 'asc')
-              ->orderBy('payments.voucher_no', 'asc');
-      }else{
-         // Show last 10 entries if no date is selected
-         $query->orderBy(DB::raw("cast(payments.voucher_no as SIGNED)"), 'desc')
-              ->orderBy('payments.date', 'desc')
-              ->limit(10);
-      }
-      // Fetch data
-      $payment = $query->get()->reverse()->values();
-      return view('payment/payment')
-         ->with('payment', $payment)
-         ->with('month_arr', $month_arr)
-         ->with('from_date', $from_date)
-         ->with('to_date', $to_date);
+        ");
+    }
+
+    $query->orderBy('payments.date', 'asc')
+          ->orderBy(DB::raw("CAST(payments.voucher_no AS SIGNED)"), 'asc');
+
+    if (!$from_date && !$to_date) {
+        $query->limit(10);
+    }
+
+    // Get data
+    $payment = $query->get()->values();
+
+    return view('payment/payment')
+        ->with('payment', $payment)
+        ->with('month_arr', $month_arr)
+        ->with('from_date', $from_date)
+        ->with('to_date', $to_date);
    }
+
 
     /**
      * Show the specified resources in storage.
