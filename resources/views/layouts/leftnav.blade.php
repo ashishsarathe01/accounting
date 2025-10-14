@@ -536,7 +536,12 @@
                                        <a href="{{ route('purchasebook.index') }}" class="text-blue">Purchase Register</a>
                                     </li>
                                  @endcan
-                                 
+                                 <li class="py-1 clickable-row-blue">
+                                    <a href="{{ route('salebook.index') }}" class="text-blue">Sale Register</a>
+                                 </li>
+                                 <li class="py-1 clickable-row-blue">
+                                    <a href="{{ route('purchasebook.index') }}" class="text-blue">Purchase Register</a>
+                                 </li>
                               </ul>
                            </div>
                         </li>
@@ -677,6 +682,9 @@
                                           <li class="py-1 clickable-row-blue">
                                              <a href="{{ route('manage-supplier-purchase-report') }}" class="text-blue">Report </a>
                                           </li>
+                                          <li class="py-1 clickable-row-blue">
+                                             <a href="{{ route('supplier-purchase-setting') }}" class="text-blue">Setting </a>
+                                          </li>
                                        @endcan
                                     </ul>
                                  </div>
@@ -701,8 +709,12 @@
                                           <a href="{{ route('sale-order.index') }}" class="text-blue">Manage Sale Order</a>
                                        </li>
                                        <li class="py-1 clickable-row-blue">
+                                          <a href="{{ route('deal.index') }}" class="text-blue">Manage Deal</a>
+                                       </li>
+                                       <li class="py-1 clickable-row-blue">
                                           <a href="{{ route('sale-order.settings') }}" class="text-blue">Sales Order Settings</a>
                                        </li>
+
                                     </ul>
                                  </div>
                               </li>

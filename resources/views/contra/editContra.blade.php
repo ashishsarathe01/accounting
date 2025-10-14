@@ -12,6 +12,17 @@
        appearance: none;
        margin: 0; 
    }
+   
+   .select2-container--default .select2-selection--single {
+  height: 50px !important;          /* increased for full text visibility */
+  border: 1px solid #ced4da !important;
+  border-radius: 0.4rem !important;    
+  display: flex;
+  align-items: center;
+  padding: 0 0.75rem;               /* extra horizontal padding for text */
+  font-size: 1rem;
+  box-sizing: border-box;           /* ensures padding doesn't cut text */
+}
 </style>
 <div class="list-of-view-company ">
    <section class="list-of-view-company-section container-fluid">
@@ -317,5 +328,59 @@
          $("#cheque_no").prop('readonly',false);
       }
    });
+   
+$(document).on('select2:select select2:unselect select2:close', 'select[id^="account_"]', function (e) {
+    const id = $(this).attr('id').split('_').pop(); // e.g. account_1 → 1
+    const selectedValue = $(this).val();
+    const previousValue = $(this).data('previousValue');
+
+    // If first time OR same value OR valid selection, move focus
+    if (!previousValue || (selectedValue && selectedValue === previousValue) || (selectedValue && e.type === 'select2:select')) {
+        $(`#debit_${id}`).focus(); // focus on the corresponding element
+    }
+
+    // Update previous value only if something is selected
+    if (selectedValue) {
+        $(this).data('previousValue', selectedValue);
+    } else {
+        $(this).removeData('previousValue');
+    }
+});
+
+
+
+    $(".add_more").on('keydown', function(event) {
+      if (event.key === "Enter") {
+        event.preventDefault(); // prevent default behavior
+        $(this).click(); // trigger click event (which submits)
+      }
+    });
+       $(".remove").on('keydown', function(event) {
+      if (event.key === "Enter") {
+        event.preventDefault(); // prevent default behavior
+        $(this).click(); // trigger click event (which submits)
+      }
+    });
+
+const submitBtn = document.querySelector('.submit_data');
+
+// Function to change color
+function setGreen() {
+    submitBtn.style.backgroundColor = 'green';
+}
+
+// Function to reset color
+function resetColor() {
+    submitBtn.style.backgroundColor = ''; // original color
+}
+
+// Mouse hover
+submitBtn.addEventListener('mouseenter', setGreen);
+submitBtn.addEventListener('mouseleave', resetColor);
+
+// Keyboard focus (tab)
+submitBtn.addEventListener('focus', setGreen);
+submitBtn.addEventListener('blur', resetColor);
+
 </script>
 @endsection

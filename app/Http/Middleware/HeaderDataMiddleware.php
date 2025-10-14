@@ -22,7 +22,6 @@ class HeaderDataMiddleware
       if(Session::get('user_type')=="OWNER"){
          $user_id = Session::get('user_id');
          if(Session::get('admin_id') && Session::get('admin_id')!=''){
-            
             $assign_company = DB::table('assign_companies')
                         ->where('admin_users_id', Session::get('admin_id'))
                         ->where('merchant_id', $user_id)

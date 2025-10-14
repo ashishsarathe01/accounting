@@ -121,7 +121,6 @@
          </p>
          
       </td>
-        
         @foreach ($saleOrder->items as $item) 
             </tr>
                 <tr style="height: 9px;background-color:#BF360C;">
@@ -215,7 +214,7 @@
         @endforeach
         <tr style="background-color: #BBDEFB;" class="rowFont">
             <th colspan="2">GRAND TOTAL</th>
-            <th colspan="7" style="text-align:left;">{{$item->gsms->flatMap(fn($gsm) => $gsm->details)->sum('quantity')}} {{$item->unitMaster->s_name}}</th>
+            <th colspan="7" style="text-align:left;">{{$saleOrder->items->flatMap->gsms->flatMap->details->sum('quantity')}} {{$item->unitMaster->s_name}}</th>
         </tr>
    <tr class="rowFont">
       <td colspan="4">

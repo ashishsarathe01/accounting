@@ -18,7 +18,10 @@ use App\Models\Accounts;
 use App\Models\SupplierSubHead;
 use App\Models\ItemGroups;
 use App\Models\SupplierPurchaseVehicleDetail;
-
+use App\Models\SupplierRateLocationWise;
+use App\Models\ManageItems;
+use App\Models\SaleOrderSetting;
+use App\Models\FuelSupplierRate;
 class SupplierPurchaseController extends Controller
 {
     public function manageSupplierPurchase()
@@ -69,12 +72,30 @@ class SupplierPurchaseController extends Controller
     }
     public function getSupplierRateByLocation(Request $request)
     {
-        $rate = SupplierLocationRates::select('head_id','head_rate')
+        $supplier_max_date = SupplierLocationRates::where('company_id',Session::get('user_company_id'))
+                                        ->where('location',$request->location)
+                                        ->where('account_id',$request->account_id)
+                                        ->where('r_date','<=',$request->date)
+                                        ->max('r_date');
+        $max_date = SupplierRateLocationWise::where('company_id',Session::get('user_company_id'))
+                                        ->where('location_id',$request->location)
+                                        ->where('rate_date','<=',$request->date)
+                                        ->max('rate_date');
+        if($max_date>$supplier_max_date){
+            $rate = SupplierRateLocationWise::select('head_id','head_rate')
+                                        ->where('company_id',Session::get('user_company_id'))
+                                        ->where('rate_date','<=',$request->date)
+                                        ->where('location_id',$request->location)
+                                        ->get();
+        }else{
+            $rate = SupplierLocationRates::select('head_id','head_rate')
                                         ->where('company_id',Session::get('user_company_id'))
                                         ->where('account_id',$request->account_id)
                                         ->where('r_date','<=',$request->date)
                                         ->where('location',$request->location)
                                         ->get();
+        }
+        
         return response()->json($rate);
     }
     public function storeSupplierPurchaseReport(Request $request)
@@ -99,26 +120,47 @@ class SupplierPurchaseController extends Controller
 
         $purchase_vehicle->difference_total_amount = $request->difference_total_amount;
         $purchase_vehicle->tare_weight = $request->tare_weight;
-        $purchase_vehicle->location = $request->location;
+        if($request->group_type=="waste_craft"){
+            $purchase_vehicle->location = $request->location;
+        }else{
+            $purchase_vehicle->contract_item_id = $request->item_id;
+        }        
         $purchase_vehicle->voucher_no = $request->voucher_no;
         $purchase_vehicle->processed_by = Session::get('user_id');
         $purchase_vehicle->save();
-        
-        $data = json_decode($request->data,true);
-        
+        $data = json_decode($request->data,true);        
         foreach ($data as $key => $value) {
-            $report = new SupplierPurchaseReport;
-            $report->purchase_id = $request->purchase_id;
-            $report->head_id = $value['id'];
-            $report->head_qty = $value['qty'];
-            $report->head_bill_rate = $value['bill_rate'];
-            $report->head_contract_rate = $value['contract_rate'];
-            $report->head_difference_amount = $value['difference_amount'];;
-            $report->company_id = Session::get('user_company_id');
-            $report->status = 1;
-            $report->created_by = Session::get('user_id');
-            $report->created_at = Carbon::now();
-            $report->save();
+            if($request->group_type=="waste_craft"){
+                $report = new SupplierPurchaseReport;
+                $report->purchase_id = $request->purchase_id;
+                $report->head_id = $value['id'];
+                $report->head_qty = $value['qty'];
+                $report->head_bill_rate = $value['bill_rate'];
+                $report->head_contract_rate = $value['contract_rate'];
+                $report->head_difference_amount = $value['difference_amount'];;
+                $report->company_id = Session::get('user_company_id');
+                $report->status = 1;
+                $report->created_by = Session::get('user_id');
+                $report->created_at = Carbon::now();
+                $report->save();
+            }else{
+                if($value['id']=='cut' || $value['id']=='short_weight'){
+                    $report = new SupplierPurchaseReport;
+                    $report->purchase_id = $request->purchase_id;
+                    $report->head_id = $value['id'];
+                    $report->head_qty = $value['qty'];
+                    $report->head_bill_rate = $value['bill_rate'];
+                    $report->head_contract_rate = $value['contract_rate'];
+                    $report->head_difference_amount = $value['difference_amount'];;
+                    $report->company_id = Session::get('user_company_id');
+                    $report->status = 1;
+                    $report->created_by = Session::get('user_id');
+                    $report->created_at = Carbon::now();
+                    $report->save();
+                }
+                
+            }
+            
         }
         $response = array(
             'status' => true,
@@ -286,8 +328,9 @@ class SupplierPurchaseController extends Controller
         $report = SupplierPurchaseReport::select('head_id','head_qty','head_bill_rate','head_contract_rate','head_difference_amount')
                     ->where('purchase_id',$id)
                     ->get();
-        $purchase = SupplierPurchaseVehicleDetail::join('supplier_locations','supplier_purchase_vehicle_details.location','=','supplier_locations.id')
-                                        ->select('image_1','image_2','image_3','voucher_no','difference_total_amount','supplier_locations.name as location_name','location','tare_weight')
+        $purchase = SupplierPurchaseVehicleDetail::leftjoin('supplier_locations','supplier_purchase_vehicle_details.location','=','supplier_locations.id')
+                                        ->leftjoin('manage_items','supplier_purchase_vehicle_details.contract_item_id','=','manage_items.id')
+                                        ->select('image_1','image_2','image_3','voucher_no','difference_total_amount','supplier_locations.name as location_name','location','tare_weight','contract_item_id')
                                         ->find($id);
         $response = array(
             'reports' => $report,
@@ -296,6 +339,7 @@ class SupplierPurchaseController extends Controller
         return json_encode($response);
     }
     public function getLocationBySupplier(Request $request){
+        //Location
         $location_id = SupplierLocationRates::where('company_id', Session::get('user_company_id'))
                                             ->where('account_id', $request->account_id)
                                             ->pluck('location')
@@ -308,8 +352,22 @@ class SupplierPurchaseController extends Controller
                                     ->where('company_id',Session::get('user_company_id'))
                                     ->orderBy('name')
                                     ->get();
+        //Items
+        $item_id = FuelSupplierRate::where('company_id', Session::get('user_company_id'))
+                                            ->where('account_id', $request->account_id)
+                                            ->pluck('item_id')
+                                            ->unique()
+                                            ->values();
+        
+        $items = ManageItems::select('id','name')
+                                    ->where('status',1)
+                                    ->whereIn('id',$item_id)
+                                    ->where('company_id',Session::get('user_company_id'))
+                                    ->orderBy('name')
+                                    ->get();
         return response()->json([
-            'location' => $location
+            'location' => $location,
+            'item' => $items,
         ]);
     }
     public function updateSupplierPurchaseReport(Request $request)
@@ -352,13 +410,13 @@ class SupplierPurchaseController extends Controller
     public function uploadPurchaseImage(Request $request)
     {
         // validate
-        $request->validate([
-            'images.*' => 'required|image|mimes:jpg,jpeg,png,gif|max:2048',
-        ]);
-
+        // $request->validate([
+        //     'images.*' => 'required|image|mimes:jpg,jpeg,png,gif|max:2048',
+        // ]);
+        
         $paths = [];
         $purchase_vehicle = SupplierPurchaseVehicleDetail::find($request->image_purchase_id);
-        if ($request->hasFile('images')) {
+        //if ($request->hasFile('images')) {
             foreach ($request->file('images') as $key=>$image) {
                  // Save file
                 $filename = time().'_'.$image->getClientOriginalName();
@@ -382,7 +440,7 @@ class SupplierPurchaseController extends Controller
                 $purchase_vehicle->completed_by = Session::get('user_id');
                 $purchase_vehicle->save();
             }
-        }
+        //}
         
         return redirect()->route('manage-purchase-info')->with('success','Image Uploaded Successfully');
     }
@@ -534,7 +592,9 @@ class SupplierPurchaseController extends Controller
                 ->select(
                     'supplier_purchase_vehicle_details.id',
                     'gross_weight',
+                    'tare_weight',
                     'supplier_purchase_vehicle_details.vehicle_no',
+                    'supplier_purchase_vehicle_details.voucher_no',
                     'accounts.account_name',
                     'item_groups.group_name',
                     'supplier_purchase_vehicle_details.account_id',
@@ -543,8 +603,10 @@ class SupplierPurchaseController extends Controller
                     'purchases.voucher_no as purchase_voucher_no',
                     'purchases.date as purchase_date',
                     'purchases.total as purchase_amount',
+                    'purchases.taxable_amt as purchase_taxable_amount',
                     'entry_date',
                     'reapproval',
+                    DB::raw('(SELECT group_type FROM `sale-order-settings` WHERE `sale-order-settings`.item_id = supplier_purchase_vehicle_details.group_id and setting_for="PURCHASE ORDER" and setting_type="PURCHASE GROUP" LIMIT 1) as group_type'),
                     DB::raw('(SELECT sum(qty) FROM purchase_descriptions WHERE purchase_descriptions.purchase_id = purchases.id) as purchase_qty'),
                     DB::raw('(SELECT price FROM purchase_descriptions WHERE purchase_descriptions.purchase_id = purchases.id LIMIT 1) as price')
                 )
@@ -557,40 +619,24 @@ class SupplierPurchaseController extends Controller
                 ->select(
                     'supplier_purchase_vehicle_details.id',
                     'gross_weight',
+                    'tare_weight',
                     'supplier_purchase_vehicle_details.vehicle_no',
+                    'supplier_purchase_vehicle_details.voucher_no',
                     'accounts.account_name',
                     'item_groups.group_name',
                     'supplier_purchase_vehicle_details.account_id',
                     'supplier_purchase_vehicle_details.group_id',
+                    'supplier_purchase_vehicle_details.image_1',
+                    'supplier_purchase_vehicle_details.image_2',
+                    'supplier_purchase_vehicle_details.image_3',
                     'map_purchase_id',
                     'purchases.voucher_no as purchase_voucher_no',
                     'purchases.date as purchase_date',
                     'purchases.total as purchase_amount',
+                    'purchases.taxable_amt as purchase_taxable_amount',
                     'entry_date',
                     'reapproval',
-                    DB::raw('(SELECT sum(qty) FROM purchase_descriptions WHERE purchase_descriptions.purchase_id = purchases.id) as purchase_qty'),
-                    DB::raw('(SELECT price FROM purchase_descriptions WHERE purchase_descriptions.purchase_id = purchases.id LIMIT 1) as price')
-                )
-                ->get();
-        $complete_report =  SupplierPurchaseVehicleDetail::join('accounts','supplier_purchase_vehicle_details.account_id','=','accounts.id')
-                ->leftJoin('purchases','supplier_purchase_vehicle_details.map_purchase_id','=','purchases.id')
-                ->join('item_groups','supplier_purchase_vehicle_details.group_id','=','item_groups.id')
-                ->where('supplier_purchase_vehicle_details.company_id', Session::get('user_company_id'))
-                ->where('supplier_purchase_vehicle_details.status', 2)
-                ->select(
-                    'supplier_purchase_vehicle_details.id',
-                    'gross_weight',
-                    'supplier_purchase_vehicle_details.vehicle_no',
-                    'accounts.account_name',
-                    'item_groups.group_name',
-                    'supplier_purchase_vehicle_details.account_id',
-                    'supplier_purchase_vehicle_details.group_id',
-                    'map_purchase_id',
-                    'purchases.voucher_no as purchase_voucher_no',
-                    'purchases.date as purchase_date',
-                    'purchases.total as purchase_amount',
-                    'entry_date',
-                    'reapproval',
+                    DB::raw('(SELECT group_type FROM `sale-order-settings` WHERE `sale-order-settings`.item_id = supplier_purchase_vehicle_details.group_id and setting_for="PURCHASE ORDER" and setting_type="PURCHASE GROUP" LIMIT 1) as group_type'),
                     DB::raw('(SELECT sum(qty) FROM purchase_descriptions WHERE purchase_descriptions.purchase_id = purchases.id) as purchase_qty'),
                     DB::raw('(SELECT price FROM purchase_descriptions WHERE purchase_descriptions.purchase_id = purchases.id LIMIT 1) as price')
                 )
@@ -603,7 +649,9 @@ class SupplierPurchaseController extends Controller
                 ->select(
                     'supplier_purchase_vehicle_details.id',
                     'gross_weight',
+                    'tare_weight',
                     'supplier_purchase_vehicle_details.vehicle_no',
+                    'supplier_purchase_vehicle_details.voucher_no',
                     'accounts.account_name',
                     'item_groups.group_name',
                     'supplier_purchase_vehicle_details.account_id',
@@ -612,21 +660,32 @@ class SupplierPurchaseController extends Controller
                     'purchases.voucher_no as purchase_voucher_no',
                     'purchases.date as purchase_date',
                     'purchases.total as purchase_amount',
+                    'purchases.taxable_amt as purchase_taxable_amount',
                     'entry_date',
                     'reapproval',
+                    DB::raw('(SELECT group_type FROM `sale-order-settings` WHERE `sale-order-settings`.item_id = supplier_purchase_vehicle_details.group_id and setting_for="PURCHASE ORDER" and setting_type="PURCHASE GROUP" LIMIT 1) as group_type'),
                     DB::raw('(SELECT sum(qty) FROM purchase_descriptions WHERE purchase_descriptions.purchase_id = purchases.id) as purchase_qty'),
                     DB::raw('(SELECT price FROM purchase_descriptions WHERE purchase_descriptions.purchase_id = purchases.id LIMIT 1) as price')
                 )
                 ->get();
+        $approve_from_date = $request->approve_from_date;
+        $approve_to_date = $request->approve_to_date;
+        if($approve_from_date=="" && $approve_to_date==""){
+            $approve_from_date = date('Y-m-d');
+            $approve_to_date = date('Y-m-d');
+        }
         $approved_report =  SupplierPurchaseVehicleDetail::join('accounts','supplier_purchase_vehicle_details.account_id','=','accounts.id')
                 ->leftJoin('purchases','supplier_purchase_vehicle_details.map_purchase_id','=','purchases.id')
                 ->join('item_groups','supplier_purchase_vehicle_details.group_id','=','item_groups.id')
                 ->where('supplier_purchase_vehicle_details.company_id', Session::get('user_company_id'))
                 ->where('supplier_purchase_vehicle_details.status', 3)
+                ->whereBetween('supplier_purchase_vehicle_details.entry_date', [$approve_from_date,$approve_to_date])
                 ->select(
                     'supplier_purchase_vehicle_details.id',
                     'gross_weight',
+                    'tare_weight',
                     'supplier_purchase_vehicle_details.vehicle_no',
+                    'supplier_purchase_vehicle_details.voucher_no',
                     'accounts.account_name',
                     'item_groups.group_name',
                     'supplier_purchase_vehicle_details.account_id',
@@ -635,8 +694,10 @@ class SupplierPurchaseController extends Controller
                     'purchases.voucher_no as purchase_voucher_no',
                     'purchases.date as purchase_date',
                     'purchases.total as purchase_amount',
+                    'purchases.taxable_amt as purchase_taxable_amount',
                     'entry_date',
                     'reapproval',
+                    DB::raw('(SELECT group_type FROM `sale-order-settings` WHERE `sale-order-settings`.item_id = supplier_purchase_vehicle_details.group_id and setting_for="PURCHASE ORDER" and setting_type="PURCHASE GROUP" LIMIT 1) as group_type'),
                     DB::raw('(SELECT sum(qty) FROM purchase_descriptions WHERE purchase_descriptions.purchase_id = purchases.id) as purchase_qty'),
                     DB::raw('(SELECT price FROM purchase_descriptions WHERE purchase_descriptions.purchase_id = purchases.id LIMIT 1) as price')
                 )
@@ -671,7 +732,41 @@ class SupplierPurchaseController extends Controller
                             ->where('status', '=', '1')
                             ->orderBy('group_name')
                             ->get();
-        return view('supplier/view_purchase_vehicle_detail',["pending_report"=>$pending_report,"in_process_report"=>$in_process_report,"complete_report"=>$complete_report,"pending_for_approval_report"=>$pending_for_approval_report,"approved_report"=>$approved_report,"locations"=>$location,"heads"=>$heads,"accounts"=>$accounts,"item_groups"=>$item_groups]);
+
+        $items = ManageItems::join('sale-order-settings','manage_items.g_name','=','sale-order-settings.item_id')
+                                ->select('manage_items.id','name')
+                                ->where('manage_items.company_id',Session::get('user_company_id'))
+                                ->where('setting_type', 'PURCHASE GROUP')
+                                ->where('setting_for', 'PURCHASE ORDER')
+                                 ->where('group_type', 'BOILER FUEL')
+                                ->where('manage_items.status','1')
+                                ->where('manage_items.delete','0')
+                                ->orderBy('name')
+                                ->get();
+        $group_list = SaleOrderSetting::join('item_groups','sale-order-settings.item_id','=','item_groups.id')
+                            ->where('sale-order-settings.company_id', Session::get('user_company_id'))
+                            ->where('setting_type', 'PURCHASE GROUP')
+                            ->where('setting_for', 'PURCHASE ORDER')
+                            ->select('item_id','group_type')
+                            ->get();
+        
+        $pending_report_grouped = [];
+        foreach ($pending_report->toArray() as $row) {
+            $pending_report_grouped[$row['group_type']][] = $row;
+        }
+        $in_process_report_grouped = [];
+        foreach ($in_process_report->toArray() as $row) {
+            $in_process_report_grouped[$row['group_type']][] = $row;
+        }
+        $pending_for_approval_report_grouped = [];
+        foreach ($pending_for_approval_report->toArray() as $row) {
+            $pending_for_approval_report_grouped[$row['group_type']][] = $row;
+        }
+        $approved_report_grouped = [];
+        foreach ($approved_report->toArray() as $row) {
+            $approved_report_grouped[$row['group_type']][] = $row;
+        }
+        return view('supplier/view_purchase_vehicle_detail',["pending_report"=>$pending_report_grouped,"in_process_report"=>$in_process_report_grouped,"pending_for_approval_report"=>$pending_for_approval_report_grouped,"approved_report"=>$approved_report_grouped,"locations"=>$location,"heads"=>$heads,"accounts"=>$accounts,"item_groups"=>$item_groups,"approve_from_date"=>$approve_from_date,"approve_to_date"=>$approve_to_date,"items"=>$items,"group_list"=>$group_list]);
     }
     public function addPurchaseInfo(Request $request){        
         $supplier = Supplier::select('account_id')
@@ -681,11 +776,16 @@ class SupplierPurchaseController extends Controller
                               ->select('accounts.id','accounts.account_name')
                               ->orderBy('account_name')
                               ->get(); 
-        $item_groups = ItemGroups::where('company_id', Session::get('user_company_id'))
-                            ->where('delete', '=', '0')
-                            ->where('status', '=', '1')
+        $item_groups = ItemGroups::join('sale-order-settings','item_groups.id','=','sale-order-settings.item_id')
+                            ->select('item_groups.id','group_name')
+                            ->where('item_groups.company_id', Session::get('user_company_id'))
+                            ->where('item_groups.delete', '=', '0')
+                            ->where('item_groups.status', '=', '1')
+                            ->where('setting_type', '=', 'PURCHASE GROUP')
+                            ->where('setting_for', '=', 'PURCHASE ORDER')
                             ->orderBy('group_name')
                             ->get();
+       
         return view('supplier/add_purchase_vehicle_detail',["accounts"=>$accounts,"item_groups"=>$item_groups]);
     }
     public function storePurchaseInfo(Request $request){
@@ -699,6 +799,7 @@ class SupplierPurchaseController extends Controller
         $purchase_info->vehicle_no = $request->vehicle_no;
         $purchase_info->entry_date = $request->date;
         $purchase_info->group_id = $request->group;
+        $purchase_info->item_id = $request->item;
         $purchase_info->account_id = $request->account;
         $purchase_info->gross_weight = $request->gross_weight;
         $purchase_info->company_id = Session::get('user_company_id');
@@ -717,9 +818,13 @@ class SupplierPurchaseController extends Controller
                               ->select('accounts.id','accounts.account_name')
                               ->orderBy('account_name')
                               ->get(); 
-        $item_groups = ItemGroups::where('company_id', Session::get('user_company_id'))
-                            ->where('delete', '=', '0')
-                            ->where('status', '=', '1')
+        $item_groups = ItemGroups::join('sale-order-settings','item_groups.id','=','sale-order-settings.item_id')
+                            ->select('item_groups.id','group_name')
+                            ->where('item_groups.company_id', Session::get('user_company_id'))
+                            ->where('item_groups.delete', '=', '0')
+                            ->where('item_groups.status', '=', '1')
+                            ->where('setting_type', '=', 'PURCHASE GROUP')
+                            ->where('setting_for', '=', 'PURCHASE ORDER')
                             ->orderBy('group_name')
                             ->get();
         $purchase_info = SupplierPurchaseVehicleDetail::find($id);
@@ -735,6 +840,7 @@ class SupplierPurchaseController extends Controller
         $purchase_info = SupplierPurchaseVehicleDetail::find($id);
         $purchase_info->vehicle_no = $request->vehicle_no;
         $purchase_info->group_id = $request->group;
+        $purchase_info->item_id = $request->item;
         $purchase_info->account_id = $request->account;
         $purchase_info->gross_weight = $request->gross_weight;
         $purchase_info->updated_at =  Carbon::now();
@@ -754,6 +860,54 @@ class SupplierPurchaseController extends Controller
         }else{
             return redirect()->route('manage-purchase-info')->with('success','Something Went Wrong');
         }
+    }
+    public function itemByGroup(Request $request){
+        $items = ManageItems::select('id','name')
+                                ->where('company_id',Session::get('user_company_id'))
+                                ->where('g_name',$request->group_id)
+                                ->where('status','1')
+                                ->where('delete','0')
+                                ->orderBy('name')
+                                ->get();
+        return json_encode(array("status"=>true,"data"=>$items));
+    }
+    public function supplierPurchaseSetting(Request $request){        
+        $item_groups = ItemGroups::where('company_id', Session::get('user_company_id'))
+                            ->where('delete', '=', '0')
+                            ->where('status', '=', '1')
+                            ->orderBy('group_name')
+                            ->get();
+        $selectedGroups = SaleOrderSetting::where('company_id', Session::get('user_company_id'))
+                            ->where('setting_type', 'PURCHASE GROUP')
+                            ->where('setting_for', 'PURCHASE ORDER')
+                            ->pluck('item_id')
+                            ->toArray();
+        $selectedGroupType = SaleOrderSetting::where('company_id', Session::get('user_company_id'))
+                            ->where('setting_type', 'PURCHASE GROUP')
+                            ->where('setting_for', 'PURCHASE ORDER')
+                            ->pluck('group_type','item_id')
+                            ->toArray();
+        return view('supplier/setting',["item_groups"=>$item_groups,"selectedGroups"=>$selectedGroups,"selectedGroupType"=>$selectedGroupType]);
+    }
+    public function storeSupplierPurchaseSetting(Request $request){
+        $company_id = auth()->user()->company_id ?? Session::get('user_company_id');
+        $newItems = $request->input('group', []);
+        SaleOrderSetting::where('company_id', $company_id)
+                ->where('setting_type', 'PURCHASE GROUP')
+                ->where('setting_for', 'PURCHASE ORDER')
+                ->delete();
+        foreach ($newItems as $item_id) {
+            SaleOrderSetting::create([
+                'company_id'   => $company_id,
+                'item_id'      => $item_id,
+                'setting_type' => 'PURCHASE GROUP',
+                'setting_for'  => 'PURCHASE ORDER',
+                'status'       => 1,
+                'group_type' => $request->input('group_type_'.$item_id) ?? null,
+            ]);
+        }
+        return redirect()->route('supplier-purchase-setting')
+            ->with('success', 'Settings updated successfully.');
     }
     
 }

@@ -56,7 +56,14 @@ input[type=number] {
                                 @foreach($item_groups as $key => $group)
                                     <option value="{{$group->id}}">{{$group->group_name}}</option>
                                 @endforeach
-                                
+                            </select>
+                        </div>
+                        <div class="clearfix"></div>
+                        <div class="mb-3 col-md-3">
+                            <label for="item" class="form-label font-14 font-heading">Item</label>
+                            <select class="form-select" name="item" id="item" required>
+                                <option value="">Select Item</option>
+                               
                             </select>
                         </div>
                         <div class="clearfix"></div>
@@ -71,7 +78,7 @@ input[type=number] {
                                 <option value="">Select Account</option>
                                 @foreach($accounts as $key => $account)
                                     <option value="{{$account->id}}">{{$account->account_name}}</option>
-                                @endforeach                                
+                                @endforeach
                             </select>
                         </div>
                     </div>
@@ -131,6 +138,30 @@ input[type=number] {
                 }
                 return null;
             }
+        });
+        $("#group").change(function(){
+            let group_id = $(this).val();
+            $.ajax({
+                url : "{{url('item-by-group')}}",
+                method : "POST",
+                data: {
+                    _token: '<?php echo csrf_token() ?>',
+                    group_id : group_id
+                },
+                success:function(obj){
+                    if(obj!=""){
+                        let res = JSON.parse(obj);
+                        if(res.data.length>0){
+                            let html = "<option value=''>Select Item</option>";
+                            res.data.forEach(function(e){
+                                html+='<option value="'+e.id+'">'+e.name+'</option>';
+                            });
+                            $("#item").html(html);
+                        }
+                    }
+                    
+                }
+            });
         });
     });
 </script>

@@ -751,6 +751,10 @@ class PurchaseController extends Controller{
       $purchase->deleted_by = Session::get('user_id');
       $purchase->update();
       if($purchase) {
+         $supplier = SupplierPurchaseVehicleDetail::where('map_purchase_id',$request->purchase_id)->first();
+         if($supplier){
+            SupplierPurchaseVehicleDetail::where('id',$supplier->id)->update(['status'=>1,"map_purchase_id"=>null,"reapproval"=>0]);
+         }
          ItemAverageDetail::where('purchase_id',$request->purchase_id)
                            ->where('type','PURCHASE')
                            ->delete();         

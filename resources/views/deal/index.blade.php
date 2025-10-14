@@ -17,8 +17,8 @@
                </div>
             @endif            
             <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
-               <h5 class="transaction-table-title m-0 py-2">List of Sales Order</h5>
-               <form  action="{{ route('sale.index') }}" method="GET">
+               <h5 class="transaction-table-title m-0 py-2">List of Deal</h5>
+               {{-- <form  action="{{ route('sale.index') }}" method="GET">
                   @csrf
                   <div class="d-md-flex d-block">                  
                      <div class="calender-administrator my-2 my-md-0">
@@ -29,12 +29,12 @@
                      </div>
                      <button class="btn btn-info" style="margin-left: 5px;">Search</button>
                   </div>
-               </form>
+               </form> --}}
                <div class="d-md-flex d-block"> 
                   <input type="text" id="search" class="form-control" placeholder="Search">
                </div>
                @can('action-module',85)
-                  <a href="{{ route('sale-order.create') }}" class="btn btn-xs-primary">
+                  <a href="{{ route('deal.create') }}" class="btn btn-xs-primary">
                   ADD
                   <svg class="position-relative ms-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M9.1665 15.8327V10.8327H4.1665V9.16602H9.1665V4.16602H10.8332V9.16602H15.8332V10.8327H10.8332V15.8327H9.1665Z" fill="white" /></svg>
                </a>
@@ -46,18 +46,18 @@
                   <thead>
                      <tr class=" font-12 text-body bg-light-pink ">
                         <th style="width: 9%;">Date </th>
-                        <th class="">Sale Order No.</th>
-                        <th class="">Purchase Order No.</th>
-                        <th class="">Purchase Order Date</th>
-                        <th class="">Bill To</th>
-                        <th class="">Shipp To</th>
-                        <th style="text-align: right;">Freight</th>
-                        <th style="text-align: right;">Status</th>
+                        <th>Account</th>
+                        <th style="text-align: right;">Rate</th>
+                        <th>Type</th>
+                        <th style="text-align: right;">Quantity</th>
+                        <th style="text-align: right;">Pending</th>
+                        <th style="text-align: right;">Complete</th>
+                        <th style="text-align: right;">Balance</th>
                         <th class="w-min-120 border-none bg-light-pink text-body text-center">Action</th>
                      </tr>
                   </thead>
                   <tbody>
-                     @foreach ($saleOrder as $value)
+                     {{-- @foreach ($saleOrder as $value)
                         <tr>
                            <td>{{date('d-m-Y',strtotime($value->created_at))}}</td>
                            <td>{{$value->sale_order_no}}</td>
@@ -73,7 +73,7 @@
                               <a href="{{route('sale-order-start',$value->id)}}"><img src="{{ URL::asset('public/assets/imgs/start.svg')}}" class="px-1 start" alt="" style="width: 30px;cursor:pointer;"></a>
                            </td>
                         </tr>
-                     @endforeach
+                     @endforeach --}}
                   </tbody>
                </table>
             </div>
@@ -176,87 +176,13 @@
       </div>
    </section>
 </div>
-<!-- Modal ---for delete ---------------------------------------------------------------icon-->
-<div class="modal fade" id="delete_sale" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-   <div class="modal-dialog w-360  modal-dialog-centered  ">
-      <div class="modal-content p-4 border-divider border-radius-8">
-         <div class="modal-header border-0 p-0">
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-         </div>
-         <form class="" method="POST" action="{{ route('sale.delete') }}">
-            @csrf
-            <div class="modal-body text-center p-0">
-               <button class="border-0 bg-transparent">
-                  <img class="delete-icon mb-3 d-block mx-auto" src="{{ URL::asset('public/assets/imgs/administrator-delete-icon.svg')}}" alt="">
-               </button>
-               <h5 class="mb-3 fw-normal">Delete this record</h5>
-               <p class="font-14 text-body "> Do you really want to delete these records? this process cannot be undone. </p>
-            </div>
-            <input type="hidden" value="" id="sale_id" name="sale_id" />
-            <div class="modal-footer border-0 mx-auto p-0">
-               <button type="button" class="btn btn-border-body cancel">CANCEL</button>
-               <button type="submit" class="ms-3 btn btn-red">DELETE</button>
-            </div>
-         </form>
-      </div>
-   </div>
-</div>
+
 </body>
 @include('layouts.footer')
 <script>
    $(document).ready(function() {
       
 
-      $(".cancel").click(function() {
-         $("#delete_sale").modal("hide");
-      });
-      $("#pan").change(function() {
-         var inputvalues = $("#pan").val();
-         var paninformat = new RegExp("^[A-Z]{5}[0-9]{4}[A-Z]{1}$");
-         if(paninformat.test(inputvalues)) {
-            return true;
-         }else {
-            alert('Please Enter Valid PAN Number');
-            $("#pan").val('');
-            $("#pan").focus();
-         }
-      });
-      setTimeout(function() {
-         if($("#business_type").val() == 1) {
-            $("#dateofjoing_section").hide();
-            $("#din_sectioon").hide();
-            $("#share_per_div").show();
-            var html = '<option value="proprietor">Proprietor</option>';
-            $("#designation").html('<option value="proprietor">Proprietor</option><option value="authorised_signatory">Authorised Signatory</option>');
-         }else if ($("#business_type").val() == 2) {
-            $("#dateofjoing_section").show();
-            $("#din_sectioon").hide();
-            $("#share_per_div").show();
-            $("#designation").html('<option value="partner">Partner</option><option value="authorised_signatory">Authorised Signatory</option>');
-         }else {
-            $("#dateofjoing_section").show();
-            $("#din_sectioon").show();
-            $("#share_per_div").hide();
-            $("#designation").html('<option value="director">Director</option><option value="authorised_signatory">Authorised Signatory</option>');
-         }
-      }, 1000);
-   });
-   $(document).on('click','.delete',function(){
-      var id = $(this).attr("data-id");
-      $("#sale_id").val(id);
-      $("#delete_sale").modal("show");
-   });
-   $("#search").keyup(function () {
-      var value = this.value.toLowerCase().trim();
-      $(".sale_table tr").each(function (index) {
-         if (!index) return;
-         $(this).find("td").each(function () {
-            var id = $(this).text().toLowerCase().trim();
-            var not_found = (id.indexOf(value) == -1);
-            $(this).closest('tr').toggle(!not_found);
-            return not_found;
-         });
-      });
    });
 </script>
 @endsection

@@ -17,6 +17,10 @@ use App\Models\AccountGroups;
 use App\Models\SupplierSubHead;
 use App\Models\SupplierDifferenceRate;
 use App\Models\SupplierBonus;
+use App\Models\ManageItems;
+use App\Models\FuelSupplier;
+use App\Models\FuelSupplierRate;
+use App\Models\SaleOrderSetting;
 class SupplierController extends Controller
 {
     /**
@@ -45,16 +49,47 @@ class SupplierController extends Controller
                                         'r_date',
                                         'supplier_sub_heads.id',
                                         'supplier_location_rates.r_date'
-                                    );
+                                    )->orderBy('r_date','desc');
                                 }
                             ])
-                            ->select('id', 'account_id', 'status')
-                            ->where('company_id', Session::get('user_company_id'))
+                            ->select('suppliers.id', 'account_id', 'suppliers.status')
+                            ->where('suppliers.company_id', Session::get('user_company_id'))
+                            ->join('accounts', 'suppliers.account_id', '=', 'accounts.id')
+                            ->orderBy('accounts.account_name', 'asc')
                             ->get();
+        $fuel_supplier = FuelSupplier::with([
+                    'account:id,account_name',
+                    'itemRates' => function ($q) {
+                        $q->join('manage_items', 'fuel_supplier_rates.item_id', '=', 'manage_items.id')
+                            ->select(
+                                'price_date',
+                                'price',
+                                'item_id',
+                                'parent_id',
+                                'name'
+                            )
+                            ->whereIn('price_date', function ($sub) {
+                                $sub->selectRaw('MAX(price_date)')
+                                    ->from('fuel_supplier_rates as fsr2')
+                                    ->whereColumn('fsr2.parent_id', 'fuel_supplier_rates.parent_id');
+                            });
+                    }
+                ])
+                ->select('fuel_suppliers.id', 'account_id', 'fuel_suppliers.status')
+                ->where('fuel_suppliers.company_id', Session::get('user_company_id'))
+                ->join('accounts', 'fuel_suppliers.account_id', '=', 'accounts.id')
+                ->orderBy('accounts.account_name', 'asc')
+                ->get();
 
-        // echo "<pre>";print_r($supplier->toArray());die;
+        $group_list = SaleOrderSetting::join('item_groups','sale-order-settings.item_id','=','item_groups.id')
+                            ->where('sale-order-settings.company_id', Session::get('user_company_id'))
+                            ->where('setting_type', 'PURCHASE GROUP')
+                            ->where('setting_for', 'PURCHASE ORDER')
+                            ->select('item_id','group_type')
+                            ->get();
+                // echo "<pre>";print_r($fuel_supplier->toArray());die;
         
-        return view('supplier.index',["locations"=>$location,'suppliers'=>$supplier]);
+        return view('supplier.index',["locations"=>$location,'suppliers'=>$supplier,"fuel_supplier"=>$fuel_supplier,"group_list"=>$group_list]);
     }
 
     /**
@@ -85,7 +120,24 @@ class SupplierController extends Controller
                                 ->where('status',1)
                                 ->orderBy('sequence')
                                 ->get();
-        return view('supplier.add_supplier',["accounts"=>$accounts,"heads"=>$heads]);
+                                
+        $items = ManageItems::join('sale-order-settings','manage_items.g_name','=','sale-order-settings.item_id')
+                                ->select('manage_items.id','name')
+                                ->where('manage_items.company_id',Session::get('user_company_id'))
+                                ->where('setting_type', 'PURCHASE GROUP')
+                                ->where('setting_for', 'PURCHASE ORDER')
+                                 ->where('group_type', 'BOILER FUEL')
+                                ->where('manage_items.status','1')
+                                ->where('manage_items.delete','0')
+                                ->orderBy('name')
+                                ->get();
+        $group_list = SaleOrderSetting::join('item_groups','sale-order-settings.item_id','=','item_groups.id')
+                            ->where('sale-order-settings.company_id', Session::get('user_company_id'))
+                            ->where('setting_type', 'PURCHASE GROUP')
+                            ->where('setting_for', 'PURCHASE ORDER')
+                            ->select('item_id','group_type')
+                            ->get();
+        return view('supplier.add_supplier',["accounts"=>$accounts,"heads"=>$heads,"items"=>$items,"group_list"=>$group_list]);
     }
     
     /**
@@ -228,6 +280,8 @@ class SupplierController extends Controller
             'account' => 'required|exists:suppliers,account_id',
             'status' => 'required|in:1,0',
         ]);
+        // echo "<pre>";
+        // print_r($request->all());die;
         $supplier = Supplier::find($id);
         $supplier->account_id = $request->account;
         $supplier->status = $request->status;
@@ -239,7 +293,7 @@ class SupplierController extends Controller
                     ->where('company_id', Session::get('user_company_id'))
                     ->delete(); // Delete existing rates for the supplier
                     SupplierBonus::where('supplier_id', $supplier->id)->delete();
-                foreach($request->location as $key => $location){                    
+                foreach($request->location as $key => $location){
                     $loc = SupplierLocation::firstOrCreate([
                         'id' => $location,
                         'company_id' => Session::get('user_company_id')
@@ -250,18 +304,18 @@ class SupplierController extends Controller
                     ]);
                     $locationId = $loc->id;
                     $bonus = 0;
-                    if(isset($request["bonus_".$key]) && isset($request["bonus_".$key][0]) && !empty($request["bonus_".$key][0])){
-                        $bonus = $request["bonus_".$key][0];
+                    if(isset($request["bonus_".$location]) && isset($request["bonus_".$location][0]) && !empty($request["bonus_".$location][0])){
+                        $bonus = $request["bonus_".$location][0];
                     }
-                    foreach ($request["head_id_".$key] as $k => $v) {
-                        if(!empty($request["head_rate_".$key][$k])){
+                    foreach ($request["head_id_".$location] as $k => $v) {
+                        if(!empty($request["head_rate_".$location][$k])){
                             $supplier_location_rates = new SupplierLocationRates;
                             $supplier_location_rates->parent_id = $supplier->id;
                             $supplier_location_rates->account_id = $request->account;
                             $supplier_location_rates->location = $locationId;
                             $supplier_location_rates->head_id = $v;
                             $supplier_location_rates->r_date = $request->rate_date;
-                            $supplier_location_rates->head_rate = $request["head_rate_".$key][$k];
+                            $supplier_location_rates->head_rate = $request["head_rate_".$location][$k];
                             $supplier_location_rates->bonus = $bonus;
                             $supplier_location_rates->company_id = Session::get('user_company_id');
                             $supplier_location_rates->created_at = Carbon::now();

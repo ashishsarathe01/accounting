@@ -63,11 +63,16 @@
                <div class="alert alert-success" role="alert">
                   {{ session('success') }}
                </div>
-            @endif            
+            @endif
+            
             <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Add Sales Voucher</h5>
             <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('sale.store') }}" id="saleForm">
                @csrf
+
                <div class="row">
+                  <input type="hidden" name="sale_order_id" value="{{$sale_order_id}}">
+                  <input type="hidden" name="new_order" value="{{$new_order}}">
+                  <input type="hidden" name="sale_enter_data" value="@if($sale_enter_data){{$sale_enter_data}}@endif">
                   <div class="mb-3 col-md-3">
                      <label for="name" class="form-label font-14 font-heading">Series No.</label>
                      <select id="series_no" name="series_no" class="form-select" required autofocus>
@@ -110,7 +115,7 @@
                      <select class="form-select select2-single" name="party_id" id="party_id">
                         <option value="">Select Account</option>
                         @foreach($party_list as $party)
-                           <option value="{{$party->id}}" data-state_code="{{$party->state_code}}" data-gstin="{{$party->gstin}}" data-id="{{$party->id}}" data-address="{{$party->address}}, {{$party->pin_code}}" data-other_address="{{$party->otherAddress}}">{{$party->account_name}}</option>
+                           <option value="{{$party->id}}" @if($bill_to_id==$party->id) selected @endif data-state_code="{{$party->state_code}}" data-gstin="{{$party->gstin}}" data-id="{{$party->id}}" data-address="{{$party->address}}, {{$party->pin_code}}" data-other_address="{{$party->otherAddress}}">{{$party->account_name}}</option>
                         @endforeach
                      </select>          
                      <p id="partyaddress" style="font-size: 9px;"></p>
@@ -158,60 +163,71 @@
                         </tr>
                      </thead>
                      <tbody>
-                        <tr id="tr_1" class="font-14 font-heading bg-white">
-                           <td class="w-min-50" id="srn_1">1</td>
-                           <td class="w-min-50">
-                              <select class="form-control item_id select2-single" name="goods_discription[]" id="item_id_1" data-id="1">
-                                 <option value="">Select Item</option>
-                                 @foreach($item as $item_list)
-                                    <option value="{{$item_list->id}}" data-unit_id="{{$item_list->u_name}}" data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id="{{$item_list->id}}" data-itemid="{{$item_list->id}}" data-available_item="{{$item_list->available_item}}" data-parameterized_stock_status="{{$item_list->parameterized_stock_status}}" data-config_status="{{$item_list->config_status}}" data-group_id="{{$item_list->group_id}}">{{$item_list->name}}</option>
-                                 @endforeach
-                              </select>                  
-                           </td>                           
-                           <td class="w-min-50">
-                              <input type="number" class="quantity w-100 form-control" id="quantity_tr_1" name="qty[]" placeholder="Quantity" style="text-align:right;" data-id="1"/>
-                           </td>
-                           <td class="w-min-50">                              
-                              <input type="text" class="w-100 form-control unit" id="unit_tr_1" readonly style="text-align:center;" data-id="1"/>
-                              <input type="hidden" class="units w-100" name="units[]" id="units_tr_1" />
-                           </td>
-                           <td class="w-min-50">
-                              <input type="number" class="price form-control" id="price_tr_1" name="price[]" placeholder="Price" style="text-align:right;" data-id="1"/>
-                           </td>
-                           <td class="">
-  <input 
-    type="number" 
-    id="amount_tr_1" 
-    class="amount w-100 form-control" 
-    name="amount[]" 
-    placeholder="Amount"  
-    style="text-align:right;" 
-    data-id="1"
-  />
-</td>
-<td class="" style="display:flex">
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    data-id="1"
-    
-    class="bg-primary rounded-circle add_more_wrapper" 
-    width="24" 
-    height="24" 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    style="cursor: pointer;" 
-    tabindex="0" 
-    role="button"
-  >
-    <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" />
-  </svg>
-</td>
-
-                           <input type="hidden" name="item_parameters[]" id="item_parameters_1">
-                           <input type="hidden" name="config_status[]" id="config_status_1">
-                        </tr>
+                        @php $add_more_count = 1; @endphp
+                        @if(count($sale_order_items)>0)
+                           @foreach ($sale_order_items as $sale_order_item)
+                              <tr id="tr_{{$add_more_count}}" class="font-14 font-heading bg-white">
+                                 <td class="w-min-50" id="srn_{{$add_more_count}}">{{$add_more_count}}</td>
+                                 <td class="w-min-50">
+                                    <select class="form-control item_id select2-single" name="goods_discription[]" id="item_id_{{$add_more_count}}" data-id="{{$add_more_count}}">
+                                       <option value="">Select Item</option>
+                                       @foreach($item as $item_list)
+                                          <option value="{{$item_list->id}}" @if($item_list->id==$sale_order_item['item_id']) selected @endif data-unit_id="{{$item_list->u_name}}" data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id="{{$item_list->id}}" data-itemid="{{$item_list->id}}" data-available_item="{{$item_list->available_item}}" data-parameterized_stock_status="{{$item_list->parameterized_stock_status}}" data-config_status="{{$item_list->config_status}}" data-group_id="{{$item_list->group_id}}">{{$item_list->name}}</option>
+                                       @endforeach
+                                    </select>                  
+                                 </td>                           
+                                 <td class="w-min-50">
+                                    <input type="number" class="quantity w-100 form-control" id="quantity_tr_{{$add_more_count}}" name="qty[]" placeholder="Quantity" style="text-align:right;" data-id="{{$add_more_count}}" value="{{$sale_order_item['total_weight']}}" />
+                                 </td>
+                                 <td class="w-min-50">                              
+                                    <input type="text" class="w-100 form-control unit" id="unit_tr_{{$add_more_count}}" readonly style="text-align:center;" data-id="{{$add_more_count}}"/>
+                                    <input type="hidden" class="units w-100" name="units[]" id="units_tr_{{$add_more_count}}" />
+                                 </td>
+                                 <td class="w-min-50">
+                                    <input type="number" class="price form-control" id="price_tr_{{$add_more_count}}" name="price[]" placeholder="Price" style="text-align:right;" data-id="{{$add_more_count}}" value="{{$sale_order_item['price']}}"/>
+                                 </td>
+                                 <td class=""><input type="number" id="amount_tr_{{$add_more_count}}" class="amount w-100 form-control" name="amount[]" placeholder="Amount"  style="text-align:right;" data-id="{{$add_more_count}}"/></td>
+                                 <td class="" style="display:flex">
+                                    <svg xmlns="http://www.w3.org/2000/svg" data-id="{{$add_more_count}}"class="bg-primary rounded-circle add_more_wrapper" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;" tabindex="0" role="button"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg>
+                                 </td>
+                                 <input type="hidden" name="item_parameters[]" id="item_parameters_{{$add_more_count}}">
+                                 <input type="hidden" name="config_status[]" id="config_status_{{$add_more_count}}">
+                              </tr>
+                              @php $add_more_count++; @endphp
+                           @endforeach
+                           
+                        @else
+                           <tr id="tr_1" class="font-14 font-heading bg-white">
+                              <td class="w-min-50" id="srn_1">1</td>
+                              <td class="w-min-50">
+                                 <select class="form-control item_id select2-single" name="goods_discription[]" id="item_id_1" data-id="1">
+                                    <option value="">Select Item</option>
+                                    @foreach($item as $item_list)
+                                       <option value="{{$item_list->id}}" data-unit_id="{{$item_list->u_name}}" data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id="{{$item_list->id}}" data-itemid="{{$item_list->id}}" data-available_item="{{$item_list->available_item}}" data-parameterized_stock_status="{{$item_list->parameterized_stock_status}}" data-config_status="{{$item_list->config_status}}" data-group_id="{{$item_list->group_id}}">{{$item_list->name}}</option>
+                                    @endforeach
+                                 </select>                  
+                              </td>                           
+                              <td class="w-min-50">
+                                 <input type="number" class="quantity w-100 form-control" id="quantity_tr_1" name="qty[]" placeholder="Quantity" style="text-align:right;" data-id="1"/>
+                              </td>
+                              <td class="w-min-50">                              
+                                 <input type="text" class="w-100 form-control unit" id="unit_tr_1" readonly style="text-align:center;" data-id="1"/>
+                                 <input type="hidden" class="units w-100" name="units[]" id="units_tr_1" />
+                              </td>
+                              <td class="w-min-50">
+                                 <input type="number" class="price form-control" id="price_tr_1" name="price[]" placeholder="Price" style="text-align:right;" data-id="1"/>
+                              </td>
+                              <td class=""><input type="number" id="amount_tr_1" class="amount w-100 form-control" name="amount[]" placeholder="Amount"  style="text-align:right;" data-id="1"/></td>
+                              <td class="" style="display:flex">
+                                 <svg xmlns="http://www.w3.org/2000/svg" data-id="1"class="bg-primary rounded-circle add_more_wrapper" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;" tabindex="0" role="button"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg>
+                              </td>
+                              <input type="hidden" name="item_parameters[]" id="item_parameters_1">
+                              <input type="hidden" name="config_status[]" id="config_status_1">
+                           </tr>
+                        @endif
+                        
+                        
                      </tbody>
-                     
                      <div class="total">
                         <tr class="font-14 font-heading bg-white">
                            <td class="w-min-50 fw-bold"></td>
@@ -266,7 +282,7 @@
                                        <option value="">Select</option>
                                        <?php
                                        foreach($billsundry as $value) {
-                                          if($value->nature_of_sundry!='CGST' && $value->nature_of_sundry!='SGST' && $value->nature_of_sundry!='IGST' && $value->nature_of_sundry!='ROUNDED OFF (+)' && $value->nature_of_sundry!='ROUNDED OFF (-)'){?>
+                                          if($value->nature_of_sundry=='OTHER'){?>
                                              <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-sundry_percent="<?php echo $value->sundry_percent;?>" data-sundry_percent_date="<?php echo $value->sundry_percent_date;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_1" id="sundry_option_<?php echo $value->id;?>_1" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
                                              <?php 
                                           }
@@ -288,39 +304,38 @@
                                  <td class="w-min-50">
                                     <select id="bill_sundry_cgst" class="w-95-parsent bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="cgst">
                                        <?php
-   $cgst_found = false;
+                                    $cgst_found = false;
 
-   foreach ($billsundry as $value) { 
-      if ($value->nature_of_sundry == 'CGST') {
-         $cgst_found = true;
-         ?>
-         <option value="<?php echo $value->id;?>" 
-                 data-type="<?php echo $value->bill_sundry_type;?>"
-                 data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>"
-                 data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>"
-                 data-sequence="<?php echo $value->sequence;?>"
-                 class="sundry_option_cgst" 
-                 id="sundry_option_cgst"
-                 data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>">
-            <?php echo $value->name; ?>
-         </option>
-         <?php
-         break;
-      }
-   }
-
-   if (!$cgst_found) {
-      ?>
-      <option value="" 
-              data-type="" 
-              data-adjust_sale_amt="" 
-              data-effect_gst_calculation="" 
-              data-sequence="" 
-              class="sundry_option_cgst" 
-              id="sundry_option_cgst" 
-              data-nature_of_sundry="">
-      </option>
-   <?php } ?>
+                                    foreach ($billsundry as $value) { 
+                                       if ($value->nature_of_sundry == 'CGST') {
+                                          $cgst_found = true;
+                                          ?>
+                                          <option value="<?php echo $value->id;?>" 
+                                                data-type="<?php echo $value->bill_sundry_type;?>"
+                                                data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>"
+                                                data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>"
+                                                data-sequence="<?php echo $value->sequence;?>"
+                                                class="sundry_option_cgst" 
+                                                id="sundry_option_cgst"
+                                                data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>">
+                                             <?php echo $value->name; ?>
+                                          </option>
+                                          <?php
+                                          break;
+                                       }
+                                    }
+                                    if (!$cgst_found) {
+                                       ?>
+                                       <option value="" 
+                                             data-type="" 
+                                             data-adjust_sale_amt="" 
+                                             data-effect_gst_calculation="" 
+                                             data-sequence="" 
+                                             class="sundry_option_cgst" 
+                                             id="sundry_option_cgst" 
+                                             data-nature_of_sundry="">
+                                       </option>
+                                    <?php } ?>
                                     </select>
                                  </td>
                                  <td class="w-min-50"><span name="tax_amt[]" class="tax_amount" id="tax_amt_cgst"></span><input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_cgst"></td>
@@ -331,39 +346,38 @@
                                  <td class="w-min-50">
                                     <select id="bill_sundry_sgst" class="w-95-parsent bill_sundry_tax_type  form-select" name="bill_sundry[]" data-id="sgst">
                                       <?php
-   $sgst_found = false; // Flag to track SGST
+                                       $sgst_found = false; // Flag to track SGST
 
-   foreach($billsundry as $value){ 
-      if($value->nature_of_sundry == 'SGST'){
-         $sgst_found = true;
-         ?>
-         <option value="<?php echo $value->id;?>" 
-                 data-type="<?php echo $value->bill_sundry_type;?>"
-                 data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>"
-                 data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>"
-                 data-sequence="<?php echo $value->sequence;?>"
-                 class="sundry_option_sgst" 
-                 id="sundry_option_sgst"
-                 data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>">
-            <?php echo $value->name; ?>
-         </option>
-         <?php 
-         break; // SGST mila to loop yahin break
-      }
-   }
-
-   // SGST nahi mila to default empty option
-   if (!$sgst_found) { ?>
-      <option value="" 
-              data-type="" 
-              data-adjust_sale_amt="" 
-              data-effect_gst_calculation="" 
-              data-sequence="" 
-              class="sundry_option_sgst" 
-              id="sundry_option_sgst" 
-              data-nature_of_sundry="">
-      </option>
-   <?php } ?>
+                                       foreach($billsundry as $value){ 
+                                          if($value->nature_of_sundry == 'SGST'){
+                                             $sgst_found = true;
+                                             ?>
+                                             <option value="<?php echo $value->id;?>" 
+                                                   data-type="<?php echo $value->bill_sundry_type;?>"
+                                                   data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>"
+                                                   data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>"
+                                                   data-sequence="<?php echo $value->sequence;?>"
+                                                   class="sundry_option_sgst" 
+                                                   id="sundry_option_sgst"
+                                                   data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>">
+                                                <?php echo $value->name; ?>
+                                             </option>
+                                             <?php 
+                                             break; // SGST mila to loop yahin break
+                                          }
+                                       }
+                                       // SGST nahi mila to default empty option
+                                       if (!$sgst_found) { ?>
+                                          <option value="" 
+                                                data-type="" 
+                                                data-adjust_sale_amt="" 
+                                                data-effect_gst_calculation="" 
+                                                data-sequence="" 
+                                                class="sundry_option_sgst" 
+                                                id="sundry_option_sgst" 
+                                                data-nature_of_sundry="">
+                                          </option>
+                                       <?php } ?>
                                     </select>
                                  </td>
                                  <td class="w-min-50"><span name="tax_amt[]" class="tax_amount" id="tax_amt_sgst"></span><input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_sgst"></td>
@@ -374,40 +388,40 @@
                                  <td class="w-min-50">
                                     <select id="bill_sundry_igst" class="w-95-parsent bill_sundry_tax_type  form-select" name="bill_sundry[]" data-id="igst">
                                         <?php
-   $igst_found = false; // Track whether IGST found or not
+                                    $igst_found = false; // Track whether IGST found or not
 
-   foreach ($billsundry as $value) { 
-      if ($value->nature_of_sundry == 'IGST') {
-         $igst_found = true;
-         ?>
-         <option value="<?php echo $value->id;?>" 
-                 data-type="<?php echo $value->bill_sundry_type;?>"
-                 data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>"
-                 data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>"
-                 data-sequence="<?php echo $value->sequence;?>"
-                 class="sundry_option_igst" 
-                 id="sundry_option_igst"
-                 data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>">
-            <?php echo $value->name; ?>
-         </option>
-         <?php
-         break; // Stop loop after first IGST found
-      }
-   }
+                                    foreach ($billsundry as $value) { 
+                                       if ($value->nature_of_sundry == 'IGST') {
+                                          $igst_found = true;
+                                          ?>
+                                          <option value="<?php echo $value->id;?>" 
+                                                data-type="<?php echo $value->bill_sundry_type;?>"
+                                                data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>"
+                                                data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>"
+                                                data-sequence="<?php echo $value->sequence;?>"
+                                                class="sundry_option_igst" 
+                                                id="sundry_option_igst"
+                                                data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>">
+                                             <?php echo $value->name; ?>
+                                          </option>
+                                          <?php
+                                          break; // Stop loop after first IGST found
+                                       }
+                                    }
 
-   // If no IGST was found, print default option (like your else)
-   if (!$igst_found) {
-      ?>
-      <option value="" 
-              data-type="" 
-              data-adjust_sale_amt="" 
-              data-effect_gst_calculation="" 
-              data-sequence="" 
-              class="sundry_option_igst" 
-              id="sundry_option_igst" 
-              data-nature_of_sundry="">
-      </option>
-   <?php } ?>
+                                    // If no IGST was found, print default option (like your else)
+                                    if (!$igst_found) {
+                                       ?>
+                                       <option value="" 
+                                             data-type="" 
+                                             data-adjust_sale_amt="" 
+                                             data-effect_gst_calculation="" 
+                                             data-sequence="" 
+                                             class="sundry_option_igst" 
+                                             id="sundry_option_igst" 
+                                             data-nature_of_sundry="">
+                                       </option>
+                                    <?php } ?>
                                     </select>
                                  </td>
                                  <td class="w-min-50"><span name="tax_amt[]" class="tax_amount" id="tax_amt_igst"></span><input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_igst"></td>
@@ -722,95 +736,84 @@
 <script>
    var bill_sundry_array = @json($billsundry);//New Changes By Ashish
    var mat_series = "<?php echo count($GstSettings);?>";
-   
+   var bill_to_id = "{{$bill_to_id}}";
+   var shipp_to_id = "{{$shipp_to_id}}";
    var enter_gst_status = 0;
    var auto_gst_calculation = 0;
    var customer_gstin = "";
    var merchant_gstin = "";
    var percent_arr = [];
-   var add_more_count = 1;
-   var add_more_counts = 1;
+   var add_more_count = {{$add_more_count}};
    var page_load = 0;
    var add_more_bill_sundry_up_count = 2;
-   function addMoreItem() {
-   let empty_status = 0;
-   $('.item_id').each(function () {
-      let i = $(this).attr('data-id');
-      if ($(this).val() == "" || $("#quantity_tr_" + i).val() == "" || $("#price_tr_" + i).val() == "") {
-         empty_status = 1;
+   function addMoreItem(){
+      let empty_status = 0;
+      $('.item_id').each(function () {
+         let i = $(this).attr('data-id');
+         if ($(this).val() == "" || $("#quantity_tr_" + i).val() == "" || $("#price_tr_" + i).val() == "") {
+            empty_status = 1;
+         }
+      });
+      if (empty_status == 1) {
+         alert("Please enter required fields");
+         return;
       }
-   });
-
-   if (empty_status == 1) {
-      alert("Please enter required fields");
-      return;
-   }
-
-   let srn = $("#srn_" + add_more_count).html();
-   srn++;
-   add_more_count++;
-
-   let optionElements = $('#goods_discription_tr_1').html();
-   let tr_id = 'tr_' + add_more_count;
-
-   let newRow = '<tr id="' + tr_id + '" class="font-14 font-heading bg-white">' +
-      '<td class="w-min-50" id="srn_' + add_more_count + '">' + srn + '</td>' +
-      '<td><select class="form-control item_id select2-single" name="goods_discription[]" id="item_id_' + add_more_count + '" data-id="' + add_more_count + '">' +
-      '<option value="">Select Item</option>' +
-      '@foreach($item as $item_list)<option value="{{$item_list->id}}" data-unit_id="{{$item_list->u_name}}" data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id="{{$item_list->id}}" data-itemid="{{$item_list->id}}" data-available_item="{{$item_list->available_item}}" data-parameterized_stock_status="{{$item_list->parameterized_stock_status}}" data-config_status="{{$item_list->config_status}}" data-group_id="{{$item_list->group_id}}">{{$item_list->name}}</option>@endforeach' +
-      optionElements + '</td>' +
-      '<td class="w-min-50"><input type="number" class="quantity w-100 form-control" name="qty[]" id="quantity_tr_' + add_more_count + '" required placeholder="Quantity" style="text-align:right" data-id="' + add_more_count + '" /></td>' +
-      '<td class="w-min-50"><input type="text" class="w-100 form-control unit" id="unit_tr_' + add_more_count + '" readonly style="text-align:center;" data-id="' + add_more_count + '"/><input type="hidden" class="units w-100" name="units[]" id="units_tr_' + add_more_count + '"/></td>' +
-      '<td class="w-min-50"><input type="number" class="price w-100 form-control" name="price[]" id="price_tr_' + add_more_count + '" required placeholder="Price" style="text-align:right" data-id="' + add_more_count + '"/></td>' +
-      '<td class="w-min-50"><input type="number" class="amount w-100 form-control" name="amount[]" id="amount_tr_' + add_more_count + '" required placeholder="Amount" style="text-align:right" data-id="' + add_more_count + '"/></td>' +
-      '<input type="hidden" name="item_parameters[]" id="item_parameters_' + add_more_count + '">' +
-      '<input type="hidden" name="config_status[]" id="config_status_' + add_more_count + '">' +
-      '<td class="w-min-50 action-cell" style="display: flex;"></td>' +
-      '</tr>';
-
-   $("#example11").append(newRow);
-   $("#max_sale_descrption").val(add_more_count);
-
-   // Re-index serial numbers
-   let k = 1;
-   $('.item_id').each(function () {
-      let i = $(this).attr('data-id');
-      $("#srn_" + i).html(k);
-      k++;
-   });
-
-   // Reset all icon cells
-   $(".item_id").each(function () {
-      let dataId = $(this).attr("data-id");
-      $("#tr_" + dataId + " td:last").html('');
-   });
-
-   let totalRows = $(".item_id").length;
-
-   $(".item_id").each(function (index) {
-      let dataId = $(this).attr("data-id");
-      let removeIcon = '<svg style="color: red; cursor: pointer; margin-right: 8px;" xmlns="http://www.w3.org/2000/svg" tabindex="0" width="24" height="24" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + dataId + '" viewBox="0 0 16 16">' +
-         '<path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/>' +
-         '</svg>';
-
-      let addIcon = '<svg style="color: green;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" tabindex="0" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="bg-primary rounded-circle add_more_wrapper" data-id="' + dataId + '" >' +
-         '<path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/>' +
-         '</svg>';
-
-         if (dataId == "1") {
-         // Clear the icon from the last <td> of the first row
+      let srn = $("#srn_" + add_more_count).html();
+      srn++;
+      add_more_count++;
+      let optionElements = $('#goods_discription_tr_1').html();
+      let tr_id = 'tr_' + add_more_count;
+      let newRow = '<tr id="' + tr_id + '" class="font-14 font-heading bg-white">' +
+         '<td class="w-min-50" id="srn_' + add_more_count + '">' + srn + '</td>' +
+         '<td><select class="form-control item_id select2-single" name="goods_discription[]" id="item_id_' + add_more_count + '" data-id="' + add_more_count + '">' +
+         '<option value="">Select Item</option>' +
+         '@foreach($item as $item_list)<option value="{{$item_list->id}}" data-unit_id="{{$item_list->u_name}}" data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id="{{$item_list->id}}" data-itemid="{{$item_list->id}}" data-available_item="{{$item_list->available_item}}" data-parameterized_stock_status="{{$item_list->parameterized_stock_status}}" data-config_status="{{$item_list->config_status}}" data-group_id="{{$item_list->group_id}}">{{$item_list->name}}</option>@endforeach' +
+         optionElements + '</td>' +
+         '<td class="w-min-50"><input type="number" class="quantity w-100 form-control" name="qty[]" id="quantity_tr_' + add_more_count + '" required placeholder="Quantity" style="text-align:right" data-id="' + add_more_count + '" /></td>' +
+         '<td class="w-min-50"><input type="text" class="w-100 form-control unit" id="unit_tr_' + add_more_count + '" readonly style="text-align:center;" data-id="' + add_more_count + '"/><input type="hidden" class="units w-100" name="units[]" id="units_tr_' + add_more_count + '"/></td>' +
+         '<td class="w-min-50"><input type="number" class="price w-100 form-control" name="price[]" id="price_tr_' + add_more_count + '" required placeholder="Price" style="text-align:right" data-id="' + add_more_count + '"/></td>' +
+         '<td class="w-min-50"><input type="number" class="amount w-100 form-control" name="amount[]" id="amount_tr_' + add_more_count + '" required placeholder="Amount" style="text-align:right" data-id="' + add_more_count + '"/></td>' +
+         '<input type="hidden" name="item_parameters[]" id="item_parameters_' + add_more_count + '">' +
+         '<input type="hidden" name="config_status[]" id="config_status_' + add_more_count + '">' +
+         '<td class="w-min-50 action-cell" style="display: flex;"></td>' +
+         '</tr>';
+      $("#example11").append(newRow);
+      $("#max_sale_descrption").val(add_more_count);
+      // Re-index serial numbers
+      let k = 1;
+      $('.item_id').each(function () {
+         let i = $(this).attr('data-id');
+         $("#srn_" + i).html(k);
+         k++;
+      });
+      // Reset all icon cells
+      $(".item_id").each(function () {
+         let dataId = $(this).attr("data-id");
          $("#tr_" + dataId + " td:last").html('');
-      }
-      else if (index < totalRows - 1) {
-         $("#tr_" + dataId + " td:last").html(removeIcon);
-      } else {
-         $("#tr_" + dataId + " td:last").html(removeIcon + addIcon);
-      }
-   });
+      });
+      let totalRows = $(".item_id").length;
+      $(".item_id").each(function (index) {
+         let dataId = $(this).attr("data-id");
+         let removeIcon = '<svg style="color: red; cursor: pointer; margin-right: 8px;" xmlns="http://www.w3.org/2000/svg" tabindex="0" width="24" height="24" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + dataId + '" viewBox="0 0 16 16">' +
+            '<path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/>' +
+            '</svg>';
 
+         let addIcon = '<svg style="color: green;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" tabindex="0" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="bg-primary rounded-circle add_more_wrapper" data-id="' + dataId + '" >' +
+            '<path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/>' +
+            '</svg>';
 
-   $(".select2-single").select2();
-}
+            if (dataId == "1") {
+            // Clear the icon from the last <td> of the first row
+            $("#tr_" + dataId + " td:last").html('');
+         }
+         else if (index < totalRows - 1) {
+            $("#tr_" + dataId + " td:last").html(removeIcon);
+         } else {
+            $("#tr_" + dataId + " td:last").html(removeIcon + addIcon);
+         }
+      });
+      $(".select2-single").select2();
+   }
 
 
 function removeItem() {
@@ -872,6 +875,7 @@ function removeItem() {
    
 
    $(document).ready(function(){
+     
       // Function to calculate amount and update total sum
       window.calculateAmount = function(key=null) {         
          customer_gstin = $('#party_id option:selected').attr('data-state_code'); 
@@ -1253,6 +1257,17 @@ function removeItem() {
          }
          return;         
       }
+      if(bill_to_id!=""){
+         $("#party_id").change();
+         $(".item_id").each(function(){
+            $(this).change();
+         })
+         if(bill_to_id!=shipp_to_id){
+            $("#shipping_name").val(shipp_to_id);
+            $("#shipping_name").change();
+         }
+      }
+      
       // Calculate amount on input change
       $(document).on('input', '.price',function(){
          let id = $(this).attr('data-id');

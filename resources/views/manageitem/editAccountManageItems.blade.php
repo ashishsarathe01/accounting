@@ -108,12 +108,12 @@
                                                 (Exempted Goods)
                                             </option>
                                         
-                                            <option value="0.25" data-type="taxable" @if($manageitems->gst_rate == "0.25") selected @endif>0.25% (Precious stones, etc.)</option>
-                                            <option value="3" data-type="taxable" @if($manageitems->gst_rate == "3") selected @endif>3% (Gold, jewelry)</option>
-                                            <option value="5" data-type="taxable" @if($manageitems->gst_rate == "5") selected @endif>5%</option>
-                                            <option value="12" data-type="taxable" @if($manageitems->gst_rate == "12") selected @endif>12%</option>
-                                            <option value="18" data-type="taxable" @if($manageitems->gst_rate == "18") selected @endif>18%</option>
-                                            <option value="28" data-type="taxable" @if($manageitems->gst_rate == "28") selected @endif>28%</option>
+                                            <option value="0.25" data-type="taxable" @if(isset($item_gst_rate) && $item_gst_rate->gst_rate == "0.25") selected @endif>0.25% (Precious stones, etc.)</option>
+                                            <option value="3" data-type="taxable" @if(isset($item_gst_rate) && $item_gst_rate->gst_rate == "3") selected @endif>3% (Gold, jewelry)</option>
+                                            <option value="5" data-type="taxable" @if(isset($item_gst_rate) && $item_gst_rate->gst_rate == "5") selected @endif>5%</option>
+                                            <option value="12" data-type="taxable" @if(isset($item_gst_rate) && $item_gst_rate->gst_rate == "12") selected @endif>12%</option>
+                                            <option value="18" data-type="taxable" @if(isset($item_gst_rate) && $item_gst_rate->gst_rate == "18") selected @endif>18%</option>
+                                            <option value="28" data-type="taxable" @if(isset($item_gst_rate) && $item_gst_rate->gst_rate == "28") selected @endif>28%</option>
                                             
                                             </select>
                                         
@@ -121,6 +121,20 @@
                                             <!-- Hidden input to store data-type -->
                                         <input type="hidden" value="{{ $manageitems->item_type }}" name="item_type" id="item_type">
                                 </div>
+
+                                <div class="mb-3 col-md-3">
+                                    <label for="with_effect_from" class="form-label font-14 font-heading">With Effect from</label>
+                                    <input 
+                                        type="date" 
+                                        class="form-control" 
+                                        id="with_effect_from" 
+                                        name="with_effect_from" 
+                                        placeholder="Effect from date" 
+                                        required
+                                        value="{{ old('with_effect_from', \Carbon\Carbon::parse(isset($item_gst_rate) && $item_gst_rate->effective_from)->format('Y-m-d')) }}"
+                                    />
+                                </div>
+
 
                                 <div class="mb-3 col-md-3">
                                     <label for="name" class="form-label font-14 font-heading">HSN CODE</label>

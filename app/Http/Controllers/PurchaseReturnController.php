@@ -79,7 +79,8 @@ class PurchaseReturnController extends Controller
             'sr_type',
             DB::raw('(select account_name from accounts where accounts.id = purchase_returns.party limit 1) as account_name'),
             DB::raw('(select manual_numbering from voucher_series_configurations where voucher_series_configurations.company_id = '.Session::get('user_company_id').' and configuration_for="DEBIT NOTE" and voucher_series_configurations.status=1 and voucher_series_configurations.series = purchase_returns.series_no limit 1) as manual_numbering_status'),
-               DB::raw('(select max(purchase_return_no) from purchase_returns as s where s.company_id = '.Session::get('user_company_id').' and s.delete="0" and s.series_no = purchase_returns.series_no) as max_voucher_no')
+            DB::raw('(select max(purchase_return_no) from purchase_returns as s where s.company_id = '.Session::get('user_company_id').' and s.delete="0" and s.series_no = purchase_returns.series_no) as max_voucher_no'),
+            DB::raw('(select count(*) from supplier_purchase_vehicle_details where supplier_purchase_vehicle_details.action_id = purchase_returns.id and supplier_purchase_vehicle_details.action_type="DEBIT NOTE") as purchase_vehicle_count'),
          )
          ->where('company_id', Session::get('user_company_id'))
          ->where('delete', '0');
@@ -3786,4 +3787,24 @@ class PurchaseReturnController extends Controller
       return view('sale_import')->with('upload_log',1)->with('total_count',$total_invoice_count)->with('success_count',$success_invoice_count)->with('failed_count',$failed_invoice_count)->with('error_message',$all_error_arr);
       
    }
+   public function purchaseReturnVehicleEntryDetail(Request $request,$id) {
+      
+      $purchases = SupplierPurchaseVehicleDetail::with(['purchaseReport'=>function($q){
+                                    $q->select('purchase_id','head_id','head_qty','head_bill_rate','head_contract_rate','head_difference_amount');
+                                    },'locationInfo'=>function($q1){
+                                        $q1->select('id','name');
+                                    },'accountInfo'=>function($q3){
+                                        $q3->select('id','account_name');
+                                    }
+                                ])
+                                ->join('purchases','supplier_purchase_vehicle_details.map_purchase_id','=','purchases.id')
+                                ->select('supplier_purchase_vehicle_details.id','purchases.voucher_no as invoice_no','purchases.total','difference_total_amount','date','supplier_purchase_vehicle_details.voucher_no','location')                                
+                                ->where('supplier_purchase_vehicle_details.action_type','DEBIT NOTE') 
+                                ->where('supplier_purchase_vehicle_details.action_id', $id)                                
+                                ->orderBy('date','asc')
+                                ->get();
+                                echo "<pre>";
+      print_r($purchases->toArray());
+   }
+   
 }

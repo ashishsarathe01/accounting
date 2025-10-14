@@ -36,6 +36,7 @@ input[type=number] {
                 <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">
                     Edit Supplier
                 </h5>
+                
                 <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('supplier.update',$supplier->id) }}">
                     
                     @csrf
@@ -89,13 +90,13 @@ input[type=number] {
                                     @endphp
                                     <div class="mb-{{$col}} col-md-{{$col}} new-row_{{$location_index}}">
                                         <label for="head_id_{{$location_index}}" class="form-label font-14 font-heading">{{$v['name']}}</label>
-                                        <input type="hidden"  name="head_id_{{$location_index}}[]" value="{{$v['head_id']}}" class="head_id_{{$location_index}}" required>
-                                        <input type="number" step="any" class="form-control head_rate_{{$location_index}}" name="head_rate_{{$location_index}}[]"  value="{{$v['head_rate']}}" data-rate="{{$v['head_rate']}}" required data-head_id="{{$v['head_id']}}">
+                                        <input type="hidden"  name="head_id_{{$key}}[]" value="{{$v['head_id']}}" class="head_id_{{$location_index}}" required>
+                                        <input type="number" step="any" class="form-control head_rate_{{$location_index}}" name="head_rate_{{$key}}[]"  value="{{$v['head_rate']}}" data-rate="{{$v['head_rate']}}" required data-head_id="{{$v['head_id']}}">
                                     </div>
                                 @endforeach
                                 <div class="mb-1 col-md-1 new-row_{{$location_index}}">
                                     <label for="bonus" class="form-label font-14 font-heading">Bonus</label>
-                                    <input type="number" step="any" class="form-control bonus head_bonus_{{$location_index}}"  placeholder="Bonus"  data-index="{{$location_index}}" value="{{$bonus}}" name="bonus_{{$location_index}}[]">
+                                    <input type="number" step="any" class="form-control bonus head_bonus_{{$location_index}}"  placeholder="Bonus"  data-index="{{$location_index}}" value="{{$bonus}}" name="bonus_{{$key}}[]">
                                 </div>
                                 <div class="mb-1 col-md-1 d-flex align-items-end new-row_{{$location_index}}">
                                     @if($location_index==0)
@@ -181,7 +182,7 @@ $(document).ready(function(){
                 }
                 html+=`<div class="mb-`+col+` col-md-`+col+`">
                     <label class="form-label font-14 font-heading">`+e.name+`</label>
-                    <input type="hidden" name="" value="`+e.id+`" required class="head_id_`+location_index+`">
+                    <input type="hidden" name="head_id_`+location_index+`[]" value="`+e.id+`" required class="head_id_`+location_index+`">
                     <input type="number" step="any" class="form-control head_rate_`+location_index+`" name="" placeholder=" RATE" required data-head_id="`+e.id+`">
                 </div>`;
             });
@@ -208,8 +209,9 @@ $(document).ready(function(){
         var id = $(this).attr("data-id");
         $("#row_id").val(id);
         var value = $(this).val();
+        
         if(value!=""){
-            let index = parseInt(id)-1;
+            let index = $(this).val();
             $(".head_id_"+id).attr('name','head_id_'+index+'[]');
             $(".head_rate_"+id).attr('name','head_rate_'+index+'[]');
             $(".head_bonus_"+id).attr('name','bonus_'+index+'[]');
@@ -270,7 +272,7 @@ $(document).ready(function(){
     });
     $(".save_location").click(function(){
         var location_name = $("#location_name").val();
-        let row_id = $("#row_id").val();        
+        let row_id = $("#row_id").val();
         if(location_name != ''){
             var new_option = `<option value="${location_name}">${location_name}</option>`;
             location_list+=`<option value="${location_name}">${location_name}</option>`;
@@ -279,6 +281,9 @@ $(document).ready(function(){
             $("#location_modal").modal('hide');
             $("#location_name").val('');
             selected_location_arr.push(location_name);
+            $(".head_id_"+row_id).attr('name','head_id_'+location_name+'[]');
+            $(".head_rate_"+row_id).attr('name','head_rate_'+location_name+'[]');
+            $(".head_bonus_"+row_id).attr('name','bonus_'+location_name+'[]');
         } else {
             alert("Please enter a location name.");
         }
@@ -324,9 +329,10 @@ $(document).ready(function(){
 });
 $("#date").change(function(){
     selected_location_arr = [];
-    $(".location").each(function(){       
+    $(".location").each(function(){
         $(this).change();
     });
-})
+});
+
 </script>
 @endsection
