@@ -178,17 +178,38 @@ class PurchaseController extends Controller{
          $bill_date = date('Y-m-d',strtotime($bill_date));
       }
       //Item List
-      $item = DB::table('manage_items')->join('units', 'manage_items.u_name', '=', 'units.id')
-            ->join('item_groups', 'item_groups.id', '=', 'manage_items.g_name')
-            ->where('manage_items.delete', '=', '0')
-            ->where('manage_items.status', '=', '1')
-            ->where('manage_items.company_id',Session::get('user_company_id'))
-            ->when($groupId,function($q)use($groupId){
-               $q->where('manage_items.g_name',$groupId);
-            })
-            ->orderBy('manage_items.name')
-            ->select(['units.s_name as unit', 'manage_items.id','manage_items.u_name','manage_items.gst_rate','manage_items.name','parameterized_stock_status','config_status','item_groups.id as group_id'])
-            ->get(); 
+      $item = DB::table('manage_items')
+    ->join('units', 'manage_items.u_name', '=', 'units.id')
+    ->join('item_groups', 'item_groups.id', '=', 'manage_items.g_name')
+    ->join(DB::raw('(SELECT igr.item_id, igr.gst_rate 
+                     FROM item_gst_rate igr
+                     WHERE igr.effective_from <= "'.$bill_date.'"
+                     AND igr.effective_from = (
+                         SELECT MAX(effective_from) 
+                         FROM item_gst_rate 
+                         WHERE item_id = igr.item_id 
+                         AND effective_from <= "'.$bill_date.'"
+                     )
+                    ) as gst'), 'gst.item_id', '=', 'manage_items.id')
+    ->where('manage_items.delete', '=', '0')
+    ->where('manage_items.status', '=', '1')
+    ->where('manage_items.company_id', Session::get('user_company_id'))
+    ->when($groupId, function($q) use ($groupId) {
+        $q->where('manage_items.g_name', $groupId);
+    })
+    ->orderBy('manage_items.name')
+    ->select([
+        'units.s_name as unit',
+        'manage_items.id',
+        'manage_items.u_name',
+        'gst.gst_rate',
+        'manage_items.name',
+        'parameterized_stock_status',
+        'config_status',
+        'item_groups.id as group_id'
+    ])
+    ->get();
+
       return view('addPurchase')->with('party_list', $party_list)->with('billsundry', $billsundry)->with('GstSettings', $GstSettings)->with('bill_date', $bill_date)->with('items', $item)->with('rowId', $rowId)->with('accountId', $accountId)->with('groupId', $groupId);
    }
     /**
@@ -799,14 +820,55 @@ class PurchaseController extends Controller{
                               ->whereIn('under_group', $group_ids)
                               ->orderBy('account_name')
                               ->get();
-      $manageitems = DB::table('manage_items')->join('units', 'manage_items.u_name', '=', 'units.id')
-            ->join('item_groups', 'item_groups.id', '=', 'manage_items.g_name')
-            ->where('manage_items.delete', '=', '0')
-            ->where('manage_items.status', '=', '1')
-            ->where('manage_items.company_id',Session::get('user_company_id'))
-            ->orderBy('manage_items.name')
-            ->select(['units.s_name as unit', 'manage_items.id','manage_items.u_name','manage_items.gst_rate','manage_items.name','parameterized_stock_status','config_status','item_groups.id as group_id'])
-            ->get(); 
+
+
+                                $financial_year = Session::get('default_fy');
+      $bill_date = date('Y-m-d');
+      if(date('m')<=3){
+         $current_year = (date('y')-1) . '-' . date('y');
+      }else{
+         $current_year = date('y') . '-' . (date('y') + 1);
+      }
+      if($financial_year!=$current_year){
+         $y =  explode("-",$financial_year);
+         $bill_date = $y[1]."-03-31";
+         $bill_date = date('Y-m-d',strtotime($bill_date));
+      }
+
+      
+      $manageitems = DB::table('manage_items')
+    ->join('units', 'manage_items.u_name', '=', 'units.id')
+    ->join('item_groups', 'item_groups.id', '=', 'manage_items.g_name')
+    ->join(DB::raw('(SELECT igr.item_id, igr.gst_rate 
+                     FROM item_gst_rate igr
+                     WHERE igr.effective_from <= "'.$bill_date.'"
+                     AND igr.effective_from = (
+                         SELECT MAX(effective_from) 
+                         FROM item_gst_rate 
+                         WHERE item_id = igr.item_id 
+                         AND effective_from <= "'.$bill_date.'"
+                     )
+                    ) as gst'), 'gst.item_id', '=', 'manage_items.id')
+    ->where('manage_items.delete', '=', '0')
+    ->where('manage_items.status', '=', '1')
+    ->where('manage_items.company_id', Session::get('user_company_id'))
+    ->when($groupId, function($q) use ($groupId) {
+        $q->where('manage_items.g_name', $groupId);
+    })
+    ->orderBy('manage_items.name')
+    ->select([
+        'units.s_name as unit',
+        'manage_items.id',
+        'manage_items.u_name',
+        'gst.gst_rate',
+        'manage_items.name',
+        'parameterized_stock_status',
+        'config_status',
+        'item_groups.id as group_id'
+    ])
+    ->get();
+
+            
 
 
       $companyData = Companies::where('id', Session::get('user_company_id'))->first();
@@ -1973,6 +2035,55 @@ class PurchaseController extends Controller{
 
     return response()->json(['exists' => $exists]);
 }
+
+ public function checkDuplicateVoucherEdit(Request $request)
+{
+    $exists = \DB::table('purchases')
+                ->where('voucher_no', $request->voucher_no)
+                ->where('party', $request->party_id)
+                ->where('id','!=',$request->purchase_id)
+                ->where('financial_year', $request->financial_year)
+                ->where('delete','0')
+                ->exists();
+
+    return response()->json(['exists' => $exists]);
+}
+
+public function getItemsByDate(Request $request)
+{
+    $bill_date = $request->bill_date;
+    $groupId   = $request->group_id;
+
+    $items = DB::table('manage_items')
+        ->join('units', 'manage_items.u_name', '=', 'units.id')
+        ->join('item_groups', 'item_groups.id', '=', 'manage_items.g_name')
+        ->join(DB::raw('(SELECT igr.item_id, igr.gst_rate, MAX(igr.effective_from) as eff_date
+                         FROM item_gst_rate igr
+                         WHERE igr.effective_from <= "'.$bill_date.'"
+                         GROUP BY igr.item_id, igr.gst_rate
+                        ) as gst'), 'gst.item_id', '=', 'manage_items.id')
+        ->where('manage_items.delete', '=', '0')
+        ->where('manage_items.status', '=', '1')
+        ->where('manage_items.company_id', Session::get('user_company_id'))
+        ->when($groupId, function($q) use ($groupId) {
+            $q->where('manage_items.g_name', $groupId);
+        })
+        ->orderBy('manage_items.name')
+        ->select([
+            'units.s_name as unit',
+            'manage_items.id',
+            'manage_items.u_name',
+            'gst.gst_rate',
+            'manage_items.name',
+            'parameterized_stock_status',
+            'config_status',
+            'item_groups.id as group_id'
+        ])
+        ->get();
+
+    return response()->json($items);
+}
+
 
 
 }

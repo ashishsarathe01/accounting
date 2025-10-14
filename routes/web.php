@@ -59,6 +59,9 @@ use App\Http\Controllers\Supplier\SupplierSubHeadController;
 use App\Http\Controllers\AdminModuleController\ManageUserController;
 use App\Http\Controllers\AdminModuleController\AdminPrivilegesController;
 
+use App\Http\Controllers\DayBookController;
+use App\Http\Controllers\SaleRegisterController;
+use App\Http\Controllers\PurchaseRegisterController;
 
 
 /*
@@ -427,6 +430,15 @@ Route::get('sale-order/settings', [SaleOrderController::class, 'saleOrderSetting
 Route::post('sale-order/settings/update', [SaleOrderController::class, 'updateSaleOrderSettings'])->name('sale-order.settings.update');
 Route::Resource('sale-order', SaleOrderController::class);
 Route::post('/check-duplicate-voucher', [PurchaseController::class, 'checkDuplicateVoucher'])->name('check.duplicate.voucher');
+Route::post('/check-duplicate-voucher-edit', [PurchaseController::class, 'checkDuplicateVoucherEdit'])->name('check.duplicate.voucher.edit');
+Route::get('/daybook', [DayBookController::class, 'index'])->name('daybook.index');
+Route::get('/Salesbook', [SaleRegisterController::class, 'index'])->name('salebook.index');
+Route::get('/Purchasebook', [PurchaseRegisterController::class, 'index'])->name('purchasebook.index');
+// routes/web.php
+
+
+
+
 
 
 });

@@ -143,9 +143,10 @@
                    </div>
                    <input type="hidden" value="" id="heading_id" name="heading_id" />
                    <div class="modal-footer border-0 mx-auto p-0">
-                       <button class="btn btn-border-body" data-bs-dismiss="modal">CANCEL</button>
-                       <button class="ms-3 btn btn-red">DELETE</button>
-                   </div>
+                        <button type="button" class="btn btn-border-body" data-bs-dismiss="modal">CANCEL</button>
+                        <button type="submit" class="ms-3 btn btn-red">DELETE</button>
+                    </div>
+
                 </form>
             </div>
         </div>
@@ -160,6 +161,9 @@
             $("#heading_id").val(id);
             $("#delete_heading").modal("show");
         });
+
+       
+
         $("#filter").change(function(){
          $("#filter_form").submit();
       });

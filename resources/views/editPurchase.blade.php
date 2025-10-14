@@ -2152,7 +2152,7 @@ foreach ($manageitems as $value) {
 
         if(voucher_no !== '' && party_id !== '') {
             $.ajax({
-                url: '{{ route("check.duplicate.voucher") }}',
+                url: '{{ route("check.duplicate.voucher.edit") }}',
                 type: 'POST',
                 data: {
                     _token: '{{ csrf_token() }}',
@@ -2187,6 +2187,47 @@ foreach ($manageitems as $value) {
 
     // Also run once on page load (for edit mode check)
     checkDuplicateVoucher();
+});
+
+
+$('#date').on('change', function () {
+    var bill_date = $(this).val();
+    var group_id  = "{{ $groupId }}"; // pass if needed
+
+    $.ajax({
+        url: "{{ route('get.items.by.date') }}",
+        type: "GET",
+        data: { bill_date: bill_date, group_id: group_id },
+        success: function (response) {
+            // Convert response into a map for quick lookup
+            var itemMap = {};
+            $.each(response, function (index, item) {
+                itemMap[item.id] = item;
+            });
+
+            // Update all existing item dropdowns without removing selected value
+            $('.goods_items').each(function ()  {
+                var select = $(this);
+                var selectedId = select.val(); // keep current selection
+
+                if (selectedId && itemMap[selectedId]) {
+                    // Update GST and other attributes
+                    var item = itemMap[selectedId];
+                    var option = select.find('option[value="' + selectedId + '"]');
+
+                    option.attr('data-unit_id', item.u_name)
+                          .attr('data-percent', item.gst_rate)
+                          .attr('data-val', item.unit)
+                          .attr('data-parameterized_stock_status', item.parameterized_stock_status)
+                          .attr('data-config_status', item.config_status)
+                          .attr('data-group_id', item.group_id);
+
+                    // 🔥 Trigger change so dependent logic (GST calc, etc.) re-runs
+                    select.trigger('change');
+                }
+            });
+        }
+    });
 });
 
 </script>

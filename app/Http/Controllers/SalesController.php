@@ -283,12 +283,13 @@ class SalesController extends Controller
                                  
       //Item List
       $item = DB::table('manage_items')->join('units', 'manage_items.u_name', '=', 'units.id')
+            ->join('item_gst_rate','item_gst_rate.id','=','manage_items.gst_rate')
             ->join('item_groups', 'item_groups.id', '=', 'manage_items.g_name')
             ->where('manage_items.delete', '=', '0')
             ->where('manage_items.status', '=', '1')
             ->where('manage_items.company_id',Session::get('user_company_id'))
             ->orderBy('manage_items.name')
-            ->select(['units.s_name as unit', 'manage_items.id','manage_items.u_name','manage_items.gst_rate','manage_items.name','parameterized_stock_status','config_status','item_groups.id as group_id'])
+            ->select(['units.s_name as unit', 'manage_items.id','manage_items.u_name','item_gst_rate.gst_rate','manage_items.name','parameterized_stock_status','config_status','item_groups.id as group_id'])
             ->get(); 
       foreach($item as $key=>$row){
          $item_in_weight = DB::table('item_ledger')->where('status','1')->where('delete_status','0')->where('company_id',Session::get('user_company_id'))->where('item_id',$row->id)->sum('in_weight');
@@ -396,7 +397,7 @@ class SalesController extends Controller
       $sale->shipping_state = $request->input('shipping_state');
       $sale->shipping_address = $request->input('shipping_address');
       $sale->shipping_pincode = $request->input('shipping_pincode');
-      $sale->shipping_gst = $request->input('shipping_gst');
+      $sale->shipping_gst = $request->input('shipping_gst'); 
       $sale->shipping_pan = $request->input('shipping_pan');
       $sale->financial_year = $financial_year;
       $roundoff = $request->input('total')-$request->input('taxable_amt');
@@ -3160,4 +3161,5 @@ class SalesController extends Controller
          }
       } 
    }
+   
 }

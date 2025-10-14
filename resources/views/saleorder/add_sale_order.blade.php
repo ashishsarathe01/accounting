@@ -553,5 +553,46 @@ $(document).on('change','.unit',function(){
         ind++;
     });
 });
+
+// Form submission validation for at least one filled size/reel per item
+$('#saleOrderForm').on('submit', function(e) {
+    let formValid = true;
+
+    $('#items_container .item-section').each(function() {
+        let hasFilledRow = false;
+        let firstEmpty = null;
+
+        $(this).find('.gsm-block').each(function() {
+            $(this).find('table tr').each(function() {
+                let sizeInput = $(this).find('input[name*="[size]"]');
+                let reelInput = $(this).find('input[name*="[reel]"]');
+
+                if(sizeInput.length && reelInput.length) {
+                    if(sizeInput.val() && reelInput.val()) {
+                        hasFilledRow = true;
+                    }
+                    if(!firstEmpty && (!sizeInput.val() || !reelInput.val())) {
+                        firstEmpty = {size: sizeInput, reel: reelInput};
+                    }
+                }
+            });
+        });
+
+        if(!hasFilledRow) {
+            // prevent submission and trigger browser validation
+            e.preventDefault();
+            if(firstEmpty) {
+                firstEmpty.size.prop('required', true);
+                firstEmpty.reel.prop('required', true);
+                firstEmpty.size[0].reportValidity();
+            }
+            formValid = false;
+            return false; // stop checking other items
+        }
+    });
+
+    return formValid;
+});
+
 </script>
 @endsection

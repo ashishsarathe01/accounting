@@ -94,9 +94,34 @@
                                 </div>
                                 <div class="mb-3 col-md-12"></div>
                                 <div class="mb-3 col-md-3">
-                                    <label class="form-label font-14 font-heading">GST RATE</label>
-                                    <input type="text" class="form-control" id="gst_rate" name="gst_rate" value="{{ $manageitems->gst_rate }}" placeholder="ENTER GST RATE" />
+                                            <label class="form-label font-14 font-heading">GST RATE</label>
+                                            <select class="form-select select2-single" id="gst_rate" name="gst_rate" required>
+                                            <option value="">SELECT GST RATE</option>
+                                        
+                                            <option value="0" data-type="nil_rated"
+                                                @if($manageitems->gst_rate == "0" && $manageitems->item_type == "nil_rated") selected @endif>
+                                                0% (Nil Rated Goods)
+                                            </option>
+                                        
+                                            <option value="0" data-type="exempted"
+                                                @if($manageitems->gst_rate == "0" && $manageitems->item_type == "exempted") selected @endif>
+                                                (Exempted Goods)
+                                            </option>
+                                        
+                                            <option value="0.25" data-type="taxable" @if($manageitems->gst_rate == "0.25") selected @endif>0.25% (Precious stones, etc.)</option>
+                                            <option value="3" data-type="taxable" @if($manageitems->gst_rate == "3") selected @endif>3% (Gold, jewelry)</option>
+                                            <option value="5" data-type="taxable" @if($manageitems->gst_rate == "5") selected @endif>5%</option>
+                                            <option value="12" data-type="taxable" @if($manageitems->gst_rate == "12") selected @endif>12%</option>
+                                            <option value="18" data-type="taxable" @if($manageitems->gst_rate == "18") selected @endif>18%</option>
+                                            <option value="28" data-type="taxable" @if($manageitems->gst_rate == "28") selected @endif>28%</option>
+                                            
+                                            </select>
+                                        
+                                        
+                                            <!-- Hidden input to store data-type -->
+                                        <input type="hidden" value="{{ $manageitems->item_type }}" name="item_type" id="item_type">
                                 </div>
+
                                 <div class="mb-3 col-md-3">
                                     <label for="name" class="form-label font-14 font-heading">HSN CODE</label>
                                     <input type="text" class="form-control" id="hsn_code" name="hsn_code" value="{{ $manageitems->hsn_code }}" placeholder="ENTER HSN CODE" />
@@ -239,7 +264,33 @@ $(document).ready(function() {
     });
 });
 
-   
+  $(document).ready(function () {
+        // Initialize Select2 (if not already initialized elsewhere)
+        $('#gst_rate').select2();
+
+        // Event listener for GST rate change
+        $('#gst_rate').on('change', function () {
+            // Get selected option
+            var selectedOption = $(this).find('option:selected');
+            
+            // Get data-type attribute
+            var gstType = selectedOption.data('type');
+            
+            // Set the value in hidden input
+            $('#item_type').val(gstType);
+        });
+    });
+
+    $(document).ready(function () {
+        $('#gst_rate').on('change', function () {
+            let selectedOption = $(this).find(':selected');
+            let itemType = selectedOption.data('type') || '';
+            $('#item_type').val(itemType);
+        });
+
+        // Trigger change to set initial value on page load (if needed)
+        $('#gst_rate').trigger('change');
+    }); 
 </script>
 
 @endsection
