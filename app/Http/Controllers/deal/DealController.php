@@ -5,7 +5,6 @@ namespace App\Http\Controllers\deal;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use App\Models\Deal;
 use Session;
 
@@ -15,13 +14,15 @@ class DealController extends Controller
     {
         $company_id = auth()->user()->company_id ?? Session::get('user_company_id');
 
-        // Fetch allowed items for company
-        $allowedItemIds = DB::table('sale_order_setting')
-                            ->where('company_id', $company_id)
-                            ->where('setting_type', 'ITEM')
-                            ->pluck('item_id')
-                            ->toArray();
+        $allowedItemIdsRaw = DB::select("
+            SELECT item_id 
+            FROM `sale-order-settings`
+            WHERE company_id = ? AND setting_type = 'ITEM'
+        ", [$company_id]);
 
+        $allowedItemIds = collect($allowedItemIdsRaw)->pluck('item_id')->toArray();
+
+        // Fetch only allowed items
         $items = DB::table('manage_items')
                     ->where('company_id', $company_id)
                     ->where('status', '1')
@@ -34,22 +35,22 @@ class DealController extends Controller
 
         // Fetch party list
         $groups = DB::table('account_groups')
-                    ->whereIn('heading', [3,11])
-                    ->where('heading_type','group')
-                    ->where('status','1')
-                    ->where('delete','0')
-                    ->where('company_id',Session::get('user_company_id'))
+                    ->whereIn('heading', [3, 11])
+                    ->where('heading_type', 'group')
+                    ->where('status', '1')
+                    ->where('delete', '0')
+                    ->where('company_id', $company_id)
                     ->pluck('id');
         $groups->push(3);
         $groups->push(11);
 
         $party_list = DB::table('accounts')
-                        ->leftJoin('states','accounts.state','=','states.id')
+                        ->leftJoin('states', 'accounts.state', '=', 'states.id')
                         ->where('delete', '=', '0')
                         ->where('status', '=', '1')
-                        ->whereIn('company_id', [Session::get('user_company_id'),0])
-                        ->whereIn('under_group',$groups)
-                        ->select('accounts.id','accounts.gstin','accounts.address','accounts.pin_code','accounts.account_name','states.state_code')
+                        ->whereIn('company_id', [$company_id, 0])
+                        ->whereIn('under_group', $groups)
+                        ->select('accounts.id', 'accounts.gstin', 'accounts.address', 'accounts.pin_code', 'accounts.account_name', 'states.state_code')
                         ->orderBy('account_name')
                         ->get();
 
@@ -73,11 +74,22 @@ class DealController extends Controller
             'items.*.rate' => 'required|numeric|min:0',
         ]);
 
-     
+        try {
+            DB::beginTransaction();
 
-       
-            $dealId = new Deal;
-            $dealId->deal_no  =>  $request->input('deal_no'); $deal_no,
+            // Generate a new deal number
+            
+            $dealNo = Deal::where('party_id', $request->party_id)->max('deal_no');
+
+                    if ($dealNo) {
+                        $dealNo = $dealNo + 1;
+                    } else {
+                        $dealNo = 1;
+                    }
+
+            // Insert into manage_deal
+            $deal = Deal::create([
+                'deal_no' => $dealNo,
                 'deal_type' => $request->type,
                 'qty' => strval($request->quantity),
                 'party_id' => $request->party_id,
@@ -87,23 +99,28 @@ class DealController extends Controller
                 'final_complete' => 0,
                 'created_at' => now()->format('Y-m-d H:i:s'),
                 'created_by' => $user_id,
-           
+            ]);
 
-            // Insert each item into manage_deal_items
+            // Insert related items into manage_deal_items
             foreach ($request->items as $item) {
                 DB::table('manage_deal_items')->insert([
-                    'manage_deal_id' => $dealId,
+                    'manage_deal_id' => $deal->id,
                     'item_id' => $item['item_id'],
                     'rate' => $item['rate'],
                     'status' => 1, // active
                     'comp_id' => $company_id,
                     'created_by' => $user_id,
-                    // created_at auto-handled by table
+                    'created_at' => now(),
                 ]);
             }
 
+            DB::commit();
+
             return redirect()->route('deal.create')->with('success', 'Deal added successfully.');
 
-      
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Error saving deal: ' . $e->getMessage());
+        }
     }
 }

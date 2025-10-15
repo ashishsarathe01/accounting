@@ -39,35 +39,47 @@ class PurchaseReturnController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-   public function index(Request $request){
-      Gate::authorize('action-module',13);
-      $input = $request->all();
-      // Default date range (first day of current month to today)
-      $from_date = null;
-      $to_date = null;
-      // Check if user has selected a date range
-      if (!empty($input['from_date']) && !empty($input['to_date'])) {
-         $from_date = date('d-m-Y', strtotime($input['from_date']));
-         $to_date = date('d-m-Y', strtotime($input['to_date']));
-         // Store in session so it persists after refresh
-         session([
+   public function index(Request $request)
+{
+    Gate::authorize('action-module', 13);
+    $input = $request->all();
+
+    // Initialize dates
+    $from_date = null;
+    $to_date = null;
+
+    // Check if user selected date range
+    if (!empty($input['from_date']) && !empty($input['to_date'])) {
+        $from_date = date('d-m-Y', strtotime($input['from_date']));
+        $to_date = date('d-m-Y', strtotime($input['to_date']));
+
+        // Store in session
+        session([
             'purchaseReturn_from_date' => $from_date,
             'purchaseReturn_to_date' => $to_date
-         ]);
-      }
-      Session::put('redirect_url','');
-      // Financial year parsing
-      $financial_year = Session::get('default_fy');
-      $y = explode("-", $financial_year);
-      $from = DateTime::createFromFormat('y', $y[0])->format('Y');
-      $to = DateTime::createFromFormat('y', $y[1])->format('Y');
-      $month_arr = [
-         $from.'-04',$from.'-05',$from.'-06',$from.'-07',$from.'-08',$from.'-09',
-         $from.'-10',$from.'-11',$from.'-12',$to.'-01',$to.'-02',$to.'-03'
-      ];
-      // Base query
-      $query = DB::table('purchase_returns')
-         ->select(
+        ]);
+    } elseif (session()->has('purchaseReturn_from_date') && session()->has('purchaseReturn_to_date')) {
+        // Restore from session if available
+        $from_date = session('purchaseReturn_from_date');
+        $to_date = session('purchaseReturn_to_date');
+    }
+
+    Session::put('redirect_url', '');
+
+    //Financial year calculation
+    $financial_year = Session::get('default_fy');
+    $y = explode("-", $financial_year);
+    $from = DateTime::createFromFormat('y', $y[0])->format('Y');
+    $to = DateTime::createFromFormat('y', $y[1])->format('Y');
+
+    $month_arr = [
+        $from . '-04', $from . '-05', $from . '-06', $from . '-07', $from . '-08', $from . '-09',
+        $from . '-10', $from . '-11', $from . '-12', $to . '-01', $to . '-02', $to . '-03'
+    ];
+
+    // Base query
+    $query = DB::table('purchase_returns')
+        ->select(
             'purchase_returns.id as purchases_id',
             'purchase_returns.date',
             'purchase_returns.sr_prefix',
@@ -78,34 +90,48 @@ class PurchaseReturnController extends Controller
             'sr_nature',
             'sr_type',
             DB::raw('(select account_name from accounts where accounts.id = purchase_returns.party limit 1) as account_name'),
-            DB::raw('(select manual_numbering from voucher_series_configurations where voucher_series_configurations.company_id = '.Session::get('user_company_id').' and configuration_for="DEBIT NOTE" and voucher_series_configurations.status=1 and voucher_series_configurations.series = purchase_returns.series_no limit 1) as manual_numbering_status'),
-            DB::raw('(select max(purchase_return_no) from purchase_returns as s where s.company_id = '.Session::get('user_company_id').' and s.delete="0" and s.series_no = purchase_returns.series_no) as max_voucher_no'),
-            DB::raw('(select count(*) from supplier_purchase_vehicle_details where supplier_purchase_vehicle_details.action_id = purchase_returns.id and supplier_purchase_vehicle_details.action_type="DEBIT NOTE") as purchase_vehicle_count'),
-         )
-         ->where('company_id', Session::get('user_company_id'))
-         ->where('delete', '0');
-      // Apply date filter only if user selected a range
-      if (!empty($input['from_date']) && !empty($input['to_date'])) {
-            $query->whereRaw("
-               STR_TO_DATE(purchase_returns.date, '%Y-%m-%d') >= STR_TO_DATE('" . date('Y-m-d', strtotime($from_date)) . "', '%Y-%m-%d')
-               AND STR_TO_DATE(purchase_returns.date, '%Y-%m-%d') <= STR_TO_DATE('" . date('Y-m-d', strtotime($to_date)) . "', '%Y-%m-%d')
-            ")
-            ->orderBy(DB::raw("cast(purchase_return_no as SIGNED)"), 'ASC')
-            ->orderBy('purchase_returns.created_at', 'ASC');
-      } else {
-         // No date selected, fetch last 10 entries
-         $query->orderBy('financial_year', 'desc')
-            ->orderBy(DB::raw("cast(purchase_return_no as SIGNED)"), 'desc')
-            ->limit(10);
-      }
-      $purchase = $query->get()->reverse()->values(); // Optional: reverse for ascending display
-      return view('purchaseReturn')
+            DB::raw('(select manual_numbering from voucher_series_configurations 
+                      where voucher_series_configurations.company_id = ' . Session::get('user_company_id') . ' 
+                      and configuration_for="DEBIT NOTE" 
+                      and voucher_series_configurations.status=1 
+                      and voucher_series_configurations.series = purchase_returns.series_no 
+                      limit 1) as manual_numbering_status'),
+            DB::raw('(select max(purchase_return_no) from purchase_returns as s 
+                      where s.company_id = ' . Session::get('user_company_id') . ' 
+                      and s.delete="0" 
+                      and s.series_no = purchase_returns.series_no) as max_voucher_no'),
+            DB::raw('(select count(*) from supplier_purchase_vehicle_details 
+                      where supplier_purchase_vehicle_details.action_id = purchase_returns.id 
+                      and supplier_purchase_vehicle_details.action_type="DEBIT NOTE") as purchase_vehicle_count')
+        )
+        ->where('purchase_returns.company_id', Session::get('user_company_id'))
+        ->where('purchase_returns.delete', '0');
+
+    if ($from_date && $to_date) {
+        $query->whereBetween(DB::raw("STR_TO_DATE(purchase_returns.date, '%Y-%m-%d')"), [
+                date('Y-m-d', strtotime($from_date)),
+                date('Y-m-d', strtotime($to_date))
+            ])
+            ->orderBy('purchase_returns.date', 'ASC')
+            ->orderBy(DB::raw("CAST(purchase_return_no AS SIGNED)"), 'ASC');
+    } else {
+        $query->orderBy('purchase_returns.date', 'DESC')
+              ->orderBy(DB::raw("CAST(purchase_return_no AS SIGNED)"), 'DESC')
+              ->limit(10);
+    }
+
+    $purchase = $query->get();
+
+    if (!$from_date && !$to_date) {
+        $purchase = $purchase->reverse()->values();
+    }
+
+    return view('purchaseReturn')
         ->with('purchase', $purchase)
         ->with('month_arr', $month_arr)
-        ->with("from_date", $from_date)
-        ->with("to_date", $to_date);
+        ->with('from_date', $from_date)
+        ->with('to_date', $to_date);
 }
-
 
 
     /**

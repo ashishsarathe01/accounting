@@ -47,73 +47,96 @@ class SalesController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-   public function index(Request $request){
-      Gate::authorize('action-module',10);
-      $input = $request->all();
-      // Initialize dates
-      $from_date = null;
-      $to_date = null;
-      // If user submitted new dates, update session
-      if (!empty($input['from_date']) && !empty($input['to_date'])) {
-         $from_date = date('d-m-Y', strtotime($input['from_date']));
-         $to_date = date('d-m-Y', strtotime($input['to_date']));
-         session(['sales_from_date' => $from_date, 'sales_to_date' => $to_date]);
-      }elseif (session()->has('sales_from_date') && session()->has('sales_to_date')) {
-         // Use previously stored session dates
-         $from_date = session('sales_from_date');
-         $to_date = session('sales_to_date');
-      }
-      Session::put('redirect_url', '');    
-      // Financial year processing
-      $financial_year = Session::get('default_fy');      
-      $y = explode("-", $financial_year);
-      $from = DateTime::createFromFormat('y', $y[0])->format('Y');
-      $to = DateTime::createFromFormat('y', $y[1])->format('Y');
-      $month_arr = [
-         $from.'-04', $from.'-05', $from.'-06', $from.'-07', $from.'-08', $from.'-09',
-         $from.'-10', $from.'-11', $from.'-12', $to.'-01', $to.'-02', $to.'-03'
-      ];    
-      // Base query
-      $query = DB::table('sales')
-                  ->select(
-                     'sales.id as sales_id',
-                     'sales.date',
-                     'sales.voucher_no',
-                     'sales.voucher_no_prefix',
-                     'sales.total',
-                     'financial_year',
-                     'series_no',
-                     'e_invoice_status',
-                     'e_waybill_status',
-                     'sales.status',
-                     DB::raw('(select account_name from accounts where accounts.id = sales.party limit 1) as account_name'),
-                     DB::raw('(select manual_numbering from voucher_series_configurations where voucher_series_configurations.company_id = '.Session::get('user_company_id').' and configuration_for="SALE" and voucher_series_configurations.status=1 and voucher_series_configurations.series = sales.series_no limit 1) as manual_numbering_status'),
-                     DB::raw('(select max(voucher_no) from sales as s where s.company_id = '.Session::get('user_company_id').' and s.delete="0" and s.series_no = sales.series_no and entry_source=1) as max_voucher_no')
-                  )
-                  ->where('sales.company_id', Session::get('user_company_id'))
-                  ->where('sales.delete', '0');   
-      // Filter if dates selected
-      if($from_date && $to_date) {
-         $query->whereRaw("
-            STR_TO_DATE(sales.date,'%Y-%m-%d') >= STR_TO_DATE('" . date('Y-m-d', strtotime($from_date)) . "','%Y-%m-%d')
-            AND STR_TO_DATE(sales.date,'%Y-%m-%d') <= STR_TO_DATE('" . date('Y-m-d', strtotime($to_date)) . "','%Y-%m-%d')
-         ");
-         $query->orderBy('sales.date','asc');
-         $query->orderBy(DB::raw("cast(voucher_no as SIGNED)"), 'ASC');
-      }else{
-         // No date filter: show last 10 transactions
-         $query->orderBy('financial_year','desc')->orderBy(DB::raw("cast(date as SIGNED)"), 'desc')->limit(10);
-      }
-      $sale = $query->get()->reverse()->values();
+   public function index(Request $request)
+{
+    Gate::authorize('action-module', 10);
+    $input = $request->all();
 
-      
+    // Initialize dates
+    $from_date = null;
+    $to_date = null;
 
-      return view('sale')
-            ->with('sale', $sale)
-            ->with('month_arr', $month_arr)
-            ->with("from_date", $from_date)
-            ->with("to_date", $to_date);
-   }
+    // Handle date input and session persistence
+    if (!empty($input['from_date']) && !empty($input['to_date'])) {
+        $from_date = date('d-m-Y', strtotime($input['from_date']));
+        $to_date = date('d-m-Y', strtotime($input['to_date']));
+        session(['sales_from_date' => $from_date, 'sales_to_date' => $to_date]);
+    } elseif (session()->has('sales_from_date') && session()->has('sales_to_date')) {
+        $from_date = session('sales_from_date');
+        $to_date = session('sales_to_date');
+    }
+
+    Session::put('redirect_url', '');
+
+    // Financial year processing
+    $financial_year = Session::get('default_fy');
+    $y = explode("-", $financial_year);
+    $from = DateTime::createFromFormat('y', $y[0])->format('Y');
+    $to = DateTime::createFromFormat('y', $y[1])->format('Y');
+
+    $month_arr = [
+        $from . '-04', $from . '-05', $from . '-06', $from . '-07', $from . '-08', $from . '-09',
+        $from . '-10', $from . '-11', $from . '-12', $to . '-01', $to . '-02', $to . '-03'
+    ];
+
+    // Base query
+    $query = DB::table('sales')
+        ->select(
+            'sales.id as sales_id',
+            'sales.date',
+            'sales.voucher_no',
+            'sales.voucher_no_prefix',
+            'sales.total',
+            'financial_year',
+            'series_no',
+            'e_invoice_status',
+            'e_waybill_status',
+            'sales.status',
+            DB::raw('(select account_name from accounts where accounts.id = sales.party limit 1) as account_name'),
+            DB::raw('(select manual_numbering from voucher_series_configurations 
+                      where voucher_series_configurations.company_id = ' . Session::get('user_company_id') . ' 
+                      and configuration_for="SALE" 
+                      and voucher_series_configurations.status=1 
+                      and voucher_series_configurations.series = sales.series_no 
+                      limit 1) as manual_numbering_status'),
+            DB::raw('(select max(voucher_no) from sales as s 
+                      where s.company_id = ' . Session::get('user_company_id') . ' 
+                      and s.delete="0" 
+                      and s.series_no = sales.series_no 
+                      and entry_source=1) as max_voucher_no')
+        )
+        ->where('sales.company_id', Session::get('user_company_id'))
+        ->where('sales.delete', '0');
+
+    // Date filtering and sorting logic
+    if ($from_date && $to_date) {
+        // If date range provided
+        $query->whereBetween(DB::raw("STR_TO_DATE(sales.date, '%Y-%m-%d')"), [
+            date('Y-m-d', strtotime($from_date)),
+            date('Y-m-d', strtotime($to_date))
+        ]);
+
+        $query->orderBy('sales.date', 'ASC')
+              ->orderBy(DB::raw("CAST(voucher_no AS SIGNED)"), 'ASC');
+    } else {
+        $query->orderBy('sales.date', 'DESC')
+              ->orderBy(DB::raw("CAST(voucher_no AS SIGNED)"), 'DESC')
+              ->limit(10);
+    }
+
+    // Fetch results
+    $sale = $query->get();
+
+    if (!$from_date && !$to_date) {
+        $sale = $sale->reverse()->values();
+    }
+
+    return view('sale')
+        ->with('sale', $sale)
+        ->with('month_arr', $month_arr)
+        ->with('from_date', $from_date)
+        ->with('to_date', $to_date);
+}
 
     /**
      * Show the specified resources in storage.

@@ -147,6 +147,7 @@ class ManageUserController extends Controller
     // --------------------- Soft Delete ---------------------
     public function destroy($id)
     {
+        
         $user = DB::table('admins')->where('id', $id)->first();
         if (!$user || !$this->canManage($user)) {
             return redirect()->route('admin.manageUser.index')->with('error','Unauthorized action.');

@@ -176,17 +176,5 @@ Route::middleware('auth:api')->group(function(){
     Route::post('update-purchase-voucher',[PurchaseController::class,'updatePurchaseVoucher']);
     Route::post('delete-purchase-voucher',[PurchaseController::class,'deletePurchaseVoucher']);
 
-    //Suppliers Purchase Management
-    Route::post('account-list',[SupplierController::class,'accountList']);
-    Route::post('add-purchase-vehicle-entry',[SupplierController::class,'addPurchaseVehicleEntry']);
-    Route::post('edit-purchase-vehicle-entry',[SupplierController::class,'editPurchaseVehicleEntry']);
-    Route::post('delete-purchase-vehicle-entry',[SupplierController::class,'deletePurchaseVehicleEntry']);
-    Route::post('purchase-vehicle-entry-list',[SupplierController::class,'purchaseVehicleEntryList']);
-    Route::post('supplier-head-list',[SupplierController::class,'supplierHeadList']);
-    Route::post('location-by-account',[SupplierController::class,'locationByAccount']);
-    Route::post('head-contract-rate-by-location',[SupplierController::class,'headContractRateByLocation']);
-    Route::post('store-supplier-purchase-report',[SupplierController::class,'storeSupplierPurchaseReport']);
-    Route::post('view-supplier-purchase-report',[SupplierController::class,'viewSupplierPurchaseReport']);
-    Route::post('upload-report-image',[SupplierController::class,'uploadReportImage']);
-    Route::post('approve-report',[SupplierController::class,'approveReport']);
+    
  });

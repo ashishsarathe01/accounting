@@ -76,8 +76,10 @@ public function index(Request $request)
             STR_TO_DATE(journals.date,'%Y-%m-%d') >= STR_TO_DATE(?, '%Y-%m-%d')
             AND STR_TO_DATE(journals.date,'%Y-%m-%d') <= STR_TO_DATE(?, '%Y-%m-%d')
         ", [date('Y-m-d', strtotime($from_date)), date('Y-m-d', strtotime($to_date))]);
+
+        $query->orderBy('journals.date', 'ASC')
+              ->orderBy('journal_details.journal_id', 'ASC');
     } else {
-        // Show last 10 distinct journal entries
         $last10Ids = DB::table('journals')
             ->where('company_id', $com_id)
             ->where('delete', '0')
@@ -86,24 +88,26 @@ public function index(Request $request)
             ->pluck('id');
 
         $query->whereIn('journal_details.journal_id', $last10Ids);
+
+        $query->orderBy('journals.date', 'ASC')
+              ->orderBy('journal_details.journal_id', 'ASC');
     }
 
-    $journal = $query
-        ->orderBy('journal_details.journal_id', 'asc')
-        ->orderBy('journals.date', 'asc')
-        ->get();
+    $journal = $query->get();
 
     // Fallback values if not set
-    $from_date = $from_date ;
-    $to_date = $to_date ;
-   //  echo "<pre>";
-   //  print_r($journal->toArray());die;
+    $from_date = $from_date;
+    $to_date = $to_date;
+
+    //  echo "<pre>";
+    //  print_r($journal->toArray());die;
     return view('journal/journal')
         ->with('journal', $journal)
         ->with('month_arr', $month_arr)
         ->with('from_date', $from_date)
         ->with('to_date', $to_date);
 }
+
 
     /**
      * Show the specified resources in storage.
