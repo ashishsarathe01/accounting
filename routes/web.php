@@ -62,6 +62,7 @@ use App\Http\Controllers\deal\DealController;
 use App\Http\Controllers\Supplier\FuelSupplierController;
 use App\Http\Controllers\SaleRegisterController;
 use App\Http\Controllers\PurchaseRegisterController;
+use App\Http\Controllers\production\ProductionController;
 
 
 /*
@@ -448,4 +449,8 @@ Route::group(['middleware' => ['merchantloginstatus']], function () {
 
    Route::get('/Salesbook', [SaleRegisterController::class, 'index'])->name('salebook.index');
    Route::get('/Purchasebook', [PurchaseRegisterController::class, 'index'])->name('purchasebook.index');
+
+   //Production Route
+   Route::get('/production.set_item', [ProductionController::class, 'setItems'])->name('production.set_item');
+   
 });
