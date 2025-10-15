@@ -98,7 +98,7 @@
                     
                         <div class="mb-3 col-md-3">
                                     <label for="freight" class="form-label font-14 font-heading freight_div">Freight *</label>
-                                    <select id="freight" name="freight" class="form-select freight_div" required autofocus>
+                                    <select id="freight" name="freight" class="form-select freight_div" required >
                                         <option value="">Select Freight</option>
                                         <option value="Yes">Yes</option>
                                         <option value="No">No</option>
@@ -268,7 +268,7 @@ $(document).ready(function() {
 
         
 
-        newSection.find(".freight_div").remove("");
+       
         newSection.find(".bill_price").attr("id","bill_price_"+itemIndex);
         let detailsRows = '';
         for (let row_index = 0; row_index < 5; row_index++) {
@@ -598,6 +598,96 @@ $('#saleOrderForm').on('submit', function(e) {
 
     return formValid;
 });
+
+
+$(document).ready(function() {
+
+    // 🔹 When user selects "Bill To"
+    $('#bill_to').on('change', function() {
+        var party_id = $(this).val();
+        $('#deal').html('<option value="">Loading deals...</option>');
+
+        if (party_id) {
+            $.ajax({
+                url: '{{ url("get-deals-by-party") }}',
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    party_id: party_id
+                },
+                success: function(response) {
+                    $('#deal').html('<option value="">Select Deal</option>');
+                    if (response.deals.length > 0) {
+                        $.each(response.deals, function(index, deal) {
+                            $('#deal').append('<option value="' + deal.id + '">Deal No: ' + deal.deal_no + '</option>');
+                        });
+                    } else {
+                        $('#deal').append('<option value="">No deals found</option>');
+                    }
+                }
+            });
+        } else {
+            $('#deal').html('<option value="">Select Deal</option>');
+        }
+    });
+
+    // 🔹 When user selects "Deal"
+    $('#deal').on('change', function() {
+        var deal_id = $(this).val();
+        if (deal_id) {
+            $.ajax({
+                url: '{{ url("get-deal-details") }}',
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    deal_id: deal_id
+                },
+                success: function(response) {
+
+                    // 🔹 Update Freight
+                    $('#freight').val(response.freight || '');
+                    // 🔹 Update all item dropdowns dynamically
+                    $('#items_container .item-section').each(function() {
+                        var itemSelect = $(this).find("select[name*='[item_id]']");
+                        var priceInput = $(this).find("input[name*='[price]']");
+
+                        // Clear current options
+                        itemSelect.html('<option value="">Select Item</option>');
+
+                        if (response.items.length > 0) {
+                            $.each(response.items, function(index, item) {
+                                itemSelect.append('<option value="' + item.item_id + '" data-rate="' + item.rate + '">' + item.item_name + '</option>');
+                            });
+                        } else {
+                            itemSelect.append('<option value="">No items found</option>');
+                        }
+
+                        // Reset price input
+                        priceInput.val('');
+                    });
+                }
+            });
+        } else {
+            $('#freight').val('');
+            $('#items_container .item-section').each(function() {
+                var itemSelect = $(this).find("select[name*='[item_id]']");
+                var priceInput = $(this).find("input[name*='[price]']");
+                itemSelect.html('<option value="">Select Item</option>');
+                priceInput.val('');
+            });
+        }
+    });
+
+    // 🔹 Auto-fill price when item is selected (works for dynamically added items)
+    $(document).on('change', "select[name*='[item_id]']", function() {
+        var rate = $(this).find(':selected').data('rate') || '';
+        var row = $(this).closest('.item-section');
+        row.find("input[name*='[price]']").val(rate);
+    });
+
+});
+
+
 
 </script>
 @endsection

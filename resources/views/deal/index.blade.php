@@ -2,20 +2,27 @@
 @section('content')
 <!-- header-section -->
 @include('layouts.header')
+
+
 <!-- list-view-company-section -->
 <div class="list-of-view-company ">
    <section class="list-of-view-company-section container-fluid">
       <div class="row vh-100">
          @include('layouts.leftnav')
          <div class="col-md-12 ml-sm-auto  col-lg-9 px-md-4 bg-mint">
-            @if (session('error'))
-               <div class="alert alert-danger" role="alert"> {{session('error')}}</div>
-            @endif
-            @if (session('success'))
-               <div class="alert alert-success" role="alert">
-                  {{ session('success') }}
-               </div>
-            @endif            
+           @if (session('success'))
+    <div class="alert alert-success alert-dismissible fade show mt-3 mx-3" role="alert">
+        <strong>Success!</strong> {{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif
+
+@if (session('error'))
+    <div class="alert alert-danger alert-dismissible fade show mt-3 mx-3" role="alert">
+        <strong>Error!</strong> {{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif          
             <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
                <h5 class="transaction-table-title m-0 py-2">List of Deal</h5>
                {{-- <form  action="{{ route('sale.index') }}" method="GET">
@@ -47,6 +54,7 @@
                      <tr class=" font-12 text-body bg-light-pink ">
                         <th style="width: 9%;">Date </th>
                         <th>Account</th>
+                        <th style="text-align: left;">item</th>
                         <th style="text-align: right;">Rate</th>
                         <th>Type</th>
                         <th style="text-align: right;">Quantity</th>
@@ -56,25 +64,47 @@
                         <th class="w-min-120 border-none bg-light-pink text-body text-center">Action</th>
                      </tr>
                   </thead>
-                  <tbody>
-                     {{-- @foreach ($saleOrder as $value)
-                        <tr>
-                           <td>{{date('d-m-Y',strtotime($value->created_at))}}</td>
-                           <td>{{$value->sale_order_no}}</td>
-                           <td>{{$value->purchase_order_no}}</td>
-                           <td>@empty(!$value->purchase_order_date) {{date('d-m-Y',strtotime($value->purchase_order_date))}} @endempty  </td>
-                           <td>{{$value->billTo->account_name}}</td>
-                           <td>{{$value->shippTo->account_name}}</td>
-                           <td style="text-align: right;">@if($value->freight==1) YES  @else NO @endif</td>
-                           <td style="text-align: right;">@if($value->status==0) PENDING  @else  @endif</td>
-                           <td style="text-align: center;">
-                              <a href="{{ URL::to('sale-order/'.$value->id.'/edit') }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
-                              <a href="{{route('sale-order.show',$value->id)}}"><img src="{{ URL::asset('public/assets/imgs/eye-icon.svg')}}" class="px-1" alt=""></a>
-                              <a href="{{route('sale-order-start',$value->id)}}"><img src="{{ URL::asset('public/assets/imgs/start.svg')}}" class="px-1 start" alt="" style="width: 30px;cursor:pointer;"></a>
-                           </td>
-                        </tr>
-                     @endforeach --}}
-                  </tbody>
+                 <tbody>
+@forelse ($deals as $deal)
+<tr>
+   <td>{{ \Carbon\Carbon::parse($deal->created_at)->format('d-m-Y') }}</td>
+   <td>{{ $deal->account_name }}</td>
+
+   {{-- Items (shown vertically within the same cell) --}}
+   <td style="text-align: left;">
+      @foreach ($deal->items as $item)
+         <div>{{ $item->name }}</div>
+      @endforeach
+   </td>
+
+   <td style="text-align: right;">
+      @foreach ($deal->items as $item)
+         <div>{{ number_format($item->rate ?? 0, 2) }}</div>
+      @endforeach
+   </td>
+
+   <td>{{ $deal->deal_type }}</td>
+   <td style="text-align: right;">{{ $deal->qty }}</td>
+  <td style="text-align: right;">{{ number_format($deal->total_pending ?? 0, 2) }}</td>
+ <td style="text-align: right;">{{ number_format($deal->total_complete ?? 0, 2) }}</td>
+   <td style="text-align: right;">{{ number_format($deal->balance_qty ?? 0, 2) }}</td>
+   <td class="text-center">
+    <a href="{{ route('deal.show', $deal->id) }}" ><img src="{{ asset('public/assets/imgs/eye-icon.svg') }}" class="px-1" alt="View"></a>
+    <a href="{{ route('deal.edit', $deal->id) }}" ><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt="Edit"></a>
+    <a href="{{ route('deal.destroy', $deal->id) }}" class="delete-form" ><img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="Delete"></a>
+    
+</td>
+
+</tr>
+@empty
+<tr>
+   <td colspan="10" class="text-center text-muted">No deals found</td>
+</tr>
+@endforelse
+
+
+</tbody>
+
                </table>
             </div>
          </div>
@@ -182,6 +212,34 @@
 <script>
    $(document).ready(function() {
       
+$(document).ready(function() {
+    $('.delete-form').on('click', function(e) {
+        e.preventDefault(); // stop page reload
+
+        var url = $(this).attr('href'); // get delete route
+
+        if (confirm('Are you sure you want to delete this deal? This action cannot be undone.')) {
+            $.ajax({
+                url: url,
+                type: 'DELETE',
+                data: {
+                    _token: '{{ csrf_token() }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        alert(response.message);
+                        location.reload(); // refresh to update list
+                    } else {
+                        alert(response.message);
+                    }
+                },
+                error: function(xhr) {
+                    alert('Something went wrong while deleting the deal.');
+                }
+            });
+        }
+    });
+});
 
    });
 </script>

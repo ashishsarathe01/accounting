@@ -449,6 +449,8 @@ Route::group(['middleware' => ['merchantloginstatus']], function () {
 
    Route::get('/Salesbook', [SaleRegisterController::class, 'index'])->name('salebook.index');
    Route::get('/Purchasebook', [PurchaseRegisterController::class, 'index'])->name('purchasebook.index');
+     Route::post('/get-deals-by-party', [DealController::class, 'getDealsByParty']);
+Route::post('/get-deal-details', [DealController::class, 'getDealDetails']);
 
    //Production Route
    Route::get('/production.set_item', [ProductionController::class, 'setItems'])->name('production.set_item');

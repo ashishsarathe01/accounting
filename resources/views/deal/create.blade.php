@@ -38,7 +38,7 @@
                         <!-- Party Name -->
                         <div class="col-md-3">
                             <label for="party_name" class="form-label">Party Name *</label>
-                            <select class="form-select select2-single" name="party_id" id="party_id" required>
+                            <select class="form-select select2-single" name="party_id" id="party_id" required autofocus>
                                 <option value="">Select Account</option>
                                 @foreach($party_list as $party)
                                     <option value="{{$party->id}}" data-address="{{$party->address}}, {{$party->pin_code}}">
@@ -52,7 +52,7 @@
                         <!-- Type -->
                         <div class="col-md-2">
                             <label for="type" class="form-label">Type *</label>
-                            <select name="type" id="type" class="form-select" required>
+                            <select name="type" id="type" class="form-select select2-single" required>
                                 <option value="">Select Type</option>
                                 @foreach($deal_types as $type)
                                     <option value="{{ $type }}">{{ $type }}</option>
@@ -69,7 +69,7 @@
                         <!-- Freight -->
                         <div class="col-md-2">
                             <label for="freight" class="form-label">Freight</label>
-                            <select name="freight" id="freight" class="form-select">
+                            <select name="freight" id="freight" class="form-select select2-single">
                                 <option value="">Select</option>
                                 @foreach($freights as $f)
                                     <option value="{{ $f }}">{{ $f }}</option>
@@ -89,7 +89,7 @@
                     <div id="items_container">
                         <div class="row mb-2 item-row">
                             <div class="col-md-6">
-                                <select name="items[0][item_id]" class="form-select select2-single item-select" required>
+                                <select name="items[0][item_id]" class="form-select select2-single item-select"  id="items[0][item_id]" required>
                                     <option value="">Select Item</option>
                                     @foreach($items as $item)
                                         <option value="{{ $item->id }}">{{ $item->name }}</option>
@@ -97,7 +97,7 @@
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <input type="number" name="items[0][rate]" class="form-control" min="0" step="0.01" placeholder="Rate" required>
+                                <input type="number" name="items[0][rate]" id="items[0][rate]" class="form-control" min="0" step="0.01" placeholder="Rate" required>
                             </div>
                             <div class="col-md-2 d-flex align-items-center">
                                 <button type="button" class="btn btn-danger btn-sm remove-item" style="display:none;">&times;</button>
@@ -111,8 +111,8 @@
 
                     <div class="d-flex">
                         <div class="ms-auto">
-                            <input type="submit" value="SAVE" class="btn btn-primary">
-                            <a href="{{ url()->previous() }}" class="btn btn-secondary">QUIT</a>
+                            <input type="submit" value="SAVE"  id="submit" class="btn btn-primary">
+                            <a href="{{ url()->previous() }}" class="btn btn-secondary" id="quit">QUIT</a>
                         </div>
                     </div>
                 </form>
@@ -162,5 +162,102 @@ $(document).ready(function(){
         $(this).closest('.item-row').remove();
     });
 });
+
+
+
+ $(document).on('keydown', 'input, select, .select2-search__field', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+
+        let current = $(this);
+
+        // If inside Select2 search box
+        if (current.hasClass('select2-search__field')) {
+            current = current.closest('.select2-container').prev('select');
+        }
+
+        let currentId = current.attr('id');
+
+        // Check if current is an item_id or rate field
+        if (currentId && currentId.includes('items')) {
+            // Extract row index
+            const match = currentId.match(/items\[(\d+)\]\[(item_id|rate)\]/);
+            if (match) {
+                let rowIndex = parseInt(match[1]);
+                let fieldType = match[2];
+
+                if (fieldType === 'item_id') {
+                    // Move focus to rate in the same row
+                    $(`#items[${rowIndex}][rate]`).focus();
+                } else if (fieldType === 'rate') {
+                    // Move focus to next row's item_id if exists
+                    rowIndex++;
+                    if ($(`#items[${rowIndex}][item_id]`).length) {
+                        $(`#items[${rowIndex}][item_id]`).focus();
+                    } else {
+                        // No more rows, move to add item button
+                        $('#add_item_btn').focus();
+                    }
+                }
+                return;
+            }
+        }
+
+        // Default static focus map
+        const focusMap = {
+            '#party_id': '#type',
+            '#type': '#quantity',
+            '#quantity': '#freight',
+            '#freight': '#short_name',
+            '#add_item_btn': '#submit',
+            '#submit': '#quit'
+        };
+
+        const nextField = focusMap['#' + currentId];
+        if (nextField) {
+            setTimeout(() => $(nextField).focus(), 100);
+        }
+    }
+});
+
+
+$(document).on('select2:close', '.select2-single', function() {
+    const current = $(this);
+    const currentId = current.attr('id');
+
+    if (currentId && currentId.includes('items')) {
+        const match = currentId.match(/items\[(\d+)\]\[(item_id|rate)\]/);
+        if (match) {
+            const rowIndex = parseInt(match[1]);
+            const fieldType = match[2];
+
+            if (fieldType === 'item_id') {
+                $(`#items[${rowIndex}][rate]`).focus();
+            } else if (fieldType === 'rate') {
+                const nextRowIndex = rowIndex + 1;
+                if ($(`#items[${nextRowIndex}][item_id]`).length) {
+                    $(`#items[${nextRowIndex}][item_id]`).focus();
+                } else {
+                    $('#add_item_btn').focus();
+                }
+            }
+            return;
+        }
+    }
+
+    // fallback for static fields
+    const focusMap = {
+        '#party_id': '#type',
+        '#type': '#quantity',
+        '#quantity': '#freight',
+        '#freight': '#short_name',
+        '#add_item_btn': '#submit',
+        '#submit': '#quit'
+    };
+
+    const nextField = focusMap['#' + currentId];
+    if (nextField) setTimeout(() => $(nextField).focus(), 100);
+});
+
 </script>
 @endsection

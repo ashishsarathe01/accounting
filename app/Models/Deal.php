@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Accounts;
 
 class Deal extends Model
 {
@@ -20,6 +21,7 @@ class Deal extends Model
         'party_id',
         'freight',
         'comp_id',
+        'manage_deal_items_id',
         'status',
         'final_complete',
         'created_at',
@@ -29,4 +31,15 @@ class Deal extends Model
         'completed_by',
         'completed_at'
     ];
+
+    public function items(){
+    return $this->hasMany(manage_deal_items::class, 'manage_deal_id', 'id');
+}
+ public function party()
+    {
+        return $this->belongsTo(Accounts::class, 'party_id');
+    }
+
+    
+
 }

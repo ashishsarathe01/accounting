@@ -66,6 +66,7 @@ class SaleOrderController extends Controller
         ->where('company_id', $company_id)
         ->get();
 
+        
          $groups1 = DB::table('account_groups')
                         ->whereIn('heading', [3,11])
                         ->where('heading_type','group')
@@ -111,7 +112,7 @@ class SaleOrderController extends Controller
      * Store a new Sale Order
      */
     public function store(Request $request)
-    {
+    { 
         $validated = $request->validate([
             'bill_to' => 'required',
             'ship_to' => 'required',
@@ -143,15 +144,16 @@ class SaleOrderController extends Controller
             }else{
                 $new_order_no = '0001';
             }
+           
             $sale_order_no = "SO".date("dmY").$new_order_no;
             $saleOrder = SaleOrder::create([
                 'bill_to' => $request->bill_to,
                 'shipp_to' => $request->ship_to,
-                'deal'    => $request->deal,
+                'deal_id'    => $request->deal,
                 'purchase_order_no'    => $request->purchase_order_no,
                 'sale_order_no'    => $sale_order_no,
                 'purchase_order_date'    => $request->purchase_order_date,
-                'freight' => $request->freight ?? null,
+                'freight' => $request->freight,
                 'created_by' => auth()->id(),
                 'company_id' => Session::get('user_company_id'),
             ]);

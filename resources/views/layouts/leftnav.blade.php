@@ -526,9 +526,7 @@
                                     <li class="py-1 clickable-row-blue">
                                        <a href="{{ route('accountledger.index') }}" class="text-blue">Account Ledger</a>
                                     </li>
-                                       <li class="py-1 clickable-row-blue">
-                                       <a href="{{ route('daybook.index') }}" class="text-blue">Day Book</a>
-                                    </li>
+                                       
                                        <li class="py-1 clickable-row-blue">
                                        <a href="{{ route('salebook.index') }}" class="text-blue">Sale Register</a>
                                     </li>
