@@ -127,7 +127,6 @@ class SalesController extends Controller
     // Fetch results
     $sale = $query->get();
 
-    // Reverse only when no date filter — so oldest shows first
     if (!$from_date && !$to_date) {
         $sale = $sale->reverse()->values();
     }
