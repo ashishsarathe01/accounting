@@ -31,7 +31,7 @@
                 {{-- Header Section --}}
                 <div class="d-flex justify-content-between align-items-center bg-plum-viloet shadow-sm py-2 px-4 border-radius-4">
                     <h5 class="m-0 py-2">List of Set Items</h5>
-                    <a href="{{ route('production.set_item.create') }}" class="btn btn-xs-primary">ADD</a>
+                    <a href="{{ route('production.set_item.create') }}" class="btn btn-xs-primary">ADD +</a>
                 </div>
 
                 {{-- Table --}}

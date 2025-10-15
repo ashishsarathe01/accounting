@@ -60,7 +60,7 @@
 
                                 <div class="col-md-3 mb-3">
                                     <label>Speed *</label>
-                                    <input type="number" name="speed" class="form-control">
+                                    <input type="number" name="speed" class="form-control" required>
                                 </div>
 
                                 <div class="col-md-3 mb-3">
