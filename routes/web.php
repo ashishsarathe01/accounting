@@ -454,10 +454,16 @@ Route::post('/get-deal-details', [DealController::class, 'getDealDetails']);
 
    //Production Route
    Route::get('/production.set_item', [ProductionController::class, 'setItems'])->name('production.set_item');
-   Route::get('/production.set_item/add', [ProductionController::class, 'create'])->name('production.set_item.create');
-   Route::post('/production.set_item/store', [ProductionController::class, 'store'])->name('production.set_item.store');
-   Route::get('/production.set_item/edit/{id}', [ProductionController::class, 'edit'])->name('production.set_item.edit');
-   Route::put('/production.set_item/update/{id}', [ProductionController::class, 'update'])->name('production.set_item.update');
-   Route::delete('/production.set_item/delete/{id}', [ProductionController::class, 'destroy'])->name('production.set_item.destroy');
+   Route::get('/production.set_item/add', [ProductionController::class, 'addItem'])->name('production.set_item.create');
+   Route::post('/production.set_item/store', [ProductionController::class, 'storeItem'])->name('production.set_item.store');
+   Route::get('/production.set_item/edit/{id}', [ProductionController::class, 'editItem'])->name('production.set_item.edit');
+   Route::put('/production.set_item/update/{id}', [ProductionController::class, 'updateItem'])->name('production.set_item.update');
+   Route::delete('/production.set_item/delete/{id}', [ProductionController::class, 'destroyItem'])->name('production.set_item.destroy');
+   
+   Route::Resource('deckle-process', ProductionController::class);
+   Route::post('deckle-process.add_quality', [ProductionController::class, 'addQuality'])->name('deckle-process.add_quality');
+   Route::post('stop-deckle-process', [ProductionController::class, 'stopDeckleProcess'])->name('stop-deckle-process');
+   Route::post('stop-deckle-machine', [ProductionController::class, 'stopDeckleMachine'])->name('stop-deckle-machine');
+   Route::post('start-deckle-machine', [ProductionController::class, 'startDeckleMachine'])->name('start-deckle-machine');
    
 });

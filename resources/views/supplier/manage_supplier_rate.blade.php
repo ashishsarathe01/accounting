@@ -91,22 +91,23 @@ input[type=number] {
                                                 <input type="text" class="form-control" name="location[]" value="{{$location->name}}" readonly>
                                                 <input type="hidden" class="form-control" name="location_id[]" value="{{$location->id}}">
                                             </div>
+                                            
                                             @foreach($heads as $k => $value)
-                                                @php 
-                                                $array_id = $location->id."_".$value->id;
-                                                $length = strlen($value->name); 
-                                                $col = 1;
-                                                if($length>8){
-                                                    $col = 2;
-                                                }
-                                                
-                                                @endphp
-                                                
-                                                <div  class="mb-{{$col}} col-md-{{$col}}">
-                                                    @if($key==0)<label for="name" class="form-label font-14 font-heading ">{{$value->name}}</label>@endif
-                                                    <input type="hidden" name="head_id_{{$location->id}}[]" value="{{$value->id}}">
-                                                    <input type="number" step="any" class="form-control @if($k==0)first_rate @else other_rate_{{$location->id}} @endif" name="head_value_{{$location->id}}[]" data-location_id="{{$location->id}}" data-head_id="{{$value->id}}" placeholder="Enter {{$value->name}} RATE" required value="<?php if(isset($supplier_rates) &&  isset($supplier_rates[$array_id]) && count($supplier_rates)>0){ echo $supplier_rates[$array_id]; }?>">
-                                                </div>
+                                                @if($value->group_type=="WASTE KRAFT")
+                                                    @php 
+                                                    $array_id = $location->id."_".$value->id;
+                                                    $length = strlen($value->name); 
+                                                    $col = 1;
+                                                    if($length>8){
+                                                        $col = 2;
+                                                    }
+                                                    @endphp                                                
+                                                    <div  class="mb-{{$col}} col-md-{{$col}}">
+                                                        @if($key==0)<label for="name" class="form-label font-14 font-heading ">{{$value->name}}</label>@endif
+                                                        <input type="hidden" name="head_id_{{$location->id}}[]" value="{{$value->id}}">
+                                                        <input type="number" step="any" class="form-control @if($k==0)first_rate @else other_rate_{{$location->id}} @endif" name="head_value_{{$location->id}}[]" data-location_id="{{$location->id}}" data-head_id="{{$value->id}}" placeholder="Enter {{$value->name}} RATE" required value="<?php if(isset($supplier_rates) &&  isset($supplier_rates[$array_id]) && count($supplier_rates)>0){ echo $supplier_rates[$array_id]; }?>">
+                                                    </div>
+                                                @endif
                                             @endforeach
                                             <div class="clearfix"></div>
                                         @endforeach

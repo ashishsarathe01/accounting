@@ -22,6 +22,7 @@ use App\Models\SupplierRateLocationWise;
 use App\Models\ManageItems;
 use App\Models\SaleOrderSetting;
 use App\Models\FuelSupplierRate;
+use App\Models\FuelSupplier;
 class SupplierPurchaseController extends Controller
 {
     public function manageSupplierPurchase()
@@ -709,11 +710,15 @@ class SupplierPurchaseController extends Controller
         $location = SupplierLocation::where('company_id',Session::get('user_company_id'))
                                         ->where('status',1)
                                         ->get();
-        $heads = SupplierSubHead::with('group')
-                                ->where('company_id',Session::get('user_company_id'))
-                                ->where('status',1)
+        $heads = SupplierSubHead::leftjoin('sale-order-settings','supplier_sub_heads.group_id',"=","sale-order-settings.item_id")
+                                ->where('supplier_sub_heads.company_id',Session::get('user_company_id'))
+                                ->where('supplier_sub_heads.status',1)
+                                ->where('sale-order-settings.setting_type', '=', 'PURCHASE GROUP')
+                                ->where('sale-order-settings.setting_for', '=', 'PURCHASE ORDER')
+                                ->select('supplier_sub_heads.*','group_type')
                                 ->orderBy('sequence')
                                 ->get();
+        // echo "<pre>";print_r($heads->toArray());die;
         $group_ids = CommonHelper::getAllChildGroupIds(3,Session::get('user_company_id'));
         array_push($group_ids, 3);
         $group_ids = array_merge($group_ids, CommonHelper::getAllChildGroupIds(11,Session::get('user_company_id'))); // Include group 11 as well
@@ -768,14 +773,27 @@ class SupplierPurchaseController extends Controller
         }
         return view('supplier/view_purchase_vehicle_detail',["pending_report"=>$pending_report_grouped,"in_process_report"=>$in_process_report_grouped,"pending_for_approval_report"=>$pending_for_approval_report_grouped,"approved_report"=>$approved_report_grouped,"locations"=>$location,"heads"=>$heads,"accounts"=>$accounts,"item_groups"=>$item_groups,"approve_from_date"=>$approve_from_date,"approve_to_date"=>$approve_to_date,"items"=>$items,"group_list"=>$group_list]);
     }
-    public function addPurchaseInfo(Request $request){        
-        $supplier = Supplier::select('account_id')
+    public function addPurchaseInfo(Request $request){
+        if(isset($request->type) && $request->type=="BOILERFUEL"){
+            $supplier = FuelSupplier::select('account_id')
                                 ->where('company_id',Session::get('user_company_id'))
                                 ->pluck('account_id');
+        }else if(isset($request->type) && $request->type=="WASTEKRAFT"){
+            $supplier = Supplier::select('account_id')
+                                ->where('company_id',Session::get('user_company_id'))
+                                ->pluck('account_id');
+        }else{
+            $supplier = Supplier::select('account_id')
+                                ->where('company_id',Session::get('user_company_id'))
+                                ->pluck('account_id');
+        }
+        
         $accounts = Accounts:: whereIn('id',$supplier)
                               ->select('accounts.id','accounts.account_name')
                               ->orderBy('account_name')
                               ->get(); 
+
+                              
         $item_groups = ItemGroups::join('sale-order-settings','item_groups.id','=','sale-order-settings.item_id')
                             ->select('item_groups.id','group_name')
                             ->where('item_groups.company_id', Session::get('user_company_id'))

@@ -55,7 +55,7 @@ input::-webkit-inner-spin-button {
                                 @can('view-module', 110)
                                     <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
                                     <h5 class="transaction-table-title m-0 py-2">Pending</h5>
-                                    <a href="{{route('add-purchase-info')}}"><button class="btn btn-primary btn-sm d-flex align-items-center" >ADD</button></a>
+                                    <a href="{{route('add-purchase-info')}}?type=WASTEKRAFT"><button class="btn btn-primary btn-sm d-flex align-items-center" >ADD</button></a>
                                     </div>
                                     <div class="transaction-table bg-white table-view shadow-sm">
                                         <table class="table-striped table m-0 shadow-sm payment_table">
@@ -239,7 +239,7 @@ input::-webkit-inner-spin-button {
                                 @can('view-module', 110)
                                     <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
                                     <h5 class="transaction-table-title m-0 py-2">Pending</h5>
-                                    <a href="{{route('add-purchase-info')}}"><button class="btn btn-primary btn-sm d-flex align-items-center" >ADD</button></a>
+                                    <a href="{{route('add-purchase-info')}}?type=BOILERFUEL"><button class="btn btn-primary btn-sm d-flex align-items-center" >ADD</button></a>
                                     </div>
                                     <div class="transaction-table bg-white table-view shadow-sm">
                                         <table class="table-striped table m-0 shadow-sm payment_table">
@@ -648,14 +648,26 @@ input::-webkit-inner-spin-button {
                         </thead>
                         <tbody id="report_body">
                             @foreach($heads as $key => $value)
-                                <tr class="head">
-                                    <td><input type="text" class="form-control" value="{{$value->name}}" readonly></td>
-                                    <td><input type="text" class="form-control calculate qty" placeholder="Enter Qty" id="qty_{{$value->id}}" style="text-align: right" data-id="{{$value->id}}"></td>
-                                    <td><input type="text" class="form-control calculate bill_rate" readonly id="bill_rate_{{$value->id}}" style="text-align: right" data-id="{{$value->id}}"></td>
-                                    <td><input type="text" class="form-control contract_rate calculate" id="contract_rate_{{$value->id}}" style="text-align: right" readonly data-id="{{$value->id}}"></td>
-                                    <td><input type="text" class="form-control report_amount" id="report_amount_{{$value->id}}" data-id="{{$value->id}}" style="text-align: right" readonly></td>
-                                    <td><input type="text" class="form-control difference_amount" id="difference_amount_{{$value->id}}" data-id="{{$value->id}}" style="text-align: right" readonly></td>
-                                </tr>
+                                @if($value->group_type=='WASTE KRAFT')
+                                    <tr class="head waste_head">
+                                        <td><input type="text" class="form-control" value="{{$value->name}}" readonly></td>
+                                        <td><input type="text" class="form-control calculate qty" placeholder="Enter Qty" id="qty_{{$value->id}}" style="text-align: right" data-id="{{$value->id}}"></td>
+                                        <td><input type="text" class="form-control calculate bill_rate" readonly id="bill_rate_{{$value->id}}" style="text-align: right" data-id="{{$value->id}}"></td>
+                                        <td><input type="text" class="form-control contract_rate calculate" id="contract_rate_{{$value->id}}" style="text-align: right" readonly data-id="{{$value->id}}"></td>
+                                        <td><input type="text" class="form-control report_amount" id="report_amount_{{$value->id}}" data-id="{{$value->id}}" style="text-align: right" readonly></td>
+                                        <td><input type="text" class="form-control difference_amount" id="difference_amount_{{$value->id}}" data-id="{{$value->id}}" style="text-align: right" readonly></td>
+                                    </tr>
+                                @elseif($value->group_type=='BOILER FUEL')
+
+                                    <tr class="head fuel_head">
+                                        <td><input type="text" class="form-control" value="{{$value->name}}" readonly></td>
+                                        <td><input type="text" class="form-control calculate qty" placeholder="Enter Qty" id="qty_{{$value->id}}" style="text-align: right" data-id="{{$value->id}}"></td>
+                                        <td><input type="text" class="form-control calculate bill_rate" readonly id="bill_rate_{{$value->id}}" style="text-align: right" data-id="{{$value->id}}"></td>
+                                        <td><input type="text" class="form-control contract_rate calculate" id="contract_rate_{{$value->id}}" style="text-align: right" readonly data-id="{{$value->id}}"></td>
+                                        <td><input type="text" class="form-control report_amount" id="report_amount_{{$value->id}}" data-id="{{$value->id}}" style="text-align: right" readonly></td>
+                                        <td><input type="text" class="form-control difference_amount" id="difference_amount_{{$value->id}}" data-id="{{$value->id}}" style="text-align: right" readonly></td>
+                                    </tr>
+                                @endif
                             @endforeach
                             <tr id="cut_row">
                                 <td><input type="text" class="form-control" value="Cut" readonly></td>
@@ -785,11 +797,13 @@ input::-webkit-inner-spin-button {
         $(".contract_rate").attr('readonly',true);
         let activeVehicleTab = localStorage.getItem('activeVehicleTabType');
         if(activeVehicleTab=="BOILER FUEL"){
-            $(".head").hide();
+            $(".waste_head").hide();
+            $(".fuel_head").show();
             $(".item_div").show();
             $(".area_div").hide();
         }else{
-            $(".head").show();
+            $(".waste_head").show();
+            $(".fuel_head").hide();
             $(".item_div").hide();
             $(".area_div").show();
         }
@@ -1137,7 +1151,7 @@ input::-webkit-inner-spin-button {
             $(this).keyup();
         });
     });
-    $(".save_location").click(function(){        
+    $(".save_location").click(function(){
         var id = $("#row_id").val();
         let group_type = "waste_craft";
         let activeVehicleTab = localStorage.getItem('activeVehicleTabType');
@@ -1310,6 +1324,7 @@ input::-webkit-inner-spin-button {
                 qty_total = parseFloat(qty_total) + parseFloat($(this).val());
             }
         });
+
         let net_weight = $("#net_weight").val();
         if(parseFloat(qty_total)!=parseFloat(net_weight)){
             $(".save_location").hide();
@@ -1426,10 +1441,21 @@ input::-webkit-inner-spin-button {
                 success:function(res){
                     if(res == null){
                         $("#contract_rate_cut").val('');
+                        $(".contract_rate").each(function(){
+                            if(rate_arr[$(this).attr('data-id')]){
+                                $(this).val('');
+                            }
+                        });
                         return;
                     }
                     if(res!=""){
                         if(res.item_price){
+
+                            $(".contract_rate").each(function(){
+                                
+                                    $(this).val(res.item_price);
+                                
+                            });
                             $("#contract_rate_cut").val(res.item_price);
                             var qty = $("#qty_cut").val();
                             var bill_rate = $("#bill_rate_cut").val();

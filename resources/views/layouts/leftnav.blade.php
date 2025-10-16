@@ -734,7 +734,9 @@
                                        <li class="py-1 clickable-row-blue">
                                           <a href="{{ route('production.set_item') }}" class="text-blue">Set Items</a>
                                        </li>
-                                       
+                                       <li class="py-1 clickable-row-blue">
+                                          <a href="{{ route('deckle-process.index') }}" class="text-blue">Manage Pop Roll</a>
+                                       </li>
 
                                     </ul>
                                  </div>

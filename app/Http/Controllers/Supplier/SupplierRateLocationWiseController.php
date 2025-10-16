@@ -22,9 +22,12 @@ class SupplierRateLocationWiseController extends Controller
         $location = SupplierLocation::where('company_id',Session::get('user_company_id'))
                                         ->where('status',1)
                                         ->get();
-        $heads = SupplierSubHead::with('group')
-                                ->where('company_id',Session::get('user_company_id'))
-                                ->where('status',1)
+        $heads = SupplierSubHead::leftjoin('sale-order-settings','supplier_sub_heads.group_id',"=","sale-order-settings.item_id")
+                                ->where('supplier_sub_heads.company_id',Session::get('user_company_id'))
+                                ->where('supplier_sub_heads.status',1)
+                                ->where('sale-order-settings.setting_type', '=', 'PURCHASE GROUP')
+                                ->where('sale-order-settings.setting_for', '=', 'PURCHASE ORDER')
+                                ->select('supplier_sub_heads.*','group_type')
                                 ->orderBy('sequence')
                                 ->get();
         $current_date = date('Y-m-d');
