@@ -11,6 +11,7 @@ use DB;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Purchase;
 use App\Models\Supplier;
+use App\Models\FuelSupplier;
 use App\Models\SupplierLocation;
 use App\Models\SupplierLocationRates;
 use App\Models\SupplierPurchaseReport;
@@ -22,7 +23,6 @@ use App\Models\SupplierRateLocationWise;
 use App\Models\ManageItems;
 use App\Models\SaleOrderSetting;
 use App\Models\FuelSupplierRate;
-use App\Models\FuelSupplier;
 class SupplierPurchaseController extends Controller
 {
     public function manageSupplierPurchase()
@@ -927,5 +927,43 @@ class SupplierPurchaseController extends Controller
         return redirect()->route('supplier-purchase-setting')
             ->with('success', 'Settings updated successfully.');
     }
+
+
+
+    public function getAccountsByGroup(Request $request)
+{
+    $group_id = $request->group_id;
+    $accounts = [];
+
+    // Get items of the selected group
+    $items = SaleOrderSetting::where('setting_type', 'PURCHASE GROUP')
+                ->where('item_id', $group_id)
+                ->get();
+
+    foreach ($items as $item) {
+        if ($item->group_type == 'BOILER FUEL') {
+            // Fuel supplier accounts
+            $fuelAccounts = FuelSupplier::where('status', 1)
+                ->pluck('account_id')
+                ->toArray();
+
+            $accounts = array_merge($accounts, $fuelAccounts);
+        } elseif ($item->group_type == 'WASTE KRAFT') {
+            // Waste kraft supplier accounts
+            $kraftAccounts = Supplier::where('status', 1)
+                ->pluck('account_id')
+                ->toArray();
+
+            $accounts = array_merge($accounts, $kraftAccounts);
+        }
+    }
+
+    // Remove duplicates and get account names
+    $accounts = Accounts::whereIn('id', array_unique($accounts))
+                ->select('id', 'account_name')
+                ->get();
+
+    return response()->json($accounts);
+}
     
 }

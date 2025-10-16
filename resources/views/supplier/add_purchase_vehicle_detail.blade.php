@@ -162,7 +162,37 @@ input[type=number] {
                     
                 }
             });
-        });
+
+$.ajax({
+        url : "{{url('accounts-by-group')}}",
+        method : "POST",
+        data: {
+            _token: '{{ csrf_token() }}',
+            group_id : group_id
+        },
+        success:function(accounts){
+            let html = "<option value=''>Select Account</option>";
+            accounts.forEach(function(acc){
+                html += '<option value="'+acc.id+'">'+acc.account_name+'</option>';
+            });
+            $("#account").html(html).trigger('change'); // update select2
+        }
     });
+
+
+        });
+
+
+
+
+
+    });
+
+
+
+    // Update Accounts dropdown dynamically
+    
+
+
 </script>
 @endsection
