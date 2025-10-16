@@ -31,7 +31,7 @@
                                     <select class="form-select form-select-lg select2-single" name="item_id" id="item_id" aria-label="form-select-lg example" required >
                                         <option value="">SELECT QUALITY</option>
                                         @foreach ($items as $item)
-                                            <option value="{{$item->id}}" data-bf="{{$item->bf}}" data-gsm="{{$item->gsm}}" data-speed="{{$item->speed}}" data-item_id="{{$item->item_id}}" @if($item->id==$quality_id) selected @endif>{{$item->name}}</option>
+                                            <option value="{{$item->item_id}}" data-bf="{{$item->bf}}" data-gsm="{{$item->gsm}}" data-speed="{{$item->speed}}" data-item_id="{{$item->item_id}}" @if($item->id==$quality_id) selected @endif>{{$item->name}}</option>
                                         @endforeach
                                     </select>
                                 </div>

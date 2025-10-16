@@ -53,14 +53,14 @@ class ProductionController extends Controller
         $company_id = Session::get('user_company_id');
 
         $setItems = ProductionItem::where('company_id', $company_id)
-                                  ->with('item')
+                                  ->with('item') // eager load item details
                                   ->get();
 
         return view('production.set_item', compact('setItems'));
     }
 
     /**
-     * Show add set item page with all items from manage_items (excluding already added)
+     * Show the add set item page with only allowed and not yet added items
      */
     public function create(Request $request)
     {
@@ -72,7 +72,7 @@ class ProductionController extends Controller
         }
         $quality_id = $request->quality_id;
         $items = ProductionItem::join('manage_items','production_items.item_id','=','manage_items.id')
-                                ->select('production_items.id','name','bf','gsm','speed')
+                                ->select('production_items.id','name','bf','gsm','speed', 'item_id')
                                 ->where('production_items.company_id',Session::get('user_company_id'))
                                 ->where('production_items.status','1')
                                 ->orderBy('name')
@@ -108,6 +108,8 @@ class ProductionController extends Controller
             $log->deckle_no = $request->deckle_no;
             $log->stopped_by = Session::get('user_id');
             $log->stopped_at = date('Y-m-d H:i:s');
+            $log->reason = $request->reason;
+            $log->remark = $request->remark;
             $log->company_id = Session::get('user_company_id');
             $log->created_at = Carbon::now();
             $log->save();
@@ -182,31 +184,34 @@ class ProductionController extends Controller
         return view('production/view_deckle_process',["deckle"=>$deckle,"items"=>$items,"deckle_qualitys"=>$deckle_quality]);
     }
 
-    /**
-     * Edit set item
-     */
-    public function edit($id)
+   
+    public function editItem($id)
     {
         $company_id = Session::get('user_company_id');
         $item = ProductionItem::findOrFail($id);
 
-        // Fetch IDs of items already added excluding current
+        $allowedItemIds = SaleOrderSetting::where('company_id', $company_id)
+                            ->where('setting_type', 'ITEM')
+                            ->pluck('item_id')
+                            ->toArray();
+
+        // Exclude items already added except the current one
         $addedItemIds = ProductionItem::where('company_id', $company_id)
-                                      ->where('id', '!=', $id)
-                                      ->pluck('item_id')
-                                      ->toArray();
+                                ->where('id', '!=', $id)
+                                ->pluck('item_id')
+                                ->toArray();
 
-        // Fetch all active items excluding already added ones
-        $items = ManageItems::where('company_id', $company_id)
-                            ->where('status', '1')
-                            ->where('delete', '0')
-                            ->whereNotIn('id', $addedItemIds)
-                            ->orderBy('name', 'asc')
-                            ->get();
+        $availableItemIds = array_diff($allowedItemIds, $addedItemIds);
 
-        $groups = ItemGroups::where('company_id', $company_id)->get();
+        $groups = ItemGroups::where('company_id', $company_id)
+            ->with(['items' => function($query) use ($availableItemIds) {
+                $query->whereIn('id', $availableItemIds)
+                      ->where('status', '1');
+            }])
+            ->get()
+            ->filter(fn($group) => $group->items->count() > 0);
 
-        return view('production.edit_set_item', compact('item', 'items', 'groups'));
+        return view('production.edit_set_item', compact('item', 'groups'));
     }
 
     /**
@@ -221,11 +226,11 @@ class ProductionController extends Controller
             'item_id' => 'required|integer',
             'bf' => 'required|integer',
             'gsm' => 'required|integer',
-            'speed' => 'required|integer',
+            'speed' => 'nullable|integer',
             'status' => 'required|in:0,1',
         ]);
 
-        // Prevent duplicate except current
+        // Prevent duplicate item except current
         $exists = ProductionItem::where('company_id', $company_id)
                     ->where('item_id', $request->item_id)
                     ->where('id', '!=', $id)
@@ -267,25 +272,35 @@ class ProductionController extends Controller
             'new_item_gsm' => 'required',
             'deckle_id' => 'required',
             'new_start_time_stamp' => 'required',
-            'new_production_in_kg' => 'required',
+            'actual_production_in_kg' => 'required',
             'new_speed' => 'required',
             'deckle_no' => 'required',
         ]);
-        $deckle = new DeckleProcessQuality;
-        $deckle->parent_id = $request->deckle_id;
-        $deckle->item_id = $request->new_item_id;
-        $deckle->bf = $request->new_item_bf;
-        $deckle->gsm = $request->new_item_gsm;
-        $deckle->deckle_no = $request->deckle_no;
-        $deckle->start_time_stamp = date('Y-m-d H:i:s',strtotime($request->new_start_time_stamp));
-        $deckle->production_in_kg = $request->new_production_in_kg;
-        $deckle->speed = $request->new_speed;
-        $deckle->started_by = Session::get('user_id');
-        $deckle->company_id = Session::get('user_company_id');
-        $deckle->created_at = Carbon::now();
-        if($deckle->save()){
-            return redirect()->back()->with('success', 'Quality added successfully');
+        
+        $deckle_process = DeckleProcess::find($request->deckle_id);
+        if($deckle_process){
+            $deckle_process->production_in_kg = $request->actual_production_in_kg;
+            $deckle_process->speed = $request->actual_speed;
+            if($deckle_process->save()){
+                $deckle = new DeckleProcessQuality;
+                $deckle->parent_id = $request->deckle_id;
+                $deckle->item_id = $request->new_item_id;
+                $deckle->bf = $request->new_item_bf;
+                $deckle->gsm = $request->new_item_gsm;
+                $deckle->deckle_no = $request->deckle_no;
+                $deckle->start_time_stamp = date('Y-m-d H:i:s',strtotime($request->new_start_time_stamp));
+                $deckle->production_in_kg = $request->new_production_in_kg;
+                $deckle->speed = $request->new_speed;
+                $deckle->started_by = Session::get('user_id');
+                $deckle->company_id = Session::get('user_company_id');
+                $deckle->created_at = Carbon::now();
+                if($deckle->save()){
+                    return redirect()->back()->with('success', 'Quality added successfully');
+                }
+            }
         }
+        
+        
     }
     public function addItem()
     {
@@ -309,63 +324,37 @@ class ProductionController extends Controller
     }
     public function storeItem(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'item_id' => 'required',
-            'item_bf' => 'required',
-            'item_gsm' => 'required',
-            'deckle_no' => 'required',
-            'start_time_stamp' => 'required',
-            'speed' => 'required',
-        ]);
-        $deckle = new DeckleProcess;
-        $deckle->item_id = $request->item_id;
-        $deckle->bf = $request->item_bf;
-        $deckle->gsm = $request->item_gsm;
-        $deckle->deckle_no = $request->deckle_no;
-        $deckle->start_time_stamp = date('Y-m-d H:i:s',strtotime($request->start_time_stamp));
-        $deckle->speed = $request->speed;
-        $deckle->started_by = Session::get('user_id');
-        $deckle->company_id = Session::get('user_company_id');
-        $deckle->created_at = Carbon::now();
-        if($deckle->save()){
-            return redirect()->route('deckle-process.index')->with('success','Deckle added successfully');
-        }
-    }
-
-   
-    public function editItem($id)
-    {
         $company_id = Session::get('user_company_id');
-        $item = ProductionItem::findOrFail($id);
+        $created_by = Session::get('user_id');
 
-        $allowedItemIds = SaleOrderSetting::where('company_id', $company_id)
-                            ->where('setting_type', 'ITEM')
-                            ->pluck('item_id')
-                            ->toArray();
+        $request->validate([
+            'item_id' => 'required|integer',
+            'bf' => 'required|integer',
+            'gsm' => 'required|integer',
+            'speed' => 'required|integer',
+            'status' => 'required|in:0,1',
+        ]);
 
-        // Exclude items already added except the current one
-        $addedItemIds = ProductionItem::where('company_id', $company_id)
-                                ->where('id', '!=', $id)
-                                ->pluck('item_id')
-                                ->toArray();
+        // Prevent duplicate item
+        $exists = ProductionItem::where('company_id', $company_id)
+                    ->where('item_id', $request->item_id)
+                    ->exists();
 
-        $availableItemIds = array_diff($allowedItemIds, $addedItemIds);
+        if ($exists) {
+            return redirect()->back()->with('error', 'Item already added.');
+        }
 
-        $groups = ItemGroups::where('company_id', $company_id)
-            ->with(['items' => function($query) use ($availableItemIds) {
-                $query->whereIn('id', $availableItemIds)
-                      ->where('status', '1');
-            }])
-            ->get()
-            ->filter(fn($group) => $group->items->count() > 0);
+        ProductionItem::create([
+            'item_id' => $request->item_id,
+            'bf' => $request->bf,
+            'gsm' => $request->gsm,
+            'speed' => $request->speed,
+            'status' => intval($request->status),
+            'company_id' => $company_id,
+            'created_by' => $created_by,
+            'created_at' => now(),
+        ]);
 
-        return view('production.edit_set_item', compact('item', 'groups'));
+        return redirect()->route('production.set_item')->with('success', 'Item added successfully.');
     }
-
-
-
-    /**
-     * Delete set item
-     */
- 
 }

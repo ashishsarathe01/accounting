@@ -430,8 +430,7 @@ Route::group(['middleware' => ['merchantloginstatus']], function () {
    Route::post('item-by-group', [SupplierPurchaseController::class, 'itemByGroup'])->name('item-by-group');
    Route::get('supplier-purchase-setting', [SupplierPurchaseController::class, 'supplierPurchaseSetting'])->name('supplier-purchase-setting');
    Route::post('store-supplier-purchase-setting', [SupplierPurchaseController::class, 'storeSupplierPurchaseSetting'])->name('store-supplier-purchase-setting');
-   Route::post('accounts-by-group', [SupplierPurchaseController::class, 'getAccountsByGroup']); 
-
+   
    
    Route::get('/sale-order', [SaleOrderController::class, 'index'])->name('sale-order.index');
    Route::get('sale-order/settings', [SaleOrderController::class, 'saleOrderSetting'])->name('sale-order.settings');

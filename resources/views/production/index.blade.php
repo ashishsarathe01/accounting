@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.app') 
 @section('content')
 <!-- header-section -->
 @include('layouts.header')
@@ -78,14 +78,53 @@
                                                 <input type="text" class="form-control" name="speed" id="speed" value="{{$deckle->speed}}" readonly>
                                             </div> 
                                         </div>
-                                        <div class="text-start">
+
+                                        <!-- Machine Stop Logs Section -->
+                                        @php
+                                            $stop_logs = \App\Models\DeckleMachineStopLog::where('deckle_id', $deckle->id)
+                                                ->where('company_id', Session::get('user_company_id'))
+                                                ->orderBy('stopped_at', 'desc')
+                                                ->get();
+                                        @endphp
+
+                                        @if($stop_logs->count() > 0)
+                                        <div class="mb-3 col-md-12 mt-2 p-2 border border-danger rounded bg-light">
+                                            <h6 class="font-14 font-heading text-danger">Machine Stop Details</h6>
+                                            <table class="table table-bordered table-sm mb-0">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>Stopped By</th>
+                                                        <th>Stopped At</th>
+                                                        <th>Start By</th>
+                                                        <th>Start At</th>
+                                                        <th>Reason</th>
+                                                        <th>Remark</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach($stop_logs as $log)
+                                                    <tr>
+                                                        <td>{{ \App\Models\Admin::where('id', $log->stopped_by)->value('name') ?? 'N/A' }}</td>
+                                                        <td>{{ date('d-m-Y H:i:s', strtotime($log->stopped_at)) }}</td>
+                                                        <td>{{ \App\Models\Admin::where('id', $log->start_by)->value('name') ?? 'N/A' }}</td>
+                                                        <td>{{ $log->start_at ? date('d-m-Y H:i:s', strtotime($log->start_at)) : 'N/A' }}</td>
+                                                        <td>{{ $log->reason }}</td>
+                                                        <td>{{ $log->remark }}</td>
+                                                    </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        @endif
+
+                                        <div class="text-start mt-2">
                                             <button type="button" id="add_new_quality" data-deckle_id="{{$deckle->id}}" data-speed="{{$deckle->speed}}"  data-deckle_no="{{$deckle->deckle_no}}" class="btn  btn-xs-primary ">
                                                 ADD QUALITY
                                             </button>
                                             <button type="button" id="add_new_deckle" data-quality_id="" class="btn  btn-xs-primary ">
                                                 ADD NEW DECKLE
                                             </button>
-                                            <button type="button" id="machine_stop" class="btn  btn-xs-primary ">
+                                            <button type="button" id="machine_stop" data-deckle_id="{{$deckle->id}}" data-deckle_no="{{$deckle->deckle_no}}" class="btn  btn-xs-primary ">
                                                 MACHINE STOP
                                             </button>
                                         </div>
@@ -99,6 +138,8 @@
         </div>
     </section>
 </div>
+
+<!-- Quality Modal -->
 <div class="modal" id="qualityModal">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -156,39 +197,123 @@
         </div>
     </div>
 </div>
+
+<!-- MACHINE STOP MODAL START -->
+<div class="modal" id="machineStopModal">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Stopping the Machine</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="stop_deckle_id">
+                <input type="hidden" id="stop_deckle_no">
+                <div class="mb-3 mt-3">
+                    <label for="stop_reason" class="form-label">Reason for Stop:</label>
+                    <select class="form-select" id="stop_reason" name="stop_reason" required>
+                        <option value="">Select Reason</option>
+                        <option value="Maintenance">Maintenance</option>
+                        <option value="Breakdown">Breakdown</option>
+                        <option value="Power Failure">Power Failure</option>
+                        <option value="Shift Change">Shift Change</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="stop_remarks" class="form-label">Remarks:</label>
+                    <textarea class="form-control" id="stop_remarks" name="stop_remarks" rows="3" placeholder="Enter remarks..." required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" id="save_machine_stop">Submit</button>
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 </body>
 @include('layouts.footer')
 <script>
-    $(document).ready(function(){
-        $("#add_new_quality").click(function(){
-            let deckle_id = $(this).attr('data-deckle_id');
-            let deckle_no = $(this).attr('data-deckle_no');
-            let speed = $(this).attr('data-speed');
-            $("#deckle_id").val(deckle_id);
-            $("#deckle_no").val(deckle_no);
-            $("#actual_speed").val(speed)
-            $("#qualityModal").modal('toggle');
-        });
-        $("#new_item_id").change(function(){
-            $("#new_item_bf").val($(this).find(':selected').data('bf'));
-            $("#new_item_gsm").val($(this).find(':selected').data('gsm'));
-        });
-        $(".save_quality").click(function(){
-            let deckle_id = $("#deckle_id").val();
-            let deckle_no = $("#deckle_no").val();
-            let actual_production_in_kg = $("#actual_production_in_kg").val();
-            let actual_speed = $("#actual_speed").val();
-            let new_item_id = $("#new_item_id").val();
-            let new_item_bf = $("#new_item_bf").val();
-            let new_item_gsm = $("#new_item_gsm").val();
-            let new_speed = $("#new_speed").val();
+$(document).ready(function(){
+    // Add Quality
+    $("#add_new_quality").click(function(){
+        let deckle_id = $(this).attr('data-deckle_id');
+        let deckle_no = $(this).attr('data-deckle_no');
+        let speed = $(this).attr('data-speed');
+        $("#deckle_id").val(deckle_id);
+        $("#deckle_no").val(deckle_no);
+        $("#actual_speed").val(speed)
+        $("#qualityModal").modal('toggle');
+    });
+    $("#new_item_id").change(function(){
+        $("#new_item_bf").val($(this).find(':selected').data('bf'));
+        $("#new_item_gsm").val($(this).find(':selected').data('gsm'));
+    });
+    $(".save_quality").click(function(){
+        let deckle_id = $("#deckle_id").val();
+        let deckle_no = $("#deckle_no").val();
+        let actual_production_in_kg = $("#actual_production_in_kg").val();
+        let actual_speed = $("#actual_speed").val();
+        let new_item_id = $("#new_item_id").val();
+        let new_item_bf = $("#new_item_bf").val();
+        let new_item_gsm = $("#new_item_gsm").val();
+        let new_speed = $("#new_speed").val();
 
-            if(deckle_id=="" || deckle_no=="" || actual_production_in_kg=="" || actual_speed=="" || new_item_bf=="" || new_item_gsm=="" || new_speed=="" || new_item_id==""){
-                alert("All Fields Required");
-                return;
+        if(deckle_id=="" || deckle_no=="" || actual_production_in_kg=="" || actual_speed=="" || new_item_bf=="" || new_item_gsm=="" || new_speed=="" || new_item_id==""){
+            alert("All Fields Required");
+            return;
+        }
+    });
+
+    // Machine Stop
+    $("#machine_stop").click(function(){
+        let deckle_id = $(this).data('deckle_id');
+        let deckle_no = $(this).data('deckle_no');
+        $("#stop_deckle_id").val(deckle_id);
+        $("#stop_deckle_no").val(deckle_no);
+        $("#stop_reason").val('');
+        $("#stop_remarks").val('');
+        $("#machineStopModal").modal('toggle');
+    });
+
+    $("#save_machine_stop").click(function(){
+        let deckle_id = $("#stop_deckle_id").val();
+        let deckle_no = $("#stop_deckle_no").val();
+        let reason = $("#stop_reason").val().trim();
+        let remarks = $("#stop_remarks").val().trim();
+
+        if(reason === "" || remarks === ""){
+            alert("Both Reason and Remarks are required.");
+            return;
+        }
+
+        $.ajax({
+            url:"{{url('stop-deckle-machine')}}",
+            type:"POST",
+            data:{
+                "_token": "{{ csrf_token() }}",
+                "id": deckle_id,
+                "deckle_no": deckle_no,
+                "reason": reason,
+                "remark": remarks
+            },
+            success:function(res){
+                if(res!=""){
+                    let obj = JSON.parse(res);
+                    if(obj.status==true){
+                        $("#machineStopModal").modal('hide');
+                        alert("Machine stopped!");
+                        location.reload();
+                    }else{
+                        alert("Something Went Wrong.");
+                    }
+                }else{
+                    alert("Something Went Wrong.");
+                }
             }
-            
         });
     });
+});
 </script>
 @endsection
