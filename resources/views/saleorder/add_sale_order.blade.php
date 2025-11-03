@@ -684,6 +684,32 @@ $(document).ready(function() {
         var row = $(this).closest('.item-section');
         row.find("input[name*='[price]']").val(rate);
     });
+    $(document).on('input', '.size', function() {
+        let currentInput = $(this);
+        let currentVal = currentInput.val().trim();
+
+        if(currentVal === '') return; // ignore empty
+
+        // Find GSM block (parent div with class 'gsm-block')
+        let gsmBlock = currentInput.closest('.gsm-block');
+
+        // Collect all other size values within this GSM block
+        let allSizes = [];
+        gsmBlock.find('.size').each(function(){
+            let val = $(this).val().trim();
+            if(val !== '') allSizes.push(val);
+        });
+
+        // Check if this value appears more than once
+        let duplicateCount = allSizes.filter(v => v === currentVal).length;
+
+        if(duplicateCount > 1){
+            alert('This size already exists! Please enter a unique size.');
+            currentInput.val(''); // clear duplicate entry
+            currentInput.focus();
+        }
+    });
+
 
 });
 

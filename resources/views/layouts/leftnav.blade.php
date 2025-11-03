@@ -737,7 +737,12 @@
                                        <li class="py-1 clickable-row-blue">
                                           <a href="{{ route('deckle-process.index') }}" class="text-blue">Manage Pop Roll</a>
                                        </li>
-
+                                       <li class="py-1 clickable-row-blue">
+                                          <a href="{{ route('deckle-process.manage-reel') }}" class="text-blue">Manage Reel</a>
+                                       </li>
+                                       <li class="py-1 clickable-row-blue">
+                                          <a href="{{ route('deckle-process.manage-stock') }}" class="text-blue">Manage Stock</a>
+                                       </li>
                                     </ul>
                                  </div>
                               </li>

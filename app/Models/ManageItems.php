@@ -36,4 +36,10 @@ class ManageItems extends Model
     {
         return $this->belongsTo(ItemGroups::class, 'g_name', 'id');
     }
+
+    public function stocks()
+    {
+        return $this->hasMany(ItemSizeStock::class, 'item_id');
+    }
+
 }

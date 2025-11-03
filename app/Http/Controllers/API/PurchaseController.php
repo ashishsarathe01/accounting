@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use App\Models\Purchase;
 use App\Models\PurchaseSundry;
 use App\Models\PurchaseDescription;
+use App\Models\SaleOrderSetting;
 use Carbon\Carbon;
 use DB;
 
@@ -181,4 +182,6 @@ class PurchaseController extends Controller
             'message' => 'Something went wrong, please try again after some time.',
         ]);
     }
+    
+    
 }

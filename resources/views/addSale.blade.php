@@ -163,6 +163,7 @@
                         </tr>
                      </thead>
                      <tbody>
+                       
                         @php $add_more_count = 1; @endphp
                         @if(count($sale_order_items)>0)
                            @foreach ($sale_order_items as $sale_order_item)
@@ -174,7 +175,7 @@
                                        @foreach($item as $item_list)
                                           <option value="{{$item_list->id}}" @if($item_list->id==$sale_order_item['item_id']) selected @endif data-unit_id="{{$item_list->u_name}}" data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id="{{$item_list->id}}" data-itemid="{{$item_list->id}}" data-available_item="{{$item_list->available_item}}" data-parameterized_stock_status="{{$item_list->parameterized_stock_status}}" data-config_status="{{$item_list->config_status}}" data-group_id="{{$item_list->group_id}}">{{$item_list->name}}</option>
                                        @endforeach
-                                    </select>                  
+                                    </select>                                    
                                  </td>                           
                                  <td class="w-min-50">
                                     <input type="number" class="quantity w-100 form-control" id="quantity_tr_{{$add_more_count}}" name="qty[]" placeholder="Quantity" style="text-align:right;" data-id="{{$add_more_count}}" value="{{$sale_order_item['total_weight']}}" />
@@ -205,8 +206,9 @@
                                     @foreach($item as $item_list)
                                        <option value="{{$item_list->id}}" data-unit_id="{{$item_list->u_name}}" data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id="{{$item_list->id}}" data-itemid="{{$item_list->id}}" data-available_item="{{$item_list->available_item}}" data-parameterized_stock_status="{{$item_list->parameterized_stock_status}}" data-config_status="{{$item_list->config_status}}" data-group_id="{{$item_list->group_id}}">{{$item_list->name}}</option>
                                     @endforeach
-                                 </select>                  
-                              </td>                           
+                                 </select>
+                                 <input type="hidden" id="item_size_info_1" value="" name="item_size_info[]" data-id="1">
+                              </td>
                               <td class="w-min-50">
                                  <input type="number" class="quantity w-100 form-control" id="quantity_tr_1" name="qty[]" placeholder="Quantity" style="text-align:right;" data-id="1"/>
                               </td>
@@ -731,6 +733,44 @@
       </div>
    </div>
 </div>
+
+
+<!-- Modal -->
+<div class="modal fade" id="sizeModal" tabindex="-1" aria-hidden="true">
+   <div class="modal-dialog modal-lg">
+      <div class="modal-content p-3">
+         <div class="modal-header">
+            <h5 class="modal-title">Size List</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+         </div>
+         <div class="modal-body">
+            <div class="table-responsive">
+               <table class="table table-bordered table-striped mb-0 item_size_table">
+                  <thead>
+                     <tr>
+                        <th style="width: 42%;">Size</th>
+                        <th>Weight</th>
+                        <th>Reel No.</th>
+                     </tr>
+                  </thead>
+                  <tbody>
+
+                  </tbody>
+                  <div class="mt-2 text-end">
+                     <strong>Total Weight: <span id="total_weight">0</span></strong>
+                  </div>
+              </table>
+            </div>
+         </div>
+         <div class="modal-footer">
+            <input type="hidden" id="item_size_row_id">
+            <button class="btn btn-info item_size_btn">Submit</button>
+            <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+         </div>
+      </div>
+   </div>
+</div>
+
 </body>
 @include('layouts.footer')
 <script>
@@ -746,6 +786,7 @@
    var add_more_count = {{$add_more_count}};
    var page_load = 0;
    var add_more_bill_sundry_up_count = 2;
+   var production_module_status = "<?php echo $production_module_status; ?>";
    function addMoreItem(){
       let empty_status = 0;
       $('.item_id').each(function () {
@@ -768,7 +809,7 @@
          '<td><select class="form-control item_id select2-single" name="goods_discription[]" id="item_id_' + add_more_count + '" data-id="' + add_more_count + '">' +
          '<option value="">Select Item</option>' +
          '@foreach($item as $item_list)<option value="{{$item_list->id}}" data-unit_id="{{$item_list->u_name}}" data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id="{{$item_list->id}}" data-itemid="{{$item_list->id}}" data-available_item="{{$item_list->available_item}}" data-parameterized_stock_status="{{$item_list->parameterized_stock_status}}" data-config_status="{{$item_list->config_status}}" data-group_id="{{$item_list->group_id}}">{{$item_list->name}}</option>@endforeach' +
-         optionElements + '</td>' +
+         optionElements + '<input type="hidden" id="item_size_info_' + add_more_count + '" value="" name="item_size_info[]" data-id="' + add_more_count + '"></td>' +
          '<td class="w-min-50"><input type="number" class="quantity w-100 form-control" name="qty[]" id="quantity_tr_' + add_more_count + '" required placeholder="Quantity" style="text-align:right" data-id="' + add_more_count + '" /></td>' +
          '<td class="w-min-50"><input type="text" class="w-100 form-control unit" id="unit_tr_' + add_more_count + '" readonly style="text-align:center;" data-id="' + add_more_count + '"/><input type="hidden" class="units w-100" name="units[]" id="units_tr_' + add_more_count + '"/></td>' +
          '<td class="w-min-50"><input type="number" class="price w-100 form-control" name="price[]" id="price_tr_' + add_more_count + '" required placeholder="Price" style="text-align:right" data-id="' + add_more_count + '"/></td>' +
@@ -1848,6 +1889,48 @@ function removeItem() {
       if($('option:selected', this).attr('data-parameterized_stock_status')==1){
          $('#unit_tr_'+$(this).attr('data-id')).css({ cursor: 'pointer' });
       }
+      
+      
+      if(production_module_status==1){
+         let id = $(this).attr('data-id');
+         $("#quantity_tr_"+id).val('');
+         $("#quantity_tr_"+id).attr('readonly',false);
+         $("#item_size_info_"+id).val('');
+         let item_id = $(this).val();
+         $.ajax({
+            url: '{{url("get-item-size-quantity")}}',
+            async: false,
+            type: 'POST',
+            dataType: 'JSON',
+            data: {
+               _token: '<?php echo csrf_token() ?>',
+               item_id: item_id,
+               series: $("#series_no").val()
+            },
+            success: function(res){
+               if(res!=""){
+                  if(res.length==0){
+                     alert("No Size Available For This Item");
+                     return;
+                  }
+                  let size_html = "<option value=''>Select Size</option>";
+                  res.forEach(function(e,i){
+                     size_html+="<option value='"+e.id+"' data-size='"+e.size+"' data-weight='"+e.weight+"' data-reel_no='"+e.reel_no+"'>Size : "+e.size+" | Weight : "+e.weight+" | Reel No. : "+e.reel_no+")</option>";
+                  });
+                  let body_html = "<tr id='size_tr_1'><td><select class='form-select select2-single item_size' data-index='1'>"+size_html+"</select></td><td><input type='text' class='form-control item_weight' readonly id='item_weight_1'></td><td><input type='text' class='form-control item_reel_no' readonly id='item_reel_no_1'></td><td><button type='button' class='btn btn-sm btn-danger remove-row'>X</button></td></tr>";
+                  $(".item_size_table tbody").html(body_html);
+                  $(".item_size").select2({
+                     dropdownParent: $('#sizeModal'),
+                     width: '100%'
+                  });
+                  $("#item_size_row_id").val(id);
+                  $("#sizeModal").modal('show');
+               }
+               
+               
+            }
+         });
+      }
    });
    $(document).on('change', '.quantity',function(){
       let id = $(this).attr("data-id");
@@ -2544,6 +2627,104 @@ $(document).ready(function() {
     });
   
   });
+$(document).on('change', '.item_size', function () {
+    let selectedValue = $(this).val();
+
+    // block duplicates
+    let duplicate = false;
+    $('.item_size').not(this).each(function () {
+        if ($(this).val() == selectedValue && selectedValue !== '') {
+            duplicate = true;
+        }
+    });
+
+    if (duplicate) {
+        alert("This size is already selected. Choose another one.");
+       $(this).val('').trigger('change');
+        return;
+    }
+    if($(this).val()==""){
+      return;
+    }
+    let index = parseInt($(this).attr('data-index'));
+    let nextIndex = index + 1;
+
+    let weight = $(this).find(':selected').data('weight');
+    let reel_no = $(this).find(':selected').data('reel_no');
+
+    $("#item_weight_" + index).val(weight);
+    $("#item_reel_no_" + index).val(reel_no);
+      updateTotalWeight();
+    if ($("#size_tr_" + nextIndex).length > 0) {
+        return;
+    }
+
+    let cloneRow = $('#size_tr_1').clone();
+    cloneRow.find('.select2-container').remove();
+
+    let originalSelect = $('#size_tr_1').find('.select2-single').clone();
+    cloneRow.find('.select2-single').replaceWith(originalSelect);
+
+    cloneRow.attr('id', 'size_tr_' + nextIndex);
+
+    cloneRow.find('.item_size')
+        .attr('data-index', nextIndex)
+        .val('');
+
+    cloneRow.find('.item_weight')
+        .attr('id', 'item_weight_' + nextIndex)
+        .val('');
+
+    cloneRow.find('.item_reel_no')
+        .attr('id', 'item_reel_no_' + nextIndex)
+        .val('');
+
+    $('#size_tr_' + index).after(cloneRow);
+
+    cloneRow.find('.select2-single').select2({
+        dropdownParent: $('#sizeModal'),
+        width: '100%'
+    });
+});
+
+
+$(document).on('click', '.remove-row', function () {
+    let row = $(this).closest('tr');
+
+    if (row.attr('id') === 'size_tr_1') {
+        return;
+    }
+
+    row.remove();
+    updateTotalWeight();
+});
+function updateTotalWeight() {
+    let total = 0;
+    $('.item_weight').each(function () {
+        let w = parseFloat($(this).val());
+        if (!isNaN(w)) {
+            total += w;
+        }
+    });
+
+    $('#total_weight').text(total);
+}
+$(".item_size_btn").click(function(){
+   let size_arr = [];
+   let item_size_row_id = $("#item_size_row_id").val();
+   let total = 0;
+   $(".item_size").each(function(){
+      if($(this).val()!=""){
+         size_arr.push($(this).val());
+         total = parseFloat(total) + parseFloat($(this).find(':selected').attr('data-weight'));
+      }
+   });
+   
+   $("#quantity_tr_"+item_size_row_id).val(total);
+   $("#quantity_tr_"+item_size_row_id).attr('readonly',true);
+   $("#item_size_info_"+item_size_row_id).val(JSON.stringify(size_arr));
+   $("#sizeModal").modal('toggle');
+});
 
 </script>
 @endsection

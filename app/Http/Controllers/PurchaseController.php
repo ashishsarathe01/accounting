@@ -93,7 +93,17 @@ class PurchaseController extends Controller{
         },
         'account:id,account_name'
     ])
-        ->select(['id', 'date', 'voucher_no', 'total', 'party'])
+        ->select([
+    'id',
+    'date',
+    'voucher_no',
+    'total',
+    'party',
+    DB::raw("(SELECT voucher_no 
+              FROM supplier_purchase_vehicle_details 
+              WHERE map_purchase_id = purchases.id 
+              LIMIT 1) AS vehicle_voucher_no")
+])
         ->where('company_id', Session::get('user_company_id'))
         ->where('delete', '0');
 

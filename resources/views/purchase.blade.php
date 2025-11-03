@@ -69,7 +69,7 @@
                         foreach ($purchase as $value) { ?>
                            <tr class="font-14 font-heading bg-white">
                               <td class=""><?php echo date('d-m-Y',strtotime($value->date));?></td>
-                              <td style="text-align: center;"><?php echo $value->voucher_no ?></td>
+                              <td style="text-align: center;"><?php echo $value->voucher_no ?> @if($value->vehicle_voucher_no)  ({{$value->vehicle_voucher_no}}) @endif</td>
                               <td class=""><?php echo $value->account['account_name'] ?></td>
                               <td>
                                 @php $qty_total = 0; @endphp

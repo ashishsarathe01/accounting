@@ -21,6 +21,7 @@ use App\Http\Controllers\API\ModuleController;
 use App\Http\Controllers\API\GstSettingController;
 use App\Http\Controllers\API\AjaxController;
 use App\Http\Controllers\API\SupplierController;
+use App\Http\Controllers\API\ProductionController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -176,5 +177,32 @@ Route::middleware('auth:api')->group(function(){
     Route::post('update-purchase-voucher',[PurchaseController::class,'updatePurchaseVoucher']);
     Route::post('delete-purchase-voucher',[PurchaseController::class,'deletePurchaseVoucher']);
 
-    
+    //Supplier Apis
+    Route::post('add-purchase-vehicle-entry',[SupplierController::class,'addPurchaseVehicleEntry']);
+    Route::get('purchase-vehicle-entry-list',[SupplierController::class,'purchaseVehicleEntryList']);
+    Route::post('edit-purchase-vehicle-entry',[SupplierController::class,'purchaseVehicleEntryList']);
+    Route::post('delete-purchase-vehicle-entry',[SupplierController::class,'GetSupplierbyId']);
+    Route::post('supplier-head-list',[SupplierController::class,'updateSupplier']);
+    Route::post('location-by-account',[SupplierController::class,'deleteSupplier']);
+    Route::post('purchase-item-type',[SupplierController::class,'purchaseItemType']);
+    Route::post('area-by-account',[SupplierController::class,'areaByAccount']);
+    Route::post('contract-rate-by-area',[SupplierController::class,'contractRateByArea']);
+   //Production Apis
+    Route::post('pop-roll-items',[ProductionController::class,'popRollItems']);
+    Route::post('add-pop-roll',[ProductionController::class,'addPopRoll']);
+    Route::post('running-pop-roll',[ProductionController::class,'runningPopRoll']);
+    Route::post('add-new-pop-roll-quality',[ProductionController::class,'addNewPopRollQuality']);
+    Route::post('complete-pop-roll',[ProductionController::class,'completePopRoll']);
+    Route::post('stop-pop-roll-machine',[ProductionController::class,'stopPopRollMachine']);
+    Route::post('start-pop-roll-machine',[ProductionController::class,'startPopRollMachine']);
+    Route::post('completed-pop-rolls',[ProductionController::class,'completedPopRolls']);
+    Route::post('complete-pop-roll-summary',[ProductionController::class,'completePopRollSummary']);
+
+    Route::post('start-pop-roll',[ProductionController::class,'startPopRoll']);
+    Route::post('start-pop-roll-list',[ProductionController::class,'startPopRollList']);
+    Route::post('store-pop-roll-reel-detail',[ProductionController::class,'storePopRollReelDetail']);
+    Route::post('generated-pop-roll-reel-list',[ProductionController::class,'generatedPopRollReelList']);
+    Route::post('cancel-generated-pop-roll',[ProductionController::class,'cancelGeneratedPopRoll']);
+    Route::post('update-generated-pop-roll',[ProductionController::class,'updateGeneratedPopRoll']);
+    Route::post('stop-machine-reason',[ProductionController::class,'stopMachineReason']);
  });

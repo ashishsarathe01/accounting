@@ -27,5 +27,9 @@ class SaleOrderItem extends Model
                         ->where('setting_type','UNIT')
                         ->where('company_id',Session::get('user_company_id'));
         }
-        
+        public function itemSize()
+        {
+            return $this->hasMany(ItemSizeStock::class,'item_id','item_id')
+                        ->where('status','1');
+        }
 }

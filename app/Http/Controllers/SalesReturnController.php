@@ -60,6 +60,10 @@ class SalesReturnController extends Controller
               'salesReturn_from_date' => $from_date,
               'salesReturn_to_date' => $to_date
           ]);
+      }elseif (session()->has('salesReturn_from_date') && session()->has('salesReturn_to_date')) {
+         // Use previously stored session dates
+         $from_date = session('salesReturn_from_date');
+         $to_date = session('salesReturn_to_date');
       }
   
       Session::put('redirect_url', '');
@@ -94,7 +98,7 @@ class SalesReturnController extends Controller
           ->where('delete', '0');
   
       // Apply date filter if dates are set by user
-      if (!empty($input['from_date']) && !empty($input['to_date'])) {
+      if($from_date && $to_date) {
           $query->whereRaw("
               STR_TO_DATE(sales_returns.date, '%Y-%m-%d') >= STR_TO_DATE('" . date('Y-m-d', strtotime($from_date)) . "', '%Y-%m-%d')
               AND STR_TO_DATE(sales_returns.date, '%Y-%m-%d') <= STR_TO_DATE('" . date('Y-m-d', strtotime($to_date)) . "', '%Y-%m-%d')
@@ -701,6 +705,7 @@ class SalesReturnController extends Controller
                }
             }
             //Average Calculation
+            if($request->input('type')=="WITH ITEM"){
             $goods_discriptions = $request->input('goods_discription');
             $qtys = $request->input('qty');
             $sale_item_array = [];
@@ -727,6 +732,7 @@ class SalesReturnController extends Controller
                $average_detail->created_at = Carbon::now();
                $average_detail->save();
                CommonHelper::RewriteItemAverageByItem($request->date,$key,$request->input('series_no')); 
+            }
             }
             //ADD DATA IN Customer ACCOUNT
             $ledger = new AccountLedger();
@@ -1168,7 +1174,7 @@ class SalesReturnController extends Controller
       }else if($company_data->gst_config_type == "multiple_gst") {    
          if($sale_ret->voucher_type=="PURCHASE"){
             $GstSettings = DB::table('gst_settings_multiple')
-                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst",'series' => $sale_return->series_no])
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst",'gst_no' => $sale_return->merchant_gst])
                            ->first();
                      //Seller Info         
             $seller_info = DB::table('gst_settings_multiple')
@@ -1457,21 +1463,23 @@ class SalesReturnController extends Controller
                                  ->select(['bill_sundrys.effect_gst_calculation','bill_sundrys.nature_of_sundry','sale_return_sundries.*'])
                                              ->where('sale_return_id',$id)
                                              ->get();
-      $groups = DB::table('account_groups')
-                     ->whereIn('heading', [3,11])
-                     ->where('heading_type','group')
-                     ->where('status','1')
-                     ->where('delete','0')
-                     ->where('company_id',Session::get('user_company_id'))
-                     ->pluck('id');
-      $groups->push(3);
-      $groups->push(11);
+      $top_groups = [3, 11];
+
+      // Step 2: Get all child group IDs recursively
+      $all_groups = [];
+      foreach ($top_groups as $group_id) {
+         $all_groups[] = $group_id; // include the top group itself
+         $all_groups = array_merge($all_groups, CommonHelper::getAllChildGroupIds($group_id, Session::get('user_company_id')));
+      }
+
+      // Remove duplicates just in case
+      $all_groups = array_unique($all_groups);
       $party_list = Accounts::select('accounts.*','states.state_code')
                               ->leftjoin('states','accounts.state','=','states.id')
                               ->where('accounts.delete', '=', '0')
                               ->where('accounts.status', '=', '1')
                               ->whereIn('company_id', [Session::get('user_company_id'),0])
-                              ->whereIn('under_group', $groups)
+                              ->whereIn('under_group', $all_groups)
                               ->orderBy('account_name')
                               ->get();      
       $companyData = Companies::where('id', Session::get('user_company_id'))->first();

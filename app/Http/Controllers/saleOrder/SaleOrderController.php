@@ -507,6 +507,7 @@ class SaleOrderController extends Controller
                             'items.item:id,name,hsn_code',
                             'items.unitMaster:id,s_name',
                             'items.SaleOrderSettingUnitMaster:item_id,unit_type',
+                            'items.itemSize:item_id,size,weight,reel_no,quality_row_id,id',
                             'items.gsms.details',
                             
                             ])->where('id', $request->id)

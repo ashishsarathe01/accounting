@@ -145,7 +145,7 @@ class SupplierPurchaseController extends Controller
                 $report->created_at = Carbon::now();
                 $report->save();
             }else{
-                if($value['id']=='cut' || $value['id']=='short_weight'){
+                if($value['qty']!='cut'){
                     $report = new SupplierPurchaseReport;
                     $report->purchase_id = $request->purchase_id;
                     $report->head_id = $value['id'];

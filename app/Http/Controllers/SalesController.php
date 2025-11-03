@@ -33,6 +33,8 @@ use App\Models\SaleOrderItem;
 use App\Models\SaleOrderItemGsm;
 use App\Models\SaleOrderItemWeight;
 use App\Models\SaleOrderItemGsmSize;
+use App\Models\ItemSizeStock;
+use App\Models\MerchantModuleMapping;
 use App\Helpers\CommonHelper;
 use Illuminate\Support\Facades\URL;
 use DB;
@@ -327,13 +329,13 @@ class SalesController extends Controller
                                  
       //Item List
       $item = DB::table('manage_items')->join('units', 'manage_items.u_name', '=', 'units.id')
-            ->join('item_gst_rate','item_gst_rate.id','=','manage_items.gst_rate')
+            ->leftjoin('item_gst_rate','item_gst_rate.id','=','manage_items.gst_rate')
             ->join('item_groups', 'item_groups.id', '=', 'manage_items.g_name')
             ->where('manage_items.delete', '=', '0')
             ->where('manage_items.status', '=', '1')
             ->where('manage_items.company_id',Session::get('user_company_id'))
             ->orderBy('manage_items.name')
-            ->select(['units.s_name as unit', 'manage_items.id','manage_items.u_name','item_gst_rate.gst_rate','manage_items.name','parameterized_stock_status','config_status','item_groups.id as group_id'])
+            ->select(['units.s_name as unit', 'manage_items.id','manage_items.u_name','manage_items.gst_rate','manage_items.name','parameterized_stock_status','config_status','item_groups.id as group_id'])
             ->get(); 
       foreach($item as $key=>$row){
          $item_in_weight = DB::table('item_ledger')->where('status','1')->where('delete_status','0')->where('company_id',Session::get('user_company_id'))->where('item_id',$row->id)->sum('in_weight');
@@ -343,8 +345,12 @@ class SalesController extends Controller
          $available_item = $item_in_weight-$item_out_weight;
          $item[$key]->available_item = $available_item;
       }
-      
-      return view('addSale')->with('party_list', $party_list)->with('billsundry', $billsundry)->with('bill_date', $bill_date)->with('GstSettings', $GstSettings)->with('item', $item)->with('bill_to_id', $bill_to_id)->with('shipp_to_id', $shipp_to_id)->with('freight', $freight)->with('sale_order_id', $sale_order_id)->with('sale_order_items',$sale_order_items)->with('sale_enter_data',$sale_enter_data)->with('new_order',$new_order);
+      //Check Production Module Permission
+
+      $comp = Companies::select('user_id')->where('id',Session::get('user_company_id'))->first();
+      $production_module_status = MerchantModuleMapping::where('module_id',4)->where('merchant_id',$comp->user_id)->first();
+      $production_module_status = $production_module_status ? 1 : 0;
+      return view('addSale')->with('party_list', $party_list)->with('billsundry', $billsundry)->with('bill_date', $bill_date)->with('GstSettings', $GstSettings)->with('item', $item)->with('bill_to_id', $bill_to_id)->with('shipp_to_id', $shipp_to_id)->with('freight', $freight)->with('sale_order_id', $sale_order_id)->with('sale_order_items',$sale_order_items)->with('sale_enter_data',$sale_enter_data)->with('new_order',$new_order)->with('production_module_status',$production_module_status);
    }   
    public function store(Request $request){
       Gate::authorize('action-module',85);
@@ -358,9 +364,16 @@ class SalesController extends Controller
          'goods_discription' => 'required|array|min:1',
       ]); 
 
-      //echo "<pre>";
-      //print_r($request->all());      
-      //die;
+      // echo "<pre>";
+      // print_r($request->all());
+      // $sale_enter_data = json_decode($request->sale_enter_data,true);
+      // $grouped = [];
+      // foreach ($sale_enter_data as $item) {
+      //    $key = $item['detail_row_id'];
+      //    $grouped[$key][] = $item;
+      // }
+      // print_r($grouped);
+      // die;
       //Check Item Empty or not
       if($request->input('goods_discription')[0]=="" || $request->input('qty')[0]=="" || $request->input('price')[0]=="" || $request->input('amount')[0]==""){
          return $this->failedMessage('Plases Select Item','sale/create');
@@ -555,78 +568,7 @@ class SalesController extends Controller
             $average_detail->created_at = Carbon::now();
             $average_detail->save();
             CommonHelper::RewriteItemAverageByItem($request->date,$key,$request->input('series_no')); 
-            // $stock_average = ItemAverage::where('item_id',$key)
-            //                ->orderBy('stock_date','desc')
-            //                ->orderBy('id','desc')
-            //                ->first();
-            // if($stock_average){
-            //    if(strtotime($stock_average->stock_date)==strtotime($request->date)){
-            //       $purchase_weight = $stock_average->average_weight;
-            //       $sale_weight = $value;
-            //       $price = $stock_average->price;
-            //       if(!empty($stock_average->sale_weight)){
-            //          $sale_weight = $sale_weight + $stock_average->sale_weight;
-            //       }
-            //       $average_weight = $purchase_weight - $value;  
-                                  
-            //       $average = ItemAverage::find($stock_average->id);
-            //       $average->sale_weight = $sale_weight;
-            //       $average->average_weight = $average_weight;
-            //       $average->amount = round($average_weight*$price,2);
-            //       $average->updated_at = Carbon::now();
-            //       $average->save();
-            //    }else if(strtotime($stock_average->stock_date)<strtotime($request->date)){
-            //       $stock_average_weight = $stock_average->average_weight - $value;
-            //       $stock_average_price = $stock_average->price;
-            //       $stock_average_amount = round($stock_average_weight*$stock_average_price,2);
-
-            //       $average = new ItemAverage;
-            //       $average->item_id = $key;
-            //       $average->sale_weight = $value;
-            //       $average->average_weight = $stock_average_weight;
-            //       $average->price = $stock_average_price;
-            //       $average->amount = $stock_average_amount;
-            //       $average->stock_date = $request->date;
-            //       $average->company_id = Session::get('user_company_id');
-            //       $average->created_at = Carbon::now();
-            //       $average->save();               
-            //    }else if(strtotime($stock_average->stock_date)>strtotime($request->date)){
-            //       CommonHelper::RewriteItemAverageByItem($request->date,$key);
-            //    }
-            // }else{
-            //    $opening = ItemLedger::where('item_id',$key)
-            //                            ->where('source','-1')
-            //                            ->first();
-            //    if($opening){
-            //       $stock_average_weight = $opening->in_weight - $value;
-            //       $stock_average_price = $opening->total_price/$opening->in_weight;
-            //       $stock_average_price = round($stock_average_price,6);
-            //       $stock_average_amount = round($stock_average_weight*$stock_average_price,2);
-            //       $average = new ItemAverage;
-            //       $average->item_id = $key;
-            //       $average->sale_weight = $value;
-            //       $average->purchase_weight = 0;
-            //       $average->average_weight = $stock_average_weight;
-            //       $average->price = $stock_average_price;
-            //       $average->amount = $stock_average_amount;
-            //       $average->stock_date = $request->date;
-            //       $average->company_id = Session::get('user_company_id');
-            //       $average->created_at = Carbon::now();
-            //       $average->save();
-            //    }else{
-            //       $average = new ItemAverage;
-            //       $average->item_id = $key;
-            //       $average->sale_weight = $value;
-            //       $average->purchase_weight = 0;
-            //       $average->average_weight = -$value;
-            //       $average->price = 0;
-            //       $average->amount = 0;
-            //       $average->stock_date = $request->date;
-            //       $average->company_id = Session::get('user_company_id');
-            //       $average->created_at = Carbon::now();
-            //       $average->save();
-            //    }
-            // }
+            
          }
          //ADD DATA IN Customer ACCOUNT
          $ledger = new AccountLedger();
@@ -722,28 +664,23 @@ class SalesController extends Controller
             foreach($grouped as $k=>$val){
                $enter_qty = 0;
                foreach($val as $k1=>$val1){
-                  if(!empty($val1['enter_qty'])){
-                     if(count($val1['reel_weight_arr'])==0){
+                  if(!empty($val1['enter_qty'])){                     
+                     if($val1['unit_type']=="REEL"){
                         $enter_qty = $enter_qty + $val1['enter_qty'];
+                     }else if($val1['unit_type']=="KG"){
+                        $enter_qty = $enter_qty + count($val1['reel_weight_arr']);
+                     }                        
+                     foreach($val1['reel_weight_arr'] as $k3=>$val2){
                         $sale_order_item_weight = new SaleOrderItemWeight;
                         $sale_order_item_weight->sale_order_id = $request->sale_order_id;
                         $sale_order_item_weight->sale_order_item_row_id = $val1['detail_row_id'];
-                        $sale_order_item_weight->weight = $val1['enter_qty'];
+                        $sale_order_item_weight->weight = $val2;
+                        $sale_order_item_weight->weight_id = $val1['reel_weight_id'][$k3];
                         $sale_order_item_weight->company_id = Session::get('user_company_id');
                         $sale_order_item_weight->created_at = Carbon::now();
                         $sale_order_item_weight->save();
-                     }else{
-                        $enter_qty = $enter_qty + count($val1['reel_weight_arr']);
-                        foreach($val1['reel_weight_arr'] as $val2){
-                           $sale_order_item_weight = new SaleOrderItemWeight;
-                           $sale_order_item_weight->sale_order_id = $request->sale_order_id;
-                           $sale_order_item_weight->sale_order_item_row_id = $val1['detail_row_id'];
-                           $sale_order_item_weight->weight = $val2;
-                           $sale_order_item_weight->company_id = Session::get('user_company_id');
-                           $sale_order_item_weight->created_at = Carbon::now();
-                           $sale_order_item_weight->save();
-                        }
-                     }
+                        ItemSizeStock::where('id',$val1['reel_weight_id'][$k3])->update(['status'=>0,'sale_order_id'=>$request->sale_order_id,'sale_id'=>$sale->id]);
+                     }                       
                   }
                }
                $sale_order_gsm_size = SaleOrderItemGsmSize::find($k);
@@ -3342,6 +3279,13 @@ class SalesController extends Controller
             }
          }
       } 
+   }
+   public function getItemSizeQuantity(Request $request){
+      $size = ItemSizeStock::select('reel_no','size','weight','id')->where('item_id',$request->item_id)
+                     ->where('status',1)
+                     ->where('company_id',Session::get('user_company_id'))
+                     ->get();
+      return response()->json($size);
    }
    
 }

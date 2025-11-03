@@ -14,6 +14,10 @@ use App\Models\SupplierSubHead;
 use App\Models\SupplierLocationRates;
 use App\Models\SupplierLocation;
 use App\Models\SupplierPurchaseReport;
+use App\Models\SaleOrderSetting;
+use App\Models\FuelSupplierRate;
+use App\Models\ManageItems;
+use App\Models\FuelItemRates;
 class SupplierController extends Controller
 {
     public function accountList(Request $request)
@@ -146,6 +150,7 @@ class SupplierController extends Controller
                 ->join('item_groups','supplier_purchase_vehicle_details.group_id','=','item_groups.id')
                 ->where('supplier_purchase_vehicle_details.company_id', $request->company_id)
                 ->where('supplier_purchase_vehicle_details.status', 0)
+                ->where('supplier_purchase_vehicle_details.group_id', $request->group_id)
                 ->select(
                     'supplier_purchase_vehicle_details.id',
                     'gross_weight',
@@ -179,6 +184,7 @@ class SupplierController extends Controller
                 ->join('item_groups','supplier_purchase_vehicle_details.group_id','=','item_groups.id')
                 ->where('supplier_purchase_vehicle_details.company_id', $request->company_id)
                 ->where('supplier_purchase_vehicle_details.status', 1)
+                ->where('supplier_purchase_vehicle_details.group_id', $request->group_id)
                 ->select(
                     'supplier_purchase_vehicle_details.id',
                     'gross_weight',
@@ -212,6 +218,7 @@ class SupplierController extends Controller
                 ->join('item_groups','supplier_purchase_vehicle_details.group_id','=','item_groups.id')
                 ->where('supplier_purchase_vehicle_details.company_id', $request->company_id)
                 ->where('supplier_purchase_vehicle_details.status', 2)
+                ->where('supplier_purchase_vehicle_details.group_id', $request->group_id)
                 ->select(
                     'supplier_purchase_vehicle_details.id',
                     'gross_weight',
@@ -245,6 +252,7 @@ class SupplierController extends Controller
                 ->join('item_groups','supplier_purchase_vehicle_details.group_id','=','item_groups.id')
                 ->where('supplier_purchase_vehicle_details.company_id', $request->company_id)
                 ->where('supplier_purchase_vehicle_details.status', 3)
+                ->where('supplier_purchase_vehicle_details.group_id', $request->group_id)
                 ->select(
                     'supplier_purchase_vehicle_details.id',
                     'gross_weight',
@@ -534,4 +542,61 @@ class SupplierController extends Controller
             'message' => 'Something went wrong, please try again after some time.',
         ]);
     }
+    public function purchaseItemType(Request $request)
+    {
+        $setting  = SaleOrderSetting::join("item_groups","sale-order-settings.item_id","=","item_groups.id")
+                        ->where('sale-order-settings.company_id',$request->company_id)
+                        ->where('setting_type','PURCHASE GROUP')
+                        ->where('setting_for','PURCHASE ORDER')
+                        ->where('sale-order-settings.status','1')
+                        ->select('group_name','group_type','item_id')
+                        ->get();
+        return response()->json(['code' => 200, 'message' => 'Purchase Item Type','data'=> $setting]);
+    }
+    public function areaByAccount(Request $request)
+    {
+        $item_id = FuelSupplierRate::where('company_id', $request->company_id)
+                                            ->where('account_id', $request->account_id)
+                                            ->pluck('item_id')
+                                            ->unique()
+                                            ->values();
+        
+        $items = ManageItems::select('id','name')
+                                    ->where('status','1')
+                                    ->whereIn('id',$item_id)
+                                    ->where('company_id',$request->company_id)
+                                    ->orderBy('name')
+                                    ->get();
+        return response()->json(['code' => 200, 'message' => 'Purchase Item Type','data'=> $items]);
+    }
+    public function contractRateByArea(Request $request)
+    {
+        $supplier_max_date = FuelSupplierRate::where('company_id',$request->company_id)
+                                        ->where('item_id',$request->area_id)
+                                        ->where('account_id',$request->account_id)
+                                        ->where('price_date','<=',$request->date)
+                                        ->max('price_date');
+        $max_date = FuelItemRates::where('company_id',$request->company_id)
+                                        ->where('item_id',$request->area_id)
+                                        ->where('item_price_date','<=',$request->date)
+                                        ->max('item_price_date');
+        if($max_date>$supplier_max_date){
+            $rate = FuelItemRates::select('item_price')
+                                        ->where('company_id',$request->company_id)
+                                        ->where('item_price_date','<=',$request->date)
+                                        ->where('item_id',$request->area_id)
+                                        ->orderBy('item_price_date','desc')
+                                        ->first();
+        }else{
+            $rate = FuelSupplierRate::select('price as item_price')
+                                        ->where('company_id',$request->company_id)
+                                        ->where('account_id',$request->account_id)
+                                        ->where('price_date','<=',$request->date)
+                                        ->where('item_id',$request->area_id)
+                                        ->orderBy('price_date','desc')
+                                        ->first();
+        }
+        return response()->json(['code' => 200, 'message' => 'Purchase Item Type','data'=> $rate]);
+    }
+    
 }

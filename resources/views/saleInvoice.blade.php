@@ -116,6 +116,9 @@ body {
                   <div class="calender-administrator my-2 my-md-0  w-min-230 noprint">
                       <button type="button" class="btn btn-danger" onclick="window.location='{{ url()->previous() }}'">QUIT</button>
                      <button class="btn btn-info" onclick="printpage();">Print</button>
+                     <button id="printChallanBtn" class="btn btn-primary">Print Challan</button>
+
+
                      <?php 
                     if ( in_array(date('Y-m', strtotime($sale_detail->date)), $month_arr) && $sale_detail->e_invoice_status == 0 && $sale_detail->e_waybill_status == 0) {?>
                         <a href="{{ URL::to('edit-sale/'.$sale_detail->id) }}" class="btn btn-primary text-white">
@@ -549,6 +552,68 @@ body {
       </div>
    </div>
 </div>
+
+
+
+<!-- Hidden Challan Print Section -->
+<div id="challanPrintSection" style="display:none; padding:20px; font-family:Arial;">
+    <h3 style="text-align:center;">Delivery Challan</h3>
+    <hr>
+
+    @if(!empty($saleOrder))
+         <p>
+            <strong>Invoice No:</strong> 
+            {{ $sale_detail->voucher_no_prefix ?? '' }}<br> </p>
+        <p><strong>Party:</strong> {{ $saleOrder->billTo->account_name ?? '-' }}</p>
+        <p><strong>Date:</strong> {{ \Carbon\Carbon::parse($saleOrder->created_at)->format('d M Y') }}</p>
+        <hr>
+
+        <table border="1" cellspacing="0" cellpadding="6" width="100%">
+            <thead style="background:#f2f2f2;">
+                <tr>
+                    <th>Item Name</th>
+                    <th>Reel No</th>
+                    <th>Size</th>
+                    <th>GSM</th>
+                    <th>BF</th>
+                    <th>Weight</th>
+                    <th>Unit</th>
+                </tr>
+            </thead>
+            <tbody>
+                @php $totalWeight = 0; @endphp
+
+                @foreach($saleOrder->items as $item)
+                    @foreach($item->itemSize as $size)
+                        @php 
+                            $totalWeight += floatval($size->weight); 
+                        @endphp
+                        <tr>
+                            <td>{{ $item->item->name ?? '-' }}</td>
+                            <td>{{ $size->reel_no ?? '-' }}</td>
+                            <td>{{ $size->size ?? '-' }}</td>
+                            <td>{{ $size->gsm ?? '-' }}</td>
+                            <td>{{ $size->bf ?? '-' }}</td>
+                            <td>{{ $size->weight ?? '-' }}</td>
+                            <td>{{ $size->unit ?? '-' }}</td>
+                        </tr>
+                    @endforeach
+                @endforeach
+
+                <tr style="font-weight:bold; background:#e8f5e9;">
+                    <td colspan="5" style="text-align:right;">Total Weight</td>
+                    <td colspan="2">{{ number_format($totalWeight, 2) }}</td>
+                </tr>
+            </tbody>
+        </table>
+    @else
+        <p class="text-danger">No Sale Order found for this invoice.</p>
+    @endif
+</div>
+
+
+
+
  
 @include('layouts.footer')
 <script> 
@@ -692,5 +757,16 @@ body {
       $('.header-section').removeClass('importantRule');
       $('.sidebar').removeClass('importantRule');
    }
+
+   $(document).on('click', '#printChallanBtn', function() {
+      let printContents = document.getElementById('challanPrintSection').innerHTML;
+      let newWindow = window.open('', '', 'width=900,height=700');
+      newWindow.document.write('<html><head><title>Delivery Challan</title></head><body>');
+      newWindow.document.write(printContents);
+      newWindow.document.write('</body></html>');
+      newWindow.document.close();
+      newWindow.print();
+   });
+
 </script>
 @endsection

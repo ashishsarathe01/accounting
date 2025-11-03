@@ -353,6 +353,8 @@ Route::group(['middleware' => ['merchantloginstatus']], function () {
    Route::post('generate-ewaybill', [SalesController::class, 'generateEwayBill']);
    Route::post('cancel-einvoice', [SalesController::class, 'cancelEinvoice']);
    Route::post('cancel-ewaybill', [SalesController::class, 'cancelEwayBill']);
+   Route::post('get-item-size-quantity', [SalesController::class, 'getItemSizeQuantity']);
+   
    Route::post('get-item-average-details', [ItemLedgerController::class, 'itemAverageDetails']);
    Route::get('/gstr1', [gstR1Controller::class, 'gstmain'])->name('gstr1');
    Route::get('/gst/b2c-normal-statewise', [gstR1Controller::class, 'B2Cstatewise'])->name('gst.b2c.normal.statewise');
@@ -430,6 +432,7 @@ Route::group(['middleware' => ['merchantloginstatus']], function () {
    Route::post('item-by-group', [SupplierPurchaseController::class, 'itemByGroup'])->name('item-by-group');
    Route::get('supplier-purchase-setting', [SupplierPurchaseController::class, 'supplierPurchaseSetting'])->name('supplier-purchase-setting');
    Route::post('store-supplier-purchase-setting', [SupplierPurchaseController::class, 'storeSupplierPurchaseSetting'])->name('store-supplier-purchase-setting');
+   Route::post('accounts-by-group', [SupplierPurchaseController::class, 'getAccountsByGroup']);
    
    
    Route::get('/sale-order', [SaleOrderController::class, 'index'])->name('sale-order.index');
@@ -450,7 +453,7 @@ Route::group(['middleware' => ['merchantloginstatus']], function () {
    Route::get('/Salesbook', [SaleRegisterController::class, 'index'])->name('salebook.index');
    Route::get('/Purchasebook', [PurchaseRegisterController::class, 'index'])->name('purchasebook.index');
      Route::post('/get-deals-by-party', [DealController::class, 'getDealsByParty']);
-Route::post('/get-deal-details', [DealController::class, 'getDealDetails']);
+   Route::post('/get-deal-details', [DealController::class, 'getDealDetails']);
 
    //Production Route
    Route::get('/production.set_item', [ProductionController::class, 'setItems'])->name('production.set_item');
@@ -465,5 +468,22 @@ Route::post('/get-deal-details', [DealController::class, 'getDealDetails']);
    Route::post('stop-deckle-process', [ProductionController::class, 'stopDeckleProcess'])->name('stop-deckle-process');
    Route::post('stop-deckle-machine', [ProductionController::class, 'stopDeckleMachine'])->name('stop-deckle-machine');
    Route::post('start-deckle-machine', [ProductionController::class, 'startDeckleMachine'])->name('start-deckle-machine');
-   
+   Route::get('deckle-process.manage-reel', [ProductionController::class, 'deckleReelProcess'])->name('deckle-process.manage-reel');
+   Route::post('quality-by-poproll', [ProductionController::class, 'qualityByPoproll'])->name('quality-by-poproll');
+   Route::post('store-deckle-item', [ProductionController::class, 'storeDeckleItem'])->name('store-deckle-item');
+   Route::post('start-deckle', [ProductionController::class, 'startDeckle'])->name('start-deckle');
+   Route::get('deckle-process.manage-stock', [ProductionController::class, 'manageStock'])->name('deckle-process.manage-stock');
+   Route::get('/stock/details/{item_id}', [ProductionController::class, 'getReelDetails'])->name('stock.details');
+   Route::post('cancel-pop-roll-reel', [ProductionController::class, 'cancelPopRollReel'])->name('cancel-pop-roll-reel');
+   Route::get('edit-pop-roll-reel/{id}', [ProductionController::class, 'editPopRollReel'])->name('edit-pop-roll-reel');
+   Route::post('update-pop-roll-reel', [ProductionController::class, 'updatePopRollReel'])->name('update-pop-roll-reel');
+   Route::get('deckle-process/{id}/edit', [ProductionController::class, 'edit'])->name('deckle-process.edit');
+   Route::get('/get-item-details/{item_id}', [ProductionController::class, 'getItemDetails']);
+   Route::get('/stock/create', [ProductionController::class, 'createNewReel'])->name('production.add.stock');
+   Route::post('/stock/store', [ProductionController::class, 'storeNewReel'])->name('stock.store');
+   Route::get('/stock/check-reel', [ProductionController::class, 'checkReel'])->name('stock.checkReel');
+   Route::get('/item-size-stocks', [ProductionController::class, 'indexManual'])->name('item-size-stocks.index'); 
+   Route::get('/item-size-stocks/{id}/edit', [ProductionController::class, 'editManual'])->name('item-size-stocks.edit'); 
+   Route::post('/item-size-stocks/{id}', [ProductionController::class, 'updateManual'])->name('item-size-stocks.update');
+   Route::post('validate-stock-weight', [ProductionController::class, 'validateStockWeight'])->name('validate-stock-weight');
 });
