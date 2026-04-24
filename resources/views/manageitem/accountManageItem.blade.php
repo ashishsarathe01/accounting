@@ -61,60 +61,6 @@
                                 <th class="w-min-120 border-none bg-light-pink text-body text-center"> Action</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <?php
-                            foreach ($manageitems as $value) { ?>
-                                <tr class="font-14 font-heading bg-white">
-                                    <td class="w-min-120"><?php echo $value->name ?></td>
-                                    <td class="w-min-120"><?php echo $value->unit_name ?></td>
-                                    <td class="w-min-120"><?php echo $value->hsn_code ?></td>
-                                    <td class="w-min-120"><?php echo $value->gst_rate ?></td>
-                                    <td class="w-min-120">
-                                        @if(count($value->series_open)>0)
-                                            <table class="table table-bordered">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Series</th>
-                                                        <th>Amount</th>
-                                                        <th>Weight</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    @foreach($value->series_open as $k1=>$v1)
-                                                        <tr>
-                                                            <td>{{$v1->series}}</td>
-                                                            <td style="text-align:right;">{{$v1->opening_amount}}</td>
-                                                            <td style="text-align:right;">{{$v1->opening_quantity}}</td>
-                                                        </tr>
-                                                    @endforeach
-                                                </tbody>
-                                            </table>
-                                        @endif
-                                    </td>                                    
-                                    <td class="w-min-120"><?php echo $value->group_name ?></td>
-                                    <td class="w-min-120">
-                                        <span class="bg-secondary-opacity-16 border-radius-4 text-secondary py-1 px-2 fw-bold">
-                                            <?php
-                                            if ($value->status == 1)
-                                                echo 'Enable';
-                                            else
-                                                echo 'Disable'; ?></span>
-                                    </td>
-                                    <td class="w-min-120 text-center">
-                                        @can('action-module',51)
-                                            <a href="{{ URL::to('account-manage-item/' . $value->id . '/edit') }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
-                                        @endcan
-                                        @can('action-module',52)
-                                            @if($value->item_delete_btn_view==1)
-                                                <button type="button" class="border-0 bg-transparent delete_partner" data-id="<?php echo $value->id; ?>">
-                                                    <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
-                                                </button>
-                                            @endif
-                                        @endcan
-                                    </td>
-                                </tr>
-                            <?php } ?>
-                        </tbody>
                     </table>
                 </div>
             </div>
@@ -154,52 +100,102 @@
 </body>
 @include('layouts.footer')
 <script>
-    $(document).ready(function() {
+$(document).ready(function () {
 
-        $(".delete_partner").click(function() {
-            var id = $(this).attr("data-id");
-            $("#heading_id").val(id);
-            $("#delete_heading").modal("show");
-        });
+    // Prevent double initialization
+    if ($.fn.DataTable.isDataTable('#example')) {
+        $('#example').DataTable().destroy();
+    }
 
-       
+    // Initialize DataTable (server-side)
+    var table = $('#example').DataTable({
+        processing: true,
+        serverSide: true,
+        stateSave: true,
 
-        $("#filter").change(function(){
-         $("#filter_form").submit();
-      });
-        $("#pan").change(function() {
-            var inputvalues = $("#pan").val();
-            var paninformat = new RegExp("^[A-Z]{5}[0-9]{4}[A-Z]{1}$");
-            if (paninformat.test(inputvalues)) {
-                return true;
-            } else {
-                alert('Please Enter Valid PAN Number');
-                $("#pan").val('');
-                $("#pan").focus();
+        ajax: {
+            url: "{{ route('account-manage-item.datatable') }}",
+            data: function (d) {
+                d.filter = $('#filter').val();
             }
-        });
+        },
 
-        setTimeout(function() {
-
-            if ($("#business_type").val() == 1) {
-                $("#dateofjoing_section").hide();
-                $("#din_sectioon").hide();
-                $("#share_per_div").show();
-                var html = '<option value="proprietor">Proprietor</option>';
-                $("#designation").html('<option value="proprietor">Proprietor</option><option value="authorised_signatory">Authorised Signatory</option>');
-
-            } else if ($("#business_type").val() == 2) {
-                $("#dateofjoing_section").show();
-                $("#din_sectioon").hide();
-                $("#share_per_div").show();
-                $("#designation").html('<option value="partner">Partner</option><option value="authorised_signatory">Authorised Signatory</option>');
-            } else {
-                $("#dateofjoing_section").show();
-                $("#din_sectioon").show();
-                $("#share_per_div").hide();
-                $("#designation").html('<option value="director">Director</option><option value="authorised_signatory">Authorised Signatory</option>');
-            }
-        }, 1000);
+        columns: [
+            { data: 'name', name: 'manage_items.name' },
+            { data: 'unit_name', name: 'units.name' },
+            { data: 'hsn_code', name: 'manage_items.hsn_code' },
+            { data: 'gst_rate', name: 'manage_items.gst_rate' },
+            { data: 'opening_stock', orderable:false, searchable:false },
+            { data: 'group_name', name: 'item_groups.group_name' },
+            { data: 'status_label', orderable:false },
+            { data: 'action', orderable:false, searchable:false }
+        ]
     });
+
+    // Reload table when filter changes (no page reload)
+    $('#filter').change(function () {
+        table.ajax.reload();
+    });
+
+    // Delete button (works with AJAX rows)
+    $(document).on('click', '.delete_partner', function () {
+        var id = $(this).data("id");
+        $("#heading_id").val(id);
+        $("#delete_heading").modal("show");
+    });
+
+    // PAN validation
+    $("#pan").change(function () {
+        var inputvalues = $("#pan").val();
+        var paninformat = new RegExp("^[A-Z]{5}[0-9]{4}[A-Z]{1}$");
+
+        if (!paninformat.test(inputvalues)) {
+            alert('Please Enter Valid PAN Number');
+            $("#pan").val('');
+            $("#pan").focus();
+        }
+    });
+
+    // Business type logic
+    setTimeout(function () {
+
+        if ($("#business_type").val() == 1) {
+
+            $("#dateofjoing_section").hide();
+            $("#din_sectioon").hide();
+            $("#share_per_div").show();
+
+            $("#designation").html(
+                '<option value="proprietor">Proprietor</option>' +
+                '<option value="authorised_signatory">Authorised Signatory</option>'
+            );
+
+        } else if ($("#business_type").val() == 2) {
+
+            $("#dateofjoing_section").show();
+            $("#din_sectioon").hide();
+            $("#share_per_div").show();
+
+            $("#designation").html(
+                '<option value="partner">Partner</option>' +
+                '<option value="authorised_signatory">Authorised Signatory</option>'
+            );
+
+        } else {
+
+            $("#dateofjoing_section").show();
+            $("#din_sectioon").show();
+            $("#share_per_div").hide();
+
+            $("#designation").html(
+                '<option value="director">Director</option>' +
+                '<option value="authorised_signatory">Authorised Signatory</option>'
+            );
+
+        }
+
+    }, 1000);
+
+});
 </script>
 @endsection

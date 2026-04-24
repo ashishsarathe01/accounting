@@ -4,6 +4,7 @@ namespace App\Http\Controllers\group;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\AccountGroups;
+use App\Models\Accounts;
 use App\Models\AccountHeading;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
@@ -17,13 +18,19 @@ class AccountGroupsController extends Controller{
      *
      * @return \Illuminate\Http\Response
    */
-   public function index(){
+ public function index(){
       Gate::authorize('action-module',3);
       $com_id = Session::get('user_company_id');
       $accountgroup = AccountGroups::whereIn('company_id', [$com_id,0])
                                     ->where('delete', '=', '0')
                                     ->get();
-      return view('group/accountGroup')->with('accountgroup', $accountgroup);
+    $accountheading = AccountHeading::whereIn('company_id', [$com_id,0])
+                                       ->where('delete', '=', '0')
+                                       ->get();
+                                       
+                                       $accountgroup = $accountgroup->concat($accountheading);
+                                       
+      return view('group/accountGroup')->with('accountgroup', $accountgroup)->with('accountheading', $accountheading);
    }
 
     /**
@@ -142,16 +149,46 @@ class AccountGroupsController extends Controller{
      * @param  \App\Models\GroupFare $groupfare
      * @return \Illuminate\Http\Response
      */
-   public function delete(Request $request){
-      Gate::authorize('action-module',40);
-      $account =  AccountGroups::find($request->group_id);
-      $account->delete = '1';
-      $account->deleted_at = Carbon::now();
-      $account->update();
-      if($account) {
-         return redirect('account-group')->withSuccess('Account group deleted successfully!');
-      }
-   }
+  public function delete(Request $request)
+{
+    Gate::authorize('action-module', 40);
+
+    $companyId = Session::get('user_company_id');
+    $groupId   = $request->group_id;
+
+    // 🔍 Check if any account exists under this group
+    $accountExists = Accounts::where('company_id', $companyId)
+        ->where('under_group', $groupId)
+        ->exists();
+
+    if ($accountExists) {
+           return redirect('account-group')
+    ->with('error', 'Account group cannot be deleted as accounts under this group exist!');
+
+    }
+
+    // 🔍 Fetch account group safely
+    $accountGroup = AccountGroups::where('company_id', $companyId)
+        ->where('id', $groupId)
+        ->first();
+
+    if (!$accountGroup) {
+        return redirect('account-group')
+            ->with('error','Account group not found!');
+    }
+
+    // 🗑 Soft delete logic
+    $accountGroup->update([
+        'delete'     => '1',
+        'deleted_at'=> now(),
+    ]);
+
+    return redirect('account-group')
+        ->withSuccess('Account group deleted successfully!');
+}
+
+   
+   
    public function accountGroupImportView(Request $request){
       return view('group/account_group_import')->with('upload_log',0);
    }
@@ -263,6 +300,47 @@ class AccountGroupsController extends Controller{
       // print_r($return);die;
       return view('group/account_group_import')->with('upload_log',1)->with('total_count',$total_invoice_count)->with('success_count',$success_invoice_count)->with('failed_count',$failed_invoice_count)->with('error_message',$return);
    }
+   public function exportAccountGroups()
+{
+    $company_id = Session::get('user_company_id');
+
+    $groups = AccountGroups::where('delete','0')
+        ->where('status','1')
+        ->where('company_id',$company_id)
+        ->get();
+
+    $filename = "account_groups_export.csv";
+
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="'.$filename.'"');
+
+    $file = fopen('php://output', 'w');
+
+    fputcsv($file, ['Name','Primary','Under Group']);
+
+    $groupNames = AccountGroups::whereIn('company_id',[$company_id,0])
+                    ->pluck('name','id');
+
+    foreach($groups as $group){
+
+        $primary = ($group->primary == 'Yes') ? 'Y' : 'N';
+
+        $under_group = '';
+
+        if($group->heading && $group->heading_type == 'group'){
+            $under_group = $groupNames[$group->heading] ?? '';
+        }
+
+        fputcsv($file, [
+            $group->name,
+            $primary,
+            $under_group
+        ]);
+    }
+
+    fclose($file);
+    exit;
+}
    
    /**
      * Generates failed response and message.

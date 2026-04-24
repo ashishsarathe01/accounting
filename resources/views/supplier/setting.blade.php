@@ -48,6 +48,12 @@
                                                 <input type="radio" name="group_type_{{ $group->id }}" value="BOILER FUEL" class="form-check-input group_type_{{ $group->id }}" @if(isset($selectedGroupType[$group->id]) && $selectedGroupType[$group->id]=="BOILER FUEL") checked @endif>
                                                 <label class="form-check-label">BOILER FUEL</label>
                                             </div>
+                                            <div class="form-check form-check-inline">
+                                                <input type="radio" name="group_type_{{ $group->id }}" value="SPARE PART"
+                                                    class="form-check-input group_type_{{ $group->id }}"
+                                                    @if(isset($selectedGroupType[$group->id]) && $selectedGroupType[$group->id]=="SPARE PART") checked @endif>
+                                                <label class="form-check-label">SPARE PART</label>
+                                            </div>
                                         </td>
                                     </tr>
                                     @endforeach

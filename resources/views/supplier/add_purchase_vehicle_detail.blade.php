@@ -49,23 +49,32 @@ input[type=number] {
                             <input type="text" class="form-control"  placeholder="Enter Vehicle No." id="vehicle_no" name="vehicle_no" required>
                         </div>
                         <div class="clearfix"></div>
-                        <div class="mb-3 col-md-3">
-                            <label for="group" class="form-label font-14 font-heading">Group</label>
-                            <select class="form-select" name="group" id="group" required>
-                                <option value="">Select Group</option>
-                                @foreach($item_groups as $key => $group)
-                                    <option value="{{$group->id}}">{{$group->group_name}}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="clearfix"></div>
-                        <div class="mb-3 col-md-3">
-                            <label for="item" class="form-label font-14 font-heading">Item</label>
-                            <select class="form-select" name="item" id="item" required>
-                                <option value="">Select Item</option>
-                               
-                            </select>
-                        </div>
+                       <div class="mb-3 col-md-3">
+    <label for="group" class="form-label font-14 font-heading">Group</label>
+    <select class="form-select select2-single" name="group" id="group" required>
+        <option value="">Select Group</option>
+        @foreach($item_groups as $group)
+            <option value="{{ $group->id }}">{{ $group->group_name }}</option>
+        @endforeach
+    </select>
+</div>
+<div class="clearfix"></div>
+<div class="mb-3 col-md-3" id="item_div">
+    <label for="item" class="form-label font-14 font-heading">Item</label>
+    <select class="form-select select2-single" name="item" id="item">
+        <option value="">Select Item</option>
+    </select>
+</div>
+<div class="mb-3 col-md-3 d-none" id="bill_no_div">
+    <label class="form-label font-14 font-heading">Bill No</label>
+    <input type="text" class="form-control" name="bill_no" id="bill_no" placeholder="Bill No.">
+</div>
+
+<div class="mb-3 col-md-3 d-none" id="amount_div">
+    <label class="form-label font-14 font-heading">Bill Amount</label>
+    <input type="number" step="0.01" class="form-control" name="amount" id="amount" placeholder="Bill Amount">
+</div>
+
                         <div class="clearfix"></div>
                         <div class="mb-3 col-md-3">
                             <label for="gross_weight" class="form-label font-14 font-heading">Gross Weight</label>
@@ -119,6 +128,36 @@ input[type=number] {
 </body>
 @include('layouts.footer')
 <script>
+
+function initSelect2() {
+    $(".select2-single").select2({
+        width: '100%',
+        matcher: function(params, data) {
+            if ($.trim(params.term) === '') {
+                return data;
+            }
+
+            function normalize(str) {
+                return (str || '')
+                    .toLowerCase()
+                    .replace(/[.\s]/g, '');
+            }
+
+            var term = normalize(params.term);
+            var text = normalize(data.text);
+
+            if (text.indexOf(term) > -1) {
+                return data;
+            }
+            return null;
+        }
+    });
+}
+
+$(document).ready(function () {
+    initSelect2();
+});
+
     $(document).ready(function(){
         $( ".select2-single" ).select2({
             matcher: function(params, data) {
@@ -156,7 +195,12 @@ input[type=number] {
                             res.data.forEach(function(e){
                                 html+='<option value="'+e.id+'">'+e.name+'</option>';
                             });
-                            $("#item").html(html);
+                            $("#item")
+                .html(html)
+                .trigger('change')
+                .select2('destroy');
+
+            initSelect2();
                         }
                     }
                     
@@ -193,6 +237,49 @@ $.ajax({
     // Update Accounts dropdown dynamically
     
 
+$('#group').on('change', function () {
+    let groupId = $(this).val();
 
+    if (!groupId) {
+        $('#item').prop('required', true);
+        return;
+    }
+
+    $.ajax({
+        url: "{{ url('get-group-type') }}/" + groupId,
+        type: 'GET',
+        success: function (response) {
+
+            if (response.group_type === 'SPARE PART') {
+                // ❌ Item NOT required
+                // Hide Item dropdown
+                $('#item_div').addClass('d-none');
+                $('#item').prop('required', false).val('').trigger('change');
+
+                // Show Bill No + Amount
+                $('#bill_no_div').removeClass('d-none');
+                $('#amount_div').removeClass('d-none');
+
+                $('#bill_no').prop('required', true);
+                $('#amount').prop('required', true);
+
+                // Optional: disable item dropdown
+                
+            } else {
+                // Show Item
+                $('#item_div').removeClass('d-none');
+                $('#item').prop('required', true);
+
+                // Hide Bill fields
+                $('#bill_no_div').addClass('d-none');
+                $('#amount_div').addClass('d-none');
+
+                $('#bill_no').prop('required', false);
+                $('#amount').prop('required', false);
+               
+            }
+        }
+    });
+});
 </script>
 @endsection

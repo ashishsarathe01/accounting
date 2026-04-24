@@ -28,12 +28,14 @@
             <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="@if(isset($id)){{ route('account.update') }}@else{{ route('account.store') }} @endif">
                @csrf
                <div class="row">  
+                <h3 class="mb-3" style="text-align: center">PART A</h3>
                   @if(isset($id))   
                      <input type="hidden" value="{{ $account->id }}" id="account_id" name="account_id" />  
                   @endif           
                   <div class="mb-4 col-md-4">
-                     <label for="name" class="form-label font-14 font-heading">ACCOUNT NAME</label>
+                     <label for="account_name" class="form-label font-14 font-heading">ACCOUNT NAME</label>
                      <input type="text" class="form-control" id="account_name" name="account_name" placeholder="ENTER ACCOUNT NAME" required value="@if(isset($id)){{$account->account_name}}@endif"  @if(isset($account) && $account->company_id==0) readonly @endif/>
+                     <input type="hidden" name="company_id" id="company_id" value="{{$formCompanyId}}"/>
                      <ul style="color: red;">
                        @error('account_name'){{$message}}@enderror                        
                      </ul>
@@ -49,13 +51,18 @@
                      <select class="form-select form-select-lg select2-single" name="under_group" id="under_group" aria-label="form-select-lg example" required>
                         <option value="">SELECT GROUP</option>
                         @foreach($accountgroup as $value)
-                           @php $under_debtor_status = 0;$under_creditors_status = 0; $under_dutytaxes_status = 0;$bank_account_status = 0;$capital_account_status = 0;$loan_status = 0;@endphp
+                           @php $under_debtor_status = 0;$under_creditors_status = 0; $under_dutytaxes_status = 0;$bank_account_status = 0;$capital_account_status = 0;$loan_status = 0; $under_expense_status=0;@endphp
                            @if($value->super_parent_id==11 && $value->heading_type=='group')
                               @php  $under_debtor_status = 1; @endphp
                            @endif
 
                            @if($value->super_parent_id==3 && $value->heading_type=='group')
                               @php  $under_creditors_status = 1; @endphp
+                           @endif
+                           
+                           
+                           @if($value->super_parent_id==12 || $value->super_parent_id==15 && $value->heading_type=='group')
+                              @php  $under_expense_status = 1; @endphp
                            @endif
 
                            @if($value->super_parent_id==1 && $value->heading_type=='group')
@@ -73,7 +80,7 @@
                               @php  $loan_status = 1; @endphp
                            @endif
                            
-                           <option value="{{$value->id}}" data-type="group" data-under_debtor_status="{{$under_debtor_status}}" data-under_creditors_status="{{$under_creditors_status}}" data-under_dutytaxes_status="{{$under_dutytaxes_status}}" data-bank_account_status="{{$bank_account_status}}" data-capital_account_status="{{$capital_account_status}}" data-loan_status="{{$loan_status}}"  @if(isset($id) && $account->under_group==$value->id && $account->under_group_type=='group') selected  @endif>{{$value->name}}</option>
+                           <option value="{{$value->id}}" data-type="group" data-under_expense_status="{{$under_expense_status}}" data-under_debtor_status="{{$under_debtor_status}}" data-under_creditors_status="{{$under_creditors_status}}" data-under_dutytaxes_status="{{$under_dutytaxes_status}}" data-bank_account_status="{{$bank_account_status}}" data-capital_account_status="{{$capital_account_status}}" data-loan_status="{{$loan_status}}"  @if(isset($id) && $account->under_group==$value->id && $account->under_group_type=='group') selected  @endif>{{$value->name}}</option>
                         @endforeach
                         @foreach($accountheading as $value)
                            <option value="{{$value->id}}" data-type="head" data-under_debtor_status="0" data-under_creditors_status="0" data-under_dutytaxes_status="0" data-bank_account_status="0" data-capital_account_status="0" data-loan_status="0" @if(isset($id) && $account->under_group==$value->id && $account->under_group_type=='head') selected  @endif>{{$value->name}}</option>
@@ -95,6 +102,35 @@
                      </select>
                   </div>
                   <div class="clearfix"></div>
+                  
+                    <div id="rcmDiv" class="rcm_div row" style="display:none;">
+
+                  <!-- RCM Yes / No -->
+                     <div class="mb-4 col-md-4">
+                        <label class="form-label fw-semibold">Reverse Charge (RCM)</label>
+                        <select name="rcm" class="form-select">
+                              <option value="">-- Select RCM --</option>
+                              <option value="1" @if(isset($id) && $account->rcm==1) selected  @endif>Yes</option>
+                              <option value="0" @if(isset($id) && $account->rcm ==0) selected @endif>No</option>
+                        </select>
+                     </div>
+
+                     <!-- RCM Rate -->
+                     <div class="mb-4 col-md-4 rcm-rate-div" style="display:none;">
+                        <label class="form-label fw-semibold">RCM Rate</label>
+                        <select name="rcm_rate" class="form-select">
+                           <option value="">Select RCM Rate</option>
+                           <option value="5"  @if(isset($id) && $account->rcm_rate == 5) selected @endif>5%</option>
+                           <option value="18" @if(isset($id) && $account->rcm_rate == 18) selected @endif>18%</option>
+                           <option value="28" @if(isset($id) && $account->rcm_rate == 28) selected @endif>28%</option>
+                        </select>
+                     </div>
+
+
+
+                  </div>
+
+
                   <div class="mb-4 col-md-4 tax_type_div common_div" style="display: none;">
                      <label for="tax_type" class="form-label font-14 font-heading">TAX TYPE</label>
                      <select class="form-select form-select-lg common_val" name="tax_type" id="tax_type" aria-label="form-select-lg example">
@@ -107,13 +143,16 @@
                      </select>
                   </div>
                   <div class="clearfix"></div>
-                  <div class="mb-4 col-md-4 gstin_div common_div" style="display: none;">
-                     <label for="gstin" class="form-label font-14 font-heading">GST NO.</label>
-                     <input type="text" class="form-control common_val" id="gstin" name="gstin" placeholder="ENTER GST NO."  value="@if(isset($id)){{$account->gstin}}@endif"/>
-                     <ul style="color: red;">
-                       @error('gstin'){{$message}}@enderror                        
-                     </ul>
-                  </div>
+                    <div class="mb-4 col-md-4 gstin_div common_div" style="display: none;">
+                        <label for="gstin" class="form-label font-14 font-heading">GST NO.</label>
+                        <div class="input-group">
+                        <input type="text" class="form-control common_val" id="gstin" name="gstin" placeholder="ENTER GST NO."  value="@if(isset($id)){{$account->gstin}}@endif"/>
+                        <button type="button" class="btn btn-info btn-sm" id="validateGSTIN">Validate</button>
+                        </div>
+                        <ul style="color: red;">
+                            @error('gstin'){{$message}}@enderror                        
+                        </ul>
+                    </div>
                   
                   @php
                      $hasGstin = isset($account) && !empty($account->gstin);
@@ -140,7 +179,7 @@
                  </div>
 
                   <div class="clearfix"></div>
-                  <div class="mb-4 col-md-8 address_div common_div" style="display: none;">
+                  <div class="mb-4 col-md-7 address_div common_div" style="display: none;">
                      <label for="address" class="form-label font-14 font-heading">ADDRESS</label>
                      <textarea class="form-control common_val" 
                           id="address" 
@@ -154,6 +193,10 @@
                      <input type="number" class="form-control common_val" id="pincode" name="pincode" placeholder="ENTER PINCODE" value="@if(isset($id)){{$account->pin_code}}@endif"/>
                   </div>
                   <div class="mb-2 col-md-2 pincode_div common_div" style="display: none;">
+                     <label for="location" class="form-label font-14 font-heading">LOCATION/STATION</label>
+                     <input type="text" class="form-control common_val" id="location" name="location" placeholder="ENTER STATION" value="@if(isset($id)){{$account->location}}@endif"/>
+                  </div>
+                  <div class="mb-2 col-md-1 pincode_div common_div" style="display: none;">
                      <svg style="color: green;cursor: pointer;margin-top: 42px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"tabindex="0" class="bg-primary rounded-circle add_address" data-id="" viewBox="0 0 24 24">
                         <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/>
                       </svg>
@@ -163,7 +206,7 @@
                      @if(isset($other_address) && count($other_address)>0)
                         @foreach($other_address as $address)
                            <div class="clearfix added-address row">
-                              <div class="mb-4 col-md-8 address_div common_div">
+                              <div class="mb-4 col-md-7 address_div common_div">
                                  <label class="form-label font-14 font-heading">ADDRESS</label>
                                  <textarea class="form-control common_val" name="other_address[]" placeholder="ENTER ADDRESS" maxlength="100" rows="2">{{$address->address}}</textarea> 
                               </div>
@@ -172,6 +215,10 @@
                                  <input type="number" class="form-control common_val" name="other_pincode[]" placeholder="ENTER PINCODE" value="{{$address->pincode}}"/> 
                               </div>
                               <div class="mb-2 col-md-2 pincode_div common_div">
+                                 <label class="form-label font-14 font-heading">LOCATION/STATION</label>
+                                 <input type="text" class="form-control common_val" name="other_location[]" placeholder="ENTER STATION" value="{{$address->location}}"/> 
+                              </div>
+                              <div class="mb-2 col-md-1 pincode_div common_div">
                                  <svg style="color: red;cursor: pointer;margin-top: 42px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bg-danger rounded-circle remove_address" viewBox="0 0 24 24">
                                     <path d="M19 13H5V11H19V13Z" fill="white"/>
                                  </svg>
@@ -186,7 +233,25 @@
                      <label for="pan" class="form-label font-14 font-heading">PAN</label>
                      <input type="text" class="form-control common_val" id="pan" name="pan" placeholder="Enter PAN" value="@if(isset($id)){{$account->pan}}@endif"/>
                   </div>
-                  
+                   <!-- SMS Send Status -->
+                  <div class="mb-4 col-md-4 sms_status_div common_div" style="display:none;">
+                     <label class="form-label">SMS Send Status</label>
+                     <select class="form-select" name="sms_status" id="sms_status">
+                        <option value="">Select</option>
+                        <option value="Yes" @if(isset($id) && $account->sms_status=="1") selected  @endif>Yes</option>
+                        <option value="No" @if(isset($id) && $account->sms_status=="0") selected  @endif>No</option>
+                     </select>
+                  </div>
+
+                  <div class="mb-4 col-md-4 credit_day_select_div common_div" style="display:none;">
+                     <label class="form-label">Credit Days</label>
+                     <select class="form-select" name="credit_days" id="credit_days">
+                        <option value="">Select</option>
+                        @foreach($credit_days as $cd)
+                              <option value="{{ $cd->days }}" @if(isset($id) && $account->credit_days==$cd->days) selected  @endif>{{ $cd->days }} Days</option>
+                        @endforeach
+                     </select>
+                  </div>
                   <div class="clearfix"></div>
                   <div class="mb-4 col-md-4 due_day_div common_div" style="display: none;">
                      <label for="due_day" class="form-label font-14 font-heading">DUE DAYS</label>
@@ -274,13 +339,77 @@
                   </div>                
                   <div class="clearfix"></div>
                   <div class="mb-4 col-md-4" @if(isset($account) && $account->company_id==0) style="display:none" @endif>
-                     <label for="name" class="form-label font-14 font-heading">STATUS</label>
+                     <label for="status" class="form-label font-14 font-heading">STATUS</label>
                      <select class="form-select form-select-lg" name="status" id="status" aria-label="form-select-lg example" required>
                         <option value="1" @if(isset($id) && $account->status=='1') selected  @endif>Enable</option>
                         <option value="0" @if(isset($id) && $account->status=='0') selected  @endif>Disable</option>
                      </select>
                   </div>
                </div>
+               <h3 class="mb-3" style="text-align: center">PART B</h3>
+               <div class="col-md-4">                    
+                    <div id="tds_part_b" style="display:none;">
+                        <div class="mb-3 row">
+                            <label class="col-5 col-form-label">TDS/TCS</label>
+                            <div class="col-7">
+                                <select name="tds_tcs" id="tds_tcs" class="form-select">
+                                    <option value="">Select</option>
+                                    <option value="yes" @if(isset($account) && $account->tds_tcs=='yes') selected @endif>YES</option>
+                                    <option value="no" @if(isset($account) && $account->tds_tcs=='no') selected @endif>NO</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3 row" id="tds_type_row" style="display:none;">
+                            <label class="col-5 col-form-label">TYPE</label>
+                            <div class="col-7">
+                                <select name="tds_type" id="tds_type" class="form-select">
+                                    <option value="">Select</option>
+                                    <option value="salary" @if(isset($account) && $account->tds_type=='salary') selected @endif>Salary</option>
+                                    <option value="non_salary" @if(isset($account) && $account->tds_type=='non_salary') selected @endif>Non Salary</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="non_salary_section" style="display:none;">
+                            <div class="mb-3 row">
+                                <label class="col-5 col-form-label">Section</label>
+                                <div class="col-7">
+                                    <select name="tds_section" id="tds_section" class="form-select">
+                                        <option value="">Select</option>
+                                        @foreach($tds_sections as $sec)
+                                            <option
+                                            value="{{ $sec->id }}"
+                                            data-description="{{ $sec->description }}"
+                                            data-rate="{{ $sec->rate_individual_huf }}"
+                                            data-threshold="{{ $sec->single_transaction_limit }}"
+                                            @if(isset($account) && $account->tds_section==$sec->id) selected @endif
+                                            >
+                                            {{ strtoupper($sec->section) }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3 row">
+                                <label class="col-5 col-form-label">Description</label>
+                                <div class="col-7">
+                                    <input type="text" id="tds_description" name="tds_description" value="@if(isset($account)){{$account->tds_description}}@endif" class="form-control" readonly>
+                                </div>
+                            </div>
+                            <div class="mb-3 row">
+                                <label class="col-5 col-form-label">Rate</label>
+                                <div class="col-7">
+                                    <input type="text" id="tds_rate" name="tds_rate" value="@if(isset($account)){{$account->tds_rate}}@endif" class="form-control" readonly>
+                                </div>
+                            </div>
+                            <div class="mb-3 row">
+                                <label class="col-5 col-form-label">Threshold</label>
+                                <div class="col-7">
+                                    <input type="text" id="tds_threshold" name="tds_threshold" value="@if(isset($account)){{$account->tds_threshold}}@endif" class="form-control" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                <div class="text-start">
                   <button type="submit" class="btn btn-xs-primary save_btn">SUBMIT</button>
                </div>
@@ -355,8 +484,24 @@ $(document).ready(function() {
         $("#state").css('pointer-events', 'auto');
 
         if (inputvalues === "") return;
+        checkGSTIN(inputvalues);
+        
+    });
+});
+$("#validateGSTIN").click(function(){
+    var inputvalues = $("#gstin").val().trim();
+    $("#pan").val("");
+    $("#address").val("");
+    $("#pincode").val("");
+    $("#state").val("").trigger('change');
+    $("#state").css('pointer-events', 'auto');
 
-        $.ajax({
+    if (inputvalues === "") return;
+    checkGSTIN(inputvalues);
+})
+function checkGSTIN(inputvalues){
+    //$("#cover-spain").show();
+    $.ajax({
             url: '{{ url("check-gstin") }}',
             async: false,
             type: 'POST',
@@ -390,17 +535,23 @@ $(document).ready(function() {
                 }
             }
         });
-    });
-});
-
-
+}
    $("#under_group").change(function(){
+      $(".rcm_div")
+        .find("select")
+        .val("")
+        .removeAttr("required");
+
+         $(".rcm_div").hide();
+         $(".rcm-rate-div").hide();
+
       $(".common_div").hide();
       $("#state").attr('required',false);
       $("#tax_type").attr('required',false);
       if(edit_id==""){
          $(".common_val").val('');
-      }            
+      }
+      
       if(($(this).val()==1 && $('option:selected', this).attr('data-type')=='group') || ($('option:selected', this).attr('data-under_dutytaxes_status')=='1')){
          $(".tax_type_div").show();
       }else if(($(this).val()==11 && $('option:selected', this).attr('data-type')=='group') || $('option:selected', this).attr('data-under_debtor_status')=='1'){
@@ -418,8 +569,11 @@ $(document).ready(function() {
          $(".email_div").show();
          $(".account_no_div").show();
          $(".ifsc_code_div").show();
+         $(".sms_status_div").show();
+         $(".credit_day_select_div").show();
       }else if(($(this).val()==3 && $('option:selected', this).attr('data-type')=='group') || ($(this).val()==10 && $('option:selected', this).attr('data-type')=='head') || $('option:selected', this).attr('data-under_creditors_status')=='1'){
          $("#state").attr('required',true);
+         
          $(".gstin_div").show();
          $(".state_div").show();
          $(".address_div").show();
@@ -432,6 +586,8 @@ $(document).ready(function() {
          $(".email_div").show();
          $(".account_no_div").show();
          $(".ifsc_code_div").show();
+         $(".sms_status_div").show();
+         $(".credit_day_select_div").show();
       }else if(($(this).val()==7 && $('option:selected', this).attr('data-type')=='group') || ($('option:selected', this).attr('data-bank_account_status')=='1')){
          $("#state").attr('required',true);
          $(".gstin_div").show();
@@ -460,35 +616,46 @@ $(document).ready(function() {
       }else if($(this).val()==1 && $('option:selected', this).attr('data-type')=='group'){
          $("#tax_type").attr('required',true);
          
-      }
-      $("#under_group_type").val($('option:selected', this).attr('data-type'));
+      }else if ((($(this).val() == 12 || $(this).val() == 15) && $('option:selected', this).data('type') == 'group') || $('option:selected', this).data('under_expense_status') == 1 ) { 
+         $(".rcm_div").show(); 
+         $(".rcm_div").find('select, input').prop('required', true); 
+     }
+         
+        $("#under_group_type").val($('option:selected', this).attr('data-type'));
+        if($(this).val() !== ""){
+        $("#tds_part_b").show();
+        }else{
+            $("#tds_part_b").hide();
+        }
       
    });
    $("#account_name").change(function(){
-      let account_name = $(this).val();
-      $.ajax({
-         url: '{{url("check-account-name")}}',
-         async: false,
-         type: 'POST',
-         dataType: 'JSON',
-         data: {
-            _token: '<?php echo csrf_token() ?>',
-            account_name: account_name
-         },
-         success: function(data) {
-            if(data==1){
-               alert("Account Name Already Exists.");
-               $(".save_btn").attr('disabled',true);
-            }else{
-               $(".save_btn").attr('disabled',false);
-            }
+   let account_name = $(this).val();
+   let company_id = $('#company_id').val();
+
+   $.ajax({
+      url: '{{ url("check-account-name") }}',
+      type: 'POST',
+      dataType: 'JSON',
+      data: {
+         _token: '{{ csrf_token() }}',
+         account_name: account_name,
+         company_id: company_id
+      },
+      success: function(data) {
+         if(data == 1){
+            alert("Account Name Already Exists.");
+         }else{
+            $(".save_btn").prop('disabled', false);
          }
-      });
+      }
    });
+});
+
    $(document).on('click', '.add_address', function() {
       let newAddressBlock = `
         <div class="clearfix added-address row">
-            <div class="mb-4 col-md-8 address_div common_div">
+            <div class="mb-4 col-md-7 address_div common_div">
                 <label class="form-label font-14 font-heading">ADDRESS</label>
                 <textarea class="form-control common_val" name="other_address[]" placeholder="ENTER ADDRESS" maxlength="100" rows="2"></textarea>
             </div>
@@ -497,6 +664,10 @@ $(document).ready(function() {
                 <input type="number" class="form-control common_val" name="other_pincode[]" placeholder="ENTER PINCODE" />
             </div>
             <div class="mb-2 col-md-2 pincode_div common_div">
+                <label class="form-label font-14 font-heading">STATION/LOCATION</label>
+                <input type="text" class="form-control common_val" name="other_location[]" placeholder="ENTER STATION" />
+            </div>
+            <div class="mb-2 col-md-1 pincode_div common_div">
                 <svg style="color: red;cursor: pointer;margin-top: 42px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bg-danger rounded-circle remove_address" viewBox="0 0 24 24">
                     <path d="M19 13H5V11H19V13Z" fill="white"/>
                 </svg>
@@ -507,6 +678,119 @@ $(document).ready(function() {
    });
    $(document).on('click', '.remove_address', function() {
         $(this).closest('.added-address').remove();
+    });
+    
+      $(document).on('change', 'select[name="rcm"]', function () {
+
+    let rcmRateDiv = $('.rcm-rate-div');
+    let rcmRateSelect = $('select[name="rcm_rate"]');
+
+    if ($(this).val() == '1') {
+        rcmRateDiv.show();
+        rcmRateSelect.attr('required', true);
+    } else {
+        rcmRateSelect.val('');
+        rcmRateSelect.removeAttr('required');
+        rcmRateDiv.hide();
+    }
+});
+
+
+$(document).ready(function () {
+    $('select[name="rcm"]').trigger('change');
+});
+
+$(document).ready(function () {
+
+    // Trigger under group logic
+    $("#under_group").trigger('change');
+
+    // If editing and RCM = Yes
+    @if(isset($id) && $account->rcm == 1)
+        $(".rcm_div").show();
+        $(".rcm-rate-div").show();
+        $('select[name="rcm_rate"]').attr('required', true);
+    @endif
+
+});
+
+$(document).ready(function () {
+
+    // Re-sync Select2 values on edit
+    @if(isset($id))
+        $('select[name="rcm"]').val('{{ $account->rcm }}').trigger('change.select2');
+        $('select[name="rcm_rate"]').val('{{ $account->rcm_rate }}').trigger('change.select2');
+    @endif
+
+});
+    $("#gstin").on("blur", function () {
+      let gstin = $(this).val().trim();
+      if (gstin === "") return;
+
+      $.ajax({
+         url: '{{ url("check-gstin-exists") }}',
+         type: 'POST',
+         dataType: 'JSON',
+         data: {
+               _token: '{{ csrf_token() }}',
+               gstin: gstin,
+               account_id: $("#account_id").val() || null
+         },
+         success: function (res) {
+               if (res.exists === true) {
+                  alert("This GST Number already exists. Please enter a new GST Number.");
+                  $("#gstin").val("").focus();
+                  $("#pan").val("");
+                  $("#address").val("");
+                  $("#pincode").val("");
+                  $("#state").val("").trigger('change');
+                  $("#gstin").data("duplicate", true);
+               } else {
+                  $("#gstin").data("duplicate", false);
+               }
+         }
+      });
+   });
+    $("#tds_tcs").change(function(){
+        if($(this).val()=="yes"){
+            $("#tds_type_row").show();
+        }else{
+            $("#tds_type_row").hide();
+            $("#non_salary_section").hide();
+            // CLEAR VALUES
+            $("#tds_type").val("");
+            $("#tds_section").val("");
+            $("#tds_description").val("");
+            $("#tds_rate").val("");
+            $("#tds_threshold").val("");
+        }
+    });
+    $("#tds_type").change(function(){
+        if($(this).val()=="non_salary"){
+            $("#non_salary_section").show();
+        }else{
+            $("#non_salary_section").hide();
+            // CLEAR VALUES
+            $("#tds_section").val("");
+            $("#tds_description").val("");
+            $("#tds_rate").val("");
+            $("#tds_threshold").val("");
+        }
+    });
+    $("#tds_section").change(function(){
+        var selected=$(this).find(':selected');
+        $("#tds_description").val(selected.data('description'));
+        $("#tds_rate").val(selected.data('rate'));
+        $("#tds_threshold").val(selected.data('threshold'));
+    });
+    $(document).ready(function(){
+        @if(isset($account) && $account->tds_tcs == 'yes')
+            $("#tds_part_b").show();
+            $("#tds_type_row").show();
+            @if($account->tds_type == 'non_salary')
+                $("#non_salary_section").show();
+            @endif
+        @endif
     });
 </script>
 @endsection

@@ -34,37 +34,45 @@
                     </div>-->
                 <!--</div>-->
 
-                <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
-                    <h5 class="transaction-table-title m-0 py-2">
-                    Purchase Return/Debit Note
+                <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-3 flex-wrap">
+                    <h5 class="transaction-table-title m-0 me-3">
+                        Purchase Return/Debit Note
                     </h5>
-                    <form  action="{{ route('purchase-return.index') }}" method="GET">
-                       @csrf
-                       <div class="d-md-flex d-block">                  
-                          <div class="calender-administrator my-2 my-md-0">
-                             <input type="date" id="customDate" class="form-control calender-bg-icon calender-placeholder" placeholder="From date" required name="from_date" value="{{ !empty($from_date) ? date('Y-m-d', strtotime($from_date)) : '' }}">
-                          </div>
-                          <div class="calender-administrator ms-md-4">
-                             <input type="date" id="customDate" class="form-control calender-bg-icon calender-placeholder" placeholder="To date" required name="to_date" value="{{ !empty($to_date) ? date('Y-m-d', strtotime($to_date)) : '' }}">
-                          </div>
-                          <button class="btn btn-info" style="margin-left: 5px;">Search</button>
-                       </div>
+                    <form action="{{ route('purchase-return.index') }}" method="GET" class="d-flex align-items-center flex-wrap gap-2 m-0">
+                        @csrf
+                        <input type="date" name="from_date"
+                            class="form-control form-control-sm"
+                            style="width:150px;"
+                            value="{{ request('from_date') }}">
+                        <input type="date" name="to_date"
+                            class="form-control form-control-sm"
+                            style="width:150px;"
+                            value="{{ request('to_date') }}">
+                        <button class="btn btn-info btn-sm">Search</button>
+                        <select name="sr_nature" class="form-select form-select-sm" style="width:140px;">
+                            <option value="WITH GST" {{ request('sr_nature')=='WITH GST' ? 'selected' : '' }}>With GST</option>
+                            <option value="WITHOUT GST" {{ request('sr_nature')=='WITHOUT GST' ? 'selected' : '' }}>Without GST</option>
+                        </select>
                     </form>
-                    <div class="d-md-flex d-block"> 
-                       <input type="text" id="search" class="form-control" placeholder="Search">
-                    </div> 
-                    @can('action-module',77)
-                        <a href="{{ route('purchase-return.create') }}" class="btn btn-xs-primary">
-                        ADD
-                        <svg class="position-relative ms-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
-                            <path d="M9.1665 15.8327V10.8327H4.1665V9.16602H9.1665V4.16602H10.8332V9.16602H15.8332V10.8327H10.8332V15.8327H9.1665Z" fill="white" />
-                        </svg>
-                    </a>
-                    @endcan                   
-                    
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="text" id="search"
+                            class="form-control form-control-sm"
+                            placeholder="Search"
+                            style="width:100px;">
+                            <button class="btn btn-info btn-sm export_csv">CSV</button>
+                            <button class="btn btn-secondary btn-sm print_btn">PRINT</button>
+                        @can('action-module',77)
+                        <a href="{{ route('purchase-return.create') }}" class="btn btn-xs-primary btn-sm d-flex align-items-center">
+                            ADD
+                            <svg class="ms-1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none">
+                                <path d="M9.1665 15.8327V10.8327H4.1665V9.16602H9.1665V4.16602H10.8332V9.16602H15.8332V10.8327H10.8332V15.8327H9.1665Z" fill="white"/>
+                            </svg>
+                        </a>
+                        @endcan
+                    </div>
                 </div>
                 <div class="transaction-table bg-white table-view shadow-sm">
-                    <table class="table-striped table m-0 shadow-sm purchase_return_table">
+                    <table class="table-striped table-bordered table m-0 shadow-sm purchase_return_table" id="purchase_return_table">
                         <thead>
                             <tr class=" font-12 text-body bg-light-pink ">
                                 <th class="w-min-120 border-none bg-light-pink text-body">Date </th>
@@ -91,19 +99,41 @@
                                        $tot_amt = $tot_amt + $value->total; ?></td>
                                     <td class="w-min-120  text-center">
                                        <?php 
-                                       if(in_array(date('Y-m',strtotime($value->date)),$month_arr)){?>
+                                        if(in_array(date('Y-m',strtotime($value->date)),$month_arr) && $value->approved_status != 1 && $value->status == '1'){?>
+
                                             @can('action-module',47)
-                                                <a href="{{ URL::to('purchase-return-edit/'.$value->purchases_id) }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
+                                            @if($value->e_invoice_status==0)
+                                                <a href="{{ URL::to('purchase-return-edit/'.$value->purchases_id) }}">
+                                                    <img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt="">
+                                                </a>
+                                            @endif
                                             @endcan
+
                                             @can('action-module',48)
-                                                @if(($value->max_voucher_no==$value->purchase_return_no && $value->manual_numbering_status=="NO") || ($value->manual_numbering_status=="YES" || $value->manual_numbering_status==""))
+                                                @if(
+                                                    ($value->max_voucher_no == $value->purchase_return_no && $value->manual_numbering_status == "NO") 
+                                                    || ($value->manual_numbering_status == "YES" || $value->manual_numbering_status == "")
+                                                )
                                                     <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $value->purchases_id;?>">
                                                         <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
                                                     </button>
                                                 @endif
                                             @endcan
-                                          <?php 
-                                       } ?>
+                                            @if($value->e_invoice_status==0)
+                                                <button type="button" 
+                                                    class="btn btn-link p-0 cancel-purchase-return text-danger fw-bold" 
+                                                    data-id="{{ $value->purchases_id }}" 
+                                                    title="Cancel Purchase Return"
+                                                    style="font-size:20px;">
+                                                    &times;
+                                                </button>
+                                            @endif
+                                        <?php 
+                                        } ?>
+                                        @if($value->status=='2')
+                                            <h4 style="color:red">CANCELLED</h4>
+                                        @endif
+                                        @if($value->status=='1')
                                        @if($value->sr_nature=="WITH GST" && ($value->sr_type=="WITH ITEM" || $value->sr_type=="RATE DIFFERENCE"))
                                             <a href="{{ URL::to('purchase-return-invoice/' . $value->purchases_id) }}" target="__blank"><img src="{{ URL::asset('public/assets/imgs/eye-icon.svg')}}" class="px-1" alt=""></a>
                                         @elseif($value->sr_nature=="WITH GST" && $value->sr_type=="WITHOUT ITEM")
@@ -111,17 +141,32 @@
                                         @elseif($value->sr_nature=="WITHOUT GST")
                                             <a href="{{ URL::to('purchase-return-without-gst-invoice/' . $value->purchases_id) }}" target="__blank"><img src="{{ URL::asset('public/assets/imgs/eye-icon.svg')}}" class="px-1" alt=""></a>
                                         @endif
-                                        @if($value->purchase_vehicle_count>0)
-                                            <a href="{{ URL::to('purchase-return-vehicle-entry-detail/' . $value->purchases_id) }}" target="__blank"><svg fill="#000000" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="64px" height="64px" viewBox="-72 -72 216.00 216.00" enable-background="new 0 0 72 72" xml:space="preserve" stroke="#000000" stroke-width="2.952"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g> <g> <g> <path d="M60.5,21h-27c-4.687,0-8.5-3.813-8.5-8.5S28.813,4,33.5,4h27c4.687,0,8.5,3.813,8.5,8.5S65.187,21,60.5,21z M33.5,8 c-2.481,0-4.5,2.019-4.5,4.5s2.019,4.5,4.5,4.5h27c2.481,0,4.5-2.019,4.5-4.5S62.981,8,60.5,8H33.5z"></path> </g> <g> <path d="M60.5,68h-27c-4.687,0-8.5-3.813-8.5-8.5s3.813-8.5,8.5-8.5h27c4.687,0,8.5,3.813,8.5,8.5S65.187,68,60.5,68z M33.5,55 c-2.481,0-4.5,2.019-4.5,4.5s2.019,4.5,4.5,4.5h27c2.481,0,4.5-2.019,4.5-4.5S62.981,55,60.5,55H33.5z"></path> </g> <g> <path d="M60.5,45h-27c-4.687,0-8.5-3.813-8.5-8.5s3.813-8.5,8.5-8.5h27c4.687,0,8.5,3.813,8.5,8.5S65.187,45,60.5,45z M33.5,32 c-2.481,0-4.5,2.019-4.5,4.5s2.019,4.5,4.5,4.5h27c2.481,0,4.5-2.019,4.5-4.5S62.981,32,60.5,32H33.5z"></path> </g> </g> <g> <g> <path d="M12.5,21h-1C6.813,21,3,17.187,3,12.5S6.813,4,11.5,4h1c4.687,0,8.5,3.813,8.5,8.5S17.187,21,12.5,21z M11.5,8 C9.019,8,7,10.019,7,12.5S9.019,17,11.5,17h1c2.481,0,4.5-2.019,4.5-4.5S14.981,8,12.5,8H11.5z"></path> </g> <g> <path d="M12.5,68h-1C6.813,68,3,64.187,3,59.5S6.813,51,11.5,51h1c4.687,0,8.5,3.813,8.5,8.5S17.187,68,12.5,68z M11.5,55 C9.019,55,7,57.019,7,59.5S9.019,64,11.5,64h1c2.481,0,4.5-2.019,4.5-4.5S14.981,55,12.5,55H11.5z"></path> </g> <g> <path d="M12.5,45h-1C6.813,45,3,41.187,3,36.5S6.813,28,11.5,28h1c4.687,0,8.5,3.813,8.5,8.5S17.187,45,12.5,45z M11.5,32 C9.019,32,7,34.019,7,36.5S9.019,41,11.5,41h1c2.481,0,4.5-2.019,4.5-4.5S14.981,32,12.5,32H11.5z"></path> </g> </g> </g> </g></svg></a>
-                                            
                                         @endif
+                                    </td>
+                                </tr>
+                                <tr class="font-12 text-muted bg-light">
+                                    <td colspan="5" class="ps-4 py-1" style="text-align:left;">
+                                        
+                                        <strong>Created By:</strong> 
+                                        {{ $value->created_by_name ?? '-' }}
+    
+                                        &nbsp;&nbsp;|&nbsp;&nbsp;
+    
+                                        <strong>Approved By:</strong> 
+                                        @if($value->approved_status == 1)
+                                            {{ $value->approved_by_name ?? '-' }}
+                                            <small>({{ date('d-m-Y H:i', strtotime($value->approved_at)) }})</small>
+                                        @else
+                                            -
+                                        @endif
+    
                                     </td>
                                 </tr>
                             <?php } ?>
                             <tr class="font-14 font-heading bg-white">
                                 <td class="w-min-120 fw-bold font-heading">TOTAL</td>
-                                <td class="w-min-120"></td>
-                                <td class="w-min-120"></td>
+                                <td></td>
+                                <td></td>
                                 <td class="w-min-120 fw-bold font-heading" style="text-align: right;">
                                     <?php 
                                     echo $tot_amt;
@@ -345,6 +390,28 @@
     </div>
 </div>
 </body>
+<div class="modal fade" id="cancel_purchase_return_modal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered w-360">
+    <div class="modal-content p-4 border-divider border-radius-8">
+      <div class="modal-header border-0 p-0">
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body text-center">
+        <span class="text-danger fw-bold mb-3 d-block mx-auto" style="font-size:50px;">&times;</span>
+        <h5 class="mb-3 fw-normal">Cancel this Purchase Return?</h5>
+        <p class="font-14 text-body">This process cannot be undone. Are you sure?</p>
+      </div>
+
+      <input type="hidden" id="cancel_purchase_return_id">
+
+      <div class="modal-footer border-0 mx-auto p-0">
+        <button type="button" class="btn btn-border-body" data-bs-dismiss="modal">CANCEL</button>
+        <button type="button" class="btn btn-red" id="confirm_cancel_purchase_return">CONFIRM</button>
+      </div>
+    </div>
+  </div>
+</div>
 @include('layouts.footer')
 <script>
    $(document).ready(function(){
@@ -399,5 +466,232 @@
          });
       });
    });
+
+   // Open modal
+    $(document).on('click', '.cancel-purchase-return', function() {
+        var id = $(this).data('id');
+        $("#cancel_purchase_return_id").val(id);
+        $("#cancel_purchase_return_modal").modal('show');
+    });
+    
+    // Confirm cancel
+    $("#confirm_cancel_purchase_return").click(function() {
+    
+        var id = $("#cancel_purchase_return_id").val();
+    
+        $.ajax({
+            url: "{{ url('cancel-purchase-return') }}",
+            type: "POST",
+            data: {
+                _token: "{{ csrf_token() }}",
+                id: id
+            },
+            success: function(response) {
+                $("#cancel_purchase_return_modal").modal('hide');
+    
+                if(response.success){
+                    alert(response.message);
+                    location.reload();
+                } else {
+                    alert("Error: " + response.message);
+                }
+            },
+            error: function(){
+                $("#cancel_purchase_return_modal").modal('hide');
+                alert("Something went wrong");
+            }
+        });
+    });
+    $('select[name="sr_nature"]').change(function(){
+        $(this).closest('form').submit();
+    });
+    $(".export_csv").click(function () {
+
+        let csv = [];
+
+        let from_date = $("input[name='from_date']").val();
+        let to_date   = $("input[name='to_date']").val();
+        let nature    = $("select[name='sr_nature']").val();
+
+        function formatDate(dateStr){
+            if(!dateStr) return '';
+            let parts = dateStr.split("-");
+            return parts[2] + "-" + parts[1] + "-" + parts[0];
+        }
+
+        csv.push("From Date: " + formatDate(from_date));
+        csv.push("To Date: " + formatDate(to_date));
+        csv.push("Nature: " + (nature || ""));
+        csv.push("");
+
+        let header = [];
+        $("#purchase_return_table thead th").each(function (index) {
+            if(index != 4){
+                header.push($(this).text().trim());
+            }
+        });
+        header.push("Status");
+        csv.push(header.join(","));
+
+        $("#purchase_return_table tbody tr").each(function () {
+
+            if($(this).hasClass("bg-light")){
+                return;
+            }
+
+            let row = [];
+            let isCancelled = false;
+
+            $(this).find("td").each(function (index) {
+
+                if(index == 4){
+                    let txt = $(this).text().toLowerCase();
+                    if(txt.includes("cancelled")){
+                        isCancelled = true;
+                    }
+                    return;
+                }
+
+                let text = $(this).text().trim()
+                    .replace(/\n/g, '')
+                    .replace(/,/g, '');
+
+                row.push(text);
+            });
+
+            row.push(isCancelled ? "Cancelled" : "");
+
+            if(row.length > 1){
+                csv.push(row.join(","));
+            }
+        });
+
+        let csvString = csv.join("\n");
+
+        let blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+        let url = window.URL.createObjectURL(blob);
+
+        let a = document.createElement("a");
+        a.href = url;
+        a.download = "debit_note_report.csv";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    });
+
+    $(".print_btn").click(function () {
+
+        let from_date = $("input[name='from_date']").val();
+        let to_date   = $("input[name='to_date']").val();
+        let nature    = $("select[name='sr_nature']").val();
+
+        function formatDate(dateStr){
+            if(!dateStr) return '';
+            let parts = dateStr.split("-");
+            return parts[2] + "-" + parts[1] + "-" + parts[0];
+        }
+
+        from_date = formatDate(from_date);
+        to_date   = formatDate(to_date);
+
+        let printWindow = window.open('', '', 'width=900,height=700');
+
+        let tableHTML = `
+            <html>
+            <head>
+                <title>Debit Note Report</title>
+                <style>
+                    body { font-family: Arial; font-size: 12px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                    th, td { border: 1px solid #000; padding: 5px; }
+                    th { background: #f2f2f2; }
+                    .text-right { text-align: right; }
+                </style>
+            </head>
+            <body>
+
+            <h2 style="text-align:center; text-decoration: underline;">
+                List of Purchase Return Voucher
+            </h2>
+
+            <p style="text-align:center;">
+                From: ${from_date} &nbsp;&nbsp; To: ${to_date}
+            </p>
+
+            <p style="text-align:center;">
+                Nature: ${nature || ""}
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Debit Note No</th>
+                        <th>Party Name</th>
+                        <th class="text-right">Amount</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        let total = 0;
+
+        $("#purchase_return_table tbody tr").each(function () {
+
+            if($(this).hasClass("bg-light")){
+                return;
+            }
+
+            let tds = $(this).find("td");
+
+            if($(tds[0]).text().trim().toLowerCase() === "total"){
+                total = $(tds[3]).text().trim();
+                return;
+            }
+
+            let date = $(tds[0]).text().trim();
+            let vch  = $(tds[1]).text().trim();
+            let party= $(tds[2]).text().trim();
+            let amt  = $(tds[3]).text().trim();
+
+            let status = "";
+
+            let actionText = $(tds[4]).text().toLowerCase();
+            if(actionText.includes("cancelled")){
+                status = "Cancelled";
+            }
+
+            tableHTML += `
+                <tr>
+                    <td>${date}</td>
+                    <td>${vch}</td>
+                    <td>${party}</td>
+                    <td class="text-right">${amt}</td>
+                    <td>${status}</td>
+                </tr>
+            `;
+        });
+
+        tableHTML += `
+            <tr>
+                <td colspan="3" style="font-weight:bold;">TOTAL</td>
+                <td class="text-right" style="font-weight:bold;">${total}</td>
+                <td></td>
+            </tr>
+        `;
+
+        tableHTML += `
+                </tbody>
+            </table>
+
+            </body>
+            </html>
+        `;
+
+        printWindow.document.write(tableHTML);
+        printWindow.document.close();
+        printWindow.print();
+    });
 </script>
 @endsection

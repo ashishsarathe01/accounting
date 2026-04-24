@@ -35,7 +35,15 @@ class AccountsController extends Controller
             return response()->json($validator->errors(), 422);
         }
 
-        $accounts = Accounts::select('accounts.*',DB::raw('(select company_name from companies where companies.id = accounts.company_id limit 1) as company_name'))->where(['delete'=> '0','company_id'=>$request->company_id])->get();
+        $accounts = Accounts::select(
+        'accounts.*',
+        'companies.company_name'
+            )
+            ->leftJoin('companies', 'companies.id', '=', 'accounts.company_id')
+            ->where('accounts.delete', '0')
+            ->whereIn('accounts.company_id', [$request->company_id, 0])
+            ->get();
+
 
         if ($accounts) {
             return response()->json([

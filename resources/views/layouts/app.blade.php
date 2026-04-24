@@ -8,7 +8,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>@yield('title', 'Meri-Accounting')</title>
-
+    <link rel="icon" type="image/png" href="{{ asset('public/MA-logo.png') }}">
     <!-- Fonts -->
     <!--<link rel="dns-prefetch" href="//fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=Nunito" rel="stylesheet">-->
@@ -21,8 +21,9 @@
         <link rel="stylesheet" type="text/css" href="{{ URL::asset('public/assets/css/vendors/select2-bootstrap.css')}}" />
         <link rel="stylesheet" type="text/css" href="{{ URL::asset('public/assets/css/vendors/screen.css')}}" />
         
-
+        
         @yield('styles')
+        
     <!-- Scripts -->
      <style>
         #cover-spin {

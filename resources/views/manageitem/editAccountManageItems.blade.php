@@ -55,18 +55,38 @@
                                     </select>
                                 </div>
                                 <div class="mb-3 col-md-12"></div>
+                               
+                                    @php
+    $isProductionItem = $production_item;
+@endphp
+
+                               
                                 @foreach($series as $key=>$value)
                                     <div class="mb-3 col-md-3">
                                         <label for="" class="form-label font-14 font-heading">BRANCH</label>
                                         <input type="text" class="form-control" name="series[]" value="{{$value->series}}" readonly>
                                     </div>
                                     <div class="mb-3 col-md-3">
-                                        <label for="" class="form-label font-14 font-heading">OPENING BAL. (Rs.)</label>
-                                        <input type="text" class="form-control" id="opening_amount_{{$key}}" data-id="{{$key}}" name="opening_amount[]" placeholder="OPENING BALANCE"  onkeyup="typevalidation({{$key}})"; value="{{$value->opening_amount}}">
+                                        <label for="" class="form-label font-14 font-heading">OPENING BAL. (Rs.)
+                                        @if($isProductionItem)
+                                            <br>
+                                            <small class="text-danger">
+                                                Change in Business Management → Production → Set Item
+                                            </small>
+                                        @endif
+                                        </label>
+                                        <input type="text" class="form-control" id="opening_amount_{{$key}}" data-id="{{$key}}" name="opening_amount[]" placeholder="OPENING BALANCE"  onkeyup="typevalidation({{$key}})"; value="{{$value->opening_amount}}" @if($isProductionItem) readonly @endif>
                                     </div>
                                     <div class="mb-3 col-md-3">
-                                        <label for="" class="form-label font-14 font-heading">OPENING BAL. (Qty.)</label>
-                                        <input type="text" class="form-control" id="opening_qty_{{$key}}" data-id="{{$key}}" name="opening_qty[]" placeholder="OPENING BALANCE" value="{{$value->opening_quantity}}">
+                                        <label for="" class="form-label font-14 font-heading">OPENING BAL. (Qty.)
+                                        @if($isProductionItem)
+                                            <br>
+                                            <small class="text-danger">
+                                                Change in Business Management → Production → Set Item
+                                            </small>
+                                        @endif
+                                        </label>
+                                        <input type="text" class="form-control" id="opening_qty_{{$key}}" data-id="{{$key}}" name="opening_qty[]" placeholder="OPENING BALANCE" value="{{$value->opening_quantity}}" @if($isProductionItem) readonly @endif>
                                     </div>
                                     <div class="mb-3 col-md-3">
                                         <label for="" class="form-label font-14 font-heading">
@@ -94,48 +114,28 @@
                                 </div>
                                 <div class="mb-3 col-md-12"></div>
                                 <div class="mb-3 col-md-3">
-                                            <label class="form-label font-14 font-heading">GST RATE</label>
-                                            <select class="form-select select2-single" id="gst_rate" name="gst_rate" required>
-                                            <option value="">SELECT GST RATE</option>
-                                        
-                                            <option value="0" data-type="nil_rated"
-                                                @if($manageitems->gst_rate == "0" && $manageitems->item_type == "nil_rated") selected @endif>
-                                                0% (Nil Rated Goods)
-                                            </option>
-                                        
-                                            <option value="0" data-type="exempted"
-                                                @if($manageitems->gst_rate == "0" && $manageitems->item_type == "exempted") selected @endif>
-                                                (Exempted Goods)
-                                            </option>
-                                        
-                                            <option value="0.25" data-type="taxable" @if(isset($item_gst_rate) && $item_gst_rate->gst_rate == "0.25") selected @endif>0.25% (Precious stones, etc.)</option>
-                                            <option value="3" data-type="taxable" @if(isset($item_gst_rate) && $item_gst_rate->gst_rate == "3") selected @endif>3% (Gold, jewelry)</option>
-                                            <option value="5" data-type="taxable" @if(isset($item_gst_rate) && $item_gst_rate->gst_rate == "5") selected @endif>5%</option>
-                                            <option value="12" data-type="taxable" @if(isset($item_gst_rate) && $item_gst_rate->gst_rate == "12") selected @endif>12%</option>
-                                            <option value="18" data-type="taxable" @if(isset($item_gst_rate) && $item_gst_rate->gst_rate == "18") selected @endif>18%</option>
-                                            <option value="28" data-type="taxable" @if(isset($item_gst_rate) && $item_gst_rate->gst_rate == "28") selected @endif>28%</option>
-                                            
-                                            </select>
-                                        
-                                        
-                                            <!-- Hidden input to store data-type -->
-                                        <input type="hidden" value="{{ $manageitems->item_type }}" name="item_type" id="item_type">
+                                    <label class="form-label font-14 font-heading">GST RATE</label>
+                                    <select class="form-select select2-single" id="gst_rate" name="gst_rate" required>
+                                        <option value="">SELECT GST RATE</option>
+                                        <option value="0" data-type="nil_rated"
+                                            @if($manageitems->gst_rate == "0" && $manageitems->item_type == "nil_rated") selected @endif>0% (Nil Rated Goods)</option>
+                                        <option value="0" data-type="exempted"
+                                            @if($manageitems->gst_rate == "0" && $manageitems->item_type == "exempted") selected @endif>
+                                            (Exempted Goods)
+                                        </option>
+                                        <option value="0.25" data-type="taxable" @if(isset($manageitems) && $manageitems->gst_rate == "0.25") selected @endif>0.25% (Precious stones, etc.)</option>
+                                        <option value="3" data-type="taxable" @if(isset($manageitems) && $manageitems->gst_rate == "3") selected @endif>3% (Gold, jewelry)</option>
+                                        <option value="5" data-type="taxable" @if(isset($manageitems) && $manageitems->gst_rate == "5") selected @endif>5%</option>
+                                        <option value="12" data-type="taxable" @if(isset($manageitems) && $manageitems->gst_rate == "12") selected @endif>12%</option>
+                                        <option value="18" data-type="taxable" @if(isset($manageitems) && $manageitems->gst_rate == "18") selected @endif>18%</option>
+                                        <option value="28" data-type="taxable" @if(isset($manageitems) && $manageitems->gst_rate == "28") selected @endif>28%</option>
+                                    </select>
+                                    <input type="hidden" value="{{ $manageitems->item_type }}" name="item_type" id="item_type">
                                 </div>
-
-                                <div class="mb-3 col-md-3">
-                                    <label for="with_effect_from" class="form-label font-14 font-heading">With Effect from</label>
-                                    <input 
-                                        type="date" 
-                                        class="form-control" 
-                                        id="with_effect_from" 
-                                        name="with_effect_from" 
-                                        placeholder="Effect from date" 
-                                        required
-                                        value="{{ old('with_effect_from', \Carbon\Carbon::parse(isset($item_gst_rate) && $item_gst_rate->effective_from)->format('Y-m-d')) }}"
-                                    />
+                                <div class="mb-3 col-md-4">
+                                    <label for="name" class="form-label font-14 font-heading">GST RATE EFFECTIVE DATE</label>
+                                    <input type="date" class="form-control" id="gst_rate_effective_date" name="gst_rate_effective_date" required value="{{$manageitems->effective_from}}" />
                                 </div>
-
-
                                 <div class="mb-3 col-md-3">
                                     <label for="name" class="form-label font-14 font-heading">HSN CODE</label>
                                     <input type="text" class="form-control" id="hsn_code" name="hsn_code" value="{{ $manageitems->hsn_code }}" placeholder="ENTER HSN CODE" />

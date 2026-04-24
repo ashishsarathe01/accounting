@@ -11,7 +11,6 @@ use App\Models\GstBranch;
 use App\Models\Sales;
 use App\Models\SalesReturn;
 use App\Models\PurchaseReturn;
-use App\Models\StockTransfer;
 class VoucherSeriesConfigurationController extends Controller
 {
     public function index()
@@ -60,6 +59,10 @@ class VoucherSeriesConfigurationController extends Controller
         if($request->manual_numbering=="YES"){
             $configuration->duplicate_voucher = $request->duplicate_voucher;
             $configuration->blank_voucher = $request->blank_voucher;
+            $configuration->prefix = $request->prefix;
+            $configuration->prefix_value = $request->prefix_value;
+            $configuration->suffix = $request->suffix;
+            $configuration->suffix_value = $request->suffix_value;
         }else if($request->manual_numbering=="NO"){
             $configuration->prefix = $request->prefix;
             $configuration->prefix_value = $request->prefix_value;
@@ -82,12 +85,13 @@ class VoucherSeriesConfigurationController extends Controller
             return $this->failedMessage('Something went wrong','voucher-series-configuration');
         }
     }
-
-
-    
     public function seriesConfigurationBySeries(Request $request)
     {  
         $series = $request->series;
+        $configuration = VoucherSeriesConfiguration::where('series',$series)
+                                                    ->where('configuration_for',$request->configuration_for)
+                                                    ->where('company_id',Session::get('user_company_id'))
+                                                ->first();
         if($request->configuration_for=="SALE"){
             $sale = Sales::select('id')
                             ->where('series_no',$series)                           
@@ -97,35 +101,118 @@ class VoucherSeriesConfigurationController extends Controller
                             ->first();
         }else if($request->configuration_for=="DEBIT NOTE"){
             $sale = PurchaseReturn::select('id')
-                            ->where('series_no',$series)                           
+                            ->where('series_no',$series)
                             ->where('status','1')
                             ->where('delete','0')
+                            ->where('sr_nature','WITH GST')
                             ->where('company_id',Session::get('user_company_id'))
+                            ->when($configuration && $configuration->manual_numbering=="NO", function ($query) use ($configuration) {
+                                $query->whereRaw(
+                                        "STR_TO_DATE(created_at, '%Y-%m-%d %H:%i:%s')>=STR_TO_DATE('".$configuration->created_at."', '%Y-%m-%d %H:%i:%s')"
+                                );
+                            })
+                            ->first();
+        }else if($request->configuration_for=="DEBIT NOTE WITHOUT"){
+            $sale = PurchaseReturn::select('id')
+                            ->where('series_no',$series)
+                            ->where('status','1')
+                            ->where('delete','0')
+                            ->where('sr_nature','WITHOUT GST')
+                            ->where('company_id',Session::get('user_company_id'))
+                            ->when($configuration && $configuration->manual_numbering=="NO", function ($query) use ($configuration) {
+                                $query->whereRaw(
+                                        "STR_TO_DATE(created_at, '%Y-%m-%d %H:%i:%s')>=STR_TO_DATE('".$configuration->created_at."', '%Y-%m-%d %H:%i:%s')"
+                                );
+                            })
                             ->first();
         }else if($request->configuration_for=="CREDIT NOTE"){
             $sale = SalesReturn::select('id')
                             ->where('series_no',$series)                           
                             ->where('status','1')
                             ->where('delete','0')
+                            ->where('sr_nature','WITH GST')
                             ->where('company_id',Session::get('user_company_id'))
+                            ->when($configuration && $configuration->manual_numbering=="NO", function ($query) use ($configuration) {
+                                $query->whereRaw(
+                                        "STR_TO_DATE(created_at, '%Y-%m-%d %H:%i:%s')>=STR_TO_DATE('".$configuration->created_at."', '%Y-%m-%d %H:%i:%s')"
+                                );
+                            })
                             ->first();
-        }else if($request->configuration_for=="STOCK TRANSFER"){
-            $sale = StockTransfer::select('id')
+        }else if($request->configuration_for=="CREDIT NOTE WITHOUT"){
+            $sale = SalesReturn::select('id')
                             ->where('series_no',$series)                           
                             ->where('status','1')
-                            ->where('delete_status','0')
+                            ->where('delete','0')
+                            ->where('sr_nature','WITHOUT GST')
                             ->where('company_id',Session::get('user_company_id'))
+                            ->when($configuration && $configuration->manual_numbering=="NO", function ($query) use ($configuration) {
+                                $query->whereRaw(
+                                        "STR_TO_DATE(created_at, '%Y-%m-%d %H:%i:%s')>=STR_TO_DATE('".$configuration->created_at."', '%Y-%m-%d %H:%i:%s')"
+                                );
+                            })
                             ->first();
-        }            
-        $configuration = VoucherSeriesConfiguration::where('series',$series)
-                                                    ->where('configuration_for',$request->configuration_for)
-                                                    ->where('company_id',Session::get('user_company_id'))
-                                                ->first();
+        }else if($request->configuration_for=="JOB WORK RAW MATERIAL" || 
+            $request->configuration_for=="JOB WORK FINISHED GOODS"){
+            $sale = DB::table('job_works')
+                ->select('id')
+                ->where('series_no', $series)
+                ->where('status', '1')
+                ->where('delete', '0')
+                ->where('company_id', Session::get('user_company_id'))
+                ->first();
+            
+        }else if($request->configuration_for=="PAYMENT"){
+                $sale = DB::table('payments')
+                    ->select('id')
+                    ->where('series_no',$series)
+                    ->where('status','1')
+                    ->where('delete','0')
+                    ->where('company_id',Session::get('user_company_id'))
+                    ->first();
+            
+            }else if($request->configuration_for=="RECEIPT"){
+                $sale = DB::table('receipts')
+                    ->select('id')
+                    ->where('series_no',$series)
+                    ->where('status','1')
+                    ->where('delete','0')
+                    ->where('company_id',Session::get('user_company_id'))
+                    ->first();
+            
+            }else if($request->configuration_for=="JOURNAL"){
+                $sale = DB::table('journals')
+                    ->select('id')
+                    ->where('series_no',$series)
+                    ->where('status','1')
+                    ->where('delete','0')
+                    ->where('company_id',Session::get('user_company_id'))
+                    ->first();
+            
+            }else if($request->configuration_for=="CONTRA"){
+                $sale = DB::table('contras')
+                    ->select('id')
+                    ->where('series_no',$series)
+                    ->where('status','1')
+                    ->where('delete','0')
+                    ->where('company_id',Session::get('user_company_id'))
+                    ->first();
+            }else if($request->configuration_for=="PRODUCTION RAW MATERIAL CONSUMPTION"){
+                $sale = DB::table('account_productions')
+                    ->select('id')
+                    ->where('series_no',$series)
+                    ->where('status','1')
+                    ->where('company_id',Session::get('user_company_id'))
+                    ->first();
+            }        
+        
         $update_status = 1;
         if($sale){
             $update_status = 0;
         }
         if($configuration){
+            if($configuration->manual_numbering=="YES"){
+                $update_status = 1;
+            }
             $data = [
                 'configuration' => $configuration,
                 'update_status'=>$update_status,

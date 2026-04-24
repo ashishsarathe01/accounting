@@ -16,7 +16,7 @@
                         <a class="font-12 text-body text-decoration-none" href="#">Dashboard</a>
                      </li>
                      <li class="breadcrumb-item p-0">
-                        <a class="fw-bold font-heading font-12  text-decoration-none" href="{{url('profitloss-filter')}}?financial_year={{$financial_year}}&from_date={{$from_date}}&to_date={{$to_date}}">Profit & Loss</a>
+                        <a class="fw-bold font-heading font-12  text-decoration-none" href="{{url('profitloss-filter')}}?financial_year={{$financial_year}}&from_date={{$from_date}}&to_date={{$to_date}}">Balance Sheet</a>
                      </li>
                      <li class="breadcrumb-item p-0">
                         <a class="fw-bold font-heading font-12  text-decoration-none" href="#">Account Balance By Group</a>
@@ -40,16 +40,20 @@
                      @php $debit_balance = 0;$credit_balance = 0; @endphp
                      @foreach($data as $key => $value)
                         @php $balance = $value['account_ledger_sum_debit'] - $value['account_ledger_sum_credit'];@endphp
+                        
+                        @if($balance == 0)
+                            @continue
+                        @endif
                         <tr class="get_info" data-id="{{$value['id']}}" data-financial_year="{{$financial_year}}" data-type="{{$value['type']}}" style="cursor: pointer;">
                            <td style="text-align:left;">{{$value['account_name']}}</td>
                            <td style="text-align:right;">
                               @if($balance>=0)
-                                 {{formatIndianNumber($balance)}}
+                                 {{formatIndianNumber(round($balance,2))}}
                               @endif  
                            </td>
                            <td style="text-align:right;">                              
                               @if($balance<0)
-                                 {{formatIndianNumber(abs($balance))}}
+                                 {{formatIndianNumber(abs(round($balance,2)))}}
                               @endif                              
                            </td>
                         </tr>
@@ -59,7 +63,7 @@
                            }
                            
                            if($balance<0){
-                              $credit_balance = $credit_balance + abs($balance);
+                              $credit_balance = $credit_balance + abs(round($balance,2));
                            } 
                         @endphp
                      @endforeach  

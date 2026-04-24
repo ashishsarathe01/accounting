@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('content')
 @include('layouts.header')
+@section('title', 'Edit Purchase')
 <style>
    .text-ellipsis {
       text-overflow: ellipsis;
@@ -97,6 +98,20 @@ foreach ($manageitems as $value) {
                        @error('date'){{$message}}@enderror                        
                      </ul> 
                   </div>
+                  @if($stockEntryEnabled)
+                     <div class="col-md-3">
+                        <label class="form-label">
+                           Stock Entry Date <span class="text-danger">*</span>
+                        </label>
+                        <input
+                           type="date"
+                           name="stock_entry_date"
+                           class="form-control"
+                           value="{{ old('stock_entry_date', $stock_entry_date) }}"
+                           required
+                        >
+                     </div>
+                  @endif
                   <div class="mb-3 col-md-3">
                      <label for="name" class="form-label font-14 font-heading">Voucher No. *</label>
                      <input type="text" class="form-control" id="voucher_no" name="voucher_no" placeholder="Enter Invoice No." value="{{$purchase->voucher_no}}">
@@ -110,11 +125,11 @@ foreach ($manageitems as $value) {
                   </div>
                   <div class="mb-6 col-md-6">
                      <label for="name" class="form-label font-14 font-heading">Party</label>
-                     <select class="form-select select2-single" id="party" name="party" required>
+                     <select class="form-select select2-single" id="party" name="party" required data-modal="accountModal">
                         <option value="">Select </option>
                         <?php
                         foreach ($party_list as $value) { ?>
-                           <option value="<?php echo $value->id; ?>" data-gstin="<?php echo $value->gstin; ?>" data-address="<?php echo $value->address.",".$value->pin_code; ?>" data-state_code="<?php echo $value->state_code; ?>" <?php if($value->id==$purchase->party){ echo "selected";}?>><?php echo $value->account_name; ?></option>
+                           <option value="<?php echo $value->id; ?>" data-gstin="<?php echo $value->gstin; ?>" data-address="<?php echo $value->address.",".$value->pin_code; ?>" data-state_code="<?php echo $value->state_code; ?>" data-group="<?php echo $value->under_group ?? ''; ?>" <?php if($value->id==$purchase->party){ echo "selected";}?>><?php echo $value->account_name; ?></option>
                            <?php 
                         } ?>
                      </select>
@@ -155,16 +170,17 @@ foreach ($manageitems as $value) {
                         </tr>
                      </thead>
                      <tbody>
+                       
                         @php $i=1; $total = 0; $itemcount = count($PurchaseDescription);@endphp
                         @foreach($PurchaseDescription as $item)
                            <tr id="tr_{{$i}}" class="font-14 font-heading bg-white">
                               <td class="w-min-50" id="srn_{{$i}}">{{$i}}</td>
                               <td class="">
-                                 <select onchange="call_fun('tr_{{$i}}');" class="border-0 form-control goods_items select2-single" id="goods_discription_tr_{{$i}}" name="goods_discription[]" required data-id="{{$i}}">
+                                 <select onchange="call_fun('tr_{{$i}}');" class="border-0 form-control goods_items select2-single" id="goods_discription_tr_{{$i}}" name="goods_discription[]" required data-id="{{$i}}" data-modal="itemModal">
                                     <option value="">Select</option>
                                     <?php
                                     foreach ($manageitems as $value) { ?>
-                                       <option unit_id="<?php echo $value->u_name; ?>" data-val="<?php echo $value->unit; ?>" data-percent="<?php echo $value->gst_rate; ?>" value="<?php echo $value->id; ?>" <?php if($value->id==$item->goods_discription){ echo "selected";} ?> data-parameterized_stock_status="{{$value->parameterized_stock_status}}" data-config_status="{{$value->config_status}}" data-group_id="{{$value->group_id}}"><?php echo $value->name; ?></option>
+                                       <option value="{{$value->id}}" unit_id="<?php echo $value->u_name; ?>" data-val="<?php echo $value->unit; ?>" data-percent="<?php echo $value->gst_rate; ?>" value="<?php echo $value->id; ?>" <?php if($value->id==$item->goods_discription){ echo "selected";} ?> data-parameterized_stock_status="{{$value->parameterized_stock_status}}" data-config_status="{{$value->config_status}}" data-group_id="{{$value->group_id}}"><?php echo $value->name; ?></option>
                                        <?php 
                                     } ?>
                                  </select>
@@ -596,6 +612,16 @@ foreach ($manageitems as $value) {
                      </div>
                   </div>
                </div>
+               <div class="mb-3">
+                   <label class="form-label fw-bold">Narration</label>
+                   <input 
+                      type="text"
+                      id="narration"
+                      name="narration"
+                      class="form-control"
+                      value="{{ $purchase->narration ?? '' }}"
+                      placeholder="Enter narration for the entry...">
+                </div>
                <div class=" d-flex">
                   <div class="ms-auto">
                      <input type="submit" value="SAVE" class="btn btn-xs-primary purchaseBtn" id="purchaseBtn">
@@ -699,14 +725,377 @@ foreach ($manageitems as $value) {
       </div>
    </section>
 </div>
+
+<div class="modal fade" id="accountModal" tabindex="-1">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Add Account</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <form id="accountForm">
+          @csrf
+
+          <div class="row">
+
+            <div class="col-md-4 mb-3">
+              <label>ACCOUNT NAME</label>
+              <input type="text" id="modal_account_name" name="account_name" class="form-control" placeholder="ENTER ACCOUNT NAME" required>
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>PRINT NAME</label>
+              <input type="text" id="modal_print_name" name="print_name" class="form-control" placeholder="ENTER PRINT NAME">
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>UNDER GROUP</label>
+              <select name="under_group" class="form-select" required>
+  <option value="">SELECT GROUP</option>
+  @foreach($allowedAccountGroups as $group)
+    <option value="{{ $group->id }}">{{ $group->name }}</option>
+  @endforeach
+</select>
+
+<input type="hidden" name="under_group_type" id="modal_under_group_type" value="">
+<input type="hidden" name="form_type" value="modal">
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>OPENING BALANCE</label>
+              <input type="number" name="opening_balance" class="form-control" placeholder="ENTER OPENING BALANCE">
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>BALANCE TYPE</label>
+              <select name="opening_balance_type" class="form-select">
+                <option value="">SELECT BALANCE TYPE</option>
+                <option value="debit">Debit</option>
+                <option value="credit">Credit</option>
+              </select>
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>GST NO.</label>
+              <input type="text" id="modal_gstin" name="gstin" class="form-control" placeholder="ENTER GST NO.">
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>STATE</label>
+              <select id="modal_state" class="form-select">
+                <option value="">SELECT STATE</option>
+                @foreach($state_list as $state)
+                  <option value="{{ $state->id }}">
+                    {{ $state->state_code }} - {{ $state->name }}
+                  </option>
+                @endforeach
+              </select>
+              <input type="hidden" name="state" id="modal_state_hidden">
+            </div>
+
+            <div class="col-md-8 mb-3">
+              <label>ADDRESS</label>
+              <textarea id="modal_address" name="address" class="form-control" placeholder="ENTER ADDRESS"></textarea>
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>PINCODE</label>
+              <input type="number" id="modal_pincode" name="pincode" class="form-control" placeholder="ENTER PINCODE">
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>PAN</label>
+              <input type="text" id="modal_pan" name="pan" class="form-control" placeholder="ENTER PAN">
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>SMS Send Status</label>
+              <select name="sms_status" class="form-select">
+                <option value="">Select</option>
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+              </select>
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>Credit Days</label>
+              <select name="credit_days" class="form-select">
+  <option value="">Select</option>
+  @foreach($credit_days as $cd)
+    <option value="{{ $cd->days }}">{{ $cd->days }} Days</option>
+  @endforeach
+</select>
+
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>DUE DAYS</label>
+              <input type="number" name="due_day" class="form-control" placeholder="ENTER DUE DAYS">
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>CONTACT PERSON</label>
+              <input type="text" name="contact_person" class="form-control" placeholder="ENTER CONTACT PERSON">
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>MOBILE NO.</label>
+              <input type="number" name="mobile_no" class="form-control" placeholder="ENTER MOBILE NO.">
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>WHATSAPP NO.</label>
+              <input type="number" name="whatsapp_no" class="form-control" placeholder="ENTER WHATSAPP NO.">
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>E-MAIL ID</label>
+              <input type="email" name="email" class="form-control" placeholder="ENTER E-MAIL ID">
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>BANK ACCOUNT NO.</label>
+              <input type="number" name="account_no" class="form-control" placeholder="ENTER BANK ACCOUNT NO.">
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>BANK IFSC CODE</label>
+              <input type="text" name="ifsc_code" class="form-control" placeholder="ENTER BANK IFSC CODE">
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>STATUS</label>
+              <select name="status" class="form-select">
+                <option value="1">Enable</option>
+                <option value="0">Disable</option>
+              </select>
+            </div>
+
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" id="saveAccountBtn" class="btn btn-primary">Save</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="itemModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Add Item</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
+<form id="modalItemForm">
+@csrf
+
+<div class="row">
+
+<!-- ================= PART A ================= -->
+<div class="col-md-8">
+  <h5>PART A</h5>
+  <hr>
+
+  <div class="row">
+
+    <div class="mb-3 col-md-5">
+      <label class="form-label font-14 font-heading">ITEM NAME</label>
+      <input type="text" class="form-control"
+             name="name" id="modal_name"
+             placeholder="ENTER ITEM NAME" required>
+    </div>
+
+    <div class="mb-3 col-md-12"></div>
+
+    <div class="mb-3 col-md-5">
+      <label class="form-label font-14 font-heading">PRINT NAME</label>
+      <input type="text" class="form-control"
+             name="p_name" id="modal_p_name"
+             placeholder="ENTER PRINT NAME">
+    </div>
+
+    <div class="mb-3 col-md-12"></div>
+
+    <div class="mb-3 col-md-5">
+      <label class="form-label font-14 font-heading">UNDER GROUP</label>
+      <select class="form-select select2-single"
+              name="g_name" id="modal_g_name" required>
+        <option value="">SELECT GROUP</option>
+        @foreach($itemGroups as $value)
+          <option value="{{ $value->id }}">{{ $value->group_name }}</option>
+        @endforeach
+      </select>
+    </div>
+
+    <div class="mb-3 col-md-12"></div>
+
+    @foreach($series as $key => $value)
+  <div class="col-md-3 mb-3">
+    <label class="form-label font-14 font-heading">BRANCH</label>
+    <input type="text"
+           class="form-control"
+           name="series[]"
+           value="{{ $value->series }}"
+           readonly>
+  </div>
+
+  <div class="col-md-3 mb-3">
+    <label class="form-label font-14 font-heading">
+      OPENING BAL. (Rs.)
+    </label>
+    <input type="text"
+           class="form-control"
+           name="opening_amount[]"
+           id="modal_opening_amount_{{ $key }}"
+           placeholder="OPENING BALANCE"
+           onkeyup="typevalidation({{ $key }})">
+  </div>
+
+  <div class="col-md-3 mb-3">
+    <label class="form-label font-14 font-heading">
+      OPENING BAL. (Qty.)
+    </label>
+    <input type="text"
+           class="form-control"
+           name="opening_qty[]"
+           placeholder="OPENING BALANCE">
+  </div>
+
+  <div class="col-md-3 mb-3">
+    <label class="form-label font-14 font-heading">
+      BALANCE TYPE
+      <span id="balance_type_required_{{ $key }}"
+            style="color:red; display:none;">*</span>
+    </label>
+    <select class="form-select"
+            name="opening_balance_type[]"
+            id="opening_balance_type_{{ $key }}">
+      <option value="">BALANCE TYPE</option>
+      <option value="Debit">Debit</option>
+      <option value="Credit">Credit</option>
+    </select>
+  </div>
+@endforeach
+
+    <div class="mb-3 col-md-12"></div>
+
+    <div class="mb-3 col-md-3">
+      <label class="form-label font-14 font-heading">UNIT NAME</label>
+      <select class="form-select select2-single"
+              name="u_name" id="modal_u_name" required>
+        <option value="">SELECT UNIT</option>
+        @foreach($accountunit as $value)
+          <option value="{{ $value->id }}">{{ $value->name }}</option>
+        @endforeach
+      </select>
+    </div>
+
+    <div class="mb-3 col-md-12"></div>
+
+    <div class="mb-3 col-md-3">
+      <label class="form-label font-14 font-heading">GST RATE</label>
+      <select class="form-select select2-single"
+              name="gst_rate" id="modal_gst_rate" required>
+        <option value="">SELECT GST RATE</option>
+        <option value="0" data-type="nil_rated">0% (Nil Rated Goods)</option>
+        <option value="0" data-type="exempted">(Exempted Goods)</option>
+        <option value="0.25" data-type="taxable">0.25% (Precious stones, etc.)</option>
+        <option value="3" data-type="taxable">3% (Gold, jewelry)</option>
+        <option value="5" data-type="taxable">5%</option>
+        <option value="12" data-type="taxable">12%</option>
+        <option value="18" data-type="taxable">18%</option>
+        <option value="28" data-type="taxable">28%</option>
+      </select>
+      <input type="hidden" name="item_type" id="modal_item_type">
+    </div>
+
+    <div class="mb-3 col-md-3">
+      <label class="form-label font-14 font-heading">HSN CODE</label>
+      <input type="text" class="form-control"
+             name="hsn_code" placeholder="ENTER HSN CODE" required>
+    </div>
+
+    <div class="mb-3 col-md-12"></div>
+
+    <div class="mb-3 col-md-3">
+      <label class="form-label font-14 font-heading">STATUS</label>
+      <select class="form-select select2-single"
+              name="status" required>
+        <option value="">SELECT STATUS</option>
+        <option value="1">Enable</option>
+        <option value="0">Disable</option>
+      </select>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================= PART B ================= -->
+<div class="col-md-4">
+  <h5>
+    <input type="checkbox" id="modal_partb"> PART B
+  </h5>
+  <hr>
+
+  <div class="row">
+    <div class="col-md-6 modal_partb_div" style="display:none">
+      <label>
+        <input type="checkbox" id="modal_tcs_applicable">
+        TCS APPLICABLE
+      </label>
+    </div>
+
+    <div class="col-md-12"></div>
+
+    <div class="col-md-6 modal_tcs_div" style="display:none">
+      <label>SECTION</label>
+      <select class="form-select">
+        <option value="">SELECT SECTION</option>
+        <option value="206CE-Scarp" data-rate="1">206CE-Scarp</option>
+      </select>
+    </div>
+
+    <div class="col-md-6 modal_tcs_div" style="display:none">
+      <label>RATE OF TCS</label>
+      <input type="text" class="form-control" readonly>
+    </div>
+  </div>
+</div>
+
+</div>
+</form>
+
+</div>
+
+
+      <div class="modal-footer">
+        <button type="button" id="saveItemBtn" class="btn btn-primary">
+          Save Item
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
 </body>
 @include('layouts.footer')
 <script>
    var bill_sundry_array = @json($billsundry);
-    var parameter_assign_item_arr = [];
+   var parameter_assign_item_arr = [];
+   var pageLoaded = 1;
    function redirectBack(){
       let previousUrl = document.referrer; // Get Previous URL
-
       if(previousUrl == "{{ session('previous_url_purchase')  }}"){
          window.location.href = "https://www.meriaccounting.com/purchase"; // Fixed Redirect
       }else{
@@ -718,11 +1107,15 @@ foreach ($manageitems as $value) {
    var auto_gst_calculation = 0;
    var customer_gstin = "";
    var merchant_gstin = "";
+   var gstApplicable = {{ $gstApplicable ? 'true' : 'false' }};
+   var initialGstApplicable = gstApplicable;
+   var gst_disabled_for_party = 0;
    var percent_arr = [];
+   var partyGSTData = {};
    var add_more_count = '<?php echo --$i;?>';
    var add_more_counts = 1;
    var add_more_bill_sundry_up_count = '<?php echo --$index;?>';
-   
+   var noGSTGroups = @json($no_gst_group_ids);
    function addMoreItem() {   
       let empty_status = 0;
       $('.goods_items').each(function(){   
@@ -741,7 +1134,7 @@ foreach ($manageitems as $value) {
       var optionElements = '<?php echo $item_list;?>';
       //var selectHTML = $('#goods_discription').prop('outerHTML');
       var tr_id = 'tr_' + add_more_count;
-      newRow = '<tr id="tr_' + add_more_count + '" class="font-14 font-heading bg-white"><td class="w-min-50" id="srn_'+add_more_count+'">' + srn + '</td><td class=""><select onchange="call_fun(\'tr_' + add_more_count + '\');" id="goods_discription_tr_' + add_more_count + '" class="border-0 w-95-parsent  goods_items" name="goods_discription[]" required data-id="'+add_more_count+'">';
+      newRow = '<tr id="tr_' + add_more_count + '" class="font-14 font-heading bg-white"><td class="w-min-50" id="srn_'+add_more_count+'">' + srn + '</td><td class=""><select onchange="call_fun(\'tr_' + add_more_count + '\');" id="goods_discription_tr_' + add_more_count + '" class="border-0 w-95-parsent  goods_items" name="goods_discription[]" required data-id="'+add_more_count+'" data-modal="itemModal">';
       newRow += optionElements;
       newRow += '</select></td><td class="w-min-50"><input type="number" data-id="'+add_more_count+'" class="quantity w-100 form-control" name="qty[]" id="quantity_tr_' + add_more_count + '"/ style="text-align:right"></td><td class=" w-min-50"><input type="text" class="w-100 form-control unit"data-id="'+add_more_count+'" id="unit_tr_'+add_more_count+'" readonly style="text-align:center;"/><input type="hidden" class="units w-100" name="units[]" id="units_tr_' + add_more_count + '"/></td><td class=" w-min-50"><input type="number" class="price w-100 form-control" data-id="'+add_more_count+'" name="price[]" id="price_tr_' + add_more_count + '" style="text-align:right"/></td><td class=" w-min-50"><input type="number" class="amount w-100 form-control" name="amount[]"data-id="'+ add_more_count +'" id="amount_tr_' + add_more_count + '"  style="text-align:right"/></td><td class="w-min-50" style="display:flex"></td><input type="hidden" name="item_parameters[]" id="item_parameters_tr_' + add_more_count + '"><input type="hidden" name="config_status[]" id="config_status_tr_' + add_more_count + '"></tr>';
       $("#max_sale_descrption").val(add_more_count);
@@ -996,18 +1389,20 @@ foreach ($manageitems as $value) {
       });
       // Function to calculate amount and update total sum
       function calculateAmount (key=null) {      
-         customer_gstin = $('#party option:selected').attr('data-state_code');      
+         customer_gstin = $('#party option:selected').attr('data-state_code');
+         let bill_date = $("#date").val();
+   
          if(customer_gstin==undefined){
             return;
          }       
-         if(customer_gstin==merchant_gstin.substring(0,2)){  
+         if(gstApplicable && customer_gstin==merchant_gstin.substring(0,2)){
             $("#billtr_cgst").show();
             $("#billtr_sgst").show();
             $("#bill_sundry_amount_igst").val('');
             $("#billtr_igst").hide();
             $("#tax_rate_tr_igst").val(0);
             $("#tax_amt_igst").html('');
-         }else{
+         }else if(gstApplicable){
             $("#billtr_igst").show();
             $("#billtr_cgst").hide();
             $("#billtr_sgst").hide();         
@@ -1018,17 +1413,33 @@ foreach ($manageitems as $value) {
             $("#tax_amt_cgst").html('');
             $("#tax_amt_sgst").html('');
          }
+         
+         if(!gstApplicable){
+            $(".extra_gst").remove();
+
+            $("#billtr_cgst").hide();
+            $("#billtr_sgst").hide();
+            $("#billtr_igst").hide();
+
+            $("#bill_sundry_amount_cgst").val('');
+            $("#bill_sundry_amount_sgst").val('');
+            $("#bill_sundry_amount_igst").val('');
+
+            $("#tax_rate_tr_cgst").val(0);
+            $("#tax_rate_tr_sgst").val(0);
+            $("#tax_rate_tr_igst").val(0);
+         }
          percent_arr = [];
          var total = 0;
          let count = 2;
          var tax_rate = 0;
          var tax_rate_display = "";
          var tax_amount = 0;
-         var final_total = 0;         
-         $('#example11 tbody tr').each(function() {                     
+         var final_total = 0;
+         $('#example11 tbody tr').each(function() {
             var price = $(this).find('.price').val();
             var quantity = $(this).find('.quantity').val();
-            if(key=="A"){
+            if(key=="A" || pageLoaded==1){
                var amount = $(this).find('.amount').val();
             }else{
                var amount = (price && quantity) ? (price * quantity) : 0;
@@ -1078,6 +1489,8 @@ foreach ($manageitems as $value) {
          final_total = total;
          let total_item_taxable_amount = 0;
          let on_tcs_amount = 0;
+         
+
          if(customer_gstin==merchant_gstin.substring(0,2)){            
             var maxPercent = Math.max.apply(null, result.map(function(item){
             return item.percent;
@@ -1107,7 +1520,10 @@ foreach ($manageitems as $value) {
                                     final_total = final_total - parseFloat(e.value);
                                  }
                               } 
-                           }                           
+                           }else if(e.nature_of_sundry=='TCS'){
+                              final_total = final_total + parseFloat(e.value);
+                              on_tcs_amount = parseFloat(on_tcs_amount) + parseFloat(e.value);
+                           }
                         });
                      }
                   } //New Changes By Ashish
@@ -1117,7 +1533,7 @@ foreach ($manageitems as $value) {
                   }else{
                      total_item_taxable_amount = total_item_taxable_amount + parseFloat(item_taxable_amount);
                   }
-                  on_tcs_amount = parseFloat(on_tcs_amount) + parseFloat(total_item_taxable_amount);
+                  //on_tcs_amount = parseFloat(on_tcs_amount) + parseFloat(total_item_taxable_amount);
                   //let a = e.amount/item_total_amount;
                   let taxable_amount_per_item = (e.amount/item_total_amount)*(bill_sundry_total);//New Changes By Ashish
                   taxable_amount_per_item = parseFloat(e.amount) + parseFloat(taxable_amount_per_item); //New Changes By Ashish
@@ -1135,12 +1551,16 @@ foreach ($manageitems as $value) {
                         taxSundryArray['sgst'] = sundry_amount;
                      }
                      //CGST
-                     $("#bill_sundry_amount_cgst").val(taxSundryArray['cgst']);
+                     if(gstApplicable){
+                        $("#bill_sundry_amount_cgst").val(taxSundryArray['cgst']);
+                     }
                      //$("#bill_sundry_amount_cgst").prop('readonly',true);
                      $("#tax_amt_cgst").html(e.percent/2+" %");
                      $("#tax_rate_tr_cgst").val(e.percent/2);
                      //SGST
-                     $("#bill_sundry_amount_sgst").val(taxSundryArray['sgst']);
+                     if(gstApplicable){
+                        $("#bill_sundry_amount_sgst").val(taxSundryArray['sgst']);
+                     }
                      //$("#bill_sundry_amount_sgst").prop('readonly',true);
                      $("#tax_amt_sgst").html(e.percent/2+" %");
                      $("#tax_rate_tr_sgst").val(e.percent/2);
@@ -1150,8 +1570,10 @@ foreach ($manageitems as $value) {
                      if(taxSundryArray['cgst']=="" || taxSundryArray['cgst']==undefined){
                         taxSundryArray['cgst'] = 0;
                      }
-                     on_tcs_amount = parseFloat(on_tcs_amount) + parseFloat(taxSundryArray['cgst']) + parseFloat(taxSundryArray['sgst']);
-                     final_total = final_total + parseFloat(taxSundryArray['cgst']) + parseFloat(taxSundryArray['sgst']); 
+                     //on_tcs_amount = parseFloat(on_tcs_amount) + parseFloat(taxSundryArray['cgst']) + parseFloat(taxSundryArray['sgst']);
+                     if(gstApplicable){
+                        final_total = final_total + parseFloat(taxSundryArray['cgst']) + parseFloat(taxSundryArray['sgst']); 
+                     }
 
                   }else{
                      if(enter_gst_status==0 && item_taxable_amount!=0){
@@ -1176,7 +1598,9 @@ foreach ($manageitems as $value) {
                         });
                      }
                      $(".add_more_bill_sundry_gst").click();
-                     $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(taxSundryArray['cgst']);
+                     if(gstApplicable){
+                        $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(taxSundryArray['cgst']);
+                     }
                      $("#bill_sundry_"+add_more_bill_sundry_up_count).val(cgst_sundry_value)
                      //$("#bill_sundry_amount_"+add_more_bill_sundry_up_count).prop('readonly',true);
                      $("#tax_amt_"+add_more_bill_sundry_up_count).html(e.percent/2+" %");
@@ -1191,7 +1615,9 @@ foreach ($manageitems as $value) {
                         });
                      }
                      $(".add_more_bill_sundry_gst").click();
-                     $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(taxSundryArray['sgst']);
+                     if(gstApplicable){
+                        $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(taxSundryArray['sgst']);
+                     }
                      $("#bill_sundry_"+add_more_bill_sundry_up_count).val(sgst_sundry_value)
                      //$("#bill_sundry_amount_"+add_more_bill_sundry_up_count).prop('readonly',true);
                      $("#tax_amt_"+add_more_bill_sundry_up_count).html(e.percent/2+" %");
@@ -1202,8 +1628,10 @@ foreach ($manageitems as $value) {
                      if(taxSundryArray['cgst']=="" || taxSundryArray['cgst']==undefined){
                         taxSundryArray['cgst'] = 0;
                      }
-                     on_tcs_amount = parseFloat(on_tcs_amount) + parseFloat(taxSundryArray['cgst']) + parseFloat(taxSundryArray['sgst']);
-                     final_total = final_total + parseFloat(taxSundryArray['cgst']) + parseFloat(taxSundryArray['sgst']); 
+                     //on_tcs_amount = parseFloat(on_tcs_amount) + parseFloat(taxSundryArray['cgst']) + parseFloat(taxSundryArray['sgst']);
+                     if(gstApplicable){
+                        final_total = final_total + parseFloat(taxSundryArray['cgst']) + parseFloat(taxSundryArray['sgst']); 
+                     }
                   }                  
                   index++;                 
                });
@@ -1238,7 +1666,10 @@ foreach ($manageitems as $value) {
                                     final_total = final_total - parseFloat(e.value);
                                  }
                               }
-                           }                           
+                           }else if(e.nature_of_sundry=='TCS'){
+                              final_total = final_total + parseFloat(e.value);
+                              on_tcs_amount = parseFloat(on_tcs_amount) + parseFloat(e.value);
+                           }
                         });
                      }
                   }  //New Changes By Ashish
@@ -1248,7 +1679,7 @@ foreach ($manageitems as $value) {
                      total_item_taxable_amount = total_item_taxable_amount + parseFloat(item_taxable_amount);
                   }
                   
-                  on_tcs_amount = parseFloat(on_tcs_amount) + parseFloat(total_item_taxable_amount);                 
+                  //on_tcs_amount = parseFloat(on_tcs_amount) + parseFloat(total_item_taxable_amount);                 
 
                   let taxable_amount_per_item = (e.amount/item_total_amount)*(bill_sundry_total);//New Changes By Ashish
                   taxable_amount_per_item = parseFloat(e.amount) + parseFloat(taxable_amount_per_item);//New Changes By Ashish
@@ -1264,15 +1695,21 @@ foreach ($manageitems as $value) {
                         sundry_amount = sundry_amount.toFixed(2);
                         taxSundryArray['igst'] = sundry_amount;
                      }
-                     $("#bill_sundry_amount_igst").val(taxSundryArray['igst']);
+                     
+                     if(gstApplicable){
+                         console.log("0000kk");
+                        $("#bill_sundry_amount_igst").val(taxSundryArray['igst']);
+                     }
                      //$("#bill_sundry_amount_igst").prop('readonly',true);
                      $("#tax_amt_igst").html(e.percent+" %");
                      $("#tax_rate_tr_igst").val(e.percent); 
                      if(taxSundryArray['igst']=="" || taxSundryArray['igst']==undefined){
                         taxSundryArray['igst'] = 0;
                      }
-                     on_tcs_amount = parseFloat(on_tcs_amount) + parseFloat(taxSundryArray['igst']);
-                     final_total = final_total + parseFloat(taxSundryArray['igst']); 
+                     //on_tcs_amount = parseFloat(on_tcs_amount) + parseFloat(taxSundryArray['igst']);
+                     if(gstApplicable){
+                        final_total = final_total + parseFloat(taxSundryArray['igst']); 
+                     }
                   }else{
                      if(enter_gst_status==0 && item_taxable_amount!=0){
                         let sundry_amount = (taxable_amount_per_item*e.percent)/100;//New Changes By Ashish
@@ -1295,7 +1732,9 @@ foreach ($manageitems as $value) {
                      }
                      
                      $(".add_more_bill_sundry_gst").click();
-                     $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(taxSundryArray['igst']);
+                     if(gstApplicable){
+                        $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(taxSundryArray['igst']);
+                     }
                      
                      $("#bill_sundry_"+add_more_bill_sundry_up_count).val(sundry_value);
                      $("#tax_amt_"+add_more_bill_sundry_up_count).html(e.percent+" %");
@@ -1303,8 +1742,10 @@ foreach ($manageitems as $value) {
                      if(taxSundryArray['igst']=="" || taxSundryArray['igst']==undefined){
                         taxSundryArray['igst'] = 0;
                      }
-                     on_tcs_amount = parseFloat(on_tcs_amount) + parseFloat(taxSundryArray['igst']);
-                     final_total = final_total + parseFloat(taxSundryArray['igst']); 
+                     //on_tcs_amount = parseFloat(on_tcs_amount) + parseFloat(taxSundryArray['igst']);
+                     if(gstApplicable){
+                        final_total = final_total + parseFloat(taxSundryArray['igst']); 
+                     }
                   }                  
                   index++;
                });
@@ -1326,10 +1767,10 @@ foreach ($manageitems as $value) {
                   
                   $("#tax_amt_"+id).html(sundry_percent+" %");
                   $("#tax_rate_tr_"+id).val(sundry_percent);
-                  let tcs_amount = (on_tcs_amount*sundry_percent)/100;
-                  tcs_amount = tcs_amount.toFixed(2);
-                  $("#bill_sundry_amount_"+id).val(tcs_amount);
-                  final_total = final_total + parseFloat(tcs_amount);
+                  // let tcs_amount = (on_tcs_amount*sundry_percent)/100;
+                  // tcs_amount = tcs_amount.toFixed(2);
+                  // $("#bill_sundry_amount_"+id).val(tcs_amount);
+                  // final_total = final_total + parseFloat(tcs_amount);
                }
             }else{
                if(new Date(sundry_percent_date) <= new Date(bill_date)){
@@ -1352,6 +1793,9 @@ foreach ($manageitems as $value) {
                }
             }
          }); 
+         if(!gstApplicable){
+            gstamount = 0;
+         }
          final_total = Math.round(final_total);
          var formattedNumber = final_total.toLocaleString('en-IN', {
             style: 'currency',
@@ -1360,7 +1804,7 @@ foreach ($manageitems as $value) {
          });
          $("#bill_sundry_amt").html(formattedNumber);
          $("#total_amounts").val(final_total);                 
-         let roundoff = parseFloat(final_total) - parseFloat($("#total_taxable_amounts").val()) - parseFloat(gstamount);
+         let roundoff = parseFloat(final_total) - parseFloat($("#total_taxable_amounts").val()) - parseFloat(gstamount)  - on_tcs_amount;
          roundoff = roundoff.toFixed(2);
          $("#billtr_round_plus").hide();
          $("#billtr_round_minus").hide();
@@ -1397,9 +1841,13 @@ foreach ($manageitems as $value) {
          $("#series_no").change();
          // Calculate amount on input change
          $(document).on('input', '.price',function(){
+            
+            pageLoaded = 0;
             calculateAmount();
          });
          $(document).on('input', '.quantity',function(){
+           
+            pageLoaded = 0;
             calculateAmount();
          });
          $(document).on('input', '.amount',function(){
@@ -1473,6 +1921,7 @@ foreach ($manageitems as $value) {
                return false;
             } 
          });
+         $("#date").change();
       });
       function call_fun(data) {
          if($('#goods_discription_'+data).val()==""){
@@ -1586,19 +2035,250 @@ foreach ($manageitems as $value) {
    
    });
    $("#party").change(function(){
-      if($('option:selected', this).attr('data-state_code')==merchant_gstin.substring(0,2)){  
+      let selected = $('option:selected', this);
+      let partyId = $(this).val();
+
+      if(partyId==""){
+         $("#party-error").show();
+         return;
+      }
+
+      $("#party-error").hide();
+
+      // Reset GST state back to server defaults (we'll disable again below if required)
+      gstApplicable = initialGstApplicable;
+      gst_disabled_for_party = 0;
+
+      let gstin = selected.attr('data-gstin');
+      let address = selected.attr('data-address');
+      let allowWithoutGst = selected.attr('data-allow_without_gst');
+      let stateCode = selected.attr('data-state_code');
+      let group = selected.data('group');
+
+      if(partyGSTData[partyId]){
+         gstin = partyGSTData[partyId].gstin;
+         address = partyGSTData[partyId].address;
+         stateCode = partyGSTData[partyId].state_code;
+      }
+
+      if(noGSTGroups.includes(group)){
+         gst_disabled_for_party = 1;
+         disableGSTCalculation();
+
+         $("#bill_sundry_amount_cgst").val('');
+         $("#bill_sundry_amount_sgst").val('');
+         $("#bill_sundry_amount_igst").val('');
+         $("#tax_amt_cgst").html('');
+         $("#tax_amt_sgst").html('');
+         $("#tax_amt_igst").html('');
+      }else{
+         if((!gstin || gstin.trim() === "") && allowWithoutGst != 1){
+            let confirmBox = confirm(
+               "This party is unauthorized.\n\nDo you want to continue without GST?"
+            );
+
+            if(confirmBox){
+               gst_disabled_for_party = 1;
+               disableGSTCalculation();
+
+               $.ajax({
+                  url: "{{ route('account.allow.without.gst') }}",
+                  type: "POST",
+                  data: {
+                        _token: "{{ csrf_token() }}",
+                        account_id: selected.val()
+                  },
+                  success: function(){
+                     selected.attr('data-allow_without_gst',1);
+                  }
+               });
+            }else{
+               // Open GST modal to enter GST details
+               $("#gst_modal_account_id").val(selected.val());
+               $("#gst_modal_account_name").text(selected.text().trim());
+
+               $("#gstin").val('');
+               $("#pan").val('');
+               $("#address").val('');
+               $("#pincode").val('');
+               $("#state").val('').trigger('change');
+
+               $("#gstAccountModal").modal('show');
+               return;
+            }
+         }
+
+         if(allowWithoutGst == 1 && (!gstin || gstin.trim() === "")){
+            gst_disabled_for_party = 1;
+            disableGSTCalculation();
+         }
+         console.log(gstin)
+         if(gstin && gstin.trim() !== ""){
+            gst_disabled_for_party = 0;
+            gstApplicable = true;
+         }
+      }
+
+      updatePurchaseType(stateCode);
+
+      $("#partyaddress").html('');
+      if(address){
+         $("#partyaddress").html(
+            "GSTIN : "+ (gstin ? gstin : "N/A") +
+            "<br>Address : "+ address
+         );
+      }
+
+      calculateAmount();
+   });
+
+   function disableGSTCalculation(){
+      gstApplicable = false;
+
+      // Hide GST rows
+      $("#billtr_cgst").hide();
+      $("#billtr_sgst").hide();
+      $("#billtr_igst").hide();
+
+      // Reset GST values
+      $("#bill_sundry_amount_cgst").val('');
+      $("#bill_sundry_amount_sgst").val('');
+      $("#bill_sundry_amount_igst").val('');
+
+      $("#tax_rate_tr_cgst").val(0);
+      $("#tax_rate_tr_sgst").val(0);
+      $("#tax_rate_tr_igst").val(0);
+
+      $("#tax_amt_cgst").html('');
+      $("#tax_amt_sgst").html('');
+      $("#tax_amt_igst").html('');
+   }
+
+   function updatePurchaseType(stateCode){
+      if(!stateCode){
+         $("#purchase_type").val('');
+         return;
+      }
+
+      if(stateCode == (merchant_gstin || '').substring(0,2)){
          $("#purchase_type").val('LOCAL');
       }else{
          $("#purchase_type").val('CENTER');
       }
-      $("#partyaddress").html('');
-      if($(this).val()==""){
-         $("#party-error").show()
+   }
+
+   // GST modal Save/Cancel (same behavior as Add Purchase)
+   $(document).on('click', '#saveGstModal', function () {
+      let account_id = $('#gst_modal_account_id').val();
+      let gstin = ($('#gstin').val() || '').trim();
+      let address = ($('#address').val() || '').trim();
+      let pincode = $('#pincode').val();
+
+      if (!gstin || gstin.length !== 15) {
+         alert("Please enter a valid GST number");
          return;
       }
-      $("#party-error").hide()
-      $("#partyaddress").html("GSTIN : "+$('option:selected', this).attr('data-gstin')+"<br>Address : "+$('option:selected', this).attr('data-address'));
-      calculateAmount();
+
+      let pan = gstin.substring(2, 12);
+      $("#pan").val(pan);
+
+      let state_code = $('#state option:selected').data('state_code');
+      let state_id = $('#state_hidden').val() || $('#state option:selected').val();
+      let fullAddress = address + ',' + pincode;
+
+      $.ajax({
+         url: "{{ route('account.update.gst') }}",
+         type: "POST",
+         data: {
+            _token: "{{ csrf_token() }}",
+            account_id: account_id,
+            gstin: gstin,
+            state: state_id,
+            address: address,
+            pincode: pincode,
+            pan: pan
+         },
+         success: function () {
+            partyGSTData[account_id] = {
+               gstin: gstin,
+               address: fullAddress,
+               state_code: state_code
+            };
+
+            let option = $('#party option[value="' + account_id + '"]');
+            if (option.length) {
+               option.attr('data-gstin', gstin);
+               option.attr('data-address', fullAddress);
+               option.attr('data-state_code', state_code);
+               option.attr('data-allow_without_gst', 0);
+            }
+
+            $("#partyaddress").html(
+               "GSTIN : " + gstin + "<br>Address : " + fullAddress
+            );
+
+            gst_disabled_for_party = 0;
+            gstApplicable = initialGstApplicable;
+            updatePurchaseType(state_code);
+            calculateAmount();
+
+            $("#gstAccountModal").modal('hide');
+         }
+      });
+   });
+
+   $(document).on('click', '#cancelGstModal', function () {
+      $("#gstAccountModal").modal('hide');
+   });
+
+   $('#gstAccountModal').on('shown.bs.modal', function () {
+      $('#state').select2({
+         dropdownParent: $('#gstAccountModal'),
+         width: '100%'
+      });
+      // Keep hidden state id in sync (used while saving GST)
+      $('#state_hidden').val($('#state').val());
+   });
+   $('#state').on('change', function () {
+      $('#state_hidden').val($(this).val());
+   });
+
+   // Auto-fill modal fields from GSTIN (same as Add Purchase)
+   $("#gstin").on("change", function () {
+      let gstin = ($(this).val() || '').trim();
+      if (gstin === "") return;
+
+      // Clear dependent fields; they'll be re-filled by check-gstin response.
+      $("#pan").val("");
+      $("#address").val("");
+      $("#pincode").val("");
+      $("#state").val("").trigger('change');
+
+      $.ajax({
+         url: '{{ url("check-gstin") }}',
+         type: 'POST',
+         dataType: 'JSON',
+         data: {
+            _token: '{{ csrf_token() }}',
+            gstin: gstin
+         },
+         success: function (data) {
+            if (data && data.status == 1) {
+               let stateCode = gstin.substr(0, 2);
+               let matched = $('#state option[data-state_code="' + stateCode + '"]').val();
+
+               if (matched) {
+                  $('#state').val(matched).trigger('change');
+               }
+
+               $("#pan").val(gstin.substring(2, 12));
+               $("#address").val((data.address || "").toUpperCase());
+               $("#pincode").val(data.pinCode || "");
+            } else {
+               alert(data.message || "Invalid GST Number");
+            }
+         }
+      });
    });
    $('body').on('keydown', 'input, select', function(e){
       if (e.key === "Enter") {
@@ -1620,6 +2300,7 @@ foreach ($manageitems as $value) {
       }else{
          $("#goods_discription_tr_"+id+"-error").hide();
       }
+      //getItemGstRate($(this).val(),id);
    });
    $("#series_no").change(function(){
       let series = $(this).val();      
@@ -2153,7 +2834,7 @@ foreach ($manageitems as $value) {
 
         if(voucher_no !== '' && party_id !== '') {
             $.ajax({
-               //  url: '{{ route("check.duplicate.voucher.edit") }}',
+               
                 url: '',
                 type: 'POST',
                 data: {
@@ -2195,9 +2876,10 @@ foreach ($manageitems as $value) {
 $('#date').on('change', function () {
     var bill_date = $(this).val();
     var group_id  = "{{ $groupId }}"; // pass if needed
+    return;
 
     $.ajax({
-        url: "{{ route('get.items.by.date') }}",
+        url: "",
         type: "GET",
         data: { bill_date: bill_date, group_id: group_id },
         success: function (response) {
@@ -2232,5 +2914,337 @@ $('#date').on('change', function () {
     });
 });
 
+$(document).on('select2:open', function () {
+
+  let select = $('.select2-container--open').prev('select');
+
+  // ✅ STORE ROW ID IF ITEM DROPDOWN
+  if (select.hasClass('goods_items')) {
+      activeItemRowId = select.attr('data-id');
+  }
+
+  $(document).on('keydown.select2Shortcut', function (e) {
+
+    if (e.ctrlKey && e.key.toLowerCase() === 'a') {
+      e.preventDefault();
+      
+      let modalId = select.data('modal');
+
+      if (modalId) {
+        $('#' + modalId).modal('show');
+      }
+    }
+  });
+});
+
+
+$(document).on('select2:close', function () {
+  $(document).off('keydown.select2Shortcut');
+});
+$('#modal_account_name').on('keyup', function () {
+    $('#modal_print_name').val($(this).val());
+});
+$('#modal_under_group_type').val('group');
+$('#modal_account_name').on('change', function () {
+
+    let account_name = $(this).val();
+    if (!account_name) return;
+
+    $.ajax({
+        url: '{{ url("check-account-name") }}',
+        type: 'POST',
+        dataType: 'JSON',
+        data: {
+            _token: '{{ csrf_token() }}',
+            account_name: account_name,
+            company_id: "{{ Session::get('user_company_id') }}"
+        },
+        success: function (data) {
+            if (data == 1) {
+                alert('Account Name Already Exists.');
+                $('#modal_account_name').val('').focus();
+            }
+        }
+    });
+});
+$('#modal_gstin').on('change', function () {
+
+    let gstin = $(this).val().trim();
+    if (!gstin || gstin.length < 2) return;
+
+    $.ajax({
+        url: '{{ url("check-gstin") }}',
+        type: 'POST',
+        dataType: 'JSON',
+        data: {
+            _token: '{{ csrf_token() }}',
+            gstin: gstin
+        },
+        success: function (data) {
+
+            if (data.status != 1) {
+                alert(data.message);
+                $('#modal_gstin').val('');
+                return;
+            }
+
+            $('#modal_pan').val(gstin.substring(2, 12));
+            $('#modal_address').val(data.address.toUpperCase());
+            $('#modal_pincode').val(data.pinCode);
+
+            let stateCode = gstin.substring(0, 2);
+
+            let stateOption = $('#modal_state option').filter(function () {
+                return $(this).text().trim().startsWith(stateCode + ' ');
+            }).val();
+
+            if (stateOption) {
+                $('#modal_state')
+                    .val(stateOption)
+                    .trigger('change'); 
+
+                $('#modal_state_hidden').val(stateOption);
+            }
+        }
+    });
+});
+$('#modal_state').on('change', function () {
+    $('#modal_state_hidden').val($(this).val());
+});
+$('select[name="under_group"]').on('change', function () {
+    $('#modal_under_group_type').val('group');
+});
+
+$('#saveAccountBtn').on('click', function () {
+
+    $('#modal_under_group_type').val('group');
+
+    let form = $('#accountForm');
+    let btn = $(this);
+
+    btn.prop('disabled', true);
+
+    $.ajax({
+        url: "{{ route('account.store') }}",
+        type: "POST",
+        data: form.serialize(),
+        success: function (res) {
+
+    alert(res.message || 'Account added successfully');
+
+    if (!res.account || !res.account.id || !res.account.account_name) {
+        console.error('Invalid response:', res);
+        return;
+    }
+
+    let partySelect = document.getElementById('party');
+
+    if (!partySelect) {
+        console.error('#party_id not found');
+        return;
+    }
+
+    // 🔥 Create option using native DOM
+    let option = document.createElement("option");
+
+option.value = res.account.id;
+option.text  = res.account.account_name;
+option.selected = true;
+
+// 🔑 REQUIRED DATA ATTRIBUTES
+option.setAttribute('data-gstin', res.account.gstin ?? '');
+option.setAttribute('data-address', res.account.address ?? '');
+option.setAttribute('data-state', res.account.state ?? '');
+option.setAttribute('data-state_code', res.account.state_code ?? '');
+
+partySelect.appendChild(option);
+
+// refresh select2
+$(partySelect).trigger('change');
+
+
+    // 🔁 Refresh Select2 safely
+    if ($(partySelect).hasClass("select2-hidden-accessible")) {
+        $(partySelect).trigger("change");
+    } else {
+        $(partySelect).select2().trigger("change");
+    }
+
+    $('#accountModal').modal('hide');
+    form[0].reset();
+},
+
+        error: function (xhr) {
+            if (xhr.responseJSON && xhr.responseJSON.errors) {
+                let msg = Object.values(xhr.responseJSON.errors)[0][0];
+                alert(msg);
+            } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                alert(xhr.responseJSON.message);
+            } else {
+                alert('Validation failed');
+            }
+        },
+        complete: function () {
+            btn.prop('disabled', false);
+        }
+    });
+});
+
+/* =========================
+   ITEM MODAL LOGIC
+========================= */
+
+// Auto PRINT NAME
+$('#modal_name').on('keyup', function () {
+    $('#modal_p_name').val(this.value);
+});
+
+// PART-B toggle
+$('#modal_partb').on('change', function () {
+    $('.modal_partb_div, .modal_tcs_div').hide();
+    $('#modal_tcs_applicable').prop('checked', false);
+
+    if (this.checked) {
+        $('.modal_partb_div').show();
+    }
+});
+
+// TCS toggle
+$('#modal_tcs_applicable').on('change', function () {
+    $('.modal_tcs_div').toggle(this.checked);
+});
+
+// GST → Item type
+$('#modal_gst_rate').on('change', function () {
+    $('#modal_item_type').val(
+        $(this).find(':selected').data('type') || ''
+    );
+});
+
+
+/* =========================
+   SELECT2 INIT (MODAL SAFE)
+========================= */
+
+$('#itemModal').on('shown.bs.modal', function () {
+
+    $('#itemModal select.select2-single').each(function () {
+
+        if ($(this).data('select2')) {
+            $(this).select2('destroy');
+        }
+
+        $(this).select2({
+            width: '100%',
+            dropdownParent: $('#itemModal'),
+            minimumResultsForSearch: 0
+        });
+    });
+});
+
+$('#saveItemBtn').on('click', function () {
+
+    let btn = $(this);
+    let form = $('#modalItemForm');
+
+    btn.prop('disabled', true);
+
+    $.ajax({
+        url: "{{ route('account-manage-item.store') }}",
+        type: "POST",
+        data: form.serialize(),
+        success: function (res) {
+
+    if (!res.status || !res.item) {
+        alert('Invalid response');
+        return;
+    }
+
+    alert(res.message);
+
+    // ✅ SAFETY CHECK
+    if (!activeItemRowId) {
+        alert('Item row not detected');
+        return;
+    }
+
+    // 🎯 TARGET CORRECT ROW
+    let itemSelect = $('#goods_discription_tr_' + activeItemRowId);
+
+    // 🔥 CREATE OPTION
+    let option = document.createElement("option");
+
+      option.value = res.item.id;
+      option.text  = res.item.name;
+      option.selected = true;
+
+      // 🔥 REQUIRED DATA ATTRIBUTES
+      option.setAttribute('data-val', res.item.unit);          // UNIT TEXT
+      option.setAttribute('unit_id', res.item.u_name);    // UNIT ID
+      option.setAttribute('data-percent', res.item.gst_rate);
+      option.setAttribute('data-parameterized_stock_status', res.item.parameterized_stock_status ?? 0);
+      option.setAttribute('data-config_status', res.item.config_status ?? 0);
+      option.setAttribute('data-group_id', res.item.group_id ?? '');
+
+      itemSelect.append(option);
+      itemSelect.trigger('change');
+
+
+      // ➕ APPEND & SELECT
+      itemSelect.append(option).trigger('change');
+
+      // 🔁 REFRESH SELECT2 (SAFE)
+      if (itemSelect.hasClass('select2-hidden-accessible')) {
+         itemSelect.trigger('change.select2');
+      }
+
+      // 👉 MOVE CURSOR TO QTY
+      $('#quantity_tr_' + activeItemRowId).focus();
+
+      // 🧹 CLEANUP
+      $('#itemModal').modal('hide');
+      $('#modalItemForm')[0].reset();
+      activeItemRowId = null;
+},
+        error: function (xhr) {
+            if (xhr.responseJSON?.errors) {
+                alert(Object.values(xhr.responseJSON.errors)[0][0]);
+            } else {
+                alert('Failed to save item');
+            }
+        },
+        complete: function () {
+            btn.prop('disabled', false);
+        }
+    });
+});
+function getItemGstRate(item_id,index){
+   let date = $("#date").val();
+   if(date==""){
+      return;
+   }
+   var token = '<?php echo csrf_token(); ?>';
+   $.ajax({
+      url: "{{ route('get-item-gst-rate') }}",
+      type: "POST",
+      data : {'item_id':item_id,'txn_date':$("#date").val(),'_token':token},
+      success : function(res) {
+         if(res.status==true){
+            let $select = $("#goods_discription_tr_" + index);
+            $select.find(':selected').attr('data-percent', res.gst_rate);
+            calculateAmount();
+         }
+      }
+   });
+}
+$("#date").on("change", function(){
+   $(".goods_items").each(function(){
+      let item_id = $(this).val();
+      let index = $(this).data("id");
+      if(item_id){
+         //getItemGstRate(item_id,index);
+      }
+   });   
+});
 </script>
 @endsection

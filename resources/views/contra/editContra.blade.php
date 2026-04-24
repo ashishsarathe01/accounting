@@ -58,21 +58,34 @@
                      <input type="date" id="date" value="<?php echo $contra->date; ?>" class="form-control calender-bg-icon calender-placeholder" name="date" placeholder="Select date" required>
                   </div>
                   <div class="mb-2 col-md-2">
-                     <label for="name" class="form-label font-14 font-heading">Voucher No.</label>
-                     <input type="text" id="voucher_no" class="form-control" name="voucher_no" placeholder="Voucher No." required value="{{$contra->voucher_no}}">
-                  </div>
-                        <div class="mb-2 col-md-2">
                      <label for="series_no" class="form-label font-14 font-heading">Series No.</label>
                      <select id="series_no" class="form-control" name="series_no">
                         <option value="">Select Series</option>
                         <?php
                         if(count($mat_series) > 0) {
                            foreach ($mat_series as $value) { ?>
-                              <option value="<?php echo $value->series; ?>" @if($contra->series_no==$value->series) selected @endif><?php echo $value->series; ?></option>
+                              <option value="<?php echo $value->series; ?>"
+                                 data-invoice_start_from="<?php echo $value->invoice_start_from ?? ''; ?>"
+                                 data-invoice_prefix="<?php echo $value->invoice_prefix ?? ''; ?>"
+                                 data-manual_enter_invoice_no="<?php echo $value->manual_enter_invoice_no ?? ''; ?>"
+                                 @if($contra->series_no==$value->series) selected @endif
+                              >
+                                 <?php echo $value->series; ?>
+                              </option>
                               <?php 
                            }
                         } ?>
                      </select>
+                  </div>
+                  <div class="mb-2 col-md-2">
+                     <label for="name" class="form-label font-14 font-heading">Voucher No.</label>
+                     <input type="text" class="form-control" id="voucher_prefix"
+                        name="voucher_prefix"
+                        value="{{ $contra->voucher_no_prefix ?? $contra->voucher_no }}"
+                        style="text-align:right;">
+
+                     <input type="hidden" id="voucher_no" name="voucher_no" value="{{ $contra->voucher_no }}">
+                     <input type="hidden" id="manual_enter_invoice_no" name="manual_enter_invoice_no">
                   </div>
                   <div class="mb-2 col-md-2">
                      <label for="name" class="form-label font-14 font-heading">Mode</label>
@@ -112,7 +125,7 @@
                                  </select>
                               </td>
                               <td class="">
-                                 <select class="form-select select2-single" id="account_<?php echo $i?>" name="account_name[]" required>
+                                 <select class="form-select select2-single" id="account_<?php echo $i?>" data-id="<?php echo $i?>" name="account_name[]" required>
                                     <option value="">Select</option>
                                     <?php                                    
                                     foreach ($party_list as $val) {
@@ -317,9 +330,15 @@
          if(cr != dr) {
             alert("Debit and credit amounts should be equal.");
             return false;
-         }         
+         }     
          $("#frm").submit();
       });
+
+      $('.select2-single').select2({
+    placeholder:"Select",
+    width:'100%'
+});
+$("#date").focus();
    });
    $("#mode").change(function(){
       $("#cheque_no").val('');
@@ -329,22 +348,20 @@
       }
    });
    
-$(document).on('select2:select select2:unselect select2:close', 'select[id^="account_"]', function (e) {
-    const id = $(this).attr('id').split('_').pop(); // e.g. account_1 → 1
-    const selectedValue = $(this).val();
-    const previousValue = $(this).data('previousValue');
+$(document).on('select2:select','select[id^="account_"]',function(){
 
-    // If first time OR same value OR valid selection, move focus
-    if (!previousValue || (selectedValue && selectedValue === previousValue) || (selectedValue && e.type === 'select2:select')) {
-        $(`#debit_${id}`).focus(); // focus on the corresponding element
-    }
+    const id = $(this).data('id');
 
-    // Update previous value only if something is selected
-    if (selectedValue) {
-        $(this).data('previousValue', selectedValue);
-    } else {
-        $(this).removeData('previousValue');
-    }
+    setTimeout(function(){
+
+        if(!$("#debit_"+id).prop("readonly")){
+            $("#debit_"+id).focus();
+        }else{
+            $("#credit_"+id).focus();
+        }
+
+    },100);
+
 });
 
 
@@ -381,6 +398,73 @@ submitBtn.addEventListener('mouseleave', resetColor);
 // Keyboard focus (tab)
 submitBtn.addEventListener('focus', setGreen);
 submitBtn.addEventListener('blur', resetColor);
+$(document).on('change','select[id^="type_"]',function(){
 
+    const id = $(this).data('id');
+
+    setTimeout(function(){
+        $("#account_"+id).select2('open');
+    },100);
+
+});
+$(document).on("keydown",".narration",function(e){
+
+    if(e.key === "Tab" && !e.shiftKey){
+
+        let id = $(this).data("id");
+
+        let next = $("#type_"+(parseInt(id)+1));
+
+        if(next.length){
+            e.preventDefault();
+            next.focus();
+        }
+
+    }
+
+});
+$(document).ready(function(){
+
+    let isEditPage = true;
+
+    $('#series_no').change(function(){
+
+        let selected = $(this).find(':selected');
+
+        let prefix = selected.data('invoice_prefix') || '';
+        let manual = selected.data('manual_enter_invoice_no');
+
+        if(!isEditPage){
+
+            if(manual == '0'){ 
+                let start = selected.data('invoice_start_from') || '';
+                $('#voucher_prefix').val(prefix);
+                $('#voucher_no').val(start); 
+            }else{
+                $('#voucher_prefix').val('');
+                $('#voucher_no').val('');
+            }
+
+        }
+
+        $('#manual_enter_invoice_no').val(manual ?? '');
+
+        if(manual === undefined || manual === null || manual === ''){
+            $('#voucher_prefix').prop('readonly', false);
+        }
+        else if(manual == '1'){
+            $('#voucher_prefix').prop('readonly', false);
+        }
+        else if(manual == '0'){
+            $('#voucher_prefix').prop('readonly', true);
+        }
+
+        isEditPage = false;
+
+    });
+
+    $('#series_no').trigger('change');
+
+});
 </script>
 @endsection

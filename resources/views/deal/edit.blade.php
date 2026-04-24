@@ -65,12 +65,19 @@
                                 @endforeach
                             </select>
                         </div>
+                        @php
+                            if ($deal->deal_type == 'TON') {
+                                $qty = $deal->qty / 1000;
+                            } else {
+                                $qty = $deal->qty;
+                            }
+                        @endphp
 
                         <!-- Quantity -->
                         <div class="col-md-2">
                             <label for="quantity" class="form-label">Qty *</label>
                             <input type="number" name="quantity" id="quantity" class="form-control" min="1"
-                                   value="{{ $deal->qty }}" required>
+                                   value="{{ $qty }}" required>
                         </div>
 
                         <!-- Freight -->

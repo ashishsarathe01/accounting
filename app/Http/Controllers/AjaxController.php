@@ -393,23 +393,23 @@ class AjaxController extends Controller
       $assign = SalesReturn::where('party',$account_id)
                               ->where('delete','0')
                               ->where('sale_bill_id','!=',$request->sale_bill_id)
-                              ->where('financial_year',$financial_year)
+                              //->where('financial_year',$financial_year)
                               ->pluck('invoice_no');
       //Purchase Invoice
       $purchase_account_details = Purchase::select('voucher_no','id','series_no','financial_year','material_center')
                                  ->where('delete','0')
                                  ->where('party', $account_id)
-                                 ->where('financial_year',$financial_year)
+                                // ->where('financial_year',$financial_year)
                                  ->orderBy('voucher_no','desc')
                                  ->get();
       $purchase_account_details = $purchase_account_details->map(function ($item) {
          $item->voucher_type = 'PURCHASE';
          return $item;
       });
-      $Accountdetails = Sales::select('voucher_no','id','series_no','financial_year','material_center','voucher_no_prefix','date')
+      $Accountdetails = Sales::select('voucher_no_prefix as voucher_no','id','series_no','financial_year','material_center','date')
                               ->where('party', $account_id)
                               ->where('delete','0')
-                              ->where('financial_year',$financial_year)
+                              //->where('financial_year',$financial_year)
                               //->whereNotIn('voucher_no', $assign)
                               ->orderBy('voucher_no','desc')
                               ->get();
@@ -428,14 +428,14 @@ class AjaxController extends Controller
       $account_id  = $request->account_id;
       $assign = PurchaseReturn::where('party',$account_id)
                               ->where('purchase_bill_id','!=',$request->purchase_bill_id)
-                              ->where('financial_year',$financial_year)
+                              //->where('financial_year',$financial_year)
                               ->where('delete','0')
                               ->pluck('invoice_no');
       //Purchase Invoice
       $Accountdetails = Purchase::select('voucher_no','id','series_no','financial_year','material_center')
                                  ->where('delete','0')
                                  ->where('party', $account_id)
-                                 ->where('financial_year',$financial_year)
+                                 //->where('financial_year',$financial_year)
                                  //->whereNotIn('voucher_no', $assign)
                                  ->orderBy('voucher_no','desc')
                                  ->get();
@@ -447,7 +447,7 @@ class AjaxController extends Controller
       $sale_voucher = Sales::select('voucher_no','id','series_no','financial_year','material_center','voucher_no_prefix','date')
                                  ->where('party', $account_id)
                                  ->where('delete','0')
-                                 ->where('financial_year',$financial_year)
+                                 //->where('financial_year',$financial_year)
                                  ->orderBy('voucher_no','desc')
                                  ->get();
       $sale_voucher = $sale_voucher->map(function ($item) {
@@ -582,17 +582,19 @@ class AjaxController extends Controller
       }
    }
    public function checkAccountName(Request $request){
-      if($request->get('account_name')){
+      if($request->get('account_name') && $request->get('company_id')){
          $account_name = $request->get('account_name');
+         $company_id = $request->get('company_id');
          $account = Accounts::select('id')
                   ->where('account_name',$account_name)
                   ->where('delete', '=', '0')
-                  ->whereIn('company_id',[Session::get('user_company_id'),0])
+                  ->whereIn('company_id',[$company_id,0])
                   ->first();
          if($account){
-            return 1;
+return response()->json(1);
+
          }else{
-            return 0;
+           return response()->json(0);
          }
       }
    }

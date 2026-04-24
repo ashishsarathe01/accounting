@@ -69,7 +69,7 @@
                                                 
                                                 <div class="mb-3 col-md-3">
                                                     <label for="start_time_stamp" class="form-label font-14 font-heading">TIME STAMP</label>
-                                                    <input type="text" class="form-control" name="start_time_stamp" id="start_time_stamp" value="{{date('d-m-Y H:i:s',strtotime($value->start_time_stamp))}}" readonly>
+                                                    <input type="text" class="form-control" name="start_time_stamp" id="start_time_stamp" value="{{date('d-m-Y H:i:s',strtotime($value->start_time_stamp))}}" >
                                                 </div>
                                                 <div class="mb-3 col-md-3">
                                                     <label for="production_in_kg" class="form-label font-14 font-heading">PRODUCTION IN KG</label>
@@ -82,6 +82,7 @@
                                                 @php $last_row_id = $value->quality_row_id; @endphp
                                                 @php $last_quality_id = $value->item_id; @endphp
                                                 @php $last_speed = $value->speed; @endphp
+                                                 @php $last_gsm = $value->gsm; @endphp
                                             @endforeach
                                         @endif
                                     </div>
@@ -128,10 +129,10 @@
                                     @endif
                                     <div class="text-start">
                                         @if($deckle && $deckle->stop_machine_status==0)
-                                            <button type="button" id="add_new_quality" data-speed="{{$last_speed}}" data-deckle_id="{{$deckle->id}}" data-last_row_id="{{$last_row_id}}" data-deckle_no="{{$deckle->deckle_no}}" class="btn  btn-xs-primary ">
+                                            <button type="button" id="add_new_quality" data-speed="{{$last_speed}}" data-gsm="{{$last_gsm}}" data-deckle_id="{{$deckle->id}}" data-last_row_id="{{$last_row_id}}" data-deckle_no="{{$deckle->deckle_no}}" class="btn  btn-xs-primary ">
                                                 ADD QUALITY
                                             </button>
-                                            <button type="button" id="add_new_deckle" data-quality_id="{{$last_quality_id}}" data-deckle_id="{{$deckle->id}}" data-speed="{{$last_speed}}" data-deckle_no="{{$deckle->deckle_no}}" data-speed="{{$deckle->speed}}"  data-last_row_id="{{$last_row_id}}" class="btn  btn-xs-primary ">ADD NEW POP ROLL
+                                            <button type="button" id="add_new_deckle" data-quality_id="{{$last_quality_id}}" data-deckle_id="{{$deckle->id}}" data-gsm="{{$last_gsm}}" data-speed="{{$last_speed}}" data-deckle_no="{{$deckle->deckle_no}}" data-speed="{{$deckle->speed}}"  data-last_row_id="{{$last_row_id}}" class="btn  btn-xs-primary ">ADD NEW POP ROLL
                                             </button>
                                             <button type="button" id="machine_stop" data-deckle_id="{{$deckle->id}}" data-deckle_no="{{$deckle->deckle_no}}" class="btn  btn-xs-primary ">
                                                 MACHINE STOP
@@ -198,6 +199,9 @@
                                 </td>
                                 <td>
                                     <a href="{{ URL::to('deckle-process/'.$deckle->id.'/edit') }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
+                                    <a href="{{ route('deckle-process.delete', $deckle->id) }}" onclick="return confirm('Are you sure you want to cancel this record?')" style="color:red;">
+                                                 Cancel
+                                                    </a>
                                 </td>
                             </tr>
                         @endforeach
@@ -301,6 +305,10 @@
                             <label for="actual_production_in_kg" class="form-label">Production In Kg:</label>
                             <input type="number" class="form-control" id="actual_production_in_kg" placeholder="2000" name="actual_production_in_kg" required>
                         </div>
+                           <div class="mb-3">
+                            <label for="actual_gsm" class="form-label">gsm:</label>
+                            <input type="number" class="form-control" id="actual_gsm"  name="actual_gsm" required>
+                        </div>
                         <div class="mb-3">
                             <label for="actual_speed" class="form-label">Speed:</label>
                             <input type="number" class="form-control" id="actual_speed"  name="actual_speed" required>
@@ -323,11 +331,11 @@
                         </div>
                         <div class="mb-3">
                             <label for="new_item_gsm" class="form-label">GSM:</label>
-                            <input type="text" class="form-control" name="new_item_gsm" id="new_item_gsm" placeholder="120" readonly required/>
+                            <input type="text" class="form-control" name="new_item_gsm" id="new_item_gsm" placeholder="120" required/>
                         </div>
                         <div class="mb-3">
                             <label for="new_start_time_stamp" class="form-label">TIME STAMP:</label>
-                            <input type="text" class="form-control" name="new_start_time_stamp" id="new_start_time_stamp"  readonly value="{{date('d-m-Y H:i:s')}}"/>
+                            <input type="text" class="form-control" name="new_start_time_stamp" id="new_start_time_stamp"   value="{{date('d-m-Y H:i:s')}}"/>
                         </div>
                         <div class="mb-3">
                             <label for="new_item_bf" class="form-label">SPEED:</label>
@@ -397,9 +405,18 @@
                         <label for="new_actual_production_in_kg" class="form-label">Production In Kg:</label>
                         <input type="number" class="form-control" id="new_actual_production_in_kg" placeholder="2000"  required>
                     </div>
+                    
+                     <div class="mb-3">
+                        <label for="new_actual_speed" class="form-label">gsm:</label>
+                        <input type="number" class="form-control" id="new_actual_gsm"  required>
+                    </div>
                     <div class="mb-3">
                         <label for="new_actual_speed" class="form-label">Speed:</label>
                         <input type="number" class="form-control" id="new_actual_speed"  required>
+                    </div>
+                    <div class="mb-3 mt-3">
+                        <label for="new_actual_production_in_kg" class="form-label">End Time</label>
+                        <input type="text" class="form-control" name="new_actual_end_time_stamp" id="new_actual_end_time_stamp"   value="{{date('d-m-Y H:i:s')}}"/>
                     </div>
                 </div>
             </div>
@@ -419,9 +436,11 @@ $(document).ready(function(){
         let deckle_id = $(this).attr('data-deckle_id');
         let deckle_no = $(this).attr('data-deckle_no');
         let speed = $(this).attr('data-speed');
+         let gsm = $(this).attr('data-gsm');
         $("#deckle_id").val(deckle_id);
         $("#deckle_number").val(deckle_no);
         $("#actual_speed").val(speed)
+        $("#actual_gsm").val(gsm)
         $("#quality_last_row_id").val($(this).attr('data-last_row_id'))
         $("#qualityModal").modal('toggle');
     });
@@ -509,11 +528,13 @@ $(document).ready(function(){
             let deckle_id = $(this).attr('data-deckle_id');
             let deckle_no = $(this).attr('data-deckle_no');
             let speed = $(this).attr('data-speed');
+            let gsm = $(this).attr('data-gsm');
             let last_row_id = $(this).attr('data-last_row_id');
             $("#new_quality").val(quality_id);
             $("#new_deckle_id").val(deckle_id);
             $("#new_deckle_number").val(deckle_no);
             $("#new_actual_speed").val(speed);
+            $("#new_actual_gsm").val(gsm);
             $("#last_row_id").val(last_row_id);
             $("#deckleModal").modal('toggle');
         });
@@ -524,7 +545,10 @@ $(document).ready(function(){
             let deckle_no = $("#new_deckle_number").val();
             let new_actual_production_in_kg = $("#new_actual_production_in_kg").val();
             let new_actual_speed = $("#new_actual_speed").val();
+            let new_actual_gsm = $("#new_actual_gsm").val();
             let last_row_id = $("#last_row_id").val();
+            let new_actual_end_time_stamp = $("#new_actual_end_time_stamp").val();
+            
             
             $.ajax({
                 url:"{{url('stop-deckle-process')}}",
@@ -534,8 +558,9 @@ $(document).ready(function(){
                     "id": deckle_id,
                     'production_in_kg':new_actual_production_in_kg,
                     'new_actual_speed':new_actual_speed,
-                    'last_row_id':last_row_id
-
+                    'last_row_id':last_row_id,
+                    'new_actual_gsm':new_actual_gsm,
+                    'new_actual_end_time_stamp':new_actual_end_time_stamp
                 },
                 success:function(res){
                     if(res!=""){

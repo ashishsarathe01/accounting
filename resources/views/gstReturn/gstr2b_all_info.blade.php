@@ -185,6 +185,52 @@
                             <tbody>{!!$b2b_credit_note!!}</tbody>
                          </table>
                     </div>
+                     @empty(!$b2b_debit_note_unlinked)
+                     <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm" style="text-align: center;">Debit Note Only In Books But Not Portal for the Current Month</h5>
+                     <div class="table-responsive">
+                           <table class="table table-bordered table-striped table-hover">
+                              <thead>
+                              <tr>
+                                 <th></th>
+                                 <th>Invoice No.</th>
+                                 <th>Invoice Date</th>
+                                 <th style="text-align: right">Book Value</th>
+                                 <th style="text-align: right">Taxable Value</th>
+                                 <th style="text-align: right">IGST</th>
+                                 <th style="text-align: right">CGST</th>
+                                 <th style="text-align: right">SGST</th>
+                                 <th style="text-align: right">Cess</th>
+                                 <th>Action</th>
+                              </tr>
+                              </thead>
+                              <tbody>{!!$b2b_debit_note_unlinked!!}</tbody>
+                           </table>
+                     </div>
+                    @endempty
+
+                     @empty(!$b2b_credit_note_unlinked)
+                     <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm" style="text-align: center;">Credit Note Only In Books But Not Portal for the Current Month </h5>
+                     <div class="table-responsive">
+                           <table class="table table-bordered table-striped table-hover">
+                              <thead>
+                              <tr>
+                                 <th></th>
+                                 <th>Invoice No.</th>
+                                 <th>Invoice Date</th>
+                                 <th style="text-align: right">Book Value</th>
+                                 <th style="text-align: right">Taxable Value</th>
+                                 <th style="text-align: right">IGST</th>
+                                 <th style="text-align: right">CGST</th>
+                                 <th style="text-align: right">SGST</th>
+                                 <th style="text-align: right">Cess</th>
+                                 <th>Action</th>
+                              </tr>
+                              </thead>
+                              <tbody>{!!$b2b_credit_note_unlinked!!}</tbody>
+                           </table>
+                     </div>
+                    @endempty
+                    
                </div>
                <div class="tab-pane" id="fill-tabpanel-1" role="tabpanel" aria-labelledby="fill-tab-1">
                     <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm" style="text-align: center;">B2BA-Invoices</h5>
@@ -647,12 +693,19 @@
          success: function (response) {
             let res = JSON.parse(response);
             $("#invoice_table_body").html('');
-            $.each(res.data, function(index, value) {
+            $.each(res.purchase, function(index, value) {
                $checked = '';
                if(value.gstr2b_invoice_id!="" && value.gstr2b_invoice_id!=null){
                   $checked = 'checked';
                }
-               $("#invoice_table_body").append('<tr><td><input type="checkbox" class="link_invoice_check" data-id="'+value.id+'" '+$checked+'></td><td>'+value.voucher_no+'</td><td>'+value.date+'</td><td style="text-align: right">'+value.total+'</td></tr>');
+               $("#invoice_table_body").append('<tr><td><input type="checkbox" class="link_invoice_check" data-id="'+value.id+'" '+$checked+' data-type="PURCHASE"></td><td>'+value.voucher_no+'</td><td>'+value.date+'</td><td style="text-align: right">'+value.total+'</td></tr>');
+            });
+            $.each(res.journal, function(index, value) {
+               $checked = '';
+               if(value.gstr2b_invoice_id!="" && value.gstr2b_invoice_id!=null){
+                  $checked = 'checked';
+               }
+               $("#invoice_table_body").append('<tr><td><input type="checkbox" class="link_invoice_check" data-id="'+value.id+'" '+$checked+' data-type="JOURNAL"></td><td>'+value.voucher_no+'</td><td>'+value.date+'</td><td style="text-align: right">'+value.total+'</td></tr>');
             });
             $(".link_invoice_btn_action").data('invoice_no',invoice);
             $('#linkInvoiceModal').modal('show');
@@ -668,7 +721,7 @@
          let invoice_no = $('.link_invoice_btn_action').data('invoice_no');
          let selected_ids = [];
          $('.link_invoice_check:checked').each(function() {
-            selected_ids.push($(this).data('id'));
+            selected_ids.push({'id':$(this).data('id'),'type':$(this).attr('data-type')});
          });
          if(selected_ids.length==0) {
             alert('Please select at least one entry to link.');

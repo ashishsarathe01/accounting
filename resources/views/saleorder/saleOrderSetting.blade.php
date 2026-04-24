@@ -18,8 +18,14 @@
 
                 <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4 mb-4">
                     <h5 class="master-table-title m-0 py-2">Sale Order Settings</h5>
+                    <a href="{{ route('sale-order.info') }}" class="btn btn-xs-primary">
+                        Add Info
+                    </a>
+                    <a href="{{ route('sale-order.add-location-price') }}" class="btn btn-xs-primary">
+                        Add Location Price
+                    </a>
                 </div>
-
+                
                 <form action="{{ route('sale-order.settings.update') }}" method="POST">
                     @csrf
 

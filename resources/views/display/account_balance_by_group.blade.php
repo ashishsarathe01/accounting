@@ -42,6 +42,9 @@
                         @php $balance = $value['account_ledger_sum_debit'] - $value['account_ledger_sum_credit'];
                         $balance = round($balance,2);
                         @endphp
+                        @if($balance == 0)
+                             @continue
+                          @endif
                         <tr class="get_info" data-id="{{$value['id']}}" data-financial_year="{{$financial_year}}" data-type="{{$value['type']}}" style="cursor: pointer;">
                            <td style="text-align:left;">{{$value['account_name']}}</td>
                            <td style="text-align:right;">
@@ -83,8 +86,8 @@
    $(document).ready(function(){
       $(".get_info").click(function(){
          if($(this).attr('data-type')==1){
-            // window.location = "{{url('account-balance-by-group')}}/"+$(this).attr('data-id')+"/"+$(this).attr('data-financial_year')+"/{{$from_date}}/{{$to_date}}";
-            window.location = "{{url('account-balance-by-group')}}/bs/"+$(this).attr('data-id')+"/"+"{{$from_date}}/{{$to_date}}/group";
+             window.location = "{{url('account-balance-by-group')}}/"+$(this).attr('data-id')+"/"+$(this).attr('data-financial_year')+"/{{$from_date}}/{{$to_date}}";
+            //window.location = "{{url('account-balance-by-group')}}/bs/"+$(this).attr('data-id')+"/"+"{{$from_date}}/{{$to_date}}/group";
          }else{
             window.location = "{{url('accountledger-filter')}}/?party="+$(this).attr('data-id')+"&from_date={{$from_date}}&to_date={{$to_date}}";            
          }         

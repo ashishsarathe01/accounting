@@ -1,6 +1,12 @@
 @extends('layouts.app')
 @section('content')
-@include('layouts.header')
+@if(!request()->has('print'))
+    @include('layouts.header')
+@endif
+@php
+    $source = request()->get('source');
+    $return_url = request()->get('return_url');
+@endphp
 <style type="text/css">
    .dataTables_filter{
       float:right;
@@ -58,11 +64,14 @@
    .bil_logo img{
       max-width:100%;
    }
-   @media print{
-      .noprint{
-         display:none;
-      }
+  @media print{
+   .noprint{
+      display:none;
    }
+   .header-section{
+      display:none !important;
+   }
+}
    @page { size: auto;  margin: 0mm; }
    .importantRule { display: none !important; }
 </style>
@@ -76,6 +85,11 @@
                         <div class="calender-administrator my-2 my-md-0  w-min-230 noprint">
                             <a href="{{ route('purchase-return.index') }}"><button type="button" class="btn btn-danger">QUIT</button></a>
                             <button class="btn btn-info" onclick="printpage();">Print</button>
+                            @if($source == 'approve' && (int)$purchase_return->approved_status !== 1)
+                                <button class="btn btn-success" id="approveDebitNote">
+                                Approve
+                                </button>
+                            @endif
                              <?php 
                     if ( in_array(date('Y-m', strtotime($purchase_return->date)), $month_arr) && $purchase_return->e_invoice_status == 0 && $purchase_return->e_waybill_status == 0) {?>
                         <a href="{{ URL::to('purchase-return-edit/'.$purchase_return->id) }}" class="btn btn-primary text-white">
@@ -190,22 +204,68 @@
                                 @endif
                             @endforeach 
                         </td>
-                        <td colspan="2"style="text-align:right; border-top:0;">
-                              @foreach($return as $k=>$item)
-                                 @php $taxable_amount = 0; @endphp
-                                 @foreach($item as $amount)
-                                    @php $taxable_amount = $taxable_amount + $amount['amount']; @endphp
-                                 @endforeach
-                                 
-                                @if($purchase_return->tax_cgst!='' && $purchase_return->tax_sgst!='')
-                                 <p>@php echo formatIndianNumber(($taxable_amount*($k/2))/100) @endphp</p>
-                                 <p>@php echo formatIndianNumber(($taxable_amount*($k/2))/100) @endphp</p>
-                                @elseif($purchase_return->tax_igst!='')
-                                <p>@php echo formatIndianNumber(($taxable_amount*$k)/100) @endphp</p>
-                                @endif
-                            @endforeach
-                        </td>
-                     </tr>
+                      <td colspan="2" style="text-align:right; border-top:0;">
+@foreach($return as $k => $item)
+    @php 
+        $taxable_amount = 0; 
+    @endphp
+
+    @foreach($item as $amount)
+        @php 
+            $taxable_amount += $amount['amount']; 
+        @endphp
+    @endforeach
+    
+    @if($purchase_return->tax_cgst != '' && $purchase_return->tax_sgst != '')
+        @php 
+            $gst = round(($taxable_amount * ($k / 2)) / 100, 2);
+        @endphp
+        <p>{{ formatIndianNumber($gst, 2) }}</p>
+
+        @php 
+            $gst = round(($taxable_amount * ($k / 2)) / 100, 2);
+        @endphp
+        <p>{{ formatIndianNumber($gst, 2) }}</p>
+
+    @elseif($purchase_return->tax_igst != '')
+        @php 
+            $gst = round(($taxable_amount * $k) / 100, 2);
+        @endphp
+        <p>{{ formatIndianNumber($gst, 2) }}</p>
+    @endif
+@endforeach
+</td>
+                     @php
+    $actual_total = $item_total;
+
+    // Add GST
+    if($purchase_return->tax_igst != ''){
+        $actual_total += $purchase_return->tax_igst;
+    } elseif($purchase_return->tax_cgst != '' && $purchase_return->tax_sgst != ''){
+        $actual_total += ($purchase_return->tax_cgst + $purchase_return->tax_sgst);
+    }
+
+    $rounded_total = round($actual_total);
+    $roundoff = round($rounded_total - $actual_total, 2);
+@endphp
+@if($roundoff != 0)
+<tr>
+    <td colspan="6" style="text-align:right; border-right:0;">
+        @if($roundoff > 0)
+        <strong>ROUND OFF (+) </strong>
+        @else
+        <strong>ROUND OFF (-) </strong>
+         @endif
+    </td>
+    <td colspan="2" style="text-align:right;">
+        @if($roundoff > 0)
+            {{ formatIndianNumber($roundoff) }} 
+        @else
+            {{ formatIndianNumber(abs($roundoff)) }} 
+        @endif
+    </td>
+</tr>
+@endif
                      <tr>
                           <td colspan="6" style="text-align:right; border-right: 0; border-bottom: 0">
                            <p><strong>Grand Total ₹</strong></p>
@@ -311,4 +371,62 @@
       window.print();
       $('.header-section').removeClass('importantRule');
    }
+    $(document).on('click','#approveDebitNote',function(){
+        if(confirm("Approve this Debit Note ?")){
+            let id = "{{ $purchase_return->id }}";
+            let returnUrl = @json($return_url);
+            $.ajax({
+                url:"{{ route('transaction.approve') }}",
+                type:"POST",
+                data:{
+                    _token:"{{ csrf_token() }}",
+                    id:id,
+                    module:"debit_note"
+                },
+                success:function(res){
+                    if(res.status){
+                        alert(res.message);
+                        if(returnUrl){
+                            window.location.href = returnUrl;
+                        }else{
+                            window.location.href = "{{ url('transaction-report') }}";
+                        }
+                    }
+                }
+            });
+        }
+    });
+    
+    // Net amount
+$("#net_amount").val(net_total);
+
+// Total before rounding
+let tamount = parseFloat(net_total) + parseFloat(total_igst);
+
+// Rounded total
+let roundedTotal = Math.round(tamount);
+
+// Set final total
+$("#total_amount").val(roundedTotal);
+
+// Roundoff difference
+let roundoff = (roundedTotal - tamount).toFixed(2);
+
+// Reset UI
+$(".round_off_minus").hide();
+$(".round_off_plus").hide();
+$("#roundoffminus").val('');
+$("#roundoffplus").val('');
+
+// ✅ Show ONLY if roundoff exists (not 0)
+if (parseFloat(roundoff) !== 0) {
+
+    if (parseFloat(roundoff) < 0) {
+        $(".round_off_minus").show();
+        $("#roundoffminus").val(Math.abs(roundoff)); // always positive display
+    } else {
+        $(".round_off_plus").show();
+        $("#roundoffplus").val(roundoff);
+    }
+}
 </script>

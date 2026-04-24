@@ -85,6 +85,9 @@
                   <div class="ms-auto">
                      <input type="submit" value="SAVE" class="btn btn-xs-primary" id="saveBtn">
                      <a href="{{ route('sale.index') }}" class="btn  btn-black ">QUIT</a>
+                     <a href="{{ url('export-items') }}" class="btn btn-success mb-3">
+                        Export Items
+                     </a>
                   </div>
                </div>
             </form>            

@@ -193,4 +193,50 @@ class ManageItemsController extends Controller
             'message' => 'Something went wrong, please try again after some time.',
         ]);
     }
+    
+     public function itemByGroup(Request $request)
+    {
+        /* -------------------------------
+           Step 1: Validate Request
+        -------------------------------- */
+        $validator = Validator::make($request->all(), [
+            'group_id'  => 'required|string'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status'  => false,
+                'message' => $validator->errors()->first()
+            ], 422);
+        }
+
+        /* -------------------------------
+           Step 2: Fetch Items
+        -------------------------------- */
+        $items = ManageItems::select('id', 'name')
+            ->where('company_id', $request->company_id ?? null) // optional if app sends company_id
+            ->where('g_name', $request->group_id)
+            ->where('status', '1')
+            ->where('delete', '0')
+            ->orderBy('name')
+            ->get();
+
+        /* -------------------------------
+           Step 3: Response
+        -------------------------------- */
+        if ($items->isEmpty()) {
+            return response()->json([
+                'status'  => true,
+                'message' => 'No items found for this group',
+                'data'    => []
+            ], 200);
+        }
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'Items fetched successfully',
+            'data'    => $items
+        ], 200);
+    }
+   
 }

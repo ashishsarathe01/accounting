@@ -17,6 +17,7 @@ use App\Models\ItemLedger;
 use App\Models\ItemAverageDetail;
 use App\Models\SaleInvoiceConfiguration;
 use App\Models\ItemAverage;
+use App\Models\ActivityLog;
 use Carbon\Carbon;
 use App\Helpers\CommonHelper;
 use Illuminate\Support\Facades\URL;
@@ -67,10 +68,12 @@ class StockTransferController extends Controller
     $com_id = Session::get('user_company_id');
 
     // Base query for stock transfers
-    $query = StockTransfer::where('company_id', $com_id)
+    $query = StockTransfer::select('*', 
+                            DB::raw("(SELECT name FROM users WHERE users.id = stock_transfers.approved_by LIMIT 1) as approved_by_name"),
+            DB::raw("(SELECT name FROM users WHERE users.id = stock_transfers.created_by LIMIT 1) as created_by_name"))->where('company_id', $com_id)
                 ->where('status', '1')
                 ->where('delete_status', '0');
-
+    
     if ($from_date && $to_date) {
         $query->whereRaw("STR_TO_DATE(transfer_date,'%Y-%m-%d') >= STR_TO_DATE('" . date('Y-m-d', strtotime($from_date)) . "', '%Y-%m-%d')")
               ->whereRaw("STR_TO_DATE(transfer_date,'%Y-%m-%d') <= STR_TO_DATE('" . date('Y-m-d', strtotime($to_date)) . "', '%Y-%m-%d')")
@@ -99,6 +102,11 @@ class StockTransferController extends Controller
     public function create()
     {
         Gate::authorize('action-module',87);
+        $financial_year = Session::get('default_fy');
+      [$startYY, $endYY] = explode('-', $financial_year);
+
+      $fy_start_date = '20' . $startYY . '-04-01'; 
+      $fy_end_date   = '20' . $endYY   . '-03-31'; 
         $companyData = Companies::where('id', Session::get('user_company_id'))->first();
         if($companyData->gst_config_type == "single_gst"){
             $series_list = DB::table('gst_settings')
@@ -226,7 +234,7 @@ class StockTransferController extends Controller
                                  ->whereIn('company_id',[Session::get('user_company_id'),0])
                                  ->orderBy('name')
                                  ->get();
-        return view('stockTransfer.add_stock_transfer',['series_list'=>$series_list,'item_list'=>$item,"billsundry"=>$billsundry]);
+        return view('stockTransfer.add_stock_transfer',['fy_start_date'=> $fy_start_date,'fy_end_date'=> $fy_end_date,'series_list'=>$series_list,'item_list'=>$item,"billsundry"=>$billsundry]);
     }
 
     /**
@@ -681,6 +689,11 @@ class StockTransferController extends Controller
     public function edit($id)
     {
         Gate::authorize('action-module',65);
+        $financial_year = Session::get('default_fy');
+      [$startYY, $endYY] = explode('-', $financial_year);
+
+      $fy_start_date = '20' . $startYY . '-04-01'; 
+      $fy_end_date   = '20' . $endYY   . '-03-31'; 
         $companyData = Companies::where('id', Session::get('user_company_id'))->first();
         if($companyData->gst_config_type == "single_gst"){
             $series_list = DB::table('gst_settings')
@@ -746,7 +759,7 @@ class StockTransferController extends Controller
                                                     ->get();
 
                                                     
-        return view('stockTransfer.edit_stock_transfer',['series_list'=>$series_list,'item_list'=>$item,"billsundry"=>$billsundry,"stock_transfer"=>$stock_transfer,"stock_transfer_desc"=>$stock_transfer_desc,"stock_transfer_sundry"=>$stock_transfer_sundry]);
+        return view('stockTransfer.edit_stock_transfer',['fy_start_date'=> $fy_start_date,'fy_end_date'=> $fy_end_date,'series_list'=>$series_list,'item_list'=>$item,"billsundry"=>$billsundry,"stock_transfer"=>$stock_transfer,"stock_transfer_desc"=>$stock_transfer_desc,"stock_transfer_sundry"=>$stock_transfer_sundry]);
     }
 
     /**
@@ -783,6 +796,19 @@ class StockTransferController extends Controller
             'amount' => 'required',
         ]);
         $stock_transfer = StockTransfer::find($id);
+        $oldSnapshot = [
+            'stock_transfer' => $stock_transfer->toArray(),
+
+            'details' => StockTransferDescription::where('stock_transfer_id', $id)
+                ->where('delete_status', '0')
+                ->get()
+                ->toArray(),
+
+            'sundries' => StockTransferSundry::where('stock_transfer_id', $id)
+                ->where('delete_status', '0')
+                ->get()
+                ->toArray(),
+        ];
         $last_date =  $stock_transfer->transfer_date;
         $stock_transfer->transfer_date = $request->input('date');
         $stock_transfer->vehicle_no = $request->input('vehicle_no');
@@ -981,6 +1007,30 @@ class StockTransferController extends Controller
                    CommonHelper::RewriteItemAverageByItem($request->date,$value,$request->input('series_no'));
                 }
              }
+             $newSnapshot = [
+                'stock_transfer' => StockTransfer::find($id)->toArray(),
+
+                'details' => StockTransferDescription::where('stock_transfer_id', $id)
+                    ->where('delete_status', '0')
+                    ->get()
+                    ->toArray(),
+
+                'sundries' => StockTransferSundry::where('stock_transfer_id', $id)
+                    ->where('delete_status', '0')
+                    ->get()
+                    ->toArray(),
+            ];
+
+            ActivityLog::create([
+                'module_type' => 'stock_transfer',
+                'module_id'   => $id,
+                'action'      => 'edit',
+                'old_data'    => $oldSnapshot,
+                'new_data'    => $newSnapshot,
+                'action_by'   => Session::get('user_id'),
+                'company_id'  => Session::get('user_company_id'),
+                'action_at'   => now(),
+            ]);
              session(['previous_url_stock_transfer_edit' => URL::previous()]);
             return redirect('stock-transfer')->withSuccess('Stock Transfer Successfully!');
         }
@@ -996,6 +1046,19 @@ class StockTransferController extends Controller
     {
         Gate::authorize('action-module',66);
         $stock_transfer =  StockTransfer::find($id);
+        $oldSnapshot = [
+            'stock_transfer' => $stock_transfer->toArray(),
+
+            'details' => StockTransferDescription::where('stock_transfer_id', $id)
+                ->where('delete_status', '0')
+                ->get()
+                ->toArray(),
+
+            'sundries' => StockTransferSundry::where('stock_transfer_id', $id)
+                ->where('delete_status', '0')
+                ->get()
+                ->toArray(),
+        ];
         $stock_transfer->delete_status = '1';
         $stock_transfer->deleted_at = Carbon::now();
         $stock_transfer->deleted_by = Session::get('user_id');
@@ -1024,6 +1087,16 @@ class StockTransferController extends Controller
             ItemLedger::where('source',6)
                         ->where('source_id',$id)
                         ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
+            ActivityLog::create([
+                'module_type' => 'stock_transfer',
+                'module_id'   => $id,
+                'action'      => 'delete',
+                'old_data'    => $oldSnapshot,
+                'new_data'    => null,
+                'action_by'   => Session::get('user_id'),
+                'company_id'  => Session::get('user_company_id'),
+                'action_at'   => now(),
+            ]);
             return redirect('stock-transfer')->withSuccess('Deleted Successfully!');
         }        
     }
@@ -1126,6 +1199,9 @@ class StockTransferController extends Controller
         if(($handle = fopen($filePath, 'r')) !== false) {
             $header = fgetcsv($handle, 10000, ",");
             $fp = file($filePath, FILE_SKIP_EMPTY_LINES);
+            $fp = array_filter($fp, function($line) {
+                return trim(str_replace(',', '', $line)) !== '';
+            });
             $total_row = count($fp);
             $total_row = $total_row - 1;
             $success_row = 0;
@@ -1136,7 +1212,7 @@ class StockTransferController extends Controller
                $index++;
                continue;
             }
-            if($data[0]!="" && $data[2]!=""){
+            if($data[0]!="" && $data[1]!=""){
                 if($bill_date!=""){
                     $akey = array_search($series, $series_arr);
                     $merchant_gst = $gst_no_arr[$akey];
@@ -1231,9 +1307,11 @@ class StockTransferController extends Controller
             $price = trim(str_replace(",","",$price));
             $amount = $data[8];
             $amount = trim(str_replace(",","",$amount));
+            //echo $item_name.'--'.$item_qty."--".$price."--".$amount;
             array_push($item_arr,array("item_name"=>$item_name,"item_qty"=>$item_qty,"price"=>$price,"amount"=>$amount));
-            
+            //echo $index."**".$total_row;
             if($index==$total_row){
+                
                 array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"voucher_no"=>$voucher_no,"from_series"=>$from_series,"to_series"=>$to_series,"material_center_from"=>$material_center_from,"material_center_to"=>$material_center_to,"merchant_gst"=>$merchant_gst,"slicedData"=>$slicedData,"item_arr"=>$item_arr,"error_arr"=>$error_arr));
             }   
             $index++;

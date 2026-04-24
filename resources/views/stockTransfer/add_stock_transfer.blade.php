@@ -78,7 +78,7 @@
                         </div>
                         <div class="mb-3 col-md-3">
                             <label for="name" class="form-label font-14 font-heading">Date</label>
-                            <input type="date" id="date" class="form-control calender-bg-icon calender-placeholder" name="date" placeholder="Select date" value="{{date('Y-m-d')}}" required>
+                            <input type="date" id="date" class="form-control calender-bg-icon calender-placeholder" name="date" placeholder="Select date" value="{{date('Y-m-d')}}" min="{{ $fy_start_date }}" max="{{ $fy_end_date }}" required>
                             <ul style="color: red;">
                             @error('date'){{$message}}@enderror                        
                             </ul>

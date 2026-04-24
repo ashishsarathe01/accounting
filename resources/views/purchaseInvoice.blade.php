@@ -1,6 +1,10 @@
 @extends('layouts.app')
 @section('content')
 @include('layouts.header')
+@php
+$source = request()->get('source');
+$return_url = request()->get('return_url');
+@endphp
 <style type="text/css">
    .dataTables_filter{
       float:right;
@@ -77,7 +81,19 @@
                   <div class="calender-administrator my-2 my-md-0  w-min-230 noprint">
                      <button type="button" class="btn btn-danger" onclick="redirectBack()">QUIT</button>
                   <button class="btn btn-info" onclick="printpage();">Print</button>
+                     <?php 
+                    if ( in_array(date('Y-m', strtotime($sale_detail->date)), $month_arr) ) {?>
+                        <a href="{{ URL::to('purchase-edit/'.$sale_detail->id) }}" class="btn btn-primary text-white">
+                           <img src="{{ URL::asset('public/assets/imgs/edit-icon.svg') }}" alt="Edit" style="width: 16px; height: 16px; vertical-align: middle; filter: brightness(0) invert(1);">
+                           Edit
+                        </a><?php 
+                     } ?>
                   <a href="{{ route('purchase.create') }}"><button class="btn btn-primary">Add Purchase</button></a>
+                  @if($source == 'approve' && $sale_detail->approved_status != 1)
+                      <button class="btn btn-success" id="approvePurchase">
+                         Approve
+                      </button>
+                  @endif
                   </div>
                </div>            
             </div>
@@ -86,7 +102,7 @@
                 <tr>
     <th colspan="8">
         <div style="width:auto; float:left; text-align:left;">
-            <h4 style="margin: 0;">GSTIN : {{$party_detail->gstin}}</h4>
+            <h4 style="margin: 0;">GSTIN :@if(isset($party_detail->gstin)) {{$party_detail->gstin}} @endif</h4>
         </div>
         <div class="bil_logo">
             <!-- Logo or any image can be placed here -->
@@ -107,20 +123,66 @@
             </p>
         </div>
     </th>
-</tr>
-
-
-
-                                                                         
+</tr>                                                     
                      <tr>
                         <td colspan="4">
-                           <p><span class="width25">Invoice No. </span>:  <span class="lft_mar15">{{$sale_detail->voucher_no}}</span></p>
-                           <p><span class="width25">Date of Invoice </span>: <span class="lft_mar15">{{date('d-m-Y',strtotime($sale_detail->date))}}</span></p>                           
+                           <p><span class="width25">Invoice No. </span>:
+                              <span class="lft_mar15">{{$sale_detail->voucher_no}}</span>
+                           </p>
+
+                           <p><span class="width25">Date of Invoice </span>:
+                              <span class="lft_mar15">
+                                 {{ date('d-m-Y', strtotime($sale_detail->invoice_date ?? $sale_detail->date)) }}
+                              </span>
+                           </p>
+
+                          
+
+                           <p><span class="width25">Reverse Charge </span>:
+                              <span class="lft_mar15">
+                                 {{ $sale_detail->reverse_charge ?? 'No' }}
+                              </span>
+                           </p>
+
+                           <p><span class="width25">GR/RR No. </span>:
+                              <span class="lft_mar15">
+                                 {{ $sale_detail->gr_pr_no ?? '' }}
+                              </span>
+                           </p>
+                            <p><span class="width25"></span>
+                              <span class="lft_mar15">
+                                 
+                              </span>
+                           </p>
                         </td>
-                        <td colspan="4">                           
-                           <p><span class="width25">Vehicle No. </span>: <span class="lft_mar15">{{$sale_detail->vehicle_no}}</span> </p>
+
+                        <td colspan="4">
+                           <p><span class="width25">Transport </span>:
+                              <span class="lft_mar15">
+                                 {{ $sale_detail->transport_name ?? '' }}
+                              </span>
+                           </p>
+
+                           <p><span class="width25">Vehicle No. </span>:
+                              <span class="lft_mar15">
+                                 {{ $sale_detail->vehicle_no ?? '' }}
+                              </span>
+                           </p>
+
+                           <p><span class="width25">Station </span>:
+                              <span class="lft_mar15">
+                                 {{ $sale_detail->station ?? '' }}
+                              </span>
+                           </p>
+
+                           <p><span class="width25">E-Way Bill No. </span>:
+                              <span class="lft_mar15">
+                                 {{ $sale_detail->ewaybill_no ?? '' }}
+                              </span>
+                           </p>
                         </td>
                      </tr>
+
                      <tr>
                         <td colspan="4">
                            <i><p><strong>Billed to :</strong></p></i>
@@ -176,27 +238,29 @@
                         <td style="border-right:0; border-top:0;" colspan="2"></td>
                         <td colspan="4" style="border-left:0; border-right:0; border-top:0;">
                               @php
-    $addTypes = ['CGST', 'SGST', 'IGST', 'ROUNDED OFF (+)'];
-    $lessTypes = ['ROUNDED OFF (-)'];
-@endphp
+                                 $addTypes = ['CGST', 'SGST', 'IGST', 'ROUNDED OFF (+)'];
+                                 $lessTypes = ['ROUNDED OFF (-)'];
+                              @endphp
 
-@foreach($sale_sundry as $sundry)
-    @php
-        $billsundry = \App\Models\BillSundrys::find($sundry->bill_sundry);  
-    @endphp
+                        @foreach($sale_sundry as $sundry)
+                           @php
+                              $billsundry = \App\Models\BillSundrys::find($sundry->bill_sundry);  
+                           @endphp
 
-    @if($sundry->nature_of_sundry === 'OTHER')
-        @if($sundry->bill_sundry_type === 'additive')
-            <p>Add : {{ $sundry->name }}</p>
-        @elseif($sundry->bill_sundry_type === 'subtractive')
-            <p>Less : {{ $sundry->name }}</p>
-        @endif
-    @elseif(in_array($sundry->nature_of_sundry, $addTypes))
-        <p>Add : {{ $sundry->name }}</p>
-    @elseif(in_array($sundry->nature_of_sundry, $lessTypes))
-        <p>Less : {{ $sundry->name }}</p>
-    @endif
-@endforeach                                
+                           @if($sundry->nature_of_sundry === 'OTHER')
+                              @if($sundry->bill_sundry_type === 'additive')
+                                    <p>Add : {{ $sundry->name }}</p>
+                              @elseif($sundry->bill_sundry_type === 'subtractive')
+                                    <p>Less : {{ $sundry->name }}</p>
+                              @endif
+                           @elseif($sundry->nature_of_sundry === 'TCS')
+                              <p>Add : {{ $sundry->name }}</p>
+                           @elseif(in_array($sundry->nature_of_sundry, $addTypes))
+                              <p>Add : {{ $sundry->name }}</p>
+                           @elseif(in_array($sundry->nature_of_sundry, $lessTypes))
+                              <p>Less : {{ $sundry->name }}</p>
+                           @endif
+                        @endforeach                                
                         </td>
                         <td style="border-left:0; border-top:0;">
                            <!-- <p style="white-space: nowrap;">&nbsp;</p> -->
@@ -326,6 +390,38 @@
         }
     }
 }
+$(document).on("click", "#approvePurchase", function () {
+        let id = "{{ $sale_detail->id }}";
+        let token = "{{ csrf_token() }}";
+        let returnUrl = @json($return_url);
+        if(confirm("Are you sure to approve?")==true){
+            $.ajax({
+                url: "{{ route('transaction.approve') }}",
+                method: "POST",
+                data: {
+                    id: id,   // ✅ NOW GUARANTEED
+                    _token: token,
+                    module:'purchase'
+                },
+                success: function (res) {
+                    if(res.status){
+                        alert("Transaction Approved ✅");
+                        if(returnUrl){
+                            window.location.href = returnUrl;
+                        }else{
+                            window.location.href = "{{ url('transaction-report') }}";
+                        }
+                    } else {
+                        alert("Something went wrong.");
+                    }
+                },
+                error: function (xhr) {
+                    console.error(xhr.responseText);
+                    alert("AJAX request failed!");
+                }
+            });
+        }
+    }); 
 
    function printpage(){
       $('.header-section').addClass('importantRule');
@@ -333,3 +429,4 @@
       $('.header-section').removeClass('importantRule');
    }
 </script>
+@endsection

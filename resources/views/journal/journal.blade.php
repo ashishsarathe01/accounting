@@ -17,8 +17,6 @@
                      {{ session('success') }}
                   </div>
                @endif
-                
-
                 <div
                     class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
                     <h5 class="transaction-table-title m-0 py-2">
@@ -27,7 +25,7 @@
                     <form  action="{{ route('journal.index') }}" method="GET">
                        @csrf
                        <div class="d-md-flex d-block">                  
-                          <div class="calender-administrator my-2 my-md-0">
+                           <div class="calender-administrator my-2 my-md-0">
                         <input type="date" id="customDate" class="form-control calender-bg-icon calender-placeholder" placeholder="From date" required name="from_date" value="{{!empty($from_date) ? date('Y-m-d', strtotime($from_date)) : ''}}">
                      </div>
                      <div class="calender-administrator ms-md-4">
@@ -38,25 +36,25 @@
                     </form>
                     <div class="d-md-flex d-block"> 
                        <input type="text" id="search" class="form-control" placeholder="Search">
+                       <button class="btn btn-info ms-2 export_csv">CSV</button>
+                       <button class="btn btn-secondary ms-2 print_btn">PRINT</button>
                     </div>
-                    @can('action-module',80)
-                        <a href="{{ route('journal.create') }}" class="btn btn-xs-primary">
-                            ADD
-                            <svg class="position-relative ms-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                                viewBox="0 0 20 20" fill="none">
-                                <path
-                                    d="M9.1665 15.8327V10.8327H4.1665V9.16602H9.1665V4.16602H10.8332V9.16602H15.8332V10.8327H10.8332V15.8327H9.1665Z"
-                                    fill="white" />
-                            </svg>
-                        </a>
-                    @endcan
-                    
+                    <a href="{{ route('journal.create') }}" class="btn btn-xs-primary">
+                        ADD
+                        <svg class="position-relative ms-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                            viewBox="0 0 20 20" fill="none">
+                            <path
+                                d="M9.1665 15.8327V10.8327H4.1665V9.16602H9.1665V4.16602H10.8332V9.16602H15.8332V10.8327H10.8332V15.8327H9.1665Z"
+                                fill="white" />
+                        </svg>
+                    </a>
                 </div>
                 <div class="transaction-table bg-white table-view shadow-sm">
-                <table class="table-striped table m-0 shadow-sm journal_table">
+                <table class="table-striped table-bordered table m-0 shadow-sm journal_table" id="journal_table">
                         <thead>
                             <tr class=" font-12 text-body bg-light-pink ">
                                 <th class="w-min-120 border-none bg-light-pink text-body">Date </th>
+                                <th class="w-min-120 border-none bg-light-pink text-body">Voucher No. </th>
                                 <th class="w-min-120 border-none bg-light-pink text-body ">Account Name </th>
                                 <th class="w-min-120 border-none bg-light-pink text-body " style="text-align:right;">Debit</th>
                                 <th class="w-min-120 border-none bg-light-pink text-body " style="text-align:right;">Credit</th>  
@@ -70,13 +68,19 @@
                             $tot_crt = 0;
                             $arr = [];
                             setlocale(LC_MONETARY, 'en_IN');
-                            foreach ($journal as $value) {
-                              
-                             ?>
+                            foreach ($journal as $key => $value) {
+                                $is_first = ($key == 0) || ($journal[$key-1]->jon_id != $value->jon_id);
+                                $is_last  = !isset($journal[$key+1]) || $journal[$key+1]->jon_id != $value->jon_id;
+                                ?>
                                 <tr class="font-14 font-heading bg-white">
                                     <td class="w-min-120 "><?php 
-                                    if(!in_array($value->jon_id,$arr)){
+                                    if($is_first){
                                        echo date("d-m-Y", strtotime($value->date));
+                                    }
+                                     ?></td>
+                                     <td class="w-min-120 "><?php 
+                                    if($is_first){
+                                       echo $value->voucher_no;
                                     }
                                      ?></td>
                                     <td class="w-min-120 "><?php echo $value->acc_name ?></td>
@@ -98,30 +102,66 @@
                                     }
                                     if(!empty($value->credit)){
                                      $tot_crt = $tot_crt + (float) $value->credit;} ?></td>
-                                    <td class="w-min-120 "><?php echo $value->series_no ?></td>
+                                    <td class="w-min-120 ">
+                                        <?php 
+                                        if($is_first){
+                                            echo $value->series_no;
+                                        }
+                                        ?>
+                                    </td>
                                     <td class="w-min-120  text-center">
                                        <?php 
-                                       if(!in_array($value->jon_id,$arr)){
-                                       if(in_array(date('Y-m',strtotime($value->date)),$month_arr)){?>
-                                        @can('action-module',53)
-                                          <a href="{{ URL::to('journal/' . $value->jon_id . '/edit') }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
-                                        @endcan
-                                        @can('action-module',54)
-                                          <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $value->jon_id; ?>">
-                                               <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
-                                          </button>
-                                        @endcan
-                                          <?php 
-                                       }
+                                       $isLast = !isset($journal[$key+1]) || $journal[$key+1]->jon_id != $value->jon_id;
+                                       if($is_first){
+                                           if(in_array(date('Y-m',strtotime($value->date)),$month_arr) && $value->approved_status != 1){?>
+                                              <a href="{{ URL::to('journal/' . $value->jon_id . '/edit') }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
+                                              @can('action-module',54)
+                                              <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $value->jon_id; ?>">
+                                                   <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
+                                              </button>
+                                              @endcan
+                                              <?php 
+                                           }
                                        }?>
                                     </td>
                                  </tr>
-                            <?php 
-                            array_push($arr,$value->jon_id);
-                         } ?>
+                                <?php if($is_last){ ?>
+                                <tr class="font-12 text-muted bg-light">
+                                <td colspan="7" class="ps-4 py-1" style="text-align:left;">
+                                    
+                                    <strong>Created By:</strong> 
+                                    {{ $value->created_by_name ?? '-' }}
+
+                                    &nbsp;&nbsp;|&nbsp;&nbsp;
+
+                                    <strong>Approved By:</strong> 
+                                    @if($value->approved_status == 1)
+                                        {{ $value->approved_by_name ?? '-' }}
+                                        <small>({{ date('d-m-Y H:i', strtotime($value->approved_at)) }})</small>
+                                    @else
+                                        <span>-</span>
+                                    @endif
+
+                                </td>
+                                </tr>
+
+                                <?php if(!empty($value->long_narration)){ ?>
+                                <tr class="narration-row">
+                                <td></td>
+                                <td colspan="7" style="font-style: italic; color: #555;">
+                                    <?php echo $value->long_narration; ?>
+                                </td>
+                                </tr>
+                                <?php } ?>
+
+                                <?php } ?>
+
+                                <?php 
+                                array_push($arr,$value->jon_id);
+                                } ?>
                             <tr class="font-14 font-heading bg-white">
                                 <td class="w-min-120 fw-bold font-heading">TOTAL</td>
-                                <td class="w-min-120"></td>
+                                <td></td>
                                 <td class="w-min-120 fw-bold font-heading" style="text-align: right;"><?php echo $tot_dbt;?></td>
                                 <td class="w-min-120 fw-bold font-heading" style="text-align: right;"><?php echo $tot_crt;?></td>
                                 <td class="w-min-120"></td>
@@ -319,5 +359,193 @@
          });
       });
    });
+   $(".export_csv").click(function () {
+        let csv = [];
+
+        let from_date = $("input[name='from_date']").val();
+        let to_date   = $("input[name='to_date']").val();
+
+        function formatDate(dateStr){
+            if(!dateStr) return '';
+            let parts = dateStr.split("-");
+            return parts[2] + "-" + parts[1] + "-" + parts[0];
+        }
+
+        csv.push("From Date: " + formatDate(from_date));
+        csv.push("To Date: " + formatDate(to_date));
+        csv.push("");
+
+        let header = [];
+        $("#journal_table thead th").each(function (index) {
+            if(index != 5){
+                header.push($(this).text().trim());
+            }
+        });
+        csv.push(header.join(","));
+
+        $("#journal_table tbody tr").each(function () {
+
+            if($(this).hasClass("bg-light")){
+                return;
+            }
+
+            if($(this).hasClass("narration-row")){
+                return;
+            }
+
+            let row = [];
+            let isEmptyRow = true;
+
+            $(this).find("td").each(function (index) {
+
+                if(index == 5) return; // skip action
+
+                let text = $(this).text().trim()
+                    .replace(/\n/g, '')
+                    .replace(/,/g, '');
+
+                if(text !== ""){
+                    isEmptyRow = false;
+                }
+
+                row.push(text);
+            });
+
+            if(!isEmptyRow){
+                csv.push(row.join(","));
+            }
+        });
+
+        let csvString = csv.join("\n");
+
+        let blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+        let url = window.URL.createObjectURL(blob);
+
+        let a = document.createElement("a");
+        a.href = url;
+        a.download = "journal_report.csv";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    });
+    $(".print_btn").click(function () {
+
+        let from_date = $("input[name='from_date']").val();
+        let to_date   = $("input[name='to_date']").val();
+
+        function formatDate(dateStr){
+            if(!dateStr) return '';
+            let parts = dateStr.split("-");
+            return parts[2] + "-" + parts[1] + "-" + parts[0];
+        }
+
+        from_date = formatDate(from_date);
+        to_date   = formatDate(to_date);
+
+        let printWindow = window.open('', '', 'width=900,height=700');
+
+        let tableHTML = `
+            <html>
+            <head>
+                <title>Journal Report</title>
+                <style>
+                    body { font-family: Arial; font-size: 12px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                    th, td { border: 1px solid #000; padding: 5px; }
+                    th { background: #f2f2f2; }
+                    .text-right { text-align: right; }
+                    .no-border td { border-top: none !important; }
+                </style>
+            </head>
+            <body>
+
+            <h2 style="text-align:center; text-decoration: underline;">
+                List of Journal Voucher
+            </h2>
+
+            <p style="text-align:center;">
+                From: ${from_date} &nbsp;&nbsp; To: ${to_date}
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Voucher No</th>
+                        <th>Account Name</th>
+                        
+                        <th class="text-right">Debit</th>
+                        <th class="text-right">Credit</th>
+                        <th>Series</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        let totalDebit = 0;
+        let totalCredit = 0;
+
+        $("#journal_table tbody tr").each(function () {
+
+            if($(this).hasClass("bg-light")){
+                return;
+            }
+
+            if($(this).hasClass("narration-row")){
+                return;
+            }
+
+            let tds = $(this).find("td");
+
+            if($(tds[0]).text().trim().toLowerCase() === "total"){
+                totalDebit  = $(tds[2]).text().trim();
+                totalCredit = $(tds[3]).text().trim();
+                return;
+            }
+
+            let date   = $(tds[0]).text().trim();
+            let voc    = $(tds[1]).text().trim();
+            let acc    = $(tds[2]).text().trim();
+            let debit  = $(tds[3]).text().trim();
+            let credit = $(tds[4]).text().trim();
+            let series = $(tds[5]).text().trim();
+
+            let isSubRow = (date === "");
+
+            tableHTML += `
+                <tr class="${isSubRow ? 'no-border' : ''}">
+                    <td>${date}</td>
+                    <td>${voc}</td>
+                    <td>${acc}</td>
+                    <td class="text-right">${debit}</td>
+                    <td class="text-right">${credit}</td>
+                    <td>${series}</td>
+                </tr>
+            `;
+        });
+
+        tableHTML += `
+            <tr>
+                <td style="font-weight:bold;">TOTAL</td>
+                <td></td>
+                <td></td>
+                <td class="text-right" style="font-weight:bold;">${totalDebit}</td>
+                <td class="text-right" style="font-weight:bold;">${totalCredit}</td>
+                <td></td>
+            </tr>
+        `;
+
+        tableHTML += `
+                </tbody>
+            </table>
+
+            </body>
+            </html>
+        `;
+
+        printWindow.document.write(tableHTML);
+        printWindow.document.close();
+        printWindow.print();
+    });
 </script>
 @endsection

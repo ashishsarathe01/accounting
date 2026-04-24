@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: DejaVu Sans; font-size: 11px; }
+        .text-center { text-align: center; }
+        .text-end { text-align: right; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            border: 1px solid #000;
+            padding: 5px;
+        }
+
+        th {
+            background: #f2f2f2;
+        }
+
+        .title {
+            font-size: 16px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    {{-- Company --}}
+    <div class="text-center">
+        <div class="title">{{ $company->company_name ?? '' }}</div>
+        <div>{{ $company->address ?? '' }}</div>
+        <div>CIN: {{ $company->cin ?? '' }}</div>
+    </div>
+
+    <br>
+
+    {{-- Title --}}
+    <div class="text-center title">
+        Account Summary
+    </div>
+
+
+    <table>
+        <thead>
+            <tr>
+                <th>Account / Group</th>
+                <th>Type</th>
+                <th>Opening</th>
+                <th>Debit</th>
+                <th>Credit</th>
+                <th>Closing</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @foreach($heads as $head)
+                @if($head)
+                    continue;
+                @endif
+                <tr>
+                    <td>{{ $head->name }}</td>
+                    <td class="text-center">HEAD</td>
+                    <td class="text-end">{{ $head->opening }}</td>
+                    <td class="text-end">{{ number_format($head->debit,2) }}</td>
+                    <td class="text-end">{{ number_format($head->credit,2) }}</td>
+                    <td class="text-end">{{ $head->closing }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+
+        <tfoot>
+            <tr>
+                <th colspan="3" class="text-end">TOTAL</th>
+                <th class="text-end">{{ number_format($totalDebit,2) }}</th>
+                <th class="text-end">{{ number_format($totalCredit,2) }}</th>
+                <th></th>
+            </tr>
+        </tfoot>
+
+    </table>
+
+</body>
+</html>

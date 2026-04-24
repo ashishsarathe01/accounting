@@ -108,6 +108,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Query Timing
+    |--------------------------------------------------------------------------
+    |
+    | Temporary slow-query instrumentation. Enable this in local/dev to log
+    | slow individual queries as well as a summary for requests that spend
+    | significant time in the database.
+    |
+    */
+
+    'query_timing' => [
+        'enabled' => env('DB_QUERY_TIMING_ENABLED', false),
+        'threshold_ms' => (float) env('DB_QUERY_SLOW_THRESHOLD_MS', 100),
+        'request_summary_threshold_ms' => (float) env('DB_REQUEST_SUMMARY_THRESHOLD_MS', 300),
+        'log_channel' => env('DB_QUERY_TIMING_LOG_CHANNEL', 'query_timing'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Redis Databases
     |--------------------------------------------------------------------------
     |

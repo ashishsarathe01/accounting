@@ -32,25 +32,25 @@
                      <button class="btn btn-info" style="margin-left: 5px;">Search</button>
                   </div>
                </form>
-               <div class="d-md-flex d-block"> 
+                <div class="d-md-flex d-block"> 
                   <input type="text" id="search" class="form-control" placeholder="Search">
-               </div>
-               @can('action-module',82)
-                  <a href="{{ route('payment.create') }}" class="btn btn-xs-primary">ADD
-                     <svg class="position-relative ms-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
-                     <path d="M9.1665 15.8327V10.8327H4.1665V9.16602H9.1665V4.16602H10.8332V9.16602H15.8332V10.8327H10.8332V15.8327H9.1665Z" fill="white" />
-                     </svg>
-                  </a>
-               @endcan
-               
+                  <button class="btn btn-info ms-2 export_csv">CSV</button>
+                  <button class="btn btn-secondary ms-2 print_btn">PRINT</button>
+                </div>
+               <a href="{{ route('payment.create') }}" class="btn btn-xs-primary">ADD
+                  <svg class="position-relative ms-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M9.1665 15.8327V10.8327H4.1665V9.16602H9.1665V4.16602H10.8332V9.16602H15.8332V10.8327H10.8332V15.8327H9.1665Z" fill="white" />
+                  </svg>
+               </a>
             </div>
             <div class="transaction-table bg-white table-view shadow-sm">
-               <table class="table-striped table m-0 shadow-sm payment_table">
+               <table class="table-striped table table-bordered m-0 shadow-sm payment_table" id="payment_table">
                   <thead>
                      <tr class=" font-12 text-body bg-light-pink ">
                         <th class="w-min-120 border-none bg-light-pink text-body">Date </th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Payment Voucher No. </th>
+                        <th class="w-min-120 border-none bg-light-pink text-body">Voucher No. </th>
                         <th class="w-min-120 border-none bg-light-pink text-body ">Account Name </th>
+                        
                         <th class="w-min-120 border-none bg-light-pink text-body " style="text-align:right;">Debit</th>
                         <th class="w-min-120 border-none bg-light-pink text-body ">Mode</th>
                         <th class="w-min-120 border-none bg-light-pink text-body ">Series</th>
@@ -63,10 +63,14 @@
                      $tot_crt = 0;
                      setlocale(LC_MONETARY, 'en_IN');
                      $date_arr = [];
-                     foreach ($payment as $value) { ?>
+                     $shown_ids = [];
+                     foreach ($payment as $key => $value) {
+                        $is_first = ($key == 0) || ($payment[$key-1]->pay_id != $value->pay_id);
+                        $is_last = !isset($payment[$key+1]) || $payment[$key+1]->pay_id != $value->pay_id;
+                     ?>
                         <tr class="font-14 font-heading bg-white">
-                           <td class="w-min-120 "><?php  echo date("d-m-Y", strtotime($value->date)); ?></td>
-                           <td class="w-min-120"><?php echo $value->voucher_no ?></td>
+                           <td class="w-min-120 "><?php if($is_first){ echo date("d-m-Y", strtotime($value->date)); } ?></td>
+                           <td class="w-min-120"><?php if($is_first){ echo $value->voucher_no; } ?></td>
                            <td class="w-min-120 "><?php echo $value->acc_name ?></td>
                            <td class="w-min-120 " style="text-align: right;">
                               <?php 
@@ -75,40 +79,63 @@
                            </td>
                            <td class="w-min-120 ">
                               <?php 
-                              if($value->m == '1'){
-                                 echo 'Cash';
-                              }else if($value->m == '0'){
-                                 echo 'IMPS/NEFT/RTGS'; 
-                              }else if($value->m == '2'){
-                                 echo 'CHEQUE';
-                              }else{
-                                 echo 'IMPS/NEFT/RTGS'; 
-                              }?>
+                              if($is_first){
+                                 if($value->m == '1'){
+                                    echo 'Cash';
+                                 }else if($value->m == '2'){
+                                    echo 'CHEQUE';
+                                 }else{
+                                    echo 'IMPS/NEFT/RTGS'; 
+                                 }
+                              }
+                              ?>
                            </td>
-                           <td class="w-min-120 "><?php echo $value->series_no ?></td>
+                           <td class="w-min-120 "><?php if($is_first){ echo $value->series_no; } ?></td>
                            <td class="w-min-120  text-center">
                               <?php 
-                              if(in_array(date('Y-m',strtotime($value->date)),$month_arr)){?>
-                                 @can('action-module',55)
-                                    <a href="{{ URL::to('payment/' . $value->pay_id . '/edit') }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
-                                 @endcan
-                                 @can('action-module',56)
-                                    <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $value->pay_id ?>">
-                                       <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
-                                    </button>
-                                 @endcan
+                              if(
+                                 in_array(date('Y-m',strtotime($value->date)),$month_arr) &&
+                                 $value->approved_status != 1 &&
+                                 !in_array($value->pay_id, $shown_ids)
+                              ){?>
+                                 <a href="{{ URL::to('payment/' . $value->pay_id . '/edit') }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
+                                 <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $value->pay_id ?>">
+                                    <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
+                                 </button>
                                  <?php 
+                                 $shown_ids[] = $value->pay_id;
                               }?>
                            </td>
                         </tr>
+                        <?php if($is_last){ ?>
+                        <tr class="font-12 text-muted bg-light">
+                           <td colspan="7" class="ps-4 py-1" style="text-align:left;">
+                              
+                              <strong>Created By:</strong> 
+                              {{ $value->created_by_name ?? '-' }}
+
+                              &nbsp;&nbsp;|&nbsp;&nbsp;
+
+                              <strong>Approved By:</strong> 
+                              @if($value->approved_status == 1)
+                                 {{ $value->approved_by_name ?? '-' }}
+                                 <small>({{ date('d-m-Y H:i', strtotime($value->approved_at)) }})</small>
+                              @else
+                                 -
+                              @endif
+
+                           </td>
+                        </tr>
+                        <?php } ?>
                         <?php 
                         array_push($date_arr,$value->pay_id);
-                     } 
+                     }
                      ?>
                      <tr class="font-14 font-heading bg-white">
                          <td></td>
                         <td class="w-min-120 fw-bold font-heading">TOTAL</td>
-                        <td class="w-min-120"></td>
+                        
+                        <td></td>
                         <td class="w-min-120 fw-bold font-heading" style="text-align: right;"><?php echo $tot_dbt; ?></td>
                         <td class="w-min-120"></td>
                         <td class="w-min-120"></td>
@@ -293,6 +320,188 @@
             return not_found;
          });
       });
+   });
+   $(".export_csv").click(function () {
+
+      let csv = [];
+
+      let from_date = $("input[name='from_date']").val();
+      let to_date   = $("input[name='to_date']").val();
+
+      function formatDate(dateStr){
+         if(!dateStr) return '';
+         let parts = dateStr.split("-");
+         return parts[2] + "-" + parts[1] + "-" + parts[0];
+      }
+
+      csv.push("From Date: " + formatDate(from_date));
+      csv.push("To Date: " + formatDate(to_date));
+      csv.push("");
+
+      let header = [];
+      $("#payment_table thead th").each(function (index) {
+         if(index != 6){
+               header.push($(this).text().trim());
+         }
+      });
+      csv.push(header.join(","));
+
+      $("#payment_table tbody tr").each(function () {
+
+         // skip detail row
+         if($(this).hasClass("bg-light")){
+               return;
+         }
+
+         let row = [];
+         let isEmptyRow = true;
+
+         $(this).find("td").each(function (index) {
+
+               if(index == 6) return; // skip action
+
+               let text = $(this).text().trim()
+                  .replace(/\n/g, '')
+                  .replace(/,/g, '');
+
+               if(text !== ""){
+                  isEmptyRow = false;
+               }
+
+               row.push(text);
+         });
+
+         // skip completely empty rows
+         if(!isEmptyRow){
+               csv.push(row.join(","));
+         }
+      });
+
+      let csvString = csv.join("\n");
+
+      let blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+      let url = window.URL.createObjectURL(blob);
+
+      let a = document.createElement("a");
+      a.href = url;
+      a.download = "payment_report.csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+   });
+
+   $(".print_btn").click(function () {
+
+      let from_date = $("input[name='from_date']").val();
+      let to_date   = $("input[name='to_date']").val();
+
+      function formatDate(dateStr){
+         if(!dateStr) return '';
+         let parts = dateStr.split("-");
+         return parts[2] + "-" + parts[1] + "-" + parts[0];
+      }
+
+      from_date = formatDate(from_date);
+      to_date   = formatDate(to_date);
+
+      let printWindow = window.open('', '', 'width=900,height=700');
+
+      let tableHTML = `
+         <html>
+         <head>
+               <title>Payment Report</title>
+               <style>
+                  body { font-family: Arial; font-size: 12px; }
+                  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                  th, td { border: 1px solid #000; padding: 5px; }
+                  th { background: #f2f2f2; }
+                  .text-right { text-align: right; }
+                  .no-border td { border-top: none !important; }
+               </style>
+         </head>
+         <body>
+
+         <h2 style="text-align:center; text-decoration: underline;">
+               List of Payment Voucher
+         </h2>
+
+         <p style="text-align:center;">
+               From: ${from_date} &nbsp;&nbsp; To: ${to_date}
+         </p>
+
+         <table>
+               <thead>
+                  <tr>
+                     <th>Date</th>
+                     <th>Payment Voucher No</th>
+                     <th>Account Name</th>
+                     <th class="text-right">Debit</th>
+                     <th>Mode</th>
+                     <th>Series</th>
+                  </tr>
+               </thead>
+               <tbody>
+      `;
+
+      let total = 0;
+
+      $("#payment_table tbody tr").each(function () {
+
+         if($(this).hasClass("bg-light")){
+               return;
+         }
+
+         let tds = $(this).find("td");
+
+         if($(tds[1]).text().trim().toLowerCase() === "total"){
+               total = $(tds[3]).text().trim();
+               return;
+         }
+
+         let date = $(tds[0]).text().trim();
+         let vch  = $(tds[1]).text().trim();
+         let acc  = $(tds[2]).text().trim();
+         let debit= $(tds[3]).text().trim();
+         let mode = $(tds[4]).text().trim();
+         let series = $(tds[5]).text().trim();
+
+         let isSubRow = (date === "" && vch === "");
+
+         tableHTML += `
+               <tr class="${isSubRow ? 'no-border' : ''}">
+                  <td>${date}</td>
+                  <td>${vch}</td>
+                  <td>${acc}</td>
+                  <td class="text-right">${debit}</td>
+                  <td>${mode}</td>
+                  <td>${series}</td>
+               </tr>
+         `;
+
+      });
+
+      tableHTML += `
+         <tr>
+               <td></td>
+               <td style="font-weight:bold;">TOTAL</td>
+               <td></td>
+               <td class="text-right" style="font-weight:bold;">${total}</td>
+               <td></td>
+               <td></td>
+         </tr>
+      `;
+
+      tableHTML += `
+               </tbody>
+         </table>
+
+         </body>
+         </html>
+      `;
+
+      printWindow.document.write(tableHTML);
+      printWindow.document.close();
+      printWindow.print();
    });
 </script>
 @endsection

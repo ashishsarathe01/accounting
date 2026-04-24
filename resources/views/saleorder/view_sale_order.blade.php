@@ -107,7 +107,7 @@
       <td colspan="4">
          <i><p><strong>Bill to :</strong></p></i>
          <p>
-            {{$saleOrder->billTo->account_name}}<br>{{$saleOrder->billTo->address}}              
+            {{$saleOrder->billTo->account_name}}<br>{{!$saleOrder->billToOtherAddress ? $saleOrder->billTo->address : $saleOrder->billToOtherAddress->address.",".$saleOrder->billToOtherAddress->pincode}}
          </p>
          <p>GSTIN / UIN : {{$saleOrder->billTo->gstin}}                  
          </p>
@@ -115,7 +115,7 @@
       <td colspan="4">
          <i><p><strong>Shipp to :</strong></p></i>
          <p>
-            {{$saleOrder->shippTo->account_name}}<br>{{$saleOrder->billTo->address}}</p>
+            {{$saleOrder->shippTo->account_name}}<br>{{!$saleOrder->shippToOtherAddress ? $saleOrder->shippTo->address : $saleOrder->shippToOtherAddress->address.",".$saleOrder->shippToOtherAddress->pincode}}</p>
          <p>GSTIN / UIN : 
             {{$saleOrder->shippTo->gstin}}                  
          </p>

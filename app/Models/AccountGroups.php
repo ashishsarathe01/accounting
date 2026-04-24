@@ -22,4 +22,18 @@ class AccountGroups extends Model
                   ->where('heading_type','=', 'group')
                   ->whereIn('company_id',[0,Session::get('user_company_id')]);
    }
+   public function children()
+   {
+      return $this->hasMany(AccountGroups::class, 'heading')
+         ->where('status', '1')
+         ->where('delete', '0');
+   }
+
+   public function childrenRecursive()
+   {
+      return $this->children()->with([
+         'childrenRecursive',
+         'account.accountLedger'
+      ]);
+   }
 }

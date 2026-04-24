@@ -51,10 +51,36 @@
    }
 </style>
 <?php
-$item_list = '<option value="">Select</option>';
+$item_list = '<option value="">Select Item</option>';
 foreach($manageitems as $value) {
-   $item_list.='<option unit_id="'.$value->u_name.'" data-val="'.$value->unit.'" data-percent="'.$value->gst_rate.'" value="'.$value->id.'">'.$value->name.'</option>';   
-} ?>
+    $item_list .= '<option value="'.$value->id.'"
+        data-unit_id="'.$value->u_name.'"
+        data-val="'.$value->unit.'"
+        data-percent="'.$value->gst_rate.'"
+        data-itemid="'.$value->id.'"
+        data-available_item="'.$value->available_item.'"
+        data-parameterized_stock_status="'.$value->parameterized_stock_status.'"
+        data-config_status="'.$value->config_status.'"
+        data-group_id="'.$value->group_id.'">
+            '.$value->name.'
+        </option>';
+}
+?>
+@php
+   $to_pay_freight = "";
+   $to_pay_other_charges = "";
+   $vehicle_info_type = request('vehicle_info_type');
+@endphp
+@if(request('vehicle_info_type')=="to_pay")
+   @php
+      $to_pay_freight = request('to_pay_freight');
+      $to_pay_other_charges = request('to_pay_other_charges');
+   @endphp
+@elseif (request('vehicle_info_type')=="vehicle")
+
+@elseif (request('vehicle_info_type')=="transporter")
+
+@endif
 <div class="list-of-view-company ">
    <section class="list-of-view-company-section container-fluid">
       <div class="row vh-100">
@@ -74,6 +100,16 @@ foreach($manageitems as $value) {
             <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('sale.update') }}" id="saleForm">
                @csrf
                <div class="row">
+                  <input type="hidden" name="vehicle_info_type" value="{{request('vehicle_info_type')}}">
+                  <input type="hidden" name="vehicle_info" value="{{request('vehicle_info')}}">
+                  <input type="hidden" name="vehicle_freight" value="{{request('vehicle_freight')}}">
+                  <input type="hidden" name="transporter_freight" value="{{request('transporter_freight')}}">
+                  <input type="hidden" name="transporter_other_charges" value="{{request('transporter_other_charges')}}">
+                  <input type="hidden" name="to_pay_other_charges" value="{{request('to_pay_other_charges')}}">
+                  <input type="hidden" name="to_pay_freight" value="{{request('to_pay_freight')}}">
+                  <input type="hidden" name="sale_order_id" value="{{$sale_order_id}}">
+                  <input type="hidden" name="new_order" value="{{$new_order}}">
+                  <input type="hidden" name="sale_enter_data" value="@if($sale_enter_data){{$sale_enter_data}}@endif">
                   <input type="hidden" name="sale_edit_id" value="{{$sale->id}}">
                   <div class="mb-3 col-md-3">
                      <label for="name" class="form-label font-14 font-heading" >Series No.</label>
@@ -102,7 +138,7 @@ foreach($manageitems as $value) {
                   </div>
                   <div class="mb-3 col-md-3">
                      <label for="name" class="form-label font-14 font-heading">Voucher No. *</label>
-                     <input type="text" class="form-control" id="voucher_prefix" name="voucher_prefix" value="{{$sale->voucher_no_prefix}}" readonly style="text-align: right;">
+                     <input type="text" class="form-control" id="voucher_prefix" name="voucher_prefix" value="{{$sale->voucher_no_prefix}}"  style="text-align: right;" readonly>
                      <input type="hidden" class="form-control" name="voucher_no" id="voucher_no" placeholder="" value="{{$sale->voucher_no}}"/>
                      <ul style="color: red;">
                        @error('voucher_no'){{$message}}@enderror                        
@@ -112,13 +148,31 @@ foreach($manageitems as $value) {
                      <label for="name" class="form-label font-14 font-heading">SALE TYPE</label>
                      <input type="text" class="form-control" id="sale_type" name="sale_type" placeholder="SALE TYPE" readonly>
                   </div>
+                  @if(isset($config) && $config->purchase_order_status == 1)
+                    <div class="mb-3 col-md-3">
+                       <label class="form-label font-14 font-heading">Purchase Order No</label>
+                       <input type="text"
+                          name="po_no"
+                          class="form-control"
+                          value="{{ $sale->po_no ?? '' }}"
+                          placeholder="Enter PO Number">
+                    </div>
+                    
+                    <div class="mb-3 col-md-3">
+                       <label class="form-label font-14 font-heading">Purchase Order Date</label>
+                       <input type="date"
+                          name="po_date"
+                          class="form-control"
+                          value="{{ $sale->po_date ?? '' }}">
+                    </div>
+                @endif
                   <div class="mb-4 col-md-5">
                      <label for="name" class="form-label font-14 font-heading">Party</label>
-                     <select class="form-select select2-single" id="party" name="party" required>
+                     <select class="form-select select2-single" id="party" name="party" required data-modal="accountModal">
                         <option value="">Select</option>
                         <?php
                         foreach ($party_list as $value) { ?>
-                           <option value="<?php echo $value->id; ?>" data-gstin="<?php echo $value->gstin; ?>" data-address="<?php echo $value->address.",".$value->pin_code; ?>" data-state_code="<?php echo $value->state_code; ?>" data-other_address='<?php echo $value->otherAddress; ?>' <?php if($value->id==$sale->party){ echo "selected";}?>><?php echo $value->account_name; ?></option>
+                           <option value="<?php echo $value->id; ?>" data-gstin="<?php echo $value->gstin; ?>" data-address="<?php echo $value->address.",".$value->pin_code; ?>" data-state_code="<?php echo $value->state_code; ?>" data-other_address='<?php echo $value->otherAddress; ?>' <?php if(!empty($bill_to_id)){ if($value->id==$bill_to_id){ echo "selected";} }else{ if($value->id==$sale->party){ echo "selected";} } ?> data-under_group="{{$value->under_group}}"><?php echo $value->account_name; ?></option>
                            <?php 
                         } ?>
                      </select>
@@ -159,8 +213,13 @@ foreach($manageitems as $value) {
                      <thead>
                         <tr class=" font-12 text-body bg-light-pink ">
                            <th class="w-min-50 border-none bg-light-pink text-body">S No.</th>
-                           <th class="w-min-50 border-none bg-light-pink text-body" style="    width: 36%;">Description of Goods
-                           </th>                           
+                           <th class="w-min-50 border-none bg-light-pink text-body" style="width: 36%;">
+                              @if($config && $config->show_description == 1)
+                                 Description of Goods + Description
+                              @else
+                                 Description of Goods
+                              @endif
+                           </th>
                            <th class="w-min-50 border-none bg-light-pink text-body " style="text-align: right;padding-right: 24px;">Qty</th>
                            <th class="w-min-50 border-none bg-light-pink text-body " style="text-align: center;">Unit</th>
                            <th class="w-min-50 border-none bg-light-pink text-body " style="text-align: right;padding-right: 24px;">Price</th>
@@ -170,67 +229,189 @@ foreach($manageitems as $value) {
                      </thead>
                      <tbody>
                         @php $i=1; $total = 0; $itemcount = count($SaleDescription);@endphp
-                        @foreach($SaleDescription as $item)
-                           <tr id="tr_{{$i}}" class="font-14 font-heading bg-white">
-                              <td class="w-min-50" id="srn_{{$i}}">{{$i}}</td>
-                              <td class="w-min-50">
-                                 <select onchange="call_fun('tr_{{$i}}');" class="form-control border-0 goods_items select2-single" id="goods_discription_tr_{{$i}}" name="goods_discription[]" required data-id="{{$i}}">
-                                    <option value="">Select</option>
-                                    <?php
-                                    foreach($manageitems as $value) { ?>
-                                       <option unit_id="<?php echo $value->u_name; ?>" data-val="<?php echo $value->unit; ?>" data-percent="<?php echo $value->gst_rate; ?>" value="<?php echo $value->id; ?>" <?php if($value->id==$item->goods_discription){ echo "selected";} ?>><?php echo $value->name; ?></option>
-                                       <?php 
-                                    } ?>
-                                 </select>
-                              </td>                              
-                              <td class="w-min-50">
-                                 <input type="number" class="quantity w-100 form-control" id="quantity_tr_{{$i}}" name="qty[]" value="{{$item->qty}}"data-id="{{$i}}"  placeholder="Quantity"  style="text-align:right;" >
-                              </td>
-                              <td class="w-min-50">
-                                 <input type="text" class="w-100 form-control" id="unit_tr_{{$i}}" readonly style="text-align:center;"data-id="{{$i}}"  value="{{$item->s_name}}" />
-                                 <input type="hidden" class="units w-100" name="units[]" id="units_tr_{{$i}}" data-id="{{$i}}"  value="{{$item->unit}}">
-                              </td>
-                              <td class="w-min-50">
-                                 <input type="number" class="price form-control" id="price_tr_{{$i}}" name="price[]" value="{{$item->price}}"data-id="{{$i}}"  placeholder="Price"  style="text-align:right;">
-                              </td>
-                              <td class="">
-                                 <input type="number" id="amount_tr_{{$i}}" class="amount w-100 form-control" name="amount[]" value="{{$item->amount}}" placeholder="Amount" data-id="{{$i}}"  style="text-align:right;">
-                              </td>
-                              <td class="" style="display:flex">
-    {{-- Show remove icon for all rows except the first --}}
-    @if($i != "1")
-        <svg style="color: red; cursor: pointer; margin-left: 10px;" 
-        tabindex="0"
-             xmlns="http://www.w3.org/2000/svg" 
-             width="24" height="24" 
-             fill="currentColor" 
-             class="bi bi-file-minus-fill remove" 
-             data-id="{{ $i }}" 
-             viewBox="0 0 16 16">
-            <path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/>
-        </svg>
-    @endif
+                        @if(count($sale_order_items)>0)
+                           @foreach ($sale_order_items as $sale_order_item)
+                              <tr id="tr_{{$i}}" class="font-14 font-heading bg-white">
+                                 <td class="w-min-50" id="srn_{{$i}}">{{$i}}</td>
+                                 <td class="w-min-50">
+                                    <select onchange="call_fun('{{$i}}');" class="form-control border-0 goods_items select2-single" id="goods_discription_tr_{{$i}}" name="goods_discription[]" required data-id="{{$i}}" data-modal="itemModal">
+                                       <option value="">Select</option>
+                                       <?php
+                                       foreach($manageitems as $value) { ?>
+                                          <option data-unit_id="<?php echo $value->u_name; ?>" data-itemid="<?php echo $value->id; ?>" data-val="<?php echo $value->unit; ?>" data-percent="<?php echo $value->gst_rate; ?>" value="<?php echo $value->id; ?>" <?php if($value->id==$sale_order_item['item_id']){ echo "selected";} ?>><?php echo $value->name; ?></option>
+                                          <?php 
+                                       } ?>
+                                    </select>
+                                    @if($config && $config->show_description == 1)
+                                    <div class="description-wrapper mt-1" data-row="{{ $i-1 }}">
+                                       <div class="d-flex mb-1">
+                                          <input type="text"
+                                             name="description_lines[{{ $i-1 }}][]"
+                                             class="form-control description-input"
+                                             placeholder="Enter description line">
 
-    {{-- Show add icon only on the last row --}}
-    @if($itemcount == $i)
-        <span class="add_btn_class" id="add_btn_id_{{ $i }}">
-            <svg xmlns="http://www.w3.org/2000/svg" 
-            tabindex="0"
-            data-id="{{$i}}"
-                 class="bg-primary rounded-circle add_more_wrapper" 
-                 width="24" height="24" 
-                 viewBox="0 0 24 24" 
-                 fill="none" 
-                 style="cursor: pointer;">
-                <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" />
-            </svg>
-        </span>
-    @endif
-</td>
+                                       </div>
+                                    </div>
+                                    @endif
+                                 </td>                              
+                                 <td class="w-min-50">
+                                    <input type="number" class="quantity w-100 form-control" id="quantity_tr_{{$i}}" name="qty[]" value="{{$sale_order_item['total_weight']}}"data-id="{{$i}}"  placeholder="Quantity"  style="text-align:right;" >
+                                 </td>
+                                 <td class="w-min-50">
+                                    <input type="text" class="w-100 form-control" id="unit_tr_{{$i}}" readonly style="text-align:center;"data-id="{{$i}}"  value="" />
+                                    <input type="hidden" class="units w-100" name="units[]" id="units_tr_{{$i}}" data-id="{{$i}}"  value="">
+                                 </td>
+                                 <td class="w-min-50">
+                                    <input type="number" class="price form-control" id="price_tr_{{$i}}" name="price[]" value="{{$sale_order_item['price']}}"data-id="{{$i}}"  placeholder="Price"  style="text-align:right;" data-price="{{$sale_order_item['price']}}">
+                                 </td>
+                                 <td class="">
+                                    <input type="number" id="amount_tr_{{$i}}" class="amount w-100 form-control" name="amount[]" value="" placeholder="Amount" data-id="{{$i}}"  style="text-align:right;">
+                                 </td>
+                                 <td class="" style="display:flex">
+                                    {{-- Show remove icon for all rows except the first --}}
+                                    @if($i != "1")
+                                       <svg style="color: red; cursor: pointer; margin-left: 10px;" 
+                                       tabindex="0"
+                                             xmlns="http://www.w3.org/2000/svg" 
+                                             width="24" height="24" 
+                                             fill="currentColor" 
+                                             class="bi bi-file-minus-fill remove" 
+                                             data-id="{{ $i }}" 
+                                             viewBox="0 0 16 16">
+                                             <path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/>
+                                       </svg>
+                                    @endif
+                                    {{-- Show add icon only on the last row --}}
+                                    @if($itemcount == $i)
+                                       <span class="add_btn_class" id="add_btn_id_{{ $i }}">
+                                             <svg xmlns="http://www.w3.org/2000/svg" 
+                                             tabindex="0"
+                                             data-id="{{$i}}"
+                                                class="bg-primary rounded-circle add_more_wrapper" 
+                                                width="24" height="24" 
+                                                viewBox="0 0 24 24" 
+                                                fill="none" 
+                                                style="cursor: pointer;">
+                                                <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" />
+                                             </svg>
+                                       </span>
+                                    @endif
+                                 </td>
+                              </tr>
+                              @php $i++;  @endphp
+                           @endforeach
+                        @else
+                           @foreach($SaleDescription as $item)
+                              <tr id="tr_{{$i}}" class="font-14 font-heading bg-white">
+                                 <td class="w-min-50" id="srn_{{$i}}">{{$i}}</td>
+                                 <td class="w-min-50">
+                                    <div class="d-flex align-items-center gap-2">
+                                       <select class="form-control goods_items select2-single"
+                                             name="goods_discription[]"
+                                             id="goods_discription_tr_{{$i}}"
+                                             data-id="{{$i}}"
+                                             onchange="call_fun({{$i}}); handleItemChange({{$i}});"
+                                             required data-modal="itemModal"> 
 
-                           </tr>
-                           @php $i++; $total = $total + $item->amount; @endphp
-                        @endforeach
+                                          <option value="">Select Item</option>
+                                          @foreach($manageitems as $value)
+                                             <option value="{{ $value->id }}"
+                                                      data-unit_id="{{ $value->u_name }}"
+                                                      data-val="{{ $value->unit }}"
+                                                      data-percent="{{ $value->gst_rate }}"
+                                                      data-itemid="{{ $value->id }}"
+                                                      data-available_item="{{ $value->available_item }}"
+                                                      data-parameterized_stock_status="{{ $value->parameterized_stock_status }}"
+                                                      data-config_status="{{ $value->config_status }}"
+                                                      data-group_id="{{ $value->group_id }}"
+                                                      @if($value->id == $item->goods_discription) selected @endif>
+                                                   {{ $value->name }}
+                                             </option>
+                                          @endforeach
+                                       </select>
+                                       <button type="button"class="btn btn-outline-secondary p-1 px-2 editItemDetailsBtn"data-row="{{$i}}"title="Configure item">⚙️</button>
+                                    </div>
+                                     @if($config && $config->show_description == 1)
+                                    <div class="description-wrapper mt-1" data-row="{{ $i-1 }}">
+
+                                       @if(isset($item->lines) && count($item->lines) > 0)
+
+                                          @foreach($item->lines as $lineIndex => $line)
+                                          <div class="d-flex mb-1">
+                                             <input type="text"
+                                                name="description_lines[{{ $i-1 }}][]"
+                                                value="{{ $line->line_text }}"
+                                                class="form-control description-input"
+                                                placeholder="Enter description line">
+
+                                          </div>
+                                          @endforeach
+
+                                       @else
+
+                                          <div class="d-flex mb-1">
+                                             <input type="text"
+                                                name="description_lines[{{ $i-1 }}][]"
+                                                class="form-control description-input"
+                                                placeholder="Enter description line">
+
+                                             <button type="button" class="btn btn-success add-desc ms-1">+</button>
+                                             <button type="button" class="btn btn-danger remove-desc ms-1">-</button>
+                                          </div>
+
+                                       @endif
+
+                                    </div>
+                                    @endif
+                                    <input type="hidden"id="item_size_info_{{$i}}"name="item_size_info[]"value='@json($item->selected_sizes ?? [])'data-id="{{$i}}">
+                                 </td>                              
+                                 <td class="w-min-50">
+                                    <input type="number" class="quantity w-100 form-control" id="quantity_tr_{{$i}}" name="qty[]" value="{{$item->qty}}"data-id="{{$i}}"  placeholder="Quantity"  style="text-align:right;" >
+                                 </td>
+                                 <td class="w-min-50">
+                                    <input type="text" class="w-100 form-control" id="unit_tr_{{$i}}" readonly style="text-align:center;"data-id="{{$i}}"  value="{{$item->s_name}}" />
+                                    <input type="hidden" class="units w-100" name="units[]" id="units_tr_{{$i}}" data-id="{{$i}}"  value="{{$item->unit}}">
+                                 </td>
+                                 <td class="w-min-50">
+                                    <input type="number" class="price form-control" id="price_tr_{{$i}}" name="price[]" value="{{$item->price}}"data-id="{{$i}}"  placeholder="Price"  style="text-align:right;">
+                                 </td>
+                                 <td class="">
+                                    <input type="number" id="amount_tr_{{$i}}" class="amount w-100 form-control" name="amount[]" value="{{$item->amount}}" placeholder="Amount" data-id="{{$i}}"  style="text-align:right;">
+                                 </td>
+                                 <td class="" style="display:flex">
+                                    {{-- Show remove icon for all rows except the first --}}
+                                    @if($i != "1")
+                                       <svg style="color: red; cursor: pointer; margin-left: 10px;" 
+                                       tabindex="0"
+                                             xmlns="http://www.w3.org/2000/svg" 
+                                             width="24" height="24" 
+                                             fill="currentColor" 
+                                             class="bi bi-file-minus-fill remove" 
+                                             data-id="{{ $i }}" 
+                                             viewBox="0 0 16 16">
+                                             <path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/>
+                                       </svg>
+                                    @endif
+                                    {{-- Show add icon only on the last row --}}
+                                    @if($itemcount == $i)
+                                       <span class="add_btn_class" id="add_btn_id_{{ $i }}">
+                                             <svg xmlns="http://www.w3.org/2000/svg" 
+                                             tabindex="0"
+                                             data-id="{{$i}}"
+                                                class="bg-primary rounded-circle add_more_wrapper" 
+                                                width="24" height="24" 
+                                                viewBox="0 0 24 24" 
+                                                fill="none" 
+                                                style="cursor: pointer;">
+                                                <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" />
+                                             </svg>
+                                       </span>
+                                    @endif
+                                 </td>
+                              </tr>
+                              @php $i++; $total = $total + $item->amount; @endphp
+                           @endforeach
+                        @endif
                      </tbody>
                      <div class="plus-icon">
                         <tr class="font-14 font-heading bg-white">
@@ -295,7 +476,7 @@ foreach($manageitems as $value) {
                                  @if($sundry->nature_of_sundry=='OTHER')
 
                                  @php $count_sundry++ @endphp 
-                                    <tr id="billtr_@php echo $index;@endphp" class="font-14 font-heading bg-white bill_taxes_row sundry_tr">
+                                    <tr id="billtr_@php echo $index;@endphp" class="font-14 font-heading bg-white bill_taxes_row sundry_tr" >
                                        <td class="w-min-50">
                                           <select id="bill_sundry_@php echo $index;@endphp" class="w-95-parsent  bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="@php echo $index;@endphp">
                                              <option value="">Select</option>
@@ -580,6 +761,7 @@ foreach($manageitems as $value) {
                                  <td class="w-min-50">
                                    
                                     <select id="bill_sundry_tcs" class="w-95-parsent bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="tcs">
+                                        <option value="">Select</option>
                                        <?php
                                        foreach ($billsundry as $value) { 
                                           if($value->nature_of_sundry=='TCS'){?>
@@ -755,6 +937,16 @@ foreach($manageitems as $value) {
                      </div>
                   </div>
                </div>
+               <div class="mb-3">
+   <label class="form-label fw-bold">Narration</label>
+   <input 
+      type="text"
+      id="narration"
+      name="narration"
+      class="form-control"
+      value="{{ $sale->narration ?? '' }}"
+      placeholder="Enter narration for the entry...">
+</div>
                <div class=" d-flex">
                   
                   <div class="ms-auto">
@@ -859,6 +1051,406 @@ foreach($manageitems as $value) {
       </div>
    </section>
 </div>
+<!-- Modal -->
+<div class="modal fade" id="sizeModal" tabindex="-1" aria-hidden="true">
+   <div class="modal-dialog modal-lg">
+      <div class="modal-content p-3">
+         <div class="modal-header">
+            <h5 class="modal-title">Size List</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div>
+
+         <div class="modal-body">
+            <div class="table-responsive">
+               <table class="table table-bordered table-striped mb-0 item_size_table">
+                  <thead>
+                     <tr>
+                        <th style="width: 42%;">Size</th>
+                        <th>Weight</th>
+                        <th>Reel No.</th>
+                     </tr>
+                  </thead>
+                  <tbody id="item_size_tbody">
+                  </tbody>
+               </table>
+
+               <div class="mt-2 text-end">
+                  <strong>Total Weight: <span id="total_weight">0</span></strong>
+               </div>
+            </div>
+         </div>
+
+         <div class="modal-footer">
+            <input type="hidden" id="item_size_row_id">
+            <input type="hidden" id="sale_id" value="{{ $sale->id ?? '' }}">
+            <button type="button" class="btn btn-info item_size_btn">Submit</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+         </div>
+      </div>
+   </div>
+</div>
+<div class="modal fade" id="accountModal" tabindex="-1">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Add Account</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <form id="accountForm">
+          @csrf
+
+          <div class="row">
+
+            <div class="col-md-4 mb-3">
+              <label>ACCOUNT NAME</label>
+              <input type="text" id="modal_account_name" name="account_name" class="form-control" placeholder="ENTER ACCOUNT NAME" required>
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>PRINT NAME</label>
+              <input type="text" id="modal_print_name" name="print_name" class="form-control" placeholder="ENTER PRINT NAME">
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>UNDER GROUP</label>
+              <select name="under_group" class="form-select" required>
+  <option value="">SELECT GROUP</option>
+  @foreach($allowedAccountGroups as $group)
+    <option value="{{ $group->id }}">{{ $group->name }}</option>
+  @endforeach
+</select>
+
+<input type="hidden" name="under_group_type" id="modal_under_group_type" value="">
+<input type="hidden" name="form_type" value="modal">
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>OPENING BALANCE</label>
+              <input type="number" name="opening_balance" class="form-control" placeholder="ENTER OPENING BALANCE">
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>BALANCE TYPE</label>
+              <select name="opening_balance_type" class="form-select">
+                <option value="">SELECT BALANCE TYPE</option>
+                <option value="debit">Debit</option>
+                <option value="credit">Credit</option>
+              </select>
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>GST NO.</label>
+              <input type="text" id="modal_gstin" name="gstin" class="form-control" placeholder="ENTER GST NO.">
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>STATE</label>
+              <select id="modal_state" class="form-select">
+                <option value="">SELECT STATE</option>
+                @foreach($state_list as $state)
+                  <option value="{{ $state->id }}">
+                    {{ $state->state_code }} - {{ $state->name }}
+                  </option>
+                @endforeach
+              </select>
+              <input type="hidden" name="state" id="modal_state_hidden">
+            </div>
+
+            <div class="col-md-8 mb-3">
+              <label>ADDRESS</label>
+              <textarea id="modal_address" name="address" class="form-control" placeholder="ENTER ADDRESS"></textarea>
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>PINCODE</label>
+              <input type="number" id="modal_pincode" name="pincode" class="form-control" placeholder="ENTER PINCODE">
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>PAN</label>
+              <input type="text" id="modal_pan" name="pan" class="form-control" placeholder="ENTER PAN">
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>SMS Send Status</label>
+              <select name="sms_status" class="form-select">
+                <option value="">Select</option>
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+              </select>
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>Credit Days</label>
+              <select name="credit_days" class="form-select">
+  <option value="">Select</option>
+  @foreach($credit_days as $cd)
+    <option value="{{ $cd->days }}">{{ $cd->days }} Days</option>
+  @endforeach
+</select>
+
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>DUE DAYS</label>
+              <input type="number" name="due_day" class="form-control" placeholder="ENTER DUE DAYS">
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>CONTACT PERSON</label>
+              <input type="text" name="contact_person" class="form-control" placeholder="ENTER CONTACT PERSON">
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>MOBILE NO.</label>
+              <input type="number" name="mobile_no" class="form-control" placeholder="ENTER MOBILE NO.">
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>WHATSAPP NO.</label>
+              <input type="number" name="whatsapp_no" class="form-control" placeholder="ENTER WHATSAPP NO.">
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>E-MAIL ID</label>
+              <input type="email" name="email" class="form-control" placeholder="ENTER E-MAIL ID">
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>BANK ACCOUNT NO.</label>
+              <input type="number" name="account_no" class="form-control" placeholder="ENTER BANK ACCOUNT NO.">
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>BANK IFSC CODE</label>
+              <input type="text" name="ifsc_code" class="form-control" placeholder="ENTER BANK IFSC CODE">
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label>STATUS</label>
+              <select name="status" class="form-select">
+                <option value="1">Enable</option>
+                <option value="0">Disable</option>
+              </select>
+            </div>
+
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" id="saveAccountBtn" class="btn btn-primary">Save</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="itemModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Add Item</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
+<form id="modalItemForm">
+@csrf
+
+<div class="row">
+
+<!-- ================= PART A ================= -->
+<div class="col-md-8">
+  <h5>PART A</h5>
+  <hr>
+
+  <div class="row">
+
+    <div class="mb-3 col-md-5">
+      <label class="form-label font-14 font-heading">ITEM NAME</label>
+      <input type="text" class="form-control"
+             name="name" id="modal_name"
+             placeholder="ENTER ITEM NAME" required>
+    </div>
+
+    <div class="mb-3 col-md-12"></div>
+
+    <div class="mb-3 col-md-5">
+      <label class="form-label font-14 font-heading">PRINT NAME</label>
+      <input type="text" class="form-control"
+             name="p_name" id="modal_p_name"
+             placeholder="ENTER PRINT NAME">
+    </div>
+
+    <div class="mb-3 col-md-12"></div>
+
+    <div class="mb-3 col-md-5">
+      <label class="form-label font-14 font-heading">UNDER GROUP</label>
+      <select class="form-select select2-single"
+              name="g_name" id="modal_g_name" required>
+        <option value="">SELECT GROUP</option>
+        @foreach($itemGroups as $value)
+          <option value="{{ $value->id }}">{{ $value->group_name }}</option>
+        @endforeach
+      </select>
+    </div>
+
+    <div class="mb-3 col-md-12"></div>
+
+    @foreach($series as $key => $value)
+  <div class="col-md-3 mb-3">
+    <label class="form-label font-14 font-heading">BRANCH</label>
+    <input type="text"
+           class="form-control"
+           name="series[]"
+           value="{{ $value->series }}"
+           readonly>
+  </div>
+
+  <div class="col-md-3 mb-3">
+    <label class="form-label font-14 font-heading">
+      OPENING BAL. (Rs.)
+    </label>
+    <input type="text"
+           class="form-control"
+           name="opening_amount[]"
+           id="modal_opening_amount_{{ $key }}"
+           placeholder="OPENING BALANCE"
+           onkeyup="typevalidation({{ $key }})">
+  </div>
+
+  <div class="col-md-3 mb-3">
+    <label class="form-label font-14 font-heading">
+      OPENING BAL. (Qty.)
+    </label>
+    <input type="text"
+           class="form-control"
+           name="opening_qty[]"
+           placeholder="OPENING BALANCE">
+  </div>
+
+  <div class="col-md-3 mb-3">
+    <label class="form-label font-14 font-heading">
+      BALANCE TYPE
+      <span id="balance_type_required_{{ $key }}"
+            style="color:red; display:none;">*</span>
+    </label>
+    <select class="form-select"
+            name="opening_balance_type[]"
+            id="opening_balance_type_{{ $key }}">
+      <option value="">BALANCE TYPE</option>
+      <option value="Debit">Debit</option>
+      <option value="Credit">Credit</option>
+    </select>
+  </div>
+@endforeach
+
+    <div class="mb-3 col-md-12"></div>
+
+    <div class="mb-3 col-md-3">
+      <label class="form-label font-14 font-heading">UNIT NAME</label>
+      <select class="form-select select2-single"
+              name="u_name" id="modal_u_name" required>
+        <option value="">SELECT UNIT</option>
+        @foreach($accountunit as $value)
+          <option value="{{ $value->id }}">{{ $value->name }}</option>
+        @endforeach
+      </select>
+    </div>
+
+    <div class="mb-3 col-md-12"></div>
+
+    <div class="mb-3 col-md-3">
+      <label class="form-label font-14 font-heading">GST RATE</label>
+      <select class="form-select select2-single"
+              name="gst_rate" id="modal_gst_rate" required>
+        <option value="">SELECT GST RATE</option>
+        <option value="0" data-type="nil_rated">0% (Nil Rated Goods)</option>
+        <option value="0" data-type="exempted">(Exempted Goods)</option>
+        <option value="0.25" data-type="taxable">0.25% (Precious stones, etc.)</option>
+        <option value="3" data-type="taxable">3% (Gold, jewelry)</option>
+        <option value="5" data-type="taxable">5%</option>
+        <option value="12" data-type="taxable">12%</option>
+        <option value="18" data-type="taxable">18%</option>
+        <option value="28" data-type="taxable">28%</option>
+      </select>
+      <input type="hidden" name="item_type" id="modal_item_type">
+    </div>
+
+    <div class="mb-3 col-md-3">
+      <label class="form-label font-14 font-heading">HSN CODE</label>
+      <input type="text" class="form-control"
+             name="hsn_code" placeholder="ENTER HSN CODE" required>
+    </div>
+
+    <div class="mb-3 col-md-12"></div>
+
+    <div class="mb-3 col-md-3">
+      <label class="form-label font-14 font-heading">STATUS</label>
+      <select class="form-select select2-single"
+              name="status" required>
+        <option value="">SELECT STATUS</option>
+        <option value="1">Enable</option>
+        <option value="0">Disable</option>
+      </select>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================= PART B ================= -->
+<div class="col-md-4">
+  <h5>
+    <input type="checkbox" id="modal_partb"> PART B
+  </h5>
+  <hr>
+
+  <div class="row">
+    <div class="col-md-6 modal_partb_div" style="display:none">
+      <label>
+        <input type="checkbox" id="modal_tcs_applicable">
+        TCS APPLICABLE
+      </label>
+    </div>
+
+    <div class="col-md-12"></div>
+
+    <div class="col-md-6 modal_tcs_div" style="display:none">
+      <label>SECTION</label>
+      <select class="form-select">
+        <option value="">SELECT SECTION</option>
+        <option value="206CE-Scarp" data-rate="1">206CE-Scarp</option>
+      </select>
+    </div>
+
+    <div class="col-md-6 modal_tcs_div" style="display:none">
+      <label>RATE OF TCS</label>
+      <input type="text" class="form-control" readonly>
+    </div>
+  </div>
+</div>
+
+</div>
+</form>
+
+</div>
+
+
+      <div class="modal-footer">
+        <button type="button" id="saveItemBtn" class="btn btn-primary">
+          Save Item
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
 </body>
 @include('layouts.footer')
 <script>
@@ -866,6 +1458,8 @@ foreach($manageitems as $value) {
    var selected_series = "";
    var enter_gst_status = 0;
    var auto_gst_calculation = 0;
+    var bill_to_id = "{{$bill_to_id}}";
+   var shipp_to_id = "{{$shipp_to_id}}";
    var customer_gstin = "";
    var merchant_gstin = "";
    var percent_arr = [];
@@ -873,78 +1467,183 @@ foreach($manageitems as $value) {
    var add_more_bill_sundry_up_count = '<?php echo --$index;?>';
    var address_id = "{{$sale->address_id}}";
    var page_load = 0;
+   var production_module_status = "<?php echo $production_module_status; ?>";
+   var vehicle_info_type = "{{$vehicle_info_type}}";
+   var to_pay_freight = "{{$to_pay_freight}}";
+   var to_pay_other_charges = "{{$to_pay_other_charges}}";
+   var cash_group_ids = @json($cash_group_ids);
    function addMoreItem() {
 
    
       let empty_status = 0;
-      $('.goods_items').each(function(){   
-         let i = $(this).attr('data-id');
-         if($(this).val()=="" || $("#quantity_tr_"+i).val()=="" || $("#price_tr_"+i).val()==""){
-            empty_status=1;            
-         }                   
-      });
-      if(empty_status==1){
-         alert("Please enter required fields");
-         return;
-      }
-      let srn = $("#srn_"+add_more_count).html();
-      srn++
-      add_more_count++;
-      var optionElements = '<?php echo $item_list;?>';
-      //var selectHTML = $('#goods_discription').prop('outerHTML');
-      var tr_id = 'tr_' + add_more_count;
-      newRow = '<tr id="tr_' + add_more_count + '" class="font-14 font-heading bg-white"><td class="w-min-50" id="srn_'+add_more_count+'">' + srn + '</td><td class=""><select onchange="call_fun(\'tr_' + add_more_count + '\');" id="goods_discription_tr_' + add_more_count + '" class="border-0 w-95-parsent  goods_items" name="goods_discription[]" required data-id="'+add_more_count+'">';
-      newRow += optionElements;
-      newRow += '</select></td><td class="w-min-50"><input type="number" data-id="'+add_more_count+'" class="quantity w-100 form-control" name="qty[]" id="quantity_tr_' + add_more_count + '"/ style="text-align:right"></td><td class=" w-min-50"><input type="text" class="w-100 form-control"data-id="'+add_more_count+'" id="unit_tr_'+add_more_count+'" readonly style="text-align:center;"/><input type="hidden" class="units w-100" name="units[]" id="units_tr_' + add_more_count + '"/></td><td class=" w-min-50"><input type="number" class="price w-100 form-control" data-id="'+add_more_count+'" name="price[]" id="price_tr_' + add_more_count + '" style="text-align:right"/></td><td class=" w-min-50"><input type="number" class="amount w-100 form-control" name="amount[]"data-id="'+ add_more_count +'" id="amount_tr_' + add_more_count + '"  style="text-align:right"/></td><td class="w-min-50" style="display:flex"></td></tr>';
-      $("#max_sale_descrption").val(add_more_count);
-      $("#example11").append(newRow);
-      $("#goods_discription_tr_"+add_more_count).select2();
-      let k = 1;
-      $(".add_btn_class").html('');
-      $('.goods_items').each(function(){   
-         let i = $(this).attr('data-id');
-         $("#srn_"+i).html(k);  
-         k++;           
-      });
-      
-   // Reset all icon cells
-   $(".goods_items").each(function () {
-      let dataId = $(this).attr("data-id");
-      $("#tr_" + dataId + " td:last").html('');
-   });
 
-   let totalRows = $(".goods_items").length;
+$('.goods_items').each(function () {
+    let i = $(this).attr('data-id');
+    if ($(this).val() === "" || $("#quantity_tr_" + i).val() === "" || $("#price_tr_" + i).val() === "") {
+        empty_status = 1;
+    }
+});
 
-   $(".goods_items").each(function (index) {
-      let dataId = $(this).attr("data-id");
-      let removeIcon = '<svg style="color: red; cursor: pointer; margin-right: 8px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" tabindex="0" class="bi bi-file-minus-fill remove" data-id="' + dataId + '" viewBox="0 0 16 16">' +
-         '<path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/>' +
-         '</svg>';
+if (empty_status === 1) {
+    alert("Please enter required fields");
+    return;
+}
 
-      let addIcon = '<svg style="color: green;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"tabindex="0" class="bg-primary rounded-circle add_more_wrapper" data-id="' + dataId + '" >' +
-         '<path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/>' +
-         '</svg>';
+let srn = $("#srn_" + add_more_count).html();
+srn++;
 
-         if (dataId == "1") {
-         // Clear the icon from the last <td> of the first row
-         $("#tr_" + dataId + " td:last").html('');
-      }
-      else if (index < totalRows - 1) {
-         $("#tr_" + dataId + " td:last").html(removeIcon);
-      } else {
-         $("#tr_" + dataId + " td:last").html(removeIcon + addIcon);
-      }
-   });
+add_more_count++;
+
+let optionElements = `<?php echo $item_list; ?>`;
+
+// Build new row
+let newRow = `
+<tr id="tr_${add_more_count}" class="font-14 font-heading bg-white">
+
+<td class="w-min-50" id="srn_${add_more_count}">${srn}</td>
+
+<td class="w-min-50">
+    <div class="d-flex align-items-center gap-2">
+
+        <select class="form-control goods_items select2-single"
+                name="goods_discription[]"
+                id="goods_discription_tr_${add_more_count}"
+                data-id="${add_more_count}"
+                onchange="call_fun('${add_more_count}'); handleItemChange(${add_more_count});"
+                required data-modal="itemModal">
+            <option value="">Select Item</option>
+            ${optionElements}
+        </select>
+
+        <button type="button"
+                class="btn btn-outline-secondary p-1 px-2 editItemDetailsBtn d-none"
+                data-row="${add_more_count}">
+            ⚙️
+        </button>
+
+    </div>
+    @if($config && $config->show_description == 1)
+<div class="description-wrapper mt-1" data-row="${add_more_count-1}">
+      <div class="d-flex mb-1">
+         <input type="text" 
+               name="description_lines[${add_more_count-1}][]" 
+               class="form-control description-input"
+               placeholder="Enter description line">
+
+         <button type="button" class="btn btn-success add-desc ms-1">+</button>
+         <button type="button" class="btn btn-danger remove-desc ms-1">-</button>
+      </div>
+   </div>
+       @endif
+    <input type="hidden"
+           id="item_size_info_${add_more_count}"
+           name="item_size_info[]"
+           data-id="${add_more_count}">
+</td>
+
+<td class="w-min-50">
+    <input type="number" class="quantity w-100 form-control"
+           id="quantity_tr_${add_more_count}"
+           name="qty[]"
+           data-id="${add_more_count}"
+           style="text-align:right;">
+</td>
+
+<td class="w-min-50">
+    <input type="text" class="w-100 form-control"
+           id="unit_tr_${add_more_count}"
+           readonly>
+    <input type="hidden"
+           class="units"
+           id="units_tr_${add_more_count}"
+           name="units[]">
+</td>
+
+<td class="w-min-50">
+    <input type="number" class="price w-100 form-control"
+           id="price_tr_${add_more_count}"
+           name="price[]"
+           data-id="${add_more_count}"
+           style="text-align:right;">
+</td>
+
+<td class="w-min-50">
+    <input type="number" class="amount w-100 form-control"
+           id="amount_tr_${add_more_count}"
+           name="amount[]"
+           data-id="${add_more_count}"
+           style="text-align:right;">
+</td>
+
+<td class="w-min-50" style="display:flex"></td>
+
+</tr>
+`;
+$("#example11").find("tr[id^='tr_']").last().after(newRow);
+
+$("#goods_discription_tr_" + add_more_count).select2();
+
+let k = 1;
+$(".goods_items").each(function () {
+    let id = $(this).attr("data-id");
+    $("#srn_" + id).html(k);
+    k++;
+});
+
+  
+$(".goods_items").each(function () {
+  let dataId = $(this).attr("data-id");
+  $("#tr_" + dataId + " td:last").html('');
+});
+
+let totalRows = $(".goods_items").length;
+
+$(".goods_items").each(function (index) {
+  let dataId = $(this).attr("data-id");
+  let removeIcon = '<svg style="color: red; cursor: pointer; margin-right: 8px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" tabindex="0" class="bi bi-file-minus-fill remove" data-id="' + dataId + '" viewBox="0 0 16 16">' +
+     '<path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/>' +
+     '</svg>';
+
+  let addIcon = '<svg style="color: green;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"tabindex="0" class="bg-primary rounded-circle add_more_wrapper" data-id="' + dataId + '" >' +
+     '<path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/>' +
+     '</svg>';
+
+     if (dataId == "1") {
+     // Clear the icon from the last <td> of the first row
+     $("#tr_" + dataId + " td:last").html('');
+  }
+  else if (index < totalRows - 1) {
+     $("#tr_" + dataId + " td:last").html(removeIcon);
+  } else {
+     $("#tr_" + dataId + " td:last").html(removeIcon + addIcon);
+  }
+});
 
 
    $(".select2-single").select2();
       // $("#add_btn_id_"+add_more_count).html('<svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle add_more" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg>');
 
    };
-    function removeItem() {
-  $(document).on("click", ".remove", function () {
-    let id = $(this).attr("data-id");
-    $("#tr_" + id).remove();
+   function removeItem() {
+      $(document).on("click", ".remove", function () {
+         let id = $(this).attr("data-id");
+
+      let itemId = $("#goods_discription_tr_" + id).val();
+
+      let arr = [];
+      try { arr = JSON.parse($("#item_size_info_" + id).val() || "[]"); } catch(e){}
+
+      if (usedSizesByItem[itemId]) {
+         let removeIds = arr.map(o => String(o.id));
+         usedSizesByItem[itemId] = usedSizesByItem[itemId].filter(
+            sid => !removeIds.includes(String(sid))
+         );
+      }
+
+      $("#tr_" + id).remove();
+
+      disableGloballyUsedSizes(itemId);
+
 
     // Re-index SRNs
     let k = 1;
@@ -1151,13 +1850,17 @@ foreach($manageitems as $value) {
    });
    function calculateAmount (key=null) {
      
-     customer_gstin = $('#party option:selected').attr('data-state_code'); 
+      customer_gstin = $('#party option:selected').attr('data-state_code'); 
+      let under_group = $('#party option:selected').attr('data-under_group');
      
-         if(customer_gstin==undefined){
-            return;
-         }  
+      if(cash_group_ids.includes(Number(under_group))){
+         customer_gstin = merchant_gstin.substring(0,2);
+      }
+      if(customer_gstin==undefined || customer_gstin==""){
+         return;
+      }  
                 
-         if(customer_gstin==merchant_gstin.substring(0,2)){  
+      if(customer_gstin==merchant_gstin.substring(0,2)){  
          $("#billtr_cgst").show();
          $("#billtr_sgst").show();
          $("#bill_sundry_amount_igst").val('');
@@ -1521,7 +2224,7 @@ foreach($manageitems as $value) {
          $("#bill_sundry_amt").html(formattedNumber);
          $("#total_amounts").val(final_total);         
          let roundoff = parseFloat(final_total) - parseFloat($("#total_taxable_amounts").val()) - parseFloat(gstamount) - parseFloat(final_tcs_amount);
-            console.log($("#total_taxable_amounts").val());
+            
          roundoff = roundoff.toFixed(2);
          $("#billtr_round_plus").hide();
          $("#billtr_round_minus").hide();
@@ -1532,11 +2235,22 @@ foreach($manageitems as $value) {
             $("#bill_sundry_amount_round_minus").attr('readonly',true); 
             $("#billtr_round_minus").show();           
          }else if(parseFloat(roundoff)>0){
+              
             $("#bill_sundry_amount_round_plus").val(Math.abs(roundoff));
             $("#bill_sundry_amount_round_plus").attr('readonly',true); 
             $("#billtr_round_plus").show(); 
          }
          return;
+      }
+      if(bill_to_id!=""){
+         $("#party_id").change();
+         $(".goods_items").each(function(){
+            $(this).change();
+         })
+         if(bill_to_id!=shipp_to_id){
+            $("#shipping_name").val(shipp_to_id);
+            $("#shipping_name").change();
+         }
       }
    $(document).ready(function() {
       let si = "";
@@ -1628,27 +2342,30 @@ foreach($manageitems as $value) {
             return false;
          } 
       });
+      $("#date").trigger('change');
    });
    function call_fun(data){
       if($('#goods_discription_'+data).val()==""){
-         $("#quantity_"+data).val('');
-         $("#price_"+data).val('');
-         $("#amount_"+data).val('');
-         $("#quantity_"+data).keyup();
-         $("#price_"+data).keyup();
-         $("#amount_"+data).keyup();
+         $("#quantity_tr_"+data).val('');
+         $("#price_tr_"+data).val('');
+         $("#amount_tr_"+data).val('');
+         $("#quantity_tr_"+data).keyup();
+         $("#price_tr_"+data).keyup();
+         $("#amount_tr_"+data).keyup();
       }
-      var selectedOptionData = $('#goods_discription_' + data + ' option:selected').data('val');
-      var item_units_id = $('#goods_discription_' + data + ' option:selected').attr('unit_id');
-      var itemId = $('#goods_discription_' + data + ' option:selected').val();
+     
+      var selectedOptionData = $('#goods_discription_tr_' + data + ' option:selected').data('val');
+      var item_units_id = $('#goods_discription_tr_' + data + ' option:selected').attr('data-unit_id');
+      var itemId = $('#goods_discription_tr_' + data + ' option:selected').val();
       var party_id = $('#party').val();
       if (party_id.length > 0) {
-         $('#unit_' + data).val(selectedOptionData);
-         $('#units_' + data).val(item_units_id);
+          
+         $('#unit_tr_' + data).val(selectedOptionData);
+         $('#units_tr_' + data).val(item_units_id);
          calculateAmount();
       }else{
          alert("Select Party Name First.");
-         $('#goods_discription_' + data + '').val("");
+         $('#goods_discription_tr_' + data + '').val("");
       }
    }
    function getAccountDeatils(e){
@@ -1749,6 +2466,7 @@ foreach($manageitems as $value) {
       $("#address").html('');
       if(other_address!=null && other_address.length>0){
          address_html = "<option value=''>Select Other Address</option>";
+         address_html = "<option value=''>"+$('option:selected', this).attr('data-address')+"</option>";
          let selecte_status = 0;
          other_address.forEach(function(e){
             let selected = "";
@@ -1771,6 +2489,9 @@ foreach($manageitems as $value) {
          $(".address_div").show();
       }
       calculateAmount();
+   });
+    $("#voucher_prefix").keyup(function(){
+      $("#voucher_no").val($(this).val());
    });
    $("#address").change(function(){
       if($(this).val()!=""){
@@ -1801,6 +2522,7 @@ foreach($manageitems as $value) {
       }else{
          $("#goods_discription_tr_"+id+"-error").hide();
       }
+      //getItemGstRate($(this).val(),$(this).attr('data-id'));
    });
    $("#series_no").change(function(){
       let series = $(this).val();      
@@ -2232,5 +2954,806 @@ $(document).ready(function() {
     });
   
   });
+  let usedSizesByItem = {};   
+function rebuildUsedSizesForItem(itemId) {
+    if (!itemId) return;
+
+    const newSet = new Set();
+
+    $("[id^=item_size_info_]").each(function () {
+        const rowId = $(this).attr("id").split("_").pop();
+        const rowItemId = $("#goods_discription_tr_" + rowId).val();
+
+        if (String(rowItemId) !== String(itemId)) return;
+
+        let arr = [];
+        try { arr = JSON.parse($(this).val() || "[]"); } catch(e){}
+
+        arr.forEach(o => {
+            if (o && o.id) newSet.add(String(o.id));
+        });
+    });
+
+    usedSizesByItem[itemId] = Array.from(newSet);
+}
+
+$(document).on('click', '.editItemDetailsBtn', function () {
+
+    let rowId = $(this).data("row");
+    let itemId = $("#goods_discription_tr_" + rowId).val();
+
+    if (!itemId) {
+        alert("Please select an item first.");
+        return;
+    }
+
+    let saleId = $("#sale_id").val();
+    openSizeModal(itemId, rowId, saleId);
+});
+
+function openSizeModal(itemId, rowId, saleId = null) {
+
+    
+
+    $.ajax({
+        url: saleId ? '{{ url("get-item-size-quantity-edit") }}' : '{{ url("get-item-size-quantity") }}',
+        type: 'POST',
+        dataType: 'JSON',
+        data: {
+            _token: '{{ csrf_token() }}',
+            item_id: itemId,
+            sale_id: saleId
+        },
+        success: function (res) {
+               if(res.available == 0 && res.assigned == 0){
+                     alert("No Size Available For This Item");
+                     return;
+                  }
+            let availableOptions = [];
+
+            if (res.available?.length > 0) {
+                res.available.forEach(e => {
+                    availableOptions.push({
+                        id: e.id,
+                        weight: e.weight,
+                        reel_no: e.reel_no,
+                        size: e.size
+                    });
+                });
+            }
+
+            let savedSizes = [];
+            try {
+                savedSizes = JSON.parse($("#item_size_info_" + rowId).val() || "[]");
+            } catch (e) {
+                console.warn("Invalid JSON in hidden input");
+            }
+
+            console.log("Loaded sizes FROM HIDDEN for row:", rowId, savedSizes);
+
+            let bodyHtml = "";
+
+            if (savedSizes.length > 0) {
+                savedSizes.forEach((sObj, i) => {
+                    bodyHtml += generateRow(i + 1, availableOptions, sObj);
+                });
+            }
+
+            bodyHtml += generateRow(savedSizes.length + 1, availableOptions);
+
+            $("#item_size_tbody").html(bodyHtml);
+
+            $(".item_size").select2({
+                dropdownParent: $('#sizeModal'),
+                width: '100%'
+            });
+
+            $("#item_size_row_id").val(rowId);
+            $("#sizeModal").modal("show");
+
+            calculateTotalWeight();
+
+if (!usedSizesByItem[itemId]) usedSizesByItem[itemId] = [];
+
+usedSizesByItem[itemId] = usedSizesByItem[itemId].filter(
+    id => !savedSizes.map(s => s.id).includes(id)
+);
+
+usedSizesByItem[itemId].push(...savedSizes.map(s => s.id));
+
+// disable globally used sizes
+disableGloballyUsedSizes(itemId);
+
+        },
+        error: function (err) {
+            console.error("AJAX error:", err);
+        }
+    });
+}
+
+
+//  Generate row function
+function generateRow(index, availableOptions = [], prefill = null) {
+    let allOptions = "<option value=''>Select Size</option>";
+    availableOptions.forEach(opt => {
+        allOptions += `<option value="${opt.id}" data-weight="${opt.weight}" data-reel_no="${opt.reel_no}">
+            ${opt.size} | Wt: ${opt.weight} | Reel: ${opt.reel_no}
+        </option>`;
+    });
+
+    let selectedOption = '';
+    if (prefill) {
+        let sizeText = prefill.size || (availableOptions.find(o => o.id == prefill.id)?.size || 'Unknown');
+        selectedOption = `<option value="${prefill.id}" selected>${sizeText} | Wt: ${prefill.weight} | Reel: ${prefill.reel_no}</option>`;
+    }
+
+    return `
+        <tr id="size_tr_${index}">
+            <td>
+                <select class="form-select item_size select2-single" data-index="${index}">
+                    ${selectedOption}
+                    ${allOptions}
+                </select>
+            </td>
+            <td><input type="text" class="form-control item_weight" id="item_weight_${index}" value="${prefill?.weight || ''}" readonly></td>
+            <td><input type="text" class="form-control item_reel_no" id="item_reel_no_${index}" value="${prefill?.reel_no || ''}" readonly></td>
+            <td><button type="button" class="btn btn-sm btn-danger remove-row">X</button></td>
+        </tr>`;
+}
+  // Manual Add Row button
+$(document).on('click', '#addSizeRow', function () {
+    addEmptyRow();
+});
+
+
+$(document).on('change', '.item_size', function () {
+
+    const $select = $(this);
+    const selectedSize = $select.val();
+    const opt = $select.find("option:selected");
+    const $row = $select.closest("tr");
+
+    $row.find(".item_weight").val(opt.data("weight") || '');
+    $row.find(".item_reel_no").val(opt.data("reel_no") || '');
+
+    calculateTotalWeight();
+
+    const rowId = $("#item_size_row_id").val();
+    const itemId = $("#goods_discription_tr_" + rowId).val();
+
+    if (!usedSizesByItem[itemId]) usedSizesByItem[itemId] = [];
+
+    // Check duplicate against GLOBAL list
+    if (usedSizesByItem[itemId].includes(selectedSize)) {
+        alert("This size is already selected in another row.");
+        $select.val('').trigger('change');
+        return;
+    }
+
+    // Add to GLOBAL list
+    if (selectedSize) {
+        usedSizesByItem[itemId].push(selectedSize);
+    }
+
+    // Disable used
+    disableGloballyUsedSizes(itemId);
+
+    // ---- Auto-add new row ----
+    const $lastRow = $("#item_size_tbody tr:last");
+    if ($row.is($lastRow) && selectedSize !== "") {
+        addEmptyRow();
+    }
+});
+  function addEmptyRow() {
+    const nextIndex = $("#item_size_tbody tr").length + 1;
+
+    let availableOptions = [];
+    $("#item_size_tbody tr:first .item_size option").each(function () {
+        if ($(this).val() !== "") {
+            availableOptions.push({
+                id: $(this).val(),
+                weight: $(this).data("weight"),
+                reel_no: $(this).data("reel_no"),
+                size: $(this).text().split("|")[0].trim()
+            });
+        }
+    });
+
+    $("#item_size_tbody").append(generateRow(nextIndex, availableOptions));
+
+    $(".item_size").select2({
+        dropdownParent: $('#sizeModal'),
+        width: '100%'
+    });
+
+    const rowId = $("#item_size_row_id").val();
+    const itemId = $("#goods_discription_tr_" + rowId).val();
+    disableAlreadySelectedSizes(itemId);
+}
+
+// Calculate total weight
+function calculateTotalWeight() {
+    let total = 0;
+    $(".item_weight").each(function () {
+        const val = parseFloat($(this).val());
+        if (!isNaN(val)) total += val;
+    });
+    $("#total_weight").text(total.toFixed(2));
+}
+
+$(document).on('click', '.item_size_btn', function () {
+    const rowId = $("#item_size_row_id").val();
+    let selectedData = [];
+    let totalWeight = 0;
+
+    $("#item_size_tbody tr").each(function () {
+        const sizeId = $(this).find(".item_size").val();
+        const weight = parseFloat($(this).find(".item_weight").val()) || 0;
+        const reelNo = $(this).find(".item_reel_no").val();
+
+        if (sizeId) {
+            selectedData.push({ id: sizeId, weight: weight, reel_no: reelNo });
+            totalWeight += weight;
+        }
+    });
+
+    $("#item_size_info_" + rowId).val(JSON.stringify(selectedData));
+
+    $("#quantity_tr_" + rowId).val(totalWeight.toFixed(2)).attr('readonly', true);
+
+    const itemId = $("#goods_discription_tr_" + rowId).val();
+$("#item_size_info_" + rowId).val(JSON.stringify(selectedData));
+
+rebuildUsedSizesForItem(itemId);
+
+disableGloballyUsedSizes(itemId);
+
+    $("#sizeModal").modal('hide');
+});
+
+
+//  Remove row
+$(document).on("click", ".remove-row", function () {
+
+    const rowId = $("#item_size_row_id").val();
+    const itemId = $("#goods_discription_tr_" + rowId).val();
+
+    $(this).closest("tr").remove();
+    calculateTotalWeight();
+
+    let updated = [];
+    $("#item_size_tbody tr").each(function () {
+        const sizeId = $(this).find(".item_size").val();
+        const weight = $(this).find(".item_weight").val();
+        const reel   = $(this).find(".item_reel_no").val();
+
+        if (sizeId) {
+            updated.push({ id: sizeId, weight: weight, reel_no: reel });
+        }
+    });
+
+    $("#item_size_info_" + rowId).val(JSON.stringify(updated));
+
+    rebuildUsedSizesForItem(itemId);
+
+    disableGloballyUsedSizes(itemId);
+});
+  //  Disable already selected sizes for same item
+function disableAlreadySelectedSizes(itemId) {
+    if (!itemId || !selectedSizesByItem[itemId]) return;
+    const usedSizes = selectedSizesByItem[itemId];
+
+    $(".item_size").each(function () {
+        const val = $(this).val();
+        $(this).find("option").each(function () {
+            if ($(this).val() !== val && usedSizes.includes($(this).val())) {
+                $(this).prop('disabled', true);
+            } else {
+                $(this).prop('disabled', false);
+            }
+        });
+    });
+}
+
+function handleItemChange(rowId) {
+
+    console.log("Checking row:", rowId);
+
+    let ddl = $("#goods_discription_tr_" + rowId);
+    let itemId = ddl.val();
+    let btn = $("#tr_" + rowId + " .editItemDetailsBtn");
+
+    if (!itemId || itemId === "") {
+        console.log("No item selected.");
+        btn.addClass("d-none");
+        return;
+    }
+
+    let paramStatus = ddl.find(":selected").data("parameterized_stock_status");
+
+    console.log("Row:", rowId, "Item:", itemId, "ParamStatus:", paramStatus);
+
+    if(production_module_status==1 && bill_to_id==""){
+        console.log("Parameterized → Show Gear + Open Modal");
+
+        btn.removeClass("d-none");
+
+        let saleId = $("#sale_id").val();
+        openSizeModal(itemId, rowId, saleId);   // 🔥 Auto-open modal
+
+    } else {
+        console.log("NOT parameterized → Hide Gear");
+        btn.addClass("d-none");
+    }
+    
+}
+// Disable globally used sizes for this item everywhere
+function disableGloballyUsedSizes(itemId) {
+
+   if (!itemId || !usedSizesByItem[itemId]) return;
+
+   const used = usedSizesByItem[itemId];
+
+   $(".item_size").each(function () {
+      const currentVal = $(this).val();
+
+      $(this).find("option").each(function () {
+         let optVal = $(this).val();
+
+         if (optVal !== currentVal && used.includes(optVal)) {
+               $(this).prop("disabled", true);
+         } else {
+               $(this).prop("disabled", false);
+         }
+      });
+   });
+   }
+   $(document).on('select2:open', function () {
+
+    let select = $('.select2-container--open').prev('select');
+
+    if (select.hasClass('goods_items')) {
+        activeItemRowId = select.data('id');
+    }
+
+    $(document).on('keydown.select2Shortcut', function (e) {
+        if (e.ctrlKey && e.key.toLowerCase() === 'a') {
+            e.preventDefault();
+            let modalId = select.data('modal');
+            if (modalId) {
+                $('#' + modalId).modal('show');
+            }
+        }
+    });
+});
+
+$(document).on('select2:close', function () {
+    $(document).off('keydown.select2Shortcut');
+});
+$('#modal_account_name').on('keyup', function () {
+    $('#modal_print_name').val($(this).val());
+});
+$('#modal_under_group_type').val('group');
+$('#modal_account_name').on('change', function () {
+
+    let account_name = $(this).val();
+    if (!account_name) return;
+
+    $.ajax({
+        url: '{{ url("check-account-name") }}',
+        type: 'POST',
+        dataType: 'JSON',
+        data: {
+            _token: '{{ csrf_token() }}',
+            account_name: account_name,
+            company_id: "{{ Session::get('user_company_id') }}"
+        },
+        success: function (data) {
+            if (data == 1) {
+                alert('Account Name Already Exists.');
+                $('#modal_account_name').val('').focus();
+            }
+        }
+    });
+});
+$('#modal_gstin').on('change', function () {
+
+    let gstin = $(this).val().trim();
+    if (!gstin || gstin.length < 2) return;
+
+    $.ajax({
+        url: '{{ url("check-gstin") }}',
+        type: 'POST',
+        dataType: 'JSON',
+        data: {
+            _token: '{{ csrf_token() }}',
+            gstin: gstin
+        },
+        success: function (data) {
+
+            if (data.status != 1) {
+                alert(data.message);
+                $('#modal_gstin').val('');
+                return;
+            }
+
+            $('#modal_pan').val(gstin.substring(2, 12));
+            $('#modal_address').val(data.address.toUpperCase());
+            $('#modal_pincode').val(data.pinCode);
+
+            let stateCode = gstin.substring(0, 2);
+
+            let stateOption = $('#modal_state option').filter(function () {
+                return $(this).text().trim().startsWith(stateCode + ' ');
+            }).val();
+
+            if (stateOption) {
+                $('#modal_state')
+                    .val(stateOption)
+                    .trigger('change'); 
+
+                $('#modal_state_hidden').val(stateOption);
+            }
+        }
+    });
+});
+
+$('#modal_state').on('change', function () {
+    $('#modal_state_hidden').val($(this).val());
+});
+$('select[name="under_group"]').on('change', function () {
+    $('#modal_under_group_type').val('group');
+});
+
+$('#saveAccountBtn').on('click', function () {
+
+    $('#modal_under_group_type').val('group');
+
+    let form = $('#accountForm');
+    let btn = $(this);
+
+    btn.prop('disabled', true);
+
+    $.ajax({
+        url: "{{ route('account.store') }}",
+        type: "POST",
+        data: form.serialize(),
+        success: function (res) {
+
+    alert(res.message || 'Account added successfully');
+
+    if (!res.account || !res.account.id || !res.account.account_name) {
+        console.error('Invalid response:', res);
+        return;
+    }
+
+    let partySelect = document.getElementById('party');
+
+    if (!partySelect) {
+        console.error('#party_id not found');
+        return;
+    }
+
+    // 🔥 Create option using native DOM
+let option = document.createElement("option");
+option.value = res.account.id;
+option.text  = res.account.account_name;
+option.selected = true;
+
+// 🔥 REQUIRED DATA ATTRIBUTES (THIS FIXES undefined)
+option.setAttribute('data-gstin', res.account.gstin || '');
+option.setAttribute('data-state_code', res.account.state_code || '');
+option.setAttribute('data-address', res.account.address || '');
+option.setAttribute(
+    'data-other_address',
+    JSON.stringify(res.account.other_address || [])
+);
+
+partySelect.appendChild(option);
+$(partySelect).trigger('change');
+
+
+    // 🔁 Refresh Select2 safely
+    if ($(partySelect).hasClass("select2-hidden-accessible")) {
+        $(partySelect).trigger("change");
+    } else {
+        $(partySelect).select2().trigger("change");
+    }
+
+    $('#accountModal').modal('hide');
+    form[0].reset();
+},
+
+        error: function (xhr) {
+            if (xhr.responseJSON && xhr.responseJSON.errors) {
+                let msg = Object.values(xhr.responseJSON.errors)[0][0];
+                alert(msg);
+            } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                alert(xhr.responseJSON.message);
+            } else {
+                alert('Validation failed');
+            }
+        },
+        complete: function () {
+            btn.prop('disabled', false);
+        }
+    });
+});
+
+/* =========================
+   ITEM MODAL LOGIC
+========================= */
+
+// Auto PRINT NAME
+$('#modal_name').on('keyup', function () {
+    $('#modal_p_name').val(this.value);
+});
+
+// PART-B toggle
+$('#modal_partb').on('change', function () {
+    $('.modal_partb_div, .modal_tcs_div').hide();
+    $('#modal_tcs_applicable').prop('checked', false);
+
+    if (this.checked) {
+        $('.modal_partb_div').show();
+    }
+});
+
+// TCS toggle
+$('#modal_tcs_applicable').on('change', function () {
+    $('.modal_tcs_div').toggle(this.checked);
+});
+
+// GST → Item type
+$('#modal_gst_rate').on('change', function () {
+    $('#modal_item_type').val(
+        $(this).find(':selected').data('type') || ''
+    );
+});
+
+
+/* =========================
+   SELECT2 INIT (MODAL SAFE)
+========================= */
+
+$('#itemModal').on('shown.bs.modal', function () {
+
+    $('#itemModal select.select2-single').each(function () {
+
+        if ($(this).data('select2')) {
+            $(this).select2('destroy');
+        }
+
+        $(this).select2({
+            width: '100%',
+            dropdownParent: $('#itemModal'),
+            minimumResultsForSearch: 0
+        });
+    });
+});
+
+$('#saveItemBtn').on('click', function () {
+
+    let btn = $(this);
+    let form = $('#modalItemForm');
+
+    btn.prop('disabled', true);
+
+    $.ajax({
+        url: "{{ route('account-manage-item.store') }}",
+        type: "POST",
+        data: form.serialize(),
+        success: function (res) {
+
+    if (!res.status || !res.item) {
+        alert('Invalid response');
+        return;
+    }
+
+    alert(res.message);
+
+    // ✅ SAFETY CHECK
+// SAFETY
+if (!activeItemRowId) {
+    alert('Item row not detected');
+    return;
+}
+
+// 🎯 TARGET EDIT SALE ROW
+let itemSelect = $('#goods_discription_tr_' + activeItemRowId);
+
+// CREATE OPTION
+let option = document.createElement("option");
+option.value = res.item.id;
+option.text  = res.item.name;
+option.selected = true;
+
+// REQUIRED DATA
+option.setAttribute('data-val', res.item.unit);
+option.setAttribute('data-unit_id', res.item.u_name);
+option.setAttribute('data-percent', res.item.gst_rate);
+option.setAttribute('data-parameterized_stock_status', res.item.parameterized_stock_status ?? 0);
+option.setAttribute('data-config_status', res.item.config_status ?? 0);
+option.setAttribute('data-group_id', res.item.group_id ?? '');
+
+// APPEND + SELECT
+itemSelect.append(option).trigger('change');
+
+// FOCUS QTY
+$('#quantity_tr_' + activeItemRowId).focus();
+
+// CLEANUP
+$('#itemModal').modal('hide');
+$('#modalItemForm')[0].reset();
+activeItemRowId = null;
+
+},
+        error: function (xhr) {
+            if (xhr.responseJSON?.errors) {
+                alert(Object.values(xhr.responseJSON.errors)[0][0]);
+            } else {
+                alert('Failed to save item');
+            }
+        },
+        complete: function () {
+            btn.prop('disabled', false);
+        }
+    });
+});
+calculateToPayAmount();
+function calculateToPayAmount(){
+   if(vehicle_info_type!="to_pay"){
+      return;
+   }
+   let other_charges = 0;
+   if(to_pay_other_charges!=""){
+      let total_qunatity = 0;
+      $(".quantity").each(function(){
+         let val = parseFloat($(this).val()) || 0;
+         total_qunatity += val;
+      });
+      
+      let other_charges = parseFloat(to_pay_other_charges) / parseFloat(total_qunatity);
+      other_charges = other_charges.toFixed(2);
+      console.log(other_charges)
+      $(".price").each(function(){
+         let val = parseFloat($(this).attr("data-price")) || 0;
+         console.log(val+"--"+other_charges+"--"+to_pay_freight);
+         val = val - parseFloat(other_charges) - (parseFloat(to_pay_freight) || 0);
+         $(this).val(val.toFixed(2));
+      });
+   }else{
+      $(".price").each(function(){
+         let val = parseFloat($(this).attr("data-price")) || 0;
+         val = val - parseFloat(other_charges) - (parseFloat(to_pay_freight) || 0);
+         $(this).val(val.toFixed(2));
+      });
+   }
+}
+function getItemGstRate(item_id,index){
+   let date = $("#date").val();
+   if(date==""){
+      return;
+   }
+   var token = '<?php echo csrf_token(); ?>';
+   $.ajax({
+      url: "{{ route('get-item-gst-rate') }}",
+      type: "POST",
+      data : {'item_id':item_id,'txn_date':$("#date").val(),'_token':token},
+      success : function(res) {
+         if(res.status==true){
+            let $select = $("#goods_discription_tr_" + index);
+            $select.find(':selected').attr('data-percent', res.gst_rate);
+            calculateAmount();
+         }
+      }
+   });
+}
+$("#date").on("change", function(){
+   
+   $(".goods_items").each(function(){
+      let item_id = $(this).val();
+      let index = $(this).data("id");
+      if(item_id){
+         //getItemGstRate(item_id,index);
+      }
+   });   
+});
+$(document).on('click', '.add-desc', function () {
+    let wrapper = $(this).closest('.description-wrapper');
+    let rowIndex = wrapper.data('row');
+
+    let newLine = `
+        <div class="d-flex mb-1">
+            <input type="text" 
+                   name="description_lines[${rowIndex}][]" 
+                   class="form-control description-input"
+                   placeholder="Enter description line">
+        </div>
+    `;
+
+    wrapper.append(newLine);
+
+    updateDescButtons(wrapper);
+});
+
+$(document).on('click', '.remove-desc', function () {
+    let wrapper = $(this).closest('.description-wrapper');
+
+    $(this).closest('.d-flex').remove();
+
+    updateDescButtons(wrapper);
+});
+function updateDescButtons(wrapper) {
+    let rows = wrapper.find('.d-flex');
+
+    rows.each(function (index) {
+
+        $(this).find('.add-desc').remove();
+        $(this).find('.remove-desc').remove();
+
+        if (rows.length === 1) {
+            $(this).append('<button type="button" class="btn btn-success add-desc ms-1">+</button>');
+        } 
+        else if (index === rows.length - 1) {
+            $(this).append('<button type="button" class="btn btn-danger remove-desc ms-1">-</button>');
+            $(this).append('<button type="button" class="btn btn-success add-desc ms-1">+</button>');
+        } 
+        else {
+            $(this).append('<button type="button" class="btn btn-danger remove-desc ms-1">-</button>');
+        }
+    });
+}
+$(document).ready(function () {
+    $('.description-wrapper').each(function () {
+        updateDescButtons($(this));
+    });
+});
+
+function checkPartyItemPriceEdit(rowId) {
+
+    let party_id = $('#party').val(); // IMPORTANT
+    let item_id  = $('#goods_discription_tr_' + rowId).val();
+console.log("----");
+    if (!party_id || !item_id) return;
+
+    $.ajax({
+        url: '/get-party-item-price',
+        type: 'GET',
+        data: {
+            party_id: party_id,
+            item_id: item_id
+        },
+        success: function (res) {
+
+            let priceInput = $('#price_tr_' + rowId);
+
+            if (res.status) {
+                priceInput.val(res.price);
+                priceInput.prop('readonly', true);
+                priceInput.addClass('bg-light');
+            } else {
+                priceInput.prop('readonly', false);
+                priceInput.removeClass('bg-light');
+            }
+        }
+    });
+}
+
+$('#party').on('change', function () {
+
+    $('.goods_items').each(function () {
+        let rowId = $(this).data('id');
+        checkPartyItemPriceEdit(rowId);
+    });
+
+});
+
+$(document).on('change', '.goods_items', function () {
+    let rowId = $(this).data('id');
+    checkPartyItemPriceEdit(rowId);
+});
+
+
 </script>
 @endsection

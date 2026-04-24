@@ -20,7 +20,7 @@
                             @csrf
                             @method('PUT')
 
-                            {{-- 🔹 Deckle Information --}}
+                            {{-- ðŸ”¹ Deckle Information --}}
                             <div class="row mb-4">
                                 <div class="col-md-4">
                                     <label class="form-label">Deckle No.</label>
@@ -28,17 +28,17 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Start Time</label>
-                                    <input type="text" class="form-control" name="start_time"
-                                        value="{{ date('d-m-Y H:i:s', strtotime($deckle->start_time_stamp)) }}" readonly>
+                                    <input type="text" class="form-control" name="start_time" placeholder="DD-MM-YYYY HH:MM:SS"
+                                        value="{{ date('d-m-Y H:i:s', strtotime($deckle->start_time_stamp)) }}" data-old="{{ date('d-m-Y H:i:s', strtotime($deckle->start_time_stamp)) }}">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">End Time</label>
-                                    <input type="text" class="form-control" name="end_time"
-                                        value="{{ date('d-m-Y H:i:s', strtotime($deckle->end_time_stamp)) }}" readonly>
+                                    <input type="text" class="form-control" name="end_time" placeholder="DD-MM-YYYY HH:MM:SS" value="{{ date('d-m-Y H:i:s', strtotime($deckle->end_time_stamp)) }}" data-old="{{ date('d-m-Y H:i:s', strtotime($deckle->end_time_stamp)) }}">
+                                    
                                 </div>
                             </div>
 
-                            {{-- 🔹 Quality Details --}}
+                            {{-- ðŸ”¹ Quality Details --}}
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <h5 class="mt-2">Quality Details</h5>
                                
@@ -59,9 +59,10 @@
                                     @foreach($deckle->quality as $q)
                                         <tr>
                                             <td>
+
                                                 <select name="qualities[{{ $q->id }}][item_id]" class="form-select item-select" required>
                                                     @foreach($items as $item)
-                                                        <option value="{{ $item->item_id }}" {{ $q->item_id == $item->item_id ? 'selected' : '' }}>
+                                                        <option value="{{ $item->id }}" {{ $q->item_id == $item->item_id ? 'selected' : '' }}>
                                                             {{ $item->name }}
                                                         </option>
                                                       
@@ -70,7 +71,7 @@
                                                 </select>
                                             </td>
                                             <td><input type="text" class="form-control bf-input" name="qualities[{{ $q->id }}][bf]" value="{{ $q->bf }}" readonly></td>
-                                            <td><input type="text" class="form-control gsm-input" name="qualities[{{ $q->id }}][gsm]" value="{{ $q->gsm }}" readonly></td>
+                                            <td><input type="text" class="form-control gsm-input" name="qualities[{{ $q->id }}][gsm]" value="{{ $q->gsm }}" ></td>
                                             <td><input type="number" class="form-control" name="qualities[{{ $q->id }}][speed]" value="{{ $q->speed }}" required></td>
                                             <td><input type="number" class="form-control" name="qualities[{{ $q->id }}][production_in_kg]" value="{{ $q->production_in_kg }}" required></td>
                                             <td class="text-center">
@@ -83,7 +84,7 @@
                                 </tbody>
                             </table>
     
-                            {{-- 🔹 Buttons --}}
+                            {{-- ðŸ”¹ Buttons --}}
                             <div class="text-end mt-3">
                                 <button type="submit" class="btn btn-success">Update</button>
                                 <a href="{{ route('deckle-process.index') }}" class="btn btn-secondary">Cancel</a>
@@ -98,39 +99,32 @@
 
 @include('layouts.footer')
 
-{{-- ✅ jQuery Section --}}
+{{-- âœ… jQuery Section --}}
 <script>
 $(document).ready(function() {
 
-    // 🔹 Function to refresh + and - buttons visibility
+    // Refresh + and - buttons visibility
     function refreshActionButtons() {
         let rows = $('#qualityTable tbody tr');
         let rowCount = rows.length;
 
-        // Remove all + buttons first
         rows.find('.addRowBtn').remove();
 
         rows.each(function(index) {
             let actionCell = $(this).find('td:last');
-
-            // Always remove old remove buttons to reset
             actionCell.find('.removeRow').remove();
 
             if (rowCount === 1) {
-                // ✅ Only one row: show only +
                 actionCell.html(`
                     <button type="button" class="btn btn-sm btn-success addRowBtn">+</button>
                 `);
             } else {
-                // ✅ More than one row
                 if (index === rowCount - 1) {
-                    // Last row → show both + and -
                     actionCell.html(`
                         <button type="button" class="btn btn-danger btn-sm removeRow">-</button>
                         <button type="button" class="btn btn-sm btn-success addRowBtn">+</button>
                     `);
                 } else {
-                    // Other rows → only -
                     actionCell.html(`
                         <button type="button" class="btn btn-danger btn-sm removeRow">-</button>
                     `);
@@ -139,7 +133,7 @@ $(document).ready(function() {
         });
     }
 
-    // 🔹 Add new row dynamically
+    // Add new row dynamically
     $(document).on('click', '.addRowBtn', function() {
         let index = $('#qualityTable tbody tr').length + 1;
 
@@ -153,25 +147,25 @@ $(document).ready(function() {
                         @endforeach
                     </select>
                 </td>
-                <td><input type="text" class="form-control bf-input" name="new_qualities[${index}][bf]" readonly></td>
-                <td><input type="text" class="form-control gsm-input" name="new_qualities[${index}][gsm]" readonly></td>
-                <td><input type="number" class="form-control text-end" name="new_qualities[${index}][speed]" required></td>
-                <td><input type="number" class="form-control text-end" name="new_qualities[${index}][production_in_kg]" required></td>
+                <td><input type="text" class="form-control bf-input" name="new_qualities[${index}][bf]" readonly placeholder="BF"></td>
+                <td><input type="text" class="form-control gsm-input" name="new_qualities[${index}][gsm]" placeholder="GSM"></td>
+                <td><input type="number" class="form-control text-end" name="new_qualities[${index}][speed]" required placeholder="Speed"></td>
+                <td><input type="number" class="form-control text-end" name="new_qualities[${index}][production_in_kg]" required placeholder="Production (KG)"></td>
                 <td class="text-center"></td>
             </tr>
         `;
 
         $('#qualityTable tbody').append(newRow);
-        refreshActionButtons(); // ✅ Update buttons visibility
+        refreshActionButtons();
     });
 
-    // 🔹 Remove row (but only if more than one)
+    // Remove row
     $(document).on('click', '.removeRow', function() {
         $(this).closest('tr').remove();
-        refreshActionButtons(); // ✅ Update buttons visibility
+        refreshActionButtons();
     });
 
-    // 🔹 Auto-fill BF & GSM on item change
+    // Auto-fill BF & GSM on item change
     $(document).on('change', '.item-select', function() {
         let row = $(this).closest('tr');
         let item_id = $(this).val();
@@ -190,10 +184,137 @@ $(document).ready(function() {
         }
     });
 
-    // ✅ Initialize buttons on load
+    // âœ… Form validation before submit
+    $('#editDeckleForm').on('submit', function(e) {
+        let valid = true;
+        let errorMsg = '';
+        // let start = $('input[name="start_time"]').val().trim();
+        // let end   = $('input[name="end_time"]').val().trim();
+
+        // if (!isValidDateTime(start)) {
+        //     alert("Invalid Start Time!");
+        //     e.preventDefault();
+        //     return;
+        // }
+
+        // if (!isValidDateTime(end)) {
+        //     alert("Invalid End Time!");
+        //     e.preventDefault();
+        //     return;
+        // }
+
+
+        // let startDate = parseDateTime(start);
+        // let endDate   = parseDateTime(end);
+
+        // if (endDate < startDate) {
+        //     alert("End Time cannot be less than Start Time!");
+        //     e.preventDefault();
+        //     return;
+        // }
+        $('#qualityTable tbody tr').each(function(index) {
+            let item = $(this).find('.item-select').val();
+            let gsm = $(this).find('.gsm-input').val();
+            let speed = $(this).find('input[name*="[speed]"]').val();
+            let prod = $(this).find('input[name*="[production_in_kg]"]').val();
+
+            if (!item || !gsm || !speed || !prod) {
+                valid = false;
+                errorMsg = `Please fill all fields in row ${index + 1}.`;
+                $(this).addClass('table-danger');
+            } else {
+                $(this).removeClass('table-danger');
+            }
+        });
+
+        if (!valid) {
+            e.preventDefault();
+            alert(errorMsg);
+        }
+    });
+
+    // Initialize buttons on load
     refreshActionButtons();
+    // $('input[name="start_time"]').on('change', function () {
+    //     let val = $(this).val().trim();
+    //     let old = $(this).data('old');
+
+    //     let end = $('input[name="end_time"]').val().trim();
+
+    //     if (!isValidDateTime(val)) {
+    //         alert("Invalid Start Time!");
+    //         $(this).val(old);
+    //         return;
+    //     }
+
+    //     let startDate = parseDateTime(val);
+    //     let endDate   = parseDateTime(end);
+
+    //     if (endDate < startDate) {
+    //         alert("Start Time cannot be greater than End Time!");
+    //         $(this).val(old);
+    //         return;
+    //     }
+
+    //     $(this).data('old', val);
+    // });
+
+    // $('input[name="end_time"]').on('change', function () {
+    //     let val = $(this).val().trim();
+    //     let old = $(this).data('old');
+
+    //     let start = $('input[name="start_time"]').val().trim();
+    //     if (!isValidDateTime(val)) {
+    //         alert("Invalid End Time!");
+    //         $(this).val(old);
+    //         return;
+    //     }
+
+    //     let startDate = parseDateTime(start);
+    //     let endDate   = parseDateTime(val);
+
+    //     if (endDate < startDate) {
+    //         alert("End Time cannot be less than Start Time!");
+    //         $(this).val(old);
+    //         return;
+    //     }
+
+    //     $(this).data('old', val);
+    // });
+    
+    // function isValidDateTime(dt) {
+    //     let regex = /^(\d{2})-(\d{2})-(20\d{2}) (\d{2}):(\d{2}):(\d{2})$/;
+    //     let match = dt.match(regex);
+
+    //     if (!match) return false;
+
+    //     let [_, d, m, y, h, i, s] = match;
+
+    //     d = parseInt(d);
+    //     m = parseInt(m);
+    //     y = parseInt(y);
+    //     h = parseInt(h);
+    //     i = parseInt(i);
+    //     s = parseInt(s);
+
+    //     if (m < 1 || m > 12) return false;
+    //     if (h > 23 || i > 59 || s > 59) return false;
+
+    //     let date = new Date(y, m - 1, d);
+
+    //     if (
+    //         date.getFullYear() !== y ||
+    //         date.getMonth() !== m - 1 ||
+    //         date.getDate() !== d
+    //     ) {
+    //         return false;
+    //     }
+
+    //     return true;
+    // }  
 });
 </script>
+
 
 
 @endsection

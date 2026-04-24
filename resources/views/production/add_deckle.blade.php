@@ -53,7 +53,7 @@
                                 <div class="mb-3 col-md-12"></div>
                                 <div class="mb-3 col-md-3">
                                     <label for="start_time_stamp" class="form-label font-14 font-heading">TIME STAMP</label>
-                                    <input type="text" class="form-control" name="start_time_stamp" id="start_time_stamp"  readonly value="{{date('d-m-Y H:i:s')}}"/>
+                                    <input type="text" class="form-control" name="start_time_stamp" id="start_time_stamp"   value="{{date('d-m-Y H:i:s')}}"/>
                                 </div>
                                 <div class="mb-3 col-md-12"></div>
                                 <div class="mb-3 col-md-3">

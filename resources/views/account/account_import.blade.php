@@ -65,25 +65,67 @@
                </div>
             @endif
             
-            <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Import Account Master</h5>
+            <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Import Account Master  <a href="{{ route('export-account-master') }}" 
+   class="btn btn-sm btn-success">
+   Export Account Master
+</a></h5>
             <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('import-account-process') }}" multipart enctype="multipart/form-data">
                @csrf
                <div class="row">
-                  <div class="mb-5 col-md-5">
-                     <label for="name" class="form-label font-14 font-heading">Upload CSV File *</label> <strong>(<a href="{{ URL::asset('public/csv-template/MA-AccountMaster.csv')}}">Download Template</a>)</strong>
-                     <span style="display: inline-flex">
-                        
-                        <input type="file" class="form-control" id="csv_file" name="csv_file" required style="height: 30%;" accept=".csv">
-                     </span>
-                     <ul style="color: red;">
-                       @error('csv_file'){{$message}}@enderror                        
-                     </ul>
-                  </div>
-               </div> 
+    <div class="mb-5 col-md-5">
+        <label for="name" class="form-label font-14 font-heading">
+            Upload CSV File *
+        </label> 
+        <strong>(
+            <a href="{{ URL::asset('public/csv-template/MA-AccountMaster.csv')}}">
+                Download Template
+            </a>
+        )</strong>
+
+        <span style="display: inline-flex">
+            <input type="file"
+                   class="form-control"
+                   id="csv_file"
+                   name="csv_file"
+                   required
+                   style="height: 30%;"
+                   accept=".csv">
+        </span>
+
+        <ul style="color: red;">
+            @error('csv_file'){{$message}}@enderror
+        </ul>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col-md-5">
+        <div class="form-check">
+            <input class="form-check-input"
+                   type="checkbox"
+                   name="overwrite"
+                   value="1"
+                   id="overwriteCheck">
+
+            <label class="form-check-label fw-500" for="overwriteCheck">
+                Overwrite Existing Accounts If Found
+            </label>
+        </div>
+
+        <small class="text-muted">
+            If checked, existing accounts in database will be updated using CSV data.
+            Other fields will remain unchanged.
+        </small>
+    </div>
+</div>
                <div class=" d-flex">                  
                   <div class="ms-auto">
                      <input type="submit" value="SAVE" class="btn btn-xs-primary" id="saveBtn">
                      <a href="{{ route('sale.index') }}" class="btn  btn-black ">QUIT</a>
+                     <a href="{{ route('export-account-master') }}" 
+                        class="btn btn-sm btn-success">
+                        Export Account Master
+                     </a>
                   </div>
                </div>
             </form>
@@ -203,5 +245,15 @@
 
 </body>
 @include('layouts.footer')
+<script>
+document.getElementById('saveBtn').addEventListener('click', function(e) {
+    const overwrite = document.getElementById('overwriteCheck').checked;
 
+    if(overwrite){
+        if(!confirm('Overwrite existing accounts? This will update matching accounts.')){
+            e.preventDefault();
+        }
+    }
+});
+</script>
 @endsection

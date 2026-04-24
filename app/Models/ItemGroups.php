@@ -28,4 +28,9 @@ class ItemGroups extends Model
         // g_name in manage_items = item_groups.id
         return $this->hasMany(ManageItems::class, 'g_name', 'id');
     }
+    public function parameters(): HasMany
+    {
+        // item_group_id in item_group_parameter_list = item_groups.id
+        return $this->hasMany(ItemGroupParameterList::class, 'parent_id', 'id');
+    }
 }

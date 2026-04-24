@@ -68,14 +68,11 @@
                                         <td>{{ formatIndianNumber($books['itc4a4']['det']['itcavl']['sgst'] ?? 0, 2) }}</td>
                                         <td>{{ formatIndianNumber($books['itc4a4']['det']['itcavl']['cess'] ?? 0, 2) }}</td>
 
-                                       <td>{{ formatIndianNumber($portal['elgitc']['itc4a5']['subtotal']['iamt'] ?? 0, 2) }}</td>
-                                        <td>{{ formatIndianNumber($portal['elgitc']['itc4a5']['subtotal']['camt'] ?? 0, 2) }}</td>
-                                        <td>{{ formatIndianNumber($portal['elgitc']['itc4a5']['subtotal']['samt'] ?? 0, 2) }}</td>
-                                        <td>{{ formatIndianNumber($portal['elgitc']['itc4a5']['subtotal']['csamt'] ?? 0, 2) }}</td>
-
+                                        <td>{{ formatIndianNumber($portal['itc4a4']['det']['itcavl']['igst'] ?? 0, 2) }}</td>
+                                        <td>{{ formatIndianNumber($portal['itc4a4']['det']['itcavl']['cgst'] ?? 0, 2) }}</td>
+                                        <td>{{ formatIndianNumber($portal['itc4a4']['det']['itcavl']['sgst'] ?? 0, 2) }}</td>
+                                        <td>{{ formatIndianNumber($portal['itc4a4']['det']['itcavl']['cess'] ?? 0, 2) }}</td>
                                     </tr>
-
-                                
 
                                     {{-- Add more rows as needed, e.g., ISD, Import of services, etc. --}}
                                 </tbody>

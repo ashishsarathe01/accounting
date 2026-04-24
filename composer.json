@@ -10,14 +10,16 @@
     "require": {
         "php": "^7.3",
         "barryvdh/laravel-dompdf": "*",
+        "endroid/qr-code": "^4.6",
         "fideloper/proxy": "^4.2",
         "fruitcake/laravel-cors": "^2.0",
-        "guzzlehttp/guzzle": "^7.0.1",
+        "guzzlehttp/guzzle": "^7.8",
         "laravel/framework": "^8.0",
         "laravel/passport": "^10.4",
         "laravel/tinker": "^2.0",
         "simplesoftwareio/simple-qrcode": "^4.2",
-        "twilio/sdk": "^7.12"
+        "twilio/sdk": "^7.12",
+        "yajra/laravel-datatables-oracle": "^9.21"
     },
     "require-dev": {
         "facade/ignition": "^2.3.6",

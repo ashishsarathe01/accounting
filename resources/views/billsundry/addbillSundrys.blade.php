@@ -2,6 +2,7 @@
 @section('content')
 <!-- header-section -->
 @include('layouts.header')
+@section('title', 'Add Bill Sundrys')
 <!-- list-view-company-section -->
 <div class="list-of-view-company ">
    <section class="list-of-view-company-section container-fluid">
@@ -29,11 +30,13 @@
                      <label class="form-label font-14 font-heading">Nature Of Sundry</label>
                      <select class="form-select form-select-lg select2-single" name="nature_of_sundry" id="nature_of_sundry" aria-label="form-select-lg example" required>
                         <option value="">Select Nature Of Sundry</option>
-                        <option value="CGST" data-sequence="1">CGST</option>
-                        <option value="SGST" data-sequence="2">SGST</option>
-                        <option value="IGST" data-sequence="3">IGST</option>
-                        <option value="TCS" data-sequence="4">TCS</option>
-                        <option value="TDS" data-sequence="5">TDS</option>                   
+                        <option value="CGST" data-sequence="1" {{ in_array('CGST', $usedNatures) ? 'disabled' : '' }}>CGST</option>
+                        <option value="SGST" data-sequence="2" {{ in_array('SGST', $usedNatures) ? 'disabled' : '' }}>SGST</option>
+                        <option value="IGST" data-sequence="3" {{ in_array('IGST', $usedNatures) ? 'disabled' : '' }}>IGST</option>
+                        <option value="TCS" data-sequence="4" {{ in_array('TCS', $usedNatures) ? 'disabled' : '' }}>TCS</option>
+                        <option value="TDS" data-sequence="5" {{ in_array('TDS', $usedNatures) ? 'disabled' : '' }}>TDS</option>
+                        <option value="IGST_IMPORT" data-sequence="6" {{ in_array('IGST_IMPORT', $usedNatures) ? 'disabled' : '' }}>  IGST IMPORT</option>
+                        <option value="CUSTOM_DUTY" data-sequence="7" {{ in_array('CUSTOM_DUTY', $usedNatures) ? 'disabled' : '' }}> CUSTOM DUTY</option>
                         <option value="OTHER" data-sequence="0">OTHER</option>
                      </select>
                      <input type="hidden" name="sequence" id="sequence">
@@ -71,6 +74,34 @@
                      </select>
                   </div>
                </div>
+                <div class="row" id="party_section" style="display:none;">
+                <div class="mb-4 col-md-4">
+                    <label class="form-label font-14 font-heading">
+                        Adjust in Party Amount
+                    </label>
+                    <select class="form-select form-select-lg select2-single"
+                            name="adjust_party_amt"
+                            id="adjust_party_amt">
+                        <option value="No" selected>No</option>
+                        <option value="Yes">Yes</option>
+                    </select>
+                </div>
+                <div class="mb-4 col-md-4">
+                    <label class="form-label font-14 font-heading">
+                        List Of Account
+                        <span id="party_required_star" class="text-danger" style="display:none;">*</span>
+                    </label>
+                    <select class="form-select form-select-lg select2-single"
+                            name="party_amt_account"
+                            id="party_amt_account"
+                            disabled>
+                        <option value="">Select</option>
+                        @foreach($account as $value)
+                            <option value="{{ $value->id }}">{{ $value->account_name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                </div>
                <div class="row">
                   <div class="mb-4 col-md-4">
                      <label for="name" class="form-label font-14 font-heading">Adjust in Purchase Amount </label>
@@ -279,6 +310,61 @@ $(document).ready(function () {
     toggleSaleAccountRequirement();
     togglePurchaseAccountRequirement();
 });
+$(document).ready(function () {
 
+    function togglePartySection() {
+        const nature = $('#nature_of_sundry').val();
+
+        if (nature === 'IGST_IMPORT' || nature === 'CUSTOM_DUTY') {
+            $('#party_section').slideDown();
+
+            // default No
+            $('#adjust_party_amt').val('No').trigger('change');
+
+        } else {
+            $('#party_section').slideUp();
+
+            $('#adjust_party_amt').val('No');
+            $('#party_amt_account')
+                .val('')
+                .prop('disabled', true)
+                .prop('required', false)
+                .trigger('change');
+
+            $('#party_required_star').hide();
+        }
+    }
+
+    function togglePartyAccount() {
+        if ($('#adjust_party_amt').val() === 'No') {
+            $('#party_amt_account')
+                .prop('disabled', false)
+                .prop('required', true);
+            $('#party_required_star').show();
+        } else {
+            $('#party_amt_account')
+                .prop('disabled', true)
+                .prop('required', false)
+                .val('');
+            $('#party_required_star').hide();
+        }
+    }
+
+    // Bind events
+    $('#nature_of_sundry').on('change', togglePartySection);
+    $('#adjust_party_amt').on('change', togglePartyAccount);
+
+    // Run on load (important for edit screen later)
+    togglePartySection();
+    togglePartyAccount();
+
+    // Prevent select2 opening if disabled
+    $('#party_amt_account').on('select2:opening', function (e) {
+        if ($(this).prop('disabled')) {
+            e.preventDefault();
+        }
+    });
+
+});
 </script>
 @endsection

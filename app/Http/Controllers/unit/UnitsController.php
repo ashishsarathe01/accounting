@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Session;
 use Gate;
+use DB;
 class UnitsController extends Controller
 {
     /**
@@ -19,7 +20,15 @@ class UnitsController extends Controller
     {
         Gate::authorize('view-module', 6);
         $com_id = Session::get('user_company_id');
-        $accountunit = Units::where('company_id', $com_id)->where('delete', '=', '0')->get();
+        $accountunit = Units::select(
+                                        'units.*',
+                                        DB::raw("
+                                        IF(
+                                            EXISTS(SELECT 1 FROM manage_items ps WHERE ps.u_name = units.id),1,0) as is_used
+                                        ")
+                            )->where('company_id', $com_id)
+                            ->where('delete', '=', '0')
+                            ->get();
         return view('unit/accountUnit')->with('accountunit', $accountunit);
     }
 

@@ -9,4 +9,5 @@ class ItemLedger extends Model
 {
     use HasFactory;
     public $table = "item_ledger";
+    protected $guarded = [];
 }

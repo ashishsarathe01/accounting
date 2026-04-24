@@ -1,6 +1,44 @@
 @extends('layouts.app')
 @section('content')
 @include('layouts.header')
+<style>
+   /* Force table to fit container */
+.stock_journal_table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+/* Compact columns */
+.col-date {
+    width: 90px;
+    white-space: nowrap;
+}
+
+.col-unit {
+    width: 60px;
+    white-space: nowrap;
+}
+
+.col-price,
+.col-amount {
+    width: 90px;
+    white-space: nowrap;
+    text-align: right;
+}
+
+/* Item details can wrap */
+.col-item {
+    width: 250px;
+    /*width: auto;*/
+    word-wrap: break-word;
+}
+/* Highlight first row of each production entry */
+.first-row {
+    background-color: #fff3cd !important; /* light highlight */
+    font-weight: 600;
+}
+
+</style>
 <div class="list-of-view-company ">
    <section class="list-of-view-company-section container-fluid">
       <div class="row vh-100">
@@ -29,12 +67,11 @@
                      </div>
                      <div class="calender-administrator ms-md-2">
                         <button type="submit" class="btn btn-info next">Next</button>
+                        <button type="button" class="btn btn-info ms-2 export_csv">CSV</button>
+                        <button type="button" class="btn btn-secondary ms-2 print_btn">PRINT</button>
                      </div>
                   </div>
                </form>
-               <div class="d-md-flex d-block"> 
-                       <input type="text" id="search" class="form-control" placeholder="Search">
-                    </div>
                     @can('action-module',86)
                        <a href="{{ route('add-stock-journal') }}" class="btn btn-xs-primary">ADD
                            <svg class="position-relative ms-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -44,104 +81,170 @@
                     @endcan
                
             </div>
-            <div class="bg-white table-view shadow-sm" style="overflow: scroll;">
-               <table class="table-striped table m-0 table-bordered shadow-sm stock_journal_table" >
+            <div class="bg-white table-view shadow-sm">
+               <table class="table-striped table m-0 table-bordered shadow-sm stock_journal_table" id="stock_journal_table">
                   <thead>
                      <tr class=" font-12 text-body bg-light-pink ">
-                        <th class="w-min-120 border-none bg-light-pink text-body">Date</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Item Details</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Qty. Generated</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Unit</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body" style="text-align:right;">Price</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body" style="text-align:right;">Amount</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Qty. Consumed</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Unit</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body" style="text-align:right;">Price</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body" style="text-align:right;">Amount</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body text-center"> Action</th>
+                        <th class="col-date">Date</th>
+                        <th class="col-date">Voucher No.</th>
+                        <th class="col-item">Item Details</th>
+                        <th style="text-align:right;">Qty. Generated</th>
+                        <th class="col-unit">Unit</th>
+                        <th class="col-price" style="text-align:right;">Price</th>
+                        <th class="col-amount" style="text-align:right;">Amount</th>
+                        <th style="text-align:right;">Qty. Consumed</th>
+                        <th class="col-unit">Unit</th>
+                        <th class="col-price" style="text-align:right;">Price</th>
+                        <th class="col-amount" style="text-align:right;">Amount</th>
+                        <th style="width: 93px;"> Action</th>
                      </tr>
                   </thead>
-                  <tbody>       
-                     @php 
-                        $parent_arr = []; 
-                        $generated_weight_total = 0;
-                        $generated_amount_total = 0;
-                        $consumed_weight_total = 0;
-                        $consumed_amount_total = 0;
-                     @endphp              
-                     @foreach($journals as $journal)
-                        <tr class="font-14 font-heading bg-white">
-                           <td class="w-min-120">
-                              @php 
-                                 if(!in_array($journal->id,$parent_arr)){
-                                    echo date('d-m-Y',strtotime($journal->journal_date));
-                                 }
-                              @endphp                              
-                           </td>
-                           <td class="w-min-120">
-                              @if($journal->name!='')
-                                 {{$journal->name}}
-                              @else
-                                 {{$journal->new_item}}
-                              @endif
-                           </td>
-                           <td class="w-min-120" style="text-align:right;">{{$journal->new_weight}}</td>
-                           <td class="w-min-120" style="text-align:right;">
-                              @if($journal->new_item!='')
-                                 Kgs.                              
-                              @endif
-                           </td>
-                           <td class="w-min-120" style="text-align:right;">{{$journal->new_price}}</td>
-                           <td class="w-min-120" style="text-align:right;">{{$journal->new_amount}}</td>
-                           <td class="w-min-120" style="text-align:right;">{{$journal->consume_weight}}</td>
-                           <td class="w-min-120" style="text-align:right;">
-                              @if($journal->name!='')
-                                 Kgs.                              
-                              @endif
-                           </td>
-                           <td class="w-min-120" style="text-align:right;">{{$journal->consume_price}}</td>
-                           <td class="w-min-120" style="text-align:right;">{{$journal->consume_amount}}</td>
-                           <td>
-                              <?php 
-                              if(in_array(date('Y-m',strtotime($journal->journal_date)),$month_arr)){
-                                
-                                    if(!in_array($journal->id,$parent_arr)){?>
-                                       
-                                 @can('action-module',63)
-                                    <a href="{{ URL::to('edit-stock-journal/' . $journal->id) }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
-                                 @endcan
-                                 @can('action-module',64)
-                                    <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $journal->id;?>">
-                                       <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
-                                    </button>
-                                 @endcan
-                                 <?php 
-                              }
-                              }?>
-                           </td>
-                        </tr>
-                        @php 
-                           array_push($parent_arr,$journal->id);
-                           $generated_weight_total = $generated_weight_total + $journal->new_weight;
-                           $generated_amount_total = $generated_amount_total + $journal->new_amount;
-                           $consumed_weight_total = $consumed_weight_total + $journal->consume_weight;
-                           $consumed_amount_total = $consumed_amount_total + $journal->consume_amount;
+                  <tbody>
+                    @php
+                        $currentParent = null;
+                    
+                        // Per entry totals
+                        $genQty = $genAmt = $conQty = $conAmt = 0;
+                    
+                        // Overall totals
+                        $overallGenQty = $overallGenAmt = 0;
+                        $overallConQty = $overallConAmt = 0;
+                    @endphp
+                    
+                    @foreach($journals as $journal)
+                    
+                        @php
+                            $isNewParent = $currentParent !== $journal->id;
+                    
+                            // Print previous entry total
+                            if ($isNewParent && $currentParent !== null) {
                         @endphp
-                     @endforeach
-                     <tr>
-                        <th></th>
-                        <th></th>
-                        <th style="text-align:right;">{{formatIndianNumber($generated_weight_total)}}</th>
-                        <th></th>
-                        <th></th>
-                        <th style="text-align:right;">{{formatIndianNumber($generated_amount_total)}}</th>
-                        <th style="text-align:right;">{{formatIndianNumber($consumed_weight_total)}}</th>
-                        <th></th>
-                        <th></th>
-                        <th style="text-align:right;">{{formatIndianNumber($consumed_amount_total)}}</th>
-                        <th></th>
-                     </tr>
-                  </tbody>
+                            <tr class="bg-light fw-bold">
+                                
+                                <td colspan="3" class="text-end">Entry Total</td>
+                                <td class="text-end">{{ formatIndianNumber($genQty) }}</td>
+                                <td></td>
+                                <td></td>
+                                <td class="text-end">{{ formatIndianNumber($genAmt) }}</td>
+                                <td class="text-end">{{ formatIndianNumber($conQty) }}</td>
+                                <td></td>
+                                <td></td>
+                                <td class="text-end">{{ formatIndianNumber($conAmt) }}</td>
+                                <td></td>
+                            </tr>
+                            <tr class="font-12 text-muted bg-light">
+                              <td colspan="11" class="ps-4 py-1" style="text-align:left;">
+                                 
+                                 <strong>Created By:</strong> 
+                                 {{ $journal->created_by_name ?? '-' }}
+
+                                 &nbsp;&nbsp;|&nbsp;&nbsp;
+
+                                 <strong>Approved By:</strong> 
+                                 @if($journal->approved_status == 1)
+                                    {{ $journal->approved_by_name ?? '-' }}
+                                    <small>({{ date('d-m-Y H:i', strtotime($journal->approved_at)) }})</small>
+                                 @else
+                                    -
+                                 @endif
+
+                              </td>
+                           </tr>
+                        @php
+                                // Reset per entry totals
+                                $genQty = $genAmt = $conQty = $conAmt = 0;
+                            }
+                        @endphp
+                    
+                        {{-- Data Row --}}
+                        <tr class="font-14 font-heading {{ $isNewParent ? 'first-row' : '' }}">
+                            <td>{{ $isNewParent ? date('d-m-Y', strtotime($journal->journal_date)) : '' }}</td>
+                            <td>{{ $isNewParent ? $journal->voucher_no_prefix : '' }}</td>
+                            <td>{{ $journal->name != '' ? $journal->name : $journal->new_item }}</td>
+                    
+                            <td class="text-end">{{ $journal->new_weight }}</td>
+                            <td>{{ $journal->new_item != '' ? $journal->new_unit : '' }}</td>
+                            <td class="text-end">{{ $journal->new_price }}</td>
+                            <td class="text-end">{{ $journal->new_amount }}</td>
+                    
+                            <td class="text-end">{{ $journal->consume_weight }}</td>
+                            <td>{{ $journal->name != '' ? $journal->s_name : '' }}</td>
+                            <td class="text-end">{{ $journal->consume_price }}</td>
+                            <td class="text-end">{{ $journal->consume_amount }}</td>
+                    
+                            <td>
+                                <?php 
+                             
+                              if(in_array(date('Y-m',strtotime($journal->journal_date)),$month_arr) && $isNewParent){                           
+                                 
+                                    if($journal->consumption_entry_status==0){?>                                       
+                                       @can('action-module',63)
+                                          <a href="{{ URL::to('edit-stock-journal/' . $journal->id) }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
+                                       @endcan
+                                       <?php 
+                                    } ?>
+                                    @if(!in_array($journal->id,$hideDeleteFor))
+                                       @can('action-module',64)
+                                          <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $journal->id;?>">
+                                             <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
+                                          </button>
+                                       @endcan
+                                    @endif
+                                    <?php 
+                                 
+                              }?>
+                            </td>
+                        </tr>
+                        
+                        @php
+                            // Add per entry totals
+                            $genQty += $journal->new_weight;
+                            $genAmt += $journal->new_amount;
+                            $conQty += $journal->consume_weight;
+                            $conAmt += $journal->consume_amount;
+                    
+                            // Add overall totals
+                            $overallGenQty += $journal->new_weight;
+                            $overallGenAmt += $journal->new_amount;
+                            $overallConQty += $journal->consume_weight;
+                            $overallConAmt += $journal->consume_amount;
+                    
+                            $currentParent = $journal->id;
+                        @endphp
+                    
+                    @endforeach
+                    
+                    {{-- Last entry total --}}
+                    @if($currentParent !== null)
+                    <tr class="bg-light fw-bold">
+                        <td colspan="3" class="text-end">Entry Total</td>
+                        <td class="text-end">{{ formatIndianNumber($genQty) }}</td>
+                        <td></td>
+                        <td></td>
+                        <td class="text-end">{{ formatIndianNumber($genAmt) }}</td>
+                        <td class="text-end">{{ formatIndianNumber($conQty) }}</td>
+                        <td></td>
+                        <td></td>
+                        <td class="text-end">{{ formatIndianNumber($conAmt) }}</td>
+                        <td></td>
+                    </tr>
+                    @endif
+                    
+                    {{-- OVERALL TOTAL --}}
+                    <tr class="bg-warning fw-bold">
+                        <td colspan="3" class="text-end">Overall Total</td>
+                        <td class="text-end">{{ formatIndianNumber($overallGenQty) }}</td>
+                        <td></td>
+                        <td></td>
+                        <td class="text-end">{{ formatIndianNumber($overallGenAmt) }}</td>
+                        <td class="text-end">{{ formatIndianNumber($overallConQty) }}</td>
+                        <td></td>
+                        <td></td>
+                        <td class="text-end">{{ formatIndianNumber($overallConAmt) }}</td>
+                        <td></td>
+                    </tr>
+                    
+                    </tbody>
                </table>
             </div>
          </div>
@@ -194,6 +297,221 @@
             return not_found;
          });
       });
+   });
+   $(".export_csv").click(function () {
+
+      let csv = [];
+
+      let from_date = $("input[name='from_date']").val();
+      let to_date   = $("input[name='to_date']").val();
+
+      function formatDate(dateStr){
+         if(!dateStr) return '';
+         let parts = dateStr.split("-");
+         return parts[2] + "-" + parts[1] + "-" + parts[0];
+      }
+
+      csv.push("From Date: " + formatDate(from_date));
+      csv.push("To Date: " + formatDate(to_date));
+      csv.push("");
+
+      let header = [];
+      $("#stock_journal_table thead th").each(function (index) {
+         if(index != 10){
+               header.push($(this).text().trim());
+         }
+      });
+      csv.push(header.join(","));
+
+      $("#stock_journal_table tbody tr").each(function () {
+
+         if($(this).hasClass("font-12") && $(this).hasClass("bg-light")){
+               return;
+         }
+
+         let row = [];
+         let isTotalRow = false;
+
+         let tds = $(this).find("td");
+
+         if(tds.length && $(tds[0]).attr("colspan") == "2"){
+
+               let label = $(tds[0]).text().trim(); // Entry Total / Overall Total
+               isTotalRow = true;
+
+               row = ["", label]; 
+               tds.each(function(index){
+                  if(index == 0) return; 
+                  if(index == 10) return;
+
+                  let text = $(this).text().trim()
+                     .replace(/\n/g, '')
+                     .replace(/,/g, '');
+
+                  row.push(text);
+               });
+
+         } else {
+
+               tds.each(function(index){
+
+                  if(index == 10) return;
+
+                  let text = $(this).text().trim()
+                     .replace(/\n/g, '')
+                     .replace(/,/g, '');
+
+                  row.push(text);
+               });
+         }
+
+         if(row.length > 1){
+               csv.push(row.join(","));
+         }
+      });
+
+      let csvString = csv.join("\n");
+
+      let blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+      let url = window.URL.createObjectURL(blob);
+
+      let a = document.createElement("a");
+      a.href = url;
+      a.download = "stock_journal_report.csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+   });
+
+   $(".print_btn").click(function () {
+
+      let rows = [];
+
+      let from_date = $("input[name='from_date']").val();
+      let to_date   = $("input[name='to_date']").val();
+
+      function formatDate(dateStr){
+         if(!dateStr) return '';
+         let parts = dateStr.split("-");
+         return parts[2] + "-" + parts[1] + "-" + parts[0];
+      }
+
+      let from = formatDate(from_date);
+      let to   = formatDate(to_date);
+
+      let header = [];
+      $("#stock_journal_table thead th").each(function (index) {
+         if(index != 10){
+               header.push($(this).text().trim());
+         }
+      });
+      rows.push(header);
+
+      $("#stock_journal_table tbody tr").each(function () {
+
+         if($(this).hasClass("font-12") && $(this).hasClass("bg-light")){
+               return;
+         }
+
+         let row = [];
+         let tds = $(this).find("td");
+
+         if(tds.length && $(tds[0]).attr("colspan") == "2"){
+
+               let label = $(tds[0]).text().trim();
+
+               row = ["", label];
+
+               tds.each(function(index){
+                  if(index == 0) return;
+                  if(index == 10) return;
+
+                  let text = $(this).text().trim();
+                  row.push(text);
+               });
+
+         } else {
+
+               tds.each(function(index){
+
+                  if(index == 10) return;
+
+                  let text = $(this).text().trim();
+                  row.push(text);
+               });
+         }
+
+         if(row.length > 1){
+               rows.push(row);
+         }
+      });
+
+      let printWindow = window.open('', '', 'width=1000,height=700');
+
+      let html = `
+         <html>
+         <head>
+               <title>Stock Journal</title>
+               <style>
+                  body { font-family: Arial; font-size: 11px; }
+                  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                  th, td { border: 1px solid #000; padding: 4px; }
+                  th { background: #f2f2f2; }
+                  .text-right { text-align: right; }
+                  .no-border td { border-top: none !important; }
+                  .bold { font-weight: bold; }
+               </style>
+         </head>
+         <body>
+
+         <h2 style="text-align:center; text-decoration: underline;">
+               List of Stock Journal
+         </h2>
+
+         <p style="text-align:center;">
+               From: ${from} &nbsp;&nbsp; To: ${to}
+         </p>
+
+         <table>
+               <thead>
+                  <tr>
+      `;
+
+      header.forEach(col => {
+         html += `<th>${col}</th>`;
+      });
+
+      html += `</tr></thead><tbody>`;
+
+      for(let i = 1; i < rows.length; i++){
+
+         let row = rows[i];
+         let isSubRow = (row[0] === "");
+         let isTotal  = (row[1] && (row[1].includes("Total")));
+
+         html += `<tr class="${isSubRow ? 'no-border' : ''} ${isTotal ? 'bold' : ''}">`;
+
+         row.forEach((cell, index) => {
+
+               let align = (index == 2 || index == 5 || index == 6 || index == 9)
+                  ? 'text-right' : '';
+
+               html += `<td class="${align}">${cell}</td>`;
+         });
+
+         html += `</tr>`;
+      }
+
+      html += `
+               </tbody>
+         </table>
+         </body>
+         </html>
+      `;
+
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.print();
    });
 </script>
 @endsection

@@ -2,6 +2,7 @@
 @section('content')
 <!-- header-section -->
 @include('layouts.header')
+@section('title', 'Bill Sundrys')
 <!-- list-view-company-section -->
 <div class="list-of-view-company ">
     <section class="list-of-view-company-section container-fluid">
@@ -72,9 +73,11 @@
                                             <a href="{{ URL::to('account-bill-sundry/' . $value->id . '/edit') }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
                                         @endcan
                                         @can('action-module',44)
+                                            @if($value->is_used==0)
                                             <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $value->id; ?>">
-                                                <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
+                                                <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt=""> 
                                             </button>
+                                            @endif
                                         @endcan
                                      <?php //} ?>
                                     </td>
@@ -118,7 +121,11 @@
 @include('layouts.footer')
 <script>
     $(document).ready(function() {
-
+        var table = $('#example').DataTable({
+            bDestroy: true,
+            stateSave: true,     
+            stateDuration: -1    
+        });
         $(".delete").click(function() {
             var id = $(this).attr("data-id");
             $("#bill_id").val(id);

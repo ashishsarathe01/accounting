@@ -2,6 +2,27 @@
 @section('content')
 <!-- header-section -->
 @include('layouts.header')
+<style>
+    /* Make rows look clickable */
+    table tbody tr {
+        cursor: pointer;                /* Changes the cursor to hand pointer */
+        transition: all 0.2s ease-in;   /* Smooth animation when hovering */
+    }
+
+    /* Hover effect for rows */
+    table tbody tr:hover {
+        background-color: #cce5ff;      /* Light violet background (matches your theme) */
+        color: #4b0082;                 /* Slightly darker text color */
+        transform: scale(1.01);         /* Slightly pop up the row */
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1); /* Soft shadow effect */
+    }
+
+    /* Keep table layout stable when scaling */
+    table tbody tr td {
+        vertical-align: middle;
+    }
+</style>
+
 <!-- list-view-company-section -->
 <div class="list-of-view-company ">
     <section class="list-of-view-company-section container-fluid">
@@ -24,8 +45,11 @@
                 <div class="position-relative table-title-bottom-line d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
                     <h5 class="table-title m-0 py-2">Stock</h5>
                     <a href="{{ route('item-size-stocks.index') }}" class="btn btn-info btn-sm">
-    <i class="bi bi-box-seam"></i> View All Reels
-</a>
+                        <i class="bi bi-box-seam"></i> View Opening Reels
+                    </a>
+                            <a href="{{ route('reel.import.view') }}" class="btn btn-primary">
+                            <i class="fa fa-upload"></i> Import Reels (CSV)
+                            </a>
 
                     <a href="{{ route('production.add.stock') }}" 
                     class="btn btn-xs-primary d-flex align-items-center">
@@ -38,22 +62,41 @@
                 </div>
 
                 <div class="bg-white table-view shadow-sm">
+                    @php
+                        $total_reels = 0;
+                        $total_kgs = 0;
+                    @endphp
+
                     <table class="table-striped table m-0 shadow-sm">
                         <thead>
                             <tr class="font-12 text-body bg-light-pink">
                                 <th class="w-min-120 border-none bg-light-pink text-body">Item</th>
-                                <th class="w-min-120 border-none bg-light-pink text-body">Quantity</th>
+                                <th class="w-min-120 border-none bg-light-pink text-body">Quantity (In Reels)</th>
+                                <th class="w-min-120 border-none bg-light-pink text-body">Quantity (In Kgs)</th>
                             </tr>
-                        </thead>    
+                        </thead>
                         <tbody>
-                            @foreach($stocks as $key => $stock)
+                            @foreach($stocks as $stock)
+                                @php
+                                    $total_reels += $stock->total_stock;
+                                    $total_kgs += $stock->total_stock_kg;
+                                @endphp
                                 <tr data-id="{{ $stock->new_item_id }}">
                                     <td>{{ $stock->name }}</td>
                                     <td>{{ $stock->total_stock }}</td>
+                                    <td>{{ $stock->total_stock_kg }}</td>
                                 </tr>
                             @endforeach
+
+                            <!-- ✅ Total Row -->
+                            <tr class="fw-bold bg-light">
+                                <td class="text-body">Total:</td>
+                                <td>{{ $total_reels }}</td>
+                                <td>{{ $total_kgs }}</td>
+                            </tr>
                         </tbody>
                     </table>
+
 
                     <!-- Reel Details Modal -->
                     <div class="modal fade" id="reelDetailsModal" tabindex="-1" aria-hidden="true">
@@ -90,7 +133,7 @@
 @include('layouts.footer')
 
 <script>
-$('table tbody tr').on('dblclick', function() {
+$('table tbody tr').on('click', function() {
     let itemId = $(this).data('id'); 
     let itemName = $(this).find('td:first').text(); // get the item name
 
@@ -108,12 +151,18 @@ $('table tbody tr').on('dblclick', function() {
             let html = '';
             response.forEach(row => {
                 for (let i = 0; i < row.reels.length; i++) {
+                    let redirect_url = "#";
+                    if(row.deckle_id[i]!=0){
+                        redirect_url = "{{url('edit-pop-roll-reel')}}/"+row.deckle_id[i]+"?from=deckle-process.manage-stock";
+                    }else if(row.deckle_id[i]==0){
+                        redirect_url = "{{url('item-size-stocks')}}/"+row.id[i]+"/edit?from=deckle-process.manage-stock";
+                    }
                     html += `
-                        <tr>
+                        <tr >
                             <td>${i === 0 ? row.size : ''}</td>
                             <td>${i === 0 ? row.count : ''}</td>
                             <td>${row.reels[i]}</td>
-                            <td>${row.weights[i]}</td>
+                            <td><a href="${redirect_url}">${row.weights[i]}</a></td>
                         </tr>
                     `;
                 }
@@ -130,5 +179,7 @@ $('table tbody tr').on('dblclick', function() {
         }
     });
 });
+
+
 </script>
 @endsection

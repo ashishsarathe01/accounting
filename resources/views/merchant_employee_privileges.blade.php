@@ -48,6 +48,12 @@
                         <div class="row">
                            <input type="hidden" name="employee_id" value="{{$employee_id}}">
                            <input type="hidden" name="company_id" value="{{$value->id}}">
+                            <div class="mb-3">
+                                <label>
+                                    <input type="checkbox" class="select-all">
+                                    <strong>SELECT / UNSELECT ALL</strong>
+                                </label>
+                            </div>
                            <ul>
                               @foreach ($privileges as $module)
                                  @include('privilege_module', ['module' => $module,'company_id' => $value->id,'employee_id' => $employee_id])
@@ -84,6 +90,24 @@
                 ul.classList.toggle('hidden');
                 this.textContent = ul.classList.contains('hidden') ? '[+]' : '[-]';
             }
+        });
+    });
+    
+     // Select / Unselect all privileges within the same form
+    document.querySelectorAll('.select-all').forEach(function(selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function () {
+
+            // Get the current form
+            const form = this.closest('form');
+
+            // Get all checkboxes except select-all
+            const checkboxes = form.querySelectorAll(
+                'input[type="checkbox"]:not(.select-all)'
+            );
+
+            checkboxes.forEach(cb => {
+                cb.checked = this.checked;
+            });
         });
     });
 </script>

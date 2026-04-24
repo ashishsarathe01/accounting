@@ -32,4 +32,14 @@ class SaleOrderItem extends Model
             return $this->hasMany(ItemSizeStock::class,'item_id','item_id')
                         ->where('status','1');
         }
+        public function saleOrderItem()
+        {
+            return $this->hasMany(SaleOrderItem::class,'item_id','item_id')
+                        ->where('status','0')
+                        ->with(['gsms' => function($q){
+                            $q->with(['details'=>function(){
+                                //$q->withSum('details as total_quantity', 'quantity');
+                            }]);
+                        }]);
+        }
 }

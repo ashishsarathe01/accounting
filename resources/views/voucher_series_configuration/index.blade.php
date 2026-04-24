@@ -37,9 +37,17 @@
                                     <select class="form-select form-select-lg" name="configuration_for" id="configuration_for" aria-label="form-select-lg example">
                                         <option value="">SELECT</option>
                                         <option value="SALE">SALES</option>
-                                        <option value="DEBIT NOTE">DEBIT NOTE</option>
-                                        <option value="CREDIT NOTE">CREDIT NOTE</option>
-                                        <option value="STOCK TRANSFER">STOCK TRANSFER</option>
+                                        <option value="DEBIT NOTE">DEBIT NOTE (WITH GST)</option>
+                                        <option value="DEBIT NOTE WITHOUT">DEBIT NOTE (WITHOUT GST)</option>
+                                        <option value="CREDIT NOTE">CREDIT NOTE (WITH GST)</option>
+                                        <option value="CREDIT NOTE WITHOUT">CREDIT NOTE (WITHOUT GST)</option>
+                                        <option value="JOB WORK RAW MATERIAL">JOB WORK OUT - RAW MATERIAL</option>
+                                        <option value="JOB WORK FINISHED GOODS">JOB WORK OUT - FINISHED GOODS</option>
+                                        <option value="PAYMENT">PAYMENT</option>
+                                        <option value="RECEIPT">RECEIPT</option>
+                                        <option value="JOURNAL">JOURNAL</option>
+                                        <option value="CONTRA">CONTRA</option>
+                                        <option value="PRODUCTION RAW MATERIAL CONSUMPTION">PRODUCTION RAW MATERIAL CONSUMPTION</option>
                                     </select>
                                 </div>
                                 <div class="clearfix"></div>
@@ -84,7 +92,7 @@
                                 <div class="clearfix"></div>
                                 <div class="mb-3 col-md-3">
                                     <label for="prefix" class="form-label font-14 font-heading">PREFIX</label>
-                                    <select class="form-select form-select-lg auto_number" name="prefix" id="prefix" aria-label="form-select-lg example" disabled onChange="invoiceNumber();">
+                                    <select class="form-select form-select-lg" name="prefix" id="prefix" aria-label="form-select-lg example"  onChange="invoiceNumber();">
                                         <option value="">SELECT</option>
                                         <option value="ENABLE">ENABLE</option>
                                         <option value="DISABLE">DISABLE</option>    
@@ -92,7 +100,7 @@
                                 </div>
                                 <div class="mb-3 col-md-3">
                                     <label for="prefix_value" class="form-label font-14 font-heading">&nbsp</label>
-                                    <input type="text" class="form-control auto_number" id="prefix_value" disabled name="prefix_value" placeholder="ENTER PREFIX" onKeyup="invoiceNumber();"/>
+                                    <input type="text" class="form-control" id="prefix_value"  name="prefix_value" placeholder="ENTER PREFIX" onKeyup="validatePrefix(this);invoiceNumber();"/>
                                 </div>                                
                                 <div class="clearfix"></div>
                                 <div class="mb-3 col-md-3">
@@ -115,7 +123,7 @@
                                 <div class="clearfix"></div>
                                 <div class="mb-3 col-md-3">
                                     <label for="suffix" class="form-label font-14 font-heading">SUFFIX</label>
-                                    <select class="form-select form-select-lg auto_number" name="suffix" id="suffix" aria-label="form-select-lg example" disabled onChange="invoiceNumber();">
+                                    <select class="form-select form-select-lg" name="suffix" id="suffix" aria-label="form-select-lg example" onChange="invoiceNumber();">
                                         <option value="">SELECT</option>
                                         <option value="ENABLE">ENABLE</option>
                                         <option value="DISABLE">DISABLE</option>    
@@ -123,7 +131,7 @@
                                 </div>
                                 <div class="mb-3 col-md-3">
                                     <label for="suffix_value" class="form-label font-14 font-heading">&nbsp</label>
-                                    <input type="text" class="form-control auto_number" id="suffix_value" disabled name="suffix_value" placeholder="ENTER SUFFIX" onKeyup="invoiceNumber();"/>
+                                    <input type="text" class="form-control" id="suffix_value" name="suffix_value" placeholder="ENTER SUFFIX" onKeyup="invoiceNumber();"/>
                                 </div> 
                                 <div class="clearfix"></div>
                                 <div class="mb-3 col-md-3">
@@ -199,20 +207,26 @@
 </body>
 @include('layouts.footer')
 <script>
+    var update_status = 0;
     $(document).ready(function(){
         $('#manual_numbering').change(function(){
             let manual_numbering = $(this).val();
+            $(".sale_btn").hide();
             if(manual_numbering == 'YES'){
                 $('.auto_number').prop('disabled', true);
                 $('.auto_number').val('');
                 $('.manual_number').prop('disabled', false);
+                $(".sale_btn").show();
             }else{
                 $('.auto_number').prop('disabled', false);
                 $('.manual_number').prop('disabled', true);
                 $('.manual_number').val('');
+                if(update_status==1){
+                    $(".sale_btn").show();
+                }
             }
-            $('#prefix_value').prop('disabled', true);
-            $('#suffix_value').prop('disabled', true);
+            //$('#prefix_value').prop('disabled', true);
+            //$('#suffix_value').prop('disabled', true);
             $('#year_format').prop('disabled', true);
         });
         $('#prefix').change(function(){
@@ -282,6 +296,7 @@
                             $('#separator_2').val(response.configuration.separator_2);
                             $('#separator_3').val(response.configuration.separator_3);
                             $('#invoice_start').val(response.configuration.invoice_start);
+                            update_status = response.update_status;
                             if(response.update_status==1){
                                 $(".sale_btn").show();
                             }else{
@@ -306,7 +321,7 @@
                             }
                             if(response.configuration.year == 'NOT REQUIRED'){
                                 $('#year_format').prop('disabled', true);
-                            }else{
+                            }else if(response.configuration.year == 'PREFIX TO NUMBER' || response.configuration.year == 'SUFFIX TO NUMBER'){
                                 $('#year_format').prop('disabled', false);
                             }
                         }else if(response.status == 'failed'){
@@ -410,5 +425,16 @@
             }
         }
     }
+    function validatePrefix(el) {
+    // Remove leading zero
+    if (el.value.length > 1 && el.value.startsWith('0')) {
+        el.value = el.value.replace(/^0+/, '');
+    }
+
+    // If only "0" entered → clear it
+    if (el.value === '0') {
+        el.value = '';
+    }
+}
 </script>
 @endsection

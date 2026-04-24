@@ -17,14 +17,19 @@ use App\Models\ParameterInfo;
 use App\Models\ParameterInfoValue;
 use App\Models\ParameterInfoValueDetail;
 use App\Models\ItemAverage;
+use App\Models\SparePart;
+use App\Models\SparePartItem;
 use App\Models\ItemAverageDetail;
 use App\Models\PurchaseParameterInfo;
 use App\Models\ItemParameterStock;
 use App\Models\SupplierPurchaseVehicleDetail;
+use App\Models\SaleOrderSetting;
+use App\Models\ActivityLog;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\URL;
 use Carbon\Carbon;
 use App\Helpers\CommonHelper;
+use Illuminate\Support\Facades\Cache;
 use DB;
 use Session;
 use DateTime;
@@ -38,11 +43,9 @@ class PurchaseController extends Controller{
    public function index(Request $request)
 {
     Gate::authorize('action-module', 11);
-
     $input = $request->all();
     $from_date = null;
     $to_date = null;
-
     if (!empty($input['from_date']) && !empty($input['to_date'])) {
         $from_date = date('d-m-Y', strtotime($input['from_date']));
         $to_date = date('d-m-Y', strtotime($input['to_date']));
@@ -51,9 +54,7 @@ class PurchaseController extends Controller{
         $from_date = session('purchase_from_date');
         $to_date = session('purchase_to_date');
     }
-
     Session::put('redirect_url', '');
-
     // Financial year setup
     $financial_year = Session::get('default_fy');
     $y = explode("-", $financial_year);
@@ -93,17 +94,24 @@ class PurchaseController extends Controller{
         },
         'account:id,account_name'
     ])
-        ->select([
-    'id',
-    'date',
-    'voucher_no',
-    'total',
-    'party',
-    DB::raw("(SELECT voucher_no 
-              FROM supplier_purchase_vehicle_details 
-              WHERE map_purchase_id = purchases.id 
-              LIMIT 1) AS vehicle_voucher_no")
-])
+    ->select([
+        'id',
+        'date',
+        'voucher_no',
+        'total',
+        'party',
+        'approved_status',
+        'approved_by',
+        'approved_at',
+        'created_by',
+        DB::raw("(SELECT name FROM users WHERE users.id = purchases.approved_by LIMIT 1) as approved_by_name"),
+        DB::raw("(SELECT name FROM users WHERE users.id = purchases.created_by LIMIT 1) as created_by_name"),
+        DB::raw("(SELECT voucher_no 
+                      FROM supplier_purchase_vehicle_details 
+                      WHERE map_purchase_id = purchases.id 
+                      LIMIT 1) AS vehicle_voucher_no"),
+        
+    ])
         ->where('company_id', Session::get('user_company_id'))
         ->where('delete', '0');
 
@@ -143,29 +151,83 @@ class PurchaseController extends Controller{
      *
      * @return \Illuminate\Http\Response
      */
-   public function create(Request $request){
+    public function create(Request $request){
       
       $rowId     = $request->query('row_id');     // 2
       $accountId = $request->query('account_id'); // 332
       $groupId   = $request->query('group_id');   // 1
-     
+      $vehicleEntryDate = null;
+      if (!empty($rowId)) {
+         $vehicleEntry = SupplierPurchaseVehicleDetail::find($rowId);
+         if ($vehicleEntry && !empty($vehicleEntry->entry_date)) {
+            $vehicleEntryDate = $vehicleEntry->entry_date; // Y-m-d
+         }
+      }
+      $in_quantity   = $request->query('quantity');   // 1
+      $in_price   = $request->query('price');   // 1
+      $itemsJson = $request->query('items');
+      $spare_part_id = $request->query('spare_part_id');
+      $startItems = json_decode($itemsJson, true);
+      $invoice_no     = $request->query('invoice_no');
+      $invoice_date   = $request->query('invoice_date');
+      $bill_sundry_id  = request('bill_sundry_id');
+      $freight_amount = $request->query('freight_amount');
+      $eway_bill_no   = $request->query('eway_bill_no');
+      $vehicle_no = $request->query('vehicle_no', '');
+      $transport  = $request->query('transport', '');
+
       Gate::authorize('action-module',83);
       //Account List
-      $group_ids = CommonHelper::getAllChildGroupIds(3,Session::get('user_company_id'));
-      array_push($group_ids, 3);
-      $group_ids = array_merge($group_ids, CommonHelper::getAllChildGroupIds(11,Session::get('user_company_id'))); // Include group 11 as well
-      $group_ids = array_unique($group_ids); // Ensure unique group IDs       
-      array_push($group_ids, 11);
+       //Account List
+      $top_groups = [3, 11, 7, 8];
+
+      // Step 2: Get all child group IDs recursively
+      $all_groups = [];
+      foreach ($top_groups as $group_id) {
+         $all_groups[] = $group_id; // include the top group itself
+         $all_groups = array_merge($all_groups, CommonHelper::getAllChildGroupIds($group_id, Session::get('user_company_id')));
+      }
+      // Remove duplicates just in case
+      $group_ids = array_unique($all_groups);
+      $allowed_group_ids = array_unique($all_groups);
+      $no_gst_groups = [7, 8];
+
+      $no_gst_all_groups = [];
+      foreach ($no_gst_groups as $gid) {
+         $no_gst_all_groups[] = $gid;
+
+         $no_gst_all_groups = array_merge(
+            $no_gst_all_groups,
+            CommonHelper::getAllChildGroupIds($gid, Session::get('user_company_id'))
+         );
+      }
+
+      $no_gst_group_ids = array_unique($no_gst_all_groups);
+      $allowedAccountGroups = DB::table('account_groups')
+         ->select('id', 'name')
+         ->whereIn('id', $allowed_group_ids)
+         ->orderBy('name')
+         ->get();
       $party_list = Accounts::leftjoin('states','accounts.state','=','states.id')
                               ->where('delete', '=', '0')
                               ->where('status', '=', '1')
                               ->whereIn('company_id', [Session::get('user_company_id'),0])
                               ->whereIn('under_group',$group_ids)
-                              ->select('accounts.id','accounts.gstin','accounts.address','accounts.pin_code','accounts.account_name','states.state_code')
+                              ->select(
+    'accounts.id',
+    'accounts.gstin',
+    'accounts.allow_without_gst',
+    'accounts.address',
+    'accounts.pin_code',
+    'accounts.account_name',
+    'states.state_code',
+    'under_group'
+)
                               ->orderBy('account_name')
                               ->get();    
 
       $companyData = Companies::where('id', Session::get('user_company_id'))->first();
+      $stockEntryEnabled = (int) ($companyData->stock_entry_status ?? 0);
       if($companyData->gst_config_type == "single_gst"){
          $GstSettings = DB::table('gst_settings')
                            ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])
@@ -201,6 +263,10 @@ class PurchaseController extends Controller{
                                  ->orderBy('name')
                                  ->get();
       $financial_year = Session::get('default_fy');
+      [$startYY, $endYY] = explode('-', $financial_year);
+
+      $fy_start_date = '20' . $startYY . '-04-01'; 
+      $fy_end_date   = '20' . $endYY   . '-03-31';   
       $bill_date = date('Y-m-d');
       if(date('m')<=3){
          $current_year = (date('y')-1) . '-' . date('y');
@@ -216,7 +282,7 @@ class PurchaseController extends Controller{
       $item = DB::table('manage_items')
     ->join('units', 'manage_items.u_name', '=', 'units.id')
     ->join('item_groups', 'item_groups.id', '=', 'manage_items.g_name')
-    ->join(DB::raw('(SELECT igr.item_id, igr.gst_rate 
+    ->leftjoin(DB::raw('(SELECT igr.item_id, igr.gst_rate 
                      FROM item_gst_rate igr
                      WHERE igr.effective_from <= "'.$bill_date.'"
                      AND igr.effective_from = (
@@ -237,7 +303,7 @@ class PurchaseController extends Controller{
         'units.s_name as unit',
         'manage_items.id',
         'manage_items.u_name',
-        'gst.gst_rate',
+        'manage_items.gst_rate',
         'manage_items.name',
         'parameterized_stock_status',
         'config_status',
@@ -245,7 +311,127 @@ class PurchaseController extends Controller{
     ])
     ->get();
 
-      return view('addPurchase')->with('party_list', $party_list)->with('billsundry', $billsundry)->with('GstSettings', $GstSettings)->with('bill_date', $bill_date)->with('items', $item)->with('rowId', $rowId)->with('accountId', $accountId)->with('groupId', $groupId);
+    $station = "";
+      if (empty($vehicle_no) && $rowId != "") {
+
+         $supplier = SupplierPurchaseVehicleDetail::select(
+                  'vehicle_no',
+                  'supplier_locations.name'
+            )
+            ->leftjoin(
+                  'supplier_locations',
+                  'supplier_purchase_vehicle_details.location',
+                  '=',
+                  'supplier_locations.id'
+            )
+            ->find($rowId);
+
+         if ($supplier) {
+            $vehicle_no = $supplier->vehicle_no;
+
+            if (!in_array(strtolower($supplier->name), ['local'])) {
+                  $station = $supplier->name;
+            }
+         }
+      }
+      $credit_days = DB::table('manage_credit_days')
+    ->where('status','1')
+    ->where('company_id', Session::get('user_company_id'))
+    ->orderBy('days')
+    ->get();
+    
+$state_list = DB::table('states') ->orderBy('state_code') ->get();
+$com_id = Session::get('user_company_id');
+
+// Item Groups
+$itemGroups = DB::table('item_groups')
+    ->where('delete','0')
+    ->where('company_id', $com_id)
+    ->orderBy('group_name')
+    ->get();
+
+// Units
+$accountunit = DB::table('units')
+    ->where('delete', '0')
+    ->where('company_id', $com_id)
+    ->orderBy('name')
+    ->get();
+
+// ✅ USE ALREADY MERGED GST SETTINGS
+if ($companyData->gst_config_type == "single_gst") {
+
+    $series = DB::table('gst_settings')
+        ->where([
+            'company_id' => Session::get('user_company_id'),
+            'gst_type' => "single_gst"
+        ])
+        ->select('id', 'series')
+        ->get();
+
+    $branch = GstBranch::select('branch_series as series')
+        ->where([
+            'delete' => '0',
+            'company_id' => Session::get('user_company_id'),
+            'gst_setting_id' => $series[0]->id ?? null
+        ])
+        ->get();
+
+    if ($branch->count()) {
+        $series = $series->merge($branch);
+    }
+
+} else {
+
+    $series = DB::table('gst_settings_multiple')
+        ->select('id', 'series')
+        ->where([
+            'company_id' => Session::get('user_company_id'),
+            'gst_type' => "multiple_gst"
+        ])
+        ->get();
+
+    foreach ($series as $value) {
+        $branch = GstBranch::select('branch_series as series')
+            ->where([
+                'delete' => '0',
+                'company_id' => Session::get('user_company_id'),
+                'gst_setting_multiple_id' => $value->id
+            ])
+            ->get();
+
+        if ($branch->count()) {
+            $series = $series->merge($branch);
+        }
+    }
+}
+
+      return view('addPurchase')
+            ->with('fy_start_date', $fy_start_date)
+            ->with('fy_end_date', $fy_end_date)
+            ->with('spare_part_id',$spare_part_id)
+            ->with('startItems',$startItems)
+            ->with('party_list', $party_list)
+            ->with('billsundry', $billsundry)
+            ->with('GstSettings', $GstSettings)
+            ->with('bill_date', $bill_date)
+            ->with('items', $item)
+            ->with('rowId', $rowId)
+            ->with('accountId', $accountId)
+            ->with('groupId', $groupId)
+            ->with("in_quantity",$in_quantity)
+            ->with("vehicle_no",$vehicle_no)
+            ->with("no_gst_group_ids",$no_gst_group_ids)
+            ->with("station",$station)
+            ->with('transport', $transport)
+            ->with('invoice_no', $invoice_no)
+            ->with('invoice_date', $invoice_date)
+            ->with('bill_sundry_id', $bill_sundry_id)
+            ->with('freight_amount', $freight_amount)
+            ->with('eway_bill_no', $eway_bill_no)
+            ->with('itemGroups', $itemGroups)->with('accountunit', $accountunit)->with('series', $series)->with('state_list', $state_list)->with('allowedAccountGroups', $allowedAccountGroups)->with('credit_days', $credit_days)
+            ->with('stockEntryEnabled', $stockEntryEnabled)
+            ->with('vehicleEntryDate', $vehicleEntryDate)
+            ->with("in_price",$in_price);
    }
     /**
      * Store a newly created resource in storage.
@@ -254,57 +440,6 @@ class PurchaseController extends Controller{
      * @return \Illuminate\Http\Response
      */
    public function store(Request $request){
-      // echo "<pre>";
-      // $parameter = json_decode($request->input('item_parameters')[0],true);
-      // if(count($parameter)>0){
-      //    foreach ($parameter as $k1 => $param) {
-      //       $parameter1_id = "";$parameter1_value = "";
-      //       $parameter2_id = "";$parameter2_value = "";
-      //       $parameter3_id = "";$parameter3_value = "";
-      //       $parameter4_id = "";$parameter4_value = "";
-      //       $parameter5_id = "";$parameter5_value = "";
-      //       $alternative_unit_value = 0;
-      //       foreach($param as $k11 => $v){
-      //          print_r($v);
-      //          if($k11==0){
-      //             $parameter1_id = $v['id'];
-      //             $parameter1_value = $v['value'];
-      //             if($v['alternative_unit']==1){
-      //                $alternative_unit_value = $v['value'];
-      //             }
-      //          }else if($k11==1){
-      //             $parameter2_id = $v['id'];
-      //             $parameter2_value = $v['value'];
-      //             if($v['alternative_unit']==1){
-      //                $alternative_unit_value = $v['value'];
-      //             }
-      //          }else if($k11==2){
-      //             $parameter3_id = $v['id'];
-      //             $parameter3_value = $v['value'];
-      //             if($v['alternative_unit']==1){
-      //                $alternative_unit_value = $v['value'];
-      //             }
-      //          }else if($k11==3){
-      //             $parameter4_id = $v['id'];
-      //             $parameter4_value = $v['value'];
-      //             if($v['alternative_unit']==1){
-      //                $alternative_unit_value = $v['value'];
-      //             }
-      //          }else if($k11==4){
-      //             $parameter5_id = $v['id'];
-      //             $parameter5_value = $v['value'];
-      //             if($v['alternative_unit']==1){
-      //                $alternative_unit_value = $v['value'];
-      //             }
-      //          }
-      //       }
-      //       while($alternative_unit_value>0){
-
-      //          $alternative_unit_value--;
-      //       }
-      //    }
-      // }
-      //          die;
       Gate::authorize('action-module',83);
       $validated = $request->validate([
          'series_no' => 'required',
@@ -314,16 +449,52 @@ class PurchaseController extends Controller{
          'material_center' => 'required',
          'total' => 'required',
          'goods_discription' => 'required|array|min:1',
-      ]);      
-      if($request->input('goods_discription')[0]=="" || $request->input('qty')[0]=="" || $request->input('price')[0]=="" || $request->input('amount')[0]==""){
-         return $this->failedMessage('Plases Select Item','purchase/create');
+      ]);
+      // echo "<pre>";
+      // print_r($request->all());
+      // die;
+      // if($request->input('goods_discription')[0]=="" || $request->input('qty')[0]=="" || $request->input('units')[0]=="" || $request->input('price')[0]=="" || $request->input('amount')[0]==""){
+      //    return $this->failedMessage('Plases Select Item','purchase/create');
+      // }
+      $goods_discriptions = $request->input('goods_discription');
+      $qtys = $request->input('qty');
+      $units = $request->input('units');
+      $prices = $request->input('price');
+      $amounts = $request->input('amount');
+      foreach ($goods_discriptions as $key => $good) {
+         if($good=="" || $qtys[$key]=="" || $units[$key]=="" || $prices[$key]=="" || $amounts[$key]==""){
+            return back()
+            ->withInput()
+            ->with('error', 'Please fill all item fields before submitting.');
+         }
       }
-      $financial_year = Session::get('default_fy'); 
+      
+      $companyData = Companies::where('id', Session::get('user_company_id'))->first();
+      $stockEntryEnabled = (int) ($companyData->stock_entry_status ?? 0);
+      $vehicleEntryId = $request->input('vehicle_entry_id'); 
+      $rules = [
+         'series_no' => 'required',
+         'date' => 'required',
+         'voucher_no' => 'required',
+         'party_id' => 'required',
+         'material_center' => 'required',
+         'total' => 'required',
+         'goods_discription' => 'required|array|min:1',
+      ];
+      if ($stockEntryEnabled === 1) {
+         $rules['stock_entry_date'] = 'required|date';
+      }
+      $validated = $request->validate($rules);
+      
+      $financial_year = CommonHelper::getFinancialYear($request->input('date'));
       $account = Accounts::where('id',$request->input('party_id'))->first();
       $purchase = new Purchase;
       $purchase->series_no = $request->input('series_no');
       $purchase->company_id = Session::get('user_company_id');
       $purchase->date = $request->input('date');
+      $purchase->stock_entry_date = $stockEntryEnabled === 1
+         ? $request->input('stock_entry_date')
+         : null;
       $purchase->voucher_no = $request->input('voucher_no');
       $purchase->party = $request->input('party_id');
       $purchase->material_center = $request->input('material_center');
@@ -341,7 +512,18 @@ class PurchaseController extends Controller{
       $purchase->billing_name = $account->account_name;
       $purchase->billing_address = $account->address;
       $purchase->billing_pincode = $account->pin_code;
-      $purchase->billing_gst = $account->gstin;
+      $purchase->created_by = Session::get('user_id');
+      $applyGST = false;
+      if ($account->gstin) {
+         if (!$account->gst_effective_from) {
+            $applyGST = true;
+         } 
+         elseif ($request->input('date') >= $account->gst_effective_from) {
+            $applyGST = true;
+         }
+      }
+
+      $purchase->billing_gst = $applyGST ? $account->gstin : null;
       $purchase->merchant_gst =  $request->input('merchant_gst');
       $purchase->billing_state = $account->state;
       $purchase->shipping_name = $request->input('shipping_name');
@@ -351,6 +533,7 @@ class PurchaseController extends Controller{
       $purchase->shipping_gst = $request->input('shipping_gst');
       $purchase->shipping_pan = $request->input('shipping_pan');
       $purchase->financial_year = $financial_year;
+      $purchase->narration = $request->input('narration');
       $purchase->save();
       if($purchase->id){
          $goods_discriptions = $request->input('goods_discription');
@@ -376,11 +559,20 @@ class PurchaseController extends Controller{
             $desc->status = '1';
             $desc->save();
             //ADD ITEM LEDGER
+            
+            $finalStockEntryDate = null;
+
+            if ($stockEntryEnabled === 1) {
+                $finalStockEntryDate = $request->filled('stock_entry_date')
+                    ? $request->input('stock_entry_date')
+                    : $request->input('date');
+            }
+
             $item_ledger = new ItemLedger();
             $item_ledger->item_id = $good;
             $item_ledger->series_no = $request->input('series_no');
             $item_ledger->in_weight = $qtys[$key];
-            $item_ledger->txn_date = $request->input('date');
+            $item_ledger->txn_date = $finalStockEntryDate ?? $request->input('date');
             $item_ledger->price = $prices[$key];
             $item_ledger->total_price = $amounts[$key];
             $item_ledger->company_id = Session::get('user_company_id');
@@ -530,7 +722,7 @@ class PurchaseController extends Controller{
                $ledger->txn_date = $request->input('date');
                $ledger->series_no = $request->input('series_no');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 2;
                $ledger->entry_type_id = $purchase->id;
                $ledger->map_account_id = $request->input('party_id');
@@ -540,6 +732,36 @@ class PurchaseController extends Controller{
                $roundoff = $roundoff - $bill_sundry_amounts[$key];
             }
          }
+         
+         $purchasePostingAmount = 0;
+
+            // 1️⃣ Add all item amounts
+            foreach ($amounts as $key => $amt) {
+                if ($amt != "") {
+                    $purchasePostingAmount += (float)$amt;
+                }
+            }
+            
+            // 2️⃣ Adjust only bill sundry where adjust_purchase_amt = Yes
+            foreach ($bill_sundrys as $key => $bill) {
+            
+                if ($bill_sundry_amounts[$key] == "" || $bill == "") {
+                    continue;
+                }
+            
+                $billsundry = BillSundrys::where('id', $bill)->first();
+            
+                if ($billsundry && $billsundry->adjust_purchase_amt == 'Yes') {
+            
+                    if ($billsundry->bill_sundry_type == 'additive') {
+                        $purchasePostingAmount += (float)$bill_sundry_amounts[$key];
+                    }
+            
+                    if ($billsundry->bill_sundry_type == 'subtractive') {
+                        $purchasePostingAmount -= (float)$bill_sundry_amounts[$key];
+                    }
+                }
+            }
          //ADD DATA IN Customer ACCOUNT
          $ledger = new AccountLedger();
          $ledger->account_id = $request->input('party_id');
@@ -547,7 +769,7 @@ class PurchaseController extends Controller{
          $ledger->credit = $request->input('total');
          $ledger->txn_date = $request->input('date');
          $ledger->company_id = Session::get('user_company_id');
-         $ledger->financial_year = Session::get('default_fy');
+         $ledger->financial_year = $financial_year;
          $ledger->entry_type = 2;
          $ledger->entry_type_id = $purchase->id;
          $ledger->map_account_id = 36;//Purchase
@@ -558,16 +780,19 @@ class PurchaseController extends Controller{
          $ledger = new AccountLedger();
          $ledger->account_id = 36;//Purchase
          $ledger->series_no = $request->input('series_no');
-         $ledger->debit = $request->input('taxable_amt');
+         $ledger->debit = $purchasePostingAmount;
          $ledger->txn_date = $request->input('date');
          $ledger->company_id = Session::get('user_company_id');
-         $ledger->financial_year = Session::get('default_fy');
+         $ledger->financial_year = $financial_year;
          $ledger->entry_type = 2;
          $ledger->entry_type_id = $purchase->id;
          $ledger->map_account_id = $request->input('party_id');
          $ledger->created_by = Session::get('user_id');
          $ledger->created_at = date('d-m-Y H:i:s');
          $ledger->save();
+         
+         
+         
          //Item Average Calculation Logic Start Here   
          $goods_discriptions = $request->input('goods_discription');
          $qtys = $request->input('qty');
@@ -616,9 +841,18 @@ class PurchaseController extends Controller{
             }else{
                $average_price = 0;
             }            
+            
+            $finalStockEntryDate = null;
+
+            if ($stockEntryEnabled === 1) {
+               $finalStockEntryDate = $request->filled('stock_entry_date')
+                  ? $request->input('stock_entry_date')
+                  : $request->input('date');
+            }
+
             //Add Data In Average Details table
             $average_detail = new ItemAverageDetail;
-            $average_detail->entry_date = $request->date;
+            $average_detail->entry_date = $finalStockEntryDate ?? $request->input('date');
             $average_detail->series_no = $request->input('series_no');
             $average_detail->item_id = $value['item'];
             $average_detail->type = 'PURCHASE';
@@ -631,16 +865,161 @@ class PurchaseController extends Controller{
             $average_detail->company_id = Session::get('user_company_id');
             $average_detail->created_at = Carbon::now();
             $average_detail->save();
-            CommonHelper::RewriteItemAverageByItem($request->date,$value['item'],$request->input('series_no'));
+            CommonHelper::RewriteItemAverageByItem($finalStockEntryDate ?? $request->input('date'),$value['item'],$request->input('series_no'));
          }
          //Update Vehicle Entry Row
          
+            // if(isset($request->spare_part_id)){
+            //       $spare = SparePart::find($request->spare_part_id);
+            //       $spare->status=3;
+            //       $spare->save();
+            //       $purchase = Purchase::find($purchase->id);
+            //       $purchase->spare_part_id = $request->spare_part_id;
+            //       $purchase->save();
+            // }
+             if ($request->filled('spare_part_id')) {
+
+            DB::transaction(function () use ($request, $purchase) {
+        
+                $spare = SparePart::with('items')
+                    //->lockForUpdate()
+                    ->findOrFail($request->spare_part_id);
+        
+                // ✅ FIX 1: Root ID must ALWAYS point to ORIGINAL
+                $rootId = $spare->root_spare_part_id ?: $spare->id;
+        
+                // Ensure original has correct root + sequence
+                if (!$spare->root_spare_part_id) {
+                    $spare->root_spare_part_id = $rootId;
+                    $spare->order_sequence = 1;
+                    $spare->save();
+                }
+        
+                $closePurchase = (int) $request->close_purchase === 1;
+                $remainingItems = [];
+        
+                foreach ($spare->items as $index => $item) {
+        
+                    $orderedQty = (float) $item->quantity;
+                    $gotQty     = isset($request->qty[$index])
+                        ? (float) $request->qty[$index]
+                        : 0;
+        
+                    // FULL PURCHASE
+                    if ($closePurchase || $gotQty >= $orderedQty) {
+                        $item->quantity = $orderedQty;
+                        $item->save();
+                        continue;
+                    }
+        
+                    // PARTIAL
+                    $remainingQty = $orderedQty - $gotQty;
+        
+                    // Update purchased qty
+                    $item->quantity = $gotQty;
+                    $item->save();
+        
+                    $remainingItems[] = [
+                        'item_id'    => $item->item_id,
+                        'quantity'   => $remainingQty,
+                        'price'      => $item->price,
+                        'unit'       => $item->unit,
+                        'company_id' => $item->company_id,
+                    ];
+                }
+                  if (!empty($vehicleEntryId)) {
+                     $spare->map_vehicle_entry_id = $vehicleEntryId;
+                  }
+                // Mark CURRENT spare part completed
+                $spare->status = 3;
+                $spare->save();
+        
+                // 🔴 If closed OR nothing remaining → STOP
+                if ($closePurchase || empty($remainingItems)) {
+                    $purchase->spare_part_id = $spare->id;
+                    $purchase->save();
+                    return;
+                }
+        
+                // ✅ FIX 2: Correct order_sequence under SAME ROOT
+                $nextSequence = SparePart::where('root_spare_part_id', $rootId)
+                    ->max('order_sequence');
+        
+                $nextSequence = $nextSequence ? $nextSequence + 1 : 2;
+        
+                // ✅ FIX 3: New spare part MUST use SAME root
+                $rootSpare = SparePart::find($rootId);
+
+                $basePo = $rootSpare->po_number;
+                
+                $basePo = preg_replace('/-\d+$/', '', $basePo);
+                
+                $newPoNumber = $basePo . '-' . ($nextSequence - 1);
+                
+                $newSpare = SparePart::create([
+                    'root_spare_part_id' => $rootId,
+                    'order_sequence'     => $nextSequence,
+                
+                    'po_number'          => $newPoNumber,
+                    'po_date'            => $spare->po_date,
+                
+                    'bill_to_account_id' => $spare->bill_to_account_id,
+                    'bill_to_company_id' => $spare->bill_to_company_id,
+                
+                    'ship_to_account_id' => $spare->ship_to_account_id,
+                    'ship_to_company_id' => $spare->ship_to_company_id,
+                
+                    'po_narration'       => $spare->po_narration,
+                    'freight'            => $spare->freight,
+                
+                    'account_id'         => $spare->account_id,
+                    'source'             => $spare->source,
+                    'status'             => 2,
+                    'company_id'         => $spare->company_id,
+                    'created_by'         => auth()->id(),
+                ]);
+        
+                foreach ($remainingItems as $row) {
+                    SparePartItem::create([
+                        'spare_part_id' => $newSpare->id,
+                        'item_id'       => $row['item_id'],
+                        'quantity'      => $row['quantity'],
+                        'price'         => $row['price'],
+                        'unit'          => $row['unit'],
+                        'status'        => 2,
+                        'company_id'    => $row['company_id'],
+                    ]);
+                }
+        
+                // Link purchase to ORIGINAL spare part
+                $purchase->spare_part_id = $spare->id;
+                $purchase->save();
+            });
+        }
          //Item Average Calculation Logic End Here
          session(['previous_url_purchase' => URL::previous()]);
          if(isset($request->rowId) && !empty($request->rowId)){
+            $supp = SupplierPurchaseVehicleDetail::find($request->rowId);
             SupplierPurchaseVehicleDetail::where('id',$request->rowId)->update(['map_purchase_id'=>$purchase->id]);
-            return redirect('manage-purchase-info?id='.$request->rowId);
-            
+            $group_list = SaleOrderSetting::join('item_groups','sale-order-settings.item_id','=','item_groups.id')
+                            ->where('sale-order-settings.company_id', Session::get('user_company_id'))
+                            ->where('setting_type', 'PURCHASE GROUP')
+                            ->where('setting_for', 'PURCHASE ORDER')
+                            ->where('item_id', $supp->group_id)
+                            ->select('group_type')
+                            ->first();
+            if($group_list->group_type=="BOILER FUEL"){
+                return redirect('boiler-fuel?status=0&id='.$request->rowId);
+            }else if($group_list->group_type=="WASTE KRAFT"){
+                return redirect('waste-kraft?status=0&id='.$request->rowId);
+            }
+         }
+         if (!empty($vehicleEntryId)) {
+            SupplierPurchaseVehicleDetail::where('id', $vehicleEntryId)
+               ->update([
+                     'map_purchase_id' => $purchase->id,
+                     'status' => 3
+               ]);
          }
          return redirect('purchase')->withSuccess('Purchase voucher added successfully!');
       }else{
@@ -672,7 +1051,7 @@ class PurchaseController extends Controller{
                            ->first();
     //   echo "<pre>";
     //   print_r($sale_detail);die;
-      $party_detail = Accounts::join('states','accounts.state','=','states.id')
+      $party_detail = Accounts::leftjoin('states','accounts.state','=','states.id')
                                  ->where('accounts.id',$sale_detail->party)
                                  ->select(['accounts.*','states.name as sname'])
                                  ->first();
@@ -746,6 +1125,8 @@ class PurchaseController extends Controller{
             $gst_detail[$key]->taxable_amount = $taxable_amount;
          }
       }
+
+    
        Session::put('redirect_url', '');
     
         // Financial year processing
@@ -781,6 +1162,34 @@ class PurchaseController extends Controller{
          return back()->with('error', '❌ Action not allowed. Cannot delete this purchase. Items have already been sold from it.');
       }
       $purchase =  Purchase::find($request->purchase_id);
+      $deleteSnapshot = [
+         'purchase' => $purchase ? $purchase->toArray() : null,
+     
+         'items' => PurchaseDescription::where('purchase_id', $purchase->id)
+             ->get()->toArray(),
+     
+         'sundries' => PurchaseSundry::where('purchase_id', $purchase->id)
+             ->get()->toArray(),
+     
+         'parameters' => PurchaseParameterInfo::where('purchase_id', $purchase->id)
+             ->get()->toArray(),
+     
+         'item_parameter_stock' => ItemParameterStock::where('stock_in_id', $purchase->id)
+             ->where('stock_in_type', 'PURCHASE')
+             ->get()->toArray(),
+     
+         'item_ledgers' => ItemLedger::where('source', 2)
+             ->where('source_id', $purchase->id)
+             ->get()->toArray(),
+     
+         'account_ledgers' => AccountLedger::where('entry_type', 2)
+             ->where('entry_type_id', $purchase->id)
+             ->get()->toArray(),
+     
+         'item_average_details' => ItemAverageDetail::where('purchase_id', $purchase->id)
+             ->where('type', 'PURCHASE')
+             ->get()->toArray(),
+     ];
       $purchase->delete = '1';
       $purchase->deleted_at = Carbon::now();
       $purchase->deleted_by = Session::get('user_id');
@@ -810,6 +1219,39 @@ class PurchaseController extends Controller{
                      ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
          //Delete item Stock 
         ItemParameterStock::where('stock_in_id',$request->purchase_id)->where('stock_in_type','PURCHASE')->delete();
+        $sparePartId = $purchase->spare_part_id;
+        if ($sparePartId) {
+            $purchaseItems = DB::table('purchase_descriptions')
+               ->where('purchase_id', $purchase->id)
+               ->where('delete', '0') 
+               ->get();
+            foreach ($purchaseItems as $item) {
+               DB::table('spare_part_items')
+                     ->where('spare_part_id', $sparePartId)
+                     ->where('item_id', $item->goods_discription) 
+                     ->decrement('quantity', $item->qty);         
+            }
+            DB::table('spare_parts')
+               ->where('id', $sparePartId)
+               ->update([
+                     'status' => 2
+               ]);
+            DB::table('purchases')
+               ->where('id', $purchase->id)
+               ->update([
+                     'spare_part_id' => null
+               ]);
+        }
+        ActivityLog::create([
+         'module_type' => 'purchase',
+         'module_id'   => $purchase->id,
+         'action'      => 'delete',
+         'old_data'    => $deleteSnapshot,
+         'new_data'    => null,
+         'action_by'   => Session::get('user_id'),
+         'company_id'  => Session::get('user_company_id'),
+         'action_at'   => now(),
+      ]);
          return redirect('purchase')->withSuccess('Purchase deleted successfully!');
       }
    }
@@ -817,9 +1259,23 @@ class PurchaseController extends Controller{
       return redirect($url)->withError($msg);
    }
    public function purchaseEdit(Request $request,$id){
+      $groupId = "";
       Gate::authorize('action-module',57);
       $rowId     = $request->query('row_id'); 
       $purchase = Purchase::where('id',$id)->first();
+      $party = Accounts::find($purchase->party);
+
+      $gstApplicable = true;
+
+      if($party && $party->gst_effective_from!='' && $party->gstin==""){
+        
+         if($purchase->date < $party->gst_effective_from){
+            $gstApplicable = false;
+         }
+      }else if($party->gstin==""){
+         $gstApplicable = false;
+      }
+      
       $PurchaseDescription = PurchaseDescription::with(['parameterColumnInfo'=>function($q){
                               $q->leftjoin('item_paremeter_list as p1', 'purchase_parameter_info.parameter1_id', '=', 'p1.id')
                                  ->leftjoin('item_paremeter_list as p2', 'purchase_parameter_info.parameter2_id', '=', 'p2.id')
@@ -846,11 +1302,36 @@ class PurchaseController extends Controller{
                                  ->select(['bill_sundrys.effect_gst_calculation','bill_sundrys.nature_of_sundry','purchase_sundries.*'])
                                  ->where('purchase_id',$id)
                                  ->get();
-      $group_ids = CommonHelper::getAllChildGroupIds(3,Session::get('user_company_id'));
-        array_push($group_ids, 3);
-        $group_ids = array_merge($group_ids, CommonHelper::getAllChildGroupIds(11,Session::get('user_company_id'))); // Include group 11 as well
-        $group_ids = array_unique($group_ids); // Ensure unique group IDs       
-        array_push($group_ids, 11);
+      $top_groups = [3, 11, 7, 8];
+
+      // Step 2: Get all child group IDs recursively
+      $all_groups = [];
+      foreach ($top_groups as $group_id) {
+         $all_groups[] = $group_id; // include the top group itself
+         $all_groups = array_merge($all_groups, CommonHelper::getAllChildGroupIds($group_id, Session::get('user_company_id')));
+      }
+
+      // Remove duplicates just in case
+      $group_ids = array_unique($all_groups);
+      $allowed_group_ids = array_unique($all_groups);
+       $no_gst_groups = [7, 8];
+
+      $no_gst_all_groups = [];
+      foreach ($no_gst_groups as $gid) {
+         $no_gst_all_groups[] = $gid;
+
+         $no_gst_all_groups = array_merge(
+            $no_gst_all_groups,
+            CommonHelper::getAllChildGroupIds($gid, Session::get('user_company_id'))
+         );
+      }
+
+      $no_gst_group_ids = array_unique($no_gst_all_groups);
+      $allowedAccountGroups = DB::table('account_groups')
+         ->select('id', 'name')
+         ->whereIn('id', $allowed_group_ids)
+         ->orderBy('name')
+         ->get();
       $party_list = Accounts::select('accounts.*','states.state_code')
                               ->leftjoin('states','accounts.state','=','states.id')
                               ->where('accounts.delete', '=', '0')
@@ -876,41 +1357,42 @@ class PurchaseController extends Controller{
 
       
       $manageitems = DB::table('manage_items')
-    ->join('units', 'manage_items.u_name', '=', 'units.id')
-    ->join('item_groups', 'item_groups.id', '=', 'manage_items.g_name')
-    ->join(DB::raw('(SELECT igr.item_id, igr.gst_rate 
-                     FROM item_gst_rate igr
-                     WHERE igr.effective_from <= "'.$bill_date.'"
-                     AND igr.effective_from = (
-                         SELECT MAX(effective_from) 
-                         FROM item_gst_rate 
-                         WHERE item_id = igr.item_id 
-                         AND effective_from <= "'.$bill_date.'"
-                     )
-                    ) as gst'), 'gst.item_id', '=', 'manage_items.id')
-    ->where('manage_items.delete', '=', '0')
-    ->where('manage_items.status', '=', '1')
-    ->where('manage_items.company_id', Session::get('user_company_id'))
-    ->when($groupId, function($q) use ($groupId) {
-        $q->where('manage_items.g_name', $groupId);
-    })
-    ->orderBy('manage_items.name')
-    ->select([
-        'units.s_name as unit',
-        'manage_items.id',
-        'manage_items.u_name',
-        'gst.gst_rate',
-        'manage_items.name',
-        'parameterized_stock_status',
-        'config_status',
-        'item_groups.id as group_id'
-    ])
-    ->get();
+                     ->join('units', 'manage_items.u_name', '=', 'units.id')
+                     ->join('item_groups', 'item_groups.id', '=', 'manage_items.g_name')
+                     ->leftjoin(DB::raw('(SELECT igr.item_id, igr.gst_rate 
+                                       FROM item_gst_rate igr
+                                       WHERE igr.effective_from <= "'.$bill_date.'"
+                                       AND igr.effective_from = (
+                                          SELECT MAX(effective_from) 
+                                          FROM item_gst_rate 
+                                          WHERE item_id = igr.item_id 
+                                          AND effective_from <= "'.$bill_date.'"
+                                       )
+                                    ) as gst'), 'gst.item_id', '=', 'manage_items.id')
+                     ->where('manage_items.delete', '=', '0')
+                     ->where('manage_items.status', '=', '1')
+                     ->where('manage_items.company_id', Session::get('user_company_id'))
+                     ->when($groupId, function($q) use ($groupId) {
+                        $q->where('manage_items.g_name', $groupId);
+                     })
+                     ->orderBy('manage_items.name')
+                     ->select([
+                        'units.s_name as unit',
+                        'manage_items.id',
+                        'manage_items.u_name',
+                        'manage_items.gst_rate',
+                        'manage_items.name',
+                        'parameterized_stock_status',
+                        'config_status',
+                        'item_groups.id as group_id'
+                     ])
+                     ->get();
 
             
 
 
       $companyData = Companies::where('id', Session::get('user_company_id'))->first();
+      $stockEntryEnabled = (int) ($companyData->stock_entry_status ?? 0);
       $GstSettings = (object)NULL;
       $GstSettings->mat_center = array();
       $mat_series = array();
@@ -966,13 +1448,113 @@ class PurchaseController extends Controller{
       if($check_stock){
          $stock_status = 0;
       }
-      return view('editPurchase')->with('party_list', $party_list)->with('manageitems', $manageitems)->with('billsundry', $billsundry)->with('mat_center', $mat_center)->with('GstSettings', $GstSettings)->with('mat_series', $mat_series)->with('purchase', $purchase)->with('PurchaseDescription', $PurchaseDescription)->with('PurchaseSundry', $PurchaseSundry)->with("stock_status",$stock_status)->with('rowId',$rowId);
+      $financial_year = Session::get('default_fy');
+      [$startYY, $endYY] = explode('-', $financial_year);
+
+      $fy_start_date = '20' . $startYY . '-04-01'; 
+      $fy_end_date   = '20' . $endYY   . '-03-31';   
+      $credit_days = DB::table('manage_credit_days')
+            ->where('status','1')
+            ->where('company_id', Session::get('user_company_id'))
+            ->orderBy('days')
+            ->get();
+    
+            $state_list = DB::table('states') ->orderBy('state_code') ->get();
+            $com_id = Session::get('user_company_id');
+
+      // Item Groups
+      $itemGroups = DB::table('item_groups')
+         ->where('delete','0')
+         ->where('company_id', $com_id)
+         ->orderBy('group_name')
+         ->get();
+
+      // Units
+      $accountunit = DB::table('units')
+         ->where('delete', '0')
+         ->where('company_id', $com_id)
+         ->orderBy('name')
+         ->get();
+
+      // ✅ USE ALREADY MERGED GST SETTINGS
+      if ($companyData->gst_config_type == "single_gst") {
+
+         $series = DB::table('gst_settings')
+            ->where([
+                  'company_id' => Session::get('user_company_id'),
+                  'gst_type' => "single_gst"
+            ])
+            ->select('id', 'series')
+            ->get();
+
+         $branch = GstBranch::select('branch_series as series')
+            ->where([
+                  'delete' => '0',
+                  'company_id' => Session::get('user_company_id'),
+                  'gst_setting_id' => $series[0]->id ?? null
+            ])
+            ->get();
+
+         if ($branch->count()) {
+            $series = $series->merge($branch);
+         }
+
+      } else {
+
+         $series = DB::table('gst_settings_multiple')
+            ->select('id', 'series')
+            ->where([
+                  'company_id' => Session::get('user_company_id'),
+                  'gst_type' => "multiple_gst"
+            ])
+            ->get();
+
+         foreach ($series as $value) {
+            $branch = GstBranch::select('branch_series as series')
+                  ->where([
+                     'delete' => '0',
+                     'company_id' => Session::get('user_company_id'),
+                     'gst_setting_multiple_id' => $value->id
+                  ])
+                  ->get();
+
+            if ($branch->count()) {
+                  $series = $series->merge($branch);
+            }
+         }
+      }
+      
+      return view('editPurchase')
+               ->with('fy_start_date', $fy_start_date)
+               ->with('fy_end_date', $fy_end_date)
+               ->with('party_list', $party_list)
+               ->with('manageitems', $manageitems)
+               ->with('billsundry', $billsundry)
+               ->with('mat_center', $mat_center)
+               ->with('GstSettings', $GstSettings)
+               ->with('mat_series', $mat_series)
+               ->with('purchase', $purchase)
+               ->with('PurchaseDescription', $PurchaseDescription)
+               ->with('PurchaseSundry', $PurchaseSundry)
+               ->with("stock_status",$stock_status)
+               ->with('rowId',$rowId)
+               ->with('groupId',$groupId)
+               ->with('itemGroups', $itemGroups)
+               ->with('accountunit', $accountunit)
+               ->with('series', $series)
+               ->with('no_gst_group_ids',$no_gst_group_ids)
+               ->with('state_list', $state_list)
+               ->with('allowedAccountGroups', $allowedAccountGroups)
+               ->with('stock_entry_date', $purchase->stock_entry_date)
+               ->with('stockEntryEnabled', $stockEntryEnabled)
+               ->with('gstApplicable', $gstApplicable)
+               ->with('credit_days', $credit_days);
    }
    public function update(Request $request){
       // echo "<pre>";
       // print_r($request->all());
       // die;
-      // Gate::authorize('action-module',57);
+      Gate::authorize('action-module',57);
       $validated = $request->validate([
          'series_no' => 'required',
          'date' => 'required',
@@ -987,9 +1569,77 @@ class PurchaseController extends Controller{
       if($request->input('goods_discription')[0]=="" || $request->input('qty')[0]=="" || $request->input('price')[0]=="" || $request->input('amount')[0]==""){
          return $this->failedMessage('Plases Select Item','purchase/create');
       }
+      $rules = [
+         'series_no' => 'required',
+         'date' => 'required',
+         'voucher_no' => 'required',
+         'party' => 'required',
+         'material_center' => 'required',
+         'total' => 'required',
+         'goods_discription' => 'required|array|min:1',
+      ];
+      $company = Companies::where('id', Session::get('user_company_id'))->first();
+      if (($company->stock_entry_status ?? 0) == 1) {
+         $rules['stock_entry_date'] = 'required|date';
+      }
+        
+       $financial_year = CommonHelper::getFinancialYear($request->input('date'));
+        // ✅ Decide effective stock date
+      $voucherDate = $request->input('date');
+      $stockEntryDate = ($company->stock_entry_status ?? 0) == 1
+         ? $request->input('stock_entry_date')
+         : null;
+
+      // For item ledger → stock entry date preferred
+      $itemLedgerDate = $stockEntryDate ?? $voucherDate;
+      // For average rewrite → earlier of the two
+      $averageRewriteDate = $stockEntryDate
+         ? (strtotime($stockEntryDate) < strtotime($voucherDate) ? $stockEntryDate : $voucherDate)
+         : $voucherDate;
+      $validated = $request->validate($rules);
       $account = Accounts::where('id',$request->input('party'))->first();
       $purchase = Purchase::find($request->input('purchase_edit_id'));
-      $last_date = $purchase->date;
+      $oldSnapshot = [
+         'purchase' => $purchase->toArray(),
+
+         'items' => PurchaseDescription::where('purchase_id', $purchase->id)->get()->toArray(),
+
+         'sundries' => PurchaseSundry::where('purchase_id', $purchase->id)->get()->toArray(),
+
+         'parameters' => PurchaseParameterInfo::where('purchase_id', $purchase->id)->get()->toArray(),
+
+         'item_parameter_stock' => ItemParameterStock::where('stock_in_id', $purchase->id)
+            ->where('stock_in_type', 'PURCHASE')
+            ->get()->toArray(),
+
+         'item_ledgers' => ItemLedger::where('source', 2)
+            ->where('source_id', $purchase->id)
+            ->get()->toArray(),
+
+         'account_ledgers' => AccountLedger::where('entry_type', 2)
+            ->where('entry_type_id', $purchase->id)
+            ->get()->toArray(),
+
+         'item_average_details' => ItemAverageDetail::where('purchase_id', $purchase->id)
+            ->where('type', 'PURCHASE')
+            ->get()->toArray(),
+      ];
+     $last_date = ($company->stock_entry_status ?? 0) == 1 && $purchase->stock_entry_date
+    ? $purchase->stock_entry_date
+    : $purchase->date;
+      $goods_discriptions = $request->input('goods_discription');
+      $qtys = $request->input('qty');
+      $units = $request->input('units');
+      $prices = $request->input('price');
+      $amounts = $request->input('amount');
+      foreach ($goods_discriptions as $key => $good) {
+         if($good=="" || $qtys[$key]=="" || $units[$key]=="" || $prices[$key]=="" || $amounts[$key]==""){
+            return back()
+            ->withInput()
+            ->with('error', 'Please fill all item fields before submitting.');
+         }
+      }      
+    //echo $averageRewriteDate."--".$last_date;die;
       $purchase->series_no = $request->input('series_no');
       $purchase->date = $request->input('date');
       $purchase->voucher_no = $request->input('voucher_no');
@@ -1004,11 +1654,24 @@ class PurchaseController extends Controller{
       $purchase->total = $request->input('total');
       $purchase->self_vehicle = $request->input('self_vehicle');
       $purchase->vehicle_no = $request->input('vehicle_no');
-      $purchase->invoice_date = $request->input('invoice_date');      
+      $purchase->invoice_date = $request->input('invoice_date');
+      if (($company->stock_entry_status ?? 0) == 1) {
+         $purchase->stock_entry_date = $request->input('stock_entry_date');
+      } 
       $purchase->billing_name = $account->account_name;
       $purchase->billing_address = $account->address;
       $purchase->billing_pincode = $account->pin_code;
-      $purchase->billing_gst = $account->gstin;
+      $applyGST = false;
+      if ($account->gstin) {
+
+         if (!$account->gst_effective_from) {
+            $applyGST = true;
+         } 
+         elseif ($request->input('date') >= $account->gst_effective_from) {
+            $applyGST = true;
+         }
+      }
+      $purchase->billing_gst = $applyGST ? $account->gstin : null;
       $purchase->billing_state = $account->state;
       $purchase->shipping_name = $request->input('shipping_name');
       $purchase->shipping_state = $request->input('shipping_state');
@@ -1016,13 +1679,10 @@ class PurchaseController extends Controller{
       $purchase->shipping_pincode = $request->input('shipping_pincode');
       $purchase->shipping_gst = $request->input('shipping_gst');
       $purchase->shipping_pan = $request->input('shipping_pan');
+      $purchase->narration = $request->input('narration');
+      $purchase->updated_by = Session::get('user_id');
       $purchase->save();
-      if($purchase->id){
-         $goods_discriptions = $request->input('goods_discription');
-         $qtys = $request->input('qty');
-         $units = $request->input('units');
-         $prices = $request->input('price');
-         $amounts = $request->input('amount');
+      if($purchase->id){         
          $config_status = $request->input('config_status');
          $item_parameters = $request->input('item_parameters');
          $desc_item_arr = PurchaseDescription::where('purchase_id',$purchase->id)->pluck('goods_discription')->toArray();
@@ -1052,7 +1712,7 @@ class PurchaseController extends Controller{
             $item_ledger->item_id = $good;
             $item_ledger->series_no = $request->input('series_no');
             $item_ledger->in_weight = $qtys[$key];
-            $item_ledger->txn_date = $request->input('date');
+           $item_ledger->txn_date = $itemLedgerDate;
             $item_ledger->price = $prices[$key];
             $item_ledger->total_price = $amounts[$key];
             $item_ledger->company_id = Session::get('user_company_id');
@@ -1199,7 +1859,7 @@ class PurchaseController extends Controller{
                $ledger->txn_date = $request->input('date');
                $ledger->series_no = $request->input('series_no');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 2;
                $ledger->entry_type_id = $purchase->id;
                $ledger->map_account_id = $request->input('party');
@@ -1213,7 +1873,7 @@ class PurchaseController extends Controller{
          $qtys = $request->input('qty');
          $prices = $request->input('price');
          $amounts = $request->input('amount');
-         $update_item__arr = [];$item_average_arr = [];$item_average_total = 0;
+         $update_item__arr = [];$item_average_arr = [];$item_average_total = 0;$purchase_amt = 0;
          foreach ($goods_discriptions as $key => $good) {
             if($good=="" || $qtys[$key]=="" || $prices[$key]=="" || $amounts[$key]==""){
                continue;
@@ -1258,10 +1918,10 @@ class PurchaseController extends Controller{
             }else{
                $average_price = 0;
             }
-            
+           
             //Add Data In Average Details table
             $average_detail = new ItemAverageDetail;
-            $average_detail->entry_date = $request->date;
+            $average_detail->entry_date = $itemLedgerDate;
             $average_detail->item_id = $value['item'];
             $average_detail->series_no = $request->input('series_no');
             $average_detail->type = 'PURCHASE';
@@ -1274,16 +1934,63 @@ class PurchaseController extends Controller{
             $average_detail->company_id = Session::get('user_company_id');
             $average_detail->created_at = Carbon::now();
             $average_detail->save();
-            $lower_date = (strtotime($last_date) < strtotime($request->date)) ? $last_date : $request->date;
-            CommonHelper::RewriteItemAverageByItem($lower_date,$value['item'],$request->input('series_no'));
+            $lower_date = (strtotime($last_date) < strtotime($averageRewriteDate))
+    ? $last_date
+    : $averageRewriteDate;
+
+CommonHelper::RewriteItemAverageByItem(
+    $lower_date,
+    $value['item'],
+    $request->input('series_no')
+);
+
 
          }
          foreach ($desc_item_arr as $key => $value) {
             if(!in_array($value, $update_item__arr)){
-               CommonHelper::RewriteItemAverageByItem($last_date,$value,$request->input('series_no'));
+              $rewriteDate = (strtotime($last_date) < strtotime($averageRewriteDate))
+    ? $last_date
+    : $averageRewriteDate;
+
+CommonHelper::RewriteItemAverageByItem(
+    $rewriteDate,
+    $value,
+    $request->input('series_no')
+);
+
             }
          }
          
+         
+         $purchasePostingAmount = 0;
+
+// 1️⃣ Add all item amounts
+foreach ($amounts as $key => $amt) {
+    if ($amt != "") {
+        $purchasePostingAmount += (float)$amt;
+    }
+}
+
+// 2️⃣ Adjust only bill sundry where adjust_purchase_amt = Yes
+foreach ($bill_sundrys as $key => $bill) {
+
+    if ($bill_sundry_amounts[$key] == "" || $bill == "") {
+        continue;
+    }
+
+    $billsundry = BillSundrys::where('id', $bill)->first();
+
+    if ($billsundry && $billsundry->adjust_purchase_amt == 'Yes') {
+
+        if ($billsundry->bill_sundry_type == 'additive') {
+            $purchasePostingAmount += (float)$bill_sundry_amounts[$key];
+        }
+
+        if ($billsundry->bill_sundry_type == 'subtractive') {
+            $purchasePostingAmount -= (float)$bill_sundry_amounts[$key];
+        }
+    }
+}
          //ADD DATA IN Customer ACCOUNT
          $ledger = new AccountLedger();
          $ledger->account_id = $request->input('party');
@@ -1291,7 +1998,7 @@ class PurchaseController extends Controller{
          $ledger->series_no = $request->input('series_no');
          $ledger->txn_date = $request->input('date');
          $ledger->company_id = Session::get('user_company_id');
-         $ledger->financial_year = Session::get('default_fy');
+         $ledger->financial_year = $financial_year;
          $ledger->entry_type = 2;
          $ledger->entry_type_id = $purchase->id;
          $ledger->map_account_id = 36;//Purchase
@@ -1301,26 +2008,95 @@ class PurchaseController extends Controller{
          //ADD DATA IN Sale ACCOUNT
          $ledger = new AccountLedger();
          $ledger->account_id = 36;//Purchase
-         $ledger->debit = $request->input('taxable_amt');
+         $ledger->debit = $purchasePostingAmount;
          $ledger->series_no = $request->input('series_no');
          $ledger->txn_date = $request->input('date');
          $ledger->company_id = Session::get('user_company_id');
-         $ledger->financial_year = Session::get('default_fy');
+         $ledger->financial_year = $financial_year;
          $ledger->entry_type = 2;
          $ledger->entry_type_id = $purchase->id;
          $ledger->map_account_id = $request->input('party');
          $ledger->created_by = Session::get('user_id');
          $ledger->created_at = date('d-m-Y H:i:s');
          $ledger->save();
-         if(isset($request->rowId) && !empty($request->rowId)){
-            $supplier = SupplierPurchaseVehicleDetail::find($request->rowId);
-            if($supplier->status==2){
-               $reapproval = 0;
-            }else if($supplier->status==3){
-               $reapproval = 1;
+         $purchaseRow = Purchase::where('id', $purchase->id)->first();
+         $newSnapshot = [
+            'purchase' => $purchaseRow ? $purchaseRow->toArray() : null,
+
+            'items' => PurchaseDescription::where('purchase_id', $purchase->id)
+               ->get()->toArray(),
+
+            'sundries' => PurchaseSundry::where('purchase_id', $purchase->id)
+               ->get()->toArray(),
+
+            'parameters' => PurchaseParameterInfo::where('purchase_id', $purchase->id)
+               ->get()->toArray(),
+
+            'item_parameter_stock' => ItemParameterStock::where('stock_in_id', $purchase->id)
+               ->where('stock_in_type', 'PURCHASE')
+               ->get()->toArray(),
+
+            'item_ledgers' => ItemLedger::where('source', 2)
+               ->where('source_id', $purchase->id)
+               ->get()->toArray(),
+
+            'account_ledgers' => AccountLedger::where('entry_type', 2)
+               ->where('entry_type_id', $purchase->id)
+               ->get()->toArray(),
+
+            'item_average_details' => ItemAverageDetail::where('purchase_id', $purchase->id)
+               ->where('type', 'PURCHASE')
+               ->get()->toArray(),
+         ];
+
+         ActivityLog::create([
+            'module_type' => 'purchase',
+            'module_id'   => $purchase->id,
+            'action'      => 'edit',
+            'old_data'    => $oldSnapshot,
+            'new_data'    => $newSnapshot,
+            'action_by'   => Session::get('user_id'),
+            'company_id'  => Session::get('user_company_id'),
+            'action_at'   => now(),
+         ]);
+         $supp_vehicle_check = SupplierPurchaseVehicleDetail::where('map_purchase_id',$purchase->id)->first();
+         if(isset($request->rowId) && !empty($request->rowId) || $supp_vehicle_check){
+            if(isset($request->rowId) && !empty($request->rowId)){
+                $supp_rowId = $request->rowId;
+               $supplier = SupplierPurchaseVehicleDetail::find($request->rowId);
+               if($supplier->status==2){
+                  $reapproval = 0;
+               }else if($supplier->status==3){
+                  $reapproval = 1;
+               }
+            }else{
+               $supplier = SupplierPurchaseVehicleDetail::where('map_purchase_id',$purchase->id)->first();
+               $supp_rowId = $supplier->id;
+               if($supplier->status==2){
+                  $reapproval = 0;
+               }else if($supplier->status==3){
+                  $reapproval = 1;
+               }else{
+                  $reapproval = 1;
+               }
             }
-            SupplierPurchaseVehicleDetail::where('id',$request->rowId)->update(['status'=>2,'reapproval'=>$reapproval]);
-            return redirect('manage-purchase-info?id='.$request->rowId);
+            
+            SupplierPurchaseVehicleDetail::where('id',$supp_rowId)->update(['status'=>2,'reapproval'=>$reapproval]);
+            if(isset($request->rowId) && !empty($request->rowId)){
+               $group_list = SaleOrderSetting::join('item_groups','sale-order-settings.item_id','=','item_groups.id')
+                            ->where('sale-order-settings.company_id', Session::get('user_company_id'))
+                            ->where('setting_type', 'PURCHASE GROUP')
+                            ->where('setting_for', 'PURCHASE ORDER')
+                            ->where('item_id', $supplier->group_id)
+                            ->select('group_type')
+                            ->first();
+               if($group_list->group_type=="BOILER FUEL"){
+                  return redirect('boiler-fuel?status=2');
+               }else if($group_list->group_type=="WASTE KRAFT"){
+                  return redirect('waste-kraft?status=2');
+               }
+            }
+            //return redirect('manage-purchase-info?id='.$request->rowId);
          }
          if(!empty(Session::get('redirect_url'))){
             return redirect(Session::get('redirect_url'));
@@ -1676,6 +2452,7 @@ class PurchaseController extends Controller{
                   $purchase->shipping_pan = $shipp->pan;
                }
                $purchase->financial_year = $financial_year;
+               
                $purchase->save();
                if($purchase->id){  
                   //ITEM DATA INSERT
@@ -2065,14 +2842,22 @@ class PurchaseController extends Controller{
 
    public function checkDuplicateVoucher(Request $request)
 {
-    $exists = \DB::table('purchases')
-                ->where('voucher_no', $request->voucher_no)
-                ->where('party', $request->party_id)
-                ->where('financial_year', $request->financial_year)
-                ->where('delete','0')
-                ->exists();
+   $exists = \DB::table('purchases')
+               ->leftjoin('supplier_purchase_vehicle_details','purchases.id','=','supplier_purchase_vehicle_details.map_purchase_id')
+               ->select('purchases.id','supplier_purchase_vehicle_details.voucher_no')
+               ->where('purchases.voucher_no', $request->voucher_no)
+               ->where('party', $request->party_id)
+               ->where('financial_year', $request->financial_year)
+               ->where('purchases.status','1')
+               ->where('purchases.delete','0')
+               ->first();
+   if($exists){
 
-    return response()->json(['exists' => $exists]);
+      return response()->json(['exists' => true,'voucher_no' => $exists->voucher_no]);
+   }else{
+      return response()->json(['exists' => false]);
+   }
+   
 }
 
  public function checkDuplicateVoucherEdit(Request $request)
@@ -2122,7 +2907,702 @@ public function getItemsByDate(Request $request)
 
     return response()->json($items);
 }
+public function exportPurchasesView()
+   {
+      return view('purchase_export');
+   }
+   public function exportPurchases(Request $request)
+   {
+      return $this->exportPurchaseChallanCSV($request);
+   }
+   public function exportPurchaseBillView()
+   {
+      return view('purchase_bill_export');
+   }
+    public function exportPurchaseBill(Request $request)
+   {
+      $request->validate([
+         'from_date'     => 'required|date',
+         'to_date'       => 'required|date',
+         'purchase_type' => 'required|in:LOCAL,CENTER',
+      ]);
+
+      $from         = $request->input('from_date');
+      $to           = $request->input('to_date');
+      $purchaseType = $request->input('purchase_type');
+
+      $company_id = Session::get('user_company_id');
+
+      $purchases = DB::table('purchases')
+         ->leftJoin('accounts', 'purchases.party', '=', 'accounts.id')
+         ->where('purchases.company_id', $company_id)
+         ->whereBetween('purchases.date', [$from, $to])
+         ->where(function ($q) {
+               $q->where('purchases.delete', '0')
+               ->orWhereNull('purchases.delete');
+         })
+         ->select([
+               'purchases.*',
+               'purchases.billing_gst',
+               'purchases.merchant_gst',
+               'accounts.account_name as party_name',
+               'accounts.id as party_alias',
+               'accounts.gstin as party_gst',
+               'accounts.address as party_address',
+         ])
+         ->orderBy('purchases.date')
+         ->get();
+
+      $filename = "purchase_bill_{$from}_to_{$to}_" . strtolower($purchaseType) . ".csv";
+
+      $headers = [
+         "Content-Type"        => "text/csv; charset=UTF-8",
+         "Content-Disposition" => "attachment; filename=\"$filename\""
+      ];
+
+      $callback = function () use ($purchases, $company_id, $purchaseType) {
+
+         $out = fopen('php://output', 'w');
+         $billSundries = DB::table('bill_sundrys')
+            ->where('company_id', $company_id)
+            ->where(function ($q) {
+               $q->where('delete', '0')->orWhereNull('delete');
+            })
+            ->orderBy('sequence')
+            ->get();
+                  $header = [
+         'Series','Date','Voucher No','Purchase Type','GST %','Party Name','Party Alias',
+         'GSTIN','Address','Material Center','Narration','Item Name','Qty in KG',
+         'Unit','Price','Amount'
+         ];
+
+         foreach ($billSundries as $bs) {
+            $header[] = $bs->name;
+         }
+
+         $header = array_merge($header, [
+         'Transport','GR','GR Date','Vehicle No','Station'
+         ]);
+
+         fputcsv($out, $header);
+         $purchases = $purchases->sortByDesc(function($p){
+
+            $rate = DB::table('purchase_descriptions')
+            ->leftJoin('manage_items','purchase_descriptions.goods_discription','=','manage_items.id')
+            ->where('purchase_descriptions.purchase_id',$p->id)
+            ->max('manage_items.gst_rate');
+
+            return $rate ?? 0;
+
+         });
+         foreach ($purchases as $p) {
+
+               $billingGst  = trim((string) $p->billing_gst);
+               $merchantGst = trim((string) $p->merchant_gst);
+
+               $billingState  = strlen($billingGst)  >= 2 ? substr($billingGst, 0, 2)  : null;
+               $merchantState = strlen($merchantGst) >= 2 ? substr($merchantGst, 0, 2) : null;
+
+               if ($billingState && $merchantState) {
+                  $row_type = ($billingState === $merchantState) ? 'LOCAL' : 'CENTER';
+               } else {
+                  $row_type = 'CENTER';
+               }
+
+               if ($row_type !== $purchaseType) {
+                  continue;
+               }
+
+               $dateFormatted = date('d-m-Y', strtotime($p->date));
+
+               $sundries = DB::table('purchase_sundries')
+                  ->leftJoin('bill_sundrys', 'purchase_sundries.bill_sundry', '=', 'bill_sundrys.id')
+                  ->where('purchase_sundries.purchase_id', $p->id)
+                  ->where('purchase_sundries.company_id', $company_id)
+                  ->select('bill_sundrys.id as bs_id', 'bill_sundrys.name', 'purchase_sundries.amount')
+                  ->get();
+
+               $sundryValues = [];
+
+               foreach ($billSundries as $bs) {
+                  $sundryValues[$bs->id] = 0;
+               }
+
+               foreach ($sundries as $s) {
+                  $sundryValues[$s->bs_id] = floatval($s->amount);
+               }
+               $descs = DB::table('purchase_descriptions')
+                  ->where('purchase_id', $p->id)
+                  ->where('company_id', $company_id)
+                  ->where(function ($q) {
+                     $q->where('status', '1')->orWhereNull('status');
+                  })
+                  ->get();
+
+               $firstRow = true;
+
+               if ($descs->isEmpty()) {
+                  fputcsv($out, [
+                     $p->series_no, $dateFormatted, $p->voucher_no, $row_type,
+                     $p->party_name, $p->party_alias, $p->party_gst, $p->party_address,
+                     $p->material_center, '', '', '', '', '',
+                     $freight, $insurance, $cgst, $sgst, $igst, $tcs,
+                     $p->transport_name, $p->gr_pr_no, '', $p->vehicle_no, $p->station
+                  ]);
+                  continue;
+               }
+
+               foreach ($descs as $d) {
+
+                  $item = DB::table('manage_items')
+                  ->leftJoin('units', 'manage_items.u_name', '=', 'units.id')
+                  ->where('manage_items.id', $d->goods_discription)
+                  ->select(
+                  'manage_items.name as item_name',
+                  'units.s_name as unit_name',
+                  'manage_items.gst_rate',
+                  'manage_items.item_type'
+                  )
+                  ->first();
+                  if ($item) {
+
+                     if ($item->item_type == 'exempted' || $item->gst_rate == 0) {
+                        $gstLabel = 'EXEMPTED';
+                        $gstSort  = 0;
+                     } else {
+
+                        if ($row_type == 'LOCAL') {
+                              $gstLabel = $item->gst_rate . '% (' . ($item->gst_rate/2) . '% CGST + ' . ($item->gst_rate/2) . '% SGST)';
+                        } else {
+                              $gstLabel = $item->gst_rate . '% IGST';
+                        }
+
+                        $gstSort = $item->gst_rate;
+                     }
+
+                  } else {
+                     $gstLabel = '';
+                     $gstSort = 0;
+                  }
+
+                  $sundryColumns = [];
+
+                  if ($firstRow) {
+                     foreach ($billSundries as $bs) {
+                        $sundryColumns[] = $sundryValues[$bs->id] ?? 0;
+                     }
+
+                     $vehicle_col   = $p->vehicle_no;
+                     $transport_col = $p->transport_name;
+                  } else {
+                     foreach ($billSundries as $bs) {
+                        $sundryColumns[] = '';
+                     }
+
+                     $vehicle_col = '';
+                     $transport_col = '';
+                  }
+
+                  $row = [
+                  $p->series_no,
+                  $dateFormatted,
+                  $p->voucher_no,
+                  $row_type,
+                  $gstLabel,
+                  $p->party_name,
+                  $p->party_alias,
+                  $p->party_gst,
+                  $p->party_address,
+                  $p->material_center,
+                  '',
+                  $item->item_name ?? '',
+                  $d->qty,
+                  $item->unit_name ?? '',
+                  $d->price,
+                  $d->amount
+                  ];
+
+                  $row = array_merge($row, $sundryColumns);
+
+                  $row = array_merge($row, [
+                  $transport_col,
+                  $p->gr_pr_no,
+                  '',
+                  $vehicle_col,
+                  $p->station
+                  ]);
+
+                  fputcsv($out, $row);
+
+                  $firstRow = false;
+               }
+         }
+
+         fclose($out);
+      };
+
+      return response()->stream($callback, 200, $headers);
+   }
 
 
+public function purchaseTallyExport(Request $request)
+{
+    $request->validate([
+        'from_date' => 'required|date',
+        'to_date'   => 'required|date',
+    ]);
+
+    $purchases = DB::table('purchases')
+                ->where('company_id',Session::get('user_company_id'))
+        ->whereBetween('date', [$request->from_date, $request->to_date])
+        ->get();
+
+    if ($purchases->isEmpty()) {
+        return back()->with('error', 'No purchase data found.');
+    }
+
+    return response()->streamDownload(function () use ($purchases) {
+
+        $file = fopen('php://output', 'w');
+
+        fputcsv($file, [
+            'VOUCHER TYPE',
+            'DATE',
+            'SUPPLIER INVOICE NUMBER',
+            'LEDGER NAME',
+            'LEDGER VALUE',
+            'DR/CR',
+            'ITEM NAME',
+            'QTY',
+            'RATE',
+            'UNIT',
+            'AMOUNT'
+        ]);
+
+        foreach ($purchases as $purchase) {
+
+            /* ========== FIRST ROW (PARTY) ========== */
+            fputcsv($file, [
+                'Purchase',
+                date('d-m-Y', strtotime($purchase->date)),
+                $purchase->voucher_no,
+                $purchase->billing_name,
+                number_format($purchase->total, 2, '.', ''),
+                'Cr',
+                '', '', '', '', ''
+            ]);
+
+            /* ========== ITEMS ========== */
+            $items = DB::table('purchase_descriptions')
+               ->join('manage_items', 'purchase_descriptions.goods_discription', '=', 'manage_items.id')
+               ->leftJoin('units', 'purchase_descriptions.unit', '=', 'units.id')
+               ->where('purchase_descriptions.purchase_id', $purchase->id)
+               ->select(
+                  'purchase_descriptions.amount',
+                  'purchase_descriptions.qty',
+                  'purchase_descriptions.price',
+                  'manage_items.name as item_name',
+                  'units.name as unit_name'
+               )
+               ->get();
+
+            $baseTotal = $items->sum('amount');
+
+            /* ========== ADJUSTABLE SUNDRIES (adjust_purchase_amt = Yes) ========== */
+            $adjustableSundryTotal = DB::table('purchase_sundries')
+               ->join('bill_sundrys', 'purchase_sundries.bill_sundry', '=', 'bill_sundrys.id')
+               ->where('purchase_sundries.purchase_id', $purchase->id)
+               ->where('bill_sundrys.adjust_purchase_amt', 'Yes')
+               ->sum('purchase_sundries.amount');
+
+            /* ========== ITEM ROWS (LEDGER VALUE ADJUSTED, AMOUNT SAME) ========== */
+            foreach ($items as $item) {
+
+               $proportionate = ($baseTotal > 0)
+                  ? ($item->amount / $baseTotal) * $adjustableSundryTotal
+                  : 0;
+
+               $ledgerValue = round($item->amount + $proportionate, 2);
+
+               fputcsv($file, [
+                  '', '', '',
+                  'Purchase',
+                  number_format($ledgerValue, 2, '.', ''), 
+                  'Dr',
+                  $item->item_name,
+                  $item->qty,
+                  $item->price,
+                  $item->unit_name,
+                  number_format($item->amount, 2, '.', ''), 
+               ]);
+            }
+
+
+            /* ========== BILL SUNDRIES (NAME, NOT ID) ========== */
+            $sundries = DB::table('purchase_sundries')
+               ->join('bill_sundrys', 'purchase_sundries.bill_sundry', '=', 'bill_sundrys.id')
+               ->where('purchase_sundries.purchase_id', $purchase->id)
+               ->where('bill_sundrys.adjust_purchase_amt', 'No')
+               ->select(
+                  'bill_sundrys.name as sundry_name',
+                  'purchase_sundries.amount'
+               )
+               ->get();
+
+            foreach ($sundries as $sundry) {
+                if ((float)$sundry->amount == 0) continue;
+
+                fputcsv($file, [
+                    '', '', '',
+                    $sundry->sundry_name,
+                    number_format($sundry->amount, 2, '.', ''),
+                    'Dr',
+                    '', '', '', '', ''
+                ]);
+            }
+        }
+
+        fclose($file);
+
+    }, 'purchase_tally_export.csv', [
+        'Content-Type' => 'text/csv',
+    ]);
+}
+
+
+public function bulkUpdateRoundOff1(Request $request)
+{
+    $companyId = Session::get('user_company_id');
+
+    // ✅ Validate dates
+    $request->validate([
+        'from_date' => 'required|date',
+        'to_date' => 'required|date|after_or_equal:from_date',
+    ]);
+
+    $fromDate = $request->from_date;
+    $toDate   = $request->to_date;
+
+    // ✅ Pre-fetch roundoff IDs
+    $roundOffIds = BillSundrys::where('nature_of_sundry', 'like', 'ROUNDED OFF%')
+        ->pluck('id')
+        ->toArray();
+
+    Purchase::where('company_id', $companyId)
+        ->whereBetween('date', [$fromDate, $toDate]) // ✅ FILTER ADDED
+        ->chunk(50, function ($purchases) use ($companyId, $roundOffIds) {
+
+            foreach ($purchases as $purchase) {
+
+                DB::beginTransaction();
+
+                try {
+
+                    // 1️⃣ Item total
+                    $itemTotal = PurchaseDescription::where('purchase_id', $purchase->id)
+                        ->sum('amount');
+
+                    // 2️⃣ Other sundries
+                    $otherSundryTotal = PurchaseSundry::where('purchase_id', $purchase->id)
+                        ->whereNotIn('bill_sundry', $roundOffIds)
+                        ->sum('amount');
+
+                    $expectedTotal = $itemTotal + $otherSundryTotal;
+
+                    $finalTotal = round($expectedTotal);
+                    $roundOffAmount = round($finalTotal - $expectedTotal, 2);
+
+                    // 3️⃣ Delete old roundoff
+                    PurchaseSundry::where('purchase_id', $purchase->id)
+                        ->whereIn('bill_sundry', $roundOffIds)
+                        ->delete();
+
+                    AccountLedger::where('entry_type', 2)
+                        ->where('entry_type_id', $purchase->id)
+                        ->whereIn('account_id', function ($q) use ($roundOffIds) {
+                            $q->select('purchase_amt_account')
+                              ->from('bill_sundrys')
+                              ->whereIn('id', $roundOffIds);
+                        })
+                        ->delete();
+
+                    // 4️⃣ Insert new roundoff
+                    if ($roundOffAmount != 0) {
+
+                        $roundOffMaster = $roundOffAmount < 0
+                            ? BillSundrys::where('nature_of_sundry', 'ROUNDED OFF (-)')->first()
+                            : BillSundrys::where('nature_of_sundry', 'ROUNDED OFF (+)')->first();
+
+                        if ($roundOffMaster) {
+
+                            PurchaseSundry::create([
+                                'purchase_id' => $purchase->id,
+                                'bill_sundry' => $roundOffMaster->id,
+                                'rate' => 0,
+                                'amount' => abs($roundOffAmount),
+                                'company_id' => $companyId,
+                                'status' => '1',
+                            ]);
+
+                            AccountLedger::create([
+                                'account_id' => $roundOffMaster->purchase_amt_account,
+                                'debit' => $roundOffAmount > 0 ? abs($roundOffAmount) : null,
+                                'credit' => $roundOffAmount < 0 ? abs($roundOffAmount) : null,
+                                'txn_date' => $purchase->date,
+                                'series_no' => $purchase->series_no,
+                                'company_id' => $companyId,
+                                'financial_year' => $purchase->financial_year ?? Session::get('default_fy'),
+                                'entry_type' => 2,
+                                'entry_type_id' => $purchase->id,
+                                'map_account_id' => $purchase->party,
+                                'created_by' => Session::get('user_id'),
+                                'created_at' => now(),
+                            ]);
+                        }
+                    }
+
+                    // 5️⃣ Update total
+                    $purchase->update(['total' => $finalTotal]);
+
+                    DB::commit();
+
+                } catch (\Exception $e) {
+                    DB::rollBack();
+                }
+            }
+        });
+
+    return back()->with('success', 'Round-off updated from '.$fromDate.' to '.$toDate);
+}
+
+public function bulkUpdateRoundOff2()
+{
+    $companyId = Session::get('user_company_id');
+    $fromDate = $request->from_date;
+    $toDate   = $request->to_date;
+
+    // ✅ Pre-fetch roundoff IDs
+    $roundOffIds = BillSundrys::where('nature_of_sundry', 'like', 'ROUNDED OFF%')
+        ->pluck('id')
+        ->toArray();
+
+    Purchase::where('company_id', $companyId)
+                ->whereBetween('date', [$fromDate, $toDate])
+        ->chunk(50, function ($purchases) use ($companyId, $roundOffIds) {
+
+            foreach ($purchases as $purchase) {
+
+                DB::beginTransaction(); // ✅ small transaction
+
+                try {
+
+                    // 1️⃣ Item total
+                    $itemTotal = PurchaseDescription::where('purchase_id', $purchase->id)
+                        ->sum('amount');
+
+                    // 2️⃣ Other sundries (excluding roundoff)
+                    $otherSundryTotal = PurchaseSundry::where('purchase_id', $purchase->id)
+                        ->whereNotIn('bill_sundry', $roundOffIds)
+                        ->sum('amount');
+
+                    $expectedTotal = $itemTotal + $otherSundryTotal;
+
+                    $finalTotal = round($expectedTotal);
+                    $roundOffAmount = round($finalTotal - $expectedTotal, 2);
+
+                    // 3️⃣ Delete OLD roundoff (FAST)
+                    PurchaseSundry::where('purchase_id', $purchase->id)
+                        ->whereIn('bill_sundry', $roundOffIds)
+                        ->delete();
+
+                    AccountLedger::where('entry_type', 2)
+                        ->where('entry_type_id', $purchase->id)
+                        ->whereIn('account_id', function ($q) use ($roundOffIds) {
+                            $q->select('purchase_amt_account')
+                              ->from('bill_sundrys')
+                              ->whereIn('id', $roundOffIds);
+                        })
+                        ->delete();
+
+                    // 4️⃣ Insert new roundoff
+                    if ($roundOffAmount != 0) {
+
+                        $roundOffMaster = $roundOffAmount < 0
+                            ? BillSundrys::where('nature_of_sundry', 'ROUNDED OFF (-)')->first()
+                            : BillSundrys::where('nature_of_sundry', 'ROUNDED OFF (+)')->first();
+
+                        if ($roundOffMaster) {
+
+                            PurchaseSundry::create([
+                                'purchase_id' => $purchase->id,
+                                'bill_sundry' => $roundOffMaster->id,
+                                'rate' => 0,
+                                'amount' => abs($roundOffAmount),
+                                'company_id' => $companyId,
+                                'status' => '1',
+                            ]);
+
+                            AccountLedger::create([
+                                'account_id' => $roundOffMaster->purchase_amt_account,
+                                'debit' => $roundOffAmount > 0 ? abs($roundOffAmount) : null,
+                                'credit' => $roundOffAmount < 0 ? abs($roundOffAmount) : null,
+                                'txn_date' => $purchase->date,
+                                'series_no' => $purchase->series_no,
+                                'company_id' => $companyId,
+                                'financial_year' => $purchase->financial_year ?? Session::get('default_fy'),
+                                'entry_type' => 2,
+                                'entry_type_id' => $purchase->id,
+                                'map_account_id' => $purchase->party,
+                                'created_by' => Session::get('user_id'),
+                                'created_at' => now(),
+                            ]);
+                        }
+                    }
+
+                    // 5️⃣ Update total
+                    $purchase->update(['total' => $finalTotal]);
+
+                    DB::commit();
+
+                } catch (\Exception $e) {
+                    DB::rollBack();
+                }
+            }
+        });
+
+    return back()->with('success', 'Round-off fixed successfully!');
+}
+
+public function bulkUpdateRoundOff(Request $request)
+{
+    $companyId = Session::get('user_company_id');
+      $fromDate = $request->from_date;
+    $toDate   = $request->to_date;
+
+    // ✅ Pre-fetch roundoff IDs
+    $roundOffIds = BillSundrys::where('nature_of_sundry', 'like', 'ROUNDED OFF%')
+        ->pluck('id')
+        ->toArray();
+    // print_r($roundOffIds);
+    Purchase::where('company_id', $companyId)
+    ->whereBetween('date', [$fromDate, $toDate])
+        ->chunk(50, function ($purchases) use ($companyId, $roundOffIds) {
+
+            foreach ($purchases as $purchase) {
+
+                DB::beginTransaction(); // ✅ small transaction
+
+                try {
+
+                    // 1️⃣ Item total
+                    $itemTotal = PurchaseDescription::where('purchase_id', $purchase->id)
+                        ->sum('amount');
+
+                    // 2️⃣ Other sundries (excluding roundoff)
+                    $otherSundryTotal = PurchaseSundry::where('purchase_id', $purchase->id)
+                        ->whereNotIn('bill_sundry', $roundOffIds)
+                        ->sum('amount');
+
+                    $expectedTotal = $itemTotal + $otherSundryTotal;
+
+                    $finalTotal = round($expectedTotal);
+                    $roundOffAmount = round($finalTotal - $expectedTotal, 2);
+
+                    // 3️⃣ Delete OLD roundoff (FAST)
+                    PurchaseSundry::where('purchase_id', $purchase->id)
+                        ->whereIn('bill_sundry', $roundOffIds)
+                        ->delete();
+
+                    AccountLedger::where('entry_type', 2)
+                        ->where('entry_type_id', $purchase->id)
+                        ->whereIn('account_id', function ($q) use ($roundOffIds) {
+                            $q->select('purchase_amt_account')
+                              ->from('bill_sundrys')
+                              ->whereIn('id', $roundOffIds);
+                        })
+                        ->delete();
+
+                    // 4️⃣ Insert new roundoff
+                    if ($roundOffAmount != 0) {
+
+                        $roundOffMaster = $roundOffAmount < 0
+                            ? BillSundrys::where('nature_of_sundry', 'ROUNDED OFF (-)')->first()
+                            : BillSundrys::where('nature_of_sundry', 'ROUNDED OFF (+)')->first();
+
+                        if ($roundOffMaster) {
+
+                            PurchaseSundry::create([
+                                'purchase_id' => $purchase->id,
+                                'bill_sundry' => $roundOffMaster->id,
+                                'rate' => 0,
+                                'amount' => abs($roundOffAmount),
+                                'company_id' => $companyId,
+                                'status' => '1',
+                            ]);
+
+                            AccountLedger::create([
+                                'account_id' => $roundOffMaster->purchase_amt_account,
+                                'debit' => $roundOffAmount > 0 ? abs($roundOffAmount) : null,
+                                'credit' => $roundOffAmount < 0 ? abs($roundOffAmount) : null,
+                                'txn_date' => $purchase->date,
+                                'series_no' => $purchase->series_no,
+                                'company_id' => $companyId,
+                                'financial_year' => $purchase->financial_year ?? Session::get('default_fy'),
+                                'entry_type' => 2,
+                                'entry_type_id' => $purchase->id,
+                                'map_account_id' => $purchase->party,
+                                'created_by' => Session::get('user_id'),
+                                'created_at' => now(),
+                            ]);
+                        }
+                    }
+
+                    // 5️⃣ Update total
+                    $purchase->update(['total' => $finalTotal]);
+
+                    DB::commit();
+
+                } catch (\Exception $e) {
+                    DB::rollBack();
+                }
+            }
+        });
+
+    return back()->with('success', 'Round-off fixed successfully!');
+}
+
+
+public function roundoffProgress()
+{
+    try {
+
+        $companyId = Cache::get('roundoff_company');
+
+        if (!$companyId) {
+            return response()->json([
+                'total' => 0,
+                'done' => 0,
+                'percent' => 0
+            ]);
+        }
+
+        $total = Cache::get('roundoff_total_'.$companyId, 0);
+        $done  = Cache::get('roundoff_done_'.$companyId, 0);
+
+        $percent = $total > 0 ? round(($done / $total) * 100, 2) : 0;
+
+        return response()->json([
+            'total' => $total,
+            'done' => $done,
+            'percent' => $percent
+        ]);
+
+    } catch (\Exception $e) {
+
+        return response()->json([
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
 
 }

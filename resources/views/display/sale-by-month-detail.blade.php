@@ -2,6 +2,21 @@
 @section('content')
 <!-- header-section -->
 @include('layouts.header')
+<style>
+   /* ===== Sticky Header for Sale Detail ===== */
+
+.table-scroll-wrapper {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.table-scroll-wrapper thead th {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #f8f9fa; /* or match your header color */
+}
+</style>
 <!-- list-view-company-section -->
 <div class="list-of-view-company ">
    <section class="list-of-view-company-section container-fluid">
@@ -40,7 +55,7 @@
                   </div>
                <p><input type="checkbox" class="custom-checkbox-input detailed"> Detailed</p>
             </div>
-            <div class="row display-profit-loss  p-0 m-0 font-heading border-divider shadow-sm rounded-bottom-8" style="overflow: scroll;">
+            <div class="row display-profit-loss p-0 m-0 font-heading border-divider shadow-sm rounded-bottom-8 table-scroll-wrapper">
                <table class="table table-bordered">
                   <thead>
                      <tr>
@@ -160,12 +175,12 @@
                               </td>
                            @endforeach                           
                            <td class="td_detail" style="text-align:right;display: none;">
-                              {{formatIndianNumber($value['grand_total'])}}
+                              {{formatIndianNumber((float) $value['grand_total'])}}
                               @php 
                                  if($value['type']=="CREDIT NOTE"){
-                                    $grand_total = $grand_total - $value['grand_total']; 
+                                    $grand_total = $grand_total - (float) $value['grand_total']; 
                                  }else{
-                                    $grand_total = $grand_total + $value['grand_total'];  
+                                    $grand_total = $grand_total + (float) $value['grand_total'];  
                                  }
                               @endphp
                            </td>                           

@@ -419,7 +419,7 @@
                                             </tbody>
 
                                             {{-- Grand Total Row --}}
-                                            <tr style="color:{{ $anyMismatch ? 'red' : 'green' }};">
+                                            <tr style="color:{{ $anyMismatchCr ? 'red' : 'green' }};">
                                                 <td colspan=2 style="text-align:center; font-weight: bold; border:1px solid black;">Grand Total</td>
                                                 <td style="font-weight: bold; border:1px solid black;">{{ formatIndianNumber($grand_api_total, 2) }}</td>
                                                 <td style="font-weight: bold; border:1px solid black;">{{ formatIndianNumber($grand_books_total, 2) }}</td> 
@@ -446,6 +446,7 @@
                                             @php
                                                 $grand_api_total = 0;
                                                 $grand_books_total = 0;
+                                                 $anyMismatchDr = false;
                                             @endphp
 
                                             <tbody id="debit-note-summary" style="display: none;">
@@ -453,6 +454,7 @@
                                                 @php
                                                     $grand_api_total += $group['total_value'];
                                                     $grand_books_total += $group['db_value'];
+                                                    if (!$group['match']) $anyMismatchDr = true;
                                                 @endphp
 
                                                 <tr onclick="toggleDebitNoteDetails('dnr{{ $index }}')" style="cursor:pointer; color: {{ $group['match'] ? 'green' : 'red' }};">
@@ -540,7 +542,7 @@
                                             </tbody>
 
                                             {{-- Grand Total Row --}}
-                                            <tr style="color: {{ $anyMismatch ? 'red' : 'green' }};">
+                                            <tr style="color: {{ $anyMismatchDr ? 'red' : 'green' }};">
                                                 <td colspan="2" style="text-align:center; font-weight: bold; border:1px solid black;">Grand Total</td>
                                                 <td style="font-weight: bold; border:1px solid black;">{{ formatIndianNumber($grand_api_total, 2) }}</td>
                                                 <td style="font-weight: bold; border:1px solid black;">{{ formatIndianNumber($grand_books_total, 2) }}</td>

@@ -158,7 +158,7 @@
                         <?php
                         if(count($mat_series) > 0) {
                            foreach ($mat_series as $value) { ?>
-                              <option value="<?php echo $value->series; ?>" data-mat_center="<?php echo $value->mat_center;?>" data-gst_no="<?php echo $value->gst_no;?>" data-invoice_prefix="<?php echo $value->invoice_prefix;?>" data-invoice_prefix_wt="<?php echo $value->invoice_prefix_wt;?>"  data-invoice_start_from="<?php echo $value->invoice_start_from;?>" data-without_invoice_start_from="<?php echo $value->without_invoice_start_from;?>" data-manual_enter_invoice_no="<?php echo $value->manual_enter_invoice_no;?>" data-duplicate_voucher="<?php echo $value->duplicate_voucher;?>" data-blank_voucher="<?php echo $value->blank_voucher;?>"><?php echo $value->series; ?></option>
+                              <option value="<?php echo $value->series; ?>" data-mat_center="<?php echo $value->mat_center;?>" data-gst_no="<?php echo $value->gst_no;?>" data-invoice_prefix="<?php echo $value->invoice_prefix;?>" data-without_invoice_prefix="<?php echo $value->without_invoice_prefix;?>" data-invoice_start_from="<?php echo $value->invoice_start_from;?>" data-without_invoice_start_from="<?php echo $value->without_invoice_start_from;?>" data-manual_enter_invoice_no_with_gst="<?php echo $value->manual_enter_invoice_no_with_gst;?>" data-manual_enter_invoice_no_without_gst="<?php echo $value->manual_enter_invoice_no_without_gst;?>" data-duplicate_voucher_with_gst="<?php echo $value->duplicate_voucher_with_gst;?>" data-duplicate_voucher_without_gst="<?php echo $value->duplicate_voucher_without_gst;?>" data-blank_voucher_with_gst="<?php echo $value->blank_voucher_with_gst;?>" data-blank_voucher_without_gst="<?php echo $value->blank_voucher_without_gst;?>"><?php echo $value->series; ?></option>
                               <?php 
                            }
                         } ?>
@@ -180,7 +180,7 @@
                         } ?>
                      </select>
                      <ul style="color: red;">
-                       @error('material_center'){{$message}}@enderror                        
+                       @error('material_center'){{$message}}@enderror
                      </ul>
                   </div>
                   <div class="mb-4 col-md-4">
@@ -534,7 +534,7 @@
                                        </select>
                            </td>
                            <td>
-                              <input type="text" class="form-control amount" id="amount_1" data-index="1" name="without_item_amount[]" placeholder="Enter Amount" onkeyup="gstCalculation()" style="text-align: right">
+                              <input type="text" class="form-control amount" id="amount_1" onblur="validateWithoutItemAmount(this)" data-index="1" name="without_item_amount[]" placeholder="Enter Amount" onkeyup="gstCalculation()" style="text-align: right">
                            </td>
                            <td>
                               <svg xmlns="http://www.w3.org/2000/svg" style="cursor:pointer;" class="bg-primary rounded-circle add_more_tr" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"></path></svg>
@@ -573,6 +573,26 @@
                            <td>
                               <input type="text" class="form-control" id="igst" name="igst" readonly style="text-align: right">
                            </td>
+                        </tr>
+                         <tr class="font-14 font-heading bg-white round_off_plus" style="display: none;">
+                           <td></td>
+                           <td></td>
+                           <td ></td>
+                           <td style="text-align: right;">
+                             ROUND OFF(+)
+                           </td>
+                           <td> <input type="text" style="text-align: right;" class="form-control" id="roundoffplus" name="roundoffplus" readonly></td>
+                           <td></td>
+                        </tr>
+                        <tr class="font-14 font-heading bg-white round_off_minus" style="display: none;">
+                           <td></td>
+                           <td></td>
+                           <td></td>
+                           <td style="text-align: right;">ROUND OFF(-)
+                              
+                           </td>
+                           <td> <input type="text" style="text-align: right;" class="form-control" id="roundoffminus" name="roundoffminus" readonly></td>
+                           <td></td>
                         </tr>
                         <tr class="font-14 font-heading bg-white">
                            <td></td>
@@ -794,6 +814,40 @@
    var add_more_count = 1;
    var add_more_counts = 1;
    var add_more_bill_sundry_up_count = 2;
+   function validateItemFields(field, value, rowId) {
+      let type = $("#type").val();
+      if (type === "WITH ITEM") {
+         let num = parseFloat(value);
+         if (value !== "" && !isNaN(num) && num <= 0) {
+               alert("Value must be greater than 0");
+               $("#" + field + "_tr_" + rowId).val("");
+               calculateAmount();
+               return false;
+         }
+      }
+      return true;
+   }
+   function validateWithoutItemAmount(el){
+
+      if($("#type").val() !== "WITHOUT ITEM") return;
+
+      let val = $(el).val();
+
+      // allow typing like 0 or 0.
+      if(val === "" || val === "0.") return;
+
+      let num = parseFloat(val);
+
+      if(!isNaN(num) && num <= 0){
+         alert("Amount must be greater than 0");
+
+         $(el).val('');
+
+         $("#net_amount, #total_amount").val('');
+
+         gstCalculation();
+      }
+   }
    let get_data = @json(request()->get('data'));
    
    $(".add_more").click(function() {
@@ -838,6 +892,75 @@
          $("#invoice_id").hide();
          $(".other_invoice_div").show();
          $("#other_invoice_against").attr('required', true);
+         $("#purchase_bill_id").val('');
+         $("#series_no").val('');
+         $("#material_center").val('');
+         $("#voucher_prefix").val('');
+         $("#purchase_return_no").val('');
+
+         $("#example11 tbody tr").not("#tr_1").not(":last").remove();
+
+         $("#goods_discription_tr_1").val('');
+         $("#quantity_tr_1").val('');
+         $("#price_tr_1").val('');
+         $("#amount_tr_1").val('');
+         $("#unit_tr_1").val('');
+         $("#units_tr_1").val('');
+
+         add_more_count = 1;
+         $("#max_sale_descrption").val(1);
+
+         $("#sundry_up_table tbody tr.sundry_tr")
+            .not("#billtr_1")
+            .not("#billtr_cgst")
+            .not("#billtr_sgst")
+            .not("#billtr_igst")
+            .not("#billtr_round_plus")
+            .not("#billtr_round_minus")
+            .remove();
+
+         $("#bill_sundry_1").val('');
+         $("#bill_sundry_amount_1").val('');
+         $("#tax_amt_1").text('');
+         $("#tax_rate_tr_1").val('');
+
+         $("#tax_amt_cgst").text('');
+         $("#bill_sundry_amount_cgst").val('');
+
+         $("#tax_amt_sgst").text('');
+         $("#bill_sundry_amount_sgst").val('');
+
+         $("#tax_amt_igst").text('');
+         $("#bill_sundry_amount_igst").val('');
+
+         $("#tax_amt_round_plus").text('');
+         $("#bill_sundry_amount_round_plus").val('');
+
+         $("#tax_amt_round_minus").text('');
+         $("#bill_sundry_amount_round_minus").val('');
+
+         $("#totalSum").text('');
+         $("#bill_sundry_amt").text('');
+         $("#total_amounts").val(0);
+         $("#total_taxable_amounts").val(0);
+         $("#series_no").css('pointer-events', 'auto');
+         $("#material_center").css('pointer-events', 'auto');
+         let defaultOptions = '<option value="">Select</option>';
+
+         @foreach($manageitems as $item_info)
+            defaultOptions += `<option value="{{ $item_info->id }}"
+                  unit_id="{{ $item_info->u_name }}"
+                  data-val="{{ $item_info->unit }}"
+                  data-percent="{{ $item_info->gst_rate }}">
+               {{ $item_info->name }}
+            </option>`;
+         @endforeach
+
+         $("#goods_discription_tr_1").html(defaultOptions).val('');
+
+         $(".goods_items").each(function(){
+            $(this).html(defaultOptions).val('');
+         });
          return;
       }
       let voucher_type = $('option:selected', this).attr('data-voucher_type');
@@ -864,6 +987,8 @@
       $("#voucher_type").val(voucher_type);
       $("#series_no").val($('option:selected', this).attr('data-series_no'));
       $("#material_center").val($('option:selected', this).attr('data-material_center'));
+      $("#series_no").css('pointer-events', 'none');
+      $("#material_center").css('pointer-events', 'none');
       $("#voucher_prefix").val($('option:selected', this).attr('data-series_no')+"/{{Session::get('default_fy')}}/DR");
       var invoice_id = $(this).val();
       let series_no = $('option:selected', this).attr('data-series_no');
@@ -880,22 +1005,82 @@
             id:$('option:selected', this).attr('data-id')
          },
          success: function(data) {
+            $("#example11 tbody tr").not("#tr_1").not(":last").remove();
+            $("#goods_discription_tr_1").val('');
+            $("#quantity_tr_1").val('');
+            $("#price_tr_1").val('');
+            $("#amount_tr_1").val('');
+            $("#unit_tr_1").val('');
+            $("#units_tr_1").val('');
+            add_more_count = 1;
+            $("#max_sale_descrption").val(1);
+
+            $("#sundry_up_table tbody tr.sundry_tr")
+               .not("#billtr_1")
+               .not("#billtr_cgst")
+               .not("#billtr_sgst")
+               .not("#billtr_igst")
+               .not("#billtr_round_plus")
+               .not("#billtr_round_minus")
+               .remove();
+
+            $("#bill_sundry_1").val('');
+            $("#bill_sundry_amount_1").val('');
+            $("#tax_amt_1").text('');
+            $("#tax_rate_tr_1").val('');
+            $("#totalSum").text('');
+            $("#bill_sundry_amt").text('');
+            $("#total_amounts").val(0);
+            $("#total_taxable_amounts").val(0);
+
+            $("#tax_amt_cgst").text('');
+            $("#bill_sundry_amount_cgst").val('');
+
+            $("#tax_amt_sgst").text('');
+            $("#bill_sundry_amount_sgst").val('');
+
+            $("#tax_amt_igst").text('');
+            $("#bill_sundry_amount_igst").val('');
+
+            $("#tax_amt_round_plus").text('');
+            $("#bill_sundry_amount_round_plus").val('');
+
+            $("#tax_amt_round_minus").text('');
+            $("#bill_sundry_amount_round_minus").val('');
             var optionElements = '<option value="">Select</option>';
             $.each(data, function(key, val) {
-               optionElements += '<option unit_id="' + val.unit_id + '" data-val="' + val.unit + '" value="' + val.item_id + '" data-percent="' + val.gst_rate + '" data-parameterized_stock_status="'+val.parameterized_stock_status+ '" data-config_status="'+val.config_status+'" data-group_id="'+val.group_id+'">' + val.items_name + '</option>';
+               optionElements += '<option unit_id="' + val.unit_id + '" data-val="' + val.unit + '" value="' + val.item_id + '" data-percent="' + val.gst_rate + '" data-parameterized_stock_status="'+val.parameterized_stock_status+ '" data-config_status="'+val.config_status+'" data-group_id="'+val.group_id+'" data-qty="' + val.qty + '">' + val.items_name + ' (' + val.qty + ' ' + val.unit + ')'  + '</option>';
             });
             $("#goods_discription_tr_1").html(optionElements);
             $("#series_no").change();
          }
       });
+      if($("#type").val() === "WITHOUT ITEM"){
+
+         $("#cgst, #sgst, #igst").val('');
+         $("#net_amount, #total_amount").val('');
+
+         $(".cgst_tr, .sgst_tr, .igst_tr").hide();
+
+         customer_gstin = $("#party_id option:selected").data("gstin") || "";
+
+         gstCalculation();
+      }
    });
+
     // Function to calculate amount and update total sum
       function calculateAmount(key=null) {  
-         customer_gstin = $('#party_id option:selected').attr('data-state_code'); 
+        let customer_gstin = $('#party_id option:selected').data('gstin') || "";
+         let merchant_gstin_local = $("#series_no option:selected").data("gst_no") || merchant_gstin || "";
+
+         if(!customer_gstin || !merchant_gstin_local) return;
+
+         let vendor_state = customer_gstin.substring(0,2);
+         let company_state = merchant_gstin_local.substring(0,2);
          if(customer_gstin==undefined){
             return;
          }            
-         if(customer_gstin==merchant_gstin.substring(0,2)){  
+         if(vendor_state == company_state){
             $("#billtr_cgst").show();
             $("#billtr_sgst").show();
             $("#bill_sundry_amount_igst").val('');
@@ -923,27 +1108,52 @@
          $('#example11 tbody tr').each(function() {         
             var price = $(this).find('.price').val();
             var quantity = $(this).find('.quantity').val();
-            if(key=="A"){
-               var amount = $(this).find('.amount').val();
+            let type = $("#type").val();
+            let amountField = parseFloat($(this).find('.amount').val()) || 0;
+
+            if(type === "RATE DIFFERENCE"){
+               var amount = amountField;
+
             }else{
-               var amount = (price && quantity) ? (price * quantity) : 0;
-               if(price==0 && quantity==0){
-                     amount = $(this).find('.amount').val();
-                  }
-               if(amount!=0){
-                  $(this).find('.amount').val(parseFloat(amount).toFixed(2));
-                  $(this).find('.amount').keyup();
-               } 
+
+               if(key=="A"){
+                  var amount = amountField;
+               }else{
+                  var amount = (price && quantity) ? (price * quantity) : 0;
+
+                  if(amount!=0){
+                     $(this).find('.amount').val(parseFloat(amount).toFixed(2));
+                     $(this).find('.amount').keyup();
+                  } 
+               }
             }
-            if(amount!=undefined){
-               total += parseFloat(amount);
+            if(type === "RATE DIFFERENCE"){
+               total += amountField;
+            }else{
+               if(amount!=undefined){
+                  total += parseFloat(amount);
+               }
             }
          });
          let k = 1;
          $('.goods_items').each(function(){   
             let i = $(this).attr('data-id');          
-            if($("#amount_tr_"+i).val()!="" && $(this).val()!=''){
-               percent_arr.push({"percent":$('option:selected', this).attr('data-percent'),"amount":$("#amount_tr_"+i).val()});
+            let amtVal = parseFloat($("#amount_tr_"+i).val()) || 0;
+
+            if(type === "RATE DIFFERENCE"){
+               if(amtVal > 0 && $(this).val()!=''){
+                  percent_arr.push({
+                     "percent":$('option:selected', this).attr('data-percent'),
+                     "amount": amtVal
+                  });
+               }
+            }else{
+               if($("#amount_tr_"+i).val()!="" && $(this).val()!=''){
+                  percent_arr.push({
+                     "percent":$('option:selected', this).attr('data-percent'),
+                     "amount":$("#amount_tr_"+i).val()
+                  });
+               }
             }
             $("#srn_"+i).html(k);  
             k++;           
@@ -1275,11 +1485,16 @@
          allowClear: true,
          width: '100%' // Ensure dropdown matches Bootstrap styling
       });
-      if(get_data!=""){
-         sectionHideShow();
+      sectionHideShow(); // always run on load
+
+      if (get_data != "" && get_data != null) {
          $("#party_id").trigger('change');
       }
-      // Move focus to next field after selecting an option
+
+      $("#type, #nature").on("change", function () {
+         sectionHideShow();
+      });
+         // Move focus to next field after selecting an option
       $('#party_id').on('select2:select', function (e) {
          $('#voucher_no').focus();
       });
@@ -1297,17 +1512,30 @@
       // Function to calculate amount and update total sum
       
      
-        // Calculate amount on input change
-        // Calculate amount on input change
-        $(document).on('input', '.price',function(){
-           calculateAmount();
-        });
-        $(document).on('input', '.quantity',function(){
-           calculateAmount();
-        });
-        $(document).on('input', '.amount',function(){
-           calculateAmount('A');
-        });
+      $(document).on('blur', '.price', function () {
+         let rowId = $(this).attr("id").replace("price_tr_", "");
+         let value = $(this).val();
+         if (!validateItemFields("price", value, rowId)) return;
+         calculateAmount();
+      });
+
+      $(document).on('blur', '.quantity', function () {
+         let rowId = $(this).attr("id").replace("quantity_tr_", "");
+         let value = $(this).val();
+         if (!validateItemFields("quantity", value, rowId)) return;
+         calculateAmount();
+      });
+      $(document).on("input", ".quantity, .price", function () {
+            
+         
+            calculateAmount();
+         });
+      $(document).on('blur', '.amount', function () {
+         let rowId = $(this).attr("id").replace("amount_tr_", "");
+         let value = $(this).val();
+         if (!validateItemFields("amount", value, rowId)) return;
+         calculateAmount('A');
+      });
         $(document).on('change', '.bill_sundry_tax_type',function(){
            let id = $(this).attr('data-id');
            if($(this).val()==""){
@@ -1439,8 +1667,95 @@
          $('#unit_' + data).val(selectedOptionData);
          $('#units_' + data).val(item_units_id);      
          $('#goods_discription_'+data).select2("val","");
+         return;
       }
+      
    }
+   $(document).on("input", ".quantity", function () {
+      let rowId = $(this).attr("id").replace("quantity_tr_", "");
+   });
+   let previousType = "";
+
+   $("#type").on("change", function () {
+
+      let currentType = $(this).val();
+
+      if (previousType === "") {
+         previousType = currentType;
+         return;
+      }
+
+      if (currentType === "WITH ITEM") {
+
+         let invalidFound = false;
+
+         $("tr[id^='tr_']").each(function () {
+
+               let rowId = $(this).attr("id").replace("tr_", "");
+
+               let qtyVal = $("#quantity_tr_" + rowId).val();
+               let priceVal = $("#price_tr_" + rowId).val();
+               let amountVal = $("#amount_tr_" + rowId).val();
+
+               if (qtyVal === "" && priceVal === "" && amountVal === "") return;
+
+               let qty = parseFloat(qtyVal);
+               let price = parseFloat(priceVal);
+               let amount = parseFloat(amountVal);
+
+               if (
+                  isNaN(qty) || qty <= 0 ||
+                  isNaN(price) || price <= 0 ||
+                  isNaN(amount) || amount <= 0
+               ) {
+                  invalidFound = true;
+
+                  $("#quantity_tr_" + rowId).val("");
+                  $("#price_tr_" + rowId).val("");
+                  $("#amount_tr_" + rowId).val("");
+               }
+         });
+
+         if (invalidFound) {
+               alert("Qty, Price and Amount must be greater than 0 for WITH ITEM");
+         }
+
+         calculateAmount();
+      }
+
+      if (currentType === "WITHOUT ITEM") {
+
+         let invalidFound = false;
+
+         $(".amount").each(function () {
+
+               let val = $(this).val();
+
+               if (val === "" || val === "0.") return;
+
+               let num = parseFloat(val);
+
+               if (!isNaN(num) && num <= 0) {
+
+                  invalidFound = true;
+
+                  $(this).val("");
+               }
+         });
+
+         if (invalidFound) {
+               alert("Amount must be greater than 0 for WITHOUT ITEM");
+         }
+
+         $("#net_amount, #total_amount").val("");
+
+         if (typeof gstCalculation === "function") {
+               gstCalculation();
+         }
+      }
+
+      previousType = currentType;
+   });
    $(document).on("click", ".remove_sundry", function() {
       let id = $(this).attr('data-id');
       $("#billtr_" + id).remove();
@@ -1851,15 +2166,92 @@
       }
    });
    $(document).on('change', '#party_id', function(){
+       
       $("#invoice_id").show();
       $(".other_invoice_div").hide();
       $("#other_invoice_no").val('');
       $("#other_invoice_date").val('');
       $("#other_invoice_against").attr('required', false);
       $("#partyaddress").html('');
-      $("#partyaddress").html("GSTIN : "+$('option:selected', this).attr('data-gstin')+"<br>Address : "+$('option:selected', this).attr('data-address'));     
+      if($('option:selected', this).attr('data-gstin')!=undefined){
+          $("#partyaddress").html("GSTIN : "+$('option:selected', this).attr('data-gstin')+"<br>Address : "+$('option:selected', this).attr('data-address')); 
+      }
+          
       var account_id = $("#party_id").val();
+      $("#series_no").css('pointer-events', 'auto');
+      $("#material_center").css('pointer-events', 'auto');
       $("#voucher_no").html("<option value=''>Select</option>");
+      $("#series_no").val('');
+      $("#material_center").val('');
+
+      $("#voucher_prefix").val('');
+      $("#purchase_return_no").val('');
+
+      $("#example11 tbody tr").not("#tr_1").not(":last").remove();
+
+      let defaultOptions = '<option value="">Select</option>';
+
+      @foreach($manageitems as $item_info)
+         defaultOptions += `<option value="{{ $item_info->id }}"
+               unit_id="{{ $item_info->u_name }}"
+               data-val="{{ $item_info->unit }}"
+               data-percent="{{ $item_info->gst_rate }}">
+            {{ $item_info->name }}
+         </option>`;
+      @endforeach
+
+      $("#goods_discription_tr_1").html(defaultOptions).val('');
+
+      $(".goods_items").each(function(){
+         $(this).html(defaultOptions).val('');
+      });
+      $("#quantity_tr_1").val('');
+      $("#price_tr_1").val('');
+      $("#amount_tr_1").val('');
+      $("#unit_tr_1").val('');
+      $("#units_tr_1").val('');
+
+      add_more_count = 1;
+      $("#max_sale_descrption").val(1);
+
+      $("#sundry_up_table tbody tr.sundry_tr")
+         .not("#billtr_1")
+         .not("#billtr_cgst")
+         .not("#billtr_sgst")
+         .not("#billtr_igst")
+         .not("#billtr_round_plus")
+         .not("#billtr_round_minus")
+         .remove();
+
+      $("#bill_sundry_1").val('');
+      $("#bill_sundry_amount_1").val('');
+      $("#tax_amt_1").text('');
+      $("#tax_rate_tr_1").val('');
+
+      $("#billtr_cgst").hide();
+      $("#billtr_sgst").hide();
+      $("#billtr_igst").hide();
+      $("#billtr_round_plus").hide();
+      $("#billtr_round_minus").hide();
+      $("#tax_amt_cgst").text('');
+      $("#bill_sundry_amount_cgst").val('');
+
+      $("#tax_amt_sgst").text('');
+      $("#bill_sundry_amount_sgst").val('');
+
+      $("#tax_amt_igst").text('');
+      $("#bill_sundry_amount_igst").val('');
+
+      $("#tax_amt_round_plus").text('');
+      $("#bill_sundry_amount_round_plus").val('');
+
+      $("#tax_amt_round_minus").text('');
+      $("#bill_sundry_amount_round_minus").val('');
+
+      $("#totalSum").text('');
+      $("#bill_sundry_amt").text('');
+      $("#total_amounts").val(0);
+      $("#total_taxable_amounts").val(0);
       $.ajax({
          url: '{{url("get/purchaseinvoice/details")}}',
          async: false,
@@ -1877,13 +2269,14 @@
                if(val.voucher_type=="PURCHASE"){
                   voc_no = val.voucher_no;
                }else{
-                  voc_no = val.voucher_no_prefix;
+                  voc_no = val.voucher_no;
                }
                optionElements += '<option value="' + voc_no + '" data-id="'+val.id+'" data-series_no="'+val.series_no+'" data-material_center="'+val.material_center+'" data-voucher_type="'+val.voucher_type+'" data-voucher_date="'+val.date+'">'+ voc_no + '</option>';
             });
             optionElements += '<option value="OTHER">OTHER</option>';
             $("#voucher_no").append(optionElements);
-            if(get_data!=""){
+            if(get_data!="" && get_data!=null){
+                console.log(get_data);
                $("#voucher_no").val('OTHER');
                $("#voucher_no").change();
                $("#other_invoice_against").val('PURCHASE');
@@ -1909,25 +2302,29 @@
       $("#purchase_return_no").attr('required',true);
       let series = $(this).val();
       let invoice_prefix = $('option:selected', this).attr('data-invoice_prefix');
-      let invoice_prefix_wt = $('option:selected', this).attr('data-invoice_prefix_wt');
-      let manual_enter_invoice_no = $('option:selected', this).attr('data-manual_enter_invoice_no');
+      let without_invoice_prefix = $('option:selected', this).attr('data-without_invoice_prefix');
+      let manual_enter_invoice_no = nature=="WITHOUT GST"
+         ? $('option:selected', this).attr('data-manual_enter_invoice_no_without_gst')
+         : $('option:selected', this).attr('data-manual_enter_invoice_no_with_gst');
       $("#manual_enter_invoice_no").val(manual_enter_invoice_no);
       let invoice_start_from = $('option:selected', this).attr('data-invoice_start_from');
       $("#material_center").val($('option:selected', this).attr('data-mat_center'));
       merchant_gstin = $('option:selected', this).attr('data-gst_no');
       $("#merchant_gst").val(merchant_gstin);
       let vou_no = "";
+      $("#voucher_prefix").attr('type','text');
       if(nature=="WITHOUT GST"){
          if(manual_enter_invoice_no==0){
-            if(invoice_prefix_wt!=""){
-               $("#voucher_prefix").val(invoice_prefix_wt);
-               vou_no = invoice_prefix_wt;
+            if(without_invoice_prefix!=""){
+               $("#voucher_prefix").val(without_invoice_prefix);
+               vou_no = without_invoice_prefix;
             }else{
                $("#voucher_prefix").val($('option:selected', this).attr('data-without_invoice_start_from'));
                vou_no = $('option:selected', this).attr('data-without_invoice_start_from');
             }
             $("#purchase_return_no").val($('option:selected', this).attr('data-without_invoice_start_from'));
          }else{
+            $("#voucher_prefix").attr('type','number');
             $("#purchase_return_no").attr('required',false);
             $("#voucher_prefix").val("");
             $("#voucher_prefix").prop('readonly',false);
@@ -1943,23 +2340,13 @@
             }         
             $("#purchase_return_no").val(invoice_start_from);
          }else{
+            $("#voucher_prefix").attr('type','number');
             $("#purchase_return_no").attr('required',false);
             $("#voucher_prefix").val("");
             $("#voucher_prefix").prop('readonly',false);
          }
       }
-      $.ajax({
-         url : '{{url("check-debit-credit-note-voucherno")}}',
-         method : 'post',
-         data : { _token: '<?php echo csrf_token() ?>','voucher_no':vou_no},
-         success : function(res){
-            let obj = JSON.parse(res);
-            if(obj.status==1){
-               alert("Voucher No Already Exist In Debit/Credit Note");
-               $("#series_no").val('');
-            }
-         }
-      })
+     
       calculateAmount();
    });
    $("#nature").change(function(){
@@ -2006,50 +2393,99 @@
       $("#transport_info_modal").modal('toggle');
    });
    function gstCalculation(){
-      let vendor_gstin = $("#party_id option:selected").attr("data-state_code");
-      let company_gstin = merchant_gstin.substr(0,2);
+
+      let customer_gstin = $("#party_id option:selected").data("gstin") || "";
+      let merchant_gstin_local = $("#series_no option:selected").data("gst_no") || merchant_gstin || "";
+
+      if(!customer_gstin || !merchant_gstin_local) return;
+
+      let vendor_gstin = customer_gstin.substring(0,2);
+      let company_gstin = merchant_gstin_local.substring(0,2);
+
       let net_total = 0;
       let total_cgst = 0;
       let total_sgst = 0;
       let total_igst = 0;
+
       $(".item").each(function(){
-         if($(this).val()!=""){
-            let id = $(this).attr('data-index');
-            let percentage = $("#percentage_"+id).val();
-            let amount = $("#amount_"+id).val();
-            if(percentage!="" && amount!=""){
-               let IGST = amount*percentage/100;
-               let CGST = amount*(percentage/2)/100;
-               let SGST = CGST;               
-               IGST = IGST.toString().match(/^-?\d+(?:\.\d{0,2})?/)[0];
-               CGST = CGST.toString().match(/^-?\d+(?:\.\d{0,2})?/)[0];
-               SGST = SGST.toString().match(/^-?\d+(?:\.\d{0,2})?/)[0]; 
-               total_cgst = parseFloat(total_cgst) + parseFloat(CGST);
-               total_sgst = parseFloat(total_sgst) + parseFloat(SGST);
-               total_igst = parseFloat(total_igst) + parseFloat(IGST);
-               net_total = parseFloat(net_total) + parseFloat(amount);
-            }                        
+         if($(this).val() != ""){
+               let id = $(this).attr('data-index');
+               let percentage = $("#percentage_"+id).val();
+               let amount = $("#amount_"+id).val();
+
+               if(percentage != "" && amount != ""){
+                  amount = parseFloat(amount);
+                  percentage = parseFloat(percentage);
+
+                  let IGST = amount * percentage / 100;
+                  let CGST = amount * (percentage / 2) / 100;
+                  let SGST = CGST;
+
+                  total_cgst += CGST;
+                  total_sgst += SGST;
+                  total_igst += IGST;
+                  net_total += amount;
+               }                        
          }
       });
+
       $("#cgst").val("");
       $("#sgst").val("");
       $("#igst").val("");
-      if(vendor_gstin==company_gstin){
+
+      let tamount = 0;
+
+      if(vendor_gstin == company_gstin){
+
          $(".cgst_tr").show();
          $(".sgst_tr").show();
          $(".igst_tr").hide();          
+
          $("#cgst").val(total_cgst.toFixed(2));
          $("#sgst").val(total_sgst.toFixed(2)); 
-      }else{
+         let cgst_rounded = parseFloat(total_cgst.toFixed(2));
+         let sgst_rounded = parseFloat(total_sgst.toFixed(2));
+
+         tamount = net_total + cgst_rounded + sgst_rounded;
+
+      } else {
+
          $("#igst").val(total_igst.toFixed(2));
+
          $(".cgst_tr").hide();
          $(".sgst_tr").hide();
          $(".igst_tr").show();
+
+         let igst_rounded = parseFloat(total_igst.toFixed(2));
+         tamount = net_total + igst_rounded;
       }
-      $("#net_amount").val(net_total);
-      let tamount = parseFloat(net_total) + parseFloat(total_igst);
-      $("#total_amount").val(Math.round(tamount));
+
+      $("#net_amount").val(net_total.toFixed(2));
+
+      tamount = parseFloat(tamount.toFixed(2));
+
+      let after_roundoff = Math.round(tamount);
+
+      $("#total_amount").val(after_roundoff);
+
+      let roundoff = parseFloat((after_roundoff - tamount).toFixed(2));
+
+      $(".round_off_minus").hide();
+      $(".round_off_plus").hide();
+      $("#roundoffminus").val('');
+      $("#roundoffplus").val('');
+
+      if (roundoff < 0) {
+         $(".round_off_minus").show();
+         $("#roundoffminus").val(Math.abs(roundoff).toFixed(2));
+      } 
+      else if (roundoff > 0) {
+         $(".round_off_plus").show();
+         $("#roundoffplus").val(roundoff.toFixed(2));
+      }
    }
+   
+   
    var add_more_count_withgst = 1;
    $(".add_more_tr").click(function(){
       let empty_status = 0;
@@ -2064,7 +2500,7 @@
       }
       add_more_count_withgst++;
       var $curRow = $(this).closest('tr');
-      let newRow = '<tr id="withgst_tr_'+add_more_count_withgst+'" class="font-14 font-heading bg-white"><td style="width:30%"><select class="form-control item" id="item_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="item[]" onchange="gstCalculation()"><option value="">Select Item</option>@foreach($items as $item)<option value="{{$item->id}}">{{$item->account_name}}</option>@endforeach </select></td><td><input type="number" class="form-control hsn" id="hsn_1" name="hsn[]" placeholder="HSN/SAC"></td><td><select class="form-select percentage" id="percentage_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="percentage[]" onchange="gstCalculation()"><option value="">GST(%)</option><option value="0">0%</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option><option value="28">28%</option></select></td><td style="width:15%"><select class="form-control select2-single unit_code" name="unit_code[]" id="unit_code_'+add_more_count_withgst+'" ><option value="">-- Select UQC --</option><option value="BAL - BALE">BAL - BALE</option><option value="BDL - BUNDLES">BDL - BUNDLES</option><option value="BKL - BUCKLES">BKL - BUCKLES</option><option value="BOU - BILLION OF UNITS">BOU - BILLION OF UNITS</option><option value="BOX - BOX">BOX - BOX</option><option value="BTL - BOTTLES">BTL - BOTTLES</option><option value="BUN - BUNCHES">BUN - BUNCHES</option><option value="CAN - CANS">CAN - CANS</option><option value="CBM - CUBIC METERS">CBM - CUBIC METERS</option><option value="CCM - CUBIC CENTIMETERS">CCM - CUBIC CENTIMETERS</option><option value="CMS - CENTIMETERS">CMS - CENTIMETERS</option><option value="CTN - CARTONS">CTN - CARTONS</option><option value="DOZ - DOZENS">DOZ - DOZENS</option><option value="DRM - DRUMS">DRM - DRUMS</option><option value="GGK - GREAT GROSS">GGK - GREAT GROSS</option><option value="GMS - GRAMMES">GMS - GRAMMES</option><option value="GRS - GROSS">GRS - GROSS</option><option value="GYD - GROSS YARDS">GYD - GROSS YARDS</option><option value="KGS - KILOGRAMS">KGS - KILOGRAMS</option><option value="KLR - KILOLITRE">KLR - KILOLITRE</option><option value="KME - KILOMETRE">KME - KILOMETRE</option><option value="LTR - LITRES">LTR - LITRES</option><option value="MLT - MILILITRE">MLT - MILILITRE</option><option value="MTR - METERS">MTR - METERS</option><option value="MTS - METRIC TON">MTS - METRIC TON</option><option value="NOS - NUMBERS">NOS - NUMBERS</option><option value="PAC - PACKS">PAC - PACKS</option><option value="PCS - PIECES">PCS - PIECES</option><option value="PRS - PAIRS">PRS - PAIRS</option><option value="QTL - QUINTAL">QTL - QUINTAL</option><option value="ROL - ROLLS">ROL - ROLLS</option><option value="SET - SETS">SET - SETS</option><option value="SQF - SQUARE FEET">SQF - SQUARE FEET</option><option value="SQM - SQUARE METERS">SQM - SQUARE METERS</option><option value="SQY - SQUARE YARDS">SQY - SQUARE YARDS</option><option value="TBS - TABLETS">TBS - TABLETS</option><option value="TGM - TEN GROSS">TGM - TEN GROSS</option><option value="THD - THOUSANDS">THD - THOUSANDS</option><option value="TON - TONNES">TON - TONNES</option><option value="TUB - TUBES">TUB - TUBES</option><option value="UGS - US GALLONS">UGS - US GALLONS</option><option value="UNT - UNITS">UNT - UNITS</option><option value="YDS - YARDS">YDS - YARDS</option><option value="OTH - OTHERS">OTH - OTHERS</option><option value="Test - ER Scenario">Test - ER Scenario</option></select></td><td><input type="text" class="form-control amount" id="amount_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="without_item_amount[]" placeholder="Enter Amount" onkeyup="gstCalculation()" style="text-align: right"></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove_more_tr" data-id="'+add_more_count_withgst+'" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"></path></svg></td></tr>';
+      let newRow = '<tr id="withgst_tr_'+add_more_count_withgst+'" class="font-14 font-heading bg-white"><td style="width:30%"><select class="form-control item" id="item_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="item[]" onchange="gstCalculation()"><option value="">Select Item</option>@foreach($items as $item)<option value="{{$item->id}}">{{$item->account_name}}</option>@endforeach </select></td><td><input type="number" class="form-control hsn" id="hsn_1" name="hsn[]" placeholder="HSN/SAC"></td><td><select class="form-select percentage" id="percentage_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="percentage[]" onchange="gstCalculation()"><option value="">GST(%)</option><option value="0">0%</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option><option value="28">28%</option></select></td><td style="width:15%"><select class="form-control select2-single unit_code" name="unit_code[]" id="unit_code_'+add_more_count_withgst+'" ><option value="">-- Select UQC --</option><option value="BAL - BALE">BAL - BALE</option><option value="BDL - BUNDLES">BDL - BUNDLES</option><option value="BKL - BUCKLES">BKL - BUCKLES</option><option value="BOU - BILLION OF UNITS">BOU - BILLION OF UNITS</option><option value="BOX - BOX">BOX - BOX</option><option value="BTL - BOTTLES">BTL - BOTTLES</option><option value="BUN - BUNCHES">BUN - BUNCHES</option><option value="CAN - CANS">CAN - CANS</option><option value="CBM - CUBIC METERS">CBM - CUBIC METERS</option><option value="CCM - CUBIC CENTIMETERS">CCM - CUBIC CENTIMETERS</option><option value="CMS - CENTIMETERS">CMS - CENTIMETERS</option><option value="CTN - CARTONS">CTN - CARTONS</option><option value="DOZ - DOZENS">DOZ - DOZENS</option><option value="DRM - DRUMS">DRM - DRUMS</option><option value="GGK - GREAT GROSS">GGK - GREAT GROSS</option><option value="GMS - GRAMMES">GMS - GRAMMES</option><option value="GRS - GROSS">GRS - GROSS</option><option value="GYD - GROSS YARDS">GYD - GROSS YARDS</option><option value="KGS - KILOGRAMS">KGS - KILOGRAMS</option><option value="KLR - KILOLITRE">KLR - KILOLITRE</option><option value="KME - KILOMETRE">KME - KILOMETRE</option><option value="LTR - LITRES">LTR - LITRES</option><option value="MLT - MILILITRE">MLT - MILILITRE</option><option value="MTR - METERS">MTR - METERS</option><option value="MTS - METRIC TON">MTS - METRIC TON</option><option value="NOS - NUMBERS">NOS - NUMBERS</option><option value="PAC - PACKS">PAC - PACKS</option><option value="PCS - PIECES">PCS - PIECES</option><option value="PRS - PAIRS">PRS - PAIRS</option><option value="QTL - QUINTAL">QTL - QUINTAL</option><option value="ROL - ROLLS">ROL - ROLLS</option><option value="SET - SETS">SET - SETS</option><option value="SQF - SQUARE FEET">SQF - SQUARE FEET</option><option value="SQM - SQUARE METERS">SQM - SQUARE METERS</option><option value="SQY - SQUARE YARDS">SQY - SQUARE YARDS</option><option value="TBS - TABLETS">TBS - TABLETS</option><option value="TGM - TEN GROSS">TGM - TEN GROSS</option><option value="THD - THOUSANDS">THD - THOUSANDS</option><option value="TON - TONNES">TON - TONNES</option><option value="TUB - TUBES">TUB - TUBES</option><option value="UGS - US GALLONS">UGS - US GALLONS</option><option value="UNT - UNITS">UNT - UNITS</option><option value="YDS - YARDS">YDS - YARDS</option><option value="OTH - OTHERS">OTH - OTHERS</option><option value="Test - ER Scenario">Test - ER Scenario</option></select></td><td><input type="text" class="form-control amount" onblur="validateWithoutItemAmount(this)" id="amount_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="without_item_amount[]" placeholder="Enter Amount" onkeyup="gstCalculation()" style="text-align: right"></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove_more_tr" data-id="'+add_more_count_withgst+'" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"></path></svg></td></tr>';
       $curRow.after(newRow);
       //$("#item_"+add_more_count_withgst).select2();
       $(".item").select2();
@@ -2113,95 +2549,95 @@
    }   
    add_more_count3 = $(".account").length; // Start count based on existing rows
 
-$(document).on("click", ".add_more_without", function () {
-    let empty_status = 0;
+   $(document).on("click", ".add_more_without", function () {
+      let empty_status = 0;
 
-    $(".account").each(function () {
-        let id = $(this).attr("data-id");
-        if ($(this).val() == "" || $("#debit_" + id).val() == "") {
-            empty_status = 1;
-        }
-    });
+      $(".account").each(function () {
+         let id = $(this).attr("data-id");
+         if ($(this).val() == "" || $("#debit_" + id).val() == "") {
+               empty_status = 1;
+         }
+      });
 
-    if (empty_status == 1) {
-        alert("Please enter required fields");
-        return;
-    }
+      if (empty_status == 1) {
+         alert("Please enter required fields");
+         return;
+      }
 
-    add_more_count3++;
-    var $curRow = $(this).closest('tr');
-    let tr_id = "tr_without_" + add_more_count3;
-    let optionElements = $("#account_1").html();
+      add_more_count3++;
+      var $curRow = $(this).closest('tr');
+      let tr_id = "tr_without_" + add_more_count3;
+      let optionElements = $("#account_1").html();
 
-    let newRow = `
-    <tr id="${tr_id}">
-        <td class="srn" id="srn_${add_more_count3}">${add_more_count3}</td>
-        <td>
-            <select class="form-control account select2-single" name="account_name[]" data-id="${add_more_count3}" id="account_${add_more_count3}">
-                ${optionElements}
-            </select>
-        </td>
-        <td>
-            <input type="number" name="debit[]" class="form-control debit" id="debit_${add_more_count3}" data-id="${add_more_count3}" placeholder="Debit Amount" onkeyup="debitTotal();">
-        </td>
-        <td class="action-cell" style="display: flex;"></td>
-    </tr>`;
+      let newRow = `
+      <tr id="${tr_id}">
+         <td class="srn" id="srn_${add_more_count3}">${add_more_count3}</td>
+         <td>
+               <select class="form-control account select2-single" name="account_name[]" data-id="${add_more_count3}" id="account_${add_more_count3}">
+                  ${optionElements}
+               </select>
+         </td>
+         <td>
+               <input type="number" name="debit[]" class="form-control debit" id="debit_${add_more_count3}" data-id="${add_more_count3}" placeholder="Debit Amount" onkeyup="debitTotal();">
+         </td>
+         <td class="action-cell" style="display: flex;"></td>
+      </tr>`;
 
-    $curRow.after(newRow);
-    $(".select2-single").select2();
+      $curRow.after(newRow);
+      $(".select2-single").select2();
 
-    refreshActionIcons();
-});
+      refreshActionIcons();
+   });
 
-  $(document).on("click", ".remove_without", function () {
-    let id = $(this).data("id");
-    $("#tr_without_" + id).remove();
+   $(document).on("click", ".remove_without", function () {
+      let id = $(this).data("id");
+      $("#tr_without_" + id).remove();
 
-    refreshActionIcons();
-    debitTotal();
-});
-function refreshActionIcons() {
-    let totalRows = $(".account").length;
+      refreshActionIcons();
+      debitTotal();
+   });
+   function refreshActionIcons() {
+      let totalRows = $(".account").length;
 
-    // Reindex SRNs
-    $(".account").each(function (index) {
-        let rowId = $(this).attr("data-id");
-        $("#srn_" + rowId).html(index + 1 + ".");
-    });
+      // Reindex SRNs
+      $(".account").each(function (index) {
+         let rowId = $(this).attr("data-id");
+         $("#srn_" + rowId).html(index + 1 + ".");
+      });
 
-    // Clear all action columns
-    $(".action-cell").html("");
+      // Clear all action columns
+      $(".action-cell").html("");
 
-    // Apply action icons based on row positions
-    $(".account").each(function (index) {
-        let rowId = $(this).attr("data-id");
-        let $actionCell = $("#tr_without_" + rowId + " .action-cell");
+      // Apply action icons based on row positions
+      $(".account").each(function (index) {
+         let rowId = $(this).attr("data-id");
+         let $actionCell = $("#tr_without_" + rowId + " .action-cell");
 
-        let removeIcon = `
-            <svg style="color: red; cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                class="bi bi-file-minus-fill remove_without" data-id="${rowId}" viewBox="0 0 16 16">
-                <path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/>
-            </svg>`;
+         let removeIcon = `
+               <svg style="color: red; cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                  class="bi bi-file-minus-fill remove_without" data-id="${rowId}" viewBox="0 0 16 16">
+                  <path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/>
+               </svg>`;
 
-        let addIcon = `
-            <svg style="color: green; cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                viewBox="0 0 24 24" fill="currentColor"
-                class="bg-primary rounded-circle add_more_without" data-id="${rowId}">
-                <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/>
-            </svg>`;
+         let addIcon = `
+               <svg style="color: green; cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                  viewBox="0 0 24 24" fill="currentColor"
+                  class="bg-primary rounded-circle add_more_without" data-id="${rowId}">
+                  <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/>
+               </svg>`;
 
-        if (totalRows === 1) {
-            // Only 1 row → show Add only
-            $actionCell.html(addIcon);
-        } else if (index === totalRows - 1) {
-            // Last row → Remove + Add
-            $actionCell.html(removeIcon + addIcon);
-        } else {
-            // All other rows (including first) → Remove only
-            $actionCell.html(removeIcon);
-        }
-    });
-}
+         if (totalRows === 1) {
+               // Only 1 row → show Add only
+               $actionCell.html(addIcon);
+         } else if (index === totalRows - 1) {
+               // Last row → Remove + Add
+               $actionCell.html(removeIcon + addIcon);
+         } else {
+               // All other rows (including first) → Remove only
+               $actionCell.html(removeIcon);
+         }
+      });
+   }
 
 
    function debitTotal() {
@@ -2238,19 +2674,57 @@ function refreshActionIcons() {
       creditTotal();
    });
    $("#date").change(function(){
-   if($("#voucher_no").val()!="" && $("#voucher_no").val()!="OTHER"){
-      let voucher_date = $('#voucher_no option:selected').data('voucher_date');
-      let credit_note_date = $("#date").val();
-      var d1 = new Date(voucher_date);
-      var d2 = new Date(credit_note_date);
-      if (d1 > d2) {
-         //$('#voucher_no').val(null).trigger('change');
-         $("#date").val("");
-         alert("Date Cannot be greater than Voucher Date.");
-         return;
+      if($("#voucher_no").val()!="" && $("#voucher_no").val()!="OTHER"){
+         let voucher_date = $('#voucher_no option:selected').data('voucher_date');
+         let credit_note_date = $("#date").val();
+         var d1 = new Date(voucher_date);
+         var d2 = new Date(credit_note_date);
+         if (d1 > d2) {
+            //$('#voucher_no').val(null).trigger('change');
+            $("#date").val("");
+            alert("Date Cannot be greater than Voucher Date.");
+            return;
+         }
       }
-   }
-   
-});
+      
+   });
+   $(document).on('wheel', 'input[type=number]', function () {
+      $(this).blur();
+   });
+
+   $(document).on('keydown', 'input[type=number]', function (e) {
+      if (e.key === '-' || e.key === 'e') {
+         e.preventDefault();
+      }
+   });
+
+   $(document).on('input', 'input[type=number]', function () {
+      if ($(this).val() < 0) {
+         $(this).val('');
+      }
+   });
+
+   $("#party_id").on("change", function(){
+
+      if($("#type").val() !== "WITHOUT ITEM") return;
+
+      $("#cgst, #sgst, #igst").val('');
+      $("#net_amount, #total_amount").val('');
+
+      $(".cgst_tr, .sgst_tr, .igst_tr").hide();
+
+      customer_gstin = $("#party_id option:selected").data("gstin") || "";
+
+      gstCalculation();
+   });
+
+   $("#series_no").on("change", function(){
+
+      if($("#type").val() !== "WITHOUT ITEM") return;
+
+      merchant_gstin = $("#series_no option:selected").data("gst_no") || "";
+
+      gstCalculation();
+   });
 </script>
 @endsection

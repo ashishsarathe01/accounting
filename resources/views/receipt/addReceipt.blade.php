@@ -14,7 +14,7 @@
       height: 46px !important;
    }
    .select2-container{
-          width: 300 px !important;
+          width: 300px !important;
    }
    .select2-container--default .select2-selection--single{
       border-radius: 12px !important;
@@ -74,10 +74,7 @@
                      <label for="name" class="form-label font-14 font-heading">Date</label>
                      <input type="date" id="date" class="form-control calender-bg-icon calender-placeholder" name="date" placeholder="Select date" required value="{{$date}}" min="{{Session::get('from_date')}}" max="{{Session::get('to_date')}}">
                   </div>
-                  <div class="mb-2 col-md-2">
-                     <label for="name" class="form-label font-14 font-heading">Voucher No.</label>
-                     <input type="text" id="voucher_no" class="form-control" name="voucher_no" placeholder="Voucher No.">
-                  </div>
+                  
                   <div class="mb-2 col-md-2">
                      <label for="series_no" class="form-label font-14 font-heading">Series No.</label>
                      <select id="series_no" class="form-control" name="series_no">
@@ -85,11 +82,23 @@
                         <?php
                         if(count($mat_series) > 0) {
                            foreach ($mat_series as $value) { ?>
-                              <option value="<?php echo $value->series; ?>" <?php if(count($mat_series)==1) { echo "selected";} ?>><?php echo $value->series; ?></option>
+                              <option value="<?php echo $value->series; ?>"
+                                 data-invoice_start_from="<?php echo $value->invoice_start_from ?? ''; ?>"
+                                 data-invoice_prefix="<?php echo $value->invoice_prefix ?? ''; ?>"
+                                 data-manual_enter_invoice_no="<?php echo $value->manual_enter_invoice_no ?? ''; ?>"
+                              >
+                                 <?php echo $value->series; ?>
+                              </option>
                               <?php 
                            }
                         } ?>
                      </select>
+                  </div>
+                  <div class="mb-2 col-md-2">
+                     <label for="name" class="form-label font-14 font-heading">Voucher No.</label>
+                     <input type="text" class="form-control" id="voucher_prefix" name="voucher_prefix" style="text-align:right;">
+                     <input type="hidden" id="voucher_no" name="voucher_no">
+                     <input type="hidden" id="manual_enter_invoice_no" name="manual_enter_invoice_no">
                   </div>
                   <div class="mb-2 col-md-2">
                      <label for="name" class="form-label font-14 font-heading">Mode</label>
@@ -126,7 +135,7 @@
                               </select>
                            </td>
                            <td class="">
-                              <select class="form-select select2-single" id="account_1" name="account_name[]" required>
+                              <select class="form-select select2-single" id="account_1" data-id="1" name="account_name[]" required>
                                  <option value="">Select</option>
                                  <?php
                                  foreach ($party_list as $value) { ?>
@@ -154,7 +163,7 @@
                               </select>
                            </td>
                            <td class="">
-                              <select class="form-select" id="account_2" name="account_name[]" required>
+                              <select class="form-select select2-single account-dropdown" id="account_2" data-id="2" name="account_name[]" required>
                                  <option value="">Select</option>
                                     <!-- Cash Accounts -->
                                     @foreach($debit_cash_accounts as $cash)
@@ -185,7 +194,7 @@
                      <div class="plus-icon">
                         <tr class="font-14 font-heading bg-white">
                            <td class="w-min-120 " colspan="7">
-                              <a class="add_more"><svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;">
+                              <a class="add_more" tabindex="0"><svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;">
                               <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg></a>
                            </td>
                         </tr>
@@ -369,9 +378,14 @@
       });
       newRow = '<tr id="tr_' + add_more_count + '"><td><select class="form-control type" name="type[]"  data-id="' + add_more_count + '" id="type_' + add_more_count + '"><option value="">Type</option>'+type_option+'</select></td><td><select class="form-control account select2-single" name="account_name[]" data-id="' + add_more_count + '" id="account_' + add_more_count + '">';
       newRow += optionElements;
-      newRow += '</select></td><td><input type="number" name="debit[]" class="form-control debit" data-id="' + add_more_count + '" id="debit_' + add_more_count + '" placeholder="Debit Amount" readonly onkeyup="debitTotal();"></td><td><input type="number" name="credit[]" class="form-control credit" data-id="' + add_more_count + '" id="credit_' + add_more_count + '" placeholder="Credit Amount" readonly onkeyup="creditTotal();"></td><td><input type="text" name="narration[]" class="form-control narration" data-id="' + add_more_count + '" id="narration_' + add_more_count + '" placeholder="Enter Narration"></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
+      newRow += '</select></td><td><input type="number" name="debit[]" class="form-control debit" data-id="' + add_more_count + '" id="debit_' + add_more_count + '" placeholder="Debit Amount" readonly onkeyup="debitTotal();"></td><td><input type="number" name="credit[]" class="form-control credit" data-id="' + add_more_count + '" id="credit_' + add_more_count + '" placeholder="Credit Amount" readonly onkeyup="creditTotal();"></td><td><input type="text" name="narration[]" class="form-control narration" data-id="' + add_more_count + '" id="narration_' + add_more_count + '" placeholder="Enter Narration"></td><td><svg style="color: red;cursor: pointer;" tabindex="0" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
       $curRow.before(newRow);
-      $('.select2-single').select2();
+$('.select2-single').select2();
+
+// focus new row type
+setTimeout(function(){
+   $("#type_" + add_more_count).focus();
+},100);
       // Add change event handler for new Type dropdown
       $(`#type_${add_more_count}`).change(function () {
          const selectedType = $(this).val();
@@ -497,7 +511,6 @@
          $("#frm").submit();
       });
    });
-   $( ".select2-single, .select2-multiple" ).select2();
    $("#mode").change(function(){
       $("#cheque_no").val('');
       $("#cheque_no").prop('readonly',true);
@@ -577,6 +590,145 @@ $(document).ready(function () {
         $('.account-dropdown').val('').trigger('change.select2'); // Clear selection
         $('.account-dropdown').select2('close'); // Force close dropdown to refresh filtered list
     });
+});
+$(document).on('keydown', '.add_more', function(event) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    $(this).click();
+  }
+});
+$(document).on('keydown', '.remove', function(event) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    $(this).click();
+  }
+});
+// Narration → remove button
+$(document).on("keydown", ".narration", function(e){
+
+    if(e.key === "Tab" && !e.shiftKey){
+
+        let id = $(this).data("id");
+        let removeBtn = $("#tr_"+id).find(".remove");
+
+        if(removeBtn.length){
+            e.preventDefault();
+            removeBtn.focus();
+        }
+
+    }
+
+});
+// remove → next row OR +
+$(document).on("keydown", ".remove", function(e){
+
+    if(e.key === "Tab" && !e.shiftKey){
+
+        e.preventDefault();
+
+        let id = $(this).data("id");
+        let nextRow = $("#tr_" + (parseInt(id) + 1));
+
+        if(nextRow.length){
+            nextRow.find(".type").focus();
+        }else{
+            $(".add_more").focus();
+        }
+
+    }
+
+});
+// prevent enter navigation
+$(document).on("keydown", "input, textarea", function(e) {
+
+    if (e.key === "Enter") {
+
+        if ($(e.target).closest(".add_more, .remove, .submit_data").length) {
+            return;
+        }
+
+        if ($(this).hasClass("select2-search__field")) {
+            return;
+        }
+
+        e.preventDefault();
+        return false;
+    }
+
+});
+$(document).ready(function(){
+   $("#date").focus();
+});
+$(document).ready(function () {
+
+  $('.select2-single').select2({
+    placeholder: "Select",
+    allowClear: true,
+    width: '100%'
+  });
+
+});
+$(document).on('select2:select select2:unselect select2:close', 'select[id^="type_"]', function () {
+
+    const id = $(this).data('id');
+    const selectedValue = $(this).val();
+    const previousValue = $(this).data('previousValue');
+
+    if (!previousValue || selectedValue === previousValue) {
+        $("#account_" + id).focus();
+    }
+
+    $(this).data('previousValue', selectedValue);
+
+});
+$(document).on('select2:select select2:unselect select2:close', 'select[id^="account_"]', function () {
+
+    const id = $(this).data('id');
+    const selectedValue = $(this).val();
+    const previousValue = $(this).data('previousValue');
+
+    if (!previousValue || selectedValue === previousValue) {
+
+        if(!$("#debit_"+id).prop("readonly")){
+            $("#debit_"+id).focus();
+        }else{
+            $("#credit_"+id).focus();
+        }
+
+    }
+
+    $(this).data('previousValue', selectedValue);
+
+});
+
+$(document).ready(function(){
+
+    $('#series_no').change(function(){
+
+        let selected = $(this).find(':selected');
+
+        let prefix = selected.data('invoice_prefix') ?? '';
+        let manual = selected.attr('data-manual_enter_invoice_no');
+
+        let start = selected.data('invoice_start_from') ?? '';
+        $('#voucher_prefix').val(prefix);
+        $('#voucher_no').val(start);
+        $('#manual_enter_invoice_no').val(manual ?? '');
+
+        if(manual === undefined || manual === null || manual === ''){
+            $('#voucher_prefix').prop('readonly', false);
+        }
+        else if(manual == '1'){
+            $('#voucher_prefix').prop('readonly', false);
+        }
+        else if(manual == '0'){
+            $('#voucher_prefix').prop('readonly', true);
+        }
+
+    });
+
+    $('#series_no').trigger('change');
+
 });
 </script>
 @endsection

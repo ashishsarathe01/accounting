@@ -2,6 +2,21 @@
 @section('content')
 <!-- header-section -->
 @include('layouts.header')
+<style>
+   /* ===== Sticky Header for Purchase Detail ===== */
+
+.table-scroll-wrapper {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.table-scroll-wrapper thead th {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #f8f9fa; /* match your theme */
+}
+</style>
 <!-- list-view-company-section -->
 <div class="list-of-view-company ">
    <section class="list-of-view-company-section container-fluid">
@@ -39,7 +54,7 @@
                   </div>
                <p><input type="checkbox" class="custom-checkbox-input detailed"> Detailed</p>
             </div>
-            <div class="row display-profit-loss  p-0 m-0 font-heading border-divider shadow-sm rounded-bottom-8" style="overflow: scroll;">
+            <div class="row display-profit-loss p-0 m-0 font-heading border-divider shadow-sm rounded-bottom-8 table-scroll-wrapper">
                <table class="table table-bordered">
                   <thead>
                      <tr>
@@ -69,10 +84,12 @@
                            @endif
                         @endforeach
                         @php 
-                           array_push($merge_arr,array('id'=>$value['id'],'date'=>$value['date'],'account_name'=>$value['account']['account_name'],'voucher_no'=>$value['voucher_no'],"net_total"=>$value['purchase_description_sum_amount'] + $adjust_sundry_amount,'purchase_total'=>$value['purchase_description_sum_amount'],'sundry'=>$value['purchaseSundry']->toArray(),'grand_total'=>$value['total'],'voucher_type'=>'','type'=>'PURCHASE'));
+                           array_push($merge_arr,array('id'=>$value['id'],'date'=>$value['date'],'account_name'=>$value['account']['account_name'],'voucher_no'=>$value['voucher_no'],"net_total"=>$value['purchase_description_sum_amount'] + $adjust_sundry_amount,'purchase_total'=>$value['purchase_description_sum_amount'],'sundry'=>$value['purchaseSundry']->toArray(),'grand_total'=>$value['total'],'voucher_type'=>'','type'=>'PURCHASE','item_type' => $value['sr_type'] ?? 'WITH_ITEM'
+));
                         @endphp
                      @endforeach  
-                     @foreach($purchase_return as $key => $value)                           
+                     @foreach($purchase_return as $key => $value)  
+                     
                         @php $adjust_sundry_amount = 0; @endphp
                         @foreach($value['purchaseReturnSundry'] as $v1)
                            @if($v1->adjust_sale_amt=="Yes")
@@ -83,9 +100,67 @@
                               @endif
                            @endif
                         @endforeach
-                        @php 
-                           array_push($merge_arr,array('id'=>$value['id'],'date'=>$value['date'],'account_name'=>$value['account']['account_name'],'voucher_no'=>$value['sr_prefix'],"net_total"=>$value['purchase_return_description_sum_amount'] + $adjust_sundry_amount,'purchase_total'=>$value['purchase_retuen_description_sum_amount'],'sundry'=>$value['purchaseReturnSundry']->toArray(),'grand_total'=>$value['total'],'voucher_type'=>$value['voucher_type'],'type'=>'DEBIT NOTE'));
+                       @php
+                            $isWithoutItem = empty($value['purchase_return_description_sum_amount']);
+                        
+                            $sundryArray = $value['purchaseReturnSundry']->toArray();
+                        
+                            if($isWithoutItem){
+                        
+                                $taxable = floatval(str_replace(',', '', $value['taxable_amt']));
+                                $cgst    = floatval(str_replace(',', '', $value['tax_cgst']));
+                                $sgst    = floatval(str_replace(',', '', $value['tax_sgst']));
+                                $igst    = floatval(str_replace(',', '', $value['tax_igst']));
+                                $total   = floatval(str_replace(',', '', $value['total']));
+                        
+                                // Inject GST into sundry array dynamically
+                                foreach($bill_sundray as $bs){
+                                    if(strtolower($bs->name) == 'cgst' && $cgst > 0){
+                                        $sundryArray[] = [
+                                            'bill_sundry' => $bs->id,
+                                            'amount' => $cgst
+                                        ];
+                                    }
+                                    if(strtolower($bs->name) == 'sgst' && $sgst > 0){
+                                        $sundryArray[] = [
+                                            'bill_sundry' => $bs->id,
+                                            'amount' => $sgst
+                                        ];
+                                    }
+                                    if(strtolower($bs->name) == 'igst' && $igst > 0){
+                                        $sundryArray[] = [
+                                            'bill_sundry' => $bs->id,
+                                            'amount' => $igst
+                                        ];
+                                    }
+                                }
+                        
+                                $return_net_total = $taxable;
+                                $return_purchase_total = $taxable;
+                                $grand_total_value = $total;
+                        
+                            } else {
+                        
+                                $return_net_total = $value['purchase_return_description_sum_amount'] + $adjust_sundry_amount;
+                                $return_purchase_total = $value['purchase_return_description_sum_amount'];
+                                $grand_total_value = floatval(str_replace(',', '', $value['total']));
+                            }
+                      
+                            array_push($merge_arr,array(
+                                'id'=>$value['id'],
+                                'date'=>$value['date'],
+                                'account_name'=>$value['account']['account_name'],
+                                'voucher_no'=>$value['sr_prefix'],
+                                "net_total"=>$return_net_total,
+                                'purchase_total'=>$return_purchase_total,
+                                'sundry'=>$sundryArray,
+                                'grand_total'=>$grand_total_value,
+                                'voucher_type'=>$value['voucher_type'],
+                                'type'=>'DEBIT NOTE',
+                                'item_type' => $value['sr_type'] ?? 'WITH_ITEM'
+                            ));
                         @endphp
+
                      @endforeach
                      @foreach($sale_return as $key => $value)                           
                         @php $adjust_sundry_amount = 0; @endphp
@@ -99,7 +174,8 @@
                            @endif
                         @endforeach
                         @php 
-                           array_push($merge_arr,array('id'=>$value['id'],'date'=>$value['date'],'account_name'=>$value['account']['account_name'],'voucher_no'=>$value['sr_prefix'],"net_total"=>$value['sale_return_descriptions_sum_amount'] + $adjust_sundry_amount,'purchase_total'=>$value['sale_return_descriptions_sum_amount'],'sundry'=>$value['saleReturnSundry']->toArray(),'grand_total'=>$value['total'],'voucher_type'=>$value['voucher_type'],'type'=>'CREDIT NOTE'));
+                           array_push($merge_arr,array('id'=>$value['id'],'date'=>$value['date'],'account_name'=>$value['account']['account_name'],'voucher_no'=>$value['sr_prefix'],"net_total"=>$value['sale_return_descriptions_sum_amount'] + $adjust_sundry_amount,'purchase_total'=>$value['sale_return_descriptions_sum_amount'],'sundry'=>$value['saleReturnSundry']->toArray(),'grand_total'=>$value['total'],'voucher_type'=>$value['voucher_type'],'type'=>'CREDIT NOTE','item_type' => $value['sr_type'] ?? 'WITH_ITEM'
+));
                         @endphp
                      @endforeach                     
                      @php 
@@ -108,10 +184,11 @@
                         });
                      @endphp
                      @foreach($merge_arr as $key => $value)
+         
                         @if(!empty($search_type) && $search_type!=$value['type'])
                            @continue;
                         @endif
-                        <tr class="view_invoice" data-id="{{$value['id']}}" data-type="{{$value['type']}}" style="cursor:pointer;">
+                        <tr class="view_invoice" data-id="{{$value['id']}}" data-type="{{$value['type']}}" data-item-type="{{$value['item_type']??'WITH_ITEM'}}" style="cursor:pointer;">
                            <td style="text-align:center;">{{date('d-m-Y',strtotime($value['date']))}}</td>
                            <td style="text-align:left;">{{$value['type']}}</td>
                            <td style="text-align:left;">{{$value['account_name']}}</td>
@@ -149,11 +226,20 @@
                                  @endforeach
                                  {{formatIndianNumber($freight)}}
                                  @php 
-                                    if(isset($sundry_sum_arr[$bsundry->id])){
-                                       $sundry_sum_arr[$bsundry->id] = $sundry_sum_arr[$bsundry->id] + $freight;
-                                    }else{
-                                       $sundry_sum_arr[$bsundry->id] = $freight;
-                                    }
+                                    
+                                
+                                  $amount = str_replace(',', '', $freight);
+                                $amount = floatval($amount);
+                            
+                                if($value['type'] == "DEBIT NOTE"){
+                                    $amount = -$amount;
+                                }
+                            
+                                if(isset($sundry_sum_arr[$bsundry->id])){
+                                    $sundry_sum_arr[$bsundry->id] += $amount;
+                                }else{
+                                    $sundry_sum_arr[$bsundry->id] = $amount;
+                                }
                                  @endphp
                               </td>
                            @endforeach                           
@@ -161,9 +247,17 @@
                               {{formatIndianNumber($value['grand_total'])}}
                               @php 
                                  if($value['type']=="DEBIT NOTE"){
-                                    $grand_total = $grand_total - $value['grand_total']; 
-                                 }else{
-                                    $grand_total = $grand_total + $value['grand_total'];  
+                                    $amount = str_replace(',', '', $value['grand_total']);
+                                    $amount = round(floatval($amount));
+                                    
+                                    $grand_total = $grand_total - $amount;
+                                    
+                                         }else{
+                                           $amount = str_replace(',', '', $value['grand_total']);
+                                   $amount = round(floatval($amount));
+                                    
+                                    $grand_total = $grand_total + $amount;
+
                                  }
                               @endphp
                            </td>                           
@@ -209,7 +303,14 @@
          if($(this).attr('data-type')=="PURCHASE"){
             window.location = "{{route('purchase-invoice')}}/"+$(this).attr('data-id');
          }else if($(this).attr('data-type')=="DEBIT NOTE"){
-            window.location = "{{route('purchase-return-invoice')}}/"+$(this).attr('data-id');
+             
+              if($(this).attr('data-item-type') == "WITHOUT ITEM"){
+         window.location = "/purchase-return-without-item-invoice/" + $(this).attr('data-id');
+      }else{
+         window.location = "{{route('purchase-return-invoice')}}/" + $(this).attr('data-id');
+      }
+
+           // window.location = "{{route('purchase-return-invoice')}}/"+$(this).attr('data-id');
          }else if($(this).attr('data-type')=="CREDIT NOTE"){
             window.location = "{{route('sale-return-invoice')}}/"+$(this).attr('data-id');
          }

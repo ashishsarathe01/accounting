@@ -12,8 +12,10 @@ use App\Models\Bank;
 use App\Models\Owner;
 use App\Models\Shareholder;
 use App\Models\User;
+use App\Models\PrivilegesModuleMapping;
 use Illuminate\Support\Facades\Gate;
 use DB;
+use Carbon\Carbon;
 class CompanyController extends Controller{
    public function companyListing(){
       if(Auth::check()) {
@@ -68,11 +70,21 @@ class CompanyController extends Controller{
       }else{
          $company = new Companies;
       }
+      if(Session::get('user_type')=="OWNER"){
+         $company->user_id = Auth::id();
+      }else{
+         $com = Companies::where('id', Session::get('user_company_id'))->first();
+         $company->user_id = $com->user_id;
+         //Set Sub User Previlege
+         $privilege = PrivilegesModuleMapping::where('employee_id', Session::get('user_id'))
+               ->where('company_id', Session::get('user_company_id'))
+               ->get();
+      }
       
-      $company->user_id = Auth::id();
       $company->business_type = $request->business_type;
       $company->company_name = $request->company_name;
-      $company->legal_name = $request->legal_name;
+      $company->company_name = $request->company_name;
+      $company->legal_name = $request->legal_name ?: $request->company_name;
       $company->cin = $request->cin;
       $company->gst_applicable = $request->gst_applicable;
       $company->gst = $request->gst;
@@ -87,12 +99,29 @@ class CompanyController extends Controller{
       $company->books_start_from = $request->books_start_from;
       $company->email_id = $request->email_id;
       $company->mobile_no = $request->mobile_no;
-      $company->save();
-      Session::put('inserted_company_id', $company->id);
-      Session::put('inserted_business_type', $request->business_type);
-      Session::put('user_company_id', $company->id);
-      Session::put('default_fy', $request->current_finacial_year);
+      $company->save();      
       if($company) {
+         Session::put('inserted_company_id', $company->id);
+         Session::put('inserted_business_type', $request->business_type);
+         Session::put('user_company_id', $company->id);
+         Session::put('default_fy', $request->current_finacial_year);
+         $y = explode("-", $request->current_finacial_year);
+         // FY always starts 1st April and ends 31st March
+         $from_date = date('Y-m-d', strtotime($y[0]."-04-01"));
+         $to_date   = date('Y-m-d', strtotime("20".$y[1]."-03-31"));
+         Session::put('from_date', $from_date);
+         Session::put('to_date', $to_date);
+         //Set Sub User Previlege
+         if(Session::get('user_type')!="OWNER"){
+             foreach($privilege as $priv){
+                 $new_priv = new PrivilegesModuleMapping;
+                 $new_priv->employee_id = Session::get('user_id');
+                 $new_priv->module_id = $priv->module_id;
+                 $new_priv->company_id = $company->id;
+                 $new_priv->created_at = Carbon::now();
+                 $new_priv->save();
+             }
+         }
          return redirect('add-owner')->withSuccess('Company Created successfully!');
       }else{
          return redirect("add-company")->withError('Something went wrong, please try after some time!');
@@ -112,7 +141,7 @@ class CompanyController extends Controller{
       $company = Companies::find(Session::get('user_company_id'));
       $company->business_type = $request->business_type;
       $company->company_name = $request->company_name;
-       $company->legal_name = $request->legal_name;
+      $company->legal_name = $request->legal_name;
       $company->gst_applicable = $request->gst_applicable;
       $company->gst = $request->gst;
       $company->pan = $request->pan;
@@ -123,6 +152,13 @@ class CompanyController extends Controller{
       $company->country_name = $request->country_name;
       $company->pin_code = $request->pin_code;
       $company->current_finacial_year = $request->current_finacial_year;
+      $y = explode("-", $request->current_finacial_year);
+       // FY always starts 1st April and ends 31st March
+        $from_date = date('Y-m-d', strtotime($y[0]."-04-01"));
+        $to_date   = date('Y-m-d', strtotime("20".$y[1]."-03-31"));
+
+        Session::put('from_date', $from_date);
+        Session::put('to_date', $to_date);
       $company->books_start_from = $request->books_start_from;
       $company->email_id = $request->email_id;
       $company->mobile_no = $request->mobile_no;
@@ -183,27 +219,80 @@ class CompanyController extends Controller{
          return response()->json(['type' => 'success', 'response' => $response]);
       }
    }
-   public function manageFinancialYear(Request $request){
-      Gate::authorize('action-module', 19);
+   public function manageFinancialYear(Request $request)
+   {
+    //   Gate::authorize('action-module', 19);
+      
       $comp = Companies::select('current_finacial_year','default_fy')
-                        ->where('id',Session::get('user_company_id'))
-                        ->first();
+                     ->where('id',Session::get('user_company_id'))
+                     ->first();
+
       $default_fy = $comp->current_finacial_year;
-      if($comp->default_fy!=""){
-         $default_fy = $comp->default_fy;
+      if(Session::get('default_fy') != ""){
+         //$default_fy = $comp->default_fy;
+         $default_fy = Session::get('default_fy');
       }
-      return view('company/managefy',['default_fy'=>$default_fy,'current_finacial_year'=>$comp->current_finacial_year]);
+
+      return response()->json([
+         'default_fy' => $default_fy,
+         'current_financial_year' => $comp->current_finacial_year
+      ]);
    }
-   public function changeDefaultFY(Request $request){
-      $comp =  Companies::find(Session::get('user_company_id'));
-      $comp->default_fy = $request->current_finacial_year;
+   public function changeDefaultFY(Request $request) {
+      $comp = Companies::find(Session::get('user_company_id'));
+      $comp->default_fy = $request->current_finacial_year_header;
       $comp->update();
-      $y = explode("-",$request->current_finacial_year);
-      $from_date = date('Y-m-d',strtotime($y[0]."-04-01"));
-      $to_date = date('Y-m-d',strtotime($y[1]."-03-31"));
+      $y = explode("-", $request->current_finacial_year_header);
+      // FY always starts 1st April and ends 31st March
+      $from_date = date('Y-m-d', strtotime($y[0]."-04-01"));
+      $to_date   = date('Y-m-d', strtotime("20".$y[1]."-03-31"));
+
       Session::put('from_date', $from_date);
       Session::put('to_date', $to_date);
-      Session::put('default_fy', $request->current_finacial_year);
-      return redirect("manage-financial-year")->withSuccess('Financial Year Changed Successfully!');
+      Session::put('default_fy', $request->current_finacial_year_header);
+
+      return redirect("dashboard")->withSuccess('Financial Year Changed Successfully!');
    }
+   
+   public function editMailSettings()
+{
+    $companyId = Session::get('user_company_id');
+    $company = Companies::findOrFail($companyId);
+
+    return view('company.mail_settings', compact('company'));
+}
+
+
+public function updateMailSettings(Request $request)
+{
+    $companyId = Session::get('user_company_id');
+$company = Companies::findOrFail($companyId);
+
+    $request->validate([
+        'smtp_host' => 'required|string',
+        'smtp_port' => 'required|numeric',
+        'smtp_username' => 'required|email',
+        'smtp_password' => 'nullable|string',
+        'smtp_encryption' => 'required|in:tls,ssl,null',
+        'smtp_from_name' => 'required|string',
+    ]);
+
+    $data = $request->only([
+        'smtp_host',
+        'smtp_port',
+        'smtp_username',
+        'smtp_encryption',
+        'smtp_from_name',
+    ]);
+
+    // Only update password if filled
+    if ($request->filled('smtp_password')) {
+        $data['smtp_password'] = $request->smtp_password;
+    }
+
+    $company->update($data);
+
+    return back()->with('success', 'Mail settings updated successfully!');
+}
+
 }

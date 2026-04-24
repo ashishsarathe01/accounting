@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Session;
 use Gate;
+use DB;
 class BillSundrysController extends Controller
 {
      /**
@@ -21,12 +22,23 @@ class BillSundrysController extends Controller
     {
         Gate::authorize('view-module', 9);
         $com_id = Session::get('user_company_id');
-        $billsundry = BillSundrys::where('company_id',$com_id)
+        $billsundry = BillSundrys::select(
+                                        'bill_sundrys.*',
+                                        DB::raw("
+                                        IF(
+                                            EXISTS(SELECT 1 FROM purchase_sundries ps WHERE ps.bill_sundry = bill_sundrys.id) OR
+                                            EXISTS(SELECT 1 FROM purchase_return_sundries prs WHERE prs.bill_sundry = bill_sundrys.id) OR
+                                            EXISTS(SELECT 1 FROM sale_sundries ss WHERE ss.bill_sundry = bill_sundrys.id) OR
+                                            EXISTS(SELECT 1 FROM sale_return_sundries srs WHERE srs.bill_sundry = bill_sundrys.id) OR
+                                            EXISTS(SELECT 1 FROM stock_transfer_sundries sts WHERE sts.bill_sundry = bill_sundrys.id),
+                                        1,0) as is_used
+                                        ")
+                                    )->where('company_id',$com_id)
                                    ->where('delete', '=', '0')
                                    ->where('status', '=', '1')
-                                   //->OrwhereIn('id',[1,2,3,8,9])
                                    ->orderBy('name')
                                    ->get();
+        
         return view('billsundry/billSundrys')->with('billsundry', $billsundry);
     }
 
@@ -49,7 +61,11 @@ class BillSundrysController extends Controller
                            ->where('financial_year','=',$financial_year)
                            ->where('delete','=','0')
                            ->max(\DB::raw("date"));
-        return view('billsundry/addbillSundrys')->with('account', $account)->with('last_invoice_date', $last_invoice_date);
+                           $usedNatures = \App\Models\BillSundrys::where('company_id', Session::get('user_company_id'))
+                           ->where('delete', '0')
+                           ->pluck('nature_of_sundry')
+                           ->toArray();
+        return view('billsundry/addbillSundrys')->with('account', $account)->with('last_invoice_date', $last_invoice_date)->with('usedNatures', $usedNatures);
     }
 
     /**
@@ -63,9 +79,15 @@ class BillSundrysController extends Controller
         Gate::authorize('action-module', 74);
         $validator = Validator::make($request->all(), [
             'name' => 'required|string',
+
+            'adjust_party_amt' => 'nullable|required_if:nature_of_sundry,IGST_IMPORT,CUSTOM_DUTY',
+            'party_amt_account' => 'nullable|required_if:adjust_party_amt,Yes',
+
         ], [
             'name.required' => 'Name is required.',
+            'party_amt_account.required_if' => 'Party account is required when adjustment is No.',
         ]);
+
         if ($validator->fails()) {
             return response()->json($validator->errors(), 422);
         }
@@ -85,6 +107,9 @@ class BillSundrysController extends Controller
         $account->adjust_sale_amt = $request->input('adjust_sale_amt');
         $account->sale_amt_account = $request->input('sale_amt_account');
         $account->adjust_purchase_amt = $request->input('adjust_purchase_amt');
+        $account->adjust_party_amt = $request->input('adjust_party_amt');
+        $account->party_amt_account = $request->input('party_amt_account');
+
         $account->nature_of_sundry = $request->input('nature_of_sundry');
         if($request->input('nature_of_sundry')=="TCS"){
             $account->sundry_percent = 0.1;
@@ -116,7 +141,12 @@ class BillSundrysController extends Controller
                            ->where('financial_year','=',$financial_year)
                            ->where('delete','=','0')
                            ->max(\DB::raw("date"));
-        return view('billsundry/editBillSundrys')->with('editbill', $editbill)->with('account', $account)->with('last_invoice_date', $last_invoice_date);
+                           $usedNatures = BillSundrys::where('company_id', Session::get('user_company_id'))
+                           ->where('delete', '0')
+                           ->where('id', '!=', $id) // IMPORTANT: ignore current record
+                           ->pluck('nature_of_sundry')
+                           ->toArray();
+        return view('billsundry/editBillSundrys')->with('editbill', $editbill)->with('account', $account)->with('last_invoice_date', $last_invoice_date)->with('usedNatures', $usedNatures);
     }
     /**
      * Update the specified resource in storage.
@@ -131,10 +161,13 @@ class BillSundrysController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string',
 
+            'adjust_party_amt' => 'nullable|required_if:nature_of_sundry,IGST_IMPORT,CUSTOM_DUTY',
+            'party_amt_account' => 'nullable|required_if:adjust_party_amt,Yes',
         ], [
             'name.required' => 'Name is required.',
+            'party_amt_account.required_if' => 'Party account is required when adjustment is No.',
         ]);
-        if ($validator->fails()) {
+                if ($validator->fails()) {
             return response()->json($validator->errors(), 422);
         }
         
@@ -145,6 +178,9 @@ class BillSundrysController extends Controller
         $account->sale_amt_account = $request->input('sale_amt_account');
         $account->adjust_purchase_amt = $request->input('adjust_purchase_amt');
         $account->purchase_amt_account = $request->input('purchase_amt_account');
+        $account->adjust_party_amt = $request->input('adjust_party_amt');
+        $account->party_amt_account = $request->input('party_amt_account');
+
         $account->status = $request->input('status');
         $account->sequence = $request->input('sequence');
         if($request->input('nature_of_sundry')=="TCS"){
@@ -153,7 +189,10 @@ class BillSundrysController extends Controller
             $account->sundry_percent = "";
         }
         $account->nature_of_sundry = $request->input('nature_of_sundry');
-        
+        if (!in_array($request->nature_of_sundry, ['IGST_IMPORT', 'CUSTOM_DUTY'])) {
+            $account->adjust_party_amt = null;
+            $account->party_amt_account = null;
+        }
         $account->updated_at = Carbon::now();
         $account->update();
 

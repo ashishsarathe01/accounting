@@ -47,20 +47,40 @@
 <div class="mb-3 col-md-3">
     <label for="month_select" class="form-label" style="font-size: 1.05rem">Select Month</label>
     <select id="month_select" name="month" class="form-select" required>
-        <option value="">-- Select Month --</option>
-        <option value="04">April</option>
-        <option value="05">May</option>
-        <option value="06">June</option>
-        <option value="07">July</option>
-        <option value="08">August</option>
-        <option value="09">September</option>
-        <option value="10">October</option>
-        <option value="11">November</option>
-        <option value="12">December</option>
-        <option value="01">January</option>
-        <option value="02">February</option>
-        <option value="03">March</option>
-    </select>
+    <option value="">-- Select Month --</option>
+
+    @php
+        $fy = Session::get('from_date');
+        $fyStartYear = \Carbon\Carbon::parse($fy)->format('Y');
+        $fyEndYear = \Carbon\Carbon::parse($fy)->addYear()->format('Y');
+
+        // Month list in financial year order (Apr -> Mar)
+        $months = [
+            '04' => 'April',
+            '05' => 'May',
+            '06' => 'June',
+            '07' => 'July',
+            '08' => 'August',
+            '09' => 'September',
+            '10' => 'October',
+            '11' => 'November',
+            '12' => 'December',
+            '01' => 'January',
+            '02' => 'February',
+            '03' => 'March',
+        ];
+    @endphp
+
+    @foreach($months as $num => $name)
+        @php
+            // Decide year exactly as your JS logic does
+            $year = (intval($num) >= 4) ? $fyStartYear : $fyEndYear;
+        @endphp
+
+        <option value="{{ $num }}">{{ $name }} {{ $year }}</option>
+    @endforeach
+</select>
+
 </div>
 
 <!-- Hidden Inputs to submit -->

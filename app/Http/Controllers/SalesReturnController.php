@@ -16,7 +16,6 @@ use App\Models\SaleSundry;
 use App\Models\Accounts;
 use App\Models\ManageItems;
 use App\Models\BillSundrys;
-use App\Models\GstBranch;
 use App\Models\Companies;
 use App\Models\AccountLedger;
 use App\Models\ItemLedger;
@@ -28,9 +27,14 @@ use App\Models\State;
 use App\Models\SaleInvoiceTermCondition;
 use App\Models\SaleReturnWithoutGstEntry;
 use App\Models\ItemAverageDetail;
+use App\Models\ItemSizeStock;
 use App\Models\SaleReturnParameterInfo;
 use App\Models\ItemParameterStock;
+use App\Models\MerchantModuleMapping;
 use App\Helpers\CommonHelper;
+use App\Models\ActivityLog;
+use App\Models\EinvoiceToken;
+use App\Models\GstBranch;
 use Session;
 use DateTime;
 use Gate;
@@ -60,10 +64,6 @@ class SalesReturnController extends Controller
               'salesReturn_from_date' => $from_date,
               'salesReturn_to_date' => $to_date
           ]);
-      }elseif (session()->has('salesReturn_from_date') && session()->has('salesReturn_to_date')) {
-         // Use previously stored session dates
-         $from_date = session('salesReturn_from_date');
-         $to_date = session('salesReturn_to_date');
       }
   
       Session::put('redirect_url', '');
@@ -90,15 +90,25 @@ class SalesReturnController extends Controller
                'sales_returns.invoice_no',
                'sale_return_no',
                'sales_returns.total',
+               'sales_returns.status',
+               'sales_returns.approved_by',
+               'sales_returns.approved_at',
+               'sales_returns.approved_status',
+               'sales_returns.e_invoice_status',
                DB::raw('(select account_name from accounts where accounts.id=sales_returns.party limit 1) as account_name'),
                DB::raw('(select manual_numbering from voucher_series_configurations where voucher_series_configurations.company_id = '.Session::get('user_company_id').' and configuration_for="CREDIT NOTE" and voucher_series_configurations.status=1 and voucher_series_configurations.series = sales_returns.series_no limit 1) as manual_numbering_status'),
-               DB::raw('(select max(sale_return_no) from sales_returns as s where s.company_id = '.Session::get('user_company_id').' and s.delete="0" and s.series_no = sales_returns.series_no) as max_voucher_no')
+               DB::raw('(select max(sale_return_no) from sales_returns as s where s.company_id = '.Session::get('user_company_id').' and s.delete="0" and s.series_no = sales_returns.series_no) as max_voucher_no'),
+               DB::raw("(SELECT name FROM users WHERE users.id = sales_returns.approved_by LIMIT 1) as approved_by_name"),
+               DB::raw("(SELECT name FROM users WHERE users.id = sales_returns.created_by LIMIT 1) as created_by_name")
           )
           ->where('company_id', Session::get('user_company_id'))
           ->where('delete', '0');
+          if (isset($input['sr_nature']) && $input['sr_nature'] != '') {
+            $query->where('sales_returns.sr_nature', $input['sr_nature']);
+         }
   
       // Apply date filter if dates are set by user
-      if($from_date && $to_date) {
+      if (!empty($input['from_date']) && !empty($input['to_date'])) {
           $query->whereRaw("
               STR_TO_DATE(sales_returns.date, '%Y-%m-%d') >= STR_TO_DATE('" . date('Y-m-d', strtotime($from_date)) . "', '%Y-%m-%d')
               AND STR_TO_DATE(sales_returns.date, '%Y-%m-%d') <= STR_TO_DATE('" . date('Y-m-d', strtotime($to_date)) . "', '%Y-%m-%d')
@@ -109,6 +119,8 @@ class SalesReturnController extends Controller
           // No date selected, show last 10 entries
           $query->orderBy('financial_year', 'desc')
               ->orderBy(DB::raw("cast(sale_return_no as SIGNED)"), 'desc')
+              ->orderBy('sales_returns.created_at', 'DESC')
+              ->orderBy('sales_returns.id', 'DESC')
               ->limit(10);
       }
   
@@ -132,11 +144,19 @@ class SalesReturnController extends Controller
 
    public function create(){
       Gate::authorize('action-module',76);
-      $group_ids = CommonHelper::getAllChildGroupIds(3,Session::get('user_company_id'));
-      array_push($group_ids, 3);
-      $group_ids = array_merge($group_ids, CommonHelper::getAllChildGroupIds(11,Session::get('user_company_id'))); // Include group 11 as well
-      $group_ids = array_unique($group_ids); // Ensure unique group IDs       
-      array_push($group_ids, 11);
+      $financial_year = Session::get('default_fy');
+      $top_groups = [3, 11];
+      
+
+      // Step 2: Get all child group IDs recursively
+      $all_groups = [];
+      foreach ($top_groups as $group_id) {
+         $all_groups[] = $group_id; // include the top group itself
+         $all_groups = array_merge($all_groups, CommonHelper::getAllChildGroupIds($group_id, Session::get('user_company_id')));
+      }
+
+      // Remove duplicates just in case
+      $group_ids = array_unique($all_groups);
       $party_list = Accounts::leftjoin('states','accounts.state','=','states.id')
                               ->where('delete', '=', '0')
                               ->where('status', '=', '1')
@@ -216,115 +236,169 @@ class SalesReturnController extends Controller
                                  ->whereIn('company_id',[Session::get('user_company_id'),0])
                                  //->OrwhereIn('id',[1,2,3,8,9])
                                  ->get();
-      $financial_year = Session::get('default_fy');      
+      
+      [$startYY, $endYY] = explode('-', $financial_year);
+
+      $fy_start_date = '20' . $startYY . '-04-01'; 
+      $fy_end_date   = '20' . $endYY   . '-03-31';        
       foreach ($mat_series as $key => $value) {
-         $series_configuration = VoucherSeriesConfiguration::where('company_id',Session::get('user_company_id'))
-               ->where('series',$value->series)
-               ->where('configuration_for','CREDIT NOTE')
-               ->where('status','1')
+         $series_configuration_with_gst = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
+               ->where('series', $value->series)
+               ->where('configuration_for', 'CREDIT NOTE')
+               ->where('status', '1')
                ->first();
-         //With GST
-         $sale_return_no = SalesReturn::select('sale_return_no')                     
-                        ->where('company_id',Session::get('user_company_id'))
-                        ->where('financial_year','=',$financial_year)
-                        ->where('sr_nature','!=',"WITHOUT GST") 
-                        ->where('series_no','=',$value->series)
-                        ->where('delete','=','0')
-                        ->max(\DB::raw("cast(sale_return_no as SIGNED)"));
-         if(!$sale_return_no){
-            if($series_configuration && $series_configuration->manual_numbering=="NO" && $series_configuration->invoice_start!=""){
-               $mat_series[$key]->invoice_start_from =  sprintf("%'03d",$series_configuration->invoice_start);
-            }else{
-               $mat_series[$key]->invoice_start_from =  "001";
-            }
-         }else{
-            $invc = $sale_return_no + 1;
-            $invc = sprintf("%'03d", $invc);
-            $mat_series[$key]->invoice_start_from =  $invc;
-         }
-         //Without GST
-         $sale_return_no_without = SalesReturn::select('sale_return_no')                     
-                        ->where('company_id',Session::get('user_company_id'))
-                        ->where('financial_year','=',$financial_year)
-                        ->where('sr_nature','=',"WITHOUT GST")
-                        ->where('series_no','=',$value->series)
-                        ->where('delete','=','0')
-                        ->max(\DB::raw("cast(sale_return_no as SIGNED)"));
-         if(!$sale_return_no_without){
-            $mat_series[$key]->without_invoice_start_from =  "001";
-         }else{
-            $invc = $sale_return_no_without + 1;
-            $invc = sprintf("%'03d", $invc);
-            $mat_series[$key]->without_invoice_start_from =  $invc;
-         }
-         $invoice_prefix = "";
-         $invoice_prefix_wt = "";
-         $duplicate_voucher = "";
-         $blank_voucher = "";
-         $manual_enter_invoice_no = "0";
-         if($series_configuration && $series_configuration->manual_numbering=="YES"){
-            $manual_enter_invoice_no = "1";
-            $duplicate_voucher = $series_configuration->duplicate_voucher;
-            $blank_voucher = $series_configuration->blank_voucher;
-         }
-         if($series_configuration && $series_configuration->manual_numbering=="NO"){
-            $manual_enter_invoice_no = "0";
-            if($series_configuration->prefix=="ENABLE" && $series_configuration->prefix_value!=""){
-               $invoice_prefix.=$series_configuration->prefix_value;
-               $invoice_prefix_wt.=$series_configuration->prefix_value."WT";
-            }        
-            if($series_configuration->prefix=="ENABLE" && $series_configuration->prefix_value!="" && $series_configuration->separator_1!=""){
-                  $invoice_prefix.=$series_configuration->separator_1;
-                  $invoice_prefix_wt.=$series_configuration->separator_1;
-            }
-            if($series_configuration->year=="PREFIX TO NUMBER" && $series_configuration->year_format!=""){
-               if($series_configuration->year_format=="YY-YY"){
-                  $invoice_prefix.=Session::get('default_fy');
-                  $invoice_prefix_wt.=Session::get('default_fy');
-               }else if($series_configuration->year_format=="YYYY-YY"){
-                  $default_fy = Session::get('default_fy');  // 23-24
-                  $fy_parts = explode('-', $default_fy);     // [23, 24]
-                  $invoice_prefix .= '20' . $fy_parts[0] . '-20' . $fy_parts[1];
-                  $invoice_prefix_wt.='20' . $fy_parts[0] . '-20' . $fy_parts[1];
+
+         $series_configuration_without_gst = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
+               ->where('series', $value->series)
+               ->where('configuration_for', 'CREDIT NOTE WITHOUT')
+               ->where('status', '1')
+               ->first();
+
+         // WITH GST next number
+         $sale_return_no = SalesReturn::select('sale_return_no')
+                       ->where('company_id', Session::get('user_company_id'))
+                       ->where('financial_year', '=', $financial_year)
+                       ->where('sr_nature', '!=', "WITHOUT GST")
+                       ->where('series_no', '=', $value->series)
+                       ->where('delete', '=', '0')
+                       ->max(\DB::raw("cast(sale_return_no as SIGNED)"));
+         if (!$sale_return_no) {
+            if ($series_configuration_with_gst && $series_configuration_with_gst->manual_numbering == "NO" && $series_configuration_with_gst->invoice_start != "") {
+               $start = $series_configuration_with_gst->invoice_start;
+               $hasPrefix = ($series_configuration_with_gst->prefix == "ENABLE" && !empty($series_configuration_with_gst->prefix_value));
+               $hasYearPrefix = ($series_configuration_with_gst->year == "PREFIX TO NUMBER" && !empty($series_configuration_with_gst->year_format));
+
+               if (!$hasPrefix && !$hasYearPrefix) {
+                  $mat_series[$key]->invoice_start_from = (int)$start;
+               } else {
+                  $mat_series[$key]->invoice_start_from = str_pad(
+                     $start,
+                     $series_configuration_with_gst->number_digit ?? 3,
+                     '0',
+                     STR_PAD_LEFT
+                  );
                }
-            }            
-            if($series_configuration->year=="PREFIX TO NUMBER" && $series_configuration->year_format!="" && $series_configuration->separator_2!=""){
-               $invoice_prefix.=$series_configuration->separator_2;
-               $invoice_prefix_wt.=$series_configuration->separator_2;
+            } else {
+               $mat_series[$key]->invoice_start_from = "1";
             }
-            $invoice_prefix.=$mat_series[$key]->invoice_start_from;
-            $invoice_prefix_wt.=$mat_series[$key]->without_invoice_start_from;
-            if($series_configuration->year=="SUFFIX TO NUMBER" && $series_configuration->year_format!="" && $series_configuration->separator_2!=""){
-               $invoice_prefix.=$series_configuration->separator_2;
-               $invoice_prefix_wt.=$series_configuration->separator_2;
+         } else {
+            $invc = ((int)$sale_return_no) + 1;
+            $hasPrefix = ($series_configuration_with_gst && $series_configuration_with_gst->prefix == "ENABLE" && !empty($series_configuration_with_gst->prefix_value));
+            $hasYearPrefix = ($series_configuration_with_gst && $series_configuration_with_gst->year == "PREFIX TO NUMBER" && !empty($series_configuration_with_gst->year_format));
+
+            if (!$hasPrefix && !$hasYearPrefix) {
+               $mat_series[$key]->invoice_start_from = (int)$invc;
+            } else {
+               $mat_series[$key]->invoice_start_from = str_pad(
+                  $invc,
+                  $series_configuration_with_gst->number_digit ?? 3,
+                  '0',
+                  STR_PAD_LEFT
+               );
             }
-            if($series_configuration->year=="SUFFIX TO NUMBER" && $series_configuration->year_format!=""){
-               if($series_configuration->year_format=="YY-YY"){
-                  $invoice_prefix.=Session::get('default_fy');
-                  $invoice_prefix_wt.=Session::get('default_fy');
-               }else if($series_configuration->year_format=="YYYY-YY"){
-                  $default_fy = Session::get('default_fy');  // 23-24
-                  $fy_parts = explode('-', $default_fy);     // [23, 24]
-                  $invoice_prefix .= '20' . $fy_parts[0] . '-20' . $fy_parts[1];
-                  $invoice_prefix_wt .= '20' . $fy_parts[0] . '-20' . $fy_parts[1];
-               }
-            }        
-            if($series_configuration->suffix=="ENABLE" && $series_configuration->suffix_value!="" && $series_configuration->separator_3!=""){
-               $invoice_prefix.=$series_configuration->separator_3;
-               $invoice_prefix_wt.=$series_configuration->separator_3;
-            }
-            if($series_configuration->suffix=="ENABLE" && $series_configuration->suffix_value!=""){
-               $invoice_prefix.=$series_configuration->suffix_value;
-               $invoice_prefix_wt.=$series_configuration->suffix_value;
-            } 
          }
-         $mat_series[$key]->manual_enter_invoice_no =  $manual_enter_invoice_no;
-         $mat_series[$key]->duplicate_voucher =  $duplicate_voucher;
-         $mat_series[$key]->blank_voucher =  $blank_voucher;
-         $mat_series[$key]->invoice_prefix =  $invoice_prefix;
-         $mat_series[$key]->invoice_prefix_wt =  $invoice_prefix_wt;
-         
-      }                
+
+         // WITHOUT GST next number
+         $sale_return_no_without = SalesReturn::select('sale_return_no')
+                       ->where('company_id', Session::get('user_company_id'))
+                       ->where('financial_year', '=', $financial_year)
+                       ->where('sr_nature', '=', "WITHOUT GST")
+                       ->where('series_no', '=', $value->series)
+                       ->where('delete', '=', '0')
+                       ->max(\DB::raw("cast(sale_return_no as SIGNED)"));
+         if (!$sale_return_no_without) {
+            if ($series_configuration_without_gst && $series_configuration_without_gst->manual_numbering == "NO" && $series_configuration_without_gst->invoice_start != "") {
+               $start = $series_configuration_without_gst->invoice_start;
+               $hasPrefix = ($series_configuration_without_gst->prefix == "ENABLE" && !empty($series_configuration_without_gst->prefix_value));
+               $hasYearPrefix = ($series_configuration_without_gst->year == "PREFIX TO NUMBER" && !empty($series_configuration_without_gst->year_format));
+
+               if (!$hasPrefix && !$hasYearPrefix) {
+                  $mat_series[$key]->without_invoice_start_from = (int)$start;
+               } else {
+                  $mat_series[$key]->without_invoice_start_from = str_pad(
+                     $start,
+                     $series_configuration_without_gst->number_digit ?? 3,
+                     '0',
+                     STR_PAD_LEFT
+                  );
+               }
+            } else {
+               $mat_series[$key]->without_invoice_start_from = "1";
+            }
+         } else {
+            $invc = ((int)$sale_return_no_without) + 1;
+            $hasPrefix = ($series_configuration_without_gst && $series_configuration_without_gst->prefix == "ENABLE" && !empty($series_configuration_without_gst->prefix_value));
+            $hasYearPrefix = ($series_configuration_without_gst && $series_configuration_without_gst->year == "PREFIX TO NUMBER" && !empty($series_configuration_without_gst->year_format));
+
+            if (!$hasPrefix && !$hasYearPrefix) {
+               $mat_series[$key]->without_invoice_start_from = (int)$invc;
+            } else {
+               $mat_series[$key]->without_invoice_start_from = str_pad(
+                  $invc,
+                  $series_configuration_without_gst->number_digit ?? 3,
+                  '0',
+                  STR_PAD_LEFT
+               );
+            }
+         }
+
+         $buildVoucherPrefix = function ($series_configuration, $voucher_number) {
+            $prefix = "";
+            if (!$series_configuration || $series_configuration->manual_numbering != "NO") {
+               return $prefix;
+            }
+            if ($series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
+               $prefix .= $series_configuration->prefix_value;
+            }
+            if ($series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "" && $series_configuration->separator_1 != "") {
+               $prefix .= $series_configuration->separator_1;
+            }
+            if ($series_configuration->year == "PREFIX TO NUMBER" && $series_configuration->year_format != "") {
+               if ($series_configuration->year_format == "YY-YY") {
+                  $prefix .= Session::get('default_fy');
+               } elseif ($series_configuration->year_format == "YYYY-YY") {
+                  $default_fy = Session::get('default_fy');
+                  $fy_parts = explode('-', $default_fy);
+                  $prefix .= '20' . $fy_parts[0] . '-20' . $fy_parts[1];
+               }
+            }
+            if ($series_configuration->year == "PREFIX TO NUMBER" && $series_configuration->year_format != "" && $series_configuration->separator_2 != "") {
+               $prefix .= $series_configuration->separator_2;
+            }
+
+            $prefix .= $voucher_number;
+
+            if ($series_configuration->year == "SUFFIX TO NUMBER" && $series_configuration->year_format != "" && $series_configuration->separator_2 != "") {
+               $prefix .= $series_configuration->separator_2;
+            }
+            if ($series_configuration->year == "SUFFIX TO NUMBER" && $series_configuration->year_format != "") {
+               if ($series_configuration->year_format == "YY-YY") {
+                  $prefix .= Session::get('default_fy');
+               } elseif ($series_configuration->year_format == "YYYY-YY") {
+                  $default_fy = Session::get('default_fy');
+                  $fy_parts = explode('-', $default_fy);
+                  $prefix .= '20' . $fy_parts[0] . '-20' . $fy_parts[1];
+               }
+            }
+            if ($series_configuration->suffix == "ENABLE" && $series_configuration->suffix_value != "" && $series_configuration->separator_3 != "") {
+               $prefix .= $series_configuration->separator_3;
+            }
+            if ($series_configuration->suffix == "ENABLE" && $series_configuration->suffix_value != "") {
+               $prefix .= $series_configuration->suffix_value;
+            }
+            return $prefix;
+         };
+
+         $mat_series[$key]->manual_enter_invoice_no_with_gst = ($series_configuration_with_gst && $series_configuration_with_gst->manual_numbering == "YES") ? "1" : "0";
+         $mat_series[$key]->duplicate_voucher_with_gst = ($series_configuration_with_gst && $series_configuration_with_gst->manual_numbering == "YES") ? $series_configuration_with_gst->duplicate_voucher : "";
+         $mat_series[$key]->blank_voucher_with_gst = ($series_configuration_with_gst && $series_configuration_with_gst->manual_numbering == "YES") ? $series_configuration_with_gst->blank_voucher : "";
+         $mat_series[$key]->invoice_prefix = $buildVoucherPrefix($series_configuration_with_gst, $mat_series[$key]->invoice_start_from);
+
+         $mat_series[$key]->manual_enter_invoice_no_without_gst = ($series_configuration_without_gst && $series_configuration_without_gst->manual_numbering == "YES") ? "1" : "0";
+         $mat_series[$key]->duplicate_voucher_without_gst = ($series_configuration_without_gst && $series_configuration_without_gst->manual_numbering == "YES") ? $series_configuration_without_gst->duplicate_voucher : "";
+         $mat_series[$key]->blank_voucher_without_gst = ($series_configuration_without_gst && $series_configuration_without_gst->manual_numbering == "YES") ? $series_configuration_without_gst->blank_voucher : "";
+         $mat_series[$key]->without_invoice_prefix = $buildVoucherPrefix($series_configuration_without_gst, $mat_series[$key]->without_invoice_start_from);
+      }              
       $bill_date = date('Y-m-d');
       if(date('m')<=3){
          $current_year = (date('y')-1) . '-' . date('y');
@@ -368,6 +442,14 @@ class SalesReturnController extends Controller
                ->orderBy('account_name')
                ->get();
       
+
+      //Check Production Module Permission
+
+      $comp = Companies::select('user_id')->where('id',Session::get('user_company_id'))->first();
+      $production_module_status = MerchantModuleMapping::where('module_id',4)->where('company_id', Session()->get('user_company_id'))->where('merchant_id',$comp->user_id)->first();
+      $production_module_status = $production_module_status ? 1 : 0;
+
+
       $all_account_list = Accounts::leftjoin('states','accounts.state','=','states.id')
                ->where('delete', '=', '0')
                ->where('status', '=', '1')
@@ -376,7 +458,13 @@ class SalesReturnController extends Controller
                ->select('accounts.id','accounts.gstin','accounts.address','accounts.pin_code','accounts.account_name','states.state_code')
                ->orderBy('account_name')
                ->get();  
-      return view('addSaleReturn')->with('party_list', $party_list)->with('manageitems', $manageitems)->with('GstSettings', $GstSettings)->with('billsundry', $billsundry)->with('mat_series', $mat_series)->with('bill_date', $bill_date)->with('vendors', $vendors)->with('items', $items)->with('all_account_list', $all_account_list);
+      $production_items = DB::table('production_items')
+                  ->where('company_id', Session::get('user_company_id'))
+                  ->pluck('item_id')
+                  ->toArray();
+      // echo "<pre>";
+      // print_r($mat_series->toArray());die;
+      return view('addSaleReturn')->with('fy_start_date', $fy_start_date)->with('fy_end_date', $fy_end_date)->with('production_items', $production_items)->with('party_list', $party_list)->with('manageitems', $manageitems)->with('GstSettings', $GstSettings)->with('billsundry', $billsundry)->with('mat_series', $mat_series)->with('bill_date', $bill_date)->with('vendors', $vendors)->with('items', $items)->with('all_account_list', $all_account_list)->with('production_module_status', $production_module_status);
    }
 
     /**
@@ -386,6 +474,7 @@ class SalesReturnController extends Controller
      * @return \Illuminate\Http\Response
      */
    public function store(Request $request){
+   //dd($request->all());
       Gate::authorize('action-module',76);
       $validated = $request->validate([         
          'date' => 'required',
@@ -402,48 +491,47 @@ class SalesReturnController extends Controller
       }
       // echo "<pre>";
       // print_r($request->all());die;
-      $financial_year = Session::get('default_fy');
-      if($request->input('manual_enter_invoice_no')=='0'){
-         if($request->nature!="WITHOUT GST"){
-            $sale_return_no = SalesReturn::select('sale_return_no')                   
-                           ->where('company_id',Session::get('user_company_id'))
-                           ->where('financial_year','=',$financial_year)
-                           ->where('sr_nature','!=',"WITHOUT GST")
-                           ->where('delete','=','0')
-                           ->where('series_no',$request->input('series_no'))
-                           ->max(\DB::raw("cast(sale_return_no as SIGNED)"));
-            if(!$sale_return_no){
-               $series_configuration = VoucherSeriesConfiguration::where('company_id',Session::get('user_company_id'))
-               ->where('series',$request->input('series_no'))
-               ->where('configuration_for','CREDIT NOTE')
-               ->where('status','1')
-               ->first();
-               if($series_configuration && $series_configuration->manual_numbering=="NO" && $series_configuration->invoice_start!=""){
+      $financial_year = CommonHelper::getFinancialYear($request->input('date'));
+      $configuration_for = ($request->input('nature') == "WITHOUT GST")
+         ? 'CREDIT NOTE'
+         : 'CREDIT NOTE WITHOUT';
+      $isWithoutGstNature = $request->input('nature') == "WITHOUT GST";
+      if($request->input('manual_enter_invoice_no')=='0'){         
+         $lastVoucherQuery = SalesReturn::select('sale_return_no')                   
+                        ->where('company_id',Session::get('user_company_id'))
+                        ->where('financial_year','=',$financial_year)
+                        ->where('sr_nature','!=',"WITHOUT GST")
+                        ->where('delete','=','0')
+                        ->where('series_no',$request->input('series_no'));
+         if ($isWithoutGstNature) {
+            $lastVoucherQuery->where('sr_nature', '=', "WITHOUT GST");
+         } else {
+            $lastVoucherQuery->where('sr_nature', '!=', "WITHOUT GST");
+         }
+         $sale_return_no = $lastVoucherQuery->max(\DB::raw("cast(sale_return_no as SIGNED)"));            
+         $series_configuration = VoucherSeriesConfiguration::where('company_id',Session::get('user_company_id'))
+                                                            ->where('series',$request->input('series_no'))
+                                                            ->where('configuration_for',$configuration_for)
+                                                            ->where('status','1')
+                                                            ->first();
+         if(!$sale_return_no){
+            if($series_configuration && $series_configuration->manual_numbering=="NO" && $series_configuration->invoice_start!=""){
+               if ($series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
                   $sale_return_no =  sprintf("%'03d",$series_configuration->invoice_start);
                }else{
-                  $sale_return_no = "001";
+                  $sale_return_no =  $series_configuration->invoice_start;
                }
             }else{
-               $sale_return_no++;
-               $sale_return_no = sprintf("%'03d", $sale_return_no);
+               $sale_return_no = "1";
             }
          }else{
-            $sale_return_no = SalesReturn::select('sale_return_no')                   
-                           ->where('company_id',Session::get('user_company_id'))
-                           ->where('financial_year','=',$financial_year)
-                           ->where('sr_nature','=',"WITHOUT GST")
-                           ->where('delete','=','0')
-                           ->where('series_no',$request->input('series_no'))
-                           ->max(\DB::raw("cast(sale_return_no as SIGNED)"));
-            if(!$sale_return_no){
-               $sale_return_no = "001";
-            }else{
-               $sale_return_no++;
+            $sale_return_no++;
+            if ($series_configuration && $series_configuration->manual_numbering=="NO" && $series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
                $sale_return_no = sprintf("%'03d", $sale_return_no);
             }
-         }  
+         }
       }else{
-         $sale_return_no = $request->input('voucher_no');
+         $sale_return_no = $request->input('voucher_prefix');
       } 
       $account = Accounts::where('id',$request->input('party_id'))->first();
       $sale = new SalesReturn;
@@ -500,6 +588,7 @@ class SalesReturnController extends Controller
       $sale->billing_gst = $account->gstin;
       $sale->billing_state = $account->state;
       $sale->station = $request->input('station');
+      $sale->created_by = Session::get('user_id');
       // $sale->other_invoice_no = $request->input('other_invoice_no');
       // $sale->other_invoice_date = $request->input('other_invoice_date');
       // $sale->other_invoice_against = $request->input('other_invoice_against');
@@ -517,6 +606,7 @@ class SalesReturnController extends Controller
             $amounts = $request->input('amount');
             $config_status = $request->input('config_status');
             $item_parameters = $request->input('item_parameters');
+            $itemSizeInfos = $request->input('item_size_info', []);
             foreach ($goods_discriptions as $key => $good) {
                if($good=="" || $amounts[$key]==""){
                   continue;
@@ -656,7 +746,53 @@ class SalesReturnController extends Controller
                      }
                   }
                }
+               //Add In Stock Table
+               $unit_name = ManageItems::where('manage_items.id',$good)
+                                    ->join('units','units.id','manage_items.u_name')
+                                    ->value('units.s_name');
+               $json = $itemSizeInfos[$key] ?? null;
+               if (!$json) continue;
+               $sizes = json_decode($json, true);
+               if (!is_array($sizes)) continue;
+               foreach ($sizes as $s) {
+                  ItemSizeStock::create([
+                        'item_id' => $good,
+                        'sale_return_id' => $sale->id,
+                        'sale_return_desc_id' => $desc->id,
+                        'size' => $s['size'] ?? null,
+                        'reel_no' => $s['reel_no'] ?? null,
+                        'weight' => $s['weight'] ?? null,
+                        'unit' => $unit_name ?? null, 
+                        'status' => 1,
+                        'company_id' => Session::get('user_company_id') 
+                  ]);
+               }
             }
+
+            // $goods = $request->input('goods_discription', []);
+            // $itemSizeInfos = $request->input('item_size_info', []);
+
+            // foreach ($goods as $index => $itemId) {
+            //    $unit_name = ManageItems::where('manage_items.id',$itemId)
+            //                         ->join('units','units.id','manage_items.u_name')
+            //                         ->value('units.s_name');
+            //    $json = $itemSizeInfos[$index] ?? null;
+            //    if (!$json) continue;
+            //    $sizes = json_decode($json, true);
+            //    if (!is_array($sizes)) continue;
+            //    foreach ($sizes as $s) {
+            //       ItemSizeStock::create([
+            //             'item_id' => $itemId,
+            //             'sale_return_id' => $sale->id,
+            //             'size' => $s['size'] ?? null,
+            //             'reel_no' => $s['reel_no'] ?? null,
+            //             'weight' => $s['weight'] ?? null,
+            //             'unit' => $unit_name ?? null, 
+            //             'status' => 1,
+            //             'company_id' => Session::get('user_company_id') 
+            //       ]);
+            //    }
+            // }
             $bill_sundrys = $request->input('bill_sundry');
             $tax_rate = $request->input('tax_rate');
             $bill_sundry_amounts = $request->input('bill_sundry_amount');
@@ -694,7 +830,7 @@ class SalesReturnController extends Controller
                   }
                   $ledger->txn_date = $request->input('date');
                   $ledger->company_id = Session::get('user_company_id');
-                  $ledger->financial_year = Session::get('default_fy');
+                  $ledger->financial_year = $financial_year;
                   $ledger->map_account_id = $request->input('party_id');
                   $ledger->entry_type = 3;
                   $ledger->entry_type_id = $sale->id;
@@ -705,7 +841,6 @@ class SalesReturnController extends Controller
                }
             }
             //Average Calculation
-            if($request->input('type')=="WITH ITEM"){
             $goods_discriptions = $request->input('goods_discription');
             $qtys = $request->input('qty');
             $sale_item_array = [];
@@ -733,14 +868,13 @@ class SalesReturnController extends Controller
                $average_detail->save();
                CommonHelper::RewriteItemAverageByItem($request->date,$key,$request->input('series_no')); 
             }
-            }
             //ADD DATA IN Customer ACCOUNT
             $ledger = new AccountLedger();
             $ledger->account_id = $request->input('party_id');
             $ledger->credit = $request->input('total');
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 3;
             $ledger->entry_type_id = $sale->id;
             if($sale->voucher_type=="PURCHASE"){
@@ -763,7 +897,7 @@ class SalesReturnController extends Controller
             $ledger->debit = $request->input('taxable_amt');
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->map_account_id = $request->input('party_id');
             $ledger->entry_type = 3;
             $ledger->entry_type_id = $sale->id;
@@ -782,7 +916,7 @@ class SalesReturnController extends Controller
             $ledger->credit = $request->input('total_amount');                       
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 10;
             $ledger->map_account_id = $request->input('item')[0];
             $ledger->entry_type_id = $sale->id;
@@ -811,7 +945,7 @@ class SalesReturnController extends Controller
                $ledger->debit = $amount;                       
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 10;
                $ledger->map_account_id = $request->input('party_id');
                $ledger->entry_type_id = $sale->id;
@@ -856,7 +990,7 @@ class SalesReturnController extends Controller
                $ledger->debit = $request->input('igst');                       
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 10;
                $ledger->map_account_id = $account_name;
                $ledger->entry_type_id = $sale->id;
@@ -896,6 +1030,7 @@ class SalesReturnController extends Controller
                if($account_info->under_group==3){
                   $sgst_sundry = BillSundrys::select('purchase_amt_account')
                            ->where('nature_of_sundry','SGST')
+                             ->where('delete','0')
                            ->where('company_id',Session::get('user_company_id'))
                            ->first();               
                   if($sgst_sundry){
@@ -904,6 +1039,7 @@ class SalesReturnController extends Controller
                }else if($account_info->under_group==11){
                   $sgst_sundry = BillSundrys::select('sale_amt_account')
                            ->where('nature_of_sundry','SGST')
+                             ->where('delete','0')
                            ->where('company_id',Session::get('user_company_id'))
                            ->first();               
                   if($sgst_sundry){
@@ -912,6 +1048,7 @@ class SalesReturnController extends Controller
                }else{
                   $sgst_sundry = BillSundrys::select('purchase_amt_account')
                            ->where('nature_of_sundry','SGST')
+                             ->where('delete','0')
                            ->where('company_id',Session::get('user_company_id'))
                            ->first();               
                   if($sgst_sundry){
@@ -924,7 +1061,7 @@ class SalesReturnController extends Controller
                $ledger->debit = $request->input('cgst');                       
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 10;
                $ledger->map_account_id = $cgst_account_name;
                $ledger->entry_type_id = $sale->id;
@@ -938,7 +1075,7 @@ class SalesReturnController extends Controller
                $ledger->debit = $request->input('sgst');                       
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 10;
                $ledger->map_account_id = $sgst_account_name;
                $ledger->entry_type_id = $sale->id;
@@ -946,6 +1083,31 @@ class SalesReturnController extends Controller
                $ledger->created_at = date('d-m-Y H:i:s');
                $ledger->save();
             }
+            $roundOffPlus  = $request->input('roundoffplus');
+               $roundOffMinus = $request->input('roundoffminus');
+
+               if (!empty($roundOffPlus) || !empty($roundOffMinus)) {
+
+                  $ledger = new AccountLedger();
+                  $ledger->account_id = 11427;
+                  $ledger->series_no = $request->input('series_no');
+                  $ledger->txn_date = $request->input('date');
+                  $ledger->company_id = Session::get('user_company_id');
+                  $ledger->financial_year = $financial_year;
+                  $ledger->entry_type = 10;
+                  $ledger->map_account_id = $request->input('party_id');
+                  $ledger->entry_type_id = $sale->id;
+                  $ledger->created_by = Session::get('user_id');
+                  $ledger->created_at = now();
+
+                  if (!empty($roundOffPlus)) {
+                     $ledger->debit = $roundOffPlus;
+                  } else {
+                     $ledger->credit = $roundOffMinus;
+                  }
+
+                  $ledger->save();
+               }
             return redirect('sale-return-without-item-invoice/'.$sale->id)->withSuccess('Sale return added successfully!');
          }else if($request->input('nature')=="WITHOUT GST"){
             $account_names = $request->input('account_name');
@@ -968,7 +1130,7 @@ class SalesReturnController extends Controller
                $ledger->debit = $debits[$key];                          
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 9;
                $ledger->entry_type_id = $sale->id;
                $ledger->map_account_id = $map_account_id;
@@ -984,7 +1146,7 @@ class SalesReturnController extends Controller
             $ledger->credit = $debit_total;                          
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 9;
             $ledger->entry_type_id = $sale->id;
             //$ledger->map_account_id = $map_account_id;
@@ -1001,6 +1163,27 @@ class SalesReturnController extends Controller
    public function delete(Request $request){
       Gate::authorize('action-module',70);
       $sale_return =  SalesReturn::find($request->sale_return_id);
+      $oldSnapshot = [
+         'sale_return' => $sale_return->toArray(),
+
+         'items' => SaleReturnDescription::where('sale_return_id', $sale_return->id)
+                     ->get()->toArray(),
+
+         'sundries' => SaleReturnSundry::where('sale_return_id', $sale_return->id)
+                     ->get()->toArray(),
+
+         'item_ledgers' => ItemLedger::where('source', 4)
+                     ->where('source_id', $sale_return->id)
+                     ->get()->toArray(),
+
+         'account_ledgers' => AccountLedger::whereIn('entry_type', [3,9,10])
+                     ->where('entry_type_id', $sale_return->id)
+                     ->get()->toArray(),
+
+         'item_average_details' => ItemAverageDetail::where('sale_return_id', $sale_return->id)
+                     ->where('type', 'SALE RETURN')
+                     ->get()->toArray(),
+      ];
       $sale_return->delete = '1';
       $sale_return->status = '0';
       $sale_return->deleted_at = Carbon::now();
@@ -1041,7 +1224,17 @@ class SalesReturnController extends Controller
             AccountLedger::where('entry_type',9)
                            ->where('entry_type_id',$request->sale_return_id)
                            ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
-         }         
+         }
+         ActivityLog::create([
+            'module_type' => 'sale_return',
+            'module_id'   => $sale_return->id,
+            'action'      => 'delete',
+            'old_data'    => $oldSnapshot,
+            'new_data'    => null,
+            'action_by'   => Session::get('user_id'),
+            'company_id'  => Session::get('user_company_id'),
+            'action_at'   => now(),
+         ]);     
          return redirect('sale-return')->withSuccess('Sale Return deleted successfully!');
       }
    }
@@ -1054,7 +1247,7 @@ class SalesReturnController extends Controller
       $sale_return = SalesReturn::leftjoin('accounts','sales_returns.party','=','accounts.id')
                                  ->leftjoin('states','sales_returns.billing_state','=','states.id')
                                  ->where('sales_returns.id',$id)
-                                 ->select(['sales_returns.date','sales_returns.id','sales_returns.invoice_no','sales_returns.remark as narration','sales_returns.merchant_gst','sales_returns.total','sales_returns.remark as narration','states.name as sname','sale_return_no','sales_returns.vehicle_no','sales_returns.billing_gst','sales_returns.gr_pr_no','sales_returns.transport_name','sales_returns.station','sales_returns.series_no','sales_returns.financial_year as dr_financial_year','sr_nature','sr_type','sr_prefix','accounts.address as party_address','accounts.print_name as billing_name','original_invoice_date'])
+                                 ->select(['sales_returns.e_invoice_status','sales_returns.einvoice_response','sales_returns.date','sales_returns.id','sales_returns.invoice_no','sales_returns.remark as narration','sales_returns.merchant_gst','sales_returns.total','sales_returns.remark as narration','states.name as sname','sale_return_no','sales_returns.vehicle_no','sales_returns.billing_gst','sales_returns.gr_pr_no','sales_returns.transport_name','sales_returns.station','sales_returns.series_no','sales_returns.financial_year as dr_financial_year','sr_nature','sr_type','sr_prefix','accounts.address as party_address','accounts.print_name as billing_name','original_invoice_date'])
                                  ->first();
       $items_detail = DB::table('sale_return_descriptions')
                            ->where('sale_return_descriptions.sale_return_id', $id)
@@ -1067,12 +1260,13 @@ class SalesReturnController extends Controller
                               'sale_return_descriptions.price',
                               'sale_return_descriptions.amount',
                               'manage_items.name as items_name',
+                              'manage_items.p_name as items_pname',
                               'manage_items.id as item_id',
                               'manage_items.hsn_code',
                               'manage_items.gst_rate'
                            )
-                           ->join('units', 'sale_return_descriptions.unit', '=', 'units.id')
-                           ->join('manage_items', 'sale_return_descriptions.goods_discription', '=', 'manage_items.id')
+                           ->leftjoin('units', 'sale_return_descriptions.unit', '=', 'units.id')
+                           ->leftjoin('manage_items', 'sale_return_descriptions.goods_discription', '=', 'manage_items.id')
                            ->get();
       $items_detail1 = DB::table('sale_return_descriptions')
                               ->where('sale_return_descriptions.sale_return_id', $id)
@@ -1085,11 +1279,12 @@ class SalesReturnController extends Controller
                                  DB::raw("'' as price"),
                                  'sale_return_descriptions.amount',
                                  'manage_items.name as items_name',
+                                 'manage_items.p_name as items_pname',
                                  'manage_items.id as item_id',
                                  'manage_items.hsn_code',
                                  'manage_items.gst_rate'
                               )
-                              ->join('units', 'sale_return_descriptions.unit', '=', 'units.id')
+                              ->leftjoin('units', 'sale_return_descriptions.unit', '=', 'units.id')
                               ->join('manage_items', 'sale_return_descriptions.goods_discription', '=', 'manage_items.id')
                               ->get();    
       // Merge both collections
@@ -1307,7 +1502,7 @@ class SalesReturnController extends Controller
             $seller_info->sname = $state_info->name;
          }
       }else if($company_data->gst_config_type == "multiple_gst") {    
-         if($sale_ret->voucher_type=="PURCHASE"){
+         if($sale_return->voucher_type=="PURCHASE"){
             $GstSettings1 = DB::table('gst_settings_multiple')
                            ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst",'series' => $sale_return->series_no])
                            ->first();
@@ -1455,10 +1650,24 @@ class SalesReturnController extends Controller
    public function edit($id){
       Gate::authorize('action-module',69);
       $sale_return =  SalesReturn::find($id);
-      $sale_return_description =  SaleReturnDescription::join('units','sale_return_descriptions.unit','=','units.id')
+      if($sale_return->e_invoice_status==1){
+          return redirect()->back();
+      }
+      $sale_return_description =  SaleReturnDescription::leftjoin('units','sale_return_descriptions.unit','=','units.id')
                   ->select(['sale_return_descriptions.*','units.s_name'])
                   ->where('sale_return_id',$id)
                   ->get();
+      // Prefill item_size_info as JSON
+      foreach ($sale_return_description as $desc) {
+         $stocks = DB::table('item_size_stocks')
+               ->where('sale_return_id', $sale_return->id)
+                ->where('sale_return_desc_id', $desc->id)
+               ->where('item_id', $desc->goods_discription)
+               ->select('size','reel_no','weight','status','id')
+               ->get();
+
+         $desc->item_size_info = json_encode($stocks); // JSON for hidden input
+      }
       $sale_return_sundry =  SaleReturnSundry::join('bill_sundrys','sale_return_sundries.bill_sundry','=','bill_sundrys.id')
                                  ->select(['bill_sundrys.effect_gst_calculation','bill_sundrys.nature_of_sundry','sale_return_sundries.*'])
                                              ->where('sale_return_id',$id)
@@ -1517,7 +1726,11 @@ class SalesReturnController extends Controller
       if(!$GstSettings || !isset($companyData->gst_config_type)){
          return $this->failedMessage('Please Enter GST Configuration!','sale-return');
       }
-      $financial_year = Session::get('default_fy'); 
+      $financial_year = Session::get('default_fy');
+      [$startYY, $endYY] = explode('-', $financial_year);
+
+      $fy_start_date = '20' . $startYY . '-04-01'; 
+      $fy_end_date   = '20' . $endYY   . '-03-31';   
       foreach ($mat_series as $key => $value) {
          if($sale_return->series_no==$value->series){
             $mat_series[$key]->invoice_start_from =  $sale_return->sale_return_no;
@@ -1612,14 +1825,20 @@ class SalesReturnController extends Controller
             ->where('manage_items.delete', '0')
             ->where('manage_items.status', '1')
             ->where('manage_items.u_name', '!=', '')
-            ->join('units', 'manage_items.u_name', '=', 'units.id')
+            ->leftjoin('units', 'manage_items.u_name', '=', 'units.id')
             ->orderBy('manage_items.name')
-            ->get();           
-      return view('editSaleReturn')->with('party_list', $party_list)->with('billsundry', $billsundry)->with('mat_series', $mat_series)->with('sale_return', $sale_return)->with('sale_return_description', $sale_return_description)->with('sale_return_sundry', $sale_return_sundry)->with('vendors', $vendors)->with('items', $items)->with('all_account_list', $all_account_list)->with('without_gst', $without_gst)->with('merchant_gst', $sale_return->merchant_gst)->with('manageitems', $manageitems);
+            ->get();   
+      $production_items = DB::table('production_items')
+                      ->where('company_id', Session::get('user_company_id'))
+                      ->pluck('item_id')
+                      ->toArray();
+      $production_module_status = 1; // or 0 depending on your logic
+        
+      return view('editSaleReturn')->with('fy_start_date', $fy_start_date)->with('fy_end_date', $fy_end_date)->with('production_items', $production_items)->with('party_list', $party_list)->with('billsundry', $billsundry)->with('mat_series', $mat_series)->with('sale_return', $sale_return)->with('sale_return_description', $sale_return_description)->with('sale_return_sundry', $sale_return_sundry)->with('vendors', $vendors)->with('items', $items)->with('all_account_list', $all_account_list)->with('without_gst', $without_gst)->with('merchant_gst', $sale_return->merchant_gst)->with('manageitems', $manageitems)->with('production_module_status', $production_module_status);
    }
    public function update(Request $request){
       Gate::authorize('action-module',69);
-     // echo "<pre>";
+      // echo "<pre>";
       // print_r($request->all());die;
       $validated = $request->validate([
          'date' => 'required',
@@ -1634,8 +1853,32 @@ class SalesReturnController extends Controller
          }
       }      
       $account = Accounts::where('id',$request->input('party'))->first();
-      $financial_year = Session::get('default_fy');
+      $financial_year = CommonHelper::getFinancialYear($request->input('date')); 
       $sale = SalesReturn::find($request->input('sale_return_edit_id'));
+      if($sale->e_invoice_status==1){
+          return redirect()->back();
+      }
+      $oldSnapshot = [
+         'sale_return' => $sale->toArray(),
+
+         'items' => SaleReturnDescription::where('sale_return_id', $sale->id)
+                     ->get()->toArray(),
+
+         'sundries' => SaleReturnSundry::where('sale_return_id', $sale->id)
+                     ->get()->toArray(),
+
+         'item_ledgers' => ItemLedger::where('source', 4)
+                     ->where('source_id', $sale->id)
+                     ->get()->toArray(),
+
+         'account_ledgers' => AccountLedger::whereIn('entry_type', [3,9,10])
+                     ->where('entry_type_id', $sale->id)
+                     ->get()->toArray(),
+
+         'item_average_details' => ItemAverageDetail::where('sale_return_id', $sale->id)
+                     ->where('type', 'SALE RETURN')
+                     ->get()->toArray(),
+      ];
       if ($request->input('sale_bill_id')!=null && $request->input('voucher_type') == 'SALE' && $request->input('nature') != "WITHOUT GST") {
          $original_invoice = Sales::find($request->input('sale_bill_id'));
          if ($original_invoice) {
@@ -1694,6 +1937,7 @@ class SalesReturnController extends Controller
       $sale->billing_gst = $account->gstin;
       $sale->billing_state = $account->state;
       $sale->financial_year = $financial_year;
+      $sale->updated_by = Session::get('user_id');
       // $sale->other_invoice_no = $request->input('other_invoice_no');
       // $sale->other_invoice_date = $request->input('other_invoice_date');
       // $sale->other_invoice_against = $request->input('other_invoice_against');
@@ -1714,12 +1958,16 @@ class SalesReturnController extends Controller
                            ->where('type','SALE RETURN')
                            ->delete();
          $update_item_arr = [];
+         DB::table('item_size_stocks')
+                     ->where('sale_return_id', $sale->id)
+                     ->where('status', '1')
+                     ->delete();
          if($request->input('nature')=="WITH GST" && ($request->input('type')=="WITH ITEM" || $request->input('type')=="RATE DIFFERENCE")){
             $goods_discriptions = $request->input('goods_discription');
             $qtys = $request->input('qty');
             $units = $request->input('units');
             $prices = $request->input('price');
-            $amounts = $request->input('amount');            
+            $amounts = $request->input('amount');
             foreach ($goods_discriptions as $key => $good) {
                if($good=="" || $amounts[$key]==""){
                   continue;
@@ -1734,6 +1982,51 @@ class SalesReturnController extends Controller
                $desc->amount = $amounts[$key];
                $desc->status = '1';
                $desc->save();
+               // After saving SaleReturnDescription
+               $update_item_arr[] = $good;
+
+               // --- ITEM SIZE INFO (UPDATE INSTEAD OF DUPLICATE) ---
+               $item_sizes_json = $request->input('item_size_info')[$key] ?? '[]';
+               $item_sizes = json_decode($item_sizes_json, true);
+
+               if($item_sizes && is_array($item_sizes)){
+                  // Delete existing size entries for this sale_return_id & item_id
+                  // Insert new size entries
+                  foreach($item_sizes as $row){
+                     if($row['status']==1){
+                        $check_sale = ItemSizeStock::where('sale_return_id', $sale->id)
+                                    ->where('reel_no', $row['reel_no'])
+                                    ->where('item_id', $good)
+                                    ->where('status', '0')
+                                    ->first();
+                        if($check_sale){
+                           continue;
+                        }
+                        DB::table('item_size_stocks')->insert([
+                           'sale_return_id' => $sale->id,
+                           'item_id' => $good,
+                           'size' => $row['size'] ?? null,
+                           'reel_no' => $row['reel_no'] ?? null,
+                           'weight' => $row['weight'] ?? 0,
+                           'sale_return_desc_id' => $desc->id,
+                           'created_at' => now(),
+                           'created_by' => Session::get('user_id'),
+                           'updated_at' => now(),
+                           'company_id' => Session::get('user_company_id') 
+                        ]);
+                     }else{
+                        // Revert existing reel
+                        ItemSizeStock::where('sale_return_id', $sale->id)
+                                    ->where('reel_no', $row['reel_no'])
+                                    ->where('item_id', $good)
+                                    //->where('id', $row['id'])
+                                 ->update([
+                                       'sale_return_desc_id' => $desc->id
+                                    ]);
+                     }
+                     
+                  }
+               }
                //ADD ITEM LEDGER
                if($request->input('type')=="WITH ITEM"){
                   if($qtys[$key]!="" && $prices[$key]!="" && $prices[$key]!=0 && $qtys[$key]!=0){
@@ -1790,7 +2083,7 @@ class SalesReturnController extends Controller
                   }
                   $ledger->txn_date = $request->input('date');
                   $ledger->company_id = Session::get('user_company_id');
-                  $ledger->financial_year = Session::get('default_fy');
+                  $ledger->financial_year = $financial_year;
                   $ledger->map_account_id = $request->input('party');
                   $ledger->entry_type = 3;
                   $ledger->entry_type_id = $sale->id;
@@ -1841,7 +2134,7 @@ class SalesReturnController extends Controller
             $ledger->credit = $request->input('total');
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 3;
             $ledger->entry_type_id = $sale->id;
             if($sale->voucher_type=="PURCHASE"){
@@ -1862,7 +2155,7 @@ class SalesReturnController extends Controller
             $ledger->debit = $request->input('taxable_amt');
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->map_account_id = $request->input('party');
             $ledger->entry_type = 3;
             $ledger->entry_type_id = $sale->id;
@@ -1874,6 +2167,37 @@ class SalesReturnController extends Controller
                   CommonHelper::RewriteItemAverageByItem($last_date,$value,$request->input('series_no'));
                }
             }
+            $newSnapshot = [
+               'sale_return' => SalesReturn::find($sale->id)->toArray(),
+
+               'items' => SaleReturnDescription::where('sale_return_id', $sale->id)
+                           ->get()->toArray(),
+
+               'sundries' => SaleReturnSundry::where('sale_return_id', $sale->id)
+                           ->get()->toArray(),
+
+               'item_ledgers' => ItemLedger::where('source', 4)
+                           ->where('source_id', $sale->id)
+                           ->get()->toArray(),
+
+               'account_ledgers' => AccountLedger::whereIn('entry_type', [3,9,10])
+                           ->where('entry_type_id', $sale->id)
+                           ->get()->toArray(),
+
+               'item_average_details' => ItemAverageDetail::where('sale_return_id', $sale->id)
+                           ->where('type', 'SALE RETURN')
+                           ->get()->toArray(),
+            ];
+            ActivityLog::create([
+               'module_type' => 'sale_return',
+               'module_id'   => $sale->id,
+               'action'      => 'edit',
+               'old_data'    => $oldSnapshot,
+               'new_data'    => $newSnapshot,
+               'action_by'   => Session::get('user_id'),
+               'company_id'  => Session::get('user_company_id'),
+               'action_at'   => now(),
+            ]);
             return redirect('sale-return-invoice/'.$sale->id)->withSuccess('Sale return added successfully!'); 
          }else if($request->input('nature')=="WITH GST" && $request->input('type')=="WITHOUT ITEM"){
             //Ledger Entry
@@ -1884,7 +2208,7 @@ class SalesReturnController extends Controller
             $ledger->credit = $request->input('total_amount');                       
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 10;
             $ledger->map_account_id = $request->input('item')[0];
             $ledger->entry_type_id = $sale->id;
@@ -1913,7 +2237,7 @@ class SalesReturnController extends Controller
                $ledger->debit = $amount;                       
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 10;
                $ledger->map_account_id = $request->input('party');
                $ledger->entry_type_id = $sale->id;
@@ -1925,6 +2249,7 @@ class SalesReturnController extends Controller
                if($account_info->under_group==3){
                   $sundry = BillSundrys::select('purchase_amt_account')
                                        ->where('nature_of_sundry','IGST')
+                                         ->where('delete','0')
                                        ->where('company_id',Session::get('user_company_id'))
                                        ->first();
                   $account_name = "";
@@ -1934,6 +2259,7 @@ class SalesReturnController extends Controller
                }else if($account_info->under_group==11){
                   $sundry = BillSundrys::select('sale_amt_account')
                                        ->where('nature_of_sundry','IGST')
+                                         ->where('delete','0')
                                        ->where('company_id',Session::get('user_company_id'))
                                        ->first();
                   $account_name = "";
@@ -1943,6 +2269,7 @@ class SalesReturnController extends Controller
                }else{
                   $sundry = BillSundrys::select('purchase_amt_account')
                                        ->where('nature_of_sundry','IGST')
+                                       ->where('delete','0')
                                        ->where('company_id',Session::get('user_company_id'))
                                        ->first();
                   $account_name = "";
@@ -1950,7 +2277,7 @@ class SalesReturnController extends Controller
                      $account_name = $sundry->purchase_amt_account;
                   }
                }               
-               
+              
                //detor sale
                //Ledger Entry
                $ledger = new AccountLedger();
@@ -1958,7 +2285,7 @@ class SalesReturnController extends Controller
                $ledger->debit = $request->input('igst');                       
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 10;
                $ledger->map_account_id = $account_name;
                $ledger->entry_type_id = $sale->id;
@@ -1971,6 +2298,7 @@ class SalesReturnController extends Controller
                if($account_info->under_group==3){
                   $cgst_sundry = BillSundrys::select('purchase_amt_account')
                         ->where('nature_of_sundry','CGST')
+                          ->where('delete','0')
                         ->where('company_id',Session::get('user_company_id'))
                         ->first();
                   if($cgst_sundry){
@@ -1979,6 +2307,7 @@ class SalesReturnController extends Controller
                }else if($account_info->under_group==11){
                   $cgst_sundry = BillSundrys::select('sale_amt_account')
                         ->where('nature_of_sundry','CGST')
+                          ->where('delete','0')
                         ->where('company_id',Session::get('user_company_id'))
                         ->first();
                   if($cgst_sundry){
@@ -1987,6 +2316,7 @@ class SalesReturnController extends Controller
                }else{
                   $cgst_sundry = BillSundrys::select('purchase_amt_account')
                         ->where('nature_of_sundry','CGST')
+                          ->where('delete','0')
                         ->where('company_id',Session::get('user_company_id'))
                         ->first();
                   if($cgst_sundry){
@@ -1998,6 +2328,7 @@ class SalesReturnController extends Controller
                if($account_info->under_group==3){
                   $sgst_sundry = BillSundrys::select('purchase_amt_account')
                            ->where('nature_of_sundry','SGST')
+                             ->where('delete','0')
                            ->where('company_id',Session::get('user_company_id'))
                            ->first();               
                   if($sgst_sundry){
@@ -2006,6 +2337,7 @@ class SalesReturnController extends Controller
                }else if($account_info->under_group==11){
                   $sgst_sundry = BillSundrys::select('sale_amt_account')
                            ->where('nature_of_sundry','SGST')
+                             ->where('delete','0')
                            ->where('company_id',Session::get('user_company_id'))
                            ->first();               
                   if($sgst_sundry){
@@ -2014,6 +2346,7 @@ class SalesReturnController extends Controller
                }else{
                   $sgst_sundry = BillSundrys::select('purchase_amt_account')
                            ->where('nature_of_sundry','SGST')
+                             ->where('delete','0')
                            ->where('company_id',Session::get('user_company_id'))
                            ->first();               
                   if($sgst_sundry){
@@ -2026,7 +2359,7 @@ class SalesReturnController extends Controller
                $ledger->debit = $request->input('cgst');                       
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 10;
                $ledger->map_account_id = $cgst_account_name;
                $ledger->entry_type_id = $sale->id;
@@ -2040,7 +2373,7 @@ class SalesReturnController extends Controller
                $ledger->debit = $request->input('sgst');                       
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 10;
                $ledger->map_account_id = $sgst_account_name;
                $ledger->entry_type_id = $sale->id;
@@ -2048,11 +2381,67 @@ class SalesReturnController extends Controller
                $ledger->created_at = date('d-m-Y H:i:s');
                $ledger->save();
             }
+            $roundOffPlus  = $request->input('roundoffplus');
+            $roundOffMinus = $request->input('roundoffminus');
+
+            if (!empty($roundOffPlus) || !empty($roundOffMinus)) {
+
+               $ledger = new AccountLedger();
+               $ledger->account_id = 11427;
+               $ledger->series_no = $request->input('series_no');
+               $ledger->txn_date = $request->input('date');
+               $ledger->company_id = Session::get('user_company_id');
+               $ledger->financial_year = $financial_year;
+               $ledger->entry_type = 10;
+               $ledger->map_account_id = $request->input('party');
+               $ledger->entry_type_id = $sale->id;
+               $ledger->created_by = Session::get('user_id');
+               $ledger->created_at = now();
+
+               if (!empty($roundOffPlus)) {
+                  $ledger->debit = $roundOffPlus;
+               } else {
+                  $ledger->credit = $roundOffMinus;
+               }
+
+               $ledger->save();
+            }
             foreach ($desc_item_arr as $key => $value) {
                if(!array_key_exists($value, $update_item_arr)){
                   CommonHelper::RewriteItemAverageByItem($last_date,$value,$request->input('series_no'));
                }
             }
+            $newSnapshot = [
+               'sale_return' => SalesReturn::find($sale->id)->toArray(),
+
+               'items' => SaleReturnDescription::where('sale_return_id', $sale->id)
+                           ->get()->toArray(),
+
+               'sundries' => SaleReturnSundry::where('sale_return_id', $sale->id)
+                           ->get()->toArray(),
+
+               'item_ledgers' => ItemLedger::where('source', 4)
+                           ->where('source_id', $sale->id)
+                           ->get()->toArray(),
+
+               'account_ledgers' => AccountLedger::whereIn('entry_type', [3,9,10])
+                           ->where('entry_type_id', $sale->id)
+                           ->get()->toArray(),
+
+               'item_average_details' => ItemAverageDetail::where('sale_return_id', $sale->id)
+                           ->where('type', 'SALE RETURN')
+                           ->get()->toArray(),
+            ];
+            ActivityLog::create([
+               'module_type' => 'sale_return',
+               'module_id'   => $sale->id,
+               'action'      => 'edit',
+               'old_data'    => $oldSnapshot,
+               'new_data'    => $newSnapshot,
+               'action_by'   => Session::get('user_id'),
+               'company_id'  => Session::get('user_company_id'),
+               'action_at'   => now(),
+            ]);
             return redirect('sale-return-without-item-invoice/'.$sale->id)->withSuccess('Sale return added successfully!');
          }else if($request->input('nature')=="WITHOUT GST"){
             $account_names = $request->input('account_name');
@@ -2075,7 +2464,7 @@ class SalesReturnController extends Controller
                $ledger->debit = $debits[$key];                          
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 9;
                $ledger->entry_type_id = $sale->id;
                $ledger->map_account_id = $map_account_id;
@@ -2091,7 +2480,7 @@ class SalesReturnController extends Controller
             $ledger->credit = $debit_total;                          
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 9;
             $ledger->entry_type_id = $sale->id;
             //$ledger->map_account_id = $map_account_id;
@@ -2105,6 +2494,37 @@ class SalesReturnController extends Controller
                CommonHelper::RewriteItemAverageByItem($last_date,$value,$request->input('series_no'));
             }
          }
+         $newSnapshot = [
+            'sale_return' => SalesReturn::find($sale->id)->toArray(),
+
+            'items' => SaleReturnDescription::where('sale_return_id', $sale->id)
+                        ->get()->toArray(),
+
+            'sundries' => SaleReturnSundry::where('sale_return_id', $sale->id)
+                        ->get()->toArray(),
+
+            'item_ledgers' => ItemLedger::where('source', 4)
+                        ->where('source_id', $sale->id)
+                        ->get()->toArray(),
+
+            'account_ledgers' => AccountLedger::whereIn('entry_type', [3,9,10])
+                        ->where('entry_type_id', $sale->id)
+                        ->get()->toArray(),
+
+            'item_average_details' => ItemAverageDetail::where('sale_return_id', $sale->id)
+                        ->where('type', 'SALE RETURN')
+                        ->get()->toArray(),
+         ];
+         ActivityLog::create([
+            'module_type' => 'sale_return',
+            'module_id'   => $sale->id,
+            'action'      => 'edit',
+            'old_data'    => $oldSnapshot,
+            'new_data'    => $newSnapshot,
+            'action_by'   => Session::get('user_id'),
+            'company_id'  => Session::get('user_company_id'),
+            'action_at'   => now(),
+         ]);
          if(!empty(Session::get('redirect_url'))){
             return redirect(Session::get('redirect_url'));
          }else{
@@ -2339,7 +2759,7 @@ class SalesReturnController extends Controller
                                 DB::raw('SUM(qty) as tweight'),
                                 DB::raw('SUM(amount) as tprice'),
                                 DB::raw('hsn_code'),
-                                DB::raw('manage_items.name'),
+                                DB::raw('manage_items.p_name as name'),
                                 DB::raw('price'),
                                 DB::raw('u_name'),
                                 DB::raw('gst_rate'),
@@ -2438,8 +2858,8 @@ class SalesReturnController extends Controller
       //    'status' => true,
       //    'data' => $einvoice_requset
       // );
-      echo json_encode($einvoice_requset);
-      die;
+    //   echo json_encode($einvoice_requset);
+    //   die;
       
       $etoken = DB::select(DB::raw("SELECT token FROM einvoice_tokens WHERE merchant_id='".$einvoice_company."' and STR_TO_DATE(token_expiry, '%Y-%m-%d %H:%i:%s')>=STR_TO_DATE('".date('Y-m-d H:i:s')."', '%Y-%m-%d %H:%i:%s')"));
       if($etoken){
@@ -3074,6 +3494,7 @@ class SalesReturnController extends Controller
             $data_array['ewayBillNo'] = $result->data->EwbNo;
             $data_array['ewayBillDate'] = $result->data->EwbDt;
             $data_array['validUpto'] = $result->data->EwbValidTill;
+            $data_array['distance'] = $request->distance;
             $invoice_update = SalesReturn::find($request->id);
             $invoice_update->eway_bill_response = json_encode($data_array);
             $invoice_update->e_waybill_status = 1;
@@ -3511,7 +3932,10 @@ class SalesReturnController extends Controller
                $date = $data[0];
                $date = date('Y-m-d',strtotime($date));
                $account = $data[1];
-               $invoice_against = $data[2];
+               $invoice_against = isset($data[2]) ? trim($data[2]) : '';
+               if ($invoice_against === '') {
+                  array_push($error_arr, 'Voucher Type is mandatory');
+               }
                $voucher_no = $data[3];
                $invoice_date = $data[4];
                $invoice_date = date('Y-m-d',strtotime($invoice_date));
@@ -3966,4 +4390,356 @@ class SalesReturnController extends Controller
       return view('sale_import')->with('upload_log',1)->with('total_count',$total_invoice_count)->with('success_count',$success_invoice_count)->with('failed_count',$failed_invoice_count)->with('error_message',$all_error_arr);
       
    }
+
+   public function checkCreditNoteNo(Request $request)
+    {
+        $exists = \DB::table('sales_returns')
+            ->where('sr_prefix', $request->sr_prefix)
+            ->where('status','1')
+            ->where('delete','0')
+            ->exists();
+    
+        return response()->json(['exists' => $exists]);
+    }
+    
+    public function exportView()
+    {
+        return view('sale_return_export');
+    }
+
+   public function export(Request $request)
+    {
+    
+        $request->validate([
+          'from_date'  => 'required|date',
+          'to_date'    => 'required|date',
+          'sr_type'    => 'required|in:WITH ITEM,RATE DIFFERENCE',
+          'sale_area'  => 'required|in:LOCAL,CENTER',
+       ]);
+    
+    
+       $companyId = Session::get('user_company_id');
+       $saleArea = $request->sale_area;
+       $srType = $request->sr_type;
+    
+       $saleReturns = SalesReturn::with([
+            'saleReturnDescriptions.item',
+            'saleReturnDescriptions.unitMaster',
+            'saleReturnSundry.billSundry',
+            'account'
+         ])
+         ->where('company_id', $companyId)
+         ->where('sr_type', $srType)
+         ->where('status','1')
+         ->where(function ($q) {
+            $q->where('delete', '0')->orWhereNull('delete');
+         })
+         ->whereDate('date', '>=', $request->from_date)
+         ->whereDate('date', '<=', $request->to_date)
+         ->orderBy('date')
+         ->get();
+    
+       if ($saleReturns->isEmpty()) {
+          return back()->with('error', 'No Sale Return data found');
+       }
+    
+        $fileName = 'sale_return_export_' . now()->format('Ymd_His') . '.csv';
+    
+        $headers = [
+            'Content-Type'        => 'text/csv',
+            'Content-Disposition' => "attachment; filename={$fileName}",
+        ];
+    
+        $callback = function () use ($saleReturns, $saleArea, $companyId) {
+    
+            $file = fopen('php://output', 'w');
+            $billSundries = DB::table('bill_sundrys')
+            ->where('company_id', $companyId)
+            ->where(function($q){
+               $q->where('delete','0')->orWhereNull('delete');
+            })
+            ->orderBy('sequence')
+            ->get();
+    
+            // ✅ CSV HEADER
+            $header = [
+               'Branch',
+               'MC Name',
+               'Date',
+               'Bill Type',
+               'Invoice Number',
+               'Cr Note Against',
+               'Party Name',
+               'Original Invoice No',
+               'Original Invoice Date',
+               'Original Invoice Value',
+               'Item Name',
+               'Qty',
+               'Unit',
+               'Rate',
+               'Amount'
+               ];
+
+               foreach($billSundries as $bs){
+                  $header[] = $bs->name;
+               }
+
+               $header[] = 'Grand Total';
+
+               fputcsv($file,$header);
+    
+          foreach ($saleReturns as $sale) {
+             $billingGst  = trim((string) $sale->billing_gst);
+             $merchantGst = trim((string) $sale->merchant_gst);
+    
+             $billingState  = strlen($billingGst)  >= 2 ? substr($billingGst, 0, 2)  : null;
+             $merchantState = strlen($merchantGst) >= 2 ? substr($merchantGst, 0, 2) : null;
+    
+             $rowSaleArea = ($billingState && $merchantState && $billingState === $merchantState)
+                ? 'LOCAL'
+                : 'CENTER';
+    
+    
+             if ($rowSaleArea !== $saleArea) {
+                continue;
+             }
+    
+             $sundryValues = [];
+
+               foreach($billSundries as $bs){
+                  $sundryValues[$bs->id] = 0;
+               }
+
+               foreach($sale->saleReturnSundry as $s){
+
+                  if($s->delete == 1){
+                     continue;
+                  }
+
+                  $sundryValues[$s->bill_sundry] = ($sundryValues[$s->bill_sundry] ?? 0) + $s->amount;
+               }
+    
+    
+             $isFirstRow = true;
+    
+             foreach ($sale->saleReturnDescriptions as $desc) {
+
+               if($desc->delete == '1'){
+                  continue;
+               }
+               $sundryColumns = [];
+
+               if($isFirstRow){
+
+                  foreach($billSundries as $bs){
+                     $sundryColumns[] = $sundryValues[$bs->id] ?? 0;
+                  }
+
+               }else{
+
+                  foreach($billSundries as $bs){
+                     $sundryColumns[] = '';
+                  }
+
+               }
+               $row = [
+
+                  $isFirstRow ? $sale->series_no : '',
+                  $isFirstRow ? $sale->material_center : '',
+                  $isFirstRow ? $sale->date : '',
+                  '',
+                  $isFirstRow ? $sale->sr_prefix : '',
+                  $isFirstRow ? $sale->voucher_type : '',
+                  $isFirstRow ? optional($sale->account)->account_name : '',
+                  $isFirstRow ? $sale->invoice_no : '',
+                  $isFirstRow ? $sale->original_invoice_date : '',
+                  $isFirstRow ? $sale->original_invoice_value : '',
+
+                  optional($desc->item)->name,
+                  $desc->qty,
+                  optional($desc->unitMaster)->s_name,
+                  $desc->price,
+                  $desc->amount
+
+               ];
+
+                  $row = array_merge($row,$sundryColumns);
+
+                  $row[] = $isFirstRow ? $sale->total : '';
+
+                  fputcsv($file,$row);
+    
+                $isFirstRow = false;
+             }
+          }
+    
+    
+          fclose($file);
+       };
+    
+       return response()->stream($callback, 200, $headers);
+    }
+    public function cancelSaleReturn(Request $request)
+{
+    try {
+
+        if (!$request->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sale Return ID is missing'
+            ]);
+        }
+
+        $sale = SalesReturn::find($request->id);
+
+        if (!$sale) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sale Return not found'
+            ]);
+        }
+
+        \DB::beginTransaction();
+
+        // ✅ SAME as einvoice cancel (just without API)
+        SalesReturn::where('id',$request->id)->update([
+            'e_invoice_status' => 0,
+            'status' => '2',
+            'einvoice_response' => '',
+            'total' => '0'
+        ]);
+
+        // ===============================
+        // WITH GST + WITH ITEM / RATE DIFF
+        // ===============================
+        if($sale->sr_nature=="WITH GST" && ($sale->sr_type=="WITH ITEM" || $sale->sr_type=="Rate Difference")){
+
+            SaleReturnDescription::where('sale_return_id',$request->id)
+                ->update([
+                    'delete'=>'1',
+                    'deleted_at'=>Carbon::now(),
+                    'deleted_by'=>Session::get('user_id')
+                ]);
+
+            SaleReturnSundry::where('sale_return_id',$request->id)
+                ->update([
+                    'delete'=>'1',
+                    'deleted_at'=>Carbon::now(),
+                    'deleted_by'=>Session::get('user_id')
+                ]);
+
+            AccountLedger::where('entry_type',3)
+                ->where('entry_type_id',$request->id)
+                ->update([
+                    'delete_status'=>'1',
+                    'deleted_at'=>Carbon::now(),
+                    'deleted_by'=>Session::get('user_id')
+                ]);
+
+            if($sale->sr_type=="WITH ITEM"){
+
+                ItemLedger::where('source',4)
+                    ->where('source_id',$request->id)
+                    ->update([
+                        'delete_status'=>'1',
+                        'deleted_at'=>Carbon::now(),
+                        'deleted_by'=>Session::get('user_id')
+                    ]);
+
+                ItemAverageDetail::where('sale_return_id',$request->id)
+                    ->where('type','SALE RETURN')
+                    ->delete();
+
+                $desc = SaleReturnDescription::where('sale_return_id',$request->id)->get();
+
+                foreach ($desc as $value) {
+                    if(method_exists(CommonHelper::class, 'RewriteItemAverageByItem')){
+                        CommonHelper::RewriteItemAverageByItem(
+                            $sale->date,
+                            $value->goods_discription ?? '',
+                            $sale->series_no
+                        );
+                    }
+                }
+            }
+
+        }
+
+        // ===============================
+        // WITH GST + WITHOUT ITEM
+        // ===============================
+        else if($sale->sr_nature=="WITH GST" && $sale->sr_type=="WITHOUT ITEM"){
+
+            SaleReturnWithoutGstEntry::where('sale_return_id',$request->id)
+                ->update([
+                    'delete'=>'1',
+                    'deleted_at'=>Carbon::now(),
+                    'deleted_by'=>Session::get('user_id')
+                ]);
+
+            AccountLedger::where('entry_type',10)
+                ->where('entry_type_id',$request->id)
+                ->update([
+                    'delete_status'=>'1',
+                    'deleted_at'=>Carbon::now(),
+                    'deleted_by'=>Session::get('user_id')
+                ]);
+        }else if($sale->sr_nature=="WITHOUT GST"){
+
+            SaleReturnWithoutGstEntry::where('sale_return_id',$request->id)
+               ->update([
+                     'delete'=>'1',
+                     'deleted_at'=>Carbon::now(),
+                     'deleted_by'=>Session::get('user_id')
+               ]);
+
+            AccountLedger::where('entry_type',9)
+               ->where('entry_type_id',$request->id)
+               ->update([
+                     'delete_status'=>'1',
+                     'deleted_at'=>Carbon::now(),
+                     'deleted_by'=>Session::get('user_id')
+               ]);
+         }
+
+        \DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Sale Return Cancelled Successfully'
+        ]);
+
+    } catch (\Exception $e) {
+
+        \DB::rollBack();
+
+        \Log::error('Sale Return Cancel Error: '.$e->getMessage(), [
+            'sale_return_id'=>$request->id
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Something went wrong: '.$e->getMessage()
+        ]);
+    }
+}
+public function approveCreditNote(Request $request)
+{
+    $id = $request->id;
+
+    $user_id = Session::get('user_id');
+
+    DB::table('sales_returns') 
+        ->where('id', $id)
+        ->update([
+            'approved_status' => 1,
+            'approved_by' => $user_id,
+            'approved_at' => now()
+        ]);
+
+    return response()->json([
+        "status" => true,
+        "message" => "Credit Note Approved Successfully"
+    ]);
+}
 }

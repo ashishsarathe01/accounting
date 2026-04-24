@@ -2,6 +2,58 @@
 @section('content')
 <!-- header-section -->
 @include('layouts.header')
+<style>
+   .print-only {
+       display: none;
+    }
+    @media print {
+    
+       @page {
+          margin: 20mm;
+       }
+    
+       .print-only {
+          display: block;
+       }
+    
+       body * {
+          visibility: hidden;
+       }
+    
+       #printArea, #printArea * {
+          visibility: visible;
+       }
+    
+       #printArea {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+          padding: 40px; /* backup margin */
+       }
+    
+       table {
+          width: 100%;
+          border-collapse: collapse;
+       }
+    
+       table, th, td {
+          border: 1px solid #000;
+       }
+    
+       th, td {
+          padding: 10px;
+          text-align: right;
+       }
+    
+       th:first-child, td:first-child {
+          text-align: left;
+       }
+    }
+    .w-min-230 {
+    min-width: 100px;
+}
+</style>
 <!-- list-view-company-section -->
 <div class="list-of-view-company ">
    <section class="list-of-view-company-section container-fluid">
@@ -19,18 +71,18 @@
                   @csrf
                   <div class="d-xxl-flex d-block  align-items-center">
                      <!-- Series Dropdown -->
-<p class="text-nowrap m-0 font-14 fw-semibold font-heading">Series:</p>
-<select class="form-select select2-single w-min-230 ms-xxl-2 w-25" aria-label="Select Series" id="series" name="series" required>
-    <option value="">Select Series</option>
-    @foreach($series as $value)
-        <option 
-            value="{{ $value->series }}" 
-            {{ ($selected_series == $value->series) ? 'selected' : '' }}>
-            {{ $value->series }}
-        </option>
-    @endforeach
-</select>
-                     <p class="text-nowrap font-14 fw-500 font-heading my-2 my-xxl-0" style="margin-left:10px;">Items </p>
+                    
+                    <select class="form-select select2-single w-min-230 ms-xxl-2 w-25" aria-label="Select Series" id="series" name="series" required>
+                        <option value="">Select Series</option>
+                        @foreach($series as $value)
+                            <option 
+                                value="{{ $value->series }}" 
+                                {{ ($selected_series == $value->series) ? 'selected' : '' }}>
+                                {{ $value->series }}
+                            </option>
+                        @endforeach
+                    </select>
+                    
                      
                      <select class="form-select select2-single w-min-200 ms-xxl-2 w-25" aria-label="Default select example" id="items_id" name="items_id" required>
                         <option value="">Select</option>
@@ -49,65 +101,97 @@
                      <div class="calender-administrator my-2 my-xxl-0 ms-xxl-2 w-min-230">
                         <input type="date" id="from_date" class="form-control calender-bg-icon calender-placeholder" placeholder="From date" required name="from_date" value="<?php if(isset($_GET['from_date'])){ echo $_GET['from_date'];}else{ echo $fdate;}?>" min="{{Session::get('from_date')}}" max="{{Session::get('to_date')}}">
                      </div>
-                     <div class="calender-administrator   w-min-230 ms-xxl-2">
+                     <div class="calender-administrator w-min-230 ms-xxl-2">
                         <input type="date" id="to_date" class="form-control calender-bg-icon calender-placeholder" placeholder="To date" required name="to_date" value="<?php  if(isset($_GET['to_date'])){ echo $_GET['to_date']; }else{ echo $tdate;}?>" min="{{Session::get('from_date')}}" max="{{Session::get('to_date')}}">
                      </div>
-                     <div class="calender-administrator   w-min-130 ms-xxl-1">
+                     <div class="calender-administrator w-min-130 ms-xxl-1">
                         <button type="button" class="btn  btn-xs-primary" id="serachBtn">SUBMIT</button>
                      </div>
                   </div>
-               </form>             
+               </form>
+               <button onclick="printReport()" class="btn btn-primary btn-sm">
+                        Print
+                     </button>
+                     <a href="{{ url('item-ledger-average-csv?items_id='.request()->items_id.'&from_date='.request()->from_date.'&to_date='.request()->to_date.'&series='.request()->series) }}" 
+                        class="btn btn-success btn-sm">
+                        Export CSV
+                     </a>
             </div>
             <div class="display-sale-month  bg-white table-view shadow-sm">
-               <table id="acc_table1" class="table-striped table-bordered table m-0 shadow-sm ">                  
-                  <thead>
-                     <tr class=" font-12 text-body bg-light-pink">                        
-                        <th class="w-min-120 border-none bg-light-pink text-body">Date </th>
-                        <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Qty. In (Kg)</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Qty. Out (Kg)</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Qty. Balance (Kg)</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Average Rate</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Amount</th>          
-                     </tr>
-                  </thead>
-                  <tbody>
-                  <tr>
-                          <td>Opening</td>
-                          <td style="text-align: right;"></td>
-                          <td style="text-align: right;"></td>
-                          <td style="text-align: right;">{{$opening_weight}}</td>
-                          <td style="text-align: right;">                             
-                              @php 
-                              
-                              if($opening_weight != 0 && $opening_weight != ''){
-                                 echo $average_price = round($opening_amount/$opening_weight,6);
-                              }else{
-                                 $average_price = 0;
-                              }
-                              
-                              @endphp
-                           </td>
-                           <td style="text-align: right;">
-                           @php                            
-                              echo formatIndianNumber($opening_amount,2);
-                           @endphp</td>
-                        </tr>
-                     @foreach($average_data as $purchase)                        
-                        <tr class="average_details" data-date="{{$purchase->stock_date}}" style="cursor: pointer;">
-                           <td>{{date('d-m-Y',strtotime($purchase->stock_date))}}</td>
-                           <td style="text-align: right;">{{formatIndianNumber($purchase->purchase_weight)}}</td>
-                           <td style="text-align: right;">{{formatIndianNumber($purchase->sale_weight)}}</td>
-                           <td style="text-align: right;">{{formatIndianNumber($purchase->average_weight)}}</td>
-                           <td style="text-align: right;">{{$purchase->price}}</td>
-                           <td style="text-align: right;">{{formatIndianNumber($purchase->amount,2)}}</td>
-                        </tr>
-                     @endforeach
-                    
-                  </tbody>                  
-                  </div>
-               </table>
+                <div id="printArea">
+                    <div class="print-only text-center mb-3">
+                        <h4>Item Ledger Report</h4>
+                        <h5>Item: {{ request()->items_id ? collect($item_list)->where('id', request()->items_id)->first()->name ?? '' : '' }}</h5>
+                        <h6>Series: {{ request()->series }}</h6>
+                        <p>
+                            From: {{ request()->from_date }} 
+                            To: {{ request()->to_date }}
+                        </p>
+                    </div>
+                    <table id="acc_table1" class="table-striped table-bordered table m-0 shadow-sm ">                  
+                        <thead>
+                            <tr class=" font-12 text-body bg-light-pink">                        
+                                <th class="w-min-120 border-none bg-light-pink text-body">Date </th>
+                                <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Qty. In (Kg)</th>
+                                <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Qty. Out (Kg)</th>
+                                <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Qty. Balance (Kg)</th>
+                                <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Average Rate</th>
+                                <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Amount</th>          
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Opening</td>
+                                <td style="text-align: right;"></td>
+                                <td style="text-align: right;"></td>
+                                <td style="text-align: right;">{{$opening_weight}}</td>
+                                <td style="text-align: right;">                             
+                                    @php
+                                        if($opening_weight != 0 && $opening_weight != ''){
+                                            echo $average_price = round($opening_amount/$opening_weight,6);
+                                        }else{
+                                            $average_price = 0;
+                                        }
+                                    @endphp
+                                </td>
+                                <td style="text-align: right;">
+                                    @php                            
+                                        echo formatIndianNumber($opening_amount,2);
+                                    @endphp
+                                </td>
+                            </tr>
+                            @php
+                                $total_in = 0;
+                                $total_out = 0;
+                            @endphp
+                            @foreach($average_data as $purchase)      
+                                @php
+                                    $total_in += $purchase->purchase_weight ?? 0;
+                                    $total_out += $purchase->sale_weight ?? 0;
+                                @endphp
+                                <tr class="average_details" data-date="{{$purchase->stock_date}}" style="cursor: pointer;">
+                                    <td>{{date('d-m-Y',strtotime($purchase->stock_date))}}</td>
+                                    <td style="text-align: right;">{{formatIndianNumber($purchase->purchase_weight)}}</td>
+                                    <td style="text-align: right;">{{formatIndianNumber($purchase->sale_weight)}}</td>
+                                    <td style="text-align: right;">{{formatIndianNumber($purchase->average_weight)}}</td>
+                                    <td style="text-align: right;">{{$purchase->price}}</td>
+                                    <td style="text-align: right;">{{formatIndianNumber($purchase->amount,2)}}</td>
+                                </tr>
+                            @endforeach
+                            <tr style="font-weight: bold; background: #f8f9fa;">
+                                <td>Total</td>
+                                <td style="text-align: right;">{{ formatIndianNumber($total_in,2) }}</td>
+                                <td style="text-align: right;">{{ formatIndianNumber($total_out,2) }}</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                        </tbody>                  
+                    </div>
+                </table>
+                </div>
             </div>
-         </div>
+        </div>
       </div>
    </section>
 </div>
@@ -318,6 +402,29 @@
                                        maximumFractionDigits: 2
                                        })+"</td>";
                         html += "<td style='text-align: right;'></td>";
+                     }else if(item.type=="PRODUCTION GENERATE"){
+                        total_weight += parseFloat(item.production_in_weight);
+                        total_amount += parseFloat(item.production_in_amount);
+                        html += "<td style='text-align:left'>"+item.ap_in_voucher+"</td>";
+                        html += "<td style='text-align:left'>"+item.ap_in_account+"</td>";
+                        html += "<td style='text-align: right;'>"+Number(item.production_in_weight).toLocaleString('en-IN', {
+                                       minimumFractionDigits: 2,
+                                       maximumFractionDigits: 2
+                                       })+"</td>";
+                        html += "<td style='text-align: right;'>"+Number(item.production_in_amount).toLocaleString('en-IN', {
+                                       minimumFractionDigits: 2,
+                                       maximumFractionDigits: 2
+                                       })+"</td>";
+                     }else if(item.type=="PRODUCTION CONSUME"){
+                        total_weight -= parseFloat(item.production_out_weight);
+                        html += "<td style='text-align:left'>"+item.ap_out_voucher+"</td>";
+                        html += "<td style='text-align:left'>"+item.ap_out_account+"</td>";
+                        html += "<td style='text-align: right;'>"+Number(item.production_out_weight).toLocaleString('en-IN', {
+                                       minimumFractionDigits: 2,
+                                       maximumFractionDigits: 2
+                                       })+"</td>";
+                        html += "<td style='text-align: right;'></td>";
+                     
                      }
                      html += "</tr>";
                   });
@@ -351,6 +458,9 @@
    });
    function reDirectFun(url){
       window.location.href = url;
+   }
+   function printReport() {
+      window.print();
    }
 </script>
 @endsection

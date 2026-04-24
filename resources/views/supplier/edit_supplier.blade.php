@@ -108,6 +108,10 @@ input[type=number] {
                             {{-- </div> --}}
                             @php $location_index++; @endphp
                         @endforeach
+                        @if($location_index==0)
+                                        <button type="button" class="btn btn-success add_more">+</button>
+                                        @endif
+                        {{$location_index}}
                         <span class="add_div"></span>
                         <div class="clearfix"></div>
                         <div class="mb-3 col-md-3">

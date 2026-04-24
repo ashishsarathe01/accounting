@@ -46,12 +46,30 @@ class User extends Authenticatable
     public function hasPrivilege($module_id, $action)
     {
         
-            if ($this->type=="OWNER" && Session::get('admin_id')!="") {
+            if (Session()->get('user_type')=="OWNER" && Session::get('admin_id')!="") {
                 $priv = DB::table('admin_user_privileges_module_mappings')->where('user_id', Session::get('admin_id'))
                     ->where('module_id', $module_id)
                     ->first();
+                    
             }else{
-                $priv = \App\Models\PrivilegesModuleMapping::where('employee_id', $this->id)
+                $comp = \App\Models\Companies::where('id', Session()->get('user_company_id'))
+                                                ->first();
+                $comp_ids = \App\Models\Companies::where('user_id', $comp->user_id)
+                                                ->pluck('id');
+                
+                $user_data = User::whereIn('company_id',$comp_ids)
+                                ->where('mobile_no',$this->mobile_no)
+                                ->first();
+                
+                        Session::put([
+                            'user_id' => $user_data->id,
+                            'user_name' => $user_data->name,
+                            'user_email' => $user_data->email,
+                            'user_mobile_no' => $user_data->mobile_no,
+                        ]);
+                // print_r($u);
+                // die($module_id);
+                $priv = \App\Models\PrivilegesModuleMapping::where('employee_id', $user_data->id)
                     ->where('module_id', $module_id)
                     ->where('company_id', Session()->get('user_company_id'))
                     ->first();
@@ -65,6 +83,7 @@ class User extends Authenticatable
         $user = \App\Models\Companies::where('id', Session()->get('user_company_id'))->first();
         $priv = \App\Models\MerchantModuleMapping::where('module_id', $module_id)
                                                   ->where('merchant_id', $user->user_id)
+                                                  ->where('company_id', Session()->get('user_company_id'))
                                                   ->first();
 
         return $priv;

@@ -24,4 +24,22 @@ class Purchase extends Model
    public function purchaseReport(){
       return $this->hasMany('App\Models\SupplierPurchaseReport','purchase_id','id');
    }
+   public function sparePart()
+{
+    return $this->belongsTo(
+        \App\Models\SparePart::class,
+        'spare_part_id',
+        'id'
+    );
+}
+
+public function descriptions()
+{
+    return $this->hasMany(
+        \App\Models\PurchaseDescription::class,
+        'purchase_id',
+        'id'
+    );
+}
+
 }

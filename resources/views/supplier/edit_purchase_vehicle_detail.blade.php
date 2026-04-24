@@ -46,7 +46,7 @@ input[type=number] {
                         <div class="clearfix"></div>
                         <div class="mb-3 col-md-3">
                             <label for="group" class="form-label font-14 font-heading">Group</label>
-                            <select class="form-select" name="group" id="group" required>
+                            <select class="form-select select2-single" name="group" id="group" required>
                                 <option value="">Select Group</option>
                                 @foreach($item_groups as $key => $group)
                                     <option value="{{$group->id}}" @if($purchase_info->group_id==$group->id) selected @endif>{{$group->group_name}}</option>
@@ -54,13 +54,24 @@ input[type=number] {
                             </select>
                         </div>
                         <div class="clearfix"></div>
-                        <div class="mb-3 col-md-3">
-                            <label for="item" class="form-label font-14 font-heading">Item</label>
-                            <select class="form-select" name="item" id="item" required>
-                                <option value="">Select Item</option>
-                               
-                            </select>
-                        </div>                        
+                        <div class="mb-3 col-md-3" id="item_div">
+    <label class="form-label font-14 font-heading">Item</label>
+    <select class="form-select select2-single" name="item" id="item">
+        <option value="">Select Item</option>
+    </select>
+</div>
+
+<div class="mb-3 col-md-3 d-none" id="bill_no_div">
+    <label class="form-label font-14 font-heading">Bill No</label>
+    <input type="text" class="form-control" name="bill_no"
+           value="{{ $purchase_info->bill_no ?? '' }}">
+</div>
+
+<div class="mb-3 col-md-3 d-none" id="amount_div">
+    <label class="form-label font-14 font-heading">Amount</label>
+    <input type="number" step="0.01" class="form-control" name="amount"
+           value="{{ $purchase_info->amount ?? '' }}">
+</div>                        
                         <div class="clearfix"></div>
                         <div class="mb-3 col-md-3">
                             <label for="gross_weight" class="form-label font-14 font-heading">Gross Weight</label>
@@ -135,7 +146,7 @@ input[type=number] {
                 return null;
             }
         });
-        $("#group").change();
+        $("#group").trigger('change');
     });
     $("#group").change(function(){
         let group_id = $(this).val();
@@ -168,5 +179,37 @@ input[type=number] {
             }
         });
     }
+
+    $('#group').on('change', function () {
+
+    let groupId = $(this).val();
+
+    if (!groupId) return;
+
+    $.ajax({
+        url: "{{ url('get-group-type') }}/" + groupId,
+        type: 'GET',
+        success: function (response) {
+
+            if (response.group_type && response.group_type.toUpperCase().includes('SPARE')) {
+
+                $('#item_div').addClass('d-none');
+                $('#item').prop('required', false).val('');
+
+                $('#bill_no_div').removeClass('d-none');
+                $('#amount_div').removeClass('d-none');
+
+            } else {
+
+                $('#item_div').removeClass('d-none');
+                $('#item').prop('required', true);
+
+                $('#bill_no_div').addClass('d-none');
+                $('#amount_div').addClass('d-none');
+            }
+        }
+    });
+
+});
 </script>
 @endsection

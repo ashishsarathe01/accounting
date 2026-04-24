@@ -69,6 +69,8 @@
                @csrf
                <div class="row">
                   <input type="hidden" name="sale_return_edit_id" value="{{$sale_return->id}}">
+                  <input type="hidden" id="current_series" value="{{$sale_return->series_no}}">
+                  <input type="hidden" id="current_party" value="{{$sale_return->party}}">
                   
                   <div class="mb-4 col-md-4">
                      <label for="name" class="form-label font-14 font-heading">NATURE</label>
@@ -87,20 +89,19 @@
                   <div class="mb-4 col-md-4 type_div" style="display:none">
                      <label for="name" class="form-label font-14 font-heading">TYPE</label>
                      <select id="type" name="type" class="form-select" onChange="sectionHideShow()">
-                        @if($sale_return->sr_type=="WITH ITEM")
-                           <option value="WITH ITEM" @if($sale_return->sr_type=="WITH ITEM") selected @endif>WITH ITEM</option>
-                        @endif
-                        @if($sale_return->sr_type=="WITHOUT ITEM")
-                           <option value="WITHOUT ITEM" @if($sale_return->sr_type=="WITHOUT ITEM") selected @endif>WITHOUT ITEM</option>
-                        @endif
-                        @if($sale_return->sr_type=="RATE DIFFERENCE")
-                           <option value="RATE DIFFERENCE" @if($sale_return->sr_type=="RATE DIFFERENCE") selected @endif>RATE DIFFERENCE</option>
-                        @endif
+                        <option value="">Select</option>
+                        <option value="WITH ITEM" {{ $sale_return->sr_type=='WITH ITEM' ? 'selected' : '' }}>WITH ITEM</option>
+                        <option value="WITHOUT ITEM" {{ $sale_return->sr_type=='WITHOUT ITEM' ? 'selected' : '' }}>WITHOUT ITEM</option>
+                        <option value="RATE DIFFERENCE" {{ $sale_return->sr_type=='RATE DIFFERENCE' ? 'selected' : '' }}>RATE DIFFERENCE</option>
                      </select>
                   </div>
                   <div class="mb-4 col-md-4">
                      <label for="name" class="form-label font-14 font-heading">Date</label>
-                     <input type="date" id="date" class="form-control calender-bg-icon calender-placeholder" name="date" placeholder="Select date" value="{{$sale_return->date}}" required min="{{Session::get('from_date')}}" max="{{Session::get('to_date')}}">
+                     <input type="text"
+                           class="form-control"
+                           value="{{ \Carbon\Carbon::parse($sale_return->date)->format('d-m-Y') }}"
+                           readonly>
+                     <input type="hidden" name="date" value="{{$sale_return->date}}">
                      <ul style="color: red;">
                         @error('date'){{$message}}@enderror                        
                      </ul>
@@ -153,26 +154,62 @@
                   </div>
                   <div class="mb-1 col-md-1 voucher_no_div">
                      <br>
-                     <a href="{{ URL::to('sale-invoice/')}}/{{$sale_return->invoice_no}}" title="View Invoice" target="__blank" id="invoice_id"><img src="{{ URL::asset('public/assets/imgs/eye-icon.svg')}}" style="margin-top: 20px;"></a>
+                     @php
+                        $invoiceUrl = '';
+                        if($sale_return->sale_bill_id){
+                           if($sale_return->voucher_type == 'PURCHASE'){
+                              $invoiceUrl = URL::to('purchase-invoice/'.$sale_return->sale_bill_id);
+                           }else{
+                              // Default to SALE
+                              $invoiceUrl = URL::to('sale-invoice/'.$sale_return->sale_bill_id);
+                           }
+                        }
+                     @endphp
+                     <a href="{{ $invoiceUrl }}" title="View Invoice" target="__blank" id="invoice_id">
+                        <img src="{{ URL::asset('public/assets/imgs/eye-icon.svg')}}" style="margin-top: 20px;">
+                     </a>
                   </div>
                   <div class="mb-4 col-md-4">
-                     <label for="name" class="form-label font-14 font-heading">Series No.</label>
-                     <select id="series_no" name="series_no" class="form-select" required>
-                     <option value="{{$sale_return->series_no}}">{{$sale_return->series_no}}</option> 
+                     <label for="series_no" class="form-label font-14 font-heading">Series No.</label>
+
+                     <select id="series_no" name="series_no" class="form-select" required style="pointer-events:none;background:#e9ecef;">
+                        <option value="">Select</option>
+
+                        @foreach($mat_series as $value)
+                              <option value="{{ $value->series }}"
+                                 data-gst_no="{{ $value->gst_no }}"
+                                 {{ $sale_return->series_no == $value->series ? 'selected' : '' }}
+                              >
+                                 {{ $value->series }}
+                              </option>
+                        @endforeach
                      </select>
+                     <input type="hidden" id="merchant_gstin_hidden" value="{{$sale_return->merchant_gst}}">
+                     <input type="hidden" id="customer_gstin_hidden" value="{{$sale_return->billing_gst}}">
                      <ul style="color: red;">
-                       @error('series_no'){{$message}}@enderror                        
-                     </ul> 
-                  </div>
-                  <div class="mb-4 col-md-4">
-                     <label for="name" class="form-label font-14 font-heading">Material Center</label>
-                     <select name="material_center" class="form-select" required>
-                        <option value="{{$sale_return->material_center}}">{{$sale_return->material_center}}</option>
-                     </select>
-                     <ul style="color: red;">
-                       @error('material_center'){{$message}}@enderror                        
+                        @error('series_no'){{ $message }}@enderror
                      </ul>
                   </div>
+
+                  <div class="mb-4 col-md-4">
+                     <label for="material_center" class="form-label font-14 font-heading">Material Center</label>
+
+                     <select name="material_center" id="material_center" class="form-select" required style="pointer-events:none;background:#e9ecef;">
+                        <option value="">Select</option>
+
+                        @foreach($mat_series as $value)
+                              <option value="{{ $value->mat_center }}"
+                                 {{ $sale_return->material_center == $value->mat_center ? 'selected' : '' }}>
+                                 {{ $value->mat_center }}
+                              </option>
+                        @endforeach
+                     </select>
+
+                     <ul style="color: red;">
+                        @error('material_center'){{ $message }}@enderror
+                     </ul>
+                  </div>
+
                   <div class="mb-4 col-md-4">
                      <label for="sale_return_no" class="form-label font-14 font-heading">Credit Note No.</label>
                      <input type="text" class="form-control" id="voucher_prefix" name="voucher_prefix" placeholder="" value="{{$sale_return->sr_prefix}}"  readonly style="text-align: right;">
@@ -195,41 +232,173 @@
                         </tr>
                      </thead>
                      <tbody>
-                        @php $i = 1; $item_arr = [];$total_amount = 0;@endphp
-                        
-                        @foreach($sale_return_description as $item)
-                        
-                           @php $item_arr[$i] = $item->goods_discription;@endphp
-                           <tr id="tr_@php $i; @endphp" class="font-14 font-heading bg-white">
-                              <td class="w-min-50">@php echo $i; @endphp</td>
+                     @php
+                        $i = 1;
+                        $item_arr = [];
+                        $total_amount = 0;
+                     @endphp
+                     @if(count($sale_return_description) > 0)
+                     @foreach($sale_return_description as $item)
+                        @php $item_arr[$i] = $item->goods_discription; @endphp
+                        <tr id="tr_{{ $i }}" class="font-14 font-heading bg-white">
+                              <td class="w-min-50">{{ $i }}</td>
+                              <td class="w-min-50 position-relative">
+                                 @if($production_module_status == 1)
+                                    <div class="d-flex align-items-center gap-2">
+                                          <select onchange="openProductionModal('tr_{{ $i }}');" 
+                                                class="border-0 goods_items form-select" 
+                                                id="goods_discription_tr_{{ $i }}" 
+                                                name="goods_discription[]"  
+                                                data-id="{{ $i }}" required>
+                                             <option value="">Select</option>
+                                             @foreach($manageitems as $item_info)
+                                                <option value="{{ $item_info->id }}"
+                                                      unit_id="{{ $item_info->u_name }}"
+                                                      data-val="{{ $item_info->unit }}"
+                                                      data-percent="{{ $item_info->gst_rate }}"
+                                                      data-production="{{ in_array($item_info->id, $production_items) ? 1 : 0 }}"
+                                                      @if($item_info->id == $item->goods_discription) selected @endif>
+                                                   {{ $item_info->name }}
+                                                </option>
+                                             @endforeach
+                                          </select>
+                                          <button type="button" class="btn btn-outline-secondary p-1 px-2 editItemDetailsBtn"
+                                                data-row="tr_{{ $i }}" title="Configure item">
+                                             ⚙️
+                                          </button>
+                                    </div>
+                                 @else
+                                    <select onchange="call_fun('tr_{{ $i }}');" 
+                                             class="border-0 goods_items form-select" 
+                                             id="goods_discription_tr_{{ $i }}" 
+                                             name="goods_discription[]"  
+                                             data-id="{{ $i }}" required>
+                                          <option value="">Select</option>
+                                          @foreach($manageitems as $item_info)
+                                             <option value="{{ $item_info->id }}" 
+                                                      unit_id="{{ $item_info->u_name }}" 
+                                                      data-val="{{ $item_info->unit }}"  
+                                                      data-percent="{{ $item_info->gst_rate }}" 
+                                                      @if($item_info->id == $item->goods_discription) selected @endif>
+                                                {{ $item_info->name }}
+                                             </option>
+                                          @endforeach
+                                    </select>
+                                 @endif
+
+                                 <input type="hidden" name="item_size_info[]" id="item_size_info_tr_{{ $i }}" 
+                                       value='@if(!empty($item->item_size_info)){{ $item->item_size_info }}@endif'>
+                              </td>
+
                               <td class="w-min-50">
-                                 <select onchange="call_fun('tr_@php echo $i; @endphp');" class="border-0 goods_items form-select" id="goods_discription_tr_@php echo $i; @endphp" name="goods_discription[]" required data-id="@php echo $i; @endphp">
-                                    <option value="">Select</option>
-                                    @foreach($manageitems as $item_info)
-                                       <option value="{{$item_info->id}}" unit_id="{{$item_info->u_name}}" data-val="{{$item_info->unit}}"  data-percent="{{$item_info->gst_rate}}" @if($item_info->id==$item->goods_discription) selected @endif>{{$item_info->name}}</option>
-                                    @endforeach
-                                 </select>
-                              </td>                              
-                              <td class=" w-min-50">
-                                 <input type="number" class="quantity w-100 form-control" id="quantity_tr_@php echo $i; @endphp" name="qty[]" value="{{$item->qty}}" style="text-align:right;"/>
+                                 <input type="number" class="quantity w-100 form-control" 
+                                       id="quantity_tr_{{ $i }}" name="qty[]" value="{{ $item->qty }}" 
+                                       style="text-align:right;"/>
                               </td>
-                              <td class=" w-min-50">
-                                 <input type="text" class="w-100 form-control" id="unit_tr_@php echo $i; @endphp" readonly style="text-align:center;" value="{{$item->s_name}}" />       
-                                 <input type="hidden" class="units w-100" name="units[]" id="units_tr_@php echo $i; @endphp" value="{{$item->unit}}" />
+
+                              <td class="w-min-50">
+                                 <input type="text" class="w-100 form-control" id="unit_tr_{{ $i }}" 
+                                       readonly style="text-align:center;" value="{{ $item->s_name }}" />       
+                                 <input type="hidden" class="units w-100" name="units[]" 
+                                       id="units_tr_{{ $i }}" value="{{ $item->unit }}" />
                               </td>
-                              <td class=" w-min-50">
-                                 <input type="number" class="price form-control" id="price_tr_@php echo $i; @endphp" name="price[]" value="{{$item->price}}" style="text-align:right;"/>
+
+                              <td class="w-min-50">
+                                 <input type="number" class="price form-control" id="price_tr_{{ $i }}" 
+                                       name="price[]" value="{{ $item->price }}" style="text-align:right;"/>
                               </td>
-                              <td class=" w-min-50">
-                                 <input type="number" id="amount_tr_@php echo $i; @endphp" class="amount w-100 form-control" name="amount[]" value="{{$item->amount}}" style="text-align:right;">
+
+                              <td class="w-min-50">
+                                 <input type="number" id="amount_tr_{{ $i }}" class="amount w-100 form-control" 
+                                       name="amount[]" value="{{ $item->amount }}" style="text-align:right;">
                               </td>
+
                               <td>
-                                 <svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle add_more" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg>
+                                 @if($loop->first)
+                                    <!-- FIRST ROW = ADD -->
+                                    <svg xmlns="http://www.w3.org/2000/svg" 
+                                       class="bg-primary rounded-circle add_more" 
+                                       width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;">
+                                       <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" />
+                                    </svg>
+                                 @else
+                                    <!-- OTHER ROWS = REMOVE -->
+                                    <svg style="color:red;cursor:pointer;" 
+                                       xmlns="http://www.w3.org/2000/svg" 
+                                       width="16" height="16" 
+                                       fill="currentColor" 
+                                       class="bi bi-file-minus-fill remove" 
+                                       data-id="{{ $i }}" 
+                                       viewBox="0 0 16 16">
+                                       <path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/>
+                                    </svg>
+                                 @endif
                               </td>
-                           </tr>
-                           @php $i++; $total_amount = $total_amount + $item->amount; @endphp
-                        @endforeach
-                     </tbody>
+                        </tr>
+                        @php 
+                              $i++; 
+                              $total_amount += $item->amount ?? 0; 
+                        @endphp
+                     @endforeach
+                     @else
+                     <tr id="tr_1" class="font-14 font-heading bg-white">
+                        <td class="w-min-50">1</td>
+
+                        <td class="w-min-50 position-relative">
+                           <select onchange="call_fun('tr_1');" 
+                              class="border-0 goods_items form-select" 
+                              id="goods_discription_tr_1" 
+                              name="goods_discription[]"  
+                              data-id="1" required>
+
+                              <option value="">Select</option>
+
+                              @foreach($manageitems as $item_info)
+                                 <option value="{{ $item_info->id }}"
+                                    unit_id="{{ $item_info->u_name }}"
+                                    data-val="{{ $item_info->unit }}"
+                                    data-percent="{{ $item_info->gst_rate }}">
+                                    {{ $item_info->name }}
+                                 </option>
+                              @endforeach
+
+                           </select>
+                        </td>
+
+                        <td class="w-min-50">
+                           <input type="number" class="quantity w-100 form-control" 
+                              id="quantity_tr_1" name="qty[]" style="text-align:right;">
+                        </td>
+
+                        <td class="w-min-50">
+                           <input type="text" class="w-100 form-control" 
+                              id="unit_tr_1" readonly style="text-align:center;">
+                           <input type="hidden" class="units w-100" 
+                              name="units[]" id="units_tr_1">
+                        </td>
+
+                        <td class="w-min-50">
+                           <input type="number" class="price form-control" 
+                              id="price_tr_1" name="price[]" style="text-align:right;">
+                        </td>
+
+                        <td class="w-min-50">
+                           <input type="number" id="amount_tr_1" 
+                              class="amount w-100 form-control" 
+                              name="amount[]" style="text-align:right;">
+                        </td>
+
+                        <td>
+                           <svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle add_more" 
+                              width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;">
+                              <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/>
+                           </svg>
+                        </td>
+                     </tr>
+
+                     @endif
+                  </tbody>
+
                      
                      <div class="total">
                         <tr class="font-14 font-heading bg-white">
@@ -563,17 +732,17 @@
                         </table>
                      </div>
                   </div>
-                   <div class="narration_withgst" style="display: none; margin: 0px 0px 10px 0px; align-items: center;">
-   <label for="narration_withgst" style="margin-right: 10px; min-width: 80px; font-weight: 500;"><strong>Narration</strong></label>
-   <input
-      id="narration_withgst"
-      name="narration_withgst"
-      class="form-control"
-      value="{{$sale_return->remark}}"
-      placeholder="Enter narration for the entry..."
-      style="color: #212529; padding-top: 2px; height: 40px; line-height: 1.5; text-align: left; width: 100%; margin-top: 0px !important;"
-   >
-</div>
+                  <div class="narration_withgst" style="display: none; margin: 0px 0px 10px 0px; align-items: center;">
+                     <label for="narration_withgst" style="margin-right: 10px; min-width: 80px; font-weight: 500;"><strong>Narration</strong></label>
+                     <input
+                        id="narration_withgst"
+                        name="narration_withgst"
+                        class="form-control"
+                        value="{{$sale_return->remark}}"
+                        placeholder="Enter narration for the entry..."
+                        style="color: #212529; padding-top: 2px; height: 40px; line-height: 1.5; text-align: left; width: 100%; margin-top: 0px !important;"
+                     >
+                  </div>
                </div>
                 <!-- With Gst WithOut Item Section Start -->
                 <div class="transaction-table transaction-main-table bg-white table-view shadow-sm border-radius-8 mb-4 with_gst_without_item_section" style="display:none">
@@ -583,7 +752,7 @@
                         @if(count($without_gst)>0)
                            @foreach($without_gst as $k=>$v)
                            <tr class="font-14 font-heading bg-white" id="withgst_tr_{{$k}}">
-                              <td style="width:50%">
+                              <td style="width:28%">
                                  <select class="form-control item select2-single" id="item_{{$k}}" data-index="{{$k}}" name="item[]" onchange="gstCalculation()" >
                                     <option value="">Select Item</option>
                                     @foreach($items as $item)
@@ -591,71 +760,71 @@
                                     @endforeach
                                  </select>
                               </td>
-                              <td>
+                              <td style="width:15%">
                                  <input type="number" class="form-control hsn" id="hsn_{{$k}}" name="hsn[]" placeholder="HSN/SAC" value="{{$v->hsn_code}}">
                               </td>
                               <td style="width:15%">
                                  <select class="form-select percentage select2-single" id="percentage_{{$k}}" data-index="{{$k}}" name="percentage[]" onchange="gstCalculation()">
                                     <option value="">GST(%)</option>
-                                    <option value="5" @if($v->percentage==0) selected @endif>0%</option>
+                                    <option value="0" @if($v->percentage==0) selected @endif>0%</option>
                                     <option value="5" @if($v->percentage==5) selected @endif>5%</option>
                                     <option value="12" @if($v->percentage==12) selected @endif>12%</option>
                                     <option value="18" @if($v->percentage==18) selected @endif>18%</option>
                                     <option value="28" @if($v->percentage==28) selected @endif>28%</option>
                                  </select>
                               </td>
-                              <td>
-                                  <select class="form-select select2-single" name="unit_code[]" id="unit_code_{{$k}}" required>
-        <option value="">-- Select UQC --</option>
-        <option value="BAL - BALE" {{ $v->unit_code == 'BAL - BALE' ? 'selected' : '' }}>BAL - BALE</option>
-        <option value="BDL - BUNDLES" {{ $v->unit_code == 'BDL - BUNDLES' ? 'selected' : '' }}>BDL - BUNDLES</option>
-        <option value="BKL - BUCKLES" {{ $v->unit_code == 'BKL - BUCKLES' ? 'selected' : '' }}>BKL - BUCKLES</option>
-        <option value="BOU - BILLION OF UNITS" {{ $v->unit_code == 'BOU - BILLION OF UNITS' ? 'selected' : '' }}>BOU - BILLION OF UNITS</option>
-        <option value="BOX - BOX" {{ $v->unit_code == 'BOX - BOX' ? 'selected' : '' }}>BOX - BOX</option>
-        <option value="BTL - BOTTLES" {{ $v->unit_code == 'BTL - BOTTLES' ? 'selected' : '' }}>BTL - BOTTLES</option>
-        <option value="BUN - BUNCHES" {{ $v->unit_code == 'BUN - BUNCHES' ? 'selected' : '' }}>BUN - BUNCHES</option>
-        <option value="CAN - CANS" {{ $v->unit_code == 'CAN - CANS' ? 'selected' : '' }}>CAN - CANS</option>
-        <option value="CBM - CUBIC METERS" {{ $v->unit_code == 'CBM - CUBIC METERS' ? 'selected' : '' }}>CBM - CUBIC METERS</option>
-        <option value="CCM - CUBIC CENTIMETERS" {{ $v->unit_code == 'CCM - CUBIC CENTIMETERS' ? 'selected' : '' }}>CCM - CUBIC CENTIMETERS</option>
-        <option value="CMS - CENTIMETERS" {{ $v->unit_code == 'CMS - CENTIMETERS' ? 'selected' : '' }}>CMS - CENTIMETERS</option>
-        <option value="CTN - CARTONS" {{ $v->unit_code == 'CTN - CARTONS' ? 'selected' : '' }}>CTN - CARTONS</option>
-        <option value="DOZ - DOZENS" {{ $v->unit_code == 'DOZ - DOZENS' ? 'selected' : '' }}>DOZ - DOZENS</option>
-        <option value="DRM - DRUMS" {{ $v->unit_code == 'DRM - DRUMS' ? 'selected' : '' }}>DRM - DRUMS</option>
-        <option value="GGK - GREAT GROSS" {{ $v->unit_code == 'GGK - GREAT GROSS' ? 'selected' : '' }}>GGK - GREAT GROSS</option>
-        <option value="GMS - GRAMMES" {{ $v->unit_code == 'GMS - GRAMMES' ? 'selected' : '' }}>GMS - GRAMMES</option>
-        <option value="GRS - GROSS" {{ $v->unit_code == 'GRS - GROSS' ? 'selected' : '' }}>GRS - GROSS</option>
-        <option value="GYD - GROSS YARDS" {{ $v->unit_code == 'GYD - GROSS YARDS' ? 'selected' : '' }}>GYD - GROSS YARDS</option>
-        <option value="KGS - KILOGRAMS" {{ $v->unit_code == 'KGS - KILOGRAMS' ? 'selected' : '' }}>KGS - KILOGRAMS</option>
-        <option value="KLR - KILOLITRE" {{ $v->unit_code == 'KLR - KILOLITRE' ? 'selected' : '' }}>KLR - KILOLITRE</option>
-        <option value="KME - KILOMETRE" {{ $v->unit_code == 'KME - KILOMETRE' ? 'selected' : '' }}>KME - KILOMETRE</option>
-        <option value="LTR - LITRES" {{ $v->unit_code == 'LTR - LITRES' ? 'selected' : '' }}>LTR - LITRES</option>
-        <option value="MLT - MILILITRE" {{ $v->unit_code == 'MLT - MILILITRE' ? 'selected' : '' }}>MLT - MILILITRE</option>
-        <option value="MTR - METERS" {{ $v->unit_code == 'MTR - METERS' ? 'selected' : '' }}>MTR - METERS</option>
-        <option value="MTS - METRIC TON" {{ $v->unit_code == 'MTS - METRIC TON' ? 'selected' : '' }}>MTS - METRIC TON</option>
-        <option value="NOS - NUMBERS" {{ $v->unit_code == 'NOS - NUMBERS' ? 'selected' : '' }}>NOS - NUMBERS</option>
-        <option value="PAC - PACKS" {{ $v->unit_code == 'PAC - PACKS' ? 'selected' : '' }}>PAC - PACKS</option>
-        <option value="PCS - PIECES" {{ $v->unit_code == 'PCS - PIECES' ? 'selected' : '' }}>PCS - PIECES</option>
-        <option value="PRS - PAIRS" {{ $v->unit_code == 'PRS - PAIRS' ? 'selected' : '' }}>PRS - PAIRS</option>
-        <option value="QTL - QUINTAL" {{ $v->unit_code == 'QTL - QUINTAL' ? 'selected' : '' }}>QTL - QUINTAL</option>
-        <option value="ROL - ROLLS" {{ $v->unit_code == 'ROL - ROLLS' ? 'selected' : '' }}>ROL - ROLLS</option>
-        <option value="SET - SETS" {{ $v->unit_code == 'SET - SETS' ? 'selected' : '' }}>SET - SETS</option>
-        <option value="SQF - SQUARE FEET" {{ $v->unit_code == 'SQF - SQUARE FEET' ? 'selected' : '' }}>SQF - SQUARE FEET</option>
-        <option value="SQM - SQUARE METERS" {{ $v->unit_code == 'SQM - SQUARE METERS' ? 'selected' : '' }}>SQM - SQUARE METERS</option>
-        <option value="SQY - SQUARE YARDS" {{ $v->unit_code == 'SQY - SQUARE YARDS' ? 'selected' : '' }}>SQY - SQUARE YARDS</option>
-        <option value="TBS - TABLETS" {{ $v->unit_code == 'TBS - TABLETS' ? 'selected' : '' }}>TBS - TABLETS</option>
-        <option value="TGM - TEN GROSS" {{ $v->unit_code == 'TGM - TEN GROSS' ? 'selected' : '' }}>TGM - TEN GROSS</option>
-        <option value="THD - THOUSANDS" {{ $v->unit_code == 'THD - THOUSANDS' ? 'selected' : '' }}>THD - THOUSANDS</option>
-        <option value="TON - TONNES" {{ $v->unit_code == 'TON - TONNES' ? 'selected' : '' }}>TON - TONNES</option>
-        <option value="TUB - TUBES" {{ $v->unit_code == 'TUB - TUBES' ? 'selected' : '' }}>TUB - TUBES</option>
-        <option value="UGS - US GALLONS" {{ $v->unit_code == 'UGS - US GALLONS' ? 'selected' : '' }}>UGS - US GALLONS</option>
-        <option value="UNT - UNITS" {{ $v->unit_code == 'UNT - UNITS' ? 'selected' : '' }}>UNT - UNITS</option>
-        <option value="YDS - YARDS" {{ $v->unit_code == 'YDS - YARDS' ? 'selected' : '' }}>YDS - YARDS</option>
-        <option value="OTH - OTHERS" {{ $v->unit_code == 'OTH - OTHERS' ? 'selected' : '' }}>OTH - OTHERS</option>
-        <option value="Test - ER Scenario" {{ $v->unit_code == 'Test - ER Scenario' ? 'selected' : '' }}>Test - ER Scenario</option>
-    </select>
+                              <td style="width:20%">
+                                 <select class="form-select select2-single" name="unit_code[]" id="unit_code_{{$k}}" required>
+                                    <option value="">-- Select UQC --</option>
+                                    <option value="BAL - BALE" {{ $v->unit_code == 'BAL - BALE' ? 'selected' : '' }}>BAL - BALE</option>
+                                    <option value="BDL - BUNDLES" {{ $v->unit_code == 'BDL - BUNDLES' ? 'selected' : '' }}>BDL - BUNDLES</option>
+                                    <option value="BKL - BUCKLES" {{ $v->unit_code == 'BKL - BUCKLES' ? 'selected' : '' }}>BKL - BUCKLES</option>
+                                    <option value="BOU - BILLION OF UNITS" {{ $v->unit_code == 'BOU - BILLION OF UNITS' ? 'selected' : '' }}>BOU - BILLION OF UNITS</option>
+                                    <option value="BOX - BOX" {{ $v->unit_code == 'BOX - BOX' ? 'selected' : '' }}>BOX - BOX</option>
+                                    <option value="BTL - BOTTLES" {{ $v->unit_code == 'BTL - BOTTLES' ? 'selected' : '' }}>BTL - BOTTLES</option>
+                                    <option value="BUN - BUNCHES" {{ $v->unit_code == 'BUN - BUNCHES' ? 'selected' : '' }}>BUN - BUNCHES</option>
+                                    <option value="CAN - CANS" {{ $v->unit_code == 'CAN - CANS' ? 'selected' : '' }}>CAN - CANS</option>
+                                    <option value="CBM - CUBIC METERS" {{ $v->unit_code == 'CBM - CUBIC METERS' ? 'selected' : '' }}>CBM - CUBIC METERS</option>
+                                    <option value="CCM - CUBIC CENTIMETERS" {{ $v->unit_code == 'CCM - CUBIC CENTIMETERS' ? 'selected' : '' }}>CCM - CUBIC CENTIMETERS</option>
+                                    <option value="CMS - CENTIMETERS" {{ $v->unit_code == 'CMS - CENTIMETERS' ? 'selected' : '' }}>CMS - CENTIMETERS</option>
+                                    <option value="CTN - CARTONS" {{ $v->unit_code == 'CTN - CARTONS' ? 'selected' : '' }}>CTN - CARTONS</option>
+                                    <option value="DOZ - DOZENS" {{ $v->unit_code == 'DOZ - DOZENS' ? 'selected' : '' }}>DOZ - DOZENS</option>
+                                    <option value="DRM - DRUMS" {{ $v->unit_code == 'DRM - DRUMS' ? 'selected' : '' }}>DRM - DRUMS</option>
+                                    <option value="GGK - GREAT GROSS" {{ $v->unit_code == 'GGK - GREAT GROSS' ? 'selected' : '' }}>GGK - GREAT GROSS</option>
+                                    <option value="GMS - GRAMMES" {{ $v->unit_code == 'GMS - GRAMMES' ? 'selected' : '' }}>GMS - GRAMMES</option>
+                                    <option value="GRS - GROSS" {{ $v->unit_code == 'GRS - GROSS' ? 'selected' : '' }}>GRS - GROSS</option>
+                                    <option value="GYD - GROSS YARDS" {{ $v->unit_code == 'GYD - GROSS YARDS' ? 'selected' : '' }}>GYD - GROSS YARDS</option>
+                                    <option value="KGS - KILOGRAMS" {{ $v->unit_code == 'KGS - KILOGRAMS' ? 'selected' : '' }}>KGS - KILOGRAMS</option>
+                                    <option value="KLR - KILOLITRE" {{ $v->unit_code == 'KLR - KILOLITRE' ? 'selected' : '' }}>KLR - KILOLITRE</option>
+                                    <option value="KME - KILOMETRE" {{ $v->unit_code == 'KME - KILOMETRE' ? 'selected' : '' }}>KME - KILOMETRE</option>
+                                    <option value="LTR - LITRES" {{ $v->unit_code == 'LTR - LITRES' ? 'selected' : '' }}>LTR - LITRES</option>
+                                    <option value="MLT - MILILITRE" {{ $v->unit_code == 'MLT - MILILITRE' ? 'selected' : '' }}>MLT - MILILITRE</option>
+                                    <option value="MTR - METERS" {{ $v->unit_code == 'MTR - METERS' ? 'selected' : '' }}>MTR - METERS</option>
+                                    <option value="MTS - METRIC TON" {{ $v->unit_code == 'MTS - METRIC TON' ? 'selected' : '' }}>MTS - METRIC TON</option>
+                                    <option value="NOS - NUMBERS" {{ $v->unit_code == 'NOS - NUMBERS' ? 'selected' : '' }}>NOS - NUMBERS</option>
+                                    <option value="PAC - PACKS" {{ $v->unit_code == 'PAC - PACKS' ? 'selected' : '' }}>PAC - PACKS</option>
+                                    <option value="PCS - PIECES" {{ $v->unit_code == 'PCS - PIECES' ? 'selected' : '' }}>PCS - PIECES</option>
+                                    <option value="PRS - PAIRS" {{ $v->unit_code == 'PRS - PAIRS' ? 'selected' : '' }}>PRS - PAIRS</option>
+                                    <option value="QTL - QUINTAL" {{ $v->unit_code == 'QTL - QUINTAL' ? 'selected' : '' }}>QTL - QUINTAL</option>
+                                    <option value="ROL - ROLLS" {{ $v->unit_code == 'ROL - ROLLS' ? 'selected' : '' }}>ROL - ROLLS</option>
+                                    <option value="SET - SETS" {{ $v->unit_code == 'SET - SETS' ? 'selected' : '' }}>SET - SETS</option>
+                                    <option value="SQF - SQUARE FEET" {{ $v->unit_code == 'SQF - SQUARE FEET' ? 'selected' : '' }}>SQF - SQUARE FEET</option>
+                                    <option value="SQM - SQUARE METERS" {{ $v->unit_code == 'SQM - SQUARE METERS' ? 'selected' : '' }}>SQM - SQUARE METERS</option>
+                                    <option value="SQY - SQUARE YARDS" {{ $v->unit_code == 'SQY - SQUARE YARDS' ? 'selected' : '' }}>SQY - SQUARE YARDS</option>
+                                    <option value="TBS - TABLETS" {{ $v->unit_code == 'TBS - TABLETS' ? 'selected' : '' }}>TBS - TABLETS</option>
+                                    <option value="TGM - TEN GROSS" {{ $v->unit_code == 'TGM - TEN GROSS' ? 'selected' : '' }}>TGM - TEN GROSS</option>
+                                    <option value="THD - THOUSANDS" {{ $v->unit_code == 'THD - THOUSANDS' ? 'selected' : '' }}>THD - THOUSANDS</option>
+                                    <option value="TON - TONNES" {{ $v->unit_code == 'TON - TONNES' ? 'selected' : '' }}>TON - TONNES</option>
+                                    <option value="TUB - TUBES" {{ $v->unit_code == 'TUB - TUBES' ? 'selected' : '' }}>TUB - TUBES</option>
+                                    <option value="UGS - US GALLONS" {{ $v->unit_code == 'UGS - US GALLONS' ? 'selected' : '' }}>UGS - US GALLONS</option>
+                                    <option value="UNT - UNITS" {{ $v->unit_code == 'UNT - UNITS' ? 'selected' : '' }}>UNT - UNITS</option>
+                                    <option value="YDS - YARDS" {{ $v->unit_code == 'YDS - YARDS' ? 'selected' : '' }}>YDS - YARDS</option>
+                                    <option value="OTH - OTHERS" {{ $v->unit_code == 'OTH - OTHERS' ? 'selected' : '' }}>OTH - OTHERS</option>
+                                    <option value="Test - ER Scenario" {{ $v->unit_code == 'Test - ER Scenario' ? 'selected' : '' }}>Test - ER Scenario</option>
+                                 </select>
                               </td>
                               <td>
-                                 <input type="text" class="form-control amount" id="amount_{{$k}}" data-index="{{$k}}" name="without_item_amount[]" placeholder="Enter Amount" onkeyup="gstCalculation()" value="{{$v->debit}}">
+                                 <input type="number" step="any" min="0.01" class="form-control amount" id="amount_{{$k}}" data-index="{{$k}}" name="without_item_amount[]" placeholder="Enter Amount" onkeyup="gstCalculation()" onblur="validateWithoutItemAmount(this)" value="{{$v->debit}}">
                               </td>
                               <td>
                                  <svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove_more_tr" data-id="{{$k}}" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"></path></svg>
@@ -669,48 +838,57 @@
                            </td>
                         </tr>
                         <tr class="font-14 font-heading bg-white">
-                           <td></td>
-                           <td></td>
+                           <td colspan="3"></td>
                            <td style="text-align: right;">Net Amount</td>
                            <td>
                               <input type="text" class="form-control" id="net_amount" name="net_amount" placeholder="Net Amount" readonly>
                            </td>
                         </tr>
                         <tr class="font-14 font-heading bg-white cgst_tr" style="display: none;">
-                           <td></td>
-                           <td></td>
+                           <td colspan="3"></td>
                            <td style="text-align: right;">CGST</td>
                            <td>
                               <input type="text" class="form-control" id="cgst" name="cgst" readonly>
                            </td>
                         </tr>
                         <tr class="font-14 font-heading bg-white sgst_tr" style="display: none;">
-                           <td></td>
-                           <td></td>
+                           <td colspan="3"></td>
                            <td style="text-align: right;">SGST</td>
                            <td>
                               <input type="text" class="form-control" id="sgst" name="sgst" readonly>
                            </td>
                         </tr>
                         <tr class="font-14 font-heading bg-white igst_tr" style="display: none;">
-                           <td></td>
-                           <td></td>
+                           <td colspan="3"></td>
                            <td style="text-align: right;">IGST</td>
                            <td>
                               <input type="text" class="form-control" id="igst" name="igst" readonly>
                            </td>
                         </tr>
+                        <tr class="font-14 font-heading bg-white round_off_plus" style="display: none;">
+                           <td colspan="3"></td>
+                           <td style="text-align: right;">ROUND OFF(+)</td>
+                           <td>
+                              <input type="text" class="form-control" id="roundoffplus" name="roundoffplus" readonly>
+                           </td>
+                        </tr>
+
+                        <tr class="font-14 font-heading bg-white round_off_minus" style="display: none;">
+                           <td colspan="3"></td>
+                           <td style="text-align: right;">ROUND OFF(-)</td>
+                           <td>
+                              <input type="text" class="form-control" id="roundoffminus" name="roundoffminus" readonly>
+                           </td>
+                        </tr>
                         <tr class="font-14 font-heading bg-white">
-                           <td></td>
-                           <td></td>
+                           <td colspan="3"></td>
                            <td style="text-align: right;">Total Amount</td>
                            <td>
                               <input type="text" class="form-control" id="total_amount" name="total_amount" placeholder="Total Amount" readonly>
                            </td>
                         </tr>
                         <tr class="font-14 font-heading bg-white">
-                           <td></td>
-                           <td></td>
+                           <td colspan="3"></td>
                            <td style="text-align: right;">Remark</td>
                            <td>
                               <input type="text" class="form-control" name="remark" placeholder="Enter Remark" value="{{$sale_return->remark}}">
@@ -771,10 +949,10 @@
                      </tbody>
                      
                      <div class="total">
-                        <tr class="font-14 font-heading bg-white">
-                           <td class="w-min-120 fw-bold">Total</td>
-                           <td class="w-min-120 fw-bold" id="total_debit"></td>
-                           <td></td>
+                        <tr>
+                            <td><a href="{{ route('sale-return.index') }}" class="btn  btn-black fw-bold">QUIT</a></td>
+                            <td class="w-min-120 fw-bold" id="total_debit"></td>
+                            <td></td>
                         </tr>
                         <tr class="font-14 font-heading bg-white">
                            <td colspan="3"><input type="text" class="form-control" placeholder="Enter Long Narration" name="long_narration"></td>
@@ -789,6 +967,60 @@
                   </div>
                   <input type="hidden" clas="max_sale_descrption" name="max_sale_descrption" value="1" id="max_sale_descrption">
                   <input type="hidden" name="max_sale_sundry" id="max_sale_sundry" value="1" />
+               </div>
+
+               <!-- Production Modal -->
+               <div class="modal fade" id="productionModal" tabindex="-1" aria-labelledby="productionModalLabel" aria-hidden="true">
+               <div class="modal-dialog modal-lg">
+                  <div class="modal-content">
+                     <div class="modal-header bg-primary text-white">
+                     <h5 class="modal-title" id="productionModalLabel">Production Details</h5>
+                     <button type="button" class="btn-close bg-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                     </div>
+
+                     <div class="modal-body">
+                     <div id="reelContainer">
+                        <!-- First reel row -->
+                        <div class="reel-entry border rounded p-3 mb-3 bg-light">
+                           <div class="row g-3 align-items-center">
+                           <div class="col-md-4">
+                              <label class="form-label">Size</label>
+                              <input type="text" class="form-control" name="production[size][]" placeholder="Enter size">
+                           </div>
+                           <div class="col-md-4">
+                              <label class="form-label">Reel No</label>
+                              <input type="text" class="form-control" name="production[reel_no][]" placeholder="Enter reel number">
+                           </div>
+                           <div class="col-md-4">
+                              <label class="form-label">Weight (kg)</label>
+                              <input type="number" class="form-control weight-input" name="production[weight][]" placeholder="Enter weight" step="0.01" min="0">
+                           </div>
+                           </div>
+                        </div>
+                     </div>
+
+                     <!-- Add Button -->
+                     <div class="text-end mb-3">
+                        <button type="button" class="btn btn-outline-primary" id="addReelBtn">
+                           <i class="bi bi-plus-circle"></i> Add New Reel
+                        </button>
+                     </div>
+
+                     <!-- Total Weight Section -->
+                     <div class="border-top pt-3">
+                        <h6 class="text-end">
+                           <strong>Total Weight: </strong>
+                           <span id="totalWeight">0.00</span> kg
+                        </h6>
+                     </div>
+                     </div>
+
+                     <div class="modal-footer">
+                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                     <button type="button" class="btn btn-success" id="saveProductionConfig">Save</button>
+                     </div>
+                  </div>
+               </div>
                </div>
             </form>
          </div>
@@ -902,7 +1134,9 @@
    var add_more_count = item_count;
    var add_more_counts = 1;
    var add_more_bill_sundry_up_count = '<?php echo --$index;?>';
-   
+   var productionData = {}; 
+   var production_module_status = {{ $production_module_status }};
+   var production_items = @json($production_items);
    $('body').on('keydown', 'input, select, textarea', function(e) {
       var self = $(this),
       form = self.parents('form:eq(0)'),
@@ -924,33 +1158,149 @@
          return false;
       }
    });   
-   $(".add_more").click(function() {
+   function validateItemFields(field, value, rowId){
+      let type = $("#type").val();
+      let num = parseFloat(value);
+
+      if(type === "WITH ITEM"){
+
+         // allow empty while typing
+         if(value !== "" && !isNaN(num) && (num === 0 || num < 0)){
+
+               alert("Value must be greater than 0");
+
+               $("#" + field + "_tr_" + rowId).val("");
+
+               calculateAmount();
+
+               return false;
+         }
+      }
+
+      return true;
+   }
+   $(document).on('click', '.add_more', function () {
+
       let empty_status = 0;
       $('.goods_items').each(function(){   
          let i = $(this).attr('data-id');
-         if($(this).val()=="" || $("#amount_tr_"+i).val()==""){
-            empty_status=1;            
-         }                   
+         if ($(this).val() === "" || $("#amount_tr_" + i).val() === "") {
+               empty_status = 1;
+         }
       });
-      if(empty_status==1){
+
+      if (empty_status == 1) {
          alert("Please enter required fields");
          return;
       }
-     
+
+      // Increase row count
       add_more_count++;
-      var optionElements = $('<select>' + $('#goods_discription_tr_1').html() + '</select>')
-                       .find('option')
-                       .removeAttr('selected')
-                       .end()
-                       .html();
-      
-      var tr_id = 'tr_' + add_more_count;
-      newRow = '<tr id="tr_' + add_more_count + '" class="font-14 font-heading bg-white"><td class="w-min-50">' + add_more_count + '</td><td class=""><select onchange="call_fun(\'tr_' + add_more_count + '\');" id="goods_discription_tr_' + add_more_count + '" class="w-95-parsent form-select goods_items" name="goods_discription[]" required data-id="'+add_more_count+'">';
-      newRow += optionElements;
-      newRow += '</select></td><td class="w-min-50"><input type="number" class="quantity w-100 form-control" name="qty[]" id="quantity_tr_' + add_more_count + '" style="text-align:right"/></td><td class=" w-min-50"><input type="text" class="w-100 form-control" id="unit_tr_'+add_more_count+'" readonly style="text-align:center;"/><input type="hidden" class="units w-100" name="units[]" id="units_tr_' + add_more_count + '"/></td><td class=" w-min-50"><input type="number" class="price w-100 form-control" name="price[]" id="price_tr_' + add_more_count + '" style="text-align:right"/></td><td class=" w-min-50"><input type="number" class="amount w-100 form-control" name="amount[]" id="amount_tr_' + add_more_count + '" style="text-align:right"/></td><td class="w-min-50"><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
-      $("#max_sale_descrption").val(add_more_count);
+      let numericId = add_more_count;
+      let tr_id = "tr_" + numericId;
+
+      // Get dropdown options
+      let optionElements = $('<select>' + $('#goods_discription_tr_1').html() + '</select>')
+                              .find('option').removeAttr('selected').end().html();
+
+      // Production module support
+      let onchangeFunction = '';
+      if (typeof production_module_status !== 'undefined' && production_module_status == 1) {
+         onchangeFunction = "openProductionModal('" + tr_id + "')";
+      } else {
+         onchangeFunction = "call_fun('" + tr_id + "')";
+      }
+
+      // New row HTML 
+      let newRow =
+      `<tr id="${tr_id}" class="font-14 font-heading bg-white">
+         <td class="w-min-50">${numericId}</td>
+
+         <td class="position-relative">
+               <div class="d-flex align-items-center gap-2">
+
+                  <select onchange="${onchangeFunction}" 
+                           id="goods_discription_${tr_id}" 
+                           class="border-0 form-select goods_items"
+                           name="goods_discription[]" 
+                           required
+                           data-id="${numericId}">
+                     ${optionElements}
+                  </select>
+
+                  <button type="button"
+                           class="btn btn-outline-secondary p-1 px-2 editItemDetailsBtn"
+                           data-row="${tr_id}" 
+                           title="Configure item">⚙️</button>
+
+               </div>
+
+               <input type="hidden" name="item_size_info[]" id="item_size_info_tr_${numericId}">
+         </td>
+
+         <td class="w-min-50">
+               <input type="number" class="quantity w-100 form-control"
+                     name="qty[]" id="quantity_tr_${numericId}" 
+                     style="text-align:right;">
+         </td>
+
+         <td class="w-min-50">
+               <input type="text" class="w-100 form-control"
+                     id="unit_tr_${numericId}" readonly style="text-align:center;">
+               <input type="hidden" class="units" name="units[]" id="units_tr_${numericId}">
+         </td>
+
+         <td class="w-min-50">
+               <input type="number" class="price w-100 form-control"
+                     name="price[]" id="price_tr_${numericId}" style="text-align:right;">
+         </td>
+
+         <td class="w-min-50">
+               <input type="number" class="amount w-100 form-control"
+                     name="amount[]" id="amount_tr_${numericId}" style="text-align:right;">
+         </td>
+
+         <td class="w-min-50">
+               <svg style="color:red;cursor:pointer;" xmlns="http://www.w3.org/2000/svg"
+                  width="16" height="16" fill="currentColor"
+                  class="bi bi-file-minus-fill remove" data-id="${numericId}"
+                  viewBox="0 0 16 16">
+                  <path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/>
+               </svg>
+         </td>
+
+         <input type="hidden" name="item_parameters[]" id="item_parameters_${numericId}">
+         <input type="hidden" name="config_status[]" id="config_status_${numericId}">
+      </tr>`;
+
+      $("#max_sale_descrption").val(numericId);
       $("#example11").append(newRow);
+      $("#example11 tbody tr").each(function(index){
+
+         let td = $(this).find("td:last");
+
+         // remove existing + from all rows
+         td.find(".add_more").remove();
+
+         // add + only to first row
+         if(index === 0){
+            td.append(`
+                  <svg xmlns="http://www.w3.org/2000/svg" 
+                     class="bg-primary rounded-circle add_more" 
+                     width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor:pointer;">
+                     <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/>
+                  </svg>
+            `);
+         }
+      });
+      $("#goods_discription_" + tr_id).select2();
+
+      // Auto-open modal for production module
+      if (typeof production_module_status !== 'undefined' && production_module_status == 1) {
+         //openProductionModal(tr_id);
+      }
    });
+
    $(document).on("click", ".remove", function() {
       let id = $(this).attr('data-id');
       $("#tr_" + id).remove();
@@ -962,6 +1312,7 @@
    $('#party').change(function() {
       // Get the selected value
       var account_id = $(this).val();
+      let currentSeries = $("#current_series").val();
       var sale_bill_id = '{{$sale_return->sale_bill_id}}';
       var invoice_no = '{{$sale_return->invoice_no}}';
       let voucher_type = '{{$sale_return->voucher_type}}';
@@ -978,17 +1329,20 @@
          success: function(data){
             var optionElements = '<option value="">Select</option>';
             $.each(data, function(key, val) {
+
                let selected = "";
-               if(invoice_no==val.voucher_no){
+               if(invoice_no == val.voucher_no){
                   selected = "selected";
                }
-               let voc_no = "";
-               if(val.voucher_type=="PURCHASE"){
-                  voc_no = val.voucher_no;
-               }else{
-                  voc_no = val.voucher_no_prefix;
+
+               let voc_no = val.voucher_no;
+
+               let disabled = '';
+               if(val.series_no != currentSeries){
+                  disabled = 'disabled style="color:#999;"';
                }
-               optionElements += '<option value="' + val.voucher_no + '" data-id="'+val.id+'" data-voucher_type="'+val.voucher_type+'" '+selected+'>' + voc_no + '</option>';
+
+               optionElements += '<option '+disabled+' value="' + val.voucher_no + '" data-id="'+val.id+'" data-series_no="'+val.series_no+'" data-material_center="'+val.material_center+'" data-voucher_type="'+val.voucher_type+'" '+selected+'>' + voc_no + '</option>';
             });
             let otherselect = "";
             if(sale_bill_id==""){
@@ -1001,26 +1355,103 @@
       });
    });
    var load = 1;
+   let voucherChangeInit = true;
+
    $('#voucher_no').change(function() {
+      let nature = $("#nature").val();
+
+      if(voucherChangeInit){
+         voucherChangeInit = false;
+         return;
+      }
+      let currentSeries = $("#current_series").val();
+      let selectedSeries = $('option:selected', this).attr('data-series_no');
+
+      if($(this).val() != 'OTHER' && selectedSeries != undefined && selectedSeries != currentSeries){
+         alert("You cannot select invoice of another series");
+         $(this).val('');
+         return;
+      }
       // Get the selected value
       $("#invoice_id").show();
       $(".other_invoice_div").hide();
       if($(this).val()=='OTHER'){
-         if(load==1){
-            load = 0;
-            return;
-         }
+
+
          $("#voucher_type").val('OTHER');
          $("#invoice_id").hide();
-         $(".other_invoice_div").show();
+         if(nature!="WITHOUT GST"){
+            $(".other_invoice_div").show();
+         }
          $("#sale_bill_id").val('');
+         $("#other_invoice_against").val('').trigger('change');
+         $("#other_invoice_no").val('');
+         $("#other_invoice_date").val('');
+         $("input[name='other_invoice_value']").val('');
+         $("input[name='other_invoice_amount']").val('');
+         $("input[name='other_invoice_total']").val('');
+
+         $("#example11 tbody tr").not("#tr_1").not(":last").remove();
+
+         $("#goods_discription_tr_1").val('');
+         $("#quantity_tr_1").val('');
+         $("#price_tr_1").val('');
+         $("#amount_tr_1").val('');
+         $("#unit_tr_1").val('');
+         $("#units_tr_1").val('');
+
+         add_more_count = 1;
+         $("#max_sale_descrption").val(1);
+
+         $("#sundry_up_table tbody tr.sundry_tr")
+            .not("#billtr_1")
+            .not("#billtr_cgst")
+            .not("#billtr_sgst")
+            .not("#billtr_igst")
+            .not("#billtr_round_plus")
+            .not("#billtr_round_minus")
+            .remove();
+
+         $("#bill_sundry_1").val('');
+         $("#bill_sundry_amount_1").val('');
+         $("#tax_amt_1").text('');
+         $("#tax_rate_tr_1").val('');
+
+         $("#billtr_cgst").hide();
+         $("#billtr_sgst").hide();
+         $("#billtr_igst").hide();
+         $("#billtr_round_plus").hide();
+         $("#billtr_round_minus").hide();
+
+         $("#tax_amt_cgst").text('');
+         $("#bill_sundry_amount_cgst").val('');
+
+         $("#tax_amt_sgst").text('');
+         $("#bill_sundry_amount_sgst").val('');
+
+         $("#tax_amt_igst").text('');
+         $("#bill_sundry_amount_igst").val('');
+
+         $("#tax_amt_round_plus").text('');
+         $("#bill_sundry_amount_round_plus").val('');
+
+         $("#tax_amt_round_minus").text('');
+         $("#bill_sundry_amount_round_minus").val('');
+
+         $("#totalSum").text('');
+         $("#bill_sundry_amt").text('');
+         $("#total_amounts").val(0);
+         $("#total_taxable_amounts").val(0);
+
+
          let option = "<option value=''>Select</option>";
          @foreach($manageitems as $item_info)
-            option+='<option value="{{$item_info->id}}" unit_id="{{$item_info->u_name}}" data-val="{{$item_info->unit}}"  data-percent="{{$item_info->gst_rate}}">{{$item_info->name}}</option>';
+            option += '<option value="{{$item_info->id}}" unit_id="{{$item_info->u_name}}" data-val="{{$item_info->unit}}" data-percent="{{$item_info->gst_rate}}">{{$item_info->name}}</option>';
          @endforeach
-         $(".goods_items").html(option)
+
+         $(".goods_items").html(option).val('');
+
          return;
-         
       }
       $("#other_invoice_no").val('');
       $("#other_invoice_date").val('');
@@ -1031,8 +1462,63 @@
       }else if($('option:selected', this).attr('data-voucher_type')=="SALE"){
          $("#invoice_id").attr('href',"{{ URL::to('sale-invoice/')}}/"+$('option:selected', this).attr('data-id'));
       }
+    //   $("#series_no").val($('option:selected', this).attr('data-series_no'));
+    //   $("#series_no").change();
+    //   $("#material_center").val($('option:selected', this).attr('data-material_center'));
       $("#sale_bill_id").val($('option:selected', this).attr('data-id'));
       var invoice_id = $('option:selected', this).attr('data-id');
+
+      $("#example11 tbody tr").not("#tr_1").not(":last").remove();
+
+      $("#goods_discription_tr_1").val('');
+      $("#quantity_tr_1").val('');
+      $("#price_tr_1").val('');
+      $("#amount_tr_1").val('');
+      $("#unit_tr_1").val('');
+      $("#units_tr_1").val('');
+
+      add_more_count = 1;
+      $("#max_sale_descrption").val(1);
+
+      $("#sundry_up_table tbody tr.sundry_tr")
+         .not("#billtr_1")
+         .not("#billtr_cgst")
+         .not("#billtr_sgst")
+         .not("#billtr_igst")
+         .not("#billtr_round_plus")
+         .not("#billtr_round_minus")
+         .remove();
+
+      $("#bill_sundry_1").val('');
+      $("#bill_sundry_amount_1").val('');
+      $("#tax_amt_1").text('');
+      $("#tax_rate_tr_1").val('');
+
+      $("#billtr_cgst").hide();
+      $("#billtr_sgst").hide();
+      $("#billtr_igst").hide();
+      $("#billtr_round_plus").hide();
+      $("#billtr_round_minus").hide();
+
+      $("#tax_amt_cgst").text('');
+      $("#bill_sundry_amount_cgst").val('');
+
+      $("#tax_amt_sgst").text('');
+      $("#bill_sundry_amount_sgst").val('');
+
+      $("#tax_amt_igst").text('');
+      $("#bill_sundry_amount_igst").val('');
+
+      $("#tax_amt_round_plus").text('');
+      $("#bill_sundry_amount_round_plus").val('');
+
+      $("#tax_amt_round_minus").text('');
+      $("#bill_sundry_amount_round_minus").val('');
+
+      $("#totalSum").text('');
+      $("#bill_sundry_amt").text('');
+      $("#total_amounts").val(0);
+      $("#total_taxable_amounts").val(0);
       $.ajax({
          url: '{{url("get/saleitems/details")}}',
          async: false,
@@ -1046,7 +1532,11 @@
          success: function(data){
             var optionElements = '<option value="">Select</option>';
             $.each(data, function(key, val) {
-               optionElements += '<option unit_id="' + val.unit_id + '" data-val="' + val.unit + '" value="' + val.item_id + '" data-percent="' + val.gst_rate + '">' + val.items_name + '</option>';
+               let production_status = 0;
+               if($.inArray(val.item_id, production_items) !== -1) {
+                  production_status = 1;
+               }
+               optionElements += '<option unit_id="' + val.unit_id + '" data-val="' + val.unit + '" value="' + val.item_id + '" data-percent="' + val.gst_rate + '" data-production="'+production_status+'">' + val.items_name + ' (' + val.qty + ' ' + val.unit + ')'  + '</option>';
             });
             $(".goods_items").html(optionElements);
             @php 
@@ -1097,14 +1587,12 @@
             if(key=="A"){
                var amount = $(this).find('.amount').val();
             }else{
-               var amount = (price && quantity) ? (price * quantity) : 0;
+               var amount = (parseFloat(price) || 0) * (parseFloat(quantity) || 0);
                if(price==0 && quantity==0){
                      amount = $(this).find('.amount').val();
                   }
-               if(amount!=0){
-                  $(this).find('.amount').val(parseFloat(amount).toFixed(2));
-                  $(this).find('.amount').keyup();
-               } 
+               $(this).find('.amount').val(parseFloat(amount).toFixed(2));
+               $(this).find('.amount').keyup();
             }
             if(amount!=undefined){
                total += parseFloat(amount);
@@ -1446,15 +1934,35 @@
       calculateAmount();
       gstCalculation();
       // Calculate amount on input change
-      $(document).on('input', '.price',function(){
+      $(document).on('blur', '.quantity', function(){
+
+         let rowId = $(this).attr("id").replace("quantity_tr_","");
+         let value = $(this).val();
+
+         if(!validateItemFields("quantity", value, rowId)) return;
+
          calculateAmount();
       });
-      $(document).on('input', '.quantity',function(){
+
+      $(document).on('blur', '.price', function(){
+
+         let rowId = $(this).attr("id").replace("price_tr_","");
+         let value = $(this).val();
+
+         if(!validateItemFields("price", value, rowId)) return;
+
          calculateAmount();
       });
-      $(document).on('input', '.amount',function(){
+
+      $(document).on('blur', '.amount', function(){
+
+         let rowId = $(this).attr("id").replace("amount_tr_","");
+         let value = $(this).val();
+
+         if(!validateItemFields("amount", value, rowId)) return;
+
          calculateAmount('A');
-      });      
+      });    
       $(document).on('change', '.bill_sundry_tax_type',function(){
          let id = $(this).attr('data-id');
          if($(this).val()==""){
@@ -1493,6 +2001,11 @@
                   //"qty[]" : "required",
                   //"price[]" : "required",
                   "amount[]" : "required",
+                  other_invoice_against: {
+                     required: function() {
+                        return $("#voucher_no").val() == "OTHER";
+                     }
+                  },
                },
                messages: {
                   series_no: "Please select series no",
@@ -1502,13 +2015,23 @@
                   "goods_discription[]" : "Please select item",
                   //"qty[]" : "Please enter quantity",
                   //"price[]" : "Please enter price",
-                  "amount[]" : "Please enter amount",                
+                  "amount[]" : "Please enter amount",  
+                  other_invoice_against: "Please select Invoice Against"              
                }
             });
          }else{
             return false;
          }
-      });   
+      });
+      
+      let nature = "{{ $sale_return->sr_nature }}";
+      let type   = "{{ $sale_return->sr_type }}";
+
+      $("#nature").val(nature);
+      $("#type").val(type);
+
+      // 🔥 TRIGGER SAME FLOW AS ADD
+      sectionHideShow();
    });
    function call_fun(data) {
       if($('#goods_discription_'+data).val()==""){
@@ -1645,8 +2168,10 @@
          return false;
       }
    });
-   $(".goods_items").change(function(){
+   $(document).on('change', '.goods_items', function() {
       let id = $(this).attr('data-id');
+      $("#units_tr_"+id).val($('option:selected', this).attr('unit_id'));
+      $("#unit_tr_"+id).val($('option:selected', this).data('val'));
       if($(this).val()==""){
          $("#goods_discription_tr_"+id+"-error").show();
       }else{
@@ -1655,6 +2180,7 @@
    });
    
    function sectionHideShow(){
+      $(".goods_items, .amount").prop("required", false);
       $(".with_gst_with_item_section").hide();
       $(".with_gst_without_item_section").hide();
       $(".without_gst_section").hide();
@@ -1665,6 +2191,12 @@
       $(".other_invoice_div").hide();
       let nature = $("#nature").val();
       let type = $("#type").val();
+      if(nature=="WITHOUT GST"){
+         $("#other_invoice_against").val('').trigger('change');
+         $("#other_invoice_no").val('');
+         $("#other_invoice_date").val('');
+         $("#original_invoice_value").val('');
+      }
       if(nature=="WITHOUT GST"){
          $(".without_gst_section").show();
          $(".account").select2();
@@ -1678,19 +2210,185 @@
       if(nature=="WITH GST" && (type=="RATE DIFFERENCE" || type=="WITH ITEM" || type=="WITHOUT ITEM")){
          $(".voucher_no_div").show();
          $('#voucher_no').select2();
+         if($("#voucher_no").val()=="OTHER" || ($("#voucher_type").val()=="OTHER")){
+            $(".other_invoice_div").show();
+         }
       }
       if(nature=="WITH GST" && (type=="WITH ITEM" || type=="RATE DIFFERENCE")){
+         $(".with_gst_with_item_section .goods_items").prop("required", true);
+         $(".with_gst_with_item_section .amount").prop("required", true);
          $(".with_gst_with_item_section").show();
          $(".narration_withgst").show();
+
+         let actualRows = $("#example11 tbody tr[id^='tr_']").length;
+         add_more_count = actualRows > 0 ? actualRows : 1;
          $(".item").select2();
          if($("#voucher_no").val()=="OTHER"){
             $(".other_invoice_div").show();
+         }
+
+         let invoice_id = $("#sale_bill_id").val();
+         let voucher_type = $("#voucher_type").val();
+
+         if(invoice_id != '' && invoice_id != null){
+
+            $.ajax({
+               url: '{{url("get/saleitems/details")}}',
+               type: 'POST',
+               dataType: 'JSON',
+               data: {
+                  _token: '<?php echo csrf_token() ?>',
+                  invoice_id: invoice_id,
+                  voucher_type: voucher_type,
+               },
+               success: function(data){
+
+                  let optionElements = '<option value="">Select</option>';
+
+                  $.each(data, function(key, val) {
+                     optionElements += '<option value="' + val.item_id + '" ' +
+                           'unit_id="' + val.unit_id + '" ' +
+                           'data-val="' + val.unit + '" ' +
+                           'data-percent="' + val.gst_rate + '">' +
+                           val.items_name + ' (' + val.qty + ' ' + val.unit + ')' +
+                           '</option>';
+                  });
+
+                  $(".goods_items").each(function(){
+
+                     let currentVal = $(this).val();
+                     let rowId = $(this).attr('id').replace('goods_discription_', ''); // e.g. "tr_1"
+                     let numeric = rowId.replace('tr_', ''); // e.g. "1"
+
+                     $(this).html(optionElements);
+
+                     if(currentVal && $(this).find('option[value="'+currentVal+'"]').length){
+                           $(this).val(currentVal);
+                     }else{
+                           $(this).val('');
+                     }
+
+                     if(production_module_status == 1){
+                           $(this).attr('onchange', "openProductionModal('" + rowId + "')");
+                           let td = $(this).closest('td');
+                           if(td.find('.editItemDetailsBtn').length === 0){
+                              td.find('select').wrap('<div class="d-flex align-items-center gap-2"></div>');
+                              td.find('.d-flex').append(
+                                 '<button type="button" class="btn btn-outline-secondary p-1 px-2 editItemDetailsBtn" data-row="' + rowId + '" title="Configure item">⚙️</button>'
+                              );
+                           }
+                     } else {
+                           $(this).attr('onchange', "call_fun('" + rowId + "')");
+                     }
+
+                  });
+
+               }
+            });
+
          }
       }
       if((nature=="WITH GST" && type=="WITHOUT ITEM")){
          $(".with_gst_without_item_section").show();
          $(".item").select2();
          
+      }
+
+      if(nature=="WITH GST" && type=="WITHOUT ITEM"){
+         $(".with_gst_without_item_section .amount").prop("required", true);
+         let tbody = $(".with_gst_without_item_section tbody");
+
+         let rowCount = tbody.find("tr[id^='withgst_tr_']").length;
+
+         if(rowCount == 0){
+
+            let html = `
+            <tr class="font-14 font-heading bg-white" id="withgst_tr_1">
+               <td style="width:28%">
+                  <select class="form-control item select2-single" id="item_1" data-index="1" name="item[]" onchange="gstCalculation()" >
+                     <option value="">Select Item</option>
+                     @foreach($items as $item)
+                        <option value="{{$item->id}}">{{$item->account_name}}</option>
+                     @endforeach
+                  </select>
+               </td>
+
+               <td style="width:15%">
+                  <input type="number" class="form-control hsn" id="hsn_1" name="hsn[]" placeholder="HSN/SAC">
+               </td>
+
+               <td style="width:15%">
+                  <select class="form-select percentage select2-single" id="percentage_1" data-index="1" name="percentage[]" onchange="gstCalculation()">
+                     <option value="">GST(%)</option>
+                     <option value="0">0%</option>
+                     <option value="5">5%</option>
+                     <option value="12">12%</option>
+                     <option value="18">18%</option>
+                     <option value="28">28%</option>
+                  </select>
+               </td>
+
+               <td style="width:20%">
+                  <select class="form-control select2-single" name="unit_code[]" id="unit_code_1">
+                     <option value="">-- Select UQC --</option>
+                     <option value="BAL - BALE">BAL - BALE</option>
+                     <option value="BDL - BUNDLES">BDL - BUNDLES</option>
+                     <option value="BKL - BUCKLES">BKL - BUCKLES</option>
+                     <option value="BOU - BILLION OF UNITS">BOU - BILLION OF UNITS</option>
+                     <option value="BOX - BOX">BOX - BOX</option>
+                     <option value="BTL - BOTTLES">BTL - BOTTLES</option>
+                     <option value="BUN - BUNCHES">BUN - BUNCHES</option>
+                     <option value="CAN - CANS">CAN - CANS</option>
+                     <option value="CBM - CUBIC METERS">CBM - CUBIC METERS</option>
+                     <option value="CCM - CUBIC CENTIMETERS">CCM - CUBIC CENTIMETERS</option>
+                     <option value="CMS - CENTIMETERS">CMS - CENTIMETERS</option>
+                     <option value="CTN - CARTONS">CTN - CARTONS</option>
+                     <option value="DOZ - DOZENS">DOZ - DOZENS</option>
+                     <option value="DRM - DRUMS">DRM - DRUMS</option>
+                     <option value="GGK - GREAT GROSS">GGK - GREAT GROSS</option>
+                     <option value="GMS - GRAMMES">GMS - GRAMMES</option>
+                     <option value="GRS - GROSS">GRS - GROSS</option>
+                     <option value="GYD - GROSS YARDS">GYD - GROSS YARDS</option>
+                     <option value="KGS - KILOGRAMS">KGS - KILOGRAMS</option>
+                     <option value="KLR - KILOLITRE">KLR - KILOLITRE</option>
+                     <option value="KME - KILOMETRE">KME - KILOMETRE</option>
+                     <option value="LTR - LITRES">LTR - LITRES</option>
+                     <option value="MLT - MILILITRE">MLT - MILILITRE</option>
+                     <option value="MTR - METERS">MTR - METERS</option>
+                     <option value="MTS - METRIC TON">MTS - METRIC TON</option>
+                     <option value="NOS - NUMBERS">NOS - NUMBERS</option>
+                     <option value="PAC - PACKS">PAC - PACKS</option>
+                     <option value="PCS - PIECES">PCS - PIECES</option>
+                     <option value="PRS - PAIRS">PRS - PAIRS</option>
+                     <option value="QTL - QUINTAL">QTL - QUINTAL</option>
+                     <option value="ROL - ROLLS">ROL - ROLLS</option>
+                     <option value="SET - SETS">SET - SETS</option>
+                     <option value="SQF - SQUARE FEET">SQF - SQUARE FEET</option>
+                     <option value="SQM - SQUARE METERS">SQM - SQUARE METERS</option>
+                     <option value="SQY - SQUARE YARDS">SQY - SQUARE YARDS</option>
+                     <option value="TBS - TABLETS">TBS - TABLETS</option>
+                     <option value="TGM - TEN GROSS">TGM - TEN GROSS</option>
+                     <option value="THD - THOUSANDS">THD - THOUSANDS</option>
+                     <option value="TON - TONNES">TON - TONNES</option>
+                     <option value="TUB - TUBES">TUB - TUBES</option>
+                     <option value="UGS - US GALLONS">UGS - US GALLONS</option>
+                     <option value="UNT - UNITS">UNT - UNITS</option>
+                     <option value="YDS - YARDS">YDS - YARDS</option>
+                     <option value="OTH - OTHERS">OTH - OTHERS</option>
+                     <option value="Test - ER Scenario">Test - ER Scenario</option>
+                  </select>
+               </td>
+
+               <td>
+                  <input type="text" class="form-control amount" id="amount_1" data-index="1" name="without_item_amount[]" placeholder="Enter Amount" onkeyup="gstCalculation()">
+               </td>
+            </tr>
+            `;
+
+            tbody.prepend(html);
+
+            $('.select2-single').select2();
+         }
       }
    }
    $(".transport_info").click(function(){
@@ -1700,8 +2398,13 @@
       $("#transport_info_modal").modal('toggle');
    }); 
    function gstCalculation(){
-      let vendor_gstin = $("#party_id option:selected").attr("data-state_code");
-      let company_gstin = merchant_gstin.substr(0,2);
+      let customer_gstin = $("#party option:selected").data("gstin") || $("#customer_gstin_hidden").val() || "";
+      let merchant_gstin_local = $("#series_no option:selected").data("gst_no") || $("#merchant_gstin_hidden").val() || "";
+
+      if(!customer_gstin || !merchant_gstin_local) return;
+
+      let vendor_gstin = customer_gstin.substring(0,2);
+      let company_gstin = merchant_gstin_local.substring(0,2);
       let net_total = 0;
       let total_cgst = 0;
       let total_sgst = 0;
@@ -1743,6 +2446,23 @@
       $("#net_amount").val(net_total);
       let tamount = parseFloat(net_total) + parseFloat(total_igst);
       $("#total_amount").val(Math.round(tamount));
+      let total = parseFloat(net_total) + parseFloat(total_igst);
+      $("#total_amount").val(total.toFixed(2));
+      let rounded = Math.round(total);
+      let diff = (rounded - total).toFixed(2);
+      $(".round_off_plus").hide();
+      $(".round_off_minus").hide();
+      $("#roundoffplus").val('');
+      $("#roundoffminus").val('');
+      if (diff > 0) {
+         $(".round_off_plus").show();
+         $("#roundoffplus").val(diff);
+      } 
+      else if (diff < 0) {
+         $(".round_off_minus").show();
+         $("#roundoffminus").val(Math.abs(diff));
+      }
+      $("#total_amount").val(rounded.toFixed(2));
    }
    var add_more_count_withgst = {{$add_more_count_withgst}};
    $(".add_more_tr").click(function(){
@@ -1759,91 +2479,91 @@
       add_more_count_withgst++;
       var $curRow = $(this).closest('tr');
       let newRow = '<tr id="withgst_tr_' + add_more_count_withgst + '" class="font-14 font-heading bg-white">\
-    <td style="width:50%">\
-        <select class="form-control item" id="item_' + add_more_count_withgst + '" data-index="' + add_more_count_withgst + '" name="item[]" onchange="gstCalculation()">\
-            <option value="">Select Item</option>\
-            @foreach($items as $item)\
-                <option value="{{$item->id}}">{{$item->account_name}}</option>\
-            @endforeach\
-        </select>\
-    </td>\
-    <td>\
-        <input type="number" class="form-control hsn" id="hsn_' + add_more_count_withgst + '" name="hsn[]" placeholder="HSN/SAC">\
-    </td>\
-    <td>\
-        <select class="form-select percentage select2-single" id="percentage_' + add_more_count_withgst + '" data-index="' + add_more_count_withgst + '" name="percentage[]" onchange="gstCalculation()">\
-            <option value="">GST(%)</option>\
-            <option value="0">0%</option>\
-            <option value="5">5%</option>\
-            <option value="12">12%</option>\
-            <option value="18">18%</option>\
-            <option value="28">28%</option>\
-        </select>\
-    </td>\
-    <td>\
-        <select class="form-control select2-single" name="unit_code[]" id="unit_code_' + add_more_count_withgst + '" required>\
-            <option value="">-- Select UQC --</option>\
-            <option value="BAL - BALE">BAL - BALE</option>\
-            <option value="BDL - BUNDLES">BDL - BUNDLES</option>\
-            <option value="BKL - BUCKLES">BKL - BUCKLES</option>\
-            <option value="BOU - BILLION OF UNITS">BOU - BILLION OF UNITS</option>\
-            <option value="BOX - BOX">BOX - BOX</option>\
-            <option value="BTL - BOTTLES">BTL - BOTTLES</option>\
-            <option value="BUN - BUNCHES">BUN - BUNCHES</option>\
-            <option value="CAN - CANS">CAN - CANS</option>\
-            <option value="CBM - CUBIC METERS">CBM - CUBIC METERS</option>\
-            <option value="CCM - CUBIC CENTIMETERS">CCM - CUBIC CENTIMETERS</option>\
-            <option value="CMS - CENTIMETERS">CMS - CENTIMETERS</option>\
-            <option value="CTN - CARTONS">CTN - CARTONS</option>\
-            <option value="DOZ - DOZENS">DOZ - DOZENS</option>\
-            <option value="DRM - DRUMS">DRM - DRUMS</option>\
-            <option value="GGK - GREAT GROSS">GGK - GREAT GROSS</option>\
-            <option value="GMS - GRAMMES">GMS - GRAMMES</option>\
-            <option value="GRS - GROSS">GRS - GROSS</option>\
-            <option value="GYD - GROSS YARDS">GYD - GROSS YARDS</option>\
-            <option value="KGS - KILOGRAMS">KGS - KILOGRAMS</option>\
-            <option value="KLR - KILOLITRE">KLR - KILOLITRE</option>\
-            <option value="KME - KILOMETRE">KME - KILOMETRE</option>\
-            <option value="LTR - LITRES">LTR - LITRES</option>\
-            <option value="MLT - MILILITRE">MLT - MILILITRE</option>\
-            <option value="MTR - METERS">MTR - METERS</option>\
-            <option value="MTS - METRIC TON">MTS - METRIC TON</option>\
-            <option value="NOS - NUMBERS">NOS - NUMBERS</option>\
-            <option value="PAC - PACKS">PAC - PACKS</option>\
-            <option value="PCS - PIECES">PCS - PIECES</option>\
-            <option value="PRS - PAIRS">PRS - PAIRS</option>\
-            <option value="QTL - QUINTAL">QTL - QUINTAL</option>\
-            <option value="ROL - ROLLS">ROL - ROLLS</option>\
-            <option value="SET - SETS">SET - SETS</option>\
-            <option value="SQF - SQUARE FEET">SQF - SQUARE FEET</option>\
-            <option value="SQM - SQUARE METERS">SQM - SQUARE METERS</option>\
-            <option value="SQY - SQUARE YARDS">SQY - SQUARE YARDS</option>\
-            <option value="TBS - TABLETS">TBS - TABLETS</option>\
-            <option value="TGM - TEN GROSS">TGM - TEN GROSS</option>\
-            <option value="THD - THOUSANDS">THD - THOUSANDS</option>\
-            <option value="TON - TONNES">TON - TONNES</option>\
-            <option value="TUB - TUBES">TUB - TUBES</option>\
-            <option value="UGS - US GALLONS">UGS - US GALLONS</option>\
-            <option value="UNT - UNITS">UNT - UNITS</option>\
-            <option value="YDS - YARDS">YDS - YARDS</option>\
-            <option value="OTH - OTHERS">OTH - OTHERS</option>\
-            <option value="Test - ER Scenario">Test - ER Scenario</option>\
-        </select>\
-    </td>\
-    <td>\
-        <input type="text" class="form-control amount" id="amount_' + add_more_count_withgst + '" data-index="' + add_more_count_withgst + '" name="without_item_amount[]" placeholder="Enter Amount" onkeyup="gstCalculation()">\
-    </td>\
-    <td>\
-        <svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove_more_tr" data-id="' + add_more_count_withgst + '" viewBox="0 0 16 16">\
-            <path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"></path>\
-        </svg>\
-    </td>\
-</tr>';
+         <td style="width:50%">\
+            <select class="form-control item" id="item_' + add_more_count_withgst + '" data-index="' + add_more_count_withgst + '" name="item[]" onchange="gstCalculation()">\
+                  <option value="">Select Item</option>\
+                  @foreach($items as $item)\
+                     <option value="{{$item->id}}">{{$item->account_name}}</option>\
+                  @endforeach\
+            </select>\
+         </td>\
+         <td>\
+            <input type="number" class="form-control hsn" id="hsn_' + add_more_count_withgst + '" name="hsn[]" placeholder="HSN/SAC">\
+         </td>\
+         <td>\
+            <select class="form-select percentage select2-single" id="percentage_' + add_more_count_withgst + '" data-index="' + add_more_count_withgst + '" name="percentage[]" onchange="gstCalculation()">\
+                  <option value="">GST(%)</option>\
+                  <option value="0">0%</option>\
+                  <option value="5">5%</option>\
+                  <option value="12">12%</option>\
+                  <option value="18">18%</option>\
+                  <option value="28">28%</option>\
+            </select>\
+         </td>\
+         <td>\
+            <select class="form-control select2-single" name="unit_code[]" id="unit_code_' + add_more_count_withgst + '" required>\
+                  <option value="">-- Select UQC --</option>\
+                  <option value="BAL - BALE">BAL - BALE</option>\
+                  <option value="BDL - BUNDLES">BDL - BUNDLES</option>\
+                  <option value="BKL - BUCKLES">BKL - BUCKLES</option>\
+                  <option value="BOU - BILLION OF UNITS">BOU - BILLION OF UNITS</option>\
+                  <option value="BOX - BOX">BOX - BOX</option>\
+                  <option value="BTL - BOTTLES">BTL - BOTTLES</option>\
+                  <option value="BUN - BUNCHES">BUN - BUNCHES</option>\
+                  <option value="CAN - CANS">CAN - CANS</option>\
+                  <option value="CBM - CUBIC METERS">CBM - CUBIC METERS</option>\
+                  <option value="CCM - CUBIC CENTIMETERS">CCM - CUBIC CENTIMETERS</option>\
+                  <option value="CMS - CENTIMETERS">CMS - CENTIMETERS</option>\
+                  <option value="CTN - CARTONS">CTN - CARTONS</option>\
+                  <option value="DOZ - DOZENS">DOZ - DOZENS</option>\
+                  <option value="DRM - DRUMS">DRM - DRUMS</option>\
+                  <option value="GGK - GREAT GROSS">GGK - GREAT GROSS</option>\
+                  <option value="GMS - GRAMMES">GMS - GRAMMES</option>\
+                  <option value="GRS - GROSS">GRS - GROSS</option>\
+                  <option value="GYD - GROSS YARDS">GYD - GROSS YARDS</option>\
+                  <option value="KGS - KILOGRAMS">KGS - KILOGRAMS</option>\
+                  <option value="KLR - KILOLITRE">KLR - KILOLITRE</option>\
+                  <option value="KME - KILOMETRE">KME - KILOMETRE</option>\
+                  <option value="LTR - LITRES">LTR - LITRES</option>\
+                  <option value="MLT - MILILITRE">MLT - MILILITRE</option>\
+                  <option value="MTR - METERS">MTR - METERS</option>\
+                  <option value="MTS - METRIC TON">MTS - METRIC TON</option>\
+                  <option value="NOS - NUMBERS">NOS - NUMBERS</option>\
+                  <option value="PAC - PACKS">PAC - PACKS</option>\
+                  <option value="PCS - PIECES">PCS - PIECES</option>\
+                  <option value="PRS - PAIRS">PRS - PAIRS</option>\
+                  <option value="QTL - QUINTAL">QTL - QUINTAL</option>\
+                  <option value="ROL - ROLLS">ROL - ROLLS</option>\
+                  <option value="SET - SETS">SET - SETS</option>\
+                  <option value="SQF - SQUARE FEET">SQF - SQUARE FEET</option>\
+                  <option value="SQM - SQUARE METERS">SQM - SQUARE METERS</option>\
+                  <option value="SQY - SQUARE YARDS">SQY - SQUARE YARDS</option>\
+                  <option value="TBS - TABLETS">TBS - TABLETS</option>\
+                  <option value="TGM - TEN GROSS">TGM - TEN GROSS</option>\
+                  <option value="THD - THOUSANDS">THD - THOUSANDS</option>\
+                  <option value="TON - TONNES">TON - TONNES</option>\
+                  <option value="TUB - TUBES">TUB - TUBES</option>\
+                  <option value="UGS - US GALLONS">UGS - US GALLONS</option>\
+                  <option value="UNT - UNITS">UNT - UNITS</option>\
+                  <option value="YDS - YARDS">YDS - YARDS</option>\
+                  <option value="OTH - OTHERS">OTH - OTHERS</option>\
+                  <option value="Test - ER Scenario">Test - ER Scenario</option>\
+            </select>\
+         </td>\
+         <td>\
+            <input type="text" class="form-control amount" id="amount_' + add_more_count_withgst + '" data-index="' + add_more_count_withgst + '" name="without_item_amount[]" placeholder="Enter Amount" onkeyup="gstCalculation()">\
+         </td>\
+         <td>\
+            <svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove_more_tr" data-id="' + add_more_count_withgst + '" viewBox="0 0 16 16">\
+                  <path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"></path>\
+            </svg>\
+         </td>\
+      </tr>';
       $curRow.before(newRow);
       //$("#item_"+add_more_count_withgst).select2();
      $('#item_' + add_more_count_withgst).select2();
-$('#unit_code_' + add_more_count_withgst).select2();
-$('#percentage_' + add_more_count_withgst).select2();
+      $('#unit_code_' + add_more_count_withgst).select2();
+      $('#percentage_' + add_more_count_withgst).select2();
    });
    $(document).on("click", ".remove_more_tr", function() {
       let id = $(this).attr('data-id');
@@ -1950,6 +2670,7 @@ $('#percentage_' + add_more_count_withgst).select2();
       $("#series_no").change();
    });
    $("#series_no").change(function(){
+       alert()
       let nature = $("#nature").val();
       if(nature==""){
          alert("Please Select Nature");
@@ -1988,59 +2709,416 @@ $('#percentage_' + add_more_count_withgst).select2();
    });
 
       function updateNarration() {
-   const type = $("#type").val();
-   const nature = $("#nature").val();
+         const type = $("#type").val();
+         const nature = $("#nature").val();
 
-   if (nature == "WITH GST" && type == "RATE DIFFERENCE") {
-      let parts = [];
+         if (nature == "WITH GST" && type == "RATE DIFFERENCE") {
+            let parts = [];
 
-      $(".quantity").each(function () {
-         const rowId = $(this).attr("id").split("_")[2];
-         const qty = parseFloat($("#quantity_tr_" + rowId).val()) || 0;
-         const price = parseFloat($("#price_tr_" + rowId).val()) || 0;
+            $(".quantity").each(function () {
+               const rowId = $(this).attr("id").split("_")[2];
+               const qty = parseFloat($("#quantity_tr_" + rowId).val()) || 0;
+               const price = parseFloat($("#price_tr_" + rowId).val()) || 0;
 
-         if (qty > 0 && price > 0) {
-            const amount = qty * price;
-            parts.push(`${qty} x ${price} = ${amount.toFixed(2)}`);
+               if (qty > 0 && price > 0) {
+                  const amount = qty * price;
+                  parts.push(`${qty} x ${price} = ${amount.toFixed(2)}`);
+               }
+            });
+
+            const leftNarration = parts.length > 0 ? parts.join(" | ") : "";
+
+            let existingNarration = $("#narration_withgst").val() || "";
+            let afterComma = "";
+
+            // If narration already has a comma, preserve the part after it
+            if (existingNarration.includes(",")) {
+               afterComma = existingNarration.substring(existingNarration.indexOf(",") + 1);
+               afterComma = afterComma.trim();
+            }
+
+            // Combine updated left part and preserved right part
+            let finalNarration = leftNarration;
+            if (afterComma !== "") {
+               finalNarration += ", " + afterComma;
+            } else if (leftNarration !== "") {
+               finalNarration += ","; // Add single trailing comma if only left part exists
+            }
+
+            $("#narration_withgst").val(finalNarration);
+         }
+      }
+
+      $(document).ready(function () {
+         sectionHideShow(); // Initial setup
+
+         $("#type, #nature").on("change", function () {
+            sectionHideShow();
+            updateNarration(); // Always refresh narration on changes
+         });
+
+         $(document).on("input", ".quantity, .price", function () {
+            
+            updateNarration();
+            calculateAmount();
+         });
+      });
+
+   //⚙️ BUTTON CLICK → OPEN MODAL
+   $(document).on('click', '.editItemDetailsBtn', function () {
+      const rowId = $(this).data('row');  // e.g. "tr_3"
+      openProductionModal(rowId);
+   });
+
+
+   //OPEN PRODUCTION MODAL 
+
+   function openProductionModal(rowId) {
+
+      const numeric = rowId.replace("tr_", "");
+   
+      // Correct selector
+      const selectedItem = $("#goods_discription_tr_" + numeric).val();
+      const selectedOption = $("#goods_discription_tr_" + numeric + " option:selected");
+      const productionAllowed = selectedOption.attr("data-production");
+
+      if (!selectedItem) {
+         alert("Please select an item first.");
+         return;
+      }
+      
+      // Only open modal for production items
+      if (productionAllowed != "1") {
+         return;
+      }
+   
+      const modal = new bootstrap.Modal(document.getElementById('productionModal'));
+
+      const hiddenInput = $("#item_size_info_tr_" + numeric);
+      let existingData = [];
+
+      if (hiddenInput.val()) {
+         try { existingData = JSON.parse(hiddenInput.val()); } catch (e) {}
+      }
+
+      $("#reelContainer").html("");
+
+      if (existingData.length > 0) {
+         existingData.forEach(d => addNewReelRow(d.size, d.reel_no, d.weight,d.status));
+      } else {
+         addNewReelRow();
+      }
+
+      calculateTotalWeightInModal();
+
+      $("#productionModal").attr("data-row-id", numeric);
+      modal.show();
+   }
+
+   //ADD REEL ROW (Reusable)
+   function addNewReelRow(size = '', reel_no = '', weight = '', locked = 1) {
+
+      const reelContainer = $('#reelContainer');
+
+      const newRow = $(`
+            <div class="reel-entry border rounded p-3 mb-3 bg-light ${locked ? '' : 'opacity-75'}"
+                  data-locked="${locked}">
+               <div class="row g-3 align-items-center">
+
+                     <div class="col-md-4">
+                        <label class="form-label">Size</label>
+                        <input type="text" class="form-control"
+                              name="production[size][]"
+                              value="${size}"
+                              ${locked ? '' : 'disabled'}>
+                     </div>
+
+                     <div class="col-md-4">
+                        <label class="form-label">Reel No</label>
+                        <input type="text" class="form-control"
+                              name="production[reel_no][]"
+                              value="${reel_no}"
+                              ${locked ? '' : 'disabled'}>
+                     </div>
+
+                     <div class="col-md-4">
+                        <label class="form-label">Weight (kg)</label>
+                        <div class="d-flex gap-2">
+                           <input type="number"
+                                    class="form-control weight-input"
+                                    name="production[weight][]"
+                                    value="${weight}"
+                                    ${locked ? '' : 'disabled'}>
+                           ${locked ? `
+                                 <button type="button"
+                                       class="btn btn-sm btn-danger remove-reel-btn">×</button>
+                           ` : ''}
+                        </div>
+                     </div>
+
+               </div>
+            </div>
+         `);
+
+      reelContainer.append(newRow);
+
+      // delete reel row
+      newRow.find('.remove-reel-btn').click(function () {
+         newRow.remove();
+         calculateTotalWeightInModal();
+      });
+
+      // update weight total
+      newRow.find('.weight-input').on('input', calculateTotalWeightInModal);
+   }
+
+   //CALCULATE TOTAL WEIGHT
+   function calculateTotalWeightInModal() {
+      let total = 0;
+
+      $('#reelContainer .weight-input').each(function () {
+         total += parseFloat($(this).val() || 0);
+      });
+
+      $('#totalWeight').text(total.toFixed(2));
+   }
+
+   //ADD EXTRA REEL ROW (Button)
+   $(document).on('click', '#addReelBtn', function () {
+      addNewReelRow();
+   });
+
+
+   $('#saveProductionConfig').click(function () {
+
+      // get numeric row id
+      const numeric = $("#productionModal").attr("data-row-id");
+
+      const hiddenInput = $("#item_size_info_tr_" + numeric);
+
+      const selectedData = [];
+
+      // collect all rows
+         $('#reelContainer .reel-entry').each(function () {
+         const size = $(this).find('input[name="production[size][]"]').val();
+         const reel_no = $(this).find('input[name="production[reel_no][]"]').val();
+         const weight = $(this).find('input[name="production[weight][]"]').val();
+
+            if (size || reel_no || weight) {
+               selectedData.push({ size, reel_no, weight, status: $(this).data('locked')  });
+            }
+         });
+
+      // save JSON to hidden field
+      hiddenInput.val(JSON.stringify(selectedData));
+
+      // update quantity = total weight
+      let totalWeight = selectedData.reduce(
+         (sum, row) => sum + (parseFloat(row.weight) || 0),
+         0
+      );
+
+      $("#quantity_tr_" + numeric)
+         .val(totalWeight.toFixed(2))
+         .attr("readonly", true);
+
+      // close modal
+      bootstrap.Modal.getInstance(document.getElementById('productionModal')).hide();
+   });
+
+   $("#saleReturnForm").on("submit", function () {
+
+      $(".with_gst_with_item_section:hidden :input").prop("disabled", true);
+      $(".with_gst_without_item_section:hidden :input").prop("disabled", true);
+      $(".without_gst_section:hidden :input").prop("disabled", true);
+
+   });
+
+   function getMaxQtyFromText(rowId) {
+
+      let text = $('#goods_discription_' + rowId + ' option:selected').text();
+
+      // extract number inside brackets (e.g. 30 from "Parli (30 BKT)")
+      let match = text.match(/\((\d+)/);
+
+      return match ? parseFloat(match[1]) : 0;
+   }
+
+   // validate on qty input
+   $(document).on('input', '.quantity', function () {
+
+      let rowId = $(this).attr('id').replace('quantity_', '');
+
+      let maxQty = getMaxQtyFromText(rowId);
+      let enteredQty = parseFloat($(this).val()) || 0;
+
+      let invoiceNo = $('#voucher_no').val();
+
+if (invoiceNo !== 'OTHER' && enteredQty > maxQty) {
+    alert("Entered quantity cannot exceed available quantity (" + maxQty + ").");
+    $(this).val('');
+    $(this).focus();
+}
+
+   });
+   function checkTotalItemQty(currentRowId) {
+
+      let currentItem = $("#goods_discription_tr_" + currentRowId).val();
+      if (!currentItem) return;
+
+      let totalQty = 0;
+      let maxQty = 0;
+
+      $(".goods_items").each(function () {
+
+         let rowId = $(this).attr("data-id");
+
+         if ($(this).val() == currentItem) {
+
+               let qty = parseFloat($("#quantity_tr_" + rowId).val()) || 0;
+               totalQty += qty;
+
+               let text = $(this).find("option:selected").text();
+
+               let match = text.match(/\((\d+)/); 
+
+               if (match) {
+                  maxQty = parseInt(match[1]);
+               }
          }
       });
 
-      const leftNarration = parts.length > 0 ? parts.join(" | ") : "";
+      if (maxQty > 0 && totalQty > maxQty) {
 
-      let existingNarration = $("#narration_withgst").val() || "";
-      let afterComma = "";
+         alert("Max allowed quantity is " + maxQty);
 
-      // If narration already has a comma, preserve the part after it
-      if (existingNarration.includes(",")) {
-         afterComma = existingNarration.substring(existingNarration.indexOf(",") + 1);
-         afterComma = afterComma.trim();
+         let currentQty = parseFloat($("#quantity_tr_" + currentRowId).val()) || 0;
+         let excess = totalQty - maxQty;
+
+         let newQty = currentQty - excess;
+
+         $("#quantity_tr_" + currentRowId).val(newQty > 0 ? newQty : 0);
       }
-
-      // Combine updated left part and preserved right part
-      let finalNarration = leftNarration;
-      if (afterComma !== "") {
-         finalNarration += ", " + afterComma;
-      } else if (leftNarration !== "") {
-         finalNarration += ","; // Add single trailing comma if only left part exists
-      }
-
-      $("#narration_withgst").val(finalNarration);
    }
-}
+   $(document).on("input", ".quantity", function () {
+      let rowId = $(this).attr("id").replace("quantity_tr_", "");
+      checkTotalItemQty(rowId);
+   });
+   $(document).on("change", ".goods_items", function () {
 
+      let rowId = $(this).attr("data-id");
 
+      checkTotalItemQty(rowId);
+   });
+   $(document).ready(function () {
 
-$(document).ready(function () {
-   sectionHideShow(); // Initial setup
+      $(".quantity").each(function () {
+         let rowId = $(this).attr("id").replace("quantity_tr_", "");
+         checkTotalItemQty(rowId);
+      });
 
-   $("#type, #nature").on("change", function () {
-      sectionHideShow();
-      updateNarration(); // Always refresh narration on changes
+   });
+   let previousType = $("#type").val(); 
+
+   $("#type").on("change", function(){
+
+      let currentType = $(this).val();
+
+      if(currentType === "WITH ITEM"){
+
+         let invalidFound = false;
+
+         $("tr[id^='tr_']").each(function(){
+
+               let rowId = $(this).attr("id").replace("tr_","");
+
+               let qtyVal = $("#quantity_tr_" + rowId).val();
+               let priceVal = $("#price_tr_" + rowId).val();
+               let amountVal = $("#amount_tr_" + rowId).val();
+
+               let qty = parseFloat(qtyVal);
+               let price = parseFloat(priceVal);
+               let amount = parseFloat(amountVal);
+
+               if(
+                  (qtyVal === "" || isNaN(qty)) &&
+                  (priceVal === "" || isNaN(price)) &&
+                  (amountVal === "" || isNaN(amount))
+               ){
+                  return;
+               }
+
+               if(
+                  (qty !== undefined && !isNaN(qty) && (qty === 0 || qty < 0)) ||
+                  (price !== undefined && !isNaN(price) && (price === 0 || price < 0)) ||
+                  (amount !== undefined && !isNaN(amount) && (amount === 0 || amount < 0))
+               ){
+
+                  invalidFound = true;
+
+                  $("#quantity_tr_" + rowId).val("");
+                  $("#price_tr_" + rowId).val("");
+                  $("#amount_tr_" + rowId).val("");
+               }
+         });
+
+         if(invalidFound){
+               alert("Qty, Price and Amount must be greater than 0 for WITH ITEM");
+         }
+
+         calculateAmount();
+      }
+
+      previousType = currentType;
+   });
+   function validateWithoutItemAmount(el){
+
+      if($("#type").val() !== "WITHOUT ITEM") return;
+
+      let val = $(el).val();
+
+      // allow typing like 0 or 0.
+      if(val === "" || val === "0." ) return;
+
+      let num = parseFloat(val);
+
+      if(!isNaN(num) && num <= 0){
+         alert("Amount must be greater than 0");
+         $(el).val('');
+         $("#net_amount, #total_amount").val('');
+      }
+   }
+   $("#party").on("change", function(){
+
+      if($("#type").val() !== "WITHOUT ITEM") return;
+
+      // reset GST values
+      $("#cgst, #sgst, #igst").val('');
+      $("#net_amount, #total_amount").val('');
+
+      $(".cgst_tr, .sgst_tr, .igst_tr").hide();
+
+      // update GSTIN
+      customer_gstin = $("#party option:selected").data("gstin") || "";
+
+      // recalc
+      gstCalculation();
    });
 
-   $(document).on("input", ".quantity, .price", function () {
-      updateNarration();
+   $(document).on('wheel', 'input[type=number]', function () {
+      $(this).blur();
    });
-});
+
+   $(document).on('keydown', 'input[type=number]', function (e) {
+      if (e.key === '-' || e.key === 'e') {
+         e.preventDefault();
+      }
+   });
+
+   $(document).on('input', 'input[type=number]', function () {
+      if ($(this).val() < 0) {
+         $(this).val('');
+      }
+   });
 </script>
 @endsection

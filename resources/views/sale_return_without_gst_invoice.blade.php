@@ -1,6 +1,10 @@
 @extends('layouts.app')
 @section('content')
 @include('layouts.header')
+@php
+$source = request()->get('source');
+$return_url = request()->get('return_url');
+@endphp
 <style type="text/css">
    .dataTables_filter{
       float:right;
@@ -76,6 +80,11 @@
                         <div class="calender-administrator my-2 my-md-0  w-min-230 noprint">
                             <a href="{{ route('sale-return.index') }}"><button type="button" class="btn btn-danger">QUIT</button></a>
                             <button class="btn btn-info" onclick="printpage();">Print</button>
+                            @if($source == 'approve' && $sale_return->approved_status != 1)
+                                <button class="btn btn-success" id="approveSaleReturn">
+                                   Approve
+                                </button>
+                                @endif
                              <?php 
                    if (in_array(date('Y-m', strtotime($sale_return->date)), $month_arr) && $sale_return->e_invoice_status == 0 && $sale_return->e_waybill_status == 0) {?>
                         <a href="{{ URL::to('sale-return-edit/'.$sale_return->id) }}" class="btn btn-primary text-white">
@@ -263,4 +272,29 @@
       window.print();
       $('.header-section').removeClass('importantRule');
    }
+    $(document).on("click","#approveSaleReturn",function(){
+        if(confirm("Approve this Credit Note ?")){
+            let returnUrl = @json($return_url);
+            $.ajax({
+                url:"{{ route('transaction.approve') }}",
+                type:"POST",
+                data:{
+                    _token:"{{ csrf_token() }}",
+                    id:"{{ $sale_return->id }}",
+                    module:"credit_note"
+                },
+                success:function(res){
+                    if(res.status){
+                        alert("Transaction Approved");
+                        if(returnUrl){
+                            window.location.href = returnUrl;
+                        }else{
+                            window.location.href = "{{ url('transaction-report') }}";
+                        }
+                    }
+                    
+                }
+            });
+        }
+    });
 </script>

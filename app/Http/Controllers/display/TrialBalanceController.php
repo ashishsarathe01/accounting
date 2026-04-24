@@ -38,6 +38,18 @@ class TrialBalanceController extends Controller
             $to_date = date('Y-m-d',strtotime($to_date));
         }
         $req['type'] = "open";
+        //Last Year Transit Amoumt
+        $baseQuery = DB::table('purchases')
+                    ->whereRaw("STR_TO_DATE(date, '%Y-%m-%d') <= ?", [Carbon::parse($from_date)->subDay()])
+                    ->whereDate('stock_entry_date', '>', Carbon::parse($from_date)->subDay())
+                    ->where('company_id',Session::get('user_company_id'))
+                    ->where('status', '1')
+                    ->where('delete', '0');
+        $purchase_in_transit_ids = (clone $baseQuery)->pluck('id')->toArray();
+        $stock_in_transit_value = (clone $baseQuery)
+        ->selectRaw("SUM(CAST(taxable_amt AS DECIMAL(15,2))) as total")
+        ->value('total');
+        $stock_in_transit_value = round($stock_in_transit_value ?? 0, 2);
         $account = Accounts::select('id','account_name','under_group','under_group_type')
                            ->where('delete','0')
                            ->whereIn('company_id',[Session::get('user_company_id'),0])
@@ -132,6 +144,7 @@ class TrialBalanceController extends Controller
                         } 
         $previous_date = Carbon::parse($from_date)->subDay(); 
         $stock_in_hand = CommonHelper::ClosingStock($previous_date);
+        $stock_in_hand = $stock_in_hand + $stock_in_transit_value;
         $stock_in_hand = round($stock_in_hand,2);
         if($stock_in_hand<0){
             $newCompete = collect([
@@ -166,10 +179,12 @@ class TrialBalanceController extends Controller
       //Check Profit & Loss Account Entry
       $jouranl = Journal::select('id')
                      ->withSum(['journal_details' => function ($query) {
-                        $query->where('id','!=','13319');
+                        $query->where('id','!=','13319')
+                        ->where('journal_details.delete','0');
                      }], 'debit')->where('journals.company_id',Session::get('user_company_id'))
                      ->where('journals.financial_year',$prevFy)
                      ->where('form_source','profitloss')
+                     ->where('journals.delete','0')
                      ->get();
       $journal_amount = 0;
       if(count($jouranl)>0){
@@ -205,6 +220,18 @@ class TrialBalanceController extends Controller
                 $to_date = date('Y-m-d',strtotime($to_date));
             }  
         }
+        //Last Year Transit Amoumt
+        $baseQuery = DB::table('purchases')
+                    ->whereRaw("STR_TO_DATE(date, '%Y-%m-%d') <= ?", [Carbon::parse($from_date)->subDay()])
+                    ->whereDate('stock_entry_date', '>', Carbon::parse($from_date)->subDay())
+                    ->where('company_id',Session::get('user_company_id'))
+                    ->where('status', '1')
+                    ->where('delete', '0');
+        $purchase_in_transit_ids = (clone $baseQuery)->pluck('id')->toArray();
+        $stock_in_transit_value = (clone $baseQuery)
+        ->selectRaw("SUM(CAST(taxable_amt AS DECIMAL(15,2))) as total")
+        ->value('total');
+        $stock_in_transit_value = round($stock_in_transit_value ?? 0, 2);
         //Data By Group
         $account = AccountHeading::with(['accountWithHead'=>function($query){
                                     $query->select('id','account_name','under_group','under_group_type');
@@ -215,7 +242,9 @@ class TrialBalanceController extends Controller
                                     }]);
                                 }])
                                 ->select('id','name')
-                                ->get();      
+                                ->get();     
+        // echo "<pre>";
+        // print_r($account->toArray());die;
         foreach ($account as $key => $value){
             if(count($value->accountWithHead)>0){
                 $profit_loss_account = [];
@@ -276,6 +305,7 @@ class TrialBalanceController extends Controller
                     if($v2->id==30){           
                         $previous_date = Carbon::parse($from_date)->subDay();      
                         $stock_in_hand = CommonHelper::ClosingStock($previous_date);
+                        $stock_in_hand = $stock_in_hand + $stock_in_transit_value;
                         $stock_in_hand = round($stock_in_hand,2);
                         if($stock_in_hand<0){
                             $value->accountGroup[$k2]->debit = 0;
@@ -343,6 +373,9 @@ class TrialBalanceController extends Controller
                                             ->where('delete','0')
                                             ->pluck('id')
                                             ->toArray();
+                                            if($v2->id=="2670"){
+                                                // echo "<pre>";print_r($inner_group_account);die;
+                                            }
                                     $inner_group2 = AccountGroups::select('id')
                                             ->where('company_id',Session::get('user_company_id'))
                                             ->whereIn('heading', $inner_group1)
@@ -400,7 +433,6 @@ class TrialBalanceController extends Controller
                                         }
                                     }
                                 }
-                                
                                 if(count($v2->account)>0){
                                     if(count($inner_group_account)>0){
                                         $merged_accounts = array_merge($v2->account->pluck('id')->toArray(), $inner_group_account);
@@ -409,6 +441,10 @@ class TrialBalanceController extends Controller
                                         $balance_sheet_account = implode(',', $v2->account->pluck('id')->toArray());
                                     }
                                     
+                                }else{
+                                    if(count($inner_group_account)>0){
+                                        $balance_sheet_account = implode(',', $inner_group_account);
+                                    }
                                 }
                             }
                             
@@ -551,9 +587,37 @@ class TrialBalanceController extends Controller
                 $group_primary_yes[$k2]->debit = 0;
                 $group_primary_yes[$k2]->credit = 0;
             }
-        }        
+        }  
+        list($start, $end) = explode('-', $financial_year);
+      $prevFy = str_pad($start - 1, 2, '0', STR_PAD_LEFT) . '-' . str_pad($end - 1, 2, '0', STR_PAD_LEFT);
+      $prev_year_profitloss =  CommonHelper::profitLoss($prevFy);
+      //Check Profit & Loss Account Entry
+      $jouranl = Journal::select('id')
+                     ->withSum(['journal_details' => function ($query) {
+                        $query->where('id','!=','13319')
+                        ->where('journal_details.delete','0');
+                     }], 'debit')->where('journals.company_id',Session::get('user_company_id'))
+                     ->where('journals.financial_year',$prevFy)
+                     ->where('form_source','profitloss')
+                      ->where('journals.delete','0')
+                     ->get();
+      $journal_amount = 0;
+      if(count($jouranl)>0){
+         foreach ($jouranl as $key => $value) {
+            $journal_amount = $journal_amount + $value->journal_details_sum_debit;
+         }
+      }
+      $prev_year_profit_status = 0;
+      if($prev_year_profitloss<0){
+         $prev_year_profit_status = 1;
+      }
+    //       echo "<pre>";
+    //   print_r($account->toArray());die;
+      $prev_year_profitloss = abs($prev_year_profitloss) - $journal_amount;
+
         if($request->trial_balance_by && $request->trial_balance_by=="by_group"){
-            return view('display/trialbalance')->with('account', $account)->with('group_primary_yes', $group_primary_yes)->with('type',$req['type'])->with('to_date',$to_date);
+            
+            return view('display/trialbalance')->with('account', $account)->with('group_primary_yes', $group_primary_yes)->with('type',$req['type'])->with('to_date',$to_date)->with('prev_year_profitloss',$prev_year_profitloss)->with('prev_year_profit_status',$prev_year_profit_status)->with('prevFy',$prevFy);
         }
         //Data By Account
         $inner_group_account_id = [];$inner_group_name = "";$inner_group_id = "";
@@ -810,7 +874,9 @@ class TrialBalanceController extends Controller
         }     
         // Add Stock In Hand
         $previous_date = Carbon::parse($from_date)->subDay();
-        $stock_in_hand = round(CommonHelper::ClosingStock($previous_date), 2);     
+        $stock_in_hand = CommonHelper::ClosingStock($previous_date);
+        $stock_in_hand = $stock_in_hand + $stock_in_transit_value;
+        $stock_in_hand = round($stock_in_hand, 2);
         $newCompete = collect([
             [
                 'id' => '',
@@ -832,10 +898,12 @@ class TrialBalanceController extends Controller
       //Check Profit & Loss Account Entry
       $jouranl = Journal::select('id')
                      ->withSum(['journal_details' => function ($query) {
-                        $query->where('id','!=','13319');
+                        $query->where('id','!=','13319')
+                        ->where('journal_details.delete','0');
                      }], 'debit')->where('journals.company_id',Session::get('user_company_id'))
                      ->where('journals.financial_year',$prevFy)
                      ->where('form_source','profitloss')
+                      ->where('journals.delete','0')
                      ->get();
       $journal_amount = 0;
       if(count($jouranl)>0){

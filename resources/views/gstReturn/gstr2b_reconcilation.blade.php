@@ -65,54 +65,143 @@
                   {{ session('success') }}
                </div>
             @endif
-            @php
-            $date = DateTime::createFromFormat("Y-m", $month);
-            @endphp
-            <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Reconciliation for the month of  {{$date->format("F")}} </h5>
-            <table class="table table-ordered bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm gst_table">
-                <thead>
-                    <tr>
-                        <th>Particulars</th>
-                        <th style='text-align:right'>Amount</th>
-                    </tr>
-                </thead>
-                <tbody style="font-size: 15px;">
-                    <tr style="cursor: pointer" class="reconciliation_details" data-type="only_in_portal" data-month="{{$month}}" data-gstin="{{$gstin}}">
-                        <td>Input On Portal</td>
-                        <td style='text-align:right'>{{formatIndianNumber($total_val_on_portal_but_not_in_book)}}</td>
-                    </tr>
-                    <tr style="cursor: pointer" class="reconciliation_details" data-type="only_in_book" data-month="{{$month}}" data-gstin="{{$gstin}}">
-                        <td>Only In books</td>
-                        <td style='text-align:right'>{{formatIndianNumber($total_val_only_in_book)}}</td>
-                    </tr>
-                    <tr>
-                        <th>Total</th>
-                        <th style='text-align:right'>{{formatIndianNumber($total_val_on_portal_but_not_in_book+$total_val_only_in_book)}}</th>
-                    </tr>
-                </tbody>
-            </table>
-            <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Aggregate Reconciliation from April upto date</h5>
-            <table class="table table-ordered bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm gst_table">
-                <thead>
-                    <tr>
-                        <th>Particulars</th>
-                        <th style='text-align:right'>Amount</th>
-                    </tr>
-                </thead>
-                <tbody style="font-size: 15px;">
-                    <tr style="cursor: pointer" class="reconciliation_details" data-type="only_in_portal_all" data-month="{{$month}}" data-gstin="{{$gstin}}">
-                        <td>Input On Portal</td>
-                        <td style='text-align:right'>{{formatIndianNumber($total_val_on_portal_but_not_in_book1)}}</td>
-                    </tr>
-                    <tr style="cursor: pointer" class="reconciliation_details" data-type="only_in_book_all" data-month="{{$month}}" data-gstin="{{$gstin}}">
-                        <td>Only In books</td>
-                        <td style='text-align:right'>{{formatIndianNumber($total_book_value_only_in_book)}}</td>
-                    </tr>
-                    <tr>
-                        <th>Total</th>
-                        <th style='text-align:right'>{{formatIndianNumber($total_val_on_portal_but_not_in_book1+$total_book_value_only_in_book)}}</th>
-                    </tr>
-                </tbody>
+            <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">GSTR2B Reconciliation Data</h5>
+            <table class="table table-bordered bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm gst_table">
+               <thead>
+                  <tr>
+                     <th style='text-align:left'>Particular</th>
+                     <th style='text-align:right'>Amount</th>
+                     <th style='text-align:right'>IGST</th>
+                     <th style='text-align:right'>CGST</th>
+                     <th style='text-align:right'>SGST</th>
+                  </tr>
+               </thead>
+               <tbody style="font-size: 15px;">
+                  <tr>
+                     <td style='text-align:left'>GST Portal</td>
+                     <td style='text-align:right'>{{formatIndianNumber($portal_invoice_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($portal_igst_amount)}}</td>                
+                     <td style='text-align:right'>{{formatIndianNumber($portal_cgst_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($portal_sgst_amount)}}</td>                    
+                  </tr>
+                  <tr><th colspan="4">Previous Month</th></tr>
+                  <tr>
+                     <td style='text-align:left'>Previous Month Invoice (Portal)</td>
+                     <td style='text-align:right'>{{formatIndianNumber($previous_month_invoice_amount+$previous_month_journal_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($previous_month_invoice_igst_amount+$previous_month_journal_igst_amount)}}</td>                
+                     <td style='text-align:right'>{{formatIndianNumber($previous_month_invoice_cgst_amount+$previous_month_journal_cgst_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($previous_month_invoice_sgst_amount+$previous_month_journal_sgst_amount)}}</td>                   
+                  </tr>
+                  <tr>
+                     <td style='text-align:left'>Previous Debit Note (Portal)</td>
+                     <td style='text-align:right'>{{formatIndianNumber($previous_month_debit_note_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($previous_month_debit_note_igst_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($previous_month_debit_note_cgst_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($previous_month_debit_note_sgst_amount)}}</td>
+                  </tr>
+                  <tr>
+                     <td style='text-align:left'>Previous Credit Note (Portal)</td>
+                     <td style='text-align:right'>{{formatIndianNumber($previous_month_credit_note_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($previous_month_credit_note_igst_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($previous_month_credit_note_cgst_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($previous_month_credit_note_sgst_amount)}}</td>
+                  </tr>
+                  <tr><th colspan="4">Only In Book</th></tr>
+                  <tr>
+                     <td style='text-align:left'>Invoice (Only In Book)</td>
+                     <td style='text-align:right;cursor:pointer;color:#0000FF' data-detail="{{$purchase_only_on_book_detail}}" data-journal-detail="{{$journal_only_on_book_detail}}" class="purchase_only_on_book_detail">{{formatIndianNumber($only_on_book_purchase_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($only_on_book_purchase_igst_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($only_on_book_purchase_cgst_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($only_on_book_purchase_sgst_amount)}}</td>
+                  </tr>
+                  <tr>
+                     <td style='text-align:left'>Debit Note (Only In Book)</td>
+                     <td style='text-align:right'>{{formatIndianNumber($only_on_book_debit_note_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($only_on_book_debit_note_igst_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($only_on_book_debit_note_cgst_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($only_on_book_debit_note_sgst_amount)}}</td>
+                  </tr>
+                  <tr>
+                     <td style='text-align:left'>Credit Note (Only In Book)</td>
+                     <td style='text-align:right'>{{formatIndianNumber($only_on_book_credit_note_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($only_on_book_credit_note_igst_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($only_on_book_credit_note_cgst_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($only_on_book_credit_note_sgst_amount)}}</td>
+                  </tr>
+                  <tr><th colspan="4">Only On Portal</th></tr>
+                  <tr>
+                     <td style='text-align:left'>Invoice (Only On Portal)</td>
+                     <td style='text-align:right'>{{formatIndianNumber($only_on_portal_purchase_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($only_on_portal_purchase_igst_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($only_on_portal_purchase_cgst_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($only_on_portal_purchase_sgst_amount)}}</td>
+                  </tr>
+                  <tr>
+                     <td style='text-align:left'>Debit Note (Only On Portal)</td>
+                     <td style='text-align:right'>{{formatIndianNumber($only_on_portal_debit_note_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($only_on_portal_debit_note_igst_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($only_on_portal_debit_note_cgst_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($only_on_portal_debit_note_sgst_amount)}}</td>
+                  </tr>
+                  <tr>
+                     <td style='text-align:left'>Credit Note (Only On Portal)</td>
+                     <td style='text-align:right'>{{formatIndianNumber($only_on_portal_credit_note_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($only_on_portal_credit_note_igst_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($only_on_portal_credit_note_cgst_amount)}}</td>
+                     <td style='text-align:right'>{{formatIndianNumber($only_on_portal_credit_note_sgst_amount)}}</td>
+                  </tr>
+                  <tr>
+                     <th style='text-align:left'>Book Total</th>
+                     <th style='text-align:right'>{{formatIndianNumber(
+                        $portal_invoice_amount 
+                        - $previous_month_invoice_amount 
+                        - $previous_month_debit_note_amount 
+                        + $previous_month_credit_note_amount 
+                        + $only_on_book_purchase_amount 
+                        - $only_on_book_debit_note_amount 
+                        + $only_on_book_credit_note_amount 
+                        - $only_on_portal_purchase_amount 
+                        - $only_on_portal_debit_note_amount 
+                        + $only_on_portal_credit_note_amount)}}
+                     </th>
+                     <th style='text-align:right'>{{formatIndianNumber(
+                        $portal_igst_amount 
+                        - $previous_month_invoice_igst_amount + $previous_month_journal_igst_amount 
+                        - $previous_month_debit_note_igst_amount 
+                        + $previous_month_credit_note_igst_amount 
+                        + $only_on_book_purchase_igst_amount 
+                        - $only_on_book_debit_note_igst_amount 
+                        + $only_on_book_credit_note_igst_amount 
+                        - $only_on_portal_purchase_igst_amount 
+                        - $only_on_portal_debit_note_igst_amount 
+                        + $only_on_portal_credit_note_igst_amount)}}
+                     </th>
+                     <th style='text-align:right'>{{formatIndianNumber(
+                        $portal_cgst_amount 
+                        - $previous_month_invoice_cgst_amount + $previous_month_journal_cgst_amount 
+                        - $previous_month_debit_note_cgst_amount 
+                        + $previous_month_credit_note_cgst_amount 
+                        + $only_on_book_purchase_cgst_amount 
+                        - $only_on_book_debit_note_cgst_amount 
+                        + $only_on_book_credit_note_cgst_amount 
+                        - $only_on_portal_purchase_cgst_amount 
+                        - $only_on_portal_debit_note_cgst_amount 
+                        + $only_on_portal_credit_note_cgst_amount)}}
+                     </th>
+                     <th style='text-align:right'>{{formatIndianNumber(
+                        $portal_sgst_amount 
+                        - $previous_month_invoice_sgst_amount + $previous_month_journal_sgst_amount 
+                        - $previous_month_debit_note_sgst_amount 
+                        + $previous_month_credit_note_sgst_amount 
+                        + $only_on_book_purchase_sgst_amount 
+                        - $only_on_book_debit_note_sgst_amount 
+                        + $only_on_book_credit_note_sgst_amount 
+                        - $only_on_portal_purchase_sgst_amount 
+                        - $only_on_portal_debit_note_sgst_amount 
+                        + $only_on_portal_credit_note_sgst_amount)}}
+                     </th>
+                  </tr>
+               </tbody>
             </table>
          </div>
          <div class="col-lg-1 d-none d-lg-flex justify-content-center px-1">
@@ -239,43 +328,107 @@
       </div>
    </div>
 </div>
+<div class="modal fade" id="purchase_only_on_book_detailModal" tabindex="-1" aria-labelledby="remarkModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Purchase Only On Book Detail</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table table-bordered table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Account</th>
+                        <th>Invoice No.</th>
+                        <th>Invoice Date</th>
+                        <th style="text-align: right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="purchase_only_on_book_body">
+                  <!-- Content will be populated via AJAX -->
+                </tbody>
+            </table> 
+         </div>
+      </div>
+   </div>
+</div>
 </body>
 @include('layouts.footer')
 <script>
-    $(document).ready(function(){
-        $(".reconciliation_details").click(function(){
+      $(document).ready(function(){
+         $(".reconciliation_details").click(function(){
             var type = $(this).data('type');
             var month = $(this).data('month');
             var gstin = $(this).data('gstin');
             $("#cover-spin").show();
             $.ajax({
-                url: "{{ url('gstr2b-reconciliation-detail') }}",
-                method: 'POST',
-                data: {'type': type,'month':month,'gstin':gstin},
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') // Add this if CSRF token is needed
-                },
-                success: function (response) {
-                    let res = JSON.parse(response);
-                    let tbody = "";
-                    if(type=="only_in_portal" || type=="only_in_portal_all"){
-                        tbody = res.only_in_portal;
-                    }else if(type=="only_in_book" || type=="only_in_book_all"){
-                        tbody = res.only_in_book;
-                    }                    
-                    $(".reconcilation-modal-title").html(type=="only_in_portal"?"Input On Portal":"Only In Books");
-                    $("#reconciliation_table_body").html(tbody);
-                    //reconciliation_table_body
-                    $("#reconciliationModal").modal('show');
-                    $("#cover-spin").hide();
-                },
+               url: "{{ url('gstr2b-reconciliation-detail') }}",
+               method: 'POST',
+               data: {'type': type,'month':month,'gstin':gstin},
+               headers: {
+                  'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') // Add this if CSRF token is needed
+               },
+               success: function (response) {
+                  let res = JSON.parse(response);
+                  let tbody = "";
+                  if(type=="only_in_portal" || type=="only_in_portal_all"){
+                     tbody = res.only_in_portal;
+                  }else if(type=="only_in_book" || type=="only_in_book_all"){
+                     tbody = res.only_in_book;
+                  }                    
+                  $(".reconcilation-modal-title").html(type=="only_in_portal"?"Input On Portal":"Only In Books");
+                  $("#reconciliation_table_body").html(tbody);
+                  //reconciliation_table_body
+                  $("#reconciliationModal").modal('show');
+                  $("#cover-spin").hide();
+               },
                 error: function() {
                     alert('An error occurred while fetching the data.');
                 }
             });
-           
-            
-        });      
-    });
+         });
+         $(".purchase_only_on_book_detail").click(function(){
+            let details = $(this).data('detail');
+            let journal_details = $(this).data('journal-detail');
+            details = details.concat(journal_details);
+            let tbody = "";
+            const formatDate = (dateStr) => {
+               if (!dateStr) return '';
+               let d = new Date(dateStr);
+               let dd = String(d.getDate()).padStart(2, '0');
+               let mm = String(d.getMonth() + 1).padStart(2, '0');
+               let yyyy = d.getFullYear();
+               return `${dd}-${mm}-${yyyy}`;
+            };
+            const formatAmount = (amount) => {
+               return Number(amount).toLocaleString('en-IN', {
+                     minimumFractionDigits: 2,
+                     maximumFractionDigits: 2
+               });
+            };
+            details.forEach(function(item){
+               let account_name = item.account_name;
+               if(item.claim_gst_status){
+                  account_name += " (JOURNAL)";
+               }
+               tbody += `<tr>
+                  <td>${account_name} </td>
+                  <td>${item.voucher_no}</td>
+                  <td>${formatDate(item.date)}</td>
+                  <td style="text-align: right;">${formatAmount(item.amount)}</td>
+               </tr>`;
+            });
+
+            tbody += `<tr>
+               <th colspan="3" style="text-align: right;">Total</th>
+               <th style="text-align: right;">${formatAmount(
+                details.reduce((sum, item) => sum + Number(item.amount), 0)
+            )}</th>
+            </tr>`;
+            $("#purchase_only_on_book_body").html(tbody);
+            $("#purchase_only_on_book_detailModal").modal('show');
+         });
+      });
 </script>
 @endsection

@@ -32,6 +32,8 @@
                         <input type="date" id="customDate" class="form-control calender-bg-icon calender-placeholder" placeholder="To date" required name="to_date" value="{{ !empty($to_date) ? date('Y-m-d', strtotime($to_date)) : '' }}">
                      </div>
                      <button class="btn btn-info" style="margin-left: 5px;">Search</button>
+                     <button class="btn btn-info ms-2 export_csv">CSV</button>
+                     <button class="btn btn-secondary ms-2 print_btn">PRINT</button>
                   </div>
                </form>
                @can('action-module',87)
@@ -44,7 +46,7 @@
                
             </div>
             <div class="transaction-table bg-white table-view shadow-sm">
-               <table id="example" class="table-striped table m-0 shadow-sm">
+               <table id="stock_transfer_table" class="table-striped table m-0 shadow-sm">
                   <thead>
                      <tr class=" font-12 text-body bg-light-pink ">
                         <th class="w-min-120 border-none bg-light-pink text-body">Date</th>
@@ -58,23 +60,47 @@
                   <tbody>
                      @foreach ($stock_transfers as $stockTransfer)   
                      <tr class="font-12 text-body">
-                        <td>{{date('d-m-Y',strtotime($stockTransfer->transfer_date))}}</td>
-                        <td>{{$stockTransfer->voucher_no_prefix}}</td>
-                        <td>{{$stockTransfer->material_center_from}}</td>
-                        <td>{{$stockTransfer->material_center_to}}</td>
-                        <td>{{$stockTransfer->grand_total}}</td>
                         <td>
-                           @if($stockTransfer->e_waybill_status==0)
-                              @can('action-module',65)
-                                 <a href="{{ URL::to('stock-transfer/'.$stockTransfer->id.'/edit') }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
-                              @endcan
-                              @can('action-module',66)
-                                 <button type="button" class="border-0 bg-transparent delete_entry"   data-id="<?php echo $stockTransfer->id;?>">
-                                    <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
-                                 </button>
-                              @endcan
+                           {{date('d-m-Y',strtotime($stockTransfer->transfer_date))}}
+
+                           <div style="font-size:11px; color:#6c757d; margin-top:4px;">
+                                 <strong>Created By:</strong> {{ $stockTransfer->created_by_name ?? '-' }}
+                                 <br>
+                                 <strong>Approved By:</strong> 
+                                 @if($stockTransfer->approved_status == 1)
+                                    {{ $stockTransfer->approved_by_name ?? '-' }}
+                                    <small>({{ date('d-m-Y H:i', strtotime($stockTransfer->approved_at)) }})</small>
+                                 @else
+                                    -
+                                 @endif
+                           </div>
+                        </td>
+
+                        <td>{{$stockTransfer->voucher_no_prefix}}</td>
+
+                        <td>{{$stockTransfer->material_center_from}}</td>
+
+                        <td>{{$stockTransfer->material_center_to}}</td>
+
+                        <td>{{$stockTransfer->grand_total}}</td>
+
+                        <td>
+                           @if($stockTransfer->e_waybill_status==0 && $stockTransfer->approved_status != 1)
+                                 @can('action-module',65)
+                                    <a href="{{ URL::to('stock-transfer/'.$stockTransfer->id.'/edit') }}">
+                                       <img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt="">
+                                    </a>
+                                 @endcan
+                                 @can('action-module',66)
+                                    <button type="button" class="border-0 bg-transparent delete_entry" data-id="<?php echo $stockTransfer->id;?>">
+                                       <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
+                                    </button>
+                                 @endcan
                            @endif
-                           <a href="{{ URL::to('stock-transfer',$stockTransfer->id) }}" target="__blank"><img src="{{ URL::asset('public/assets/imgs/eye-icon.svg')}}" class="px-1" alt=""></a>
+
+                           <a href="{{ URL::to('stock-transfer',$stockTransfer->id) }}" target="__blank">
+                                 <img src="{{ URL::asset('public/assets/imgs/eye-icon.svg')}}" class="px-1" alt="">
+                           </a>
                         </td>
                      </tr>
                      @endforeach
@@ -124,6 +150,191 @@
       
       $('#delete_stock_transfer_form').attr('action',url);      
       $("#delete_stock_transfer").modal("show");
+   });
+
+   $(".export_csv").click(function () {
+
+      let csv = [];
+
+      let from_date = $("input[name='from_date']").val();
+      let to_date   = $("input[name='to_date']").val();
+
+      function formatDate(dateStr){
+         if(!dateStr) return '';
+         let parts = dateStr.split("-");
+         return parts[2] + "-" + parts[1] + "-" + parts[0];
+      }
+
+      csv.push("From Date: " + formatDate(from_date));
+      csv.push("To Date: " + formatDate(to_date));
+      csv.push("");
+
+      let header = [];
+      $("#stock_transfer_table thead th").each(function (index) {
+         if(index != 5){
+               header.push($(this).text().trim());
+         }
+      });
+      csv.push(header.join(","));
+
+      $("#stock_transfer_table tbody tr").each(function () {
+
+         let row = [];
+
+         $(this).find("td").each(function (index) {
+
+               if(index == 5) return;
+
+               let text = "";
+
+               if(index == 0){
+                  text = $(this).clone()   
+                     .children("div")     
+                     .remove()
+                     .end()
+                     .text()
+                     .trim();
+               } else {
+                  text = $(this).text().trim();
+               }
+
+               text = text.replace(/\n/g, '').replace(/,/g, '');
+
+               row.push(text);
+         });
+
+         if(row.length > 1){
+               csv.push(row.join(","));
+         }
+      });
+
+      let csvString = csv.join("\n");
+
+      let blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+      let url = window.URL.createObjectURL(blob);
+
+      let a = document.createElement("a");
+      a.href = url;
+      a.download = "stock_transfer_report.csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+   });
+
+   $(".print_btn").click(function () {
+
+      let rows = [];
+
+      let from_date = $("input[name='from_date']").val();
+      let to_date   = $("input[name='to_date']").val();
+
+      function formatDate(dateStr){
+         if(!dateStr) return '';
+         let parts = dateStr.split("-");
+         return parts[2] + "-" + parts[1] + "-" + parts[0];
+      }
+
+      let from = formatDate(from_date);
+      let to   = formatDate(to_date);
+
+      let header = [];
+      $("#stock_transfer_table thead th").each(function (index) {
+         if(index != 5){
+               header.push($(this).text().trim());
+         }
+      });
+      rows.push(header);
+
+      $("#stock_transfer_table tbody tr").each(function () {
+
+         let row = [];
+
+         $(this).find("td").each(function (index) {
+
+               if(index == 5) return;
+
+               let text = "";
+
+               if(index == 0){
+                  text = $(this).clone()
+                     .children("div")
+                     .remove()
+                     .end()
+                     .text()
+                     .trim();
+               } else {
+                  text = $(this).text().trim();
+               }
+
+               row.push(text);
+         });
+
+         if(row.length > 1){
+               rows.push(row);
+         }
+      });
+
+      let printWindow = window.open('', '', 'width=900,height=700');
+
+      let html = `
+         <html>
+         <head>
+               <title>Stock Transfer</title>
+               <style>
+                  body { font-family: Arial; font-size: 12px; }
+                  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                  th, td { border: 1px solid #000; padding: 5px; }
+                  th { background: #f2f2f2; }
+                  .text-right { text-align: right; }
+               </style>
+         </head>
+         <body>
+
+         <h2 style="text-align:center; text-decoration: underline;">
+               List of Stock Transfer
+         </h2>
+
+         <p style="text-align:center;">
+               From: ${from} &nbsp;&nbsp; To: ${to}
+         </p>
+
+         <table>
+               <thead>
+                  <tr>
+      `;
+
+      header.forEach(col => {
+         html += `<th>${col}</th>`;
+      });
+
+      html += `</tr></thead><tbody>`;
+
+      for(let i = 1; i < rows.length; i++){
+
+         let row = rows[i];
+
+         html += `<tr>`;
+
+         row.forEach((cell, index) => {
+
+               let align = (index == 4) ? 'text-right' : '';
+
+               html += `<td class="${align}">${cell}</td>`;
+         });
+
+         html += `</tr>`;
+      }
+
+      html += `
+               </tbody>
+         </table>
+         </body>
+         </html>
+      `;
+
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.print();
    });
 </script>
 @endsection

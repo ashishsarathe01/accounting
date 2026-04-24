@@ -137,6 +137,11 @@
 @include('layouts.footer')
 <script>
    $(document).ready(function(){
+       var table = $('#example').DataTable({
+            bDestroy: true,
+            stateSave: true,     
+            stateDuration: -1    
+        });
       $(".cancel").click(function() {
          $("#delete_heading").modal("hide");
       });

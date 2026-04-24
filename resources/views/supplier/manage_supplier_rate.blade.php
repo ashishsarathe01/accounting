@@ -100,7 +100,7 @@ input[type=number] {
                                                     $col = 1;
                                                     if($length>8){
                                                         $col = 2;
-                                                    }
+                                                    }                                                
                                                     @endphp                                                
                                                     <div  class="mb-{{$col}} col-md-{{$col}}">
                                                         @if($key==0)<label for="name" class="form-label font-14 font-heading ">{{$value->name}}</label>@endif

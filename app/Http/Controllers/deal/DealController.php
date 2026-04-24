@@ -17,8 +17,9 @@ public function index()
 {
     $company_id = Session::get('user_company_id');
 
-    // Get all deals with account and items
-    $deals = Deal::where('manage_deal.comp_id', $company_id)
+    // Fetch Pending Deals (status = 0)
+    $pendingDeals = Deal::where('manage_deal.comp_id', $company_id)
+        ->where('manage_deal.status', 0)
         ->join('accounts', 'accounts.id', '=', 'manage_deal.party_id')
         ->select('manage_deal.*', 'accounts.account_name')
         ->with(['items' => function ($q) {
@@ -27,61 +28,85 @@ public function index()
         }])
         ->get();
 
-    // Now calculate total, complete, pending & balance qty (without relationships or raw SQL)
-    foreach ($deals as $deal) {
+    // Fetch Completed Deals (status = 1)
+    $completedDeals = Deal::where('manage_deal.comp_id', $company_id)
+        ->where('manage_deal.status', 1)
+        ->join('accounts', 'accounts.id', '=', 'manage_deal.party_id')
+        ->select('manage_deal.*', 'accounts.account_name')
+        ->with(['items' => function ($q) {
+            $q->join('manage_items', 'manage_items.id', '=', 'manage_deal_items.item_id')
+                ->select('manage_deal_items.*', 'manage_items.name');
+        }])
+        ->get();
 
-        if ($deal->deal_type == 'TON') {
+    // Calculate quantities for both sets
+    $calculateQuantities = function ($deals) {
+        foreach ($deals as $deal) {
+            if ($deal->deal_type == 'TON') {
+                $saleOrders = DB::table('sale_orders')
+                    ->where('deal_id', $deal->id)
+                    ->pluck('id');
 
-            // ✅ 1. Get all sale orders linked to this deal
-            $saleOrders = DB::table('sale_orders')
-                ->where('deal_id', $deal->id)
-                ->pluck('id'); // only IDs
+                if ($saleOrders->count() > 0) {
+                    $totalQty = DB::table('sale_order_item_gsm_sizes')
+                        ->whereIn('sale_orders_id', $saleOrders)
+                        ->sum('quantity');
 
-            // ✅ 2. If sale orders exist, calculate quantities
-            if ($saleOrders->count() > 0) {
+                    $completeQty = DB::table('sale_order_item_gsm_sizes')
+                        ->whereIn('sale_orders_id', $saleOrders)
+                        ->whereNotNull('sale_order_qty')
+                        ->sum('sale_order_qty');
 
-                // Total quantity (sum of 'quantity' for all sale orders under this deal)
-                $totalQty = DB::table('sale_order_item_gsm_sizes')
-                    ->whereIn('sale_orders_id', $saleOrders)
-                    ->sum('quantity');
+                    $pendingQty = DB::table('sale_order_item_gsm_sizes')
+                        ->whereIn('sale_orders_id', $saleOrders)
+                        ->whereNull('sale_order_qty')
+                        ->sum('quantity');
+                } else {
+                    $totalQty = $completeQty = $pendingQty = 0;
+                }
 
-                // Completed quantity (sum of 'sale_order_qty' where not null)
-                $completeQty = DB::table('sale_order_item_gsm_sizes')
-                    ->whereIn('sale_orders_id', $saleOrders)
-                    ->whereNotNull('sale_order_qty')
-                    ->sum('sale_order_qty');
+                $balanceQty = ($deal->qty - $totalQty);
+                $deal->total_quantity =     $deal->qty/1000;
+                $deal->total_complete = $completeQty/1000;
+                $deal->total_pending = $pendingQty/1000;
+                $deal->balance_qty = $balanceQty/1000;
+            } elseif ($deal->deal_type == 'Vehicle') {
+                $balanceQty = $deal->qty;
+                $pendingQty = $completeQty = 0;
 
-                // Pending quantity (sum of 'quantity' where sale_order_qty is null)
-                $pendingQty = DB::table('sale_order_item_gsm_sizes')
-                    ->whereIn('sale_orders_id', $saleOrders)
-                    ->whereNull('sale_order_qty')
-                    ->sum('quantity');
+                $saleOrders = DB::table('sale_orders')
+                    ->where('deal_id', $deal->id)
+                    ->get();
 
+                foreach ($saleOrders as $so) {
+                    if ($so->status == 1) { // Pending
+                        $pendingQty++;
+                        $balanceQty--;
+                    } elseif ($so->status == 2) { // Completed
+                        $completeQty++;
+                        $balanceQty--;
+                    }
+                }
+
+                $deal->total_quantity = $deal->qty;
+                $deal->total_pending = $pendingQty;
+                $deal->total_complete = $completeQty;
+                $deal->balance_qty = $balanceQty;
             } else {
-                $totalQty = 0;
-                $completeQty = 0;
-                $pendingQty = 0;
+                $deal->total_quantity = 0;
+                $deal->total_complete = 0;
+                $deal->total_pending = 0;
+                $deal->balance_qty = 0;
             }
-
-            // ✅ 3. Balance = deal qty - total quantity used in sale orders
-            $balanceQty = $deal->qty - $totalQty;
-
-            // ✅ 4. Assign all values to the deal object
-            $deal->total_quantity = $totalQty;
-            $deal->total_complete = $completeQty;
-            $deal->total_pending = $pendingQty;
-            $deal->balance_qty = $balanceQty;
-
-        } else {
-            // We'll handle non-TON types later as you said
-            $deal->total_quantity = 0;
-            $deal->total_complete = 0;
-            $deal->total_pending = 0;
-            $deal->balance_qty = 0;
         }
-    }
+        return $deals;
+    };
 
-    return view('deal.index', compact('deals'));
+
+    $pendingDeals = $calculateQuantities($pendingDeals);
+    $completedDeals = $calculateQuantities($completedDeals);
+
+    return view('deal.index', compact('pendingDeals', 'completedDeals'));
 }
 
 
@@ -135,6 +160,7 @@ public function index()
 
     public function store(Request $request)
     {
+        
         $company_id = auth()->user()->company_id ?? Session::get('user_company_id');
         $user_id = auth()->user()->id ?? Session::get('user_id');
 
@@ -162,17 +188,23 @@ public function index()
                     } else {
                         $dealNo = 1;
                     }
-
+                    if($request->type == "TON"){
+                    $qty = 1000*($request->quantity);
+                    }
+                    else{
+                        $qty = $request->quantity;
+                    }
             // Insert into manage_deal
             $deal = Deal::create([
                 'deal_no' => $dealNo,
                 'deal_type' => $request->type,
-                'qty' => strval($request->quantity),
+                'qty' => strval($qty),
                 'party_id' => $request->party_id,
                 'freight' => $request->freight,
                 'comp_id' => $company_id,
                 'status' => 0, // pending
                 'final_complete' => 0,
+                'short_name'=>$request->short_name,
                 'created_at' => now()->format('Y-m-d H:i:s'),
                 'created_by' => $user_id,
             ]);
@@ -270,9 +302,15 @@ public function update(Request $request, $id)
 
         $deal = Deal::findOrFail($id);
 
+                     if($request->type="TON"){
+                    $qty = 1000*($request->quantity);
+                    }
+                    else{
+                        $qty = $request->quantity;
+                    }
         $deal->update([
             'deal_type' => $request->type,
-            'qty' => strval($request->quantity),
+            'qty' => strval($qty),
             'party_id' => $request->party_id,
             'freight' => $request->freight,
             'short_name' => $request->short_name,
@@ -337,7 +375,7 @@ public function destroy($id)
     $deals = Deal::where('party_id', $party_id)
         ->where('comp_id', $comp_id)
         ->where('status', 0) // pending
-        ->select('id', 'deal_no',)
+        ->select('id', 'deal_no')
         ->get();
 
     return response()->json(['deals' => $deals]);
@@ -359,6 +397,14 @@ public function getDealDetails(Request $request)
         'freight' => $deal ? $deal->freight : null,
         'items' => $items
     ]);
+}
+public function autoComplete($id)
+{
+    $deal = Deal::findOrFail($id);
+    $deal->status = 1; // mark as completed
+    $deal->save();
+
+    return redirect()->back()->with('success', 'Deal marked as completed successfully.');
 }
 
 

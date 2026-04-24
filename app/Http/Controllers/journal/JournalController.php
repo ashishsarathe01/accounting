@@ -7,12 +7,19 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\URL;
 use App\Models\Accounts;
 use App\Models\Journal;
+use App\Models\SparePart;
+use App\Models\SparePartItem;
+use App\Models\SparePartItemSubItem;
+use App\Models\SparePartItemSubItemSize;
+use App\Models\VoucherSeriesConfiguration;
 use App\Models\JournalDetails;
 use App\Models\AccountLedger;
 use App\Models\Companies;
 use App\Models\GstBranch;
 use App\Models\AccountGroups;
 use App\Models\BillSundrys;
+use App\Models\ActivityLog;
+use App\Models\SupplierPurchaseVehicleDetail;
 use DB;
 use Carbon\Carbon;
 use Session;
@@ -28,6 +35,7 @@ class JournalController extends Controller
      */
 public function index(Request $request)
 {
+   Gate::authorize('action-module', 14);
     $input = $request->all();
     $from_date = null;
     $to_date = null;
@@ -64,9 +72,14 @@ public function index(Request $request)
 
     // Base query
     $query = DB::table('journal_details')
-        ->select('journals.series_no', 'journals.id as jon_id', 'journals.date', 'accounts.account_name as acc_name', 'journal_details.*')
+        ->select('journals.series_no','journals.voucher_no', 'journals.id as jon_id', 'journals.date', 'accounts.account_name as acc_name', 'journal_details.*', 'journals.created_by','journals.approved_by','journals.approved_at','journals.approved_status',
+
+    'created_user.name as created_by_name',
+    'approved_user.name as approved_by_name')
         ->join('journals', 'journal_details.journal_id', '=', 'journals.id')
         ->join('accounts', 'journal_details.account_name', '=', 'accounts.id')
+        ->leftJoin('users as created_user', 'created_user.id', '=', 'journals.created_by')
+        ->leftJoin('users as approved_user', 'approved_user.id', '=', 'journals.approved_by')
         ->where('journal_details.company_id', $com_id)
         ->where('journals.delete', '0');
 
@@ -76,10 +89,8 @@ public function index(Request $request)
             STR_TO_DATE(journals.date,'%Y-%m-%d') >= STR_TO_DATE(?, '%Y-%m-%d')
             AND STR_TO_DATE(journals.date,'%Y-%m-%d') <= STR_TO_DATE(?, '%Y-%m-%d')
         ", [date('Y-m-d', strtotime($from_date)), date('Y-m-d', strtotime($to_date))]);
-
-        $query->orderBy('journals.date', 'ASC')
-              ->orderBy('journal_details.journal_id', 'ASC');
     } else {
+        // Show last 10 distinct journal entries
         $last10Ids = DB::table('journals')
             ->where('company_id', $com_id)
             ->where('delete', '0')
@@ -88,19 +99,19 @@ public function index(Request $request)
             ->pluck('id');
 
         $query->whereIn('journal_details.journal_id', $last10Ids);
-
-        $query->orderBy('journals.date', 'ASC')
-              ->orderBy('journal_details.journal_id', 'ASC');
     }
 
-    $journal = $query->get();
+    $journal = $query
+        ->orderBy('journals.date', 'asc')
+        ->orderBy('journal_details.journal_id', 'asc')
+        
+        ->get();
 
     // Fallback values if not set
-    $from_date = $from_date;
-    $to_date = $to_date;
-
-    //  echo "<pre>";
-    //  print_r($journal->toArray());die;
+    $from_date = $from_date ;
+    $to_date = $to_date ;
+   //  echo "<pre>";
+   //  print_r($journal->toArray());die;
     return view('journal/journal')
         ->with('journal', $journal)
         ->with('month_arr', $month_arr)
@@ -108,16 +119,23 @@ public function index(Request $request)
         ->with('to_date', $to_date);
 }
 
-
     /**
      * Show the specified resources in storage.
      *
      * @return \Illuminate\Http\Response
      */
-   public function create(){
+   public function create(Request $request){
       Gate::authorize('action-module',80);
       $financial_year = Session::get('default_fy');
+      [$startYY, $endYY] = explode('-', $financial_year);
+
+      $fy_start_date = '20' . $startYY . '-04-01'; 
+      $fy_end_date   = '20' . $endYY   . '-03-31'; 
       $com_id = Session::get('user_company_id');
+      $prefill_account_id = $request->query('account_id');
+      $prefill_invoice_no = $request->query('invoice_no');
+      $prefill_date       = $request->query('invoice_date');
+      $prefill_data = $request->query('data');
       $party_list = Accounts::whereIn('company_id', [$com_id,0])
                                 ->where('delete', '=', '0')
                                 ->orderBy('account_name')
@@ -132,6 +150,29 @@ public function index(Request $request)
          $y =  explode("-",$financial_year);
          $bill_date = $y[1]."-03-31";
          $bill_date = date('Y-m-d',strtotime($bill_date));
+      }
+      if($prefill_date){
+         $bill_date = $prefill_date;
+      }
+      // ===== JOURNAL PREFILL LOGIC =====
+      $journal_type = null;
+      $journal_amount = 0;
+
+      if($prefill_data){
+         $rows = json_decode($prefill_data, true);
+
+         $total = 0;
+         foreach($rows as $row){
+            $total += floatval($row['amount']);
+         }
+
+         if($total >= 0){
+            $journal_type = 'debit';
+         }else{
+            $journal_type = 'credit';
+         }
+
+         $journal_amount = abs($total);
       }
       $companyData = Companies::where('id', Session::get('user_company_id'))->first();
       $GstSettings = (object)NULL;
@@ -168,11 +209,20 @@ public function index(Request $request)
       // if(!empty($GstSettings->series)) {
       //    $mat_series[] = array("branch_series" => $GstSettings->series);
       // }
+      $top_groups = [3, 11];
+
+      // Step 2: Get all child group IDs recursively
+      $all_groups = [];
+      foreach ($top_groups as $group_id) {
+         $all_groups[] = $group_id; // include the top group itself
+         $all_groups = array_merge($all_groups, CommonHelper::getAllChildGroupIds($group_id, Session::get('user_company_id')));
+      }
+      $groups = array_unique($all_groups);
       $vendors = Accounts::select('id','account_name','gstin')
                ->whereIn('company_id',[Session::get('user_company_id'),0])
+                ->whereIn('under_group',$groups)
                ->where('status','1')
                ->where('delete','0')
-               ->where('gstin','!=','')
                ->orderBy('account_name')
                ->get();
       // $fixed_asset_group = AccountGroups::where('heading','6')
@@ -208,8 +258,94 @@ public function index(Request $request)
                ->where('delete','0')
                ->orderBy('account_name')
                ->get();
+    $state_list = DB::table('states') ->orderBy('state_code') ->get();
+      foreach ($mat_series as $key => $value) {
 
-      return view('journal/addJournal')->with('party_list', $party_list)->with('date', $bill_date)->with('mat_series', $mat_series)->with('vendors', $vendors)->with('items', $items)->with('company_gst', $companyData->gst);
+         $series_configuration = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
+            ->where('series', $value->series)
+            ->where('configuration_for', 'JOURNAL') 
+            ->where('status', '1')
+            ->first();
+
+         $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
+         $lastNumber = DB::table('journals')
+            ->where('company_id', Session::get('user_company_id'))
+            ->where('financial_year', $financial_year)
+            ->where('series_no', $value->series)
+            ->where('delete', '0')
+            ->max(DB::raw("cast(voucher_no as SIGNED)"));
+
+         if (!$lastNumber) {
+            if ($series_configuration && $series_configuration->manual_numbering == "NO" && $series_configuration->invoice_start != "") {
+               $next = (int)$series_configuration->invoice_start;
+            } else {
+               $next = 1;
+            }
+         } else {
+            $next = ((int)$lastNumber) + 1;
+         }
+
+         $mat_series[$key]->invoice_start_from = sprintf("%0" . $number_digit . "d", $next);
+
+         $invoice_prefix = "";
+         $manual_enter_invoice_no = "";
+
+         if ($series_configuration) {
+            $manual_enter_invoice_no = ($series_configuration->manual_numbering == "YES") ? "1" : "0";
+         }
+
+         if ($series_configuration && $series_configuration->manual_numbering == "NO") {
+
+            if ($series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
+               $invoice_prefix .= $series_configuration->prefix_value;
+            }
+
+            if ($series_configuration->prefix == "ENABLE" && $series_configuration->separator_1 != "") {
+               $invoice_prefix .= $series_configuration->separator_1;
+            }
+
+            if ($series_configuration->year == "PREFIX TO NUMBER") {
+
+               if ($series_configuration->year_format == "YY-YY") {
+                  $invoice_prefix .= Session::get('default_fy');
+               } else {
+                  $fy = explode('-', Session::get('default_fy'));
+                  $invoice_prefix .= '20' . $fy[0] . '-' . $fy[1];
+               }
+
+               if ($series_configuration->separator_2 != "") {
+                  $invoice_prefix .= $series_configuration->separator_2;
+               }
+            }
+            $invoice_prefix .= $mat_series[$key]->invoice_start_from;
+
+            if ($series_configuration->year == "SUFFIX TO NUMBER") {
+
+               if ($series_configuration->separator_2 != "") {
+                  $invoice_prefix .= $series_configuration->separator_2;
+               }
+
+               if ($series_configuration->year_format == "YY-YY") {
+                  $invoice_prefix .= Session::get('default_fy');
+               } else {
+                  $fy = explode('-', Session::get('default_fy'));
+                  $invoice_prefix .= '20' . $fy[0] . '-' . $fy[1];
+               }
+            }
+
+            if ($series_configuration->suffix == "ENABLE" && $series_configuration->separator_3 != "") {
+               $invoice_prefix .= $series_configuration->separator_3;
+            }
+
+            if ($series_configuration->suffix == "ENABLE" && $series_configuration->suffix_value != "") {
+               $invoice_prefix .= $series_configuration->suffix_value;
+            }
+         }
+
+         $mat_series[$key]->invoice_prefix = $invoice_prefix;
+         $mat_series[$key]->manual_enter_invoice_no = $manual_enter_invoice_no;
+      }
+      return view('journal/addJournal')->with('party_list', $party_list)->with('prefill_account_id', $prefill_account_id)->with('journal_type', $journal_type)->with('journal_amount', $journal_amount)->with('is_purchase_journal', $prefill_data ? true : false)->with('prefill_invoice_no', $prefill_invoice_no)->with('date', $bill_date)->with('mat_series', $mat_series)->with('vendors', $vendors)->with('items', $items)->with('company_gst', $companyData->gst)->with('state_list', $state_list);
    }
 
 
@@ -221,15 +357,47 @@ public function index(Request $request)
      * @return \Illuminate\Http\Response
      */
    public function store(Request $request){
+      //dd($request->data);
       Gate::authorize('action-module',80);
-      $financial_year = Session::get('default_fy');
+      $financial_year = CommonHelper::getFinancialYear($request->input('date'));
+      $spare_part_id  = $request->input('spare_part_id');
+      $closePurchase  = (int) $request->input('close_purchase') === 1;
+      $itemsJson      = $request->input('items');
+      $receivedItems = json_decode($itemsJson, true) ?? [];
+      $series_configuration = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
+         ->where('series', $request->input('series_no'))
+         ->where('configuration_for', 'JOURNAL')
+         ->where('status', '1')
+         ->first();
+      $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
+      if ($series_configuration && $series_configuration->manual_numbering == "YES") {
+         $voucher_no = $request->input('voucher_no') ?: $request->input('voucher_prefix');
+      } else {
+         $last_voucher_no = DB::table('journals')
+            ->where('company_id', Session::get('user_company_id'))
+            ->where('series_no', $request->input('series_no'))
+            ->where('financial_year', $financial_year)
+            ->where('delete', '0')
+            ->max(DB::raw("cast(voucher_no as SIGNED)"));
+         if (!$last_voucher_no) {
+            if ($series_configuration && $series_configuration->invoice_start != "") {
+               $voucher_no = sprintf("%0" . $number_digit . "d", (int)$series_configuration->invoice_start);
+            } else {
+               $voucher_no = sprintf("%0" . $number_digit . "d", 1);
+            }
+         } else {
+            $voucher_no = sprintf("%0" . $number_digit . "d", ((int)$last_voucher_no + 1));
+         }
+      }
       $journal = new Journal;
       $journal->date = $request->input('date');
-      $journal->voucher_no = $request->input('voucher_no');
+      $journal->voucher_no_prefix = $request->input('voucher_prefix');
+      $journal->voucher_no = $voucher_no;
       $journal->series_no = $request->input('series_no');
       $journal->long_narration = $request->input('long_narration');
       $journal->company_id = Session::get('user_company_id');
       $journal->financial_year = $financial_year;
+      $journal->created_by = Session::get('user_id');
       $journal->claim_gst_status = $request->input('flexRadioDefault');
       $journal->merchant_gst = $request->input('merchant_gst');
       if($request->input('form_source') && !empty($request->input('form_source'))){
@@ -253,6 +421,23 @@ public function index(Request $request)
          }
       }
       $journal->save();
+      if(isset($request->data) && !empty($request->data)){
+
+         $decoded = json_decode($request->data, true);
+
+         if(is_string($decoded)){
+            $decoded = json_decode($decoded, true);
+         }
+
+         $ids = array_column($decoded, 'id');
+
+         SupplierPurchaseVehicleDetail::whereIn('id', $ids)
+            ->update([
+                  'status' => 4,
+                  'action_id' => $journal->id,
+                  'action_type' => 'JOURNAL'
+            ]);
+      }
       if($journal->id){
          if($request->input('flexRadioDefault')=="YES"){
             //Journal Entry
@@ -277,7 +462,7 @@ public function index(Request $request)
             $ledger->credit = $request->input('total_amount');                       
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 7;
             $ledger->map_account_id = $vendor_mapp_id;
             $ledger->entry_type_id = $journal->id;
@@ -317,7 +502,7 @@ public function index(Request $request)
             $ledger->series_no = $request->input('series_no');            
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 7;
             $ledger->map_account_id = $request->input('vendor');
             $ledger->entry_type_id = $journal->id;
@@ -344,7 +529,7 @@ public function index(Request $request)
                $ledger->txn_date = $request->input('date');
                $ledger->series_no = $request->input('series_no');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 7;
                $ledger->map_account_id = $request->input('vendor');
                $ledger->entry_type_id = $journal->id;
@@ -379,7 +564,7 @@ public function index(Request $request)
                $ledger->debit = $request->input('igst');                       
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 7;
                $ledger->map_account_id = $request->input('vendor');
                $ledger->entry_type_id = $journal->id;
@@ -423,7 +608,7 @@ public function index(Request $request)
                $ledger->debit = $request->input('cgst');                       
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 7;
                $ledger->map_account_id = $request->input('vendor');
                $ledger->entry_type_id = $journal->id;
@@ -446,7 +631,7 @@ public function index(Request $request)
                $ledger->debit = $request->input('sgst');                       
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 7;
                $ledger->map_account_id = $request->input('vendor');
                $ledger->entry_type_id = $journal->id;
@@ -504,7 +689,7 @@ public function index(Request $request)
                $ledger->series_no = $request->input('series_no');
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 7;
                $ledger->entry_type_id = $journal->id;
                $ledger->entry_narration = $narrations[$key];
@@ -513,95 +698,80 @@ public function index(Request $request)
                $ledger->created_at = date('d-m-Y H:i:s');
                $ledger->save();
             }
-            // if($credit_count==1){
-            //    //Account Ledger Entry
-            //    $debit_arr = [];$credit_arr = [];
-            //    foreach($request->input('type') as $key => $type){
-            //       if($type=="Debit"){
-            //          array_push($debit_arr,array(
-            //             'type' => $type,
-            //             'account_name' => $request->input('account_name')[$key],
-            //             'debit' => $request->input('debit')[$key],
-            //             'credit' => 0,
-            //             'narration' => isset($request->input('narration')[$key]) ? $request->input('narration')[$key] : '',
-            //             'mapped_account_id' => $credit_id
-            //             ));
-            //             //Credit Array
-            //             $accountName = $request->input('account_name')[$key];
-            //             $debitValue  = $request->input('debit')[$key];
-            //             if(isset($credit_arr[$accountName])) {
-            //                   // If already exists, add credit
-            //                   $credit_arr[$accountName]['credit'] += $debitValue;
-            //             } else {
-            //                   // Otherwise, create new
-            //                   $credit_arr[$accountName] = [
-            //                      'type' => 'Credit',
-            //                      'account_name' => $credit_id,
-            //                      'debit' => 0,
-            //                      'credit' => $debitValue,
-            //                      'narration' => $entry_narration,
-            //                      'mapped_account_id' => $accountName
-            //                   ];
-            //             }
-            //       }
-            //    }
-            //    $final_arr = array_merge($debit_arr, array_values($credit_arr));
-            // }else if($debit_count==1){
-            //    //Account Ledger Entry
-            //    $debit_arr = [];$credit_arr = [];
-            //    foreach($request->input('type') as $key => $type){
-            //       if($type=="Credit"){
-            //          array_push($credit_arr,array(
-            //             'type' => $type,
-            //             'account_name' => $request->input('account_name')[$key],
-            //             'credit' => $request->input('credit')[$key],
-            //             'debit' => 0,
-            //             'narration' => isset($request->input('narration')[$key]) ? $request->input('narration')[$key] : '',
-            //             'mapped_account_id' => $debit_id
-            //          ));
-            //          //Credit Array
-            //          $accountName = $request->input('account_name')[$key];
-            //          $creditValue  = $request->input('credit')[$key];
-            //          if(isset($debit_arr[$accountName])) {
-            //                // If already exists, add credit
-            //                $debit_arr[$accountName]['debit'] += $creditValue;
-            //          } else {
-            //                // Otherwise, create new
-            //                $debit_arr[$accountName] = [
-            //                   'type' => 'Debit',
-            //                   'account_name' => $debit_id,
-            //                   'credit' => 0,
-            //                   'debit' => $creditValue,
-            //                   'narration' => $entry_narration,
-            //                   'mapped_account_id' => $accountName
-            //                ];
-            //          }
-            //       }
-            //    }
-            //    $final_arr = array_merge($debit_arr, array_values($credit_arr));
-            // }
-            // foreach ($final_arr as $key => $value) {
-            //    $ledger = new AccountLedger();
-            //    $ledger->account_id = $value['account_name'];
-            //    if(isset($value['debit']) && !empty($value['debit']) && $value['debit'] != 0){
-            //       $ledger->debit = $value['debit'];
-            //    }else{
-            //       $ledger->credit = $value['credit'];
-            //    }
-            //    $ledger->series_no = $request->input('series_no');
-            //    $ledger->txn_date = $request->input('date');
-            //    $ledger->company_id = Session::get('user_company_id');
-            //    $ledger->financial_year = Session::get('default_fy');
-            //    $ledger->entry_type = 7;
-            //    $ledger->entry_type_id = $journal->id;
-            //    $ledger->entry_narration = $value['narration'];
-            //    $ledger->map_account_id = $value['mapped_account_id'];
-            //    $ledger->created_by = Session::get('user_id');
-            //    $ledger->created_at = date('d-m-Y H:i:s');
-            //    $ledger->save();
-            // }
+            
          }
          session(['previous_url_journal' => URL::previous()]);
+         if ($spare_part_id) {
+            $spare = SparePart::with('items')->find($spare_part_id);
+            $remainingItems = [];
+            foreach ($spare->items as $item) {
+               $orderedQty = $item->quantity;
+                $gotQty = 0;
+                foreach ($receivedItems as $r) {
+                    if ((int)$r['item_id'] == (int)$item->item_id) {
+                       $gotQty = $r['quantity'];
+                       break;
+                    }
+                }
+                if($gotQty > $orderedQty){
+                    $gotQty = $orderedQty;
+                }
+                $item->quantity = $gotQty;
+                $item->save();
+                $pendingQty = $orderedQty - $gotQty;
+                if ($pendingQty > 0) {
+                    $remainingItems[] = [
+                        'item_id' => $item->item_id,
+                        'quantity' => $pendingQty,
+                        'price' => $item->price,
+                        'unit' => $item->unit,
+                        'company_id' => $item->company_id
+                    ];
+                }
+            }
+            $spare->status = 3;
+            $spare->save();
+            if(!empty($request->vehicle_entry_id)){
+                SupplierPurchaseVehicleDetail::where('id',$request->vehicle_entry_id)->update(['status'=>4]);
+            }
+            if (!empty($remainingItems)) {
+
+               $basePo = $spare->po_number;
+
+               $count = SparePart::where('po_number', 'like', $basePo.'%')->count();
+
+               $newPoNumber = $basePo . '-' . $count;
+
+               $newSpare = SparePart::create([
+                     'po_number' => $newPoNumber,
+                     'po_date' => $spare->po_date,
+                     'bill_to_account_id' => $spare->bill_to_account_id,
+                     'bill_to_company_id' => $spare->bill_to_company_id,
+                     'ship_to_account_id' => $spare->ship_to_account_id,
+                     'ship_to_company_id' => $spare->ship_to_company_id,
+                     'po_narration' => $spare->po_narration,
+                     'freight' => $spare->freight,
+                     'account_id' => $spare->account_id,
+                     'source' => $spare->source,
+                     'status' => 2,
+                     'company_id' => $spare->company_id,
+                     'created_by' => auth()->id(),
+               ]);
+
+               foreach ($remainingItems as $row) {
+
+                     SparePartItem::create([
+                        'spare_part_id' => $newSpare->id,
+                        'item_id' => $row['item_id'],
+                        'quantity' => $row['quantity'],
+                        'price' => $row['price'],
+                        'unit' => $row['unit'],
+                        'status' => 2,
+                        'company_id' => $row['company_id']
+                     ]);
+               }
+            }
+         }
          if($request->input('form_source') && !empty($request->input('form_source'))){
             return redirect('profitloss')->withSuccess('Journal added successfully!');
          }else{
@@ -614,6 +784,11 @@ public function index(Request $request)
    }
    public function edit($id){
       Gate::authorize('action-module',53);
+       $financial_year = Session::get('default_fy');
+      [$startYY, $endYY] = explode('-', $financial_year);
+
+      $fy_start_date = '20' . $startYY . '-04-01'; 
+      $fy_end_date   = '20' . $endYY   . '-03-31';
       $journal = Journal::find($id);
       $com_id = Session::get('user_company_id');
       $journal_detail = JournalDetails::where('journal_id', '=', $id)->where('delete', '=', '0')->get();
@@ -656,11 +831,20 @@ public function index(Request $request)
       // if(!empty($GstSettings->series)) {
       //    $mat_series[] = array("branch_series" => $GstSettings->series);
       // }
+     $top_groups = [3, 11];
+
+      // Step 2: Get all child group IDs recursively
+      $all_groups = [];
+      foreach ($top_groups as $group_id) {
+         $all_groups[] = $group_id; // include the top group itself
+         $all_groups = array_merge($all_groups, CommonHelper::getAllChildGroupIds($group_id, Session::get('user_company_id')));
+      }
+      $groups = array_unique($all_groups);
       $vendors = Accounts::select('id','account_name','gstin')
                ->whereIn('company_id',[Session::get('user_company_id'),0])
+                ->whereIn('under_group',$groups)
                ->where('status','1')
                ->where('delete','0')
-               ->where('gstin','!=','')
                ->orderBy('account_name')
                ->get();
       // $fixed_asset_group = AccountGroups::where('heading','6')
@@ -701,10 +885,106 @@ public function index(Request $request)
                            ->pluck('purchase_amt_account');  
                            
       $sundry_arr = $sundry->toArray();
-      return view('journal/editJournal')->with('journal', $journal)->with('party_list', $party_list)->with('journal_detail', $journal_detail)->with('mat_series', $mat_series)->with('vendors', $vendors)->with('items', $items)->with('company_gst', $companyData->gst)->with('sundry', $sundry_arr);
+      $state_list = DB::table('states') ->orderBy('state_code') ->get();
+      foreach ($mat_series as $key => $value) {
+
+         $series_configuration = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
+            ->where('series', $value->series)
+            ->where('configuration_for', 'JOURNAL') 
+            ->where('status', '1')
+            ->first();
+
+         if ($journal->series_no == $value->series) {
+
+            $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
+            $mat_series[$key]->invoice_start_from = sprintf("%0" . $number_digit . "d", (int)$journal->voucher_no);
+
+         } else {
+
+            $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
+            $lastNumber = DB::table('journals')
+               ->where('company_id', Session::get('user_company_id'))
+               ->where('financial_year', $financial_year)
+               ->where('series_no', $value->series)
+               ->where('delete', '0')
+               ->max(DB::raw("cast(voucher_no as SIGNED)"));
+
+            if (!$lastNumber) {
+               if ($series_configuration && $series_configuration->manual_numbering == "NO" && $series_configuration->invoice_start != "") {
+                  $next = (int)$series_configuration->invoice_start;
+               } else {
+                  $next = 1;
+               }
+            } else {
+               $next = ((int)$lastNumber) + 1;
+            }
+
+            $mat_series[$key]->invoice_start_from = sprintf("%0" . $number_digit . "d", $next);
+         }
+
+         $invoice_prefix = "";
+         $manual_enter_invoice_no = "";
+
+         if ($series_configuration) {
+            $manual_enter_invoice_no = ($series_configuration->manual_numbering == "YES") ? "1" : "0";
+         }
+
+         if ($series_configuration && $series_configuration->manual_numbering == "NO") {
+
+            if ($series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
+               $invoice_prefix .= $series_configuration->prefix_value;
+            }
+
+            if ($series_configuration->prefix == "ENABLE" && $series_configuration->separator_1 != "") {
+               $invoice_prefix .= $series_configuration->separator_1;
+            }
+
+            if ($series_configuration->year == "PREFIX TO NUMBER") {
+
+               if ($series_configuration->year_format == "YY-YY") {
+                  $invoice_prefix .= Session::get('default_fy');
+               } else {
+                  $fy = explode('-', Session::get('default_fy'));
+                  $invoice_prefix .= '20' . $fy[0] . '-' . $fy[1];
+               }
+
+               if ($series_configuration->separator_2 != "") {
+                  $invoice_prefix .= $series_configuration->separator_2;
+               }
+            }
+            $invoice_prefix .= $mat_series[$key]->invoice_start_from;
+
+            if ($series_configuration->year == "SUFFIX TO NUMBER") {
+
+               if ($series_configuration->separator_2 != "") {
+                  $invoice_prefix .= $series_configuration->separator_2;
+               }
+
+               if ($series_configuration->year_format == "YY-YY") {
+                  $invoice_prefix .= Session::get('default_fy');
+               } else {
+                  $fy = explode('-', Session::get('default_fy'));
+                  $invoice_prefix .= '20' . $fy[0] . '-' . $fy[1];
+               }
+            }
+
+            if ($series_configuration->suffix == "ENABLE" && $series_configuration->separator_3 != "") {
+               $invoice_prefix .= $series_configuration->separator_3;
+            }
+
+            if ($series_configuration->suffix == "ENABLE" && $series_configuration->suffix_value != "") {
+               $invoice_prefix .= $series_configuration->suffix_value;
+            }
+         }
+
+         $mat_series[$key]->invoice_prefix = $invoice_prefix;
+         $mat_series[$key]->manual_enter_invoice_no = $manual_enter_invoice_no;
+      }
+      return view('journal/editJournal')->with('fy_start_date', $fy_start_date)->with('fy_end_date', $fy_end_date)->with('journal', $journal)->with('party_list', $party_list)->with('journal_detail', $journal_detail)->with('mat_series', $mat_series)->with('vendors', $vendors)->with('items', $items)->with('company_gst', $companyData->gst)->with('sundry', $sundry_arr)->with('state_list', $state_list);
    }
    public function update(Request $request){
       Gate::authorize('action-module',53);
+      
       $validator = Validator::make($request->all(), [
          'date' => 'required|string',
         ], [
@@ -713,13 +993,50 @@ public function index(Request $request)
       if($validator->fails()){
          return response()->json($validator->errors(), 422);
       }
+      $financial_year = CommonHelper::getFinancialYear($request->input('date'));
       $receipt =  Journal::find($request->journal_id);
-      $receipt->voucher_no = $request->input('voucher_no');
+      $oldSnapshot = [
+         'journal' => $receipt->toArray(),
+         'details' => JournalDetails::where('journal_id', $receipt->id)
+                        ->where('delete', '0')
+                        ->get()
+                        ->toArray(),
+      ];
+      $series_changed = ($receipt->series_no != $request->input('series_no'));
+      $series_configuration = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
+         ->where('series', $request->input('series_no'))
+         ->where('configuration_for', 'JOURNAL')
+         ->where('status', '1')
+         ->first();
+      $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
+      $voucher_no = $receipt->voucher_no;
+      if ($series_configuration && $series_configuration->manual_numbering == "YES") {
+         $voucher_no = $request->input('voucher_no') ?: $request->input('voucher_prefix');
+      } elseif ($series_changed) {
+         $last_voucher_no = DB::table('journals')
+            ->where('company_id', Session::get('user_company_id'))
+            ->where('series_no', $request->input('series_no'))
+            ->where('financial_year', $financial_year)
+            ->where('delete', '0')
+            ->max(DB::raw("cast(voucher_no as SIGNED)"));
+         if (!$last_voucher_no) {
+            if ($series_configuration && $series_configuration->invoice_start != "") {
+               $voucher_no = sprintf("%0" . $number_digit . "d", (int)$series_configuration->invoice_start);
+            } else {
+               $voucher_no = sprintf("%0" . $number_digit . "d", 1);
+            }
+         } else {
+            $voucher_no = sprintf("%0" . $number_digit . "d", ((int)$last_voucher_no + 1));
+         }
+      }
+      $receipt->voucher_no = $voucher_no;
       $receipt->series_no = $request->input('series_no');
+      $receipt->voucher_no_prefix = $request->input('voucher_prefix');
       $receipt->long_narration = $request->input('long_narration');
       $receipt->date = $request->input('date');
       $receipt->merchant_gst = $request->input('merchant_gst');
       $receipt->claim_gst_status = $request->input('flexRadioDefault');
+      $receipt->updated_by = Session::get('user_id');
       if($request->input('flexRadioDefault')=="YES"){
          $receipt->invoice_no = $request->input('invoice_no');
          $receipt->net_total = $request->input('net_amount');
@@ -775,7 +1092,7 @@ public function index(Request $request)
          $ledger->series_no = $request->input('series_no');                     
          $ledger->txn_date = $request->input('date');
          $ledger->company_id = Session::get('user_company_id');
-         $ledger->financial_year = Session::get('default_fy');
+         $ledger->financial_year = $financial_year;
          $ledger->entry_type = 7;
          $ledger->map_account_id = $vendor_mapp_id;
          $ledger->entry_type_id = $request->journal_id;
@@ -817,7 +1134,7 @@ public function index(Request $request)
          $ledger->series_no = $request->input('series_no');            
          $ledger->txn_date = $request->input('date');
          $ledger->company_id = Session::get('user_company_id');
-         $ledger->financial_year = Session::get('default_fy');
+         $ledger->financial_year = $financial_year;
          $ledger->entry_type = 7;
          $ledger->map_account_id = $request->input('vendor');
          $ledger->entry_type_id = $request->journal_id;
@@ -827,7 +1144,7 @@ public function index(Request $request)
          $ledger->save();
          foreach ($request->input('item') as $key => $item){
             $percentage = $request->input('percentage')[$key];
-            $amount = $request->input('amount')[$key];
+           $amount = round((float)$request->input('amount')[$key], 2);
             $joundetail = new JournalDetails;
             $joundetail->journal_id = $request->journal_id;
             $joundetail->company_id = Session::get('user_company_id');
@@ -844,7 +1161,7 @@ public function index(Request $request)
             $ledger->txn_date = $request->input('date');
             $ledger->series_no = $request->input('series_no');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 7;
             $ledger->map_account_id = $request->input('vendor');
             $ledger->entry_type_id = $request->journal_id;
@@ -879,7 +1196,7 @@ public function index(Request $request)
             $ledger->debit = $request->input('igst');                       
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 7;
             $ledger->map_account_id = $request->input('vendor');
             $ledger->entry_type_id = $request->journal_id;
@@ -922,7 +1239,7 @@ public function index(Request $request)
             $ledger->debit = $request->input('cgst');                       
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 7;
             $ledger->map_account_id = $request->input('vendor');
             $ledger->entry_type_id = $request->journal_id;
@@ -944,7 +1261,7 @@ public function index(Request $request)
             $ledger->debit = $request->input('sgst');                       
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 7;
             $ledger->map_account_id = $request->input('vendor');
             $ledger->entry_type_id = $request->journal_id;
@@ -1001,7 +1318,7 @@ public function index(Request $request)
             $ledger->series_no = $request->input('series_no');
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 7;
             $ledger->entry_type_id = $request->journal_id;
             $ledger->entry_narration = $narrations[$key];            
@@ -1009,94 +1326,26 @@ public function index(Request $request)
             $ledger->created_at = date('d-m-Y H:i:s');
             $ledger->save();
          }
-         // if($credit_count==1){
-         //    //Account Ledger Entry
-         //    $debit_arr = [];$credit_arr = [];
-         //    foreach($request->input('type') as $key => $type){
-         //       if($type=="Debit"){
-         //          array_push($debit_arr,array(
-         //             'type' => $type,
-         //             'account_name' => $request->input('account_name')[$key],
-         //             'debit' => $request->input('debit')[$key],
-         //             'credit' => 0,
-         //             'narration' => isset($request->input('narration')[$key]) ? $request->input('narration')[$key] : '',
-         //             'mapped_account_id' => $credit_id
-         //             ));
-         //             //Credit Array
-         //             $accountName = $request->input('account_name')[$key];
-         //             $debitValue  = $request->input('debit')[$key];
-         //             if(isset($credit_arr[$accountName])) {
-         //                   // If already exists, add credit
-         //                   $credit_arr[$accountName]['credit'] += $debitValue;
-         //             } else {
-         //                   // Otherwise, create new
-         //                   $credit_arr[$accountName] = [
-         //                      'type' => 'Credit',
-         //                      'account_name' => $credit_id,
-         //                      'debit' => 0,
-         //                      'credit' => $debitValue,
-         //                      'narration' => $entry_narration,
-         //                      'mapped_account_id' => $accountName
-         //                   ];
-         //             }
-         //       }
-         //    }
-         //    $final_arr = array_merge($debit_arr, array_values($credit_arr));
-         // }else if($debit_count==1){
-         //    //Account Ledger Entry
-         //    $debit_arr = [];$credit_arr = [];
-         //    foreach($request->input('type') as $key => $type){
-         //       if($type=="Credit"){
-         //          array_push($credit_arr,array(
-         //             'type' => $type,
-         //             'account_name' => $request->input('account_name')[$key],
-         //             'credit' => $request->input('credit')[$key],
-         //             'debit' => 0,
-         //             'narration' => isset($request->input('narration')[$key]) ? $request->input('narration')[$key] : '',
-         //             'mapped_account_id' => $debit_id
-         //          ));
-         //          //Credit Array
-         //          $accountName = $request->input('account_name')[$key];
-         //          $creditValue  = $request->input('credit')[$key];
-         //          if(isset($debit_arr[$accountName])) {
-         //                // If already exists, add credit
-         //                $debit_arr[$accountName]['debit'] += $creditValue;
-         //          } else {
-         //                // Otherwise, create new
-         //                $debit_arr[$accountName] = [
-         //                   'type' => 'Debit',
-         //                   'account_name' => $debit_id,
-         //                   'credit' => 0,
-         //                   'debit' => $creditValue,
-         //                   'narration' => $entry_narration,
-         //                   'mapped_account_id' => $accountName
-         //                ];
-         //          }
-         //       }
-         //    }
-         //    $final_arr = array_merge($debit_arr, array_values($credit_arr));
-         // }
-         // foreach ($final_arr as $key => $value) {
-         //    $ledger = new AccountLedger();
-         //    $ledger->account_id = $value['account_name'];
-         //    if(isset($value['debit']) && !empty($value['debit']) && $value['debit'] != 0){
-         //       $ledger->debit = $value['debit'];
-         //    }else{
-         //       $ledger->credit = $value['credit'];
-         //    }
-         //    $ledger->series_no = $request->input('series_no');
-         //    $ledger->txn_date = $request->input('date');
-         //    $ledger->company_id = Session::get('user_company_id');
-         //    $ledger->financial_year = Session::get('default_fy');
-         //    $ledger->entry_type = 7;
-         //    $ledger->entry_type_id = $request->journal_id;
-         //    $ledger->entry_narration = $value['narration'];
-         //    $ledger->map_account_id = $value['mapped_account_id'];
-         //    $ledger->created_by = Session::get('user_id');
-         //    $ledger->created_at = date('d-m-Y H:i:s');
-         //    $ledger->save();
-         // }
+         
       }
+      $newSnapshot = [
+         'journal' => Journal::find($receipt->id)->toArray(),
+         'details' => JournalDetails::where('journal_id', $receipt->id)
+                        ->where('delete', '0')
+                        ->get()
+                        ->toArray(),
+      ];
+
+      ActivityLog::create([
+         'module_type' => 'journal',
+         'module_id'   => $receipt->id,
+         'action'      => 'edit',
+         'old_data'    => $oldSnapshot,
+         'new_data'    => $newSnapshot,
+         'action_by'   => Session::get('user_id'),
+         'company_id'  => Session::get('user_company_id'),
+         'action_at'   => now(),
+      ]);
       if(!empty(Session::get('redirect_url'))){
          return redirect(Session::get('redirect_url'));
       }else{
@@ -1106,16 +1355,40 @@ public function index(Request $request)
    public function delete(Request $request){
       Gate::authorize('action-module',54);
       $journal =  Journal::find($request->journal_id);
+      $oldSnapshot = [
+         'journal' => $journal->toArray(),
+         'details' => JournalDetails::where('journal_id', $journal->id)
+                        ->where('delete', '0')
+                        ->get()
+                        ->toArray(),
+      ];
       $journal->delete = '1';
       $journal->deleted_at = Carbon::now();
       $journal->deleted_by = Session::get('user_id');
       $journal->update();
+      SupplierPurchaseVehicleDetail::where('action_id', $journal->id)
+         ->where('action_type', 'JOURNAL')
+         ->update([
+            'status' => 3,
+            'action_id' => null,
+            'action_type' => null
+         ]);
       if($journal){
          JournalDetails::where('journal_id',$request->journal_id)
                         ->update(['delete'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
          AccountLedger::where('entry_type',7)
                         ->where('entry_type_id',$request->journal_id)
                         ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
+         ActivityLog::create([
+            'module_type' => 'journal',
+            'module_id'   => $journal->id,
+            'action'      => 'delete',
+            'old_data'    => $oldSnapshot,
+            'new_data'    => null,
+            'action_by'   => Session::get('user_id'),
+            'company_id'  => Session::get('user_company_id'),
+            'action_at'   => now(),
+         ]);
          return redirect('journal')->withSuccess('Journal deleted successfully!');
       }
    }
@@ -1784,4 +2057,100 @@ public function index(Request $request)
       return json_encode($res);
       
    }
+public function exportView()
+{
+    return view('journal.export'); 
+}
+
+public function export(Request $request)
+{
+    $request->validate([
+        'from_date' => 'required|date',
+        'to_date'   => 'required|date',
+    ]);
+
+    $companyId = Session::get('user_company_id');
+
+    $journals = DB::table('journals')
+        ->where('company_id', $companyId)
+        ->where('status', '1')
+        ->where(function ($q) {
+            $q->where('delete', '0')
+              ->orWhereNull('delete');
+        })
+        ->whereDate('date', '>=', $request->from_date)
+        ->whereDate('date', '<=', $request->to_date)
+        ->orderBy('date')
+        ->orderBy('voucher_no')
+        ->get();
+
+    if ($journals->isEmpty()) {
+        return back()->with('error', 'No Journal data found');
+    }
+
+    $filename = "journal_export_" . now()->format('Ymd_His') . ".csv";
+
+    $headers = [
+        "Content-Type" => "text/csv",
+        "Content-Disposition" => "attachment; filename=$filename",
+    ];
+
+    $callback = function () use ($journals, $companyId) {
+
+        $file = fopen('php://output', 'w');
+
+        fputcsv($file, [
+            'DATE','SERIES','VC.NO','INVOICE NO','GST NATURE',
+            'ACCOUNT NAME','DEBIT AMOUNT','CREDIT AMOUNT','NARRATION'
+        ]);
+
+        foreach ($journals as $journal) {
+
+            $details = DB::table('journal_details')
+                ->leftJoin('accounts', 'accounts.id', '=', 'journal_details.account_name')
+                ->where('journal_details.journal_id', $journal->id)
+                ->where('journal_details.company_id', $companyId)
+                ->where(function ($q) {
+                    $q->where('journal_details.delete', '0')
+                      ->orWhereNull('journal_details.delete');
+                })
+                ->select(
+                    'accounts.account_name as acc_name',
+                    'journal_details.debit',
+                    'journal_details.credit',
+                    'journal_details.narration'
+                )
+                ->get();
+
+            $firstRow = true;
+
+            foreach ($details as $d) {
+
+                fputcsv($file, [
+
+                    $firstRow ? date('d-m-Y', strtotime($journal->date)) : '',
+                    $firstRow ? $journal->series_no : '',
+                    $firstRow ? $journal->voucher_no : '',
+                    $firstRow ? $journal->invoice_no : '',
+                    $firstRow ? $journal->claim_gst_status : '',
+
+                    $d->acc_name ?? '',
+                    $d->debit != 0 ? $d->debit : '',
+                    $d->credit != 0 ? $d->credit : '',
+                    $d->narration ?? ''
+
+                ]);
+
+                $firstRow = false;
+            }
+        }
+
+        fclose($file);
+    };
+
+    return response()->stream($callback, 200, $headers);
+}
+
+
+   
 }

@@ -85,28 +85,31 @@
                                     </select>
                                 </div>
                                 <div class="mb-3 col-md-12"></div>
-                                    <div class="mb-3 col-md-3">
-                                            <label class="form-label font-14 font-heading">GST RATE</label>
-                                            <select class="form-select select2-single" id="gst_rate" name="gst_rate" required>
-                                                <option value="">SELECT GST RATE</option>
-                                                <option value="0" data-type="nil_rated">0% (Nil Rated Goods)</option>
-                                                <option value="0" data-type="exempted">(Exempted Goods)</option>
-                                                <option value="0.25" data-type="taxable">0.25% (Precious stones, etc.)</option>
-                                                <option value="3" data-type="taxable">3% (Gold, jewelry)</option>
-                                                <option value="5" data-type="taxable">5%</option>
-                                                <option value="12" data-type="taxable">12%</option>
-                                                <option value="18" data-type="taxable">18%</option>
-                                                <option value="28" data-type="taxable">28%</option>
-                                            </select>
-                                        
-                                            <!-- Hidden input to store data-type -->
-                                            <input type="hidden" name="item_type" id="item_type">
-                                    </div>
+                                <div class="mb-3 col-md-3">
+                                    <label class="form-label font-14 font-heading">GST RATE</label>
+                                    <select class="form-select select2-single" id="gst_rate" name="gst_rate" required>
+                                        <option value="">SELECT GST RATE</option>
+                                        <option value="0" data-type="nil_rated">0% (Nil Rated Goods)</option>
+                                        <option value="0" data-type="exempted">(Exempted Goods)</option>
+                                        <option value="0.25" data-type="taxable">0.25% (Precious stones, etc.)</option>
+                                        <option value="3" data-type="taxable">3% (Gold, jewelry)</option>
+                                        <option value="5" data-type="taxable">5%</option>
+                                        <option value="12" data-type="taxable">12%</option>
+                                        <option value="18" data-type="taxable">18%</option>
+                                        <option value="28" data-type="taxable">28%</option>
+                                    </select>
+                                    <!-- Hidden input to store data-type -->
+                                    <input type="hidden" name="item_type" id="item_type">
+                                </div>
+                                <div class="mb-3 col-md-4">
+                                    <label for="name" class="form-label font-14 font-heading">GST RATE EFFECTIVE DATE</label>
+                                    <input type="date" class="form-control" id="gst_rate_effective_date" name="gst_rate_effective_date" required />
+                                </div>
                                 <div class="mb-3 col-md-3">
                                     <label for="name" class="form-label font-14 font-heading">HSN CODE</label>
                                     <input type="text" class="form-control" id="hsn_code" name="hsn_code" placeholder="ENTER HSN CODE" required />
                                 </div>
-                                <div class="mb-3 col-md-12"> </div>                      
+                                <div class="mb-3 col-md-12"> </div>
                                 <div class="mb-3 col-md-3">
                                     <label class="form-label font-14 font-heading">STATUS</label>
                                     <select class="form-select form-select-lg select2-single" name="status" id="status" aria-label="form-select-lg example" required>

@@ -51,58 +51,18 @@
             </div>
             <div class="   bg-white table-view shadow-sm">
                <table id="example" class="table-striped table m-0 shadow-sm">
-                  <thead>
-                     <tr class=" font-12 text-body bg-light-pink ">
-                        <th class="w-min-120 border-none bg-light-pink text-body">Name</th>
-                        <th class="w-min-120 border-none bg-light-pink text-body ">Print Name </th>
-                        <th class="w-min-120 border-none bg-light-pink text-body ">Group </th>
-                        <th class="w-min-120 border-none bg-light-pink text-body ">GSTIN </th>                                
-                        <th class="w-min-120 border-none bg-light-pink text-body ">Status </th>
-                        <th class="w-min-120 border-none bg-light-pink text-body text-center"> Action</th>
-                     </tr>
-                  </thead>
-                  <tbody>
-                     <?php
-                     foreach ($account as $value) { ?>
-                        <tr class="font-14 font-heading bg-white">
-                           <td class="w-min-120"><?php echo $value->account_name ?></td>
-                           <td class="w-min-120"><?php echo $value->print_name ?></td>
-                           <td class="w-min-120"><?php if($value->group_name!=""){ echo $value->group_name;}else if($value->head_name!=""){ echo $value->head_name; } ?></td>
-                           <td class="w-min-120"><?php echo $value->gstin ?></td>
-                           <td class="w-min-120">
-                              <span class="bg-secondary-opacity-16 border-radius-4 text-secondary py-1 px-2 fw-bold">
-                                 <?php
-                                 if ($value->status == 1)
-                                    echo 'Enable';
-                                 else
-                                    echo 'Disable'; 
-                                 ?>
-                              </span>
-                           </td>
-                           <td class="w-min-120 text-center">
-                              <?php 
-                               ?>
-                                 @can('action-module',41)
-                                    <a href="{{ URL::to('account/' . $value->id . '/edit') }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
-                                 @endcan
-                                 
-                                 <?php
-                              
-                              if($value->company_id!=0){ ?>                                 
-                                 @can('action-module',42)
-                                    <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $value->id; ?>">
-                                       <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
-                                    </button>
-                                 @endcan
-                                 <?php
-                              }
-                              ?>                              
-                           </td>
-                        </tr>
-                        <?php 
-                     } ?>
-                  </tbody>
-               </table>
+    <thead>
+        <tr class="font-12 text-body bg-light-pink">
+            <th>Name</th>
+            <th>Print Name</th>
+            <th>Group</th>
+            <th>GSTIN</th>
+            <th>Status</th>
+            <th class="text-center">Action</th>
+        </tr>
+    </thead>
+</table>
+
             </div>
          </div>
       </div>
@@ -137,22 +97,54 @@
 
 <script>
    $(document).ready(function() {      
+       
       $(".cancel").click(function(){
          $("#delete_heading").modal("toggle");
       });
-      var table = $('#example').DataTable({
-         "bDestroy": true,
-         //stateSave: true,
-        
-      });
-      $("#filter").change(function(){
-         $("#filter_form").submit();
-      });
+      // var table = $('#example').DataTable({
+      //    bDestroy: true,
+      //    stateSave: true,     
+      //    stateDuration: -1,
+      //    serverSide: true
+      // });
+      // $("#filter").change(function(){
+      //    $("#filter_form").submit();
+      // });
    });
    $(document).on('click','.delete',function(){ 
       var id = $(this).attr("data-id");
       $("#account_id").val(id);
       $("#delete_heading").modal("toggle");
    });
+   $('#example').DataTable({
+      processing: true,
+      serverSide: true,
+      stateSave: true,
+      ajax: {
+         url: "{{ route('account.datatable') }}",
+         data: function (d) {
+               d.filter = $('#filter').val();
+         }
+      },
+      columns: [
+         { data: 'account_name', name: 'account_name' },
+         { data: 'print_name', name: 'print_name' },
+         { data: 'group_name', name: 'group_name', orderable: false },
+         { data: 'gstin', name: 'gstin' },
+         { data: 'status_label', name: 'status', orderable: false },
+         { data: 'action', orderable: false, searchable: false }
+      ]
+   });
+// ✅ Fix UI issue on first load
+    setTimeout(function () {
+        table.columns.adjust().draw();
+    }, 300);
+$('#filter').change(function () {
+    $('#example').DataTable().ajax.reload();
+});
+
+
 </script>
+
+
 @endsection

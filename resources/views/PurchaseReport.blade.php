@@ -22,9 +22,7 @@ th, td {
    .select2-container .select2-selection--single{
       height: 45px !important;
    }
-   .select2-container{
-          width: 300 px !important;
-   }
+
    .select2-container--default .select2-selection--single{
       border-radius: 12px !important;
    }
@@ -40,6 +38,42 @@ th, td {
     height: 100%;
     width: 100%; 
 }
+td div {
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.item-row {
+    padding: 6px 6px;
+    line-height: 1.4;
+}
+
+.item-border {
+    border-top: 1px solid #dcdcdc;
+}
+
+.item-row:nth-child(even) {
+    background-color: #f8f9fa;
+}
+.column-dropdown {
+    width: 260px;
+    max-height: 300px;   /* limit height */
+    overflow-y: auto;    /* enable vertical scroll */
+    overflow-x: hidden;  /* prevent horizontal scroll */
+}
+.table-responsive {
+    max-height: 70vh;      /* makes vertical scroll */
+    overflow-y: auto;
+}
+
+/* Sticky table header */
+.table-responsive thead th {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #264653;   /* same as your header color */
+    color: #ffffff;
+}
 </style>
 <div class="container-fluid py-4">
     <div class="card shadow-lg border-0 rounded-4">
@@ -51,184 +85,269 @@ th, td {
 
         <div class="card-body p-4">
             {{-- Filter Form --}}
-            <form method="GET" action="{{ route('salebook.index') }}" class="mb-4">
-                <div class="row g-3">
-                    <div class="col-md-2">
-                        <label class="form-label">From Date</label>
-                        <input type="date" id="from_date" name="from_date" class="form-control" value="{{ $from_date }}" autofocus>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">To Date</label>
-                        <input type="date" id="to_date" name="to_date" class="form-control" value="{{ $to_date }}">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Series</label>
-                        <select name="series"  id="series" class="form-select select2-single">
-                            <option value="">All</option>
-                            @foreach($seriesList as $s)
-                                <option value="{{ $s }}" {{ request('series')==$s ? 'selected' : '' }}>{{ $s }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Party</label>
-                        <select name="party" id="party" class="form-select select2-single">
-                            <option value="">All</option>
-                            @foreach($partyList as $p)
-                                <option value="{{ $p }}" {{ request('party')==$p ? 'selected' : '' }}>{{ $p }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Material Center</label>
-                        <select name="material_center" id="material_center" class="form-select select2-single">
-                            <option value="">All</option>
-                            @foreach($materialList as $m)
-                                <option value="{{ $m }}" {{ request('material_center')==$m ? 'selected' : '' }}>{{ $m }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Voucher No</label>
-                        <input type="text" name="voucher_no" id="voucher_no" class="form-control" value="{{ request('voucher_no') }}">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Item Filter</label>
-                        <select name="item_id" id="item_id" class="form-select select2-single">
-                            <option value="">All Items</option>
-                            @foreach($itemList as $id => $name)
-                                <option value="{{ $id }}" {{ request('item_id')==$id ? 'selected' : '' }}>{{ $name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Bill Sundry Filter</label>
-                        <select name="bill_sundry" id="bill_sundry" class="form-select select2-single">
-                            <option value="">All Sundries</option>
-                            @foreach($sundryList as $id => $name)
-                                <option value="{{ $id }}" {{ request('bill_sundry')==$id ? 'selected' : '' }}>{{ $name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-2 d-flex align-items-end">
-                        <button type="submit" id="filter" class="btn btn-primary w-100">Filter</button>
+            <form method="GET" action="{{ route('purchasebook.index') }}" class="mb-4">
+                <div class="filter-card p-4">
+                    <div class="row g-4">
+                        <div class="col-md-3">
+                            <label class="filter-label">From Date</label>
+                            <input type="date" id="from_date" name="from_date"
+                                   class="form-control filter-input"
+                                   value="{{ $from_date }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="filter-label">To Date</label>
+                            <input type="date" id="to_date" name="to_date"
+                                   class="form-control filter-input"
+                                   value="{{ $to_date }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="filter-label">Series</label>
+                            <select name="series" id="series"
+                                    class="form-select filter-input select2-single">
+                                <option value="">All</option>
+                                @foreach($seriesList as $s)
+                                    <option value="{{ $s }}" {{ request('series')==$s ? 'selected' : '' }}>
+                                        {{ $s }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="filter-label">Party</label>
+                            <select name="party" id="party"
+                                    class="form-select filter-input select2-single">
+                                <option value="">All</option>
+                                @foreach($partyList as $p)
+                                    <option value="{{ $p }}" {{ request('party')==$p ? 'selected' : '' }}>
+                                        {{ $p }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+            
+                        <div class="col-md-3">
+                            <label class="filter-label">Material Center</label>
+                            <select name="material_center" id="material_center"
+                                    class="form-select filter-input select2-single">
+                                <option value="">All</option>
+                                @foreach($materialList as $m)
+                                    <option value="{{ $m }}" {{ request('material_center')==$m ? 'selected' : '' }}>
+                                        {{ $m }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+            
+                        <div class="col-md-3">
+                            <label class="filter-label">Voucher No</label>
+                            <input type="text" name="voucher_no" id="voucher_no"
+                                   class="form-control filter-input"
+                                   value="{{ request('voucher_no') }}">
+                        </div>
+            
+                        <div class="col-md-3">
+                            <label class="filter-label">Item Filter</label>
+                            <select name="item_id" id="item_id"
+                                    class="form-select filter-input select2-single">
+                                <option value="">All Items</option>
+                                @foreach($itemList as $id => $name)
+                                    <option value="{{ $id }}" {{ request('item_id')==$id ? 'selected' : '' }}>
+                                        {{ $name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+            
+                        <div class="col-md-3">
+                            <label class="filter-label">Bill Sundry</label>
+                            <select name="bill_sundry" id="bill_sundry"
+                                    class="form-select filter-input select2-single">
+                                <option value="">All Sundries</option>
+                                @foreach($sundryList as $id => $name)
+                                    <option value="{{ $id }}" {{ request('bill_sundry')==$id ? 'selected' : '' }}>
+                                        {{ $name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+        </div>
+                    <div class="controls-row mt-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="dropdown">
+                                <button class="btn btn-outline-dark btn-uniform dropdown-toggle"
+                                        type="button"
+                                        data-bs-toggle="dropdown">
+                                    Show Columns
+                                </button>
+                                <div class="dropdown-menu p-3 shadow column-dropdown">
+                                    @foreach($availableColumns as $key => $label)
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input"
+                                                   type="checkbox"
+                                                   name="columns[]"
+                                                   value="{{ $key }}"
+                                                   {{ in_array($key, $selectedColumns) ? 'checked' : '' }}>
+                                            <label class="form-check-label">
+                                                {{ $label }}
+                                            </label>
+                                        </div>
+                                    @endforeach
+                                    <hr class="my-2">
+                                    <div class="d-flex justify-content-between">
+                                        <button type="button" class="btn btn-sm btn-secondary" id="selectAllCols">All</button>
+                                        <button type="button" class="btn btn-sm btn-warning" id="clearAllCols">Clear</button>
+                                        <button type="submit" class="btn btn-sm btn-success">Apply</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-3">
+                            <button type="submit" id="filter"
+                                    class="btn btn-primary btn-main">
+                                Search
+                            </button>
+                            <button type="submit" name="download" value="csv"
+                                    class="btn btn-success btn-main">
+                                Download CSV
+                            </button>
+                        </div>
                     </div>
                 </div>
             </form>
-
+            
             {{-- Sales Table --}}
             <div class="table-responsive">
                 <table class="table table-bordered table-hover align-middle text-center shadow-sm">
-                    <thead style="background-color:#264653; color:white;">
+                   <thead style="background-color:#264653; color:white;">
                         <tr>
-                            @if($isItemFilter)
-                                <th>Series</th>
-                                <th>Date</th>
-                                <th>Party</th>
-                                <th>Voucher No</th>
-                                <th style="background:#1d3557;color:#fff;">Item</th>
-                                <th style="background:#1d3557;color:#fff;">Qty</th>
-                                <th style="background:#1d3557;color:#fff;">Price</th>
-                                <th style="background:#1d3557;color:#fff;">Amount</th>
-                            @else
-                                <th>Series</th>
-                                <th>Date</th>
-                                <th>Voucher No</th>
-                                <th>Party</th>
-                                <th>Material Center</th>
-                                <th>Total</th>
-                                <th style="background:#1d3557;color:#fff;">Item</th>
-                                <th style="background:#1d3557;color:#fff;">Qty</th>
-                                <th style="background:#1d3557;color:#fff;">Price</th>
-                                <th style="background:#1d3557;color:#fff;">Amount</th>
-                                @foreach($allSundries as $sundry)
-                                    <th style="background:#2a9d8f;color:#fff;">{{ $sundry }}</th>
-                                @endforeach
-                            @endif
+                            @foreach($selectedColumns as $col)
+                                <th
+                                    @if(in_array($col, ['item','qty','price','amount']))
+                                        style="background:#1d3557;color:#fff;"
+                                    @elseif(Str::startsWith($col, 'sundry_') || 
+                                            in_array($availableColumns[$col], $allSundries ?? []))
+                                        style="background:#2a9d8f;color:#fff;"
+                                    @endif
+                                >
+                                    {{ $availableColumns[$col] }}
+                                </th>
+                            @endforeach
                         </tr>
                     </thead>
                     <tbody>
-                        @php
-                            $totalQty = 0;
-                            $totalAmount = 0;
-                            $grandTotal = 0;
-                            $sundryTotals = array_fill_keys($allSundries, 0);
-                        @endphp
-
                         @foreach($sales as $sale)
-                            @if($isItemFilter)
-                                @foreach($sale->items->where('id',$itemFilter) as $item)
-                                    <tr>
-                                        <td>{{ $sale->series_no }}</td>
-                                        <td>{{ \Carbon\Carbon::parse($sale->date)->format('d-M-Y') }}</td>
-                                        <td>{{ $sale->party }}</td>
-                                        <td>{{ $sale->voucher_no }}</td>
-                                        <td>{{ $item->item_name }}</td>
-                                        <td>{{ $item->qty }}</td>
-                                        <td>₹{{ number_format($item->price,2) }}</td>
-                                        <td>₹{{ number_format($item->amount,2) }}</td>
-                                    </tr>
-                                    @php
-                                        $totalQty += $item->qty;
-                                        $totalAmount += $item->amount;
-                                    @endphp
+                            <tr>
+                                @foreach($selectedColumns as $col)
+                                    <td class="text-start">
+                                        @switch($col)
+                        
+                                            @case('series')
+                                                {{ $sale->series_no }}
+                                                @break
+                        
+                                            @case('date')
+                                                {{ \Carbon\Carbon::parse($sale->date)->format('d-M-Y') }}
+                                                @break
+                        
+                                            @case('voucher_no')
+                                                {{ $sale->voucher_no }}
+                                                @break
+                        
+                                            @case('party')
+                                                {{ $sale->party }}
+                                                @break
+                        
+                                            @case('material_center')
+                                                {{ $sale->material_center }}
+                                                @break
+                        
+                                            @case('total')
+                                                ₹{{ number_format($sale->total, 2) }}
+                                                @break
+                        
+                                            @case('item')
+                                            <table class="table table-sm mb-0 inner-table">
+                                                    @foreach($sale->items as $item)
+                                                        <tr>
+                                                            <td>{{ $item->item_name }}</td>
+                                                        </tr>
+                                                    @endforeach
+                                                </table>
+                        
+                                               
+                                                @break
+                        
+                                            @case('qty')
+                                                @foreach($sale->items as $item)
+                                                    {{ $item->qty }}<br><hr>
+                                                @endforeach
+                                                @break
+                        
+                                            @case('price')
+                                                @foreach($sale->items as $item)
+                                                    ₹{{ number_format($item->price, 2) }}<br><hr>
+                                                @endforeach
+                                                @break
+                        
+                                            @case('amount')
+                                                @foreach($sale->items as $item)
+                                                    ₹{{ number_format($item->amount, 2) }}<br><hr>
+                                                @endforeach
+                                                @break
+                        
+                                            @default
+                                                {{-- Bill Sundries --}}
+                                                ₹{{ number_format($sale->sundries[$availableColumns[$col]] ?? 0, 2) }}
+                        
+                                        @endswitch
+                                    </td>
                                 @endforeach
-                            @else
-                                @php $rowspan = max(count($sale->items),1); @endphp
-                                @foreach($sale->items as $index => $item)
-                                    <tr>
-                                        @if($index === 0)
-                                            <td rowspan="{{ $rowspan }}">{{ $sale->series_no }}</td>
-                                            <td rowspan="{{ $rowspan }}">{{ \Carbon\Carbon::parse($sale->date)->format('d-M-Y') }}</td>
-                                            <td rowspan="{{ $rowspan }}">{{ $sale->voucher_no }}</td>
-                                            <td rowspan="{{ $rowspan }}">{{ $sale->party }}</td>
-                                            <td rowspan="{{ $rowspan }}">{{ $sale->material_center }}</td>
-                                            <td rowspan="{{ $rowspan }}">₹{{ number_format($sale->total,2) }}</td>
-                                        @endif
-
-                                        <td>{{ $item->item_name }}</td>
-                                        <td>{{ $item->qty }}</td>
-                                        <td>₹{{ number_format($item->price,2) }}</td>
-                                        <td>₹{{ number_format($item->amount,2) }}</td>
-
-                                        @if($index === 0)
-                                            @foreach($allSundries as $sundry)
-                                                <td rowspan="{{ $rowspan }}">₹{{ number_format($sale->sundries[$sundry]??0,2) }}</td>
-                                                @php $sundryTotals[$sundry] += $sale->sundries[$sundry] ?? 0; @endphp
-                                            @endforeach
-                                        @endif
-                                    </tr>
-                                    @php
-                                        $totalQty += $item->qty;
-                                        $totalAmount += $item->amount;
-                                    @endphp
-                                @endforeach
-                                @php $grandTotal += $sale->total; @endphp
-                            @endif
+     </tr>
                         @endforeach
                     </tbody>
                     <tfoot class="fw-bold">
-                        @if($isItemFilter)
-                            <tr style="background:#f1faee;">
-                                <th class="text-end" colspan="5">Total</th>
-                                <th>{{ $totalQty }}</th>
-                                <th></th>
-                                <th>₹{{ number_format($totalAmount,2) }}</th>
-                            </tr>
-                        @else
-                            <tr style="background:#f1faee;">
-                                <th colspan="5" class="text-end">Grand Total</th>
-                                <th>₹{{ number_format($grandTotal,2) }}</th>
-                                <th></th>
-                                <th>{{ $totalQty }}</th>
-                                <th></th>
-                                <th>₹{{ number_format($totalAmount,2) }}</th>
-                                @foreach($sundryTotals as $total)
-                                    <th>₹{{ number_format($total,2) }}</th>
-                                @endforeach
-                            </tr>
-                        @endif
-                    </tfoot>
+                    <tr style="background:#f1faee;">
+                        @foreach($selectedColumns as $col)
+                            <th class="text-end">
+                    
+                                @switch($col)
+                    
+                                    @case('qty')
+                                        {{ 
+                                            $sales->sum(fn($s) => $s->items->sum('qty')) 
+                                        }}
+                                        @break
+                    
+                                    @case('amount')
+                                        ₹{{ 
+                                            number_format(
+                                                $sales->sum(fn($s) => $s->items->sum('amount')),
+                                            2) 
+                                        }}
+                                        @break
+                    
+                                    @case('total')
+                                        ₹{{ 
+                                            number_format($sales->sum('total'), 2) 
+                                        }}
+                                        @break
+                    
+                                    @default
+                                        {{-- Bill Sundry totals --}}
+                                        @if(isset($sales[0]->sundries[$availableColumns[$col]]))
+                                            ₹{{
+                                                number_format(
+                                                    $sales->sum(fn($s) => $s->sundries[$availableColumns[$col]] ?? 0),
+                                                2)
+                                            }}
+                                        @endif
+                    
+                                @endswitch
+                    
+                            </th>
+                        @endforeach
+                    </tr>
+                </tfoot>
                 </table>
             </div>
 </div>
@@ -303,7 +422,13 @@ th, td {
         }
     });
 });
+$('#selectAllCols').click(() => 
+    $('input[name="columns[]"]').prop('checked', true)
+);
 
+$('#clearAllCols').click(() => 
+    $('input[name="columns[]"]').prop('checked', false)
+);
 
 </script>
 

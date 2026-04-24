@@ -56,6 +56,7 @@
                     @csrf
                     @method('PUT')
                     <div class="row mb-3">
+                        <input type="hidden" name="sale_id" value="{{$sale_id}}">
                         <div class="col-md-3">
                             <label for="bill_to" class="form-label font-14 font-heading">Bill To *</label>
                             <select name="bill_to" class="form-select select2-single" id="bill_to" required>
@@ -65,6 +66,14 @@
                                 @endforeach
                             </select>
                             <p id="bill_to_address" style="font-size: 10px;"></p>
+                        </div>
+                        <div class="mb-4 col-md-7 bill_to_other_address_div" style="display: none;">
+                            <label for="bill_to_other_address" class="form-label font-14 font-heading">Bill Address</label><br>
+                            <select class="form-select" name="bill_to_other_address" id="bill_to_other_address">
+                            </select>
+                            <ul style="color: red;">
+                                @error('bill_to_other_address'){{$message}}@enderror                        
+                            </ul>
                         </div>
                         <div class="col-md-3">
                             <label for="ship_to" class="form-label font-14 font-heading">Ship To *</label>
@@ -76,14 +85,27 @@
                             </select>
                             <p id="shipp_to_address" style="font-size: 10px;"></p>
                         </div>
+                        <div class="mb-4 col-md-7 shipp_to_other_address_div" style="display: none;">
+                            <label for="shipp_to_other_address" class="form-label font-14 font-heading">Bill Address</label><br>
+                            <select class="form-select" name="shipp_to_other_address" id="shipp_to_other_address">
+                            </select>
+                            <ul style="color: red;">
+                                @error('shipp_to_other_address'){{$message}}@enderror                        
+                            </ul>
+                        </div>
                         <div class="mb-3 col-md-3">
                             <label for="deal" class="form-label font-14 font-heading">Deal</label>
                             <select id="deal" name="deal" class="form-select" autofocus>
                                 <option value="">Select Deal</option>
+                                @foreach ($deals as $deal)
+                                    <option value="{{ $deal->id }}" {{ $saleOrder->deal_id == $deal->id ? 'selected' : '' }}>
+                                        {{ $deal->deal_no }}
+                                    </option>
+                                @endforeach
                             </select>
                             <ul style="color: red;">
-                                @error('voucher_no'){{$message}}@enderror
-                            </ul> 
+                                @error('deal'){{ $message }}@enderror
+                            </ul>
                         </div>
                     </div>
                     <div class="row mb-3">
@@ -95,17 +117,6 @@
                             <label for="purchase_order_date" class="form-label font-14 font-heading">Purchase Order Date</label>
                             <input type="date" name="purchase_order_date" id="purchase_order_date" class="form-control" value="{{$saleOrder->purchase_order_date}}">
                         </div>
-                        <div class="mb-3 col-md-3">
-                                           
-                                            <label for="freight" class="form-label font-14 font-heading freight_div">Freight *</label>
-                                            <select id="freight" name="freight" class="form-select freight_div" required autofocus>
-                                                <option value="">Select Freight</option>
-                                                <option value="Yes" @if($saleOrder->freight=="Yes") selected @endif>Yes</option>
-                                                <option value="No" @if($saleOrder->freight=="No") selected @endif>No</option>
-                                            </select>
-                                           
-                                        
-                                        </div>
                     </div>
                     <!-- Items Container -->
                     <div id="items_container">
@@ -116,19 +127,23 @@
                                 <div class="row">
                                     <div class="col-md-3 mb-3">
                                         <label class="form-label font-14 font-heading">Item *</label>
-                                        <select name="items[{{$item_index}}][item_id]" class="form-select select2-single" required>
+                                        <select name="items[{{$item_index}}][item_id]" 
+                                                class="form-select select2-single item-select" 
+                                                required
+                                                data-selected-id="{{ $value->item_id }}" data-index="{{ $item_index }}" id="item_select_{{$item_index}}">
                                             <option value="">Select Item</option>
-                                            @if(isset($groups))
-                                                @foreach($groups as $group)
-                                                    @if($group->items->count() > 0)
-                                                        <optgroup label="{{ $group->name }}">
-                                                            @foreach($group->items as $item)
-                                                                <option value="{{ $item->id }}" @if($value->item_id==$item->id) selected @endif>{{ $item->name }}</option>
-                                                            @endforeach
-                                                        </optgroup>
-                                                    @endif
-                                                @endforeach
-                                            @endif
+                                            @foreach($groups as $group)
+                                                @if($group->items->count() > 0)
+                                                    <optgroup label="{{ $group->name }}">
+                                                        @foreach($group->items as $item)
+                                                            <option value="{{ $item->id }}" 
+                                                                {{ $value->item_id == $item->id ? 'selected' : '' }}>
+                                                                {{ $item->name }}
+                                                            </option>
+                                                        @endforeach
+                                                    </optgroup>
+                                                @endif
+                                            @endforeach
                                         </select>
                                     </div>
                                     <div class="col-md-3 mb-3">
@@ -143,7 +158,19 @@
                                         </ul> 
                                     </div>
                                     
-                                        
+                                        <div class="mb-3 col-md-3">
+                                            @if($item_index==1)
+                                            <label for="freight" class="form-label font-14 font-heading freight_div">Freight *</label>
+                                            <select id="freight" name="freight" class="form-select freight_div" required autofocus>
+                                                <option value="">Select Freight</option>
+                                                <option value="Yes" @if($saleOrder->freight=="Yes") selected @endif>Yes</option>
+                                                <option value="No" @if($saleOrder->freight=="No") selected @endif>No</option>
+                                            </select>
+                                            <ul style="color: red;">
+                                                @error('voucher_no'){{$message}}@enderror
+                                            </ul> 
+                                            @endif
+                                        </div>
                                     
                                     <div class="col-md-3 mb-3">
                                         <label for="unit_{{$item_index}}" class="form-label font-14 font-heading">Unit *</label>
@@ -285,6 +312,10 @@ $(document).ready(function() {
         newSection.find("#sub_unit_1").attr("id","sub_unit_"+itemIndex);
         newSection.find(".freight_div").remove("");
         newSection.find(".bill_price").attr("id","bill_price_"+itemIndex);
+
+        newSection.find("#item_select_1").attr("data-index",itemIndex);
+        newSection.find("#item_select_1").attr("id","item_select_"+itemIndex);
+        newSection.find("#price_1").attr("id","price_"+itemIndex);
         let detailsRows = '';
         for (let row_index = 0; row_index < 5; row_index++) {
             detailsRows += `
@@ -454,12 +485,55 @@ $(document).ready(function() {
         var address = selectedOption.data('address');
         var fullAddress = address;        
         $("#bill_to_address").text(fullAddress);
+        let otherAddressAttr = $('option:selected', this).attr('data-other_address');
+        let other_address = [];
+        if (otherAddressAttr && otherAddressAttr !== "undefined") {
+            try {
+                other_address = JSON.parse(otherAddressAttr);
+            } catch (e) {
+                console.warn("Invalid other_address JSON", otherAddressAttr);
+                other_address = [];
+            }
+        }
+        $(".bill_to_other_address_div").hide();
+        $("#bill_to_other_address").html('');
+        if(other_address!=null && other_address.length>0){
+            address_html = "<option value=''>"+$('option:selected', this).attr('data-address')+"</option>";
+            other_address.forEach(function(e){
+                address_html += "<option value='"+e.id+"' data-address='"+e.address+"' data-pincode='"+e.pincode+"' data-location='"+e.location+"'>"+e.address+" ("+e.pincode+")</option>";
+            });
+            $("#bill_to_other_address").html(address_html);
+            
+            $("#bill_to_other_address").val("{{ $saleOrder->bill_to_address_id }}");
+            $(".bill_to_other_address_div").show();
+        }
     });
     $("#ship_to").change(function() {
         var selectedOption = $(this).find('option:selected');
         var address = selectedOption.data('address');
         var fullAddress = address;        
         $("#shipp_to_address").text(fullAddress);
+        let otherAddressAttr = $('option:selected', this).attr('data-other_address');
+        let other_address = [];
+        if (otherAddressAttr && otherAddressAttr !== "undefined") {
+            try {
+                other_address = JSON.parse(otherAddressAttr);
+            } catch (e) {
+                console.warn("Invalid other_address JSON", otherAddressAttr);
+                other_address = [];
+            }
+        }
+        $(".shipp_to_other_address_div").hide();
+        $("#shipp_to_other_address").html('');
+        if(other_address!=null && other_address.length>0){
+            address_html = "<option value=''>"+$('option:selected', this).attr('data-address')+"</option>";
+            other_address.forEach(function(e){
+                address_html += "<option value='"+e.id+"' data-address='"+e.address+"' data-pincode='"+e.pincode+"' data-location='"+e.location+"'>"+e.address+" ("+e.pincode+")</option>";
+            });
+            $("#shipp_to_other_address").html(address_html);
+            $("#shipp_to_other_address").val("{{ $saleOrder->shipp_to_address_id }}");
+            $(".shipp_to_other_address_div").show();
+        }
     });
     
 });
@@ -520,7 +594,13 @@ function approxCalculation(item_id,gsm_id){
     }else{
         for(let i=0;i<reelArr.length;i++){
             if(reelArr[i]!=""){
-                approx_qty = approx_qty + reelArr[i]/(sizeArr[i] * kg_per_inch);
+                let in_inch = sizeArr[i];
+                if($("#sub_unit_"+item_id).val()=="CM"){
+                    in_inch = sizeArr[i]/ 2.54;
+                }else if($("#sub_unit_"+item_id).val()=="MM"){
+                    in_inch = sizeArr[i]/ 25.4;
+                }
+                approx_qty = approx_qty + reelArr[i]/(in_inch * kg_per_inch);
             }
         }
     }
@@ -534,6 +614,7 @@ function approxCalculation(item_id,gsm_id){
         approx_qty = Math.round(approx_qty / 100) * 100;
         $("#approx_qty_"+item_id+"_"+gsm_id).val(approx_qty);
     }else if($("#unit_"+item_id+" option:selected").attr("data-unit_type")=='KG' && kg_per_inch!=''){
+       
         approx_qty = Math.round(approx_qty);
         $("#approx_qty_"+item_id+"_"+gsm_id).val(approx_qty);
     }
@@ -571,6 +652,197 @@ $(document).on('change','.unit',function(){
         $(".quantity_"+id+"_"+ind).attr('placeholder',name);
         ind++;
     });
+});
+$(document).ready(function() {
+    $("#bill_to").trigger('change');
+    $("#ship_to").trigger('change');
+    // ðŸ”¹ When user selects "Bill To"
+    $('#bill_to').on('change', function() {
+        var party_id = $(this).val();
+        $('#deal').html('<option value="">Loading deals...</option>');
+
+        if (party_id) {
+            $.ajax({
+                url: '{{ url("get-deals-by-party") }}',
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    party_id: party_id
+                },
+                success: function(response) {
+                    $('#deal').html('<option value="">Select Deal</option>');
+                    if (response.deals.length > 0) {
+                        $.each(response.deals, function(index, deal) {
+                            $('#deal').append('<option value="' + deal.id + '">Deal No: ' + deal.deal_no + '</option>');
+                        });
+                    } else {
+                        $('#deal').append('<option value="">No deals found</option>');
+                    }
+                }
+            });
+        } else {
+            $('#deal').html('<option value="">Select Deal</option>');
+        }
+    });
+
+    // ðŸ”¹ Load deal details via AJAX
+    function loadDealDetails(deal_id, isInitialLoad = false) {
+        if (deal_id) {
+            $.ajax({
+                url: '{{ url("get-deal-details") }}',
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    deal_id: deal_id
+                },
+                success: function(response) {
+                    // ðŸ”¹ Update freight
+                    $('#freight').val(response.freight || '');
+
+                    // ðŸ”¹ Loop through each item row
+                    $('#items_container .item-section').each(function() {
+                        var itemSelect = $(this).find("select[name*='[item_id]']");
+                        var priceInput = $(this).find("input[name*='[price]']");
+                        var preSelectedId = itemSelect.data('selected-id'); // stored in Blade
+
+                        // Clear dropdown
+                        itemSelect.html('<option value="">Select Item</option>');
+
+                        // If deal has items
+                        if (response.items.length > 0) {
+                            $.each(response.items, function(index, item) {
+                                var selected = (preSelectedId == item.item_id) ? 'selected' : '';
+                                itemSelect.append('<option value="' + item.item_id + '" data-rate="' + item.rate + '" ' + selected + '>' + item.item_name + '</option>');
+                            });
+                        } else {
+                            itemSelect.append('<option value="">No items found</option>');
+                        }
+
+                        // Autofill price only if not initial load
+                        if (!isInitialLoad) {
+                            var rate = itemSelect.find(':selected').data('rate') || '';
+                            priceInput.val(rate).attr('readonly', true);
+                        }
+                    });
+                }
+            });
+        } else {
+            // ðŸ”¹ Reset when no deal selected
+            $('#freight').val('');
+            $('#items_container .item-section').each(function() {
+                var itemSelect = $(this).find("select[name*='[item_id]']");
+                var priceInput = $(this).find("input[name*='[price]']");
+                priceInput.val('').attr('readonly', false);
+
+                // Restore full item list from Blade
+                var defaultOptions = `
+                    <option value="">Select Item</option>
+                    @if(isset($groups))
+                        @foreach($groups as $group)
+                            @if($group->items->count() > 0)
+                                <optgroup label="{{ $group->name }}">
+                                    @foreach($group->items as $item)
+                                        <option value="{{ $item->id }}">{{ $item->name }}</option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
+                        @endforeach
+                    @endif
+                `;
+                itemSelect.html(defaultOptions);
+            });
+        }
+    }
+
+    // ðŸ”¹ On manual deal change
+    $('#deal').on('change', function() {
+        var deal_id = $(this).val();
+        loadDealDetails(deal_id, false);
+    });
+
+    // ðŸ”¹ On edit page load
+    var preselectedDeal = $('#deal').val();
+    if (preselectedDeal) {
+        loadDealDetails(preselectedDeal, true);
+    }
+
+    // ðŸ”¹ Auto-fill price when item changes
+    $(document).on('change', "select[name*='[item_id]']", function() {
+        var rate = $(this).find(':selected').data('rate') || '';
+        var priceInput = $(this).closest('.item-section').find("input[name*='[price]']");
+        priceInput.val(rate);
+    });
+
+    // ðŸ”¹ Prevent duplicate size within same GSM block
+    $(document).on('change', '.size', function() {
+        let currentInput = $(this);
+        let currentVal = currentInput.val().trim();
+        if (currentVal === '') return;
+
+        let gsmBlock = currentInput.closest('.gsm-block');
+        let duplicateFound = false;
+        gsmBlock.find('.size').each(function() {
+            let val = $(this).val().trim();
+            if (val !== '' && $(this)[0] !== currentInput[0] && val === currentVal) {
+                duplicateFound = true;
+                return false;
+            }
+        });
+
+        if (duplicateFound) {
+            alert('This size already exists in this GSM block. Please enter a unique size.');
+            currentInput.val('').focus();
+        }
+    });
+});
+function fetchPrice(index) {
+    let bill_to = $("#bill_to").val();
+    let item_id = $(`select[data-index='${index}']`).val();
+
+    if (!bill_to || !item_id) {
+        $(`#price_${index}`).val('');
+        return;
+    }
+
+    $.ajax({
+        url: "{{url('get-item-priceSO')}}",
+        method: "GET",
+        data: { bill_to: bill_to, item_id: item_id },
+        success: function(res) {
+            $(`#price_${index}`).val(res.price ?? '');
+        }
+    });
+}
+// on item change
+$(document).on("change", ".item-select", function() {
+    let index = $(this).data("index");
+    fetchPrice(index);
+});
+// on bill_to change = update all rows
+$("#bill_to").on("change", function() {
+    $(".item-select").each(function() {
+        //fetchPrice($(this).data("index"));
+    });
+});
+$("#bill_to_other_address").change(function(){
+    if($(this).val()!=""){
+        let address = $('option:selected', this).attr('data-address');
+        let pincode = $('option:selected', this).attr('data-pincode');
+        let location = $('option:selected', this).attr('data-location');
+        $("#bill_to_address").html(address+","+pincode);
+    }else{
+        $("#bill_to_address").html($('option:selected', '#bill_to').attr('data-address'));
+    }
+});
+$("#shipp_to_other_address").change(function(){
+    if($(this).val()!=""){
+        let address = $('option:selected', this).attr('data-address');
+        let pincode = $('option:selected', this).attr('data-pincode');
+        let location = $('option:selected', this).attr('data-location');
+        $("#shipp_to_address").html(address+","+pincode);
+    }else{
+        $("#shipp_to_address").html($('option:selected', '#bill_to').attr('data-address'));
+    }
 });
 </script>
 @endsection

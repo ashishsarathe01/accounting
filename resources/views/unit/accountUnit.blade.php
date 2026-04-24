@@ -68,9 +68,11 @@
                                             <a href="{{ URL::to('account-unit/' . $value->id . '/edit') }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
                                         @endcan
                                         @can('action-module',68)
+                                        @if($value->is_used==0)
                                             <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $value->id; ?>">
                                                 <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
                                             </button>
+                                            @endif
                                         @endcan
                                     </td>
                                 </tr>
@@ -114,6 +116,11 @@
 @include('layouts.footer')
 <script>
     $(document).ready(function() {
+        var table = $('#example').DataTable({
+            bDestroy: true,
+            stateSave: true,     
+            stateDuration: -1    
+        });
 
 $(".delete").click(function() {
     var id = $(this).attr("data-id");

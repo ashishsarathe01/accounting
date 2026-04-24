@@ -12,6 +12,7 @@ use App\Models\ManageItems;
 use App\Models\Companies;
 use App\Models\Accounts;
 use App\Models\BillSundrys;
+use App\Models\PrivilegesModuleMapping;
 use Carbon\Carbon;
 use DB;
 
@@ -366,4 +367,298 @@ class AjaxController extends Controller
                 );
          return response()->json($response);
     }
+    public function userPrivileges(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+           'company_id' => 'required',
+           'user_id' => 'required',
+           'type' => 'required',
+
+        ], 
+        [
+            'user_id.required' => 'User id is required.',
+            'company_id.required' => 'Company id is required.',
+            'type.required' => 'Type is required.'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+        $user_id  = $request->user_id;
+        $company_id  = $request->company_id;
+        $type  = $request->type;
+        $privilehes_arr = [];
+        if($type=="DASHBOARD"){
+            //94-Business Management
+            
+            $privilehes = PrivilegesModuleMapping::where('module_id',94)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'PURCHASE');
+            }
+            //117-Production
+            $privilehes = PrivilegesModuleMapping::where('module_id',117)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'PRODUCTION');
+            }
+            //10-Sale
+            $privilehes = PrivilegesModuleMapping::where('module_id',10)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'SALES');
+            }
+            //26 - Ledger
+            $privilehes = PrivilegesModuleMapping::where('module_id',26)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'LEDGER');
+            }
+              $privilehes = PrivilegesModuleMapping::where('module_id',178)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'MANAGE STOCK');
+            }
+        }else if($type=="PURCHASE"){
+            //160-Waste kraft
+            $privilehes = PrivilegesModuleMapping::where('module_id',160)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'WASTE KRAFT');
+            }
+            //161-Boiler Fuel
+            $privilehes = PrivilegesModuleMapping::where('module_id',161)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'BOILER FUEL');
+            }
+            //162 - Spare parts
+            $privilehes = PrivilegesModuleMapping::where('module_id',162)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'SPARE PARTS');
+            }
+        }else if($type=="PRODUCTION"){
+            //119-RUNNING
+            $privilehes = PrivilegesModuleMapping::where('module_id',119)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'RUNNING');
+            }
+            //120-COMPLETED
+            $privilehes = PrivilegesModuleMapping::where('module_id',120)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'COMPLETED');
+            }
+            //120 - MANAGE REEL
+            $privilehes = PrivilegesModuleMapping::where('module_id',120)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'MANAGE REEL');
+            }
+        }else if($type=="SALES"){
+            //10-SALES
+            $privilehes = PrivilegesModuleMapping::where('module_id',10)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'SALES');
+            }
+            //10-SALES REPORT
+            $privilehes = PrivilegesModuleMapping::where('module_id',10)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'SALES REPORT');
+            }
+            //114 - SALE ORDER
+            $privilehes = PrivilegesModuleMapping::where('module_id',114)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'SALE ORDER');
+            }
+        }else if($type=="WASTE KRAFT"){
+            //184-PENDING
+            $privilehes = PrivilegesModuleMapping::where('module_id',184)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'PENDING');
+            }
+            //184-IN PROCESS
+            $privilehes = PrivilegesModuleMapping::where('module_id',184)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'IN PROCESS');
+            }
+            //185 - PENDING APPROVAL
+            $privilehes = PrivilegesModuleMapping::where('module_id',185)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'PENDING APPROVAL');
+            }
+            //186 -APPROVED
+            $privilehes = PrivilegesModuleMapping::where('module_id',186)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'APPROVED');
+            }
+            //164 - REPORT
+            $privilehes = PrivilegesModuleMapping::where('module_id',164)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'REPORT');
+            }
+            //101 - DAILY REPORT
+            $privilehes = PrivilegesModuleMapping::where('module_id',101)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'DAILY REPORT');
+            }
+        }else if($type=="BOILER FUEL"){
+            //111-PENDING
+            $privilehes = PrivilegesModuleMapping::where('module_id',111)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'PENDING');
+            }
+            //111-IN PROCESS
+            $privilehes = PrivilegesModuleMapping::where('module_id',111)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'IN PROCESS');
+            }
+            //112 - PENDING APPROVAL
+            $privilehes = PrivilegesModuleMapping::where('module_id',112)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'PENDING APPROVAL');
+            }
+            //113 -APPROVED
+            $privilehes = PrivilegesModuleMapping::where('module_id',113)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'APPROVED');
+            }
+            //168 - REPORT
+            $privilehes = PrivilegesModuleMapping::where('module_id',168)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'REPORT');
+            }
+            //101 - DAILY REPORT
+            $privilehes = PrivilegesModuleMapping::where('module_id',101)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'DAILY REPORT');
+            }
+        }else if($type=="SPARE PARTS"){
+            //111-PENDING
+            $privilehes = PrivilegesModuleMapping::where('module_id',111)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'PENDING');
+            }
+            //111-IN PROCESS
+            $privilehes = PrivilegesModuleMapping::where('module_id',111)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'IN PROCESS');
+            }
+            //112 - PENDING APPROVAL
+            $privilehes = PrivilegesModuleMapping::where('module_id',112)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'PENDING APPROVAL');
+            }
+            //113 -APPROVED
+            $privilehes = PrivilegesModuleMapping::where('module_id',113)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'APPROVED');
+            }
+            //168 - REPORT
+            $privilehes = PrivilegesModuleMapping::where('module_id',168)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'REPORT');
+            }
+            //101 - DAILY REPORT
+            $privilehes = PrivilegesModuleMapping::where('module_id',101)
+                                                ->where('employee_id',$user_id)
+                                                ->where('company_id',$company_id)
+                                                ->first();
+            if($privilehes){
+                array_push($privilehes_arr,'DAILY REPORT');
+            }
+        }
+        $response = array(
+                'code' => 200,
+                    'status'=>true,
+                    'message'=>'Privileges successfully.',
+                    'data'=>$privilehes_arr
+                );
+        return response()->json($response);
+    }
+    
 }

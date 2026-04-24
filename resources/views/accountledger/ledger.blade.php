@@ -75,9 +75,9 @@
       vertical-align: top;
    }
 
-   td:nth-child(5), td:nth-child(6), td:nth-child(7) {
-      text-align: right;
-   }
+  td:nth-child(5), td:nth-child(6), td:nth-child(7), td:nth-child(8) {
+   text-align: right;
+}
 
    tr:nth-child(even) {
       background-color: #fcfcfc;
@@ -118,6 +118,13 @@
             <th>Debit</th>
             <th>Credit</th>
             <th>Balance</th>
+            @php
+                $isSpecialParty = $configuration->purchase_order_info_show_in_ledger;;
+            @endphp
+            @if($isSpecialParty)
+              <th>PO No</th>
+              <th>Location</th>
+            @endif
          </tr>
       </thead>
       <tbody>
@@ -173,6 +180,10 @@
                
                @php $balance += $entry->debit - $entry->credit; @endphp
                <td>{{ formatIndianNumber(abs((float) str_replace(',', '', $balance))) }} {{ $balance < 0 ? 'Cr' : 'Dr' }}</td>
+               @if($isSpecialParty)
+                   <td>{{ $entry->po_no ?? '' }}</td>
+                   <td>{{ $entry->location ?? '' }}</td>
+                @endif
             </tr>
          @endforeach
          <tr>
@@ -183,6 +194,10 @@
              <td><strong>{{ formatIndianNumber($totalDebit, 2) }}</strong></td>
              <td><strong>{{ formatIndianNumber($totalCredit, 2) }}</strong></td>
              <td></td>
+             @if($isSpecialParty)
+                  <td></td>
+                  <td></td>
+               @endif
          </tr>
       </tbody>
      

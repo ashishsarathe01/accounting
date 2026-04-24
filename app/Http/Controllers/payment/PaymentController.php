@@ -14,6 +14,9 @@ use App\Models\AccountLedger;
 use App\Models\GstBranch;
 use App\Models\Companies;
 use App\Models\AccountGroups;
+use App\Models\ActivityLog;
+use App\Models\VoucherSeriesConfiguration;
+use App\Helpers\CommonHelper;
 use DB;
 use Session;
 use DateTime;
@@ -25,80 +28,79 @@ class PaymentController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-   public function index(Request $request)
-   {
-    Gate::authorize('action-module', 15);
-    $input = $request->all();
-    $from_date = null;
-    $to_date = null;
-
-    // Date range handling
-    if (!empty($input['from_date']) && !empty($input['to_date'])) {
-        $from_date = date('d-m-Y', strtotime($input['from_date']));
-        $to_date = date('d-m-Y', strtotime($input['to_date']));
-        session(['payment_from_date' => $from_date, 'payment_to_date' => $to_date]);
-    } elseif (session()->has('payment_from_date') && session()->has('payment_to_date')) {
-        $from_date = session('payment_from_date');
-        $to_date = session('payment_to_date');
-    }
-
-    Session::put('redirect_url', '');
-
-    // Financial Year logic
-    $financial_year = Session::get('default_fy');
-    $y = explode("-", $financial_year);
-    $from = DateTime::createFromFormat('y', $y[0])->format('Y');
-    $to = DateTime::createFromFormat('y', $y[1])->format('Y');
-    $month_arr = [
-        $from . '-04', $from . '-05', $from . '-06', $from . '-07',
-        $from . '-08', $from . '-09', $from . '-10', $from . '-11',
-        $from . '-12', $to . '-01', $to . '-02', $to . '-03'
-    ];
-
-    $com_id = Session::get('user_company_id');
-
-    // Base query
-    $query = DB::table('payment_details')
-        ->select(
+   public function index(Request $request){
+      Gate::authorize('action-module', 15);
+      $input = $request->all();
+      $from_date = null;
+      $to_date = null;
+      // If user selected date range
+      if(!empty($input['from_date']) && !empty($input['to_date'])) {
+         $from_date = date('d-m-Y', strtotime($input['from_date']));
+         $to_date = date('d-m-Y', strtotime($input['to_date']));
+         session(['payment_from_date' => $from_date, 'payment_to_date' => $to_date]);
+      }elseif (session()->has('payment_from_date') && session()->has('payment_to_date')) {
+         $from_date = session('payment_from_date');
+         $to_date = session('payment_to_date');
+      }
+      Session::put('redirect_url', '');
+      // Financial Year logic
+      $financial_year = Session::get('default_fy');
+      $y = explode("-", $financial_year);
+      $from = DateTime::createFromFormat('y', $y[0])->format('Y');
+      $to = DateTime::createFromFormat('y', $y[1])->format('Y');
+      $month_arr = [
+         $from . '-04', $from . '-05', $from . '-06', $from . '-07',
+         $from . '-08', $from . '-09', $from . '-10', $from . '-11',
+         $from . '-12', $to . '-01', $to . '-02', $to . '-03'
+      ];
+      $com_id = Session::get('user_company_id');
+      // Start query
+      $query = DB::table('payment_details')
+         ->select(
             'payments.series_no',
             'payments.id as pay_id',
             'payments.date',
             'payments.mode as m',
             'accounts.account_name as acc_name',
             'payment_details.*',
-            'payments.voucher_no'
-        )
-        ->join('payments', 'payment_details.payment_id', '=', 'payments.id')
-        ->join('accounts', 'payment_details.account_name', '=', 'accounts.id')
-        ->where('payment_details.company_id', $com_id)
-        ->where('payments.delete', '0')
-        ->where('payment_details.debit', '!=', '')
-        ->where('payment_details.debit', '!=', '0');
-
-    if ($from_date && $to_date) {
-        $query->whereRaw("
+            'payments.voucher_no',
+            'payments.created_by',
+            'payments.approved_by',
+            'payments.approved_at',
+            'payments.approved_status',
+            'created_user.name as created_by_name',
+            'approved_user.name as approved_by_name'
+         )
+         ->join('payments', 'payment_details.payment_id', '=', 'payments.id')
+         ->join('accounts', 'payment_details.account_name', '=', 'accounts.id')
+         ->leftJoin('users as created_user', 'created_user.id', '=', 'payments.created_by')
+         ->leftJoin('users as approved_user', 'approved_user.id', '=', 'payments.approved_by')
+         ->where('payment_details.company_id', $com_id)
+         ->where('payments.delete', '0')
+         ->where('payment_details.debit', '!=', '')
+         ->where('payment_details.debit', '!=', '0');
+      // Apply date filter if dates are provided
+      if($from_date && $to_date) {
+         $query->whereRaw("
             STR_TO_DATE(payments.date,'%Y-%m-%d') >= STR_TO_DATE('" . date('Y-m-d', strtotime($from_date)) . "','%Y-%m-%d')
             AND STR_TO_DATE(payments.date,'%Y-%m-%d') <= STR_TO_DATE('" . date('Y-m-d', strtotime($to_date)) . "','%Y-%m-%d')
-        ");
-    }
-
-    $query->orderBy('payments.date', 'asc')
-          ->orderBy(DB::raw("CAST(payments.voucher_no AS SIGNED)"), 'asc');
-
-    if (!$from_date && !$to_date) {
-        $query->limit(10);
-    }
-
-    // Get data
-    $payment = $query->get()->values();
-
-    return view('payment/payment')
-        ->with('payment', $payment)
-        ->with('month_arr', $month_arr)
-        ->with('from_date', $from_date)
-        ->with('to_date', $to_date);
+         ");
+         $query->orderBy('payments.date', 'asc')
+              ->orderBy('payments.voucher_no', 'asc');
+      }else{
+         // Show last 10 entries if no date is selected
+         $query->orderBy('payments.date', 'desc')->orderBy(DB::raw("cast(payments.voucher_no as SIGNED)"), 'desc')
+              
+              ->limit(10);
+      }
+      // Fetch data
+      $payment = $query->get()->reverse()->values();
+      return view('payment/payment')
+         ->with('payment', $payment)
+         ->with('month_arr', $month_arr)
+         ->with('from_date', $from_date)
+         ->with('to_date', $to_date);
    }
-
 
     /**
      * Show the specified resources in storage.
@@ -108,6 +110,10 @@ class PaymentController extends Controller
    public function create(){
       Gate::authorize('action-module',82);
       $financial_year = Session::get('default_fy');
+      [$startYY, $endYY] = explode('-', $financial_year);
+
+      $fy_start_date = '20' . $startYY . '-04-01'; 
+      $fy_end_date   = '20' . $endYY   . '-03-31';   
       $com_id = Session::get('user_company_id');
       $party_list = Accounts::where('delete', '=', '0')
                               ->where('status', '=', '1')
@@ -195,13 +201,99 @@ class PaymentController extends Controller
             }
          } 
       }
+      foreach ($mat_series as $key => $value) {
 
+         $series_configuration = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
+            ->where('series', $value->series)
+            ->where('configuration_for', 'PAYMENT') 
+            ->where('status', '1')
+            ->first();
+
+         $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
+         $lastNumber = DB::table('payments')
+            ->where('company_id', Session::get('user_company_id'))
+            ->where('financial_year', $financial_year)
+            ->where('series_no', $value->series)
+            ->where('delete', '0')
+            ->max(DB::raw("cast(voucher_no as SIGNED)"));
+
+         if (!$lastNumber) {
+            if ($series_configuration && $series_configuration->manual_numbering == "NO" && $series_configuration->invoice_start != "") {
+               $next = (int)$series_configuration->invoice_start;
+            } else {
+               $next = 1;
+            }
+         } else {
+            $next = ((int)$lastNumber) + 1;
+         }
+
+         $mat_series[$key]->invoice_start_from = sprintf("%0" . $number_digit . "d", $next);
+
+         $invoice_prefix = "";
+         $manual_enter_invoice_no = "";
+
+         if ($series_configuration) {
+            $manual_enter_invoice_no = ($series_configuration->manual_numbering == "YES") ? "1" : "0";
+         }
+
+         if ($series_configuration && $series_configuration->manual_numbering == "NO") {
+
+            if ($series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
+               $invoice_prefix .= $series_configuration->prefix_value;
+            }
+
+            if ($series_configuration->prefix == "ENABLE" && $series_configuration->separator_1 != "") {
+               $invoice_prefix .= $series_configuration->separator_1;
+            }
+
+            if ($series_configuration->year == "PREFIX TO NUMBER") {
+
+               if ($series_configuration->year_format == "YY-YY") {
+                  $invoice_prefix .= Session::get('default_fy');
+               } else {
+                  $fy = explode('-', Session::get('default_fy'));
+                  $invoice_prefix .= '20' . $fy[0] . '-' . $fy[1];
+               }
+
+               if ($series_configuration->separator_2 != "") {
+                  $invoice_prefix .= $series_configuration->separator_2;
+               }
+            }
+
+            $invoice_prefix .= $mat_series[$key]->invoice_start_from;
+
+            if ($series_configuration->year == "SUFFIX TO NUMBER") {
+
+               if ($series_configuration->separator_2 != "") {
+                  $invoice_prefix .= $series_configuration->separator_2;
+               }
+
+               if ($series_configuration->year_format == "YY-YY") {
+                  $invoice_prefix .= Session::get('default_fy');
+               } else {
+                  $fy = explode('-', Session::get('default_fy'));
+                  $invoice_prefix .= '20' . $fy[0] . '-' . $fy[1];
+               }
+            }
+
+            if ($series_configuration->suffix == "ENABLE" && $series_configuration->separator_3 != "") {
+               $invoice_prefix .= $series_configuration->separator_3;
+            }
+
+            if ($series_configuration->suffix == "ENABLE" && $series_configuration->suffix_value != "") {
+               $invoice_prefix .= $series_configuration->suffix_value;
+            }
+         }
+
+         $mat_series[$key]->invoice_prefix = $invoice_prefix;
+         $mat_series[$key]->manual_enter_invoice_no = $manual_enter_invoice_no;
+      }
       
       // $mat_series = GstBranch::select('branch_series')->where(['delete' => '0', 'company_id' => Session::get('user_company_id')])->get()->toArray();
       // if(!empty($GstSettings->series)) {
       //    $mat_series[] = array("branch_series" => $GstSettings->series);
       // }
-      return view('payment/addPayment')->with('party_list', $party_list)->with('credit_bank_accounts', $credit_bank_accounts)->with('credit_cash_accounts', $credit_cash_accounts)->with('date', $bill_date)->with('mat_series', $mat_series);
+      return view('payment/addPayment')->with('fy_start_date', $fy_start_date)->with('fy_end_date', $fy_end_date)->with('party_list', $party_list)->with('credit_bank_accounts', $credit_bank_accounts)->with('credit_cash_accounts', $credit_cash_accounts)->with('date', $bill_date)->with('mat_series', $mat_series);
    }
    /**
      * Store a newly created resource in storage.
@@ -209,18 +301,46 @@ class PaymentController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
    */
-   public function store(Request $request){      
+   public function store(Request $request){
       Gate::authorize('action-module',82);
       $com_id = Session::get('user_company_id');
-      $financial_year = Session::get('default_fy');
+      $financial_year = CommonHelper::getFinancialYear($request->input('date'));
+      
+      $series_configuration = VoucherSeriesConfiguration::where('company_id', $com_id)
+         ->where('series', $request->input('series_no'))
+         ->where('configuration_for', 'PAYMENT')
+         ->where('status', '1')
+         ->first();
+      $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
+      if ($series_configuration && $series_configuration->manual_numbering == "YES") {
+         $voucher_no = $request->input('voucher_no') ?: $request->input('voucher_prefix');
+      } else {
+         $last_voucher_no = DB::table('payments')
+            ->where('company_id', $com_id)
+            ->where('series_no', $request->input('series_no'))
+            ->where('financial_year', $financial_year)
+            ->where('delete', '0')
+            ->max(DB::raw("cast(voucher_no as SIGNED)"));
+         if (!$last_voucher_no) {
+            if ($series_configuration && $series_configuration->invoice_start != "") {
+               $voucher_no = sprintf("%0" . $number_digit . "d", (int)$series_configuration->invoice_start);
+            } else {
+               $voucher_no = sprintf("%0" . $number_digit . "d", 1);
+            }
+         } else {
+            $voucher_no = sprintf("%0" . $number_digit . "d", ((int)$last_voucher_no + 1));
+         }
+      }
       $payment = new Payment;
       $payment->date = $request->input('date');
-      $payment->voucher_no = $request->input('voucher_no');
+      $payment->voucher_no_prefix = $request->input('voucher_prefix');
+      $payment->voucher_no = $voucher_no;
       $payment->mode = $request->input('mode');
       $payment->series_no = $request->input('series_no');
       $payment->cheque_no = $request->input('cheque_no');
       $payment->long_narration = $request->input('long_narration');
       $payment->company_id = $com_id;
+      $payment->created_by = Session::get('user_id');
       $payment->financial_year = $financial_year;
       $payment->save();
       if($payment->id){
@@ -290,7 +410,7 @@ class PaymentController extends Controller
             $ledger->series_no = $request->input('series_no');
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 5;
             $ledger->entry_type_id = $payment->id;
             $ledger->entry_narration = $value['narration'];
@@ -379,12 +499,118 @@ class PaymentController extends Controller
             }
          }
       }
+      $financial_year = Session::get('default_fy');
+      [$startYY, $endYY] = explode('-', $financial_year);
+
+      $fy_start_date = '20' . $startYY . '-04-01'; 
+      $fy_end_date   = '20' . $endYY   . '-03-31';   
      
       // $mat_series = GstBranch::select('branch_series')->where(['delete' => '0', 'company_id' => Session::get('user_company_id')])->get()->toArray();
       // if(!empty($GstSettings->series)) {
       //    $mat_series[] = array("branch_series" => $GstSettings->series);
       // }
-      return view('payment/editPayment')->with('payment', $payment)->with('party_list', $party_list)->with('payment_detail', $payment_detail)->with('credit_bank_accounts', $credit_bank_accounts)->with('credit_cash_accounts', $credit_cash_accounts)->with('mat_series', $mat_series);
+
+      foreach ($mat_series as $key => $value) {
+
+         $series_configuration = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
+            ->where('series', $value->series)
+            ->where('configuration_for', 'PAYMENT')
+            ->where('status', '1')
+            ->first();
+
+         if ($payment->series_no == $value->series) {
+
+            $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
+            $currentNumber = (int)$payment->voucher_no;
+            $mat_series[$key]->invoice_start_from = sprintf("%0" . $number_digit . "d", $currentNumber);
+
+         } else {
+
+            $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
+            $lastNumber = DB::table('payments')
+               ->where('company_id', Session::get('user_company_id'))
+               ->where('financial_year', $financial_year)
+               ->where('series_no', $value->series)
+               ->where('delete', '0')
+               ->max(DB::raw("cast(voucher_no as SIGNED)"));
+
+            if (!$lastNumber) {
+               if ($series_configuration && $series_configuration->manual_numbering == "NO" && $series_configuration->invoice_start != "") {
+                  $next = (int)$series_configuration->invoice_start;
+               } else {
+                  $next = 1;
+               }
+            } else {
+               $next = ((int)$lastNumber) + 1;
+            }
+
+            $mat_series[$key]->invoice_start_from = sprintf("%0" . $number_digit . "d", $next);
+         }
+
+         $invoice_prefix = "";
+         $manual_enter_invoice_no = "";
+
+         if (!$series_configuration) {
+            $manual_enter_invoice_no = "";
+         } else if ($series_configuration->manual_numbering == "YES") {
+            $manual_enter_invoice_no = "1";
+         } else {
+            $manual_enter_invoice_no = "0";
+         }
+
+         if ($series_configuration && $series_configuration->manual_numbering == "NO") {
+
+            if ($series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
+               $invoice_prefix .= $series_configuration->prefix_value;
+            }
+
+            if ($series_configuration->prefix == "ENABLE" && $series_configuration->separator_1 != "") {
+               $invoice_prefix .= $series_configuration->separator_1;
+            }
+
+            if ($series_configuration->year == "PREFIX TO NUMBER") {
+
+               if ($series_configuration->year_format == "YY-YY") {
+                  $invoice_prefix .= Session::get('default_fy');
+               } else {
+                  $fy = explode('-', Session::get('default_fy'));
+                  $invoice_prefix .= '20' . $fy[0] . '-' . $fy[1];
+               }
+
+               if ($series_configuration->separator_2 != "") {
+                  $invoice_prefix .= $series_configuration->separator_2;
+               }
+            }
+
+            $invoice_prefix .= $mat_series[$key]->invoice_start_from;
+
+            if ($series_configuration->year == "SUFFIX TO NUMBER") {
+
+               if ($series_configuration->separator_2 != "") {
+                  $invoice_prefix .= $series_configuration->separator_2;
+               }
+
+               if ($series_configuration->year_format == "YY-YY") {
+                  $invoice_prefix .= Session::get('default_fy');
+               } else {
+                  $fy = explode('-', Session::get('default_fy'));
+                  $invoice_prefix .= '20' . $fy[0] . '-' . $fy[1];
+               }
+            }
+
+            if ($series_configuration->suffix == "ENABLE" && $series_configuration->separator_3 != "") {
+               $invoice_prefix .= $series_configuration->separator_3;
+            }
+
+            if ($series_configuration->suffix == "ENABLE" && $series_configuration->suffix_value != "") {
+               $invoice_prefix .= $series_configuration->suffix_value;
+            }
+         }
+
+         $mat_series[$key]->invoice_prefix = $invoice_prefix;
+         $mat_series[$key]->manual_enter_invoice_no = $manual_enter_invoice_no;
+      }
+      return view('payment/editPayment')->with('fy_start_date', $fy_start_date)->with('fy_end_date', $fy_end_date)->with('payment', $payment)->with('party_list', $party_list)->with('payment_detail', $payment_detail)->with('credit_bank_accounts', $credit_bank_accounts)->with('credit_cash_accounts', $credit_cash_accounts)->with('mat_series', $mat_series);
    }
     /**
      * Update the specified resource in storage.
@@ -405,12 +631,49 @@ class PaymentController extends Controller
          return response()->json($validator->errors(), 422);
       }
       $payment =  Payment::find($request->payment_id);
+      $oldSnapshot = [
+         'payment' => $payment->toArray(),
+         'details' => PaymentDetails::where('payment_id', $payment->id)
+                        ->where('delete', '0')
+                        ->get()
+                        ->toArray(),
+      ];
+      $financial_year = CommonHelper::getFinancialYear($request->input('date'));
       $payment->date = $request->input('date');
-      $payment->voucher_no = $request->input('voucher_no');
+      $payment->voucher_no_prefix = $request->input('voucher_prefix');
+      $series_changed = ($payment->series_no != $request->input('series_no'));
+      $series_configuration = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
+         ->where('series', $request->input('series_no'))
+         ->where('configuration_for', 'PAYMENT')
+         ->where('status', '1')
+         ->first();
+      $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
+      $voucher_no = $payment->voucher_no;
+      if ($series_configuration && $series_configuration->manual_numbering == "YES") {
+         $voucher_no = $request->input('voucher_no') ?: $request->input('voucher_prefix');
+      } elseif ($series_changed) {
+         $last_voucher_no = DB::table('payments')
+            ->where('company_id', Session::get('user_company_id'))
+            ->where('series_no', $request->input('series_no'))
+            ->where('financial_year', $financial_year)
+            ->where('delete', '0')
+            ->max(DB::raw("cast(voucher_no as SIGNED)"));
+         if (!$last_voucher_no) {
+            if ($series_configuration && $series_configuration->invoice_start != "") {
+               $voucher_no = sprintf("%0" . $number_digit . "d", (int)$series_configuration->invoice_start);
+            } else {
+               $voucher_no = sprintf("%0" . $number_digit . "d", 1);
+            }
+         } else {
+            $voucher_no = sprintf("%0" . $number_digit . "d", ((int)$last_voucher_no + 1));
+         }
+      }
+      $payment->voucher_no = $voucher_no;
       $payment->mode = $request->input('mode');
       $payment->cheque_no = $request->input('cheque_no');
       $payment->series_no = $request->input('series_no');
       $payment->long_narration = $request->input('long_narration');
+      $payment->updated_by = Session::get('user_id');
       $payment->save();
       $payment_detail = PaymentDetails::where('payment_id', '=', $request->payment_id)->delete();
       AccountLedger::where('entry_type',5)
@@ -482,7 +745,7 @@ class PaymentController extends Controller
          $ledger->series_no = $request->input('series_no');
          $ledger->txn_date = $request->input('date');
          $ledger->company_id = Session::get('user_company_id');
-         $ledger->financial_year = Session::get('default_fy');
+         $ledger->financial_year = $financial_year;
          $ledger->entry_type = 5;
          $ledger->entry_type_id = $payment->id;
          $ledger->entry_narration = $value['narration'];
@@ -491,6 +754,24 @@ class PaymentController extends Controller
          $ledger->created_at = date('d-m-Y H:i:s');
          $ledger->save();
       }
+      $newSnapshot = [
+         'payment' => Payment::find($payment->id)->toArray(),
+         'details' => PaymentDetails::where('payment_id', $payment->id)
+                        ->where('delete', '0')
+                        ->get()
+                        ->toArray(),
+      ];
+
+      ActivityLog::create([
+         'module_type' => 'payment',
+         'module_id'   => $payment->id,
+         'action'      => 'edit',
+         'old_data'    => $oldSnapshot,
+         'new_data'    => $newSnapshot,
+         'action_by'   => Session::get('user_id'),
+         'company_id'  => Session::get('user_company_id'),
+         'action_at'   => now(),
+      ]);
       if(!empty(Session::get('redirect_url'))){
          return redirect(Session::get('redirect_url'));
       }else{
@@ -507,6 +788,13 @@ class PaymentController extends Controller
    public function delete(Request $request){
       Gate::authorize('action-module',56);
       $payment =  Payment::find($request->payment_id);
+      $oldSnapshot = [
+         'payment' => $payment->toArray(),
+         'details' => PaymentDetails::where('payment_id', $payment->id)
+                        ->where('delete', '0')
+                        ->get()
+                        ->toArray(),
+      ];
       $payment->delete = '1';
       $payment->deleted_at = Carbon::now();
       $payment->deleted_by = Session::get('user_id');
@@ -517,6 +805,16 @@ class PaymentController extends Controller
          AccountLedger::where('entry_type',5)
                         ->where('entry_type_id',$request->payment_id)
                         ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
+                        ActivityLog::create([
+                           'module_type' => 'payment',
+                           'module_id'   => $payment->id,
+                           'action'      => 'delete',
+                           'old_data'    => $oldSnapshot,
+                           'new_data'    => null,
+                           'action_by'   => Session::get('user_id'),
+                           'company_id'  => Session::get('user_company_id'),
+                           'action_at'   => now(),
+                        ]);
          return redirect('payment')->withSuccess('Payment deleted successfully!');
       }
    }
@@ -846,4 +1144,143 @@ class PaymentController extends Controller
       return json_encode($res);
       
    }
+   public function exportPaymentView()
+   {
+      return view('payment.export_payment');
+   }
+
+
+
+  public function exportPayment(Request $request)
+{
+    $request->validate([
+        'from_date' => 'required|date',
+        'to_date'   => 'required|date',
+    ]);
+
+    $exportType = $request->export_type;
+
+    $company_id = Session::get('user_company_id');
+    $from = $request->from_date;
+    $to   = $request->to_date;
+
+    $payments = DB::table('payments')
+        ->where('company_id', $company_id)
+        ->where('delete', '0')
+        ->whereBetween('date', [$from, $to])
+        ->orderBy('date', 'asc')
+        ->get();
+
+    $filename = "payment_export_{$from}_to_{$to}.csv";
+
+    $headers = [
+        'Content-Type' => 'text/csv; charset=UTF-8',
+        'Content-Disposition' => "attachment; filename=\"$filename\"",
+    ];
+
+    $callback = function() use ($payments, $company_id, $exportType) {
+
+        $out = fopen('php://output', 'w');
+
+        // ✅ HEADER
+        if ($exportType == 'old') {
+            fputcsv($out, [
+                'Series',
+                'Voucher No',
+                'Date',
+                'Party Name',
+                'Party Alias',
+                'Amount DR',
+                'Amount CR',
+                'Bank'
+            ]);
+        } else {
+            fputcsv($out, [
+                'vch_series',
+                'vch/bill_date',
+                'vch/bill_no',
+                'party_name',
+                'acc_alias',
+                'amount_dr',
+                'payment/receipt_mode',
+                'long_narration1'
+            ]);
+        }
+
+        foreach ($payments as $p) {
+
+            $details = DB::table('payment_details')
+                ->where('payment_id', $p->id)
+                ->where('company_id', $company_id)
+                ->where('delete', '0')
+                ->get();
+
+            if ($details->isEmpty()) continue;
+
+            // ✅ GET BANK FROM CREDIT ENTRY
+            $creditRow = $details->firstWhere('type', 'Credit');
+
+            $bankName = "";
+            if ($creditRow) {
+                $bankAcc = DB::table('accounts')
+                    ->where('id', $creditRow->account_name)
+                    ->first();
+
+                $bankName = $bankAcc->account_name ?? "";
+            }
+
+            // ================= OLD EXPORT =================
+            if ($exportType == 'old') {
+
+                foreach ($details as $d) {
+
+                    $acc = DB::table('accounts')
+                        ->where('id', $d->account_name)
+                        ->first();
+
+                    fputcsv($out, [
+                        $p->series_no,
+                        $p->voucher_no,
+                        "'" . $p->date,
+                        $acc->account_name ?? '',
+                        $acc->id ?? '',
+                        $d->debit,
+                        $d->credit,
+                        $bankName
+                    ]);
+                }
+
+            }
+
+            // ================= NEW EXPORT (FIXED) =================
+            else {
+
+                // ✅ ONLY DEBIT ENTRIES (NO CREDIT ROW)
+                foreach ($details->where('type', 'Debit') as $d) {
+
+                    $acc = DB::table('accounts')
+                        ->where('id', $d->account_name)
+                        ->first();
+
+                    fputcsv($out, [
+                        $p->series_no,
+                        date('Y-m-d', strtotime($p->date)), // better format
+                        $p->voucher_no,
+                        $acc->account_name ?? '',          // party name
+                        "",
+                        $d->debit,
+                        $bankName,                         // 🔥 bank repeated in every row
+                        $d->narration ?? ''
+                    ]);
+                }
+            }
+        }
+
+        fclose($out);
+    };
+
+    return response()->stream($callback, 200, $headers);
+}
+
+
 }

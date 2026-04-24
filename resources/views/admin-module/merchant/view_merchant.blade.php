@@ -79,6 +79,8 @@
                                        <!-- <li><a class="dropdown-item" href="#">EDIT</a></li> -->
                                        <li><a class="dropdown-item merchant_login" href="javascript:void(0)" data-id="{{$merchant->id}}">LOGIN</a></li>
                                        <li><a class="dropdown-item" href="{{route('admin.merchant-module-permission')}}/{{$merchant->id}}">Modules Permission</a></li>
+                                       <li> <a class="dropdown-item" href="{{ route('admin.merchant-module-privileges', $merchant->id) }}"> Module Privileges</a></li>
+                                       <li> <a class="dropdown-item" href="{{ url('admin/merchant/backup/list', $merchant->id) }}"> Database Backup</a></li>
                                     </ul>
                                  </div>
                               </div>
@@ -99,9 +101,9 @@
 </body>
 @include('layouts.footer')
 <script>
-   $(document).ready(function() {
-      $(".merchant_login").click(function(){
-         let id = $(this).attr('data-id');
+   
+   $(document).on('click','.merchant_login',function(){
+       let id = $(this).attr('data-id');
          var _token = '<?php echo csrf_token(); ?>';
          $.ajax({
             url:"{{ url('admin/login-merchant') }}",
@@ -117,7 +119,6 @@
                }
             }
          });
-      });        
-   });
+   })
 </script>
 @endsection

@@ -1,20 +1,31 @@
 @extends('layouts.app')
 @section('content')
 @include('layouts.header')
+<style>
+   /* ===== Sticky Header for Account Ledger ===== */
+
+.table-scroll-wrapper {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+#acc_table1 thead th {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #f8f9fa; /* matches bg-light-pink theme */
+}
+</style>
 <div class="list-of-view-company ">
    <section class="list-of-view-company-section container-fluid">
       <div class="row vh-100">
          @include('layouts.leftnav')
          <!-- view-table-Content -->
          <div class="col-md-12 ml-sm-auto  col-lg-10 px-md-4 bg-mint">
-           @if(session('error'))
-                     <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        {{ session('error') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                     </div>
-                  @endif
-   
-                  @if(session('success'))
+            @if(session('error'))
+               <div class="alert alert-danger" role="alert"> {{session('error')}}</div>
+            @endif
+            @if(session('success'))
                <div class="alert alert-success" role="alert">
                   {{ session('success') }}
                </div>
@@ -67,23 +78,37 @@
    </h5>
    
    @if(request()->get('party'))
-   <form method="GET" action="{{ route('ledger.export.pdf') }}" target="_blank">
-      <input type="hidden" name="party" value="{{ request()->get('party') }}">
-      <input type="hidden" name="from_date" value="{{ request()->get('from_date') }}">
-      <input type="hidden" name="to_date" value="{{ request()->get('to_date') }}">
-      <button type="submit" class="btn btn-sm btn-success">Download PDF</button>
-   </form>
+   <div class="d-flex gap-2">
+       <form method="GET" action="{{ route('ledger.export.pdf') }}" target="_blank">
+          <input type="hidden" name="party" value="{{ request()->get('party') }}">
+          <input type="hidden" name="from_date" value="{{ request()->get('from_date') }}">
+          <input type="hidden" name="to_date" value="{{ request()->get('to_date') }}">
+          <button type="submit" class="btn btn-sm btn-success">Download PDF</button>
+       </form>
+        <form method="GET" action="{{ route('ledger.export.csv') }}">
+         <input type="hidden" name="party" value="{{ request()->get('party') }}">
+         <input type="hidden" name="from_date" value="{{ request()->get('from_date') }}">
+         <input type="hidden" name="to_date" value="{{ request()->get('to_date') }}">
+         <button type="submit" class="btn btn-sm btn-primary">Download CSV</button>
+      </form>
+      </div>
    @endif
 </div>
 
               <span class="ms-auto font-14 fw-bold font-heading">
-  Opening Bal. : {{ formatIndianNumber(abs((float)str_replace(',', '', $opening))) }} @if($opening < 0) CR @else DR @endif
+ @php
+    $open = abs((float)str_replace(',', '', $opening));
+    $open = round($open, 2);
+@endphp
+
+Opening Bal. : {{ formatIndianNumber($open) }} @if($opening < 0) CR @else DR @endif
+
 
 
 </span>
 
             </div>
-            <div class="display-sale-month  bg-white table-view shadow-sm">
+            <div class="display-sale-month bg-white table-view shadow-sm table-scroll-wrapper">
                <table id="acc_table1" class="table-striped table-bordered table m-0 shadow-sm ">
                   <thead>
                      <tr class=" font-12 text-body bg-light-pink ">
@@ -95,6 +120,13 @@
                         <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Credit(Rs.)</th>
                         <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Balance(Rs.)</th>
                         <th class="w-min-100 border-none bg-light-pink text-body" style="text-align: right;">Short Narration</th>
+                         @php
+                            $isSpecialParty = $configuration->purchase_order_info_show_in_ledger;
+                        @endphp
+                        @if($isSpecialParty)
+                            <th>PO Number</th>
+                            <th>Location</th>
+                        @endif
                      </tr>
                   </thead>
                   <tbody>
@@ -137,7 +169,7 @@
                               }
                               ?>
                            </td>
-                           <td class="w-min-120 " style="text-align: center;"><?php echo $value['bill_no'];?></td>
+                           <td class="w-min-120 " style="text-align: center;"><?php echo $value['bill_no'];?>@if($value['slip_no'])  ({{$value['slip_no']}}) @endif @if($value['invoice_no'])  ({{$value['invoice_no']}}) @endif</td>
                            <td class="w-min-120 ">
                               <?php                               
                               echo $value['account'];
@@ -190,11 +222,22 @@
                                  }
                               ?>
                            </td>
+                           @if($isSpecialParty)
+                            <td class="w-min-120 border-none bg-light-pink text-body">
+                                {{ $value['po_no'] ?? '' }}
+                            </td>
+                        @endif
+                        
+                        @if($isSpecialParty)
+                            <td class="w-min-120 border-none bg-light-pink text-body">
+                                {{ $value['location'] ?? '' }}
+                            </td>
+                        @endif
                         </tr>
                         <?php 
                         if (!empty($value['long_narration'])) { ?>
                            <tr class="font-12 text-muted bg-light">
-                              <td colspan="8" class="ps-4 py-2 " style="text-align:center;">
+                              <td colspan="4" class="ps-4 py-2 " style="text-align:left;">
                                  <strong>Long Narration:</strong> <?php echo $value['long_narration']; ?>
                               </td>
                            </tr>
@@ -224,9 +267,11 @@
                         <td class="text-end " colspan="7" style="text-align: right;">
                            Closing Bal. : <?php 
                            if($tot_blance<0){
+                               $tot_blance = round($tot_blance, 2);
                               echo formatIndianNumber(abs((float) str_replace(',', '', $tot_blance))) . ' Cr';
                                
                            }else{
+                               $tot_blance = round($tot_blance, 2);
                                echo formatIndianNumber((float) str_replace(',', '', $tot_blance)) . ' Dr';                         
                            }?>
                         </td>
@@ -285,6 +330,8 @@
                      window.location = "journal/"+id+"/edit";
                   }else if(type==8){
                      window.location = "contra/"+id+"/edit";
+                  }else if(type==13){
+                     window.location = "purchase-return-without-item-invoice/"+id;
                   } 
                }
             });       
@@ -300,5 +347,62 @@
       }
    }
    $( ".select2-single, .select2-multiple" ).select2(  );
+   
+   
+   $(document).ready(function(){
+
+    function checkPartyGroup(party_id){
+
+        if(party_id == '') return;
+
+        $.ajax({
+            url: "{{ url('/check-party-group') }}",
+            type: "POST",
+            dataType: "json", // ✅ IMPORTANT
+            data: {
+                _token: "{{ csrf_token() }}",
+                party_id: party_id
+            },
+            success: function(res){
+
+                console.log(res); // ✅ debug
+
+                if(res.status && res.isSpecialGroup){
+
+                    // ✅ REMOVE restriction
+                    $("#from_date").removeAttr("min").removeAttr("max");
+                    $("#to_date").removeAttr("min").removeAttr("max");
+
+                } else {
+
+                    // ✅ APPLY restriction
+                    $("#from_date")
+                        .attr("min", "{{ Session::get('from_date') }}")
+                        .attr("max", "{{ Session::get('to_date') }}");
+
+                    $("#to_date")
+                        .attr("min", "{{ Session::get('from_date') }}")
+                        .attr("max", "{{ Session::get('to_date') }}");
+                }
+            },
+            error: function(xhr){
+                console.log("AJAX ERROR:", xhr.responseText); // ✅ DEBUG
+            }
+        });
+    }
+
+    // ✅ On change
+    $("#party").on('change', function(){
+        let party_id = $(this).val();
+        checkPartyGroup(party_id);
+    });
+
+    // ✅ IMPORTANT: On page load (already selected party)
+    let initialParty = $("#party").val();
+    if(initialParty){
+        checkPartyGroup(initialParty);
+    }
+
+});
 </script>
 @endsection

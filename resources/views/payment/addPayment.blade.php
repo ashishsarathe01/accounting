@@ -78,10 +78,7 @@
                      <label for="date" class="form-label font-14 font-heading">Date</label>
                      <input type="date" id="date" class="form-control calender-bg-icon calender-placeholder" name="date" placeholder="Select date" autofocus required value="{{$date}}" min="{{Session::get('from_date')}}" max="{{Session::get('to_date')}}">
                   </div>
-                  <div class="mb-2 col-md-2">
-                     <label for="voucher_no" class="form-label font-14 font-heading">Voucher No.</label>
-                     <input type="text" id="voucher_no" class="form-control" name="voucher_no" placeholder="Voucher No.">
-                  </div>
+                  
                   <div class="mb-2 col-md-2">
                      <label for="series_no" class="form-label font-14 font-heading">Series No.</label>
                      <select id="series_no" class="form-control select2-single" name="series_no">
@@ -89,11 +86,23 @@
                         <?php
                         if(count($mat_series) > 0) {
                            foreach ($mat_series as $value) { ?>
-                              <option value="<?php echo $value->series; ?>" <?php if(count($mat_series)==1) { echo "selected";} ?>><?php echo $value->series; ?></option>
+                              <option value="<?php echo $value->series; ?>"
+                                 data-invoice_start_from="<?php echo $value->invoice_start_from ?? ''; ?>"
+                                 data-invoice_prefix="<?php echo $value->invoice_prefix ?? ''; ?>"
+                                 data-manual_enter_invoice_no="<?php echo $value->manual_enter_invoice_no ?? ''; ?>"
+                              >
+                                 <?php echo $value->series; ?>
+                              </option>
                               <?php 
                            }
                         } ?>
                      </select>
+                  </div>
+                  <div class="mb-2 col-md-2">
+                     <label for="voucher_no" class="form-label font-14 font-heading">Voucher No.</label>
+                     <input type="text" class="form-control" id="voucher_prefix" name="voucher_prefix" style="text-align:right;">
+                     <input type="hidden" id="voucher_no" name="voucher_no">
+                     <input type="hidden" id="manual_enter_invoice_no" name="manual_enter_invoice_no">
                   </div>
                   <div class="mb-2 col-md-2 ">
                      <label for="mode" class="form-label font-14 font-heading">Mode</label>
@@ -190,7 +199,7 @@
                      <div class="plus-icon">
                         <tr class="font-14 font-heading bg-white">
                            <td class="w-min-120 " colspan="7">
-                              <a class="add_more"><svg xmlns="http://www.w3.org/2000/svg" tabindex="0"class="bg-primary rounded-circle" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;">
+                              <a class="add_more" tabindex="0"><svg xmlns="http://www.w3.org/2000/svg" tabindex="0"class="bg-primary rounded-circle" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;">
                                  <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" />
                               </svg></a>
                            </td>
@@ -298,14 +307,19 @@ $(".add_more").click(function () {
         <td><input type="number" name="credit[]" class="form-control credit" data-id="${add_more_count}" id="credit_${add_more_count}" placeholder="Credit Amount" readonly onkeyup="creditTotal();"></td>
         <td><input type="text" name="narration[]" class="form-control narration" data-id="${add_more_count}" id="narration_${add_more_count}" placeholder="Enter Narration"></td>
         <td>
-            <svg style="color: red; cursor: pointer;" xmlns="http://www.w3.org/2000/svg" tabindex width="24" height="24" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="${add_more_count}" viewBox="0 0 24 24">
+            <svg style="color: red; cursor: pointer;" xmlns="http://www.w3.org/2000/svg" tabindex="0" width="24" height="24" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="${add_more_count}" viewBox="0 0 24 24">
                 <path d="M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/>
             </svg>
         </td>
     </tr>`;
 
     $curRow.before(newRow);
-    $('.select2-single').select2();
+$('.select2-single').select2();
+
+// ⭐ move focus to the new row Type dropdown
+setTimeout(function(){
+    $("#type_" + add_more_count).focus();
+},100);
 
     // Add change event handler for new Type dropdown
     $(`#type_${add_more_count}`).change(function () {
@@ -619,7 +633,11 @@ $(document).ready(function () {
 
     // If first time OR same value OR any selection, move focus
     if (!previousValue || selectedValue === previousValue) {
-      $(`#debit_${id}`).focus(); // focus on the corresponding account select
+      if(!$("#debit_"+id).prop("readonly")){
+   $("#debit_"+id).focus();
+}else{
+   $("#credit_"+id).focus();
+}
     }
 
     // Update previous value
@@ -627,18 +645,18 @@ $(document).ready(function () {
   });
 });
 
-    $(".add_more").on('keydown', function(event) {
-      if (event.key === "Enter") {
-        event.preventDefault(); // prevent default behavior
-        $(this).click(); // trigger click event (which submits)
-      }
-    });
-      $(".remove").on('keydown', function(event) {
-      if (event.key === "Enter") {
-        event.preventDefault(); // prevent default behavior
-        $(this).click(); // trigger click event (which submits)
-      }
-    });
+   $(document).on('keydown', '.add_more', function(event) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    $(this).click();
+  }
+});
+$(document).on('keydown', '.remove', function(event) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    $(this).click();
+  }
+});
     const submitBtn = document.querySelector('.submit_data');
 
 // Function to change color
@@ -666,5 +684,79 @@ submitBtn.addEventListener('blur', resetColor);
         $(this).click(); // trigger click event (which submits)
       }
     });
+// Narration → focus remove button
+$(document).on("keydown", ".narration", function(e){
+
+    if(e.key === "Tab" && !e.shiftKey){
+
+        let id = $(this).data("id");
+
+        let removeBtn = $("#tr_"+id).find(".remove");
+
+        if(removeBtn.length){
+            e.preventDefault();
+            removeBtn.focus();
+        }
+
+    }
+
+});
+// Remove → focus +
+$(document).on("keydown", ".remove", function(e){
+
+    if(e.key === "Tab" && !e.shiftKey){
+        e.preventDefault();
+        $(".add_more").focus();
+    }
+
+});
+    // 🔒 Prevent Enter from moving to next field
+$(document).on("keydown", "input, textarea", function(e) {
+
+    if (e.key === "Enter") {
+
+        // Allow Enter for action buttons
+        if ($(e.target).closest(".add_more, .remove, .submit_data").length) {
+            return;
+        }
+
+        // Allow Select2 search typing
+        if ($(this).hasClass("select2-search__field")) {
+            return;
+        }
+
+        e.preventDefault();
+        return false;
+    }
+
+});
+$(document).ready(function(){
+
+    $('#series_no').change(function(){
+
+        let selected = $(this).find(':selected');
+
+        let prefix = selected.data('invoice_prefix') ?? '';
+        let start = selected.data('invoice_start_from') ?? '';
+        let manual = selected.attr('data-manual_enter_invoice_no');
+         $('#voucher_prefix').val(prefix);
+         $('#voucher_no').val(start);
+               $('#manual_enter_invoice_no').val(manual ?? '');
+
+        if(manual === undefined || manual === null || manual === ''){
+            $('#voucher_prefix').prop('readonly', false);
+         }
+         else if(manual == '1'){
+            $('#voucher_prefix').prop('readonly', false);
+         }
+         else if(manual == '0'){
+            $('#voucher_prefix').prop('readonly', true);
+         }
+
+    });
+
+    $('#series_no').trigger('change');
+
+});
 </script>
 @endsection

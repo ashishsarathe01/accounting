@@ -54,7 +54,6 @@
 
                 <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('sale-order.store')}}" id="saleOrderForm">
                     @csrf
-
                     <div class="row mb-3">
                         <div class="col-md-3">
                             <label for="bill_to" class="form-label font-14 font-heading">Bill To *</label>
@@ -64,7 +63,15 @@
                                     <option value="{{$party->id}}" data-state_code="{{$party->state_code}}" data-gstin="{{$party->gstin}}" data-id="{{$party->id}}" data-address="{{$party->address}}, {{$party->pin_code}}" data-other_address="{{$party->otherAddress}}">{{$party->account_name}}</option>
                                 @endforeach
                             </select>
-                            <p id="bill_to_address" style="font-size: 10px;"></p>
+                            <p id="bill_to_address" style="font-size: 13px;"></p>
+                        </div>
+                        <div class="mb-4 col-md-7 bill_to_other_address_div" style="display: none;">
+                            <label for="bill_to_other_address" class="form-label font-14 font-heading">Bill Address</label><br>
+                            <select class="form-select" name="bill_to_other_address" id="bill_to_other_address">
+                            </select>
+                            <ul style="color: red;">
+                                @error('bill_to_other_address'){{$message}}@enderror                        
+                            </ul>
                         </div>
                         <div class="col-md-3">
                             <label for="ship_to" class="form-label font-14 font-heading">Ship To *</label>
@@ -74,7 +81,15 @@
                                     <option value="{{$party->id}}" data-state_code="{{$party->state_code}}" data-gstin="{{$party->gstin}}" data-id="{{$party->id}}" data-address="{{$party->address}}, {{$party->pin_code}}" data-other_address="{{$party->otherAddress}}">{{$party->account_name}}</option>
                                 @endforeach
                             </select>
-                            <p id="shipp_to_address" style="font-size: 10px;"></p>
+                            <p id="shipp_to_address" style="font-size: 13px;"></p>
+                        </div>
+                        <div class="mb-4 col-md-7 shipp_to_other_address_div" style="display: none;">
+                            <label for="shipp_to_other_address" class="form-label font-14 font-heading">Bill Address</label><br>
+                            <select class="form-select" name="shipp_to_other_address" id="shipp_to_other_address">
+                            </select>
+                            <ul style="color: red;">
+                                @error('shipp_to_other_address'){{$message}}@enderror                        
+                            </ul>
                         </div>
                         <div class="mb-3 col-md-3">
                             <label for="deal" class="form-label font-14 font-heading">Deal</label>
@@ -115,7 +130,7 @@
                             <div class="row">
                                 <div class="col-md-3 mb-3">
                                     <label class="form-label font-14 font-heading">Item *</label>
-                                    <select name="items[1][item_id]" class="form-select select2-single" required>
+                                    <select name="items[1][item_id]" class="form-select select2-single item-select" data-index="1" required id="item_select_1">
                                         <option value="">Select Item</option>
                                         @if(isset($groups))
                                             @foreach($groups as $group)
@@ -263,7 +278,10 @@ $(document).ready(function() {
         newSection.find(".bill_price").attr("id","bill_price_"+itemIndex);
         newSection.find("#unit_1").attr("data-id",itemIndex);
         newSection.find("#sub_unit_1").attr("data-id",itemIndex);
+        newSection.find("#item_select_1").attr("data-index",itemIndex);
+         newSection.find("#item_select_1").attr("id","item_select_"+itemIndex);
         newSection.find("#unit_1").attr("id","unit_"+itemIndex);
+        newSection.find("#price_1").attr("id","price_"+itemIndex);
         newSection.find("#sub_unit_1").attr("id","sub_unit_"+itemIndex);
 
         
@@ -446,6 +464,27 @@ $(document).ready(function() {
         var address = selectedOption.data('address');
         var fullAddress = address;        
         $("#shipp_to_address").text(fullAddress);
+        let otherAddressAttr = $('option:selected', this).attr('data-other_address');
+        let other_address = [];
+        if (otherAddressAttr && otherAddressAttr !== "undefined") {
+            try {
+                other_address = JSON.parse(otherAddressAttr);
+            } catch (e) {
+                console.warn("Invalid other_address JSON", otherAddressAttr);
+                other_address = [];
+            }
+        }
+        $(".shipp_to_other_address_div").hide();
+        $("#shipp_to_other_address").html('');
+        if(other_address!=null && other_address.length>0){
+            address_html = "<option value=''>"+$('option:selected', this).attr('data-address')+"</option>";
+            other_address.forEach(function(e){
+                address_html += "<option value='"+e.id+"' data-address='"+e.address+"' data-pincode='"+e.pincode+"' data-location='"+e.location+"'>"+e.address+" ("+e.pincode+")</option>";
+            });
+            $("#shipp_to_other_address").html(address_html);
+            $(".shipp_to_other_address_div").show();
+        }
+
     });
     
 });
@@ -506,6 +545,12 @@ function approxCalculation(item_id,gsm_id){
     }else{
         for(let i=0;i<reelArr.length;i++){
             if(reelArr[i]!=""){
+                let in_inch = sizeArr[i];
+                if($("#sub_unit_"+item_id).val()=="CM"){
+                    in_inch = sizeArr[i]/ 2.54;
+                }else if($("#sub_unit_"+item_id).val()=="MM"){
+                    in_inch = sizeArr[i]/ 25.4;
+                }
                 approx_qty = approx_qty + reelArr[i]/(sizeArr[i] * kg_per_inch);
             }
         }
@@ -602,7 +647,7 @@ $('#saleOrderForm').on('submit', function(e) {
 
 $(document).ready(function() {
 
-    // 🔹 When user selects "Bill To"
+    // ðŸ”¹ When user selects "Bill To"
     $('#bill_to').on('change', function() {
         var party_id = $(this).val();
         $('#deal').html('<option value="">Loading deals...</option>');
@@ -631,8 +676,8 @@ $(document).ready(function() {
         }
     });
 
-    // 🔹 When user selects "Deal"
-    $('#deal').on('change', function() {
+    // ðŸ”¹ When user selects "Deal"
+     $('#deal').on('change', function() {
         var deal_id = $(this).val();
         if (deal_id) {
             $.ajax({
@@ -663,28 +708,52 @@ $(document).ready(function() {
                         }
 
                         // Reset price input
-                        priceInput.val('');
+                        priceInput.val('').attr('readonly', true);
                     });
                 }
             });
-        } else {
-            $('#freight').val('');
-            $('#items_container .item-section').each(function() {
-                var itemSelect = $(this).find("select[name*='[item_id]']");
-                var priceInput = $(this).find("input[name*='[price]']");
-                itemSelect.html('<option value="">Select Item</option>');
-                priceInput.val('');
-            });
-        }
+        }else {
+                    $('#freight').val('');
+                    $('#items_container .item-section').each(function() {
+                        var itemSelect = $(this).find("select[name*='[item_id]']");
+                        var priceInput = $(this).find("input[name*='[price]']");
+
+                        // Reset price
+                        priceInput.val('').attr('readonly', false);
+
+                        // 🔹 Restore default dropdown list (from Blade template)
+                        var defaultOptions = `
+                            <option value="">Select Item</option>
+                            @if(isset($groups))
+                                @foreach($groups as $group)
+                                    @if($group->items->count() > 0)
+                                        <optgroup label="{{ $group->name }}">
+                                            @foreach($group->items as $item)
+                                                <option value="{{ $item->id }}">{{ $item->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                @endforeach
+                            @endif
+                        `;
+
+                        itemSelect.html(defaultOptions);
+                          priceInput.val('').attr('readonly', false);
+                    });
+                   
+                }
+
     });
 
     // 🔹 Auto-fill price when item is selected (works for dynamically added items)
     $(document).on('change', "select[name*='[item_id]']", function() {
         var rate = $(this).find(':selected').data('rate') || '';
         var row = $(this).closest('.item-section');
-        row.find("input[name*='[price]']").val(rate);
+         var priceInput = row.find("input[name*='[price]']");
+    priceInput.val(rate);
     });
-    $(document).on('input', '.size', function() {
+    
+    $(document).on('change', '.size', function() {
         let currentInput = $(this);
         let currentVal = currentInput.val().trim();
 
@@ -713,7 +782,89 @@ $(document).ready(function() {
 
 });
 
+// function fetchPrice(index) {
 
+//     let bill_to = $("#bill_to").val();
+//     let item_id = $(`select[data-index='${index}']`).val();
 
+//     if (!bill_to || !item_id) {
+//         $(`#price_${index}`).val('');
+//         return;
+//     }
+
+//     $.ajax({
+//         url: "{{url('get-item-priceSO')}}",
+//         method: "GET",
+//         data: {
+//             bill_to: bill_to,
+//             item_id: item_id
+//         },
+//         success: function(res) {
+//             $(`#price_${index}`).val(res.price ?? '');
+//         }
+//     });
+// }
+
+// $(document).on("change", ".item-select", function () {
+//     let index = $(this).data("index");
+//     fetchPrice(index);
+// });
+
+// $("#bill_to").on("change", function () {
+//     $(".item-select").each(function () {
+//         let index = $(this).data("index");
+//         fetchPrice(index);
+//     });
+// });
+
+$(document).on('change', '#bill_to', function () {
+    let selectedVal = $(this).val(); // get selected bill_to id
+    let selectedOption = $(this).find('option:selected');
+    // Auto-select Ship To
+    $('#ship_to').val(selectedVal).trigger('change');
+    // Also update Ship To address
+    let shipAddress = selectedOption.data('address');
+    $('#shipp_to_address').text(shipAddress);
+    let otherAddressAttr = $('option:selected', this).attr('data-other_address');
+    let other_address = [];
+    if (otherAddressAttr && otherAddressAttr !== "undefined") {
+        try {
+            other_address = JSON.parse(otherAddressAttr);
+        } catch (e) {
+            console.warn("Invalid other_address JSON", otherAddressAttr);
+            other_address = [];
+        }
+    }
+    $(".bill_to_other_address_div").hide();
+    $("#bill_to_other_address").html('');
+    if(other_address!=null && other_address.length>0){
+        address_html = "<option value=''>"+$('option:selected', this).attr('data-address')+"</option>";
+        other_address.forEach(function(e){
+            address_html += "<option value='"+e.id+"' data-address='"+e.address+"' data-pincode='"+e.pincode+"' data-location='"+e.location+"'>"+e.address+" ("+e.pincode+")</option>";
+        });
+        $("#bill_to_other_address").html(address_html);
+        $(".bill_to_other_address_div").show();
+    }
+});
+$("#bill_to_other_address").change(function(){
+    if($(this).val()!=""){
+        let address = $('option:selected', this).attr('data-address');
+        let pincode = $('option:selected', this).attr('data-pincode');
+        let location = $('option:selected', this).attr('data-location');
+        $("#bill_to_address").html(address+","+pincode);
+    }else{
+        $("#bill_to_address").html($('option:selected', '#bill_to').attr('data-address'));
+    }
+});
+$("#shipp_to_other_address").change(function(){
+    if($(this).val()!=""){
+        let address = $('option:selected', this).attr('data-address');
+        let pincode = $('option:selected', this).attr('data-pincode');
+        let location = $('option:selected', this).attr('data-location');
+        $("#shipp_to_address").html(address+","+pincode);
+    }else{
+        $("#shipp_to_address").html($('option:selected', '#bill_to').attr('data-address'));
+    }
+});
 </script>
 @endsection

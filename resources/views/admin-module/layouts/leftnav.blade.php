@@ -8,6 +8,12 @@
                <a class="nav-link text-white fw-500 font-14 ms-2 p-0" href="{{ route('admin.dashboard') }}">Dashboard</a>
             </div>
          </div>
+         <div class="card rounded-0 bg-blue py-20 px-2 border-bottom-divider">
+            <div class="card-header p-0 border-0 rounded-0 d-flex p-0 border-0" id="dashboardHeading">
+               <img src="{{ URL::asset('public/assets/imgs/dashboard.svg')}}" alt="">
+               <a class="nav-link text-white fw-500 font-14 ms-2 p-0" href="{{ route('admin.database.backup.index') }}">Download DB</a>
+            </div>
+         </div>
          <div class="card  bg-blue pt-2 px-2 rounded-0 aside-bottom-divider">
             <div class="card-header py-12 px-2 border-0 d-flex rounded-0" id="administratorHeading">
                <a class="nav-link text-white font-14 dropdown-icon-img d-flex fw-500  p-0 collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#merchantCollapse" aria-expanded="true" aria-controls="merchantCollapse">
@@ -20,6 +26,11 @@
                         View Merchant
                      </a>
                   </li>
+                  <li class="font-14  fw-500 m-0 py-12 px-2  border-radius-4 bg-white">
+                     <a class=" text-decoration-none  d-flex  text-blue " href="{{ route('admin.activate.merchant') }}">
+                        Activate Merchant
+                     </a>
+                  </li> 
                </ul>
             </div>
          </div>
@@ -49,9 +60,13 @@
                      </a>
                   </li>
                   <li class="font-14  fw-500 m-0 py-12 px-2  ">
-                     <a class=" text-decoration-none  d-flex   text-white" href="{{ route('admin.merchant-module-permission') }}">Merchant Modules Permission
+                     <a class=" text-decoration-none  d-flex   text-white" href="{{ route('admin.tds.index') }}">Tds Section
                      </a>
                   </li>
+                  <!--<li class="font-14  fw-500 m-0 py-12 px-2  ">-->
+                  <!--   <a class=" text-decoration-none  d-flex   text-white" href="{{ route('admin.merchant-module-permission') }}">Merchant Modules Permission-->
+                  <!--   </a>-->
+                  <!--</li>-->
                </ul>
             </div>
          </div>

@@ -22,6 +22,7 @@ class Deal extends Model
         'freight',
         'comp_id',
         'manage_deal_items_id',
+        'short_name',
         'status',
         'final_complete',
         'created_at',

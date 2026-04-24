@@ -1,60 +1,62 @@
 @extends('layouts.app')
 @section('content')
+
 <!-- header-section -->
 @include('layouts.header')
 
-
 <!-- list-view-company-section -->
-<div class="list-of-view-company ">
+<div class="list-of-view-company">
    <section class="list-of-view-company-section container-fluid">
       <div class="row vh-100">
          @include('layouts.leftnav')
-         <div class="col-md-12 ml-sm-auto  col-lg-9 px-md-4 bg-mint">
-           @if (session('success'))
-    <div class="alert alert-success alert-dismissible fade show mt-3 mx-3" role="alert">
-        <strong>Success!</strong> {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-@endif
 
-@if (session('error'))
-    <div class="alert alert-danger alert-dismissible fade show mt-3 mx-3" role="alert">
-        <strong>Error!</strong> {{ session('error') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-@endif          
+         <div class="col-md-12 ml-sm-auto col-lg-9 px-md-4 bg-mint">
+
+            {{-- ==================== ALERT MESSAGES ==================== --}}
+            @if (session('success'))
+               <div class="alert alert-success alert-dismissible fade show mt-3 mx-3" role="alert">
+                  <strong>Success!</strong> {{ session('success') }}
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+               </div>
+            @endif
+
+            @if (session('error'))
+               <div class="alert alert-danger alert-dismissible fade show mt-3 mx-3" role="alert">
+                  <strong>Error!</strong> {{ session('error') }}
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+               </div>
+            @endif
+
+            {{-- ==================== PAGE HEADER ==================== --}}
             <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
-               <h5 class="transaction-table-title m-0 py-2">List of Deal</h5>
-               {{-- <form  action="{{ route('sale.index') }}" method="GET">
-                  @csrf
-                  <div class="d-md-flex d-block">                  
-                     <div class="calender-administrator my-2 my-md-0">
-                        <input type="date" id="customDate" class="form-control calender-bg-icon calender-placeholder" placeholder="From date" required name="from_date" value="{{ !empty($from_date) ? date('Y-m-d', strtotime($from_date)) : '' }}">
-                     </div>
-                     <div class="calender-administrator ms-md-4">
-                        <input type="date" id="customDate" class="form-control calender-bg-icon calender-placeholder" placeholder="To date" required name="to_date" value="{{ !empty($to_date) ? date('Y-m-d', strtotime($to_date)) : '' }}">
-                     </div>
-                     <button class="btn btn-info" style="margin-left: 5px;">Search</button>
-                  </div>
-               </form> --}}
-               <div class="d-md-flex d-block"> 
+               <h5 class="transaction-table-title m-0 py-2">List of Deals</h5>
+
+               <div class="d-md-flex d-block">
                   <input type="text" id="search" class="form-control" placeholder="Search">
                </div>
-               @can('action-module',85)
+
+               @can('action-module',130)
                   <a href="{{ route('deal.create') }}" class="btn btn-xs-primary">
-                  ADD
-                  <svg class="position-relative ms-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M9.1665 15.8327V10.8327H4.1665V9.16602H9.1665V4.16602H10.8332V9.16602H15.8332V10.8327H10.8332V15.8327H9.1665Z" fill="white" /></svg>
-               </a>
+                     ADD
+                     <svg class="position-relative ms-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                        viewBox="0 0 20 20" fill="none">
+                        <path
+                           d="M9.1665 15.8327V10.8327H4.1665V9.16602H9.1665V4.16602H10.8332V9.16602H15.8332V10.8327H10.8332V15.8327H9.1665Z"
+                           fill="white" />
+                     </svg>
+                  </a>
                @endcan
-               
             </div>
-            <div class="transaction-table bg-white table-view shadow-sm">
+
+            {{-- ==================== PENDING DEALS ==================== --}}
+            <h5 class="transaction-table-title m-0 py-2 mt-4">List of Pending Deal</h5>
+            <div class="transaction-table bg-white table-view shadow-sm mb-5">
                <table class="table-striped table m-0 shadow-sm sale_table">
                   <thead>
-                     <tr class=" font-12 text-body bg-light-pink ">
-                        <th style="width: 9%;">Date </th>
+                     <tr class="font-12 text-body bg-light-pink">
+                        <th style="width: 9%;">Date</th>
                         <th>Account</th>
-                        <th style="text-align: left;">item</th>
+                        <th style="text-align: left;">Item</th>
                         <th style="text-align: right;">Rate</th>
                         <th>Type</th>
                         <th style="text-align: right;">Quantity</th>
@@ -64,47 +66,101 @@
                         <th class="w-min-120 border-none bg-light-pink text-body text-center">Action</th>
                      </tr>
                   </thead>
-                 <tbody>
-@forelse ($deals as $deal)
-<tr>
-   <td>{{ \Carbon\Carbon::parse($deal->created_at)->format('d-m-Y') }}</td>
-   <td>{{ $deal->account_name }}</td>
+                  <tbody>
+                     @forelse ($pendingDeals as $deal)
+                        <tr>
+                           <td>{{ \Carbon\Carbon::parse($deal->created_at)->format('d-m-Y') }}</td>
+                           <td>{{ $deal->account_name }}</td>
+                           <td style="text-align: left;">
+                              @foreach ($deal->items as $item)
+                                 <div>{{ $item->name }}</div>
+                              @endforeach
+                           </td>
+                           <td style="text-align: right;">
+                              @foreach ($deal->items as $item)
+                                 <div>{{ number_format($item->rate ?? 0, 2) }}</div>
+                              @endforeach
+                           </td>
+                           <td>{{ $deal->deal_type }}</td>
+                           <td style="text-align: right;">{{ $deal->total_quantity }}</td>
+                           <td style="text-align: right;">{{ number_format($deal->total_pending ?? 0, 2) }}</td>
+                           <td style="text-align: right;">{{ number_format($deal->total_complete ?? 0, 2) }}</td>
+                           <td style="text-align: right;">{{ number_format($deal->balance_qty ?? 0, 2) }}</td>
+                           <td class="text-center">
+                              <a href="{{ route('deal.show', $deal->id) }}"><img
+                                    src="{{ asset('public/assets/imgs/eye-icon.svg') }}" class="px-1" alt="View"></a>
+                                @can('action-module',131)    
+                              <a href="{{ route('deal.edit', $deal->id) }}"><img
+                                    src="{{ URL::asset('public/assets/imgs/edit-icon.svg') }}" class="px-1" alt="Edit"></a>
+                                    @endcan
+                                    @can('action-module',132)
+                              <a href="{{ route('deal.destroy', $deal->id) }}" class="delete-form"><img
+                                    src="{{ URL::asset('public/assets/imgs/delete-icon.svg') }}" class="px-1" alt="Delete"></a>
+                                    @endcan
+                                    @can('action-module',133)
+                              <form action="{{ route('deal.autoComplete', $deal->id) }}" method="POST" class="d-inline">
+                                 @csrf
+                                 <button type="submit" class="btn btn-sm btn-success" title="Mark as Completed">
+                                    Complete Deal
+                                 </button>
+                              </form>
+                               @endcan
+                           </td>
+                        </tr>
+                     @empty
+                        <tr><td colspan="10" class="text-center text-muted">No pending deals found</td></tr>
+                     @endforelse
+                  </tbody>
+               </table>
+            </div>
 
-   {{-- Items (shown vertically within the same cell) --}}
-   <td style="text-align: left;">
-      @foreach ($deal->items as $item)
-         <div>{{ $item->name }}</div>
-      @endforeach
-   </td>
-
-   <td style="text-align: right;">
-      @foreach ($deal->items as $item)
-         <div>{{ number_format($item->rate ?? 0, 2) }}</div>
-      @endforeach
-   </td>
-
-   <td>{{ $deal->deal_type }}</td>
-   <td style="text-align: right;">{{ $deal->qty }}</td>
-  <td style="text-align: right;">{{ number_format($deal->total_pending ?? 0, 2) }}</td>
- <td style="text-align: right;">{{ number_format($deal->total_complete ?? 0, 2) }}</td>
-   <td style="text-align: right;">{{ number_format($deal->balance_qty ?? 0, 2) }}</td>
-   <td class="text-center">
-    <a href="{{ route('deal.show', $deal->id) }}" ><img src="{{ asset('public/assets/imgs/eye-icon.svg') }}" class="px-1" alt="View"></a>
-    <a href="{{ route('deal.edit', $deal->id) }}" ><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt="Edit"></a>
-    <a href="{{ route('deal.destroy', $deal->id) }}" class="delete-form" ><img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="Delete"></a>
-    
-</td>
-
-</tr>
-@empty
-<tr>
-   <td colspan="10" class="text-center text-muted">No deals found</td>
-</tr>
-@endforelse
-
-
-</tbody>
-
+            {{-- ==================== COMPLETED DEALS ==================== --}}
+            <h5 class="transaction-table-title m-0 py-2">List of Completed Deal</h5>
+            <div class="transaction-table bg-white table-view shadow-sm">
+               <table class="table-striped table m-0 shadow-sm sale_table">
+                  <thead>
+                     <tr class="font-12 text-body bg-light-pink">
+                        <th style="width: 9%;">Date</th>
+                        <th>Account</th>
+                        <th style="text-align: left;">Item</th>
+                        <th style="text-align: right;">Rate</th>
+                        <th>Type</th>
+                        <th style="text-align: right;">Quantity</th>
+                        <th style="text-align: right;">Pending</th>
+                        <th style="text-align: right;">Complete</th>
+                        <th style="text-align: right;">Balance</th>
+                        <th class="w-min-120 border-none bg-light-pink text-body text-center">Action</th>
+                     </tr>
+                  </thead>
+                  <tbody>
+                     @forelse ($completedDeals as $deal)
+                        <tr>
+                           <td>{{ \Carbon\Carbon::parse($deal->created_at)->format('d-m-Y') }}</td>
+                           <td>{{ $deal->account_name }}</td>
+                           <td style="text-align: left;">
+                              @foreach ($deal->items as $item)
+                                 <div>{{ $item->name }}</div>
+                              @endforeach
+                           </td>
+                           <td style="text-align: right;">
+                              @foreach ($deal->items as $item)
+                                 <div>{{ number_format($item->rate ?? 0, 2) }}</div>
+                              @endforeach
+                           </td>
+                           <td>{{ $deal->deal_type }}</td>
+                           <td style="text-align: right;">{{ $deal->qty }}</td>
+                           <td style="text-align: right;">{{ number_format($deal->total_pending ?? 0, 2) }}</td>
+                           <td style="text-align: right;">{{ number_format($deal->total_complete ?? 0, 2) }}</td>
+                           <td style="text-align: right;">{{ number_format($deal->balance_qty ?? 0, 2) }}</td>
+                           <td class="text-center">
+                              <a href="{{ route('deal.show', $deal->id) }}"><img
+                                    src="{{ asset('public/assets/imgs/eye-icon.svg') }}" class="px-1" alt="View"></a>
+                           </td>
+                        </tr>
+                     @empty
+                        <tr><td colspan="10" class="text-center text-muted">No completed deals found</td></tr>
+                     @endforelse
+                  </tbody>
                </table>
             </div>
          </div>

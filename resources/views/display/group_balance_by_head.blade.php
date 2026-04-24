@@ -13,7 +13,7 @@
                <nav aria-label="breadcrumb meri-breadcrumb ">
                   <ol class="breadcrumb meri-breadcrumb m-0  ">
                      <li class="breadcrumb-item">
-                        <a class="font-12 text-body text-decoration-none" href="#">Dashboard</a>
+                        <a class="font-12 text-body text-decoration-none" href="#">Dashboards</a>
                      </li>
                      <li class="breadcrumb-item p-0">
                         <a class="fw-bold font-heading font-12  text-decoration-none" href="{{url('balancesheet')}}">Balance Sheet</a>
@@ -127,6 +127,14 @@
                         
                         $balance = $debit - $credit;                        
                         @endphp
+
+
+                        @if(
+                            $value->stock_in_hand == 0 
+                            && round($balance,2) == 0
+                        )
+                            @continue
+                        @endif
                         <tr>
                            <td>
                               @if($value->stock_in_hand==1)
@@ -143,6 +151,18 @@
                               if($value->stock_in_hand==1){
                                  $debit_total = $debit_total + $stock_in_hand;                    
                                 echo formatIndianNumber($stock_in_hand);
+                                if($stock_in_transit_value>0){
+                                $debit_total = $debit_total + $stock_in_transit_value;
+                                ?>
+                                    <div class="row font-14 align-items-center mt-1">
+                                        <div class="ps-4 text-muted">
+                                            <small>Stock in Transit : <a href="{{ url('purchase-by-month-detail-transit/'.$financial_year.'/'.$from_date.'/'.$to_date) }}"> <?php echo formatIndianNumber($stock_in_transit_value);?></a></small>
+                                        </div>
+                                       
+                                    </div>
+                                    <?php
+                                }
+                                
                               }else{
                                  if($balance>=0){                                    
                                     $debit_total = $debit_total + $balance; 
@@ -157,8 +177,8 @@
                               <?php 
                               if($value->stock_in_hand==0){
                                  if($balance<0){                                     
-                                    $credit_total = $credit_total + abs($balance); 
-                                    echo formatIndianNumber(abs($balance));                          
+                                    $credit_total = $credit_total + abs(round($balance,2)); 
+                                    echo formatIndianNumber(abs(round($balance,2)));                          
                                  }else{
                                     echo '0.00';
                                  }
@@ -170,55 +190,73 @@
                         </tr>
                      @endforeach
                      <?php 
-                     
+
                      foreach($head_account as $value1){
-                        $debit = 0;$credit = 0;                        
-                        ?>
-                        <tr class="get_info" data-id="{{$value1['id']}}" style="cursor: pointer;">
-                           <td>{{$value1->account_name}}</td>
+                        $debit_acc = $value1->account_ledger_sum_debit; 
+                        $credit_acc = $value1->account_ledger_sum_credit;  
+                        $bal_acc = $debit_acc - $credit_acc;  
+
+                        // Skip accounts with zero balance
+                        if (round($bal_acc, 2) == 0) {
+                           continue;
+                        }
+                     ?>
+                        <tr class="get_info" data-id="{{ $value1->id }}" style="cursor: pointer;">
+                           <td>{{ $value1->account_name }}</td>
                            <td>Account</td>
+                           
+                           <!-- Debit Column -->
                            <td style="text-align:right;">
-                              <?php 
-                              $debit_total = $debit_total + $value1->account_ledger_sum_debit;
-                              setlocale(LC_MONETARY, 'en_IN');                              
-                              echo formatIndianNumber($value1->account_ledger_sum_debit);
-                              ?>
+                                 <?php 
+                                 if ($bal_acc >= 0) {   
+                                    $debit_total += $bal_acc;
+                                    echo formatIndianNumber($bal_acc);
+                                 } else {
+                                    echo '0.00';
+                                 }
+                                 ?>
                            </td>
+
+                           <!-- Credit Column -->
                            <td style="text-align:right;">
-                              <?php 
-                              $credit_total = $credit_total + $value1->account_ledger_sum_credit;
-                              setlocale(LC_MONETARY, 'en_IN');                              
-                              echo formatIndianNumber($value1->account_ledger_sum_credit);
-                              ?>
+                                 <?php 
+                                 if ($bal_acc < 0) {  
+                                    $credit_total += abs($bal_acc);
+                                    echo formatIndianNumber(abs(round($bal_acc,2)));
+                                 } else {
+                                    echo '0.00';
+                                 }
+                                 ?>
                            </td>
                         </tr>
                      <?php } ?>
+
+                     <!-- Totals Row -->
                      <tr>
                         <th style="text-align:right;"></th>
-                        <th style="text-align:right;"></th>
+                        <th style="text-align:right;">Total</th>
                         <th style="text-align:right;">
-                           <?php                              
-                           echo formatIndianNumber($debit_total);
-                           ?>
+                           <?php echo formatIndianNumber($debit_total); ?>
                         </th>
                         <th style="text-align:right;">
-                           <?php                              
-                           echo formatIndianNumber($credit_total);
-                           ?>
+                           <?php echo formatIndianNumber(round($credit_total,2)); ?>
                         </th>
-                     </tr> 
+                     </tr>
+
                      <tr>
                         <th colspan="4">Balance : 
                            <?php 
                            $bal = $debit_total - $credit_total;
-                           if($bal>=0){
+                           
+                          if($bal>=0){
                               $balance = $bal;
                               echo formatIndianNumber($bal).' Dr';
-                           }else{
+                          }else{
                               $balance = abs($bal);
                               echo formatIndianNumber(abs($bal)).' Cr';
-                           }
+                          }
                            
+                   
                            ?>
                         </th>
                      </tr>               

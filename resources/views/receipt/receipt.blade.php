@@ -36,6 +36,8 @@
                </form>
                <div class="d-md-flex d-block"> 
                   <input type="text" id="search" class="form-control" placeholder="Search">
+                  <button class="btn btn-info ms-2 export_csv">CSV</button>
+                  <button class="btn btn-secondary ms-2 print_btn">PRINT</button>
                </div>
                @can('action-module',84)
                   <a href="{{ route('receipt.create') }}" class="btn btn-xs-primary">ADD
@@ -46,13 +48,12 @@
                
             </div>
             <div class="transaction-table bg-white table-view shadow-sm">
-               <table class="table-striped table m-0 shadow-sm receipt_table">
+               <table class="table-striped table-bordered table m-0 shadow-sm receipt_table" id="receipt_table">
                   <thead>
                      <tr class=" font-12 text-body bg-light-pink ">
                         <th class="w-min-120 border-none bg-light-pink text-body">Date </th>
-                        <th class="w-min-120 border-none bg-light-pink text-body">Receipt Voucher No. </th>
+                        <th class="w-min-120 border-none bg-light-pink text-body">Voucher No. </th>
                         <th class="w-min-120 border-none bg-light-pink text-body ">Account Name </th>
-                        
                         <th class="w-min-120 border-none bg-light-pink text-body " style="text-align:right;">Credit</th>
                         <th class="w-min-120 border-none bg-light-pink text-body ">Mode</th>
                         <th class="w-min-120 border-none bg-light-pink text-body ">Series</th>
@@ -64,10 +65,14 @@
                      $tot_dbt = 0;
                      $tot_crt = 0;
                      setlocale(LC_MONETARY, 'en_IN');
-                     foreach ($receipt as $value) { ?>
+                     $shown_ids = [];
+                     foreach ($receipt as $key => $value) { 
+                        $is_first = ($key == 0) || ($receipt[$key-1]->rec_id != $value->rec_id);
+                        $is_last  = !isset($receipt[$key+1]) || $receipt[$key+1]->rec_id != $value->rec_id;
+                     ?>
                         <tr class="font-14 font-heading bg-white">
-                           <td class="w-min-120 "><?php echo date("d-m-Y", strtotime($value->date)); ?></td>
-                           <td class="w-min-120"><?php echo $value->voucher_no ?></td>
+                           <td class="w-min-120 "><?php if($is_first){ echo date("d-m-Y", strtotime($value->date)); } ?></td>
+                           <td class="w-min-120"><?php if($is_first){ echo $value->voucher_no; } ?></td>
                            <td class="w-min-120 "><?php echo $value->acc_name ?></td>
                           
                            <td class="w-min-120 " style="text-align: right;">
@@ -78,20 +83,26 @@
                            </td>
                            <td class="w-min-120 ">
                               <?php 
-                              if($value->m == '1'){
-                                 echo 'Cash';
-                              }else if($value->m == '0'){
-                                 echo 'IMPS/NEFT/RTGS'; 
-                              }else if($value->m == '2'){
-                                 echo 'CHEQUE';
-                              }else{
-                                 echo 'IMPS/NEFT/RTGS'; 
-                              }?>                                 
+                              if($is_first){
+                                 if($value->m == '1'){
+                                    echo 'Cash';
+                                 }else if($value->m == '2'){
+                                    echo 'CHEQUE';
+                                 }else{
+                                    echo 'IMPS/NEFT/RTGS'; 
+                                 }
+                              }
+                              ?>                                
                            </td>
-                           <td class="w-min-120 "><?php echo $value->series_no ?></td>
+                           <td class="w-min-120 "><?php if($is_first){ echo $value->series_no; } ?></td>
                            <td class="w-min-120  text-center">
                               <?php 
-                              if(in_array(date('Y-m',strtotime($value->date)),$month_arr)){?>
+                              if(
+                                 in_array(date('Y-m',strtotime($value->date)),$month_arr) &&
+                                 $value->approved_status != 1 &&
+                                 !in_array($value->rec_id, $shown_ids)
+                              ){
+                              ?>
                                @can('action-module',59)
                                  <a href="{{ URL::to('receipt/' . $value->rec_id . '/edit') }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
                               @endcan
@@ -101,16 +112,39 @@
                                  </button>
                                  @endcan
                                  <?php 
+                                 if($is_first){
+                                    $shown_ids[] = $value->rec_id;
+                                 }
                               }?>
                            </td>
                         </tr>
+                        <?php if($is_last){ ?>
+                        <tr class="font-12 text-muted bg-light">
+                           <td colspan="7" class="ps-4 py-1" style="text-align:left;">
+                              
+                              <strong>Created By:</strong> 
+                              {{ $value->created_by_name ?? '-' }}
+
+                              &nbsp;&nbsp;|&nbsp;&nbsp;
+
+                              <strong>Approved By:</strong> 
+                              @if($value->approved_status == 1)
+                                 {{ $value->approved_by_name ?? '-' }}
+                                 <small>({{ date('d-m-Y H:i', strtotime($value->approved_at)) }})</small>
+                              @else
+                                 -
+                              @endif
+
+                           </td>
+                        </tr>
+                        <?php } ?>
                         <?php 
                      } ?>
                      <tr class="font-14 font-heading bg-white">
                          <td></td>
                         <td class="w-min-120 fw-bold font-heading">TOTAL</td>
-                        <td class="w-min-120"></td>
-                        
+                        <td></td>
+
                         <td class="w-min-120 fw-bold font-heading" style="text-align: right;"><?php echo $tot_crt;?></td>
                         <td class="w-min-120"></td>
                         <td class="w-min-120 "></td>
@@ -296,6 +330,185 @@
             return not_found;
          });
       });
+   });
+   $(".export_csv").click(function () {
+
+      let csv = [];
+
+      let from_date = $("input[name='from_date']").val();
+      let to_date   = $("input[name='to_date']").val();
+
+      function formatDate(dateStr){
+         if(!dateStr) return '';
+         let parts = dateStr.split("-");
+         return parts[2] + "-" + parts[1] + "-" + parts[0];
+      }
+
+      csv.push("From Date: " + formatDate(from_date));
+      csv.push("To Date: " + formatDate(to_date));
+      csv.push("");
+
+      let header = [];
+      $("#receipt_table thead th").each(function (index) {
+         if(index != 6){
+               header.push($(this).text().trim());
+         }
+      });
+      csv.push(header.join(","));
+
+      $("#receipt_table tbody tr").each(function () {
+
+         // skip detail row
+         if($(this).hasClass("bg-light")){
+               return;
+         }
+
+         let row = [];
+         let isEmptyRow = true;
+
+         $(this).find("td").each(function (index) {
+
+               if(index == 6) return; // skip action
+
+               let text = $(this).text().trim()
+                  .replace(/\n/g, '')
+                  .replace(/,/g, '');
+
+               if(text !== ""){
+                  isEmptyRow = false;
+               }
+
+               row.push(text);
+         });
+
+         if(!isEmptyRow){
+               csv.push(row.join(","));
+         }
+      });
+
+      let csvString = csv.join("\n");
+
+      let blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+      let url = window.URL.createObjectURL(blob);
+
+      let a = document.createElement("a");
+      a.href = url;
+      a.download = "receipt_report.csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+   });
+   $(".print_btn").click(function () {
+
+      let from_date = $("input[name='from_date']").val();
+      let to_date   = $("input[name='to_date']").val();
+
+      function formatDate(dateStr){
+         if(!dateStr) return '';
+         let parts = dateStr.split("-");
+         return parts[2] + "-" + parts[1] + "-" + parts[0];
+      }
+
+      from_date = formatDate(from_date);
+      to_date   = formatDate(to_date);
+
+      let printWindow = window.open('', '', 'width=900,height=700');
+
+      let tableHTML = `
+         <html>
+         <head>
+               <title>Receipt Report</title>
+               <style>
+                  body { font-family: Arial; font-size: 12px; }
+                  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                  th, td { border: 1px solid #000; padding: 5px; }
+                  th { background: #f2f2f2; }
+                  .text-right { text-align: right; }
+                  .no-border td { border-top: none !important; }
+               </style>
+         </head>
+         <body>
+
+         <h2 style="text-align:center; text-decoration: underline;">
+               List of Receipt Voucher
+         </h2>
+
+         <p style="text-align:center;">
+               From: ${from_date} &nbsp;&nbsp; To: ${to_date}
+         </p>
+
+         <table>
+               <thead>
+                  <tr>
+                     <th>Date</th>
+                     <th>Receipt Voucher No</th>
+                     <th>Account Name</th>
+                     <th class="text-right">Credit</th>
+                     <th>Mode</th>
+                     <th>Series</th>
+                  </tr>
+               </thead>
+               <tbody>
+      `;
+
+      let total = 0;
+
+      $("#receipt_table tbody tr").each(function () {
+
+         if($(this).hasClass("bg-light")){
+               return;
+         }
+
+         let tds = $(this).find("td");
+
+         if($(tds[1]).text().trim().toLowerCase() === "total"){
+               total = $(tds[3]).text().trim();
+               return;
+         }
+
+         let date   = $(tds[0]).text().trim();
+         let vch    = $(tds[1]).text().trim();
+         let acc    = $(tds[2]).text().trim();
+         let credit = $(tds[3]).text().trim();
+         let mode   = $(tds[4]).text().trim();
+         let series = $(tds[5]).text().trim();
+
+         let isSubRow = (date === "" && vch === "");
+
+         tableHTML += `
+               <tr class="${isSubRow ? 'no-border' : ''}">
+                  <td>${date}</td>
+                  <td>${vch}</td>
+                  <td>${acc}</td>
+                  <td class="text-right">${credit}</td>
+                  <td>${mode}</td>
+                  <td>${series}</td>
+               </tr>
+         `;
+      });
+
+      tableHTML += `
+         <tr>
+               <td></td>
+               <td style="font-weight:bold;">TOTAL</td>
+               <td></td>
+               <td class="text-right" style="font-weight:bold;">${total}</td>
+               <td></td>
+               <td></td>
+         </tr>
+      `;
+
+      tableHTML += `
+               </tbody>
+         </table>
+
+         </body>
+         </html>
+      `;
+
+      printWindow.document.write(tableHTML);
+      printWindow.document.close();
+      printWindow.print();
    });
 </script>
 @endsection

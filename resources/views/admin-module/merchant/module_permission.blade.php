@@ -23,31 +23,32 @@
                 {{-- Header --}}
                 <div class="card shadow-sm border-0 mt-4">
                     <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white rounded-top">
-                        <h5 class="mb-0">Modules Permission</h5>                        
+                        <h5 class="mb-0">Modules Permission</h5>
                     </div>
                     {{-- Modules List --}}
-                    <div class="card-body bg-white">                        
+                    <div class="card-body bg-white">
                             <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('admin.store-merchant-module') }}">
                                 @csrf
-                                <div class="row">
+                                <div class="row">                                   
                                     <div class="mb-4 col-md-4">
-                                        <label for="merchant_id" class="form-label font-14 font-heading">Merchant</label>
-                                        <select class="form-select form-select-lg merchant select2" name="merchant_id" aria-label="form-select-lg example" required>
-                                            <option selected value="">Choose Merchant</option>
-                                            @foreach($merchants as $merchant)
-                                                <option value="{{$merchant->id}}" @if($merchant->id==$id) selected @endif>
-                                                    {{$merchant->name}}
+                                        <label for="company_id" class="form-label font-14 font-heading">Company</label>
+                                        <select class="form-select form-select-lg company select2" name="company_id" aria-label="form-select-lg example" required>
+                                            <option selected value="">Choose Company</option>
+                                            @foreach($company_list as $company)
+                                                <option value="{{$company->id}}" @if($company->id==$company_id) selected @endif>
+                                                    {{$company->company_name}}
                                                 </option>
                                             @endforeach
                                         </select>
                                         <ul style="color: red;">
-                                            @error('merchant_id') Please Select Merchant @enderror                        
+                                            @error('company_id') Please Select Company @enderror
                                         </ul> 
                                     </div>
-                                    <div class="clearfix"></div>
                                     
-                                        <label for="module" class="form-label font-14 font-heading">Modules</label>
-                                        @foreach ($modules as $value)
+                                    <div class="clearfix"></div>
+                                    <input type="hidden" name="merchant_id" value="{{$merchant_id}}">
+                                    <label for="module" class="form-label font-14 font-heading">Modules</label>
+                                    @foreach ($modules as $value)
                                         <div class="mb-4 col-md-4">
                                             <div class="col">
                                                 <div class="form-check p-3 border rounded shadow-sm h-100">
@@ -56,9 +57,8 @@
                                                     <label class="form-check-label fw-semibold" for="module{{$value->id}}">{{$value->name}}</label>
                                                 </div>
                                             </div>
-                                            </div>
-                                        @endforeach
-                                    
+                                        </div>
+                                    @endforeach
                                 </div>
                                 <br>
                                 <div class="text-start">
@@ -79,10 +79,10 @@
 <script>
     $(document).ready(function() {
         $(".select2").select2();
-        $('.merchant').change(function(){
-           var id = $(this).val();
-            window.location.href = "{{url('admin/merchant-module-permission')}}/"+id;
-            
+        $('.company').change(function(){
+            var company_id = $(this).val();
+            var merchant_id = "{{$merchant_id}}";
+            window.location.href = "{{url('admin/merchant-module-permission')}}/"+merchant_id+"/"+company_id;
         });
     });
 </script>

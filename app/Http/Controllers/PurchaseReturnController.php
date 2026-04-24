@@ -26,6 +26,7 @@ use App\Models\State;
 use App\Models\ItemParameterStock;
 use App\Models\Sales;
 use App\Models\ManageItems;
+use App\Models\ActivityLog;
 use App\Models\SupplierPurchaseVehicleDetail;
 use Carbon\Carbon;
 use DB;
@@ -79,22 +80,33 @@ class PurchaseReturnController extends Controller
             'purchase_return_no',
             'purchase_returns.series_no',
             'purchase_returns.financial_year',
+            'purchase_returns.e_invoice_status',
+            'purchase_returns.status',
+            'purchase_returns.approved_by',
+            'purchase_returns.approved_at',
+            'purchase_returns.approved_status',
             'sr_nature',
             'sr_type',
             DB::raw('(select account_name from accounts where accounts.id = purchase_returns.party limit 1) as account_name'),
             DB::raw('(select manual_numbering from voucher_series_configurations where voucher_series_configurations.company_id = '.Session::get('user_company_id').' and configuration_for="DEBIT NOTE" and voucher_series_configurations.status=1 and voucher_series_configurations.series = purchase_returns.series_no limit 1) as manual_numbering_status'),
-               DB::raw('(select max(purchase_return_no) from purchase_returns as s where s.company_id = '.Session::get('user_company_id').' and s.delete="0" and s.series_no = purchase_returns.series_no) as max_voucher_no')
+            DB::raw('(select max(purchase_return_no) from purchase_returns as s where s.company_id = '.Session::get('user_company_id').' and s.delete="0" and s.series_no = purchase_returns.series_no) as max_voucher_no'),
+            DB::raw("(SELECT name FROM users WHERE users.id = purchase_returns.approved_by LIMIT 1) as approved_by_name"),
+            DB::raw("(SELECT name FROM users WHERE users.id = purchase_returns.created_by LIMIT 1) as created_by_name")
          )
          ->where('company_id', Session::get('user_company_id'))
          ->where('delete', '0');
+         if (!empty($input['sr_nature'])) {
+            $query->where('purchase_returns.sr_nature', $input['sr_nature']);
+         }
       // Apply date filter only if user selected a range
       if($from_date && $to_date)  {
             $query->whereRaw("
                STR_TO_DATE(purchase_returns.date, '%Y-%m-%d') >= STR_TO_DATE('" . date('Y-m-d', strtotime($from_date)) . "', '%Y-%m-%d')
                AND STR_TO_DATE(purchase_returns.date, '%Y-%m-%d') <= STR_TO_DATE('" . date('Y-m-d', strtotime($to_date)) . "', '%Y-%m-%d')
             ")
+            ->orderBy('purchase_returns.date', 'ASC')
             ->orderBy(DB::raw("cast(purchase_return_no as SIGNED)"), 'ASC')
-            ->orderBy('purchase_returns.created_at', 'ASC');
+             ->orderBy('purchase_returns.created_at', 'ASC');
       } else {
          // No date selected, fetch last 10 entries
          $query->orderBy('financial_year', 'desc')
@@ -118,11 +130,16 @@ class PurchaseReturnController extends Controller
      */
    public function create(){
       Gate::authorize('action-module',77);
-      $group_ids = CommonHelper::getAllChildGroupIds(3,Session::get('user_company_id'));
-      array_push($group_ids, 3);
-      $group_ids = array_merge($group_ids, CommonHelper::getAllChildGroupIds(11,Session::get('user_company_id'))); // Include group 11 as well
-      $group_ids = array_unique($group_ids); // Ensure unique group IDs       
-      array_push($group_ids, 11);
+      $top_groups = [3, 11];
+
+      // Step 2: Get all child group IDs recursively
+      $all_groups = [];
+      foreach ($top_groups as $group_id) {
+         $all_groups[] = $group_id; // include the top group itself
+         $all_groups = array_merge($all_groups, CommonHelper::getAllChildGroupIds($group_id, Session::get('user_company_id')));
+      }
+      // Remove duplicates just in case
+      $group_ids = array_unique($all_groups);
       $party_list = Accounts::leftjoin('states','accounts.state','=','states.id')
                   ->where('delete', '=', '0')
                   ->where('status', '=', '1')
@@ -184,121 +201,181 @@ class PurchaseReturnController extends Controller
                                  //->OrwhereIn('id',[1,2,3,8,9])
                                  ->get();
          $financial_year = Session::get('default_fy');
+      [$startYY, $endYY] = explode('-', $financial_year);
+
+      $fy_start_date = '20' . $startYY . '-04-01'; 
+      $fy_end_date   = '20' . $endYY   . '-03-31';   
          foreach ($mat_series as $key => $value) {
-            $series_configuration = VoucherSeriesConfiguration::where('company_id',Session::get('user_company_id'))
-                  ->where('series',$value->series)
-                  ->where('configuration_for','DEBIT NOTE')
-                  ->where('status','1')
+            $series_configuration_with_gst = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
+                  ->where('series', $value->series)
+                  ->where('configuration_for', 'DEBIT NOTE')
+                  ->where('status', '1')
                   ->first();
-            //With GST
-            $purchase_return_no = PurchaseReturn::select('purchase_return_no')                     
-                           ->where('company_id',Session::get('user_company_id'))
-                           ->where('financial_year','=',$financial_year)
-                           ->where('sr_nature','!=',"WITHOUT GST")
-                           ->where('series_no','=',$value->series)
-                           ->where('delete','=','0')
-                           ->max(\DB::raw("cast(purchase_return_no as SIGNED)"));
-            if(!$purchase_return_no){
-               if($series_configuration && $series_configuration->manual_numbering=="NO" && $series_configuration->invoice_start!=""){
-                  $mat_series[$key]->invoice_start_from =  sprintf("%'03d",$series_configuration->invoice_start);
-               }else{
-                  $mat_series[$key]->invoice_start_from =  "001";
-               }
-            }else{
-               $invc = $purchase_return_no + 1;
-               $invc = sprintf("%'03d", $invc);
-               $mat_series[$key]->invoice_start_from =  $invc;
-            }
-            //Without GST
-            $purchase_return_no_without = PurchaseReturn::select('purchase_return_no')                     
-                           ->where('company_id',Session::get('user_company_id'))
-                           ->where('financial_year','=',$financial_year)
-                           ->where('sr_nature','=',"WITHOUT GST")
-                           ->where('series_no','=',$value->series)
-                           ->where('delete','=','0')
-                           ->max(\DB::raw("cast(purchase_return_no as SIGNED)"));
-            if(!$purchase_return_no_without){
-               $mat_series[$key]->without_invoice_start_from =  "001";
-            }else{
-               $invc = $purchase_return_no_without + 1;
-               $invc = sprintf("%'03d", $invc);
-               $mat_series[$key]->without_invoice_start_from =  $invc;
-            }
-            $invoice_prefix = "";
-            $invoice_prefix_wt = "";
-            $duplicate_voucher = "";
-            $blank_voucher = "";
-            $manual_enter_invoice_no = "0";
-            if($series_configuration && $series_configuration->manual_numbering=="YES"){
-               $manual_enter_invoice_no = "1";
-               $duplicate_voucher = $series_configuration->duplicate_voucher;
-               $blank_voucher = $series_configuration->blank_voucher;
-            }
-            if($series_configuration && $series_configuration->manual_numbering=="NO"){
-               $manual_enter_invoice_no = "0";
-               if($series_configuration->prefix=="ENABLE" && $series_configuration->prefix_value!=""){
-                  $invoice_prefix.=$series_configuration->prefix_value;
-                  $invoice_prefix_wt.=$series_configuration->prefix_value."WT";
-               }        
-               if($series_configuration->prefix=="ENABLE" && $series_configuration->prefix_value!="" && $series_configuration->separator_1!=""){
-                     $invoice_prefix.=$series_configuration->separator_1;
-                     $invoice_prefix_wt.=$series_configuration->separator_1;
-               }
-               if($series_configuration->year=="PREFIX TO NUMBER" && $series_configuration->year_format!=""){
-                  if($series_configuration->year_format=="YY-YY"){
-                     $invoice_prefix.=Session::get('default_fy');
-                     $invoice_prefix_wt.=Session::get('default_fy');
-                  }else if($series_configuration->year_format=="YYYY-YY"){
-                     $default_fy = Session::get('default_fy');  // 23-24
-                     $fy_parts = explode('-', $default_fy);     // [23, 24]
-                     $invoice_prefix .= '20' . $fy_parts[0] . '-20' . $fy_parts[1];
-                     $invoice_prefix_wt .= '20' . $fy_parts[0] . '-20' . $fy_parts[1];
+
+            $series_configuration_without_gst = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
+                  ->where('series', $value->series)
+                  ->where('configuration_for', 'DEBIT NOTE WITHOUT')
+                  ->where('status', '1')
+                  ->first();
+
+            // WITH GST next number (sr_nature != WITHOUT GST)
+            $purchase_return_no = PurchaseReturn::where('company_id', Session::get('user_company_id'))
+                  ->where('financial_year', $financial_year)
+                  ->where('sr_nature', '!=', 'WITHOUT GST')
+                  ->where('series_no', $value->series)
+                  ->where('delete', '0')
+                  ->max(DB::raw('CAST(purchase_return_no AS SIGNED)'));
+
+            if (!$purchase_return_no) {
+               if ($series_configuration_with_gst && $series_configuration_with_gst->manual_numbering == "NO" && $series_configuration_with_gst->invoice_start != "") {
+                  $start = $series_configuration_with_gst->invoice_start;
+
+                  $hasPrefix = ($series_configuration_with_gst->prefix == "ENABLE" && !empty($series_configuration_with_gst->prefix_value));
+                  $hasYearPrefix = ($series_configuration_with_gst->year == "PREFIX TO NUMBER" && !empty($series_configuration_with_gst->year_format));
+
+                  if (!$hasPrefix && !$hasYearPrefix) {
+                     $mat_series[$key]->invoice_start_from = (int)$start;
+                  } else {
+                     $mat_series[$key]->invoice_start_from = str_pad(
+                        $start,
+                        $series_configuration_with_gst->number_digit ?? 3,
+                        '0',
+                        STR_PAD_LEFT
+                     );
                   }
-               }            
-               if($series_configuration->year=="PREFIX TO NUMBER" && $series_configuration->year_format!="" && $series_configuration->separator_2!=""){
-                  $invoice_prefix.=$series_configuration->separator_2;
-                  $invoice_prefix_wt.=$series_configuration->separator_2;
+               } else {
+                  $mat_series[$key]->invoice_start_from = "1";
                }
-               $invoice_prefix.=$mat_series[$key]->invoice_start_from;
-               $invoice_prefix_wt.=$mat_series[$key]->without_invoice_start_from;
-               if($series_configuration->year=="SUFFIX TO NUMBER" && $series_configuration->year_format!="" && $series_configuration->separator_2!=""){
-                  $invoice_prefix.=$series_configuration->separator_2;
-                  $invoice_prefix_wt.=$series_configuration->separator_2;
+            } else {
+               $invc = ((int)$purchase_return_no) + 1;
+
+               $hasPrefix = ($series_configuration_with_gst && $series_configuration_with_gst->prefix == "ENABLE" && !empty($series_configuration_with_gst->prefix_value));
+               $hasYearPrefix = ($series_configuration_with_gst && $series_configuration_with_gst->year == "PREFIX TO NUMBER" && !empty($series_configuration_with_gst->year_format));
+
+               if (!$hasPrefix && !$hasYearPrefix) {
+                  $mat_series[$key]->invoice_start_from = (int)$invc;
+               } else {
+                  $mat_series[$key]->invoice_start_from = str_pad(
+                     $invc,
+                     $series_configuration_with_gst->number_digit ?? 3,
+                     '0',
+                     STR_PAD_LEFT
+                  );
                }
-               if($series_configuration->year=="SUFFIX TO NUMBER" && $series_configuration->year_format!=""){
-                  if($series_configuration->year_format=="YY-YY"){
-                     $invoice_prefix.=Session::get('default_fy');
-                     $invoice_prefix_wt.=Session::get('default_fy');
-                  }else if($series_configuration->year_format=="YYYY-YY"){
-                     $default_fy = Session::get('default_fy');  // 23-24
-                     $fy_parts = explode('-', $default_fy);     // [23, 24]
-                     $invoice_prefix .= '20' . $fy_parts[0] . '-20' . $fy_parts[1];
-                     $invoice_prefix_wt .= '20' . $fy_parts[0] . '-20' . $fy_parts[1];
-                  }
-               }        
-               if($series_configuration->suffix=="ENABLE" && $series_configuration->suffix_value!="" && $series_configuration->separator_3!=""){
-                  $invoice_prefix.=$series_configuration->separator_3;
-                  $invoice_prefix_wt.=$series_configuration->separator_3;
-               }
-               if($series_configuration->suffix=="ENABLE" && $series_configuration->suffix_value!=""){
-                  $invoice_prefix.=$series_configuration->suffix_value;
-                  $invoice_prefix_wt.=$series_configuration->suffix_value;
-               } 
             }
-            $mat_series[$key]->manual_enter_invoice_no =  $manual_enter_invoice_no;
-            $mat_series[$key]->duplicate_voucher =  $duplicate_voucher;
-            $mat_series[$key]->blank_voucher =  $blank_voucher;
-            $mat_series[$key]->invoice_prefix =  $invoice_prefix;
-            $mat_series[$key]->invoice_prefix_wt =  $invoice_prefix_wt;         
+
+            // WITHOUT GST next number (sr_nature == WITHOUT GST)
+            $purchase_return_no_without = PurchaseReturn::select('purchase_return_no')
+                  ->where('company_id', Session::get('user_company_id'))
+                  ->where('financial_year', '=', $financial_year)
+                  ->where('sr_nature', '=', "WITHOUT GST")
+                  ->where('series_no', '=', $value->series)
+                  ->where('delete', '=', '0')
+                  ->max(\DB::raw("cast(purchase_return_no as SIGNED)"));
+
+            if (!$purchase_return_no_without) {
+               if ($series_configuration_without_gst && $series_configuration_without_gst->manual_numbering == "NO" && $series_configuration_without_gst->invoice_start != "") {
+                  $start = $series_configuration_without_gst->invoice_start;
+
+                  $hasPrefix = ($series_configuration_without_gst->prefix == "ENABLE" && !empty($series_configuration_without_gst->prefix_value));
+                  $hasYearPrefix = ($series_configuration_without_gst->year == "PREFIX TO NUMBER" && !empty($series_configuration_without_gst->year_format));
+
+                  if (!$hasPrefix && !$hasYearPrefix) {
+                     $mat_series[$key]->without_invoice_start_from = (int)$start;
+                  } else {
+                     $mat_series[$key]->without_invoice_start_from = str_pad(
+                        $start,
+                        $series_configuration_without_gst->number_digit ?? 3,
+                        '0',
+                        STR_PAD_LEFT
+                     );
+                  }
+               } else {
+                  $mat_series[$key]->without_invoice_start_from = "1";
+               }
+            } else {
+               $invc = ((int)$purchase_return_no_without) + 1;
+
+               $hasPrefix = ($series_configuration_without_gst && $series_configuration_without_gst->prefix == "ENABLE" && !empty($series_configuration_without_gst->prefix_value));
+               $hasYearPrefix = ($series_configuration_without_gst && $series_configuration_without_gst->year == "PREFIX TO NUMBER" && !empty($series_configuration_without_gst->year_format));
+
+               if (!$hasPrefix && !$hasYearPrefix) {
+                  $mat_series[$key]->without_invoice_start_from = (int)$invc;
+               } else {
+                  $mat_series[$key]->without_invoice_start_from = str_pad(
+                     $invc,
+                     $series_configuration_without_gst->number_digit ?? 3,
+                     '0',
+                     STR_PAD_LEFT
+                  );
+               }
+            }
+
+            $buildVoucherPrefix = function ($series_configuration, $voucher_number) {
+               $prefix = "";
+               if (!$series_configuration || $series_configuration->manual_numbering != "NO") {
+                  return $prefix;
+               }
+               if ($series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
+                  $prefix .= $series_configuration->prefix_value;
+               }
+               if ($series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "" && $series_configuration->separator_1 != "") {
+                  $prefix .= $series_configuration->separator_1;
+               }
+               if ($series_configuration->year == "PREFIX TO NUMBER" && $series_configuration->year_format != "") {
+                  if ($series_configuration->year_format == "YY-YY") {
+                     $prefix .= Session::get('default_fy');
+                  } elseif ($series_configuration->year_format == "YYYY-YY") {
+                     $default_fy = Session::get('default_fy');
+                     $fy_parts = explode('-', $default_fy);
+                     $prefix .= '20' . $fy_parts[0] . '-20' . $fy_parts[1];
+                  }
+               }
+               if ($series_configuration->year == "PREFIX TO NUMBER" && $series_configuration->year_format != "" && $series_configuration->separator_2 != "") {
+                  $prefix .= $series_configuration->separator_2;
+               }
+
+               $prefix .= $voucher_number;
+
+               if ($series_configuration->year == "SUFFIX TO NUMBER" && $series_configuration->year_format != "" && $series_configuration->separator_2 != "") {
+                  $prefix .= $series_configuration->separator_2;
+               }
+               if ($series_configuration->year == "SUFFIX TO NUMBER" && $series_configuration->year_format != "") {
+                  if ($series_configuration->year_format == "YY-YY") {
+                     $prefix .= Session::get('default_fy');
+                  } elseif ($series_configuration->year_format == "YYYY-YY") {
+                     $default_fy = Session::get('default_fy');
+                     $fy_parts = explode('-', $default_fy);
+                     $prefix .= '20' . $fy_parts[0] . '-20' . $fy_parts[1];
+                  }
+               }
+               if ($series_configuration->suffix == "ENABLE" && $series_configuration->suffix_value != "" && $series_configuration->separator_3 != "") {
+                  $prefix .= $series_configuration->separator_3;
+               }
+               if ($series_configuration->suffix == "ENABLE" && $series_configuration->suffix_value != "") {
+                  $prefix .= $series_configuration->suffix_value;
+               }
+               return $prefix;
+            };
+
+            $mat_series[$key]->manual_enter_invoice_no_with_gst = ($series_configuration_with_gst && $series_configuration_with_gst->manual_numbering == "YES") ? "1" : "0";
+            $mat_series[$key]->duplicate_voucher_with_gst = ($series_configuration_with_gst && $series_configuration_with_gst->manual_numbering == "YES") ? $series_configuration_with_gst->duplicate_voucher : "";
+            $mat_series[$key]->blank_voucher_with_gst = ($series_configuration_with_gst && $series_configuration_with_gst->manual_numbering == "YES") ? $series_configuration_with_gst->blank_voucher : "";
+            $mat_series[$key]->invoice_prefix = $buildVoucherPrefix($series_configuration_with_gst, $mat_series[$key]->invoice_start_from);
+
+            $mat_series[$key]->manual_enter_invoice_no_without_gst = ($series_configuration_without_gst && $series_configuration_without_gst->manual_numbering == "YES") ? "1" : "0";
+            $mat_series[$key]->duplicate_voucher_without_gst = ($series_configuration_without_gst && $series_configuration_without_gst->manual_numbering == "YES") ? $series_configuration_without_gst->duplicate_voucher : "";
+            $mat_series[$key]->blank_voucher_without_gst = ($series_configuration_without_gst && $series_configuration_without_gst->manual_numbering == "YES") ? $series_configuration_without_gst->blank_voucher : "";
+            $mat_series[$key]->without_invoice_prefix = $buildVoucherPrefix($series_configuration_without_gst, $mat_series[$key]->without_invoice_start_from);
          }
          //Vendor
          $vendors = Accounts::select('id','account_name','gstin')
-         ->whereIn('company_id',[Session::get('user_company_id'),0])
-         ->where('status','1')
-         ->where('delete','0')
-         ->where('gstin','!=','')
-         ->orderBy('account_name')
-         ->get();
+                              ->whereIn('company_id',[Session::get('user_company_id'),0])
+                              ->where('status','1')
+                              ->where('delete','0')
+                              ->where('gstin','!=','')
+                              ->orderBy('account_name')
+                              ->get();
             //Item
             $fixed_asset_group = AccountGroups::where('heading','6')
                                           ->whereIn('company_id',[Session::get('user_company_id'),0])
@@ -341,7 +418,7 @@ class PurchaseReturnController extends Controller
             $bill_date = $y[1]."-03-31";
             $bill_date = date('Y-m-d',strtotime($bill_date));
          } 
-        return view('addPurchaseReturn')->with('party_list', $party_list)->with('manageitems', $manageitems)->with('billsundry', $billsundry)->with('mat_series', $mat_series)->with('bill_date', $bill_date)->with('vendors', $vendors)->with('items', $items)->with('all_account_list', $all_account_list);
+        return view('addPurchaseReturn')->with('fy_start_date', $fy_start_date)->with('fy_end_date', $fy_end_date)->with('party_list', $party_list)->with('manageitems', $manageitems)->with('billsundry', $billsundry)->with('mat_series', $mat_series)->with('bill_date', $bill_date)->with('vendors', $vendors)->with('items', $items)->with('all_account_list', $all_account_list);
    }
 
     /**
@@ -351,6 +428,7 @@ class PurchaseReturnController extends Controller
      * @return \Illuminate\Http\Response
      */
    public function store(Request $request){
+      //dd($request->all());
       Gate::authorize('action-module',77);
       $validated = $request->validate([         
          'date' => 'required',
@@ -369,32 +447,59 @@ class PurchaseReturnController extends Controller
             return $this->failedMessage('Plases Select Item','sale-return/create');
          }
       }
-      $financial_year = Session::get('default_fy');
+      $financial_year = CommonHelper::getFinancialYear($request->input('date'));
+      $voucher_prefix = $request->input('voucher_prefix');
+      $configuration_for = ($request->input('nature') == "WITHOUT GST")
+         ? 'DEBIT NOTE'
+         : 'DEBIT NOTE WITH';
+      $isWithoutGstNature = $request->input('nature') == "WITHOUT GST";
       if($request->input('manual_enter_invoice_no')=='0'){
+         $voucher_prefix = $request->input('voucher_prefix');
+         $series_configuration = VoucherSeriesConfiguration::where('company_id',Session::get('user_company_id'))
+                  ->where('series',$request->input('series_no'))
+                  ->where('configuration_for','DEBIT NOTE')
+                  ->where('status','1')
+                  ->first();
          if($request->nature!="WITHOUT GST"){
             $purchase_return_no = PurchaseReturn::select('purchase_return_no')                   
                            ->where('company_id',Session::get('user_company_id'))
                            ->where('financial_year','=',$financial_year)
                            ->where('sr_nature','!=',"WITHOUT GST")
                            ->where('delete','=','0')
+                           ->when($series_configuration, function ($query) use ($series_configuration) {
+                              $query->whereRaw(
+                                                      "STR_TO_DATE(created_at, '%Y-%m-%d %H:%i:%s')>=STR_TO_DATE('".$series_configuration->created_at."', '%Y-%m-%d %H:%i:%s')"
+                                             );
+                           })
                            ->where('series_no',$request->input('series_no'))
                            ->max(\DB::raw("cast(purchase_return_no as SIGNED)"));
+            $series_configuration = VoucherSeriesConfiguration::where('company_id',Session::get('user_company_id'))
+                                                                  ->where('series',$request->input('series_no'))
+                                                                  ->where('configuration_for','DEBIT NOTE')
+                                                                  ->where('status','1')
+                                                                  ->first();
             if(!$purchase_return_no){
-               $series_configuration = VoucherSeriesConfiguration::where('company_id',Session::get('user_company_id'))
-               ->where('series',$request->input('series_no'))
-               ->where('configuration_for','DEBIT NOTE')
-               ->where('status','1')
-               ->first();
                if($series_configuration && $series_configuration->manual_numbering=="NO" && $series_configuration->invoice_start!=""){
-                  $purchase_return_no =  sprintf("%'03d",$series_configuration->invoice_start);
+                  if ($series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
+                     $purchase_return_no =  sprintf("%'03d",$series_configuration->invoice_start);
+                  }else{
+                     $purchase_return_no =  $series_configuration->invoice_start;
+                  }
                }else{
-                  $purchase_return_no = "001";
+                  $purchase_return_no = "1";
                }
             }else{
                $purchase_return_no++;
-               $purchase_return_no = sprintf("%'03d", $purchase_return_no);
+               if ($series_configuration && $series_configuration->manual_numbering=="NO" && $series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
+                  $purchase_return_no = sprintf("%'03d", $purchase_return_no);
+               }
             }
          }else{
+            $series_configuration = VoucherSeriesConfiguration::where('company_id',Session::get('user_company_id'))
+                                                                  ->where('series',$request->input('series_no'))
+                                                                  ->where('configuration_for','DEBIT NOTE GST')
+                                                                  ->where('status','1')
+                                                                  ->first();
             $purchase_return_no = PurchaseReturn::select('purchase_return_no')                   
                            ->where('company_id',Session::get('user_company_id'))
                            ->where('financial_year','=',$financial_year)
@@ -403,18 +508,46 @@ class PurchaseReturnController extends Controller
                            ->where('series_no',$request->input('series_no'))
                            ->max(\DB::raw("cast(purchase_return_no as SIGNED)"));
             if(!$purchase_return_no){
-               $purchase_return_no = "001";
+               if($series_configuration && $series_configuration->manual_numbering=="NO" && $series_configuration->invoice_start!=""){
+                  if ($series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
+                     $purchase_return_no =  sprintf("%'03d",$series_configuration->invoice_start);
+                  }else{
+                     $purchase_return_no =  $series_configuration->invoice_start;
+                  }
+               }else{
+                  $purchase_return_no = "1";
+               }
             }else{
                $purchase_return_no++;
-               $purchase_return_no = sprintf("%'03d", $purchase_return_no);
+               if ($series_configuration && $series_configuration->manual_numbering=="NO" && $series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
+                  $purchase_return_no = sprintf("%'03d", $purchase_return_no);
+               }               
             }
          }
       }else{
-         $purchase_return_no = $request->input('voucher_no');
+         $purchase_return_no = $request->input('voucher_prefix');
+         $series_configuration = VoucherSeriesConfiguration::where('company_id',Session::get('user_company_id'))
+                  ->where('series',$request->input('series_no'))
+                  ->where('configuration_for','DEBIT NOTE')
+                  ->where('status','1')
+                  ->first();
+         
+         if($series_configuration){
+            $voucher_prefix = "";
+            if($series_configuration->prefix=="ENABLE" && $series_configuration->prefix_value!=""){
+               $voucher_prefix.=$series_configuration->prefix_value.$purchase_return_no;
+            }else if($series_configuration->suffix=="ENABLE" && $series_configuration->suffix_value!=""){
+               $voucher_prefix.=$purchase_return_no.$series_configuration->suffix_value;
+            }else{
+               $voucher_prefix = $request->input('voucher_prefix');
+            }
+         }else{
+            $voucher_prefix = $request->input('voucher_prefix');
+         }
       }
       $account = Accounts::where('id',$request->input('party_id'))->first();
       $purchase = new PurchaseReturn;
-      if ($request->input('purchase_bill_id')!=null && $request->input('voucher_type') == 'SALE' && $request->input('nature') != "WITHOUT GST") {
+      if ($request->input('purchase_bill_id')!=null && $request->input('purchase_bill_id')!='' && $request->input('voucher_type') == 'SALE' && $request->input('nature') != "WITHOUT GST") {
          $original_invoice = Sales::find($request->input('purchase_bill_id'));
          if ($original_invoice) {
             $purchase->original_invoice_date = $original_invoice->date;
@@ -422,7 +555,7 @@ class PurchaseReturnController extends Controller
          }
          $purchase->invoice_no = $request->input('voucher_no');
          $purchase->voucher_type = $request->input('voucher_type');
-      }elseif ($request->input('purchase_bill_id')!=null && $request->input('voucher_type') == 'PURCHASE' && $request->input('nature') != "WITHOUT GST") {
+      }elseif ($request->input('purchase_bill_id')!=null && $request->input('purchase_bill_id')!='' && $request->input('voucher_type') == 'PURCHASE' && $request->input('nature') != "WITHOUT GST") {
          $original_invoice = Purchase::find($request->input('purchase_bill_id'));
          if ($original_invoice) {
             $purchase->original_invoice_date = $original_invoice->date;
@@ -430,7 +563,7 @@ class PurchaseReturnController extends Controller
          }
          $purchase->invoice_no = $request->input('voucher_no');
          $purchase->voucher_type = $request->input('voucher_type');
-      } elseif ($request->input('purchase_bill_id')==null  && $request->input('nature') != "WITHOUT GST") {
+      } elseif (($request->input('purchase_bill_id')==null || $request->input('purchase_bill_id')=='')  && $request->input('nature') != "WITHOUT GST") {
          $purchase->invoice_no = $request->input('other_invoice_no');
          $purchase->original_invoice_date = $request->input('other_invoice_date');
          $purchase->original_invoice_value = $request->input('other_invoice_value'); // ❗️fixed missing quote
@@ -452,7 +585,7 @@ class PurchaseReturnController extends Controller
       }
       $purchase->sr_nature = $request->input('nature');
       $purchase->sr_type = $request->input('type');
-      $voucher_prefix = $request->input('voucher_prefix');
+      
       $purchase->sr_prefix = $voucher_prefix;
 
       $purchase->series_no = $request->input('series_no');
@@ -467,6 +600,7 @@ class PurchaseReturnController extends Controller
       $purchase->tax_cgst = $request->input('cgst');
       $purchase->tax_sgst = $request->input('sgst');
       $purchase->tax_igst = $request->input('igst');
+      $purchase->created_by = Session::get('user_id');
       //$purchase->other_invoice_no = $request->input('other_invoice_no');
       //$purchase->other_invoice_date = $request->input('other_invoice_date');
       //$purchase->other_invoice_against = $request->input('other_invoice_against');
@@ -566,7 +700,7 @@ class PurchaseReturnController extends Controller
                   $ledger->series_no = $request->input('series_no');
                   $ledger->txn_date = $request->input('date');
                   $ledger->company_id = Session::get('user_company_id');
-                  $ledger->financial_year = Session::get('default_fy');
+                  $ledger->financial_year = $financial_year;
                   $ledger->entry_type = 4;
                   $ledger->entry_type_id = $purchase->id;
                   $ledger->map_account_id = $request->input('party_id');
@@ -618,8 +752,8 @@ class PurchaseReturnController extends Controller
                   $subtractive_sundry_amount = round($subtractive_sundry_amount,2);
                   $average_amount = $value['amount'] + $additive_sundry_amount - $subtractive_sundry_amount;
                   $average_amount =  round($average_amount,2);
-                  $average_price = $average_amount/$value['quantity'];
-                  $average_price =  round($average_price,6);
+                  //$average_price = $average_amount/$value['quantity'];
+                //  $average_price =  round($average_price,6);
                   //Add Data In Average Details table
                   
                   $average_detail = new ItemAverageDetail;
@@ -648,7 +782,7 @@ class PurchaseReturnController extends Controller
             $ledger->debit = $request->input('total');
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 4;
             $ledger->entry_type_id = $purchase->id;
             if($purchase->voucher_type=="PURCHASE"){
@@ -670,7 +804,7 @@ class PurchaseReturnController extends Controller
             $ledger->credit = $request->input('taxable_amt');
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 4;
             $ledger->entry_type_id = $purchase->id;
             $ledger->map_account_id = $request->input('party_id');
@@ -687,7 +821,7 @@ class PurchaseReturnController extends Controller
             $ledger->debit = $request->input('total_amount');                       
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 13;
             $ledger->map_account_id = $request->input('item')[0];
             $ledger->entry_type_id = $purchase->id;
@@ -717,7 +851,7 @@ class PurchaseReturnController extends Controller
                $ledger->credit = $amount;                       
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 13;
                $ledger->map_account_id = $request->input('party_id');
                $ledger->entry_type_id = $purchase->id;
@@ -762,7 +896,7 @@ class PurchaseReturnController extends Controller
                $ledger->credit = $request->input('igst');                       
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 13;
                $ledger->map_account_id = $account_name;
                $ledger->entry_type_id = $purchase->id;
@@ -831,7 +965,7 @@ class PurchaseReturnController extends Controller
                $ledger->series_no = $request->input('series_no');                     
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 13;
                $ledger->map_account_id = $cgst_account_name;
                $ledger->entry_type_id = $purchase->id;
@@ -846,7 +980,7 @@ class PurchaseReturnController extends Controller
                $ledger->series_no = $request->input('series_no');
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 13;
                $ledger->map_account_id = $sgst_account_name;
                $ledger->entry_type_id = $purchase->id;
@@ -854,6 +988,33 @@ class PurchaseReturnController extends Controller
                $ledger->created_at = date('d-m-Y H:i:s');
                $ledger->save();
             }
+               $roundOffPlus  = $request->input('roundoffplus');
+               $roundOffMinus = $request->input('roundoffminus');
+
+               // ✅ Run only if any round-off value exists
+               if (!empty($roundOffPlus) || !empty($roundOffMinus)) {
+
+                  $ledger = new AccountLedger();
+                  $ledger->account_id = 11427;
+                  $ledger->series_no = $request->input('series_no');
+                  $ledger->txn_date = $request->input('date');
+                  $ledger->company_id = Session::get('user_company_id');
+                  $ledger->financial_year = $financial_year;
+                  $ledger->entry_type = 13;
+                  $ledger->map_account_id = $request->input('party_id');
+                  $ledger->entry_type_id = $purchase->id;
+                  $ledger->created_by = Session::get('user_id');
+                  $ledger->created_at = now();
+
+                  // ✅ Apply correct side
+                  if (!empty($roundOffPlus)) {
+                     $ledger->credit = $roundOffPlus;
+                  } else {
+                     $ledger->debit = $roundOffMinus;
+                  }
+
+                  $ledger->save();
+               }
             return redirect('purchase-return-without-item-invoice/'.$purchase->id)->withSuccess('Sale return added successfully!');
          }else if($request->input('nature')=="WITHOUT GST"){
             $account_names = $request->input('account_name');
@@ -878,7 +1039,7 @@ class PurchaseReturnController extends Controller
                $ledger->series_no = $request->input('series_no');
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 12;
                $ledger->entry_type_id = $purchase->id;
                $ledger->map_account_id = $map_account_id;
@@ -894,7 +1055,7 @@ class PurchaseReturnController extends Controller
             $ledger->series_no = $request->input('series_no');
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 12;
             $ledger->entry_type_id = $purchase->id;
             //$ledger->map_account_id = $map_account_id;
@@ -912,6 +1073,27 @@ class PurchaseReturnController extends Controller
    public function delete(Request $request){
       Gate::authorize('action-module',48);   
       $purchase_return =  PurchaseReturn::find($request->purchase_return_id);
+      $oldSnapshot = [
+         'purchase_return' => $purchase_return->toArray(),
+
+         'items' => PurchaseReturnDescription::where('purchase_return_id', $purchase_return->id)
+                     ->get()->toArray(),
+
+         'sundries' => PurchaseReturnSundry::where('purchase_return_id', $purchase_return->id)
+                     ->get()->toArray(),
+
+         'item_ledgers' => ItemLedger::where('source', 5)
+                     ->where('source_id', $purchase_return->id)
+                     ->get()->toArray(),
+
+         'account_ledgers' => AccountLedger::whereIn('entry_type', [4,12,13])
+                     ->where('entry_type_id', $purchase_return->id)
+                     ->get()->toArray(),
+
+         'item_average_details' => ItemAverageDetail::where('purchase_return_id', $purchase_return->id)
+                     ->where('type', 'PURCHASE RETURN')
+                     ->get()->toArray(),
+      ];
       $purchase_return->delete = '1';
       $purchase_return->deleted_at = Carbon::now();
       $purchase_return->deleted_by = Session::get('user_id');
@@ -951,7 +1133,16 @@ class PurchaseReturnController extends Controller
                            ->where('entry_type_id',$request->purchase_return_id)
                            ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
          }  
-         
+         ActivityLog::create([
+            'module_type' => 'purchase_return',
+            'module_id'   => $purchase_return->id,
+            'action'      => 'delete',
+            'old_data'    => $oldSnapshot,
+            'new_data'    => null,
+            'action_by'   => Session::get('user_id'),
+            'company_id'  => Session::get('user_company_id'),
+            'action_at'   => now(),
+         ]);
          return redirect('purchase-return')->withSuccess('Purchase Return deleted successfully!');
       }
    }
@@ -1284,11 +1475,17 @@ class PurchaseReturnController extends Controller
                                  ->select(['bill_sundrys.effect_gst_calculation','bill_sundrys.nature_of_sundry','purchase_return_sundries.*'])
                                              ->where('purchase_return_id',$id)
                                              ->get();
-      $group_ids = CommonHelper::getAllChildGroupIds(3,Session::get('user_company_id'));
-      array_push($group_ids, 3);
-      $group_ids = array_merge($group_ids, CommonHelper::getAllChildGroupIds(11,Session::get('user_company_id'))); // Include group 11 as well
-      $group_ids = array_unique($group_ids); // Ensure unique group IDs       
-      array_push($group_ids, 11);
+      $top_groups = [3, 11];
+
+      // Step 2: Get all child group IDs recursively
+      $all_groups = [];
+      foreach ($top_groups as $group_id) {
+         $all_groups[] = $group_id; // include the top group itself
+         $all_groups = array_merge($all_groups, CommonHelper::getAllChildGroupIds($group_id, Session::get('user_company_id')));
+      }
+
+      // Remove duplicates just in case
+      $group_ids = array_unique($all_groups);
       $party_list = Accounts::select('accounts.*','states.state_code')
                               ->leftjoin('states','accounts.state','=','states.id')
                               ->where('accounts.delete', '=', '0')
@@ -1328,20 +1525,62 @@ class PurchaseReturnController extends Controller
          return $this->failedMessage('Please Enter GST Configuration!','purchase-return');
       }    
       $financial_year = Session::get('default_fy');
+      [$startYY, $endYY] = explode('-', $financial_year);
+
+      $fy_start_date = '20' . $startYY . '-04-01'; 
+      $fy_end_date   = '20' . $endYY   . '-03-31';   
       $billsundry = BillSundrys::where('delete', '=', '0')
                                 ->where('status', '=', '1')
                                 ->whereIn('company_id',[Session::get('user_company_id'),0])
                                 //->OrwhereIn('id',[1,2,3,8,9])
                                 ->get();
+                                
+                                
+                                 $GstSettings = (object)NULL;
+        $GstSettings->mat_center = array();
+        if ($companyData->gst_config_type == "single_gst") {
+            $GstSettings = DB::table('gst_settings')->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])->first();
+        } elseif ($companyData->gst_config_type == "multiple_gst") {
+            $GstSettings = DB::table('gst_settings_multiple')->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst"])->first();
+        }
+        if(!$GstSettings || !isset($companyData->gst_config_type)){
+           return $this->failedMessage('Please Enter GST Configuration!','purchase-return');
+        }
+        $purchaseData = Purchase::where('company_id', Session::get('user_company_id'))->orderBy('id', 'desc')->limit(1)->get();
+         $mat_series = array();
+         if($companyData->gst_config_type == "single_gst"){
+            $mat_series = DB::table('gst_settings')
+                              ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])
+                              ->get();
+            $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series','branch_invoice_start_from as invoice_start_from')
+                              ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_id'=>$mat_series[0]->id])
+                              ->get();
+            if(count($branch)>0){
+               $mat_series = $mat_series->merge($branch);
+            }            
+         }else if($companyData->gst_config_type == "multiple_gst"){
+            $mat_series = DB::table('gst_settings_multiple')
+                              ->select('id','gst_no','mat_center','series','invoice_start_from')
+                              ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst"])
+                              ->get();
+            foreach ($mat_series as $key => $value) {
+               $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series','branch_invoice_start_from as invoice_start_from')
+                           ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_multiple_id'=>$value->id])
+                           ->get();
+               if(count($branch)>0){
+                  $mat_series = $mat_series->merge($branch);
+               }
+            }         
+         }
 
       //Vendor
       $vendors = Accounts::select('id','account_name','gstin')
-      ->whereIn('company_id',[Session::get('user_company_id'),0])
-      ->where('status','1')
-      ->where('delete','0')
-      ->where('gstin','!=','')
-      ->orderBy('account_name')
-      ->get();
+                     ->whereIn('company_id',[Session::get('user_company_id'),0])
+                     ->where('status','1')
+                     ->where('delete','0')
+                     ->where('gstin','!=','')
+                     ->orderBy('account_name')
+                     ->get();
          //Item
          $fixed_asset_group = AccountGroups::where('heading','6')
                                        ->whereIn('company_id',[Session::get('user_company_id'),0])
@@ -1393,7 +1632,18 @@ class PurchaseReturnController extends Controller
                         ->select('units.s_name as unit', 'manage_items.*')
                         ->join('units', 'manage_items.u_name', '=', 'units.id')
                         ->get();
-      return view('editPurchaseReturn')->with('party_list', $party_list)->with('billsundry', $billsundry)->with('purchase_return', $purchase_return)->with('purchase_return_description', $purchase_return_description)->with('purchase_return_sundry', $purchase_return_sundry)->with('without_gst', $without_gst)->with('vendors', $vendors)->with('items', $items)->with('all_account_list', $all_account_list)->with('merchant_gst',$merchant_gst)->with('manageitems',$manageitems);
+      $series_configuration = VoucherSeriesConfiguration::where('company_id',Session::get('user_company_id'))
+                  ->where('series',$purchase_return->series_no)
+                  ->where('configuration_for','DEBIT NOTE')
+                  ->where('status','1')
+                  ->first();
+      $manual_voucher_no = 1;
+      if($series_configuration && $series_configuration->manual_numbering=="NO"){
+         $manual_voucher_no = 0;
+      }
+      
+
+      return view('editPurchaseReturn')->with('fy_start_date', $fy_start_date)->with('fy_end_date', $fy_end_date)->with('mat_series',$mat_series)->with('party_list', $party_list)->with('billsundry', $billsundry)->with('purchase_return', $purchase_return)->with('purchase_return_description', $purchase_return_description)->with('purchase_return_sundry', $purchase_return_sundry)->with('without_gst', $without_gst)->with('vendors', $vendors)->with('items', $items)->with('all_account_list', $all_account_list)->with('merchant_gst',$merchant_gst)->with('manageitems',$manageitems)->with('manual_voucher_no',$manual_voucher_no);
    }
    public function update(Request $request){
       Gate::authorize('action-module',47); 
@@ -1403,8 +1653,34 @@ class PurchaseReturnController extends Controller
          'series_no' => 'required',
          'material_center' => 'required',
       ]);
+      $type = $request->input('type');
+      $nature = $request->input('nature');
+      if ($nature == "WITH GST") {
+         if ($type == "WITH ITEM" || $type == "RATE DIFFERENCE") {
+            $request->merge([
+                  'item' => [],
+                  'without_item_amount' => [],
+                  'percentage' => [],
+                  'hsn' => [],
+                  'unit_code' => [],
+                  'net_amount' => null,
+                  'total_amount' => null
+            ]);
+         } elseif ($type == "WITHOUT ITEM") {
+            $request->merge([
+                  'goods_discription' => [],
+                  'qty' => [],
+                  'units' => [],
+                  'price' => [],
+                  'amount' => [],
+                  'taxable_amt' => null,
+                  'total' => null
+            ]);         }
+      }
       // echo "<pre>";
-      // print_r($request->all());die;
+      // print_r($request->all());
+      
+      //die;
       //Check Item Empty or not
       if($request->input('nature')=="WITH GST" && ($request->input('type')=="WITH ITEM" || $request->input('type')=="RATE DIFFERENCE")){
          if($request->input('goods_discription')[0]=="" || $request->input('amount')[0]==""){
@@ -1412,9 +1688,32 @@ class PurchaseReturnController extends Controller
          }
       }
       $account = Accounts::where('id',$request->input('party_id'))->first();
-      $financial_year = Session::get('default_fy');      
-      $purchase = PurchaseReturn::find($request->input('purchase_return_edit_id'));      
-      if ($request->input('purchase_bill_id')!=null && $request->input('voucher_type') == 'SALE' && $request->input('nature') != "WITHOUT GST") {
+      $financial_year = CommonHelper::getFinancialYear($request->input('date'));    
+      $purchase = PurchaseReturn::find($request->input('purchase_return_edit_id'));
+      $oldSnapshot = [
+         'purchase_return' => $purchase->toArray(),
+     
+         'items' => PurchaseReturnDescription::where('purchase_return_id', $purchase->id)
+                     ->get()->toArray(),
+     
+         'sundries' => PurchaseReturnSundry::where('purchase_return_id', $purchase->id)
+                     ->get()->toArray(),
+     
+         'item_ledgers' => ItemLedger::where('source', 5)
+                     ->where('source_id', $purchase->id)
+                     ->get()->toArray(),
+     
+         'account_ledgers' => AccountLedger::whereIn('entry_type', [4,12,13])
+                     ->where('entry_type_id', $purchase->id)
+                     ->get()->toArray(),
+     
+         'item_average_details' => ItemAverageDetail::where('purchase_return_id', $purchase->id)
+                     ->where('type', 'PURCHASE RETURN')
+                     ->get()->toArray(),
+      ]; 
+      
+      if ($request->input('purchase_bill_id')!=null && $request->input('purchase_bill_id')!='' && $request->input('voucher_type') == 'SALE' && $request->input('nature') != "WITHOUT GST") {
+        
          $original_invoice = Sales::find($request->input('purchase_bill_id'));
          if ($original_invoice) {
             $purchase->original_invoice_date = $original_invoice->date;
@@ -1423,7 +1722,8 @@ class PurchaseReturnController extends Controller
          $purchase->invoice_no = $request->input('voucher_no');
          $purchase->voucher_type = $request->input('voucher_type');
 
-      } elseif ($request->input('purchase_bill_id')!=null && $request->input('voucher_type') == 'PURCHASE' && $request->input('nature') != "WITHOUT GST") {
+      } elseif ($request->input('purchase_bill_id')!=null && $request->input('purchase_bill_id')!='' && $request->input('voucher_type') == 'PURCHASE' && $request->input('nature') != "WITHOUT GST") {
+         
          $original_invoice = Purchase::find($request->input('purchase_bill_id'));
          if ($original_invoice) {
             $purchase->original_invoice_date = $original_invoice->date;
@@ -1432,13 +1732,14 @@ class PurchaseReturnController extends Controller
          $purchase->invoice_no = $request->input('voucher_no');
          $purchase->voucher_type = $request->input('voucher_type');
 
-      } elseif ($request->input('purchase_bill_id')==null  && $request->input('nature') != "WITHOUT GST") {
+      } elseif (($request->input('purchase_bill_id')==null || $request->input('purchase_bill_id')=='')  && $request->input('nature') != "WITHOUT GST") {
+         
          $purchase->invoice_no = $request->input('other_invoice_no');
          $purchase->original_invoice_date = $request->input('other_invoice_date');
          $purchase->original_invoice_value = $request->input('other_invoice_value'); // ❗️fixed missing quote
          $purchase->voucher_type = $request->input('other_invoice_against');
       }
-      
+     
       $last_date = $purchase->date;
       $purchase->date = $request->input('date');
       
@@ -1447,29 +1748,53 @@ class PurchaseReturnController extends Controller
       if($request->input('nature')=="WITH GST" && ($request->input('type')=="WITH ITEM" || $request->input('type')=="RATE DIFFERENCE")){
          $purchase->taxable_amt = $request->input('taxable_amt');
          $purchase->total = $request->input('total');
-          $purchase->remark = $request->input('narration_withgst');         
+          $purchase->remark = $request->input('narration_withgst');
       }else if($request->nature=="WITH GST" && $request->type=="WITHOUT ITEM"){
          $purchase->taxable_amt = $request->input('net_amount');
          $purchase->total = $request->input('total_amount');
          $purchase->remark = $request->input('remark');
       }
-      //$purchase->series_no = $request->input('series_no');
-      //$purchase->material_center = $request->input('material_center');
+      $purchase->sr_nature = $request->input('nature');
+      $purchase->sr_type   = $request->input('type');
+      $purchase->series_no = $request->input('series_no');
+      $purchase->material_center = $request->input('material_center');
       $purchase->vehicle_no = $request->input('vehicle_no');
       //$purchase->voucher_type = $request->input('voucher_type');
       $purchase->gr_pr_no = $request->input('gr_pr_no');
       $purchase->transport_name = $request->input('transport_name');
       $purchase->station = $request->input('station');
-      //$purchase->purchase_return_no = $request->input('purchase_return_no');      
+      $series_configuration = VoucherSeriesConfiguration::where('company_id',Session::get('user_company_id'))
+                  ->where('series',$request->input('series_no'))
+                  ->where('configuration_for','DEBIT NOTE')
+                  ->where('status','1')
+                  ->first();
+      if($series_configuration && $series_configuration->manual_numbering=="YES"){
+         $purchase->purchase_return_no = $request->input('voucher_prefix');
+         $voucher_prefix = "";
+         if($series_configuration->prefix=="ENABLE" && $series_configuration->prefix_value!="" && $series_configuration->suffix=="ENABLE" && $series_configuration->suffix_value!=""){
+            $voucher_prefix.=$series_configuration->prefix_value.$request->input('voucher_prefix').$series_configuration->suffix_value;
+            $purchase->sr_prefix = $voucher_prefix;
+         }else if($series_configuration->prefix=="ENABLE" && $series_configuration->prefix_value!=""){
+            $voucher_prefix.=$series_configuration->prefix_value.$request->input('voucher_prefix');
+            $purchase->sr_prefix = $voucher_prefix;
+         }else if($series_configuration->suffix=="ENABLE" && $series_configuration->suffix_value!=""){
+            $voucher_prefix.=$request->input('voucher_prefix').$series_configuration->suffix_value;
+            $purchase->sr_prefix = $voucher_prefix;
+         }else{
+            $purchase->sr_prefix = $request->input('purchase_return_no');
+         }
+      }else{
+         $purchase->purchase_return_no = $request->input('purchase_return_no');
+         $purchase->sr_prefix = $request->input('voucher_prefix');
+      }
+      
       $purchase->tax_cgst = $request->input('cgst');
       $purchase->tax_sgst = $request->input('sgst');
       $purchase->tax_igst = $request->input('igst');
       $purchase->billing_gst = $account->gstin;
       $purchase->billing_state = $account->state;
       $purchase->financial_year = $financial_year;
-     // $purchase->other_invoice_no = $request->input('other_invoice_no');
-      //$purchase->other_invoice_date = $request->input('other_invoice_date');
-      //$purchase->other_invoice_against = $request->input('other_invoice_against');
+      $purchase->updated_by = Session::get('user_id');
       $purchase->purchase_bill_id = $request->input('purchase_bill_id');
       $purchase->save();
       if($purchase->id){
@@ -1566,7 +1891,7 @@ class PurchaseReturnController extends Controller
                   $ledger->txn_date = $request->input('date');
                   $ledger->series_no = $request->input('series_no');
                   $ledger->company_id = Session::get('user_company_id');
-                  $ledger->financial_year = Session::get('default_fy');
+                  $ledger->financial_year = $financial_year;
                   $ledger->entry_type = 4;
                   $ledger->entry_type_id = $purchase->id;
                   $ledger->map_account_id = $request->input('party_id');
@@ -1656,7 +1981,7 @@ class PurchaseReturnController extends Controller
             $ledger->series_no = $request->input('series_no');
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 4;
             $ledger->entry_type_id = $purchase->id;
             if($purchase->voucher_type=="PURCHASE"){
@@ -1679,7 +2004,7 @@ class PurchaseReturnController extends Controller
             $ledger->series_no = $request->input('series_no');
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 4;
             $ledger->entry_type_id = $purchase->id;
             $ledger->map_account_id = $request->input('party_id');
@@ -1691,6 +2016,38 @@ class PurchaseReturnController extends Controller
                   CommonHelper::RewriteItemAverageByItem($last_date,$value,$request->input('series_no'));
                }
             }
+            $newSnapshot = [
+               'purchase_return' => PurchaseReturn::find($purchase->id)->toArray(),
+
+               'items' => PurchaseReturnDescription::where('purchase_return_id', $purchase->id)
+                           ->get()->toArray(),
+
+               'sundries' => PurchaseReturnSundry::where('purchase_return_id', $purchase->id)
+                           ->get()->toArray(),
+
+               'item_ledgers' => ItemLedger::where('source', 5)
+                           ->where('source_id', $purchase->id)
+                           ->get()->toArray(),
+
+               'account_ledgers' => AccountLedger::whereIn('entry_type', [4,12,13])
+                           ->where('entry_type_id', $purchase->id)
+                           ->get()->toArray(),
+
+               'item_average_details' => ItemAverageDetail::where('purchase_return_id', $purchase->id)
+                           ->where('type', 'PURCHASE RETURN')
+                           ->get()->toArray(),
+            ];
+
+            ActivityLog::create([
+               'module_type' => 'purchase_return',
+               'module_id'   => $purchase->id,
+               'action'      => 'edit',
+               'old_data'    => $oldSnapshot,
+               'new_data'    => $newSnapshot,
+               'action_by'   => Session::get('user_id'),
+               'company_id'  => Session::get('user_company_id'),
+               'action_at'   => now(),
+            ]);
             return redirect('purchase-return-invoice/'.$purchase->id)->withSuccess('Purchase return added successfully!');
          }else if($request->input('nature')=="WITH GST" && $request->input('type')=="WITHOUT ITEM"){
             //Ledger Entry
@@ -1701,7 +2058,7 @@ class PurchaseReturnController extends Controller
             $ledger->series_no = $request->input('series_no');                      
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 13;
             $ledger->map_account_id = $request->input('item')[0];
             $ledger->entry_type_id = $purchase->id;
@@ -1732,7 +2089,7 @@ class PurchaseReturnController extends Controller
                $ledger->txn_date = $request->input('date');
                $ledger->series_no = $request->input('series_no');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 13;
                $ledger->map_account_id = $request->input('party_id');
                $ledger->entry_type_id = $purchase->id;
@@ -1777,7 +2134,7 @@ class PurchaseReturnController extends Controller
                $ledger->series_no = $request->input('series_no');                     
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 13;
                $ledger->map_account_id = $account_name;
                $ledger->entry_type_id = $purchase->id;
@@ -1846,7 +2203,7 @@ class PurchaseReturnController extends Controller
                $ledger->txn_date = $request->input('date');
                $ledger->series_no = $request->input('series_no');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 13;
                $ledger->map_account_id = $cgst_account_name;
                $ledger->entry_type_id = $purchase->id;
@@ -1861,19 +2218,80 @@ class PurchaseReturnController extends Controller
                $ledger->txn_date = $request->input('date');
                $ledger->series_no = $request->input('series_no');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 13;
                $ledger->map_account_id = $sgst_account_name;
                $ledger->entry_type_id = $purchase->id;
                $ledger->created_by = Session::get('user_id');
                $ledger->created_at = date('d-m-Y H:i:s');
                $ledger->save();
+               
+            }
+            
+            $roundOffPlus  = $request->input('roundoffplus');
+            $roundOffMinus = $request->input('roundoffminus');
+            
+            // ✅ Run only if any round-off value exists
+            if (!empty($roundOffPlus) || !empty($roundOffMinus)) {
+            
+                $ledger = new AccountLedger();
+                $ledger->account_id = 11427;
+                $ledger->series_no = $request->input('series_no');
+                $ledger->txn_date = $request->input('date');
+                $ledger->company_id = Session::get('user_company_id');
+                $ledger->financial_year = $financial_year;
+                $ledger->entry_type = 13;
+                $ledger->map_account_id = $request->input('party_id');
+                $ledger->entry_type_id = $purchase->id;
+                $ledger->created_by = Session::get('user_id');
+                $ledger->created_at = now();
+            
+                // ✅ Apply correct side
+                if (!empty($roundOffPlus)) {
+                    $ledger->credit = $roundOffPlus;
+                } else {
+                    $ledger->debit = $roundOffMinus;
+                }
+            
+                $ledger->save();
             }
             foreach ($desc_item_arr as $key => $value) {
                if(!in_array($value, $update_item_arr)){
                   CommonHelper::RewriteItemAverageByItem($last_date,$value,$request->input('series_no'));
                }
             }
+            $newSnapshot = [
+               'purchase_return' => PurchaseReturn::find($purchase->id)->toArray(),
+
+               'items' => PurchaseReturnDescription::where('purchase_return_id', $purchase->id)
+                           ->get()->toArray(),
+
+               'sundries' => PurchaseReturnSundry::where('purchase_return_id', $purchase->id)
+                           ->get()->toArray(),
+
+               'item_ledgers' => ItemLedger::where('source', 5)
+                           ->where('source_id', $purchase->id)
+                           ->get()->toArray(),
+
+               'account_ledgers' => AccountLedger::whereIn('entry_type', [4,12,13])
+                           ->where('entry_type_id', $purchase->id)
+                           ->get()->toArray(),
+
+               'item_average_details' => ItemAverageDetail::where('purchase_return_id', $purchase->id)
+                           ->where('type', 'PURCHASE RETURN')
+                           ->get()->toArray(),
+            ];
+
+            ActivityLog::create([
+               'module_type' => 'purchase_return',
+               'module_id'   => $purchase->id,
+               'action'      => 'edit',
+               'old_data'    => $oldSnapshot,
+               'new_data'    => $newSnapshot,
+               'action_by'   => Session::get('user_id'),
+               'company_id'  => Session::get('user_company_id'),
+               'action_at'   => now(),
+            ]);
             return redirect('purchase-return-without-item-invoice/'.$purchase->id)->withSuccess('Sale return added successfully!');
          }else if($request->input('nature')=="WITHOUT GST"){
             $account_names = $request->input('account_name');
@@ -1898,7 +2316,7 @@ class PurchaseReturnController extends Controller
                $ledger->credit = $debits[$key];                          
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 12;
                $ledger->entry_type_id = $purchase->id;
                $ledger->map_account_id = $map_account_id;
@@ -1914,7 +2332,7 @@ class PurchaseReturnController extends Controller
             $ledger->txn_date = $request->input('date');
             $ledger->series_no = $request->input('series_no');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 12;
             $ledger->entry_type_id = $purchase->id;
             $ledger->map_account_id =  $account_names[0];
@@ -1927,6 +2345,37 @@ class PurchaseReturnController extends Controller
                   CommonHelper::RewriteItemAverageByItem($last_date,$value,$request->input('series_no'));
                }
             }
+            $newSnapshot = [
+               'purchase_return' => PurchaseReturn::find($purchase->id)->toArray(),
+
+               'items' => PurchaseReturnDescription::where('purchase_return_id', $purchase->id)
+                           ->get()->toArray(),
+
+               'sundries' => PurchaseReturnSundry::where('purchase_return_id', $purchase->id)
+                           ->get()->toArray(),
+
+               'item_ledgers' => ItemLedger::where('source', 5)
+                           ->where('source_id', $purchase->id)
+                           ->get()->toArray(),
+
+               'account_ledgers' => AccountLedger::whereIn('entry_type', [4,12,13])
+                           ->where('entry_type_id', $purchase->id)
+                           ->get()->toArray(),
+
+               'item_average_details' => ItemAverageDetail::where('purchase_return_id', $purchase->id)
+                           ->where('type', 'PURCHASE RETURN')
+                           ->get()->toArray(),
+            ];
+            ActivityLog::create([
+               'module_type' => 'purchase_return',
+               'module_id'   => $purchase->id,
+               'action'      => 'edit',
+               'old_data'    => $oldSnapshot,
+               'new_data'    => $newSnapshot,
+               'action_by'   => Session::get('user_id'),
+               'company_id'  => Session::get('user_company_id'),
+               'action_at'   => now(),
+            ]);
             return redirect('purchase-return-without-gst-invoice/'.$purchase->id)->withSuccess('Sale return added successfully!');
          }
 
@@ -3242,6 +3691,7 @@ class PurchaseReturnController extends Controller
                if($data[0]!="" && $data[2]!=""){
                   $series_no = $data[7];
                   $voucher_no = $data[3];
+                  
                   $account = $data[1];
                   $account = Accounts::select('id')
                                        ->where('account_name',trim($account))
@@ -3250,7 +3700,7 @@ class PurchaseReturnController extends Controller
                   if($account){
                      $check_invoice = PurchaseReturn::select('id')
                               ->where('company_id',Session::get('user_company_id'))
-                              ->where('sr_prefix',$voucher_no)
+                              ->where('purchase_return_no',$voucher_no)
                               ->where('series_no',$series_no)
                               ->where('financial_year','=',$financial_year)
                               ->where('delete','0')
@@ -3329,8 +3779,14 @@ class PurchaseReturnController extends Controller
                $date = $data[0];
                $date = date('Y-m-d',strtotime($date));
                $account = $data[1];
-               $invoice_against = $data[2];
+               $invoice_against = isset($data[2]) ? trim($data[2]) : '';
+               if ($invoice_against === '') {
+                  array_push($error_arr, 'Voucher Type is mandatory');
+               }
                $voucher_no = $data[3];
+               if (!is_numeric($voucher_no)) {
+                  array_push($error_arr, 'Voucher No '.$voucher_no.' should be numeric');
+               }
                $invoice_date = $data[4];
                $invoice_date = date('Y-m-d',strtotime($invoice_date));
                $invoice_amount = $data[5];
@@ -3373,7 +3829,7 @@ class PurchaseReturnController extends Controller
                if($duplicate_voucher_status!=2){
                   $check_invoice = PurchaseReturn::select('id')
                               ->where('company_id',Session::get('user_company_id'))
-                              ->where('sr_prefix',$voucher_no)
+                              ->where('purchase_return_no',$voucher_no)
                               ->where('series_no',$series_no)
                               ->where('financial_year','=',$financial_year)
                               ->where('delete','0')
@@ -3427,6 +3883,76 @@ class PurchaseReturnController extends Controller
                $series_no = $value['series_no'];
                $date = date('Y-m-d',strtotime($value['date']));
                $voucher_no = $value['voucher_no'];
+               $sr_prefix = $voucher_no;
+               //Voucher Series Configuration Data
+               $series_configuration = VoucherSeriesConfiguration::where('company_id',Session::get('user_company_id'))
+                                       ->where('series',$series_no)
+                                       ->where('configuration_for','DEBIT NOTE')
+                                       ->where('status','1')
+                                       ->first();
+               if($series_configuration){
+                  if($series_configuration->manual_numbering=="NO"){
+                     $invoice_prefix = "";$invoice_prefix_wt = "";
+                     if($series_configuration->prefix=="ENABLE" && $series_configuration->prefix_value!=""){
+                        $invoice_prefix.=$series_configuration->prefix_value;
+                        $invoice_prefix_wt.=$series_configuration->prefix_value."WT";
+                     } 
+                     if($series_configuration->prefix=="ENABLE" && $series_configuration->prefix_value!="" && $series_configuration->separator_1!=""){
+                           $invoice_prefix.=$series_configuration->separator_1;
+                           $invoice_prefix_wt.=$series_configuration->separator_1;
+                     }
+                     if($series_configuration->year=="PREFIX TO NUMBER" && $series_configuration->year_format!=""){
+                        if($series_configuration->year_format=="YY-YY"){
+                           $invoice_prefix.=Session::get('default_fy');
+                           $invoice_prefix_wt.=Session::get('default_fy');
+                        }else if($series_configuration->year_format=="YYYY-YY"){
+                           $default_fy = Session::get('default_fy');  // 23-24
+                           $fy_parts = explode('-', $default_fy);     // [23, 24]
+                           $invoice_prefix .= '20' . $fy_parts[0] . '-20' . $fy_parts[1];
+                           $invoice_prefix_wt .= '20' . $fy_parts[0] . '-20' . $fy_parts[1];
+                        }
+                     }            
+                     if($series_configuration->year=="PREFIX TO NUMBER" && $series_configuration->year_format!="" && $series_configuration->separator_2!=""){
+                        $invoice_prefix.=$series_configuration->separator_2;
+                        $invoice_prefix_wt.=$series_configuration->separator_2;
+                     }
+                     $invoice_prefix.=$voucher_no;
+                     $invoice_prefix_wt.=$voucher_no;
+                     if($series_configuration->year=="SUFFIX TO NUMBER" && $series_configuration->year_format!="" && $series_configuration->separator_2!=""){
+                        $invoice_prefix.=$series_configuration->separator_2;
+                        $invoice_prefix_wt.=$series_configuration->separator_2;
+                     }
+                     if($series_configuration->year=="SUFFIX TO NUMBER" && $series_configuration->year_format!=""){
+                        if($series_configuration->year_format=="YY-YY"){
+                           $invoice_prefix.=Session::get('default_fy');
+                           $invoice_prefix_wt.=Session::get('default_fy');
+                        }else if($series_configuration->year_format=="YYYY-YY"){
+                           $default_fy = Session::get('default_fy');  // 23-24
+                           $fy_parts = explode('-', $default_fy);     // [23, 24]
+                           $invoice_prefix .= '20' . $fy_parts[0] . '-20' . $fy_parts[1];
+                           $invoice_prefix_wt .= '20' . $fy_parts[0] . '-20' . $fy_parts[1];
+                        }
+                     }        
+                     if($series_configuration->suffix=="ENABLE" && $series_configuration->suffix_value!="" && $series_configuration->separator_3!=""){
+                        $invoice_prefix.=$series_configuration->separator_3;
+                        $invoice_prefix_wt.=$series_configuration->separator_3;
+                     }
+                     if($series_configuration->suffix=="ENABLE" && $series_configuration->suffix_value!=""){
+                        $invoice_prefix.=$series_configuration->suffix_value;
+                        $invoice_prefix_wt.=$series_configuration->suffix_value;
+                     }
+                     $sr_prefix = $invoice_prefix;
+                  }else if($series_configuration->manual_numbering=="YES"){
+                     $sr_prefix = "";
+                     if($series_configuration->prefix=="ENABLE" && $series_configuration->prefix_value!=""){
+                        $sr_prefix.=$series_configuration->prefix_value.$voucher_no;
+                     }else if($series_configuration->suffix=="ENABLE" && $series_configuration->suffix_value!=""){
+                        $sr_prefix.=$voucher_no.$series_configuration->suffix_value;
+                     }else{
+                        $sr_prefix = $voucher_no;
+                     }
+                  }
+               }
                $account = $value['account'];
                $material_center = $value['material_center'];
                $invoice_date = $value['invoice_date'];
@@ -3439,7 +3965,7 @@ class PurchaseReturnController extends Controller
                if($duplicate_voucher_status==2){
                   $check_invoices = PurchaseReturn::select('id')
                         ->where('company_id',Session::get('user_company_id'))
-                        ->where('sr_prefix',$voucher_no)
+                        ->where('sr_prefix',$sr_prefix)
                         ->where('series_no',$series_no)
                         ->where('financial_year','=',$financial_year)
                         ->where('delete','0')
@@ -3493,7 +4019,7 @@ class PurchaseReturnController extends Controller
                $purchase->party = $accounts->id;
                $purchase->sr_nature = "WITH GST";
                $purchase->sr_type = $sr_type;//
-               $purchase->sr_prefix = $voucher_no;
+               $purchase->sr_prefix = $sr_prefix;
                $purchase->series_no = $series_no;
                $purchase->material_center = $material_center;
                $purchase->merchant_gst = $merchant_gst; 
@@ -3790,4 +4316,358 @@ class PurchaseReturnController extends Controller
       return view('sale_import')->with('upload_log',1)->with('total_count',$total_invoice_count)->with('success_count',$success_invoice_count)->with('failed_count',$failed_invoice_count)->with('error_message',$all_error_arr);
       
    }
+     public function exportView()
+    {
+        return view('purchase_return_export');
+    }
+
+     public function export(Request $request)
+{
+
+   $request->validate([
+      'from_date'     => 'required|date',
+      'to_date'       => 'required|date',
+      'sr_type'       => 'required|in:WITH ITEM,RATE DIFFERENCE',
+      'purchase_area' => 'required|in:LOCAL,CENTER',
+   ]);
+
+   $companyId = Session::get('user_company_id');
+   $purchaseArea = $request->purchase_area;
+   $srType = $request->sr_type;
+
+   $purchaseReturns = \App\Models\PurchaseReturn::with([
+      'purchaseReturnDescription.item',
+      'purchaseReturnDescription.unitMaster',
+      'purchaseReturnSundry.billSundry',
+      'account'
+   ])
+      ->where('company_id', $companyId)
+      ->where('sr_type', $srType)
+      ->where('status','1')
+      ->where(function ($q) {
+         $q->where('delete', '0')->orWhereNull('delete');
+      })
+      ->whereDate('date', '>=', $request->from_date)
+      ->whereDate('date', '<=', $request->to_date)
+      ->orderBy('date')
+      ->get();
+
+   if ($purchaseReturns->isEmpty()) {
+      return back()->with('error', 'No Purchase Return data found');
+   }
+
+   $fileName = 'purchase_return_export_' . now()->format('Ymd_His') . '.csv';
+
+   $headers = [
+      'Content-Type'        => 'text/csv',
+      'Content-Disposition' => "attachment; filename={$fileName}",
+   ];
+
+   $callback = function () use ($purchaseReturns, $purchaseArea, $companyId) {
+
+      $file = fopen('php://output', 'w');
+
+      /* ==========================
+         GET COMPANY BILL SUNDRIES
+      ========================== */
+
+      $billSundries = DB::table('bill_sundrys')
+         ->where('company_id', $companyId)
+         ->where(function($q){
+            $q->where('delete','0')->orWhereNull('delete');
+         })
+         ->orderBy('sequence')
+         ->get();
+
+      /* ==========================
+         CSV HEADER
+      ========================== */
+
+      $header = [
+         'Branch',
+         'MC Name',
+         'Date',
+         'Bill Type',
+         'Invoice Number',
+         'Dr Note Against',
+         'Party Name',
+         'Original Invoice No',
+         'Original Invoice Date',
+         'Original Invoice Value',
+         'Item Name',
+         'Qty',
+         'Unit',
+         'Rate',
+         'Amount'
+      ];
+
+      foreach($billSundries as $bs){
+         $header[] = $bs->name;
+      }
+
+      $header[] = 'Grand Total';
+
+      fputcsv($file,$header);
+
+      /* ==========================
+         DATA LOOP
+      ========================== */
+
+      foreach ($purchaseReturns as $pr) {
+
+         $billingGst  = trim((string) $pr->billing_gst);
+         $merchantGst = trim((string) $pr->merchant_gst);
+
+         $billingState  = strlen($billingGst)  >= 2 ? substr($billingGst, 0, 2)  : null;
+         $merchantState = strlen($merchantGst) >= 2 ? substr($merchantGst, 0, 2) : null;
+
+         $rowPurchaseArea = ($billingState && $merchantState && $billingState === $merchantState)
+            ? 'LOCAL'
+            : 'CENTER';
+
+         if ($rowPurchaseArea !== $purchaseArea) {
+            continue;
+         }
+
+         /* ==========================
+            PREPARE SUNDRY VALUES
+         ========================== */
+
+         $sundryValues = [];
+
+         foreach($billSundries as $bs){
+            $sundryValues[$bs->id] = 0;
+         }
+
+         foreach($pr->purchaseReturnSundry as $s){
+
+            if($s->delete == '1'){
+               continue;
+            }
+
+            $sundryValues[$s->bill_sundry] =
+               ($sundryValues[$s->bill_sundry] ?? 0) + $s->amount;
+         }
+
+         $isFirstRow = true;
+
+         foreach ($pr->purchaseReturnDescription as $desc) {
+
+            if($desc->delete == '1'){
+               continue;
+            }
+
+            $sundryColumns = [];
+
+            if($isFirstRow){
+
+               foreach($billSundries as $bs){
+                  $sundryColumns[] = $sundryValues[$bs->id] ?? 0;
+               }
+
+            }else{
+
+               foreach($billSundries as $bs){
+                  $sundryColumns[] = '';
+               }
+            }
+
+            $row = [
+
+               $isFirstRow ? $pr->series_no : '',
+               $isFirstRow ? $pr->material_center : '',
+               $isFirstRow ? $pr->date : '',
+               '',
+               $isFirstRow ? $pr->sr_prefix : '',
+               $isFirstRow ? $pr->voucher_type : '',
+               $isFirstRow ? optional($pr->account)->account_name : '',
+               $isFirstRow ? $pr->invoice_no : '',
+               $isFirstRow ? $pr->original_invoice_date : '',
+               $isFirstRow ? $pr->original_invoice_value : '',
+
+               optional($desc->item)->name,
+               $desc->qty,
+               optional($desc->unitMaster)->s_name,
+               $desc->price,
+               $desc->amount
+            ];
+
+            $row = array_merge($row,$sundryColumns);
+
+            $row[] = $isFirstRow ? $pr->total : '';
+
+            fputcsv($file,$row);
+
+            $isFirstRow = false;
+         }
+      }
+
+      fclose($file);
+
+   };
+
+   return response()->stream($callback, 200, $headers);
+}
+public function cancelPurchaseReturn(Request $request)
+{
+    try {
+
+        if (!$request->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Purchase Return ID is missing'
+            ]);
+        }
+
+        $sale = PurchaseReturn::find($request->id);
+
+        if (!$sale) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Purchase Return not found'
+            ]);
+        }
+
+        \DB::beginTransaction();
+
+        // ✅ SAME AS E-INVOICE CANCEL (NO API)
+        PurchaseReturn::where('id',$request->id)->update([
+            'e_invoice_status' => 0,
+            'status' => '2',
+            'einvoice_response' => '',
+            'total' => '0'
+        ]);
+
+        // ===============================
+        // WITH GST + WITH ITEM / RATE DIFF
+        // ===============================
+        if($sale->sr_nature=="WITH GST" && ($sale->sr_type=="WITH ITEM" || $sale->sr_type=="Rate Difference")){
+
+            PurchaseReturnDescription::where('purchase_return_id',$request->id)
+                ->update([
+                    'delete'=>'1',
+                    'deleted_at'=>Carbon::now(),
+                    'deleted_by'=>Session::get('user_id')
+                ]);
+
+            PurchaseReturnSundry::where('purchase_return_id',$request->id)
+                ->update([
+                    'delete'=>'1',
+                    'deleted_at'=>Carbon::now(),
+                    'deleted_by'=>Session::get('user_id')
+                ]);
+
+            AccountLedger::where('entry_type',4)
+                ->where('entry_type_id',$request->id)
+                ->update([
+                    'delete_status'=>'1',
+                    'deleted_at'=>Carbon::now(),
+                    'deleted_by'=>Session::get('user_id')
+                ]);
+
+            if($sale->sr_type=="WITH ITEM"){
+
+                ItemLedger::where('source',5)
+                    ->where('source_id',$request->id)
+                    ->update([
+                        'delete_status'=>'1',
+                        'deleted_at'=>Carbon::now(),
+                        'deleted_by'=>Session::get('user_id')
+                    ]);
+
+                ItemAverageDetail::where('purchase_return_id',$request->id)
+                    ->where('type','PURCHASE RETURN')
+                    ->delete();
+
+                $desc = PurchaseReturnDescription::where('purchase_return_id',$request->id)->get();
+
+                foreach ($desc as $value) {
+                    if(method_exists(CommonHelper::class, 'RewriteItemAverageByItem')){
+                        CommonHelper::RewriteItemAverageByItem(
+                            $sale->date,
+                            $value->goods_discription ?? '',
+                            $sale->series_no
+                        );
+                    }
+                }
+            }
+
+        }
+
+        // ===============================
+        // WITH GST + WITHOUT ITEM
+        // ===============================
+        else if($sale->sr_nature=="WITH GST" && $sale->sr_type=="WITHOUT ITEM"){
+
+            PurchaseReturnEntry::where('purchase_return_id',$request->id)
+                ->update([
+                    'delete'=>'1',
+                    'deleted_at'=>Carbon::now(),
+                    'deleted_by'=>Session::get('user_id')
+                ]);
+
+            AccountLedger::where('entry_type',13)
+                ->where('entry_type_id',$request->id)
+                ->update([
+                    'delete_status'=>'1',
+                    'deleted_at'=>Carbon::now(),
+                    'deleted_by'=>Session::get('user_id')
+                ]);
+        }else if($sale->sr_nature=="WITHOUT GST"){
+            PurchaseReturnEntry::where('purchase_return_id',$request->id)
+               ->update([
+                     'delete'=>'1',
+                     'deleted_at'=>Carbon::now(),
+                     'deleted_by'=>Session::get('user_id')
+               ]);
+
+            AccountLedger::where('entry_type',12)
+               ->where('entry_type_id',$request->id)
+               ->update([
+                     'delete_status'=>'1',
+                     'deleted_at'=>Carbon::now(),
+                     'deleted_by'=>Session::get('user_id')
+               ]);
+        }
+
+        \DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Purchase Return Cancelled Successfully'
+        ]);
+
+    } catch (\Exception $e){
+
+        \DB::rollBack();
+
+        \Log::error('Purchase Return Cancel Error: '.$e->getMessage(), [
+            'purchase_return_id'=>$request->id
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Something went wrong: '.$e->getMessage()
+        ]);
+    }
+}
+public function approveDebitNote(Request $request)
+{
+    $id = $request->id;
+
+    $user_id = Session::get('user_id');
+
+    DB::table('purchase_returns') 
+        ->where('id', $id)
+        ->update([
+            'approved_status' => 1,
+            'approved_by' => $user_id,
+            'approved_at' => now()
+        ]);
+
+    return response()->json([
+        "status" => true,
+        "message" => "Debit Note Approved Successfully"
+    ]);
+}
 }

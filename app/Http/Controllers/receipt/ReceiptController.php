@@ -11,10 +11,12 @@ use App\Models\Receipt;
 use App\Models\ReceiptDetails;
 use App\Models\AccountLedger;
 use App\Models\AccountGroups;
+use App\Models\VoucherSeriesConfiguration;
 use App\Models\Companies;
 use App\Models\GstBranch;
 use DB;
 use Carbon\Carbon;
+use App\Helpers\CommonHelper;
 use Session;
 use DateTime;
 use Gate;
@@ -68,10 +70,18 @@ class ReceiptController extends Controller
             'accounts.account_name as acc_name',
             'receipts.mode as m',
             'receipt_details.*',
-            'receipts.voucher_no'
+            'receipts.voucher_no',
+            'receipts.created_by',
+            'receipts.approved_by',
+            'receipts.approved_at',
+            'receipts.approved_status',
+            'created_user.name as created_by_name',
+            'approved_user.name as approved_by_name'
         )
         ->join('receipts', 'receipt_details.receipt_id', '=', 'receipts.id')
         ->join('accounts', 'receipt_details.account_name', '=', 'accounts.id')
+        ->leftJoin('users as created_user', 'created_user.id', '=', 'receipts.created_by')
+        ->leftJoin('users as approved_user', 'approved_user.id', '=', 'receipts.approved_by')
         ->where('receipt_details.company_id', $com_id)
         ->where('receipts.delete', '0')
         ->where('receipt_details.credit', '!=', '')
@@ -109,6 +119,10 @@ class ReceiptController extends Controller
    public function create(){
       Gate::authorize('action-module',84);
       $financial_year = Session::get('default_fy');
+      [$startYY, $endYY] = explode('-', $financial_year);
+
+      $fy_start_date = '20' . $startYY . '-04-01'; 
+      $fy_end_date   = '20' . $endYY   . '-03-31';   
       $com_id = Session::get('user_company_id');
       $party_list = Accounts::where('delete', '=', '0')
                               ->where('status', '=', '1')
@@ -195,12 +209,98 @@ class ReceiptController extends Controller
             }
          }
       }
+      foreach ($mat_series as $key => $value) {
+
+         $series_configuration = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
+            ->where('series', $value->series)
+            ->where('configuration_for', 'RECEIPT') 
+            ->where('status', '1')
+            ->first();
+
+         $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
+         $lastNumber = DB::table('receipts')
+            ->where('company_id', Session::get('user_company_id'))
+            ->where('financial_year', $financial_year)
+            ->where('series_no', $value->series)
+            ->where('delete', '0')
+            ->max(DB::raw("cast(voucher_no as SIGNED)"));
+
+         if (!$lastNumber) {
+            if ($series_configuration && $series_configuration->manual_numbering == "NO" && $series_configuration->invoice_start != "") {
+               $next = (int)$series_configuration->invoice_start;
+            } else {
+               $next = 1;
+            }
+         } else {
+            $next = ((int)$lastNumber) + 1;
+         }
+
+         $mat_series[$key]->invoice_start_from = sprintf("%0" . $number_digit . "d", $next);
+
+         $invoice_prefix = "";
+         $manual_enter_invoice_no = "";
+
+         if ($series_configuration) {
+            $manual_enter_invoice_no = ($series_configuration->manual_numbering == "YES") ? "1" : "0";
+         }
+
+         if ($series_configuration && $series_configuration->manual_numbering == "NO") {
+
+            if ($series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
+               $invoice_prefix .= $series_configuration->prefix_value;
+            }
+
+            if ($series_configuration->prefix == "ENABLE" && $series_configuration->separator_1 != "") {
+               $invoice_prefix .= $series_configuration->separator_1;
+            }
+
+            if ($series_configuration->year == "PREFIX TO NUMBER") {
+
+               if ($series_configuration->year_format == "YY-YY") {
+                  $invoice_prefix .= Session::get('default_fy');
+               } else {
+                  $fy = explode('-', Session::get('default_fy'));
+                  $invoice_prefix .= '20' . $fy[0] . '-' . $fy[1];
+               }
+
+               if ($series_configuration->separator_2 != "") {
+                  $invoice_prefix .= $series_configuration->separator_2;
+               }
+            }
+            $invoice_prefix .= $mat_series[$key]->invoice_start_from;
+
+            if ($series_configuration->year == "SUFFIX TO NUMBER") {
+
+               if ($series_configuration->separator_2 != "") {
+                  $invoice_prefix .= $series_configuration->separator_2;
+               }
+
+               if ($series_configuration->year_format == "YY-YY") {
+                  $invoice_prefix .= Session::get('default_fy');
+               } else {
+                  $fy = explode('-', Session::get('default_fy'));
+                  $invoice_prefix .= '20' . $fy[0] . '-' . $fy[1];
+               }
+            }
+
+            if ($series_configuration->suffix == "ENABLE" && $series_configuration->separator_3 != "") {
+               $invoice_prefix .= $series_configuration->separator_3;
+            }
+
+            if ($series_configuration->suffix == "ENABLE" && $series_configuration->suffix_value != "") {
+               $invoice_prefix .= $series_configuration->suffix_value;
+            }
+         }
+
+         $mat_series[$key]->invoice_prefix = $invoice_prefix;
+         $mat_series[$key]->manual_enter_invoice_no = $manual_enter_invoice_no;
+      }
       
       // $mat_series = GstBranch::select('branch_series')->where(['delete' => '0', 'company_id' => Session::get('user_company_id')])->get()->toArray();
       // if(!empty($GstSettings->series)) {
       //    $mat_series[] = array("branch_series" => $GstSettings->series);
       // }
-      return view('receipt/addReceipt')->with('party_list', $party_list)->with('debit_bank_accounts', $debit_bank_accounts)->with('debit_cash_accounts', $debit_cash_accounts)->with('date', $bill_date)->with('mat_series', $mat_series);
+      return view('receipt/addReceipt')->with('fy_start_date', $fy_start_date)->with('fy_end_date', $fy_end_date)->with('party_list', $party_list)->with('debit_bank_accounts', $debit_bank_accounts)->with('debit_cash_accounts', $debit_cash_accounts)->with('date', $bill_date)->with('mat_series', $mat_series);
    }
     /**
      * Store a newly created resource in storage.
@@ -210,16 +310,43 @@ class ReceiptController extends Controller
      */
    public function store(Request $request){  
       Gate::authorize('action-module',84);
-      $financial_year = Session::get('default_fy');      
+      $financial_year = CommonHelper::getFinancialYear($request->input('date'));    
+      $series_configuration = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
+         ->where('series', $request->input('series_no'))
+         ->where('configuration_for', 'RECEIPT')
+         ->where('status', '1')
+         ->first();
+      $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
+      if ($series_configuration && $series_configuration->manual_numbering == "YES") {
+         $voucher_no = $request->input('voucher_no') ?: $request->input('voucher_prefix');
+      } else {
+         $last_voucher_no = DB::table('receipts')
+            ->where('company_id', Session::get('user_company_id'))
+            ->where('series_no', $request->input('series_no'))
+            ->where('financial_year', $financial_year)
+            ->where('delete', '0')
+            ->max(DB::raw("cast(voucher_no as SIGNED)"));
+         if (!$last_voucher_no) {
+            if ($series_configuration && $series_configuration->invoice_start != "") {
+               $voucher_no = sprintf("%0" . $number_digit . "d", (int)$series_configuration->invoice_start);
+            } else {
+               $voucher_no = sprintf("%0" . $number_digit . "d", 1);
+            }
+         } else {
+            $voucher_no = sprintf("%0" . $number_digit . "d", ((int)$last_voucher_no + 1));
+         }
+      }
       $receipt = new Receipt;
       $receipt->date = $request->input('date');
-      $receipt->voucher_no = $request->input('voucher_no');
+      $receipt->voucher_no_prefix = $request->input('voucher_prefix');
+      $receipt->voucher_no = $voucher_no;
       $receipt->mode = $request->input('mode');
       $receipt->series_no = $request->input('series_no');
       $receipt->cheque_no = $request->input('cheque_no');
       $receipt->long_narration = $request->input('long_narration');
       $receipt->company_id = Session::get('user_company_id');
       $receipt->financial_year = $financial_year;
+      $receipt->created_by = Session::get('user_id');
       $receipt->save();
       if($receipt->id){
          $types = $request->input('type');
@@ -287,7 +414,7 @@ class ReceiptController extends Controller
             $ledger->series_no = $request->input('series_no');
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 6;
             $ledger->entry_type_id = $receipt->id;
             $ledger->entry_narration = $value['narration'];
@@ -374,12 +501,112 @@ class ReceiptController extends Controller
             }
          }
       }
-      
+      $financial_year = Session::get('default_fy');
+      [$startYY, $endYY] = explode('-', $financial_year);
+
+      $fy_start_date = '20' . $startYY . '-04-01'; 
+      $fy_end_date   = '20' . $endYY   . '-03-31';   
       // $mat_series = GstBranch::select('branch_series')->where(['delete' => '0', 'company_id' => Session::get('user_company_id')])->get()->toArray();
       // if(!empty($GstSettings->series)) {
       //    $mat_series[] = array("branch_series" => $GstSettings->series);
       // }
-      return view('receipt/editReceipt')->with('receipt', $receipt)->with('party_list', $party_list)->with('receipt_detail', $receipt_detail)->with('debit_bank_accounts', $debit_bank_accounts)->with('debit_cash_accounts', $debit_cash_accounts)->with('mat_series', $mat_series);
+      foreach ($mat_series as $key => $value) {
+
+         $series_configuration = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
+            ->where('series', $value->series)
+            ->where('configuration_for', 'RECEIPT') 
+            ->where('status', '1')
+            ->first();
+
+         if ($receipt->series_no == $value->series) {
+
+            $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
+            $currentNumber = (int)$receipt->voucher_no;
+            $mat_series[$key]->invoice_start_from = sprintf("%0" . $number_digit . "d", $currentNumber);
+
+         } else {
+
+            $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
+            $lastNumber = DB::table('receipts')
+               ->where('company_id', Session::get('user_company_id'))
+               ->where('financial_year', $financial_year)
+               ->where('series_no', $value->series)
+               ->where('delete', '0')
+               ->max(DB::raw("cast(voucher_no as SIGNED)"));
+
+            if (!$lastNumber) {
+               if ($series_configuration && $series_configuration->manual_numbering == "NO" && $series_configuration->invoice_start != "") {
+                  $next = (int)$series_configuration->invoice_start;
+               } else {
+                  $next = 1;
+               }
+            } else {
+               $next = ((int)$lastNumber) + 1;
+            }
+
+            $mat_series[$key]->invoice_start_from = sprintf("%0" . $number_digit . "d", $next);
+         }
+
+         $invoice_prefix = "";
+         $manual_enter_invoice_no = "";
+
+         if (!$series_configuration) {
+            $manual_enter_invoice_no = "";
+         } else if ($series_configuration->manual_numbering == "YES") {
+            $manual_enter_invoice_no = "1";
+         } else {
+            $manual_enter_invoice_no = "0";
+         }
+
+         if ($series_configuration && $series_configuration->manual_numbering == "NO") {
+
+            if ($series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
+               $invoice_prefix .= $series_configuration->prefix_value;
+            }
+
+            if ($series_configuration->prefix == "ENABLE" && $series_configuration->separator_1 != "") {
+               $invoice_prefix .= $series_configuration->separator_1;
+            }
+
+            if ($series_configuration->year == "PREFIX TO NUMBER") {
+               if ($series_configuration->year_format == "YY-YY") {
+                  $invoice_prefix .= Session::get('default_fy');
+               } else if ($series_configuration->year_format == "YYYY-YY") {
+                  $fy = explode('-', Session::get('default_fy'));
+                  $invoice_prefix .= '20' . $fy[0] . '-' . $fy[1];
+               }
+               if ($series_configuration->separator_2 != "") {
+                  $invoice_prefix .= $series_configuration->separator_2;
+               }
+            }
+            $invoice_prefix .= $mat_series[$key]->invoice_start_from;
+            if ($series_configuration->year == "SUFFIX TO NUMBER") {
+
+               if ($series_configuration->separator_2 != "") {
+                  $invoice_prefix .= $series_configuration->separator_2;
+               }
+
+               if ($series_configuration->year_format == "YY-YY") {
+                  $invoice_prefix .= Session::get('default_fy');
+               } else if ($series_configuration->year_format == "YYYY-YY") {
+                  $fy = explode('-', Session::get('default_fy'));
+                  $invoice_prefix .= '20' . $fy[0] . '-' . $fy[1];
+               }
+            }
+
+            if ($series_configuration->suffix == "ENABLE" && $series_configuration->separator_3 != "") {
+               $invoice_prefix .= $series_configuration->separator_3;
+            }
+
+            if ($series_configuration->suffix == "ENABLE" && $series_configuration->suffix_value != "") {
+               $invoice_prefix .= $series_configuration->suffix_value;
+            }
+         }
+
+         $mat_series[$key]->invoice_prefix = $invoice_prefix;
+         $mat_series[$key]->manual_enter_invoice_no = $manual_enter_invoice_no;
+      }
+      return view('receipt/editReceipt')->with('fy_start_date', $fy_start_date)->with('fy_end_date', $fy_end_date)->with('receipt', $receipt)->with('party_list', $party_list)->with('receipt_detail', $receipt_detail)->with('debit_bank_accounts', $debit_bank_accounts)->with('debit_cash_accounts', $debit_cash_accounts)->with('mat_series', $mat_series);
    }
 
     /**
@@ -400,13 +627,43 @@ class ReceiptController extends Controller
       if($validator->fails()) {
          return response()->json($validator->errors(), 422);
       }
+      $financial_year = CommonHelper::getFinancialYear($request->input('date'));
       $receipt =  Receipt::find($request->receipt_id);
       $receipt->date = $request->input('date');
-      $receipt->voucher_no = $request->input('voucher_no');
+      $receipt->voucher_no_prefix = $request->input('voucher_prefix');
+      $series_changed = ($receipt->series_no != $request->input('series_no'));
+      $series_configuration = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
+         ->where('series', $request->input('series_no'))
+         ->where('configuration_for', 'RECEIPT')
+         ->where('status', '1')
+         ->first();
+      $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
+      $voucher_no = $receipt->voucher_no;
+      if ($series_configuration && $series_configuration->manual_numbering == "YES") {
+         $voucher_no = $request->input('voucher_no') ?: $request->input('voucher_prefix');
+      } elseif ($series_changed) {
+         $last_voucher_no = DB::table('receipts')
+            ->where('company_id', Session::get('user_company_id'))
+            ->where('series_no', $request->input('series_no'))
+            ->where('financial_year', $financial_year)
+            ->where('delete', '0')
+            ->max(DB::raw("cast(voucher_no as SIGNED)"));
+         if (!$last_voucher_no) {
+            if ($series_configuration && $series_configuration->invoice_start != "") {
+               $voucher_no = sprintf("%0" . $number_digit . "d", (int)$series_configuration->invoice_start);
+            } else {
+               $voucher_no = sprintf("%0" . $number_digit . "d", 1);
+            }
+         } else {
+            $voucher_no = sprintf("%0" . $number_digit . "d", ((int)$last_voucher_no + 1));
+         }
+      }
+      $receipt->voucher_no = $voucher_no;
       $receipt->mode = $request->input('mode');
       $receipt->series_no = $request->input('series_no');
       $receipt->cheque_no = $request->input('cheque_no');
       $receipt->long_narration = $request->input('long_narration');
+      $receipt->updated_by = Session::get('user_id');
       $receipt->save();
       $receipt_detail = ReceiptDetails::where('receipt_id', '=', $request->receipt_id)->delete();
       AccountLedger::where('entry_type',6)
@@ -478,7 +735,7 @@ class ReceiptController extends Controller
          $ledger->series_no = $request->input('series_no');
          $ledger->txn_date = $request->input('date');
          $ledger->company_id = Session::get('user_company_id');
-         $ledger->financial_year = Session::get('default_fy');
+         $ledger->financial_year = $financial_year;
          $ledger->entry_type = 6;
          $ledger->entry_type_id = $receipt->id;
          $ledger->entry_narration = $value['narration'];
@@ -878,4 +1135,142 @@ class ReceiptController extends Controller
       return json_encode($res);
       
    }
+   public function exportReceiptView()
+    {
+        return view('receipt.export_receipt');
+    }
+
+
+  public function exportReceipt(Request $request)
+{
+    $request->validate([
+        'from_date' => 'required|date',
+        'to_date'   => 'required|date',
+    ]);
+
+    $exportType = $request->export_type;
+
+    $company_id = Session::get('user_company_id');
+    $from = $request->from_date;
+    $to   = $request->to_date;
+
+    $receipts = DB::table('receipts')
+        ->where('company_id', $company_id)
+        ->where('delete', '0')
+        ->whereBetween('date', [$from, $to])
+        ->orderBy('date', 'asc')
+        ->get();
+
+    $filename = "receipt_export_{$from}_to_{$to}.csv";
+
+    $headers = [
+        'Content-Type' => 'text/csv; charset=UTF-8',
+        'Content-Disposition' => "attachment; filename=\"$filename\"",
+    ];
+
+    $callback = function() use ($receipts, $company_id, $exportType) {
+
+        $out = fopen('php://output', 'w');
+
+        // ✅ HEADER
+        if ($exportType == 'old') {
+            fputcsv($out, [
+                'Series',
+                'Voucher No',
+                'Date',
+                'Party Name',
+                'Party Alias',
+                'Amount DR',
+                'Amount CR',
+                'Bank'
+            ]);
+        } else {
+            fputcsv($out, [
+                'vch_series',
+                'vch/bill_date',
+                'vch/bill_no',
+                'party_name',
+                'acc_alias',
+                'amount_dr',
+                'payment/receipt_mode',
+                'long_narration1'
+            ]);
+        }
+
+        foreach ($receipts as $r) {
+
+            $details = DB::table('receipt_details')
+                ->where('receipt_id', $r->id)
+                ->where('company_id', $company_id)
+                ->where('delete', '0')
+                ->get();
+
+            if ($details->isEmpty()) continue;
+
+            // ✅ BANK FROM DEBIT ENTRY
+            $debitRow = $details->firstWhere('type', 'Debit');
+
+            $bankName = "";
+            if ($debitRow) {
+                $bankAcc = DB::table('accounts')
+                    ->where('id', $debitRow->account_name)
+                    ->first();
+
+                $bankName = $bankAcc->account_name ?? "";
+            }
+
+            // ================= OLD EXPORT =================
+            if ($exportType == 'old') {
+
+                foreach ($details as $d) {
+
+                    $acc = DB::table('accounts')
+                        ->where('id', $d->account_name)
+                        ->first();
+
+                    fputcsv($out, [
+                        $r->series_no,
+                        $r->voucher_no,
+                        "'" . $r->date,
+                        $acc->account_name ?? '',
+                        $acc->id ?? '',
+                        $d->debit,
+                        $d->credit,
+                        $bankName
+                    ]);
+                }
+
+            }
+
+            // ================= NEW EXPORT (FIXED) =================
+            else {
+
+                // ✅ ONLY CREDIT ENTRIES (NO DEBIT ROW)
+                foreach ($details->where('type','Credit') as $d) {
+
+                    $acc = DB::table('accounts')
+                        ->where('id', $d->account_name)
+                        ->first();
+
+                    fputcsv($out, [
+                        $r->series_no,
+                        date('Y-m-d', strtotime($r->date)), // clean format
+                        $r->voucher_no,
+                        $acc->account_name ?? '',          // party name
+                        "",
+                        $d->credit,                        // ✅ credit amount
+                        $bankName,                         // 🔥 repeat bank
+                        $d->narration ?? ''
+                    ]);
+                }
+            }
+        }
+
+        fclose($out);
+    };
+
+    return response()->stream($callback, 200, $headers);
+}
+
+
 }

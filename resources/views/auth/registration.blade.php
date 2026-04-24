@@ -77,7 +77,7 @@
    <div class="modal-dialog w-360  modal-dialog-centered  ">
       <div class="modal-content p-4 border-divider border-radius-8">
          <div class="modal-header border-0 p-0">
-         <h4 class="modal-title"><span id="modal_parameter_name"></span>Enter OTP</h4>
+         <h4 class="modal-title"><span id="modal_parameter_name"></span>Please enter the OTP we sent to your WhatsApp</h4>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
          </div>
             <div class="modal-body text-center p-0">               

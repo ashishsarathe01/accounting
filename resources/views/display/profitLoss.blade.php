@@ -64,6 +64,8 @@ input[type=number]::-webkit-outer-spin-button {
                   </div>
                </form>
             </div>
+            
+            @if(!empty($from_date) && !empty($to_date))
             <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
                <h5 class="master-table-title m-0 py-2">Profit & Loss Account</h5>
             </div>
@@ -72,25 +74,68 @@ input[type=number]::-webkit-outer-spin-button {
                <div class="col-md-6  font-14 p-0 border-bottom-divider">
                   <div class="px-3 py-12 fw-bold border-bottom-divider">Debit (Rs.)</div>
                   <div class="row p-0 m-0">
-                     <div class="col-md-12 fw-500 font-14 d-flex px-3 py-12 border-bottom-divider">Opening Stock
-                        <span class="ms-auto">
-                            @php
-                              use Carbon\Carbon;
-                              $previous_date = Carbon::parse($from_date)->subDay()->format('Y-m-d');
-                              $formatted_stock = formatIndianNumber(round($data['opening_stock'], 2));
-                           @endphp
+                     
+                     <div class="col-md-12 px-3 py-12 border-bottom-divider">
 
-                           <a href="{{ url('itemledger-filter') }}?items_id=all&from_date={{ $from_date }}&to_date={{ $previous_date }}">
-                              {{ $formatted_stock }}
-                           </a>
-                        </span>
-                     </div>
+    @php
+        $opening = $data['opening_stock'] ?? 0;
+        $transit_opening = $data['stock_in_transit_opening_value'] ?? 0;
+        $total_opening_stock = $opening + $transit_opening;
+
+        $previous_date = Carbon\Carbon::parse($from_date)->subDay()->format('Y-m-d');
+    @endphp
+
+    <!-- Opening Stock Row -->
+    <div class="row fw-500 font-14 align-items-center">
+
+        <div class="col-4">
+            Opening Stock
+        </div>
+
+        <div class="col-4 text-end">
+            <span class="ms-auto">
+                <a href="{{ url('itemledger-filter') }}?items_id=all&from_date={{ $from_date }}&to_date={{ $previous_date }}">
+                    {{ formatIndianNumber(round($opening,2)) }}
+                </a>
+            </span>
+        </div>
+
+        <div class="col-4 text-end fw-bold">
+            {{ formatIndianNumber(round($total_opening_stock,2)) }}
+        </div>
+
+    </div>
+
+    @if($transit_opening > 0)
+    <!-- Opening Stock in Transit Row -->
+    <div class="row font-14 align-items-center mt-1">
+
+        <div class="col-4 ps-4 text-muted">
+            <small>Stock in Transit</small>
+        </div>
+
+        <div class="col-4 text-end text-muted">
+            <span class="ms-auto">
+                <a href="{{ url('purchase-by-month-detail-transit-opening/'.$data['financial_year'].'/'.$from_date.'/'.$to_date) }}">
+                <small>{{ formatIndianNumber(round($transit_opening,2)) }}</small>
+                </a>
+            </span>
+        </div>
+
+        <div class="col-4"></div>
+
+    </div>
+    @endif
+
+</div>
+
                      <div class="col-md-12 fw-500 font-14  px-3 py-12 border-bottom-divider">
                         <a class="text-decoration-none text-primary fw-500" href="{{url('purchase-by-month-detail')}}/{{$data['financial_year']}}/{{$from_date}}/{{$to_date}}">
                            <p class="d-flex m-0">Purchase
                               <span class="ms-auto">
                                  @php
-                                    echo formatIndianNumber($data['tot_purchase_amt'] - $data['tot_purchase_return_amt'] + $data['tot_sale_return_amt_purchase'],2);
+                                    
+                                    echo formatIndianNumber($data['tot_purchase_amt']-$data['tot_purchase_return_amt']+$data['tot_sale_return_amt_purchase'],2);
                                  @endphp
                               </span>
                            </p>
@@ -129,8 +174,8 @@ input[type=number]::-webkit-outer-spin-button {
                      </div>
                      <?php
                      $gross_profit = 0;$gross_loss = 0;
-                     $total_net_sale = $data['closing_stock'] + $data['tot_sale_amt'] - $data['tot_sale_return_amt'] + $data['tot_purchase_return_amt_sale'] + $data['direct_income']  - $debit_direct_income;
-                     $total_net_purchase = $data['opening_stock'] + $data['tot_purchase_amt'] - $data['tot_purchase_return_amt'] + $data['tot_sale_return_amt_purchase'] + $data['direct_expenses'] - $direct_expenses_credit;
+                     $total_net_sale = $data['total_closing_stock'] + $data['tot_sale_amt'] - $data['tot_sale_return_amt'] + $data['tot_purchase_return_amt_sale'] + $data['direct_income']  - $debit_direct_income;
+                     $total_net_purchase = $data['total_opening_stock'] + $data['tot_purchase_amt'] - $data['tot_purchase_return_amt'] + $data['tot_sale_return_amt_purchase'] + $data['direct_expenses'] - $direct_expenses_credit;
                      $balance = $total_net_purchase - $total_net_sale;
                      if($balance < 0) {
                         $gross_profit = str_replace("-","",$balance);
@@ -298,16 +343,63 @@ input[type=number]::-webkit-outer-spin-button {
                <div class="col-md-6  font-14 p-0 border-left-divider  border-bottom-divider">
                   <div class="px-3 fw-bold py-12 border-bottom-divider">Credit (Rs.)</div>
                   <div class="row p-0 m-0">
-                     <div class="col-md-12 fw-500 font-14 d-flex px-3 py-12 border-bottom-divider">Closing Stock
-                           <span class="ms-auto">
-                              <a href="{{url('itemledger-filter')}}?&items_id=all&from_date={{$from_date}}&to_date={{$to_date}}">@php
-                                 echo formatIndianNumber(round($data['closing_stock'],2));
-                              @endphp</a>
+                     
+      <div class="col-md-12 px-3 py-12 border-bottom-divider">
+
+    @php
+        $closing = $data['closing_stock'] ?? 0;
+        $transit = $data['stock_in_transit_value'] ?? 0;
+        $total_closing_stock = $closing + $transit;
+    @endphp
+
+    <!-- Closing Stock Row -->
+    <div class="row fw-500 font-14 align-items-center">
+
+        <div class="col-4">
+            Closing Stock
+        </div>
+
+        <div class="col-4 text-end">
+            <span class="ms-auto">
+             <a href="{{url('itemledger-filter')}}?&items_id=all&from_date={{$from_date}}&to_date={{$to_date}}">
+            {{ formatIndianNumber(round($closing,2)) }}</a>
                            </span>
-                        
-                     </div>
+        </div>
+
+        <div class="col-4 text-end fw-bold">
+            {{ formatIndianNumber(round($total_closing_stock,2)) }}
+        </div>
+
+    </div>
+
+    @if($transit > 0)
+    <!-- Stock in Transit Row -->
+    <div class="row font-14 align-items-center mt-1">
+
+        <div class="col-4 ps-4 text-muted">
+            <small>Stock in Transits</small>
+        </div>
+
+        <div class="col-4 text-end text-muted">
+                        <span class="ms-auto">
+            <a href="{{ url('purchase-by-month-detail-transit/'.$data['financial_year'].'/'.$from_date.'/'.$to_date) }}">
+                <small>{{ formatIndianNumber(round($transit,2)) }}</small>
+            </a>
+            
+                                       </span>
+                    </div>
+            
+                    <div class="col-4"></div>
+            
+                </div>
+                @endif
+            
+            </div>
+
+
                      <div class="col-md-12 fw-500 font-14  px-3 py-12 border-bottom-divider">
-                        <a class="text-decoration-none text-primary fw-500" href="{{url('sale-by-month-detail')}}/{{$data['financial_year']}}/{{$from_date}}/{{$to_date}}">
+                        {{-- <a class="text-decoration-none text-primary fw-500" href="{{url('sale-by-month-detail')}}/{{$data['financial_year']}}/{{$from_date}}/{{$to_date}}"> --}}
+                        <a class="text-decoration-none text-primary fw-500" href="{{url('sale-by-month')}}/{{$data['financial_year']}}/{{$from_date}}/{{$to_date}}">
                            <p class="d-flex m-0">
                            Sale
                            <span class="ms-auto">
@@ -492,6 +584,14 @@ input[type=number]::-webkit-outer-spin-button {
                   </div>
                </div>
             </div>
+            
+@else
+
+<div class="alert alert-info mx-3">
+   Please select From Date and To Date to view Profit & Loss Report.
+</div>
+
+@endif
          </div>
       </div>
    </section>

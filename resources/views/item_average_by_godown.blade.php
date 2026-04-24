@@ -2,6 +2,38 @@
 @section('content')
 <!-- header-section -->
 @include('layouts.header')
+<style>
+/* hide in normal screen */
+.print-only {
+   display: none;
+}
+
+@media print {
+   body {
+      font-size: 12px;
+   }
+
+   /* show only during print */
+   .print-only {
+      display: block;
+   }
+
+   table {
+      width: 100%;
+      border-collapse: collapse;
+   }
+   table, th, td {
+      border: 1px solid #000;
+   }
+   th, td {
+      padding: 5px;
+      text-align: right;
+   }
+   th:first-child, td:first-child {
+      text-align: left;
+   }
+}
+</style>
 <!-- list-view-company-section -->
 <div class="list-of-view-company ">
    <section class="list-of-view-company-section container-fluid">
@@ -19,9 +51,25 @@
             @endif
             <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
                <h5 class="master-table-title m-0 py-2">Item Stock ({{$item->name}})</h5>
+               <button onclick="printReport()" class="btn btn-primary btn-sm">
+                  Print
+               </button>
+               <a href="{{ url('item-stock-csv?items_id='.request()->items_id.'&from_date='.request()->from_date.'&to_date='.request()->to_date) }}" 
+                  class="btn btn-success btn-sm">
+                  Export CSV
+               </a>
             </div>
             <div class="display-sale-month  bg-white table-view shadow-sm">
-               <table id="acc_table1" class="table-striped table-bordered table m-0 shadow-sm ">                  
+                <div id="printArea">
+                    <div class="text-center mb-3 print-only">
+                      <h4>Item Stock Report</h4>
+                      <h5>{{$item->name}}</h5>
+                      <p>
+                         From: {{ request()->from_date }} 
+                         To: {{ request()->to_date }}
+                      </p>
+                    </div>
+                    <table id="acc_table1" class="table-striped table-bordered table m-0 shadow-sm ">                  
                   <thead>
                      <tr class=" font-12 text-body bg-light-pink ">
                            <th class="w-min-120 border-none bg-light-pink text-body">Material Center</th>
@@ -52,6 +100,7 @@
                         </tr>
                   </tbody>
                </table>
+               </div>
             </div>
          </div>
       </div>
@@ -66,7 +115,16 @@
       let to_date = $(this).attr('data-to_date');
       let series = $(this).attr('data-series');
       window.location = "{{url('item-ledger-average')}}/?items_id="+item_id+"&from_date="+from_date+"&to_date="+to_date+"&series="+series;
-      
-   })
+    });
+    function printReport() {
+        let printContents = document.getElementById('printArea').innerHTML;
+        let originalContents = document.body.innerHTML;
+    
+        document.body.innerHTML = printContents;
+        window.print();
+        document.body.innerHTML = originalContents;
+    
+        location.reload();
+    }
 </script>
 @endsection

@@ -62,7 +62,7 @@
                         </div>
                     
                             
-                            <input type="hidden" class="form-control" id="legal_name" name="legal_name" placeholder="Enter firm’s name" required value=""/>
+                            <input type="hidden" class="form-control" id="legal_name" name="legal_name" placeholder="Enter firm’s name"  value=""/>
                        
                         <div class="mb-8 col-md-8">
                             <label for="name" class="form-label font-14 font-heading">Address</label>
@@ -225,7 +225,7 @@
         } else {
             financialYear = (year - 1) + '-' + year;
         }
-        $("#current_finacial_year").val(financialYear);
+        $("#current_finacial_year").html('<option value="'+financialYear+'">'+financialYear+'</option>');
     });
     $("#pin_code").change(function() {
         var inputvalues = $("#pin_code").val();

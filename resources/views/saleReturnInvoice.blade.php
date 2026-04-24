@@ -1,6 +1,10 @@
 @extends('layouts.app')
 @section('content')
 @include('layouts.header')
+@php
+    $source = request()->get('source');
+    $return_url = request()->get('return_url');
+@endphp
 <style type="text/css">
    .dataTables_filter{
       float:right;
@@ -15,7 +19,7 @@
       border:1px solid #dadada;
    }
    table tr th, table tr td{
-      border:1px solid #dadada;
+      border:1px solid #000000;
       margin: 0;
       padding: 2px 5px;
    }
@@ -53,10 +57,10 @@
    }
    .bil_logo{
       width: 120px;
-      height: 87px;
+      height: 90px;
       overflow: hidden;
       position: absolute;
-      margin-top: 26px;
+      margin-top: 20px;
       margin-left: 4px;
    }
    .bil_logo img{
@@ -67,10 +71,7 @@
          display:none;
       }
    }
-   @page { 
-   size: A4;        /* Always A4 size page (210mm x 297mm) */
-   margin: 5mm;     /* Outer margin around content */
-}
+@page { size: auto;  margin: 0mm; }
 
 .importantRule { 
    display: none !important;  /* Force hide anything with this class */
@@ -79,7 +80,14 @@
 p {
    margin: 0.5px !important;  /* Almost zero vertical space between paragraphs */
 }
-   
+ .wrap-text {
+    display: inline-block;
+    max-width: 55%;
+    word-wrap: break-word;
+    word-break: break-word;
+    white-space: normal;
+    vertical-align: top;
+}
 </style>
 <div class="list-of-view-company ">
    <section class="list-of-view-company-section container-fluid">
@@ -91,6 +99,11 @@ p {
                   <div class="calender-administrator my-2 my-md-0  w-min-230 noprint">
                      <a href="{{ route('sale-return.index') }}"><button type="button" class="btn btn-danger">QUIT</button></a>
                      <button class="btn btn-info" onclick="printpage();">Print</button>
+                     @if($source == 'approve' && (int)$sale_return->approved_status !== 1)
+                        <button class="btn btn-success" id="approveCreditNote">
+                           Approve
+                        </button>
+                     @endif
                      <?php 
                     if (in_array(date('Y-m', strtotime($sale_return->date)), $month_arr) && $sale_return->e_invoice_status == 0 && $sale_return->e_waybill_status == 0) {?>
                         <a href="{{ URL::to('sale-return-edit/'.$sale_return->id) }}" class="btn btn-primary text-white">
@@ -101,45 +114,53 @@ p {
                   </div>
                </div>            
             </div>
+            <br>
             <table style="font-family: 'Source Sans Pro', sans-serif;letter-spacing: 0.05em;color: #404040;font-size: 12px;font-weight: 500;padding: 10px;">
                <tbody>
                   <tr>
-                     <th colspan="8">
-                        <div style="width:auto; float:left; text-align:left;">
-                           <strong style="margin:0;">GSTIN: {{$seller_info->gst_no}}</strong>
-                        </div>
-                        <div class="bil_logo">
-                           @if($configuration && $configuration->company_logo_status==1 && !empty($configuration->company_logo))
-                              <img src="{{ URL::asset('public/images')}}/{{$configuration->company_logo}}" alt="My Logo">
-                           @endif
-                        </div>
-                        <div style="width:auto; float:right; text-align:right;">
-                           <strong style="margin:0;">PAN: {{substr($seller_info->gst_no, 2, 10)}}</strong><br>
-                           <small>O/D/T</small>
-                        </div>
-                        <div style="clear:both;"></div>
-                        <div style="text-align:center; line-height:1; margin:0; padding:0;">
-                           <p style="margin:0;"><u>CREDIT NOTE</u></p>
-                           <p style="margin:0; font-size: 24px; font-weight: bold;">{{$company_data->company_name}}</p>
-                           <p style="margin:0;">
-                              <small style="font-size: 12px; display:inline-block; max-width:50%; word-break:break-word;">
-                                 {{$seller_info->address}},{{$seller_info->pincode}}
-                              </small>
-                           </p>
-                           <p style="margin:0;">
-                              <small style="font-size: 12px;">Phone: {{$company_data->mobile_no}} &nbsp; Email: {{$company_data->email_id}}</small>
-                           </p>
+                     <th colspan="8" style="padding: 0;">
+                        <div style="min-height: 120px; position: relative;">
+                            <div style="width:auto; float:left; text-align:left;">
+                               <strong style="margin:0;">GSTIN: {{$seller_info->gst_no}}</strong>
+                            </div>
+                            <div class="bil_logo">
+                               @if($configuration && $configuration->company_logo_status==1 && !empty($configuration->company_logo))
+                                  <img src="{{ URL::asset('public/images')}}/{{$configuration->company_logo}}" alt="My Logo">
+                               @endif
+                            </div>
+                            <div style="width:auto; float:right; text-align:right;">
+                               <strong style="margin:0;">PAN: {{substr($seller_info->gst_no, 2, 10)}}</strong><br>
+                               <small>O/D/T</small>
+                            </div>
+                            <div style="clear:both;"></div>
+                            <div style="text-align:center; line-height:1; margin:0; padding:0;">
+                               <p style="margin:0;"><u>CREDIT NOTE</u></p>
+                               <p style="margin:0; font-size: 24px; font-weight: bold;">{{$company_data->company_name}}</p>
+                               <p style="margin:0;">
+                                  <small style="font-size: 12px; display:inline-block; max-width:50%; word-break:break-word;">
+                                     {{$seller_info->address}},{{$seller_info->pincode}}
+                                  </small>
+                               </p>
+                               <p style="margin:0;">
+                                  <small style="font-size: 12px;">Phone: {{$company_data->mobile_no}} &nbsp; Email: {{$company_data->email_id}}</small>
+                               </p>
+                            </div>
                         </div>
                      </th>
-                  </tr> 
-                  <!-- <tr>
-                     <td colspan="8">               
-                        <img src="" style="float: right;width: 90px;height: 90px;position: relative;">
-                        <p>IRN NO. : 2c8e0befc2f68623add91ef6512a392220a4b362e580cdedd0a58afce9f968eb</p>
-                        <p>ACK.NO. : 172414735996048</p>
-                        <p>ACK.DATE : 2024-04-04 16:13:00</p>
-                     </td>
-                  </tr> -->                                                    
+                  </tr>
+                  @if($sale_return->e_invoice_status==1 && !empty($sale_return->einvoice_response))
+                    @php $einvoice_data = json_decode($sale_return->einvoice_response); $qrContent = $einvoice_data->SignedQRCode; @endphp
+                      <tr>
+                         <td colspan="8">               
+                            <span style="float: right;width: 90px;height: 90px;position: relative;">
+                                {!! QrCode::size(90)->generate($qrContent) !!}
+                            </span> 
+                            <p>IRN NO. : {{$einvoice_data->Irn}}</p>
+                            <p>ACK.NO. : {{$einvoice_data->AckNo}}</p>
+                            <p>ACK.DATE : {{$einvoice_data->AckDt}}</p>
+                         </td>
+                      </tr>
+                  @endif
                   <tr>
                      <td colspan="4" style="position: relative; vertical-align: top; padding: 0; height:120px;">
                         <p style="margin: 0; position: absolute; top: 0; left: 5px; font-style: italic;">
@@ -166,7 +187,7 @@ p {
                         <p style="padding-left:5px;"><span class="width25">Org. Inv. Date </span>: <span class="lft_mar15">{{date('d-m-Y',strtotime($sale_return->original_invoice_date))}}</span> </p>
                         
                         
-                        <p style="padding-left:5px;"><span class="width25">Transport </span>: <span class="lft_mar15">{{$sale_return->transport_name}}</span> </p>
+                        <p style="padding-left:5px;"><span class="width25">Transport </span>: <span class="lft_mar15 wrap-text">{{$sale_return->transport_name}}</span> </p>
                         <p style="padding-left:5px;"><span class="width25">Vehicle No. </span>: <span class="lft_mar15">{{$sale_return->vehicle_no}}</span> </p>
                         <p style="padding-left:5px;"><span class="width25">Station </span>: <span class="lft_mar15">{{$sale_return->station}}</span> </p>
                         <p style="padding-left:5px;"><span class="width25">GR/RR No. </span>: <span class="lft_mar15">{{$sale_return->gr_pr_no}}</span> </p>
@@ -185,7 +206,7 @@ p {
                   @foreach($items_detail as $item)
                      <tr>
                            <td style="text-align:center;">{{$i}}</td>
-                           <td colspan="2" style="text-align:left">{{$item->items_name}}</td>
+                           <td colspan="2" style="text-align:left"> {{ $item->items_pname }}</td>
                            <td style="text-align:center;">{{$item->hsn_code}}</td>
                            <td style="text-align:right">{{$item->qty}}</td>
                            <td style="text-align:center">{{$item->unit}}</td>
@@ -341,7 +362,7 @@ p {
                </tbody>
             </table>
             <br>
-            <div style="text-align: center;" class="noprint">
+            <div style="text-align: center;" class="header-section">
                @if($einvoice_status==1 && $sale_return->e_invoice_status==0)
                   <button class="btn btn-border border-secondary generate_einvoice">GENERATE E-INVOICE</button>
                @endif
@@ -442,7 +463,7 @@ p {
                   vehicle_number : vehicle_no,
                   distance : distance
                },
-               success: function(data){                  
+               success: function(res){                  
                   if(res.success==true){
                      alert(res.message)
                      location.reload();
@@ -503,8 +524,35 @@ p {
    });
       function printpage(){
          $('.header-section').addClass('importantRule');
+         $('.sidebar').addClass('importantRule');
          window.print();
          $('.header-section').removeClass('importantRule');
+         $('.sidebar').removeClass('importantRule');
       }
+    $(document).on('click','#approveCreditNote',function(){
+        if(confirm("Approve this Credit Note?")){
+            let id = "{{ $sale_return->id }}";
+            let returnUrl = @json($return_url);
+            $.ajax({
+                url: "{{ route('transaction.approve') }}",
+                type: "POST",
+                data:{
+                    _token:"{{ csrf_token() }}",
+                    id:id,
+                    module:'credit_note'
+                },
+                success:function(res){
+                    if(res.status){
+                        alert(res.message);
+                        if(returnUrl){
+                            window.location.href = returnUrl;
+                        }else{
+                            window.location.href = "{{ url('transaction-report') }}";
+                        }
+                    }
+                }
+            });
+        }
+    });
 </script>
 @endsection

@@ -480,6 +480,7 @@ public function gstr1Detail(Request $request)
             ->where('sales.delete', '0' )
             ->whereNotNull('sales.billing_gst')
             ->Where('billing_gst','!=','')
+            ->where('status','1')
             ->select('sales.billing_gst', 'sales.total')
             ->get();
         $saleTotals = $sale->groupBy('billing_gst')->map(function ($group) {
@@ -501,6 +502,7 @@ public function gstr1Detail(Request $request)
             
                 $dbInvoices = Sales::where('billing_gst', $ctin)
                     ->where('company_id', Session::get('user_company_id'))
+                    ->where('status','1')
                     ->whereBetween('date', [$from_date, $to_date])
                     ->get(['id', 'voucher_no_prefix', 'date', 'total']);
 
@@ -568,6 +570,7 @@ public function gstr1Detail(Request $request)
                 $dbInvoices = Sales::where('billing_gst', $ctin)
                     ->where('company_id', Session::get('user_company_id'))
                     ->whereBetween('date', [$from_date, $to_date])
+                    ->where('status','1')
                     ->get(['voucher_no_prefix', 'total']);     
 
                 $matched = [];          // No matched invoices since this CTIN is not in API
@@ -888,9 +891,7 @@ public function gstr1Detail(Request $request)
                             ->where('delete', '0')
                             ->where('status', '1')                            
                             ->pluck('id');
-        if ($b2cSaleIds->isEmpty()) {
-            return view('gstReturn.hsnSummary', ['data' => []]);
-        }
+       
         // ----- SALES ITEMS -----
         $items_sale = DB::table('sale_descriptions')
             ->join('sales', 'sale_descriptions.sale_id', '=', 'sales.id')
@@ -3107,18 +3108,33 @@ public function b2cLargedetailed(Request $request){
    
 
     // Step 2: Get B2C Sale IDs
-    $b2cSaleIds = DB::table('sales')
-        ->where('merchant_gst', $merchant_gst)
-        ->where('company_id', $company_id)
-        ->whereBetween('date', [$from_date, $to_date])
-        ->where('delete', '0')
-        ->where('status', '1')
-         ->where(function($query) {
-            $query->whereNull('billing_gst')
-                  ->orWhere('billing_gst', '');
-                                  })
-        ->where('total', '>', 250000)
-        ->pluck('id');
+   $b2cSales = DB::table('sales')
+    ->where('merchant_gst', $merchant_gst)
+    ->where('company_id', $company_id)
+    ->whereBetween('date', [$from_date, $to_date])
+    ->where('delete', '0')
+    ->where('status', '1')
+    ->where(function($q){
+        $q->whereNull('billing_gst')
+          ->orWhere('billing_gst', '');
+    })
+    ->get();
+
+    $merchant_state_code = substr($merchant_gst, 0, 2);
+    
+    $b2cSaleIds = $b2cSales->filter(function ($sale) use ($merchant_state_code) {
+    
+        // get customer state code (POS)
+        $customer_state_code = State::where('id', $sale->billing_state)->value('state_code');
+    
+        // Interstate check
+        if ($merchant_state_code != $customer_state_code) {
+            return $sale->total > 250000;
+        }
+    
+        return false; // exclude intrastate
+    })->pluck('id');
+
 
         
     if ($b2cSaleIds->isEmpty()) {
@@ -3293,18 +3309,34 @@ public function B2Cstatewise(Request $request)
     $sundries = BillSundrys::where('company_id', $user_company_id)->get()->keyBy('id');
 
     // -------- STEP 1: Get B2C Sale IDs --------
-    $b2cSaleIds = DB::table('sales')
-        ->where('merchant_gst', $merchant_gst)
-        ->where('company_id', $company_id)
-        ->whereBetween('date', [$from_date, $to_date])
-        ->where('delete', '0')
-        ->where('status', '1')
-        ->where(function($query) {
-            $query->whereNull('billing_gst')
-                  ->orWhere('billing_gst', '');
-        })
-        ->where('total', '<=', 250000)
-        ->pluck('id');
+   $b2cSales = DB::table('sales')
+    ->where('merchant_gst', $merchant_gst)
+    ->where('company_id', $company_id)
+    ->whereBetween('date', [$from_date, $to_date])
+    ->where('delete', '0')
+    ->where('status', '1')
+    ->where(function($query) {
+        $query->whereNull('billing_gst')
+              ->orWhere('billing_gst', '');
+    })
+    ->get();
+
+$merchant_state_code = substr($merchant_gst, 0, 2);
+
+$b2cSaleIds = $b2cSales->filter(function($sale) use ($merchant_state_code) {
+
+    $customer_state_code = State::where('id', $sale->billing_state)->value('state_code');
+
+    if ($merchant_state_code == $customer_state_code) {
+        // Intra — include always
+        return true;
+    }
+
+    // Inter — include only <= 250000
+    return $sale->total <= 250000;
+
+})->pluck('id');
+
 
     if ($b2cSaleIds->isEmpty()) {
         return view('gstReturn.b2c_statewise', ['data' => []]);

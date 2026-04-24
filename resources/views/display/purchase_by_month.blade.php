@@ -48,7 +48,11 @@
                   <tbody>
                      @php $balance = 0; @endphp
                      @foreach($data as $key => $value)
-                        <tr class="get_info" data-date="{{$value['date']}}" style="cursor: pointer;">
+                        <tr class="get_info"
+                           data-date="{{$value['date']}}"
+                           data-from_date="{{$value['from_date']}}"
+                           data-to_date="{{$value['to_date']}}"
+                           style="cursor: pointer;">
                            <td style="text-align:center;">{{$value['month']}}</td>
                            <td style="text-align:right;">{{$value['debit']}}</td>
                            <td style="text-align:right;">{{$value['credit']}}</td>
@@ -73,9 +77,17 @@
 @include('layouts.footer')
 <script>
    $(document).ready(function(){
-      $(".get_info").click(function(){
-         window.location = "{{route('purchase-by-month-detail')}}/"+$(this).attr('data-date');
-      });
+   $(".get_info").click(function(){
+      var from_date = $(this).attr('data-from_date');
+      var to_date = $(this).attr('data-to_date');
+      var financial_year = "{{ request()->segment(3) }}";
+
+      window.location = "{{url('purchase-by-month-detail')}}/"
+            + financial_year + "/"
+            + from_date + "/"
+            + to_date;
    });
+});
+
 </script>
 @endsection

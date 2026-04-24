@@ -83,10 +83,7 @@
                      <label for="name" class="form-label font-14 font-heading">Date</label>
                      <input type="date" id="date" value="<?php echo $payment->date; ?>" class="form-control calender-bg-icon calender-placeholder" name="date" placeholder="Select date" required>
                   </div>
-                  <div class="mb-2 col-md-2">
-                     <label for="name" class="form-label font-14 font-heading">Voucher No.</label>
-                     <input type="text" id="voucher_no" class="form-control" name="voucher_no" placeholder="Voucher No." required value="{{$payment->voucher_no}}">
-                  </div>
+                  
                   <div class="mb-2 col-md-2">
                      <label for="series_no" class="form-label font-14 font-heading">Series No.</label>
                      <select id="series_no" class="form-control" name="series_no">
@@ -94,11 +91,28 @@
                         <?php
                         if(count($mat_series) > 0) {
                            foreach ($mat_series as $value) { ?>
-                              <option value="<?php echo $value->series; ?>" @if($payment->series_no==$value->series) selected @endif><?php echo $value->series; ?></option>
+                              <option value="<?php echo $value->series; ?>"
+                                 data-invoice_start_from="<?php echo $value->invoice_start_from ?? ''; ?>"
+                                 data-invoice_prefix="<?php echo $value->invoice_prefix ?? ''; ?>"
+                                 data-manual_enter_invoice_no="<?php echo $value->manual_enter_invoice_no ?? ''; ?>"
+                                 @if($payment->series_no==$value->series) selected @endif
+                              >
+                                 <?php echo $value->series; ?>
+                              </option>
                               <?php 
                            }
                         } ?>
                      </select>
+                  </div>
+                  <div class="mb-2 col-md-2">
+                     <label for="name" class="form-label font-14 font-heading">Voucher No.</label>
+                     <input type="text" class="form-control" id="voucher_prefix"
+                        name="voucher_prefix"
+                       value="{{ $payment->voucher_no_prefix ?? $payment->voucher_no }}"
+                        style="text-align:right;">
+
+                     <input type="hidden" id="voucher_no" name="voucher_no" value="{{ $payment->voucher_no }}">
+                     <input type="hidden" id="manual_enter_invoice_no" name="manual_enter_invoice_no">
                   </div>
                   <div class="mb-2 col-md-2">
                      <label for="name" class="form-label font-14 font-heading">Mode</label>
@@ -127,71 +141,71 @@
                      </thead>
                      @php $i = 1; @endphp
 
-@foreach($payment_detail as $value)
-    <tbody>
-        <tr class="font-14 font-heading bg-white" id="tr_{{ $i }}">
-            <td>
-                <select class="form-control type" name="type[]" data-id="{{ $i }}" id="type_{{ $i }}">
-                    <option value="">Type</option>
-                    <option value="Credit" {{ $value->type == 'Credit' ? 'selected' : '' }}>Credit</option>
-                    <option value="Debit" {{ $value->type == 'Debit' ? 'selected' : '' }}>Debit</option>
-                </select>
-            </td>
+                     @foreach($payment_detail as $value)
+                        <tbody>
+                           <tr class="font-14 font-heading bg-white" id="tr_{{ $i }}">
+                                 <td>
+                                    <select class="form-control type" name="type[]" data-id="{{ $i }}" id="type_{{ $i }}">
+                                       <option value="">Type</option>
+                                       <option value="Credit" {{ $value->type == 'Credit' ? 'selected' : '' }}>Credit</option>
+                                       <option value="Debit" {{ $value->type == 'Debit' ? 'selected' : '' }}>Debit</option>
+                                    </select>
+                                 </td>
 
-            <td>
-                <select class="form-select select2-single account-dropdown" data-id="{{ $i }}" id="account_{{ $i }}" name="account_name[]" required>
-                    <option value="">Select</option>
+                                 <td>
+                                    <select class="form-select select2-single account-dropdown" data-id="{{ $i }}" id="account_{{ $i }}" name="account_name[]" required>
+                                       <option value="">Select</option>
 
-                    @if($value->type == "Debit")
-                        @foreach($party_list as $val)
-                        
-                            <option value="{{ $val->id }}"  class="account-option mode-bank mode-cash" {{ $value->account_name == $val->id ? 'selected' : '' }}>
-                                {{ $val->account_name }}
-                            </option>
-                        @endforeach
-                    @elseif($value->type == "Credit")
-                        @foreach($credit_cash_accounts as $cash)
-                            <option value="{{ $cash->id }}" class="account-option mode-cash" {{ $value->account_name == $cash->id ? 'selected' : '' }}>
-                                {{ $cash->account_name }}
-                            </option>
-                        @endforeach
+                                       @if($value->type == "Debit")
+                                             @foreach($party_list as $val)
+                                             
+                                                <option value="{{ $val->id }}"  class="account-option mode-bank mode-cash" {{ $value->account_name == $val->id ? 'selected' : '' }}>
+                                                   {{ $val->account_name }}
+                                                </option>
+                                             @endforeach
+                                       @elseif($value->type == "Credit")
+                                             @foreach($credit_cash_accounts as $cash)
+                                                <option value="{{ $cash->id }}" class="account-option mode-cash" {{ $value->account_name == $cash->id ? 'selected' : '' }}>
+                                                   {{ $cash->account_name }}
+                                                </option>
+                                             @endforeach
 
-                        @foreach($credit_bank_accounts as $bank)
-                            <option value="{{ $bank->id }}" class="account-option mode-bank" {{ $value->account_name == $bank->id ? 'selected' : '' }}>
-                                {{ $bank->account_name }}
-                            </option>
-                        @endforeach
-                    @endif
-                </select>
-            </td>
+                                             @foreach($credit_bank_accounts as $bank)
+                                                <option value="{{ $bank->id }}" class="account-option mode-bank" {{ $value->account_name == $bank->id ? 'selected' : '' }}>
+                                                   {{ $bank->account_name }}
+                                                </option>
+                                             @endforeach
+                                       @endif
+                                    </select>
+                                 </td>
 
-            <td>
-                <input type="number" name="debit[]" value="{{ $value->debit }}" class="form-control debit" data-id="{{ $i }}" id="debit_{{ $i }}" placeholder="Debit Amount" {{ $value->type == "Credit" ? 'readonly' : '' }} onkeyup="debitTotal();">
-            </td>
+                                 <td>
+                                    <input type="number" name="debit[]" value="{{ $value->debit }}" class="form-control debit" data-id="{{ $i }}" id="debit_{{ $i }}" placeholder="Debit Amount" {{ $value->type == "Credit" ? 'readonly' : '' }} onkeyup="debitTotal();">
+                                 </td>
 
-            <td>
-                <input type="number" name="credit[]" value="{{ $value->credit }}" class="form-control credit" data-id="{{ $i }}" id="credit_{{ $i }}" placeholder="Credit Amount" {{ $value->type == "Debit" ? 'readonly' : '' }} onkeyup="creditTotal();">
-            </td>
+                                 <td>
+                                    <input type="number" name="credit[]" value="{{ $value->credit }}" class="form-control credit" data-id="{{ $i }}" id="credit_{{ $i }}" placeholder="Credit Amount" {{ $value->type == "Debit" ? 'readonly' : '' }} onkeyup="creditTotal();">
+                                 </td>
 
-            <td>
-                <input type="text" name="narration[]" value="{{ $value->narration }}" class="form-control narration" data-id="{{ $i }}" id="narration_{{ $i }}" placeholder="Enter Narration">
-            </td>
+                                 <td>
+                                    <input type="text" name="narration[]" value="{{ $value->narration }}" class="form-control narration" data-id="{{ $i }}" id="narration_{{ $i }}" placeholder="Enter Narration">
+                                 </td>
 
-            <td>
-                <svg style="color: red; cursor: pointer;" tabindex="0" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="{{ $i }}" viewBox="0 0 16 16">
-                    <path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/>
-                </svg>
-            </td>
-        </tr>
-    </tbody>
+                                 <td>
+                                    <svg style="color: red; cursor: pointer;" tabindex="0" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="{{ $i }}" viewBox="0 0 16 16">
+                                       <path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/>
+                                    </svg>
+                                 </td>
+                           </tr>
+                        </tbody>
 
-    @php $i++; @endphp
-@endforeach
+                        @php $i++; @endphp
+                     @endforeach
 
                      <div class="plus-icon">
                         <tr class="font-14 font-heading bg-white">
                            <td class="w-min-120 " colspan="7">
-                              <a class="add_more"><svg xmlns="http://www.w3.org/2000/svg" tabindex="0" class="bg-primary rounded-circle" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;">
+                              <a class="add_more" tabindex="0"><svg xmlns="http://www.w3.org/2000/svg" tabindex="0" class="bg-primary rounded-circle" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;">
                                  <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg></a>
                            </td>
                         </tr>
@@ -310,14 +324,19 @@ $(".add_more").click(function () {
         <td><input type="number" name="credit[]" class="form-control credit" data-id="${add_more_count}" id="credit_${add_more_count}" placeholder="Credit Amount" readonly onkeyup="creditTotal();"></td>
         <td><input type="text" name="narration[]" class="form-control narration" data-id="${add_more_count}" id="narration_${add_more_count}" placeholder="Enter Narration"></td>
         <td>
-            <svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="${add_more_count}" viewBox="0 0 16 16">
+            <svg style="color: red;cursor: pointer;" tabindex="0" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="${add_more_count}" viewBox="0 0 16 16">
                 <path d="M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/>
             </svg>
         </td>
     </tr>`;
 
     $curRow.before(newRow);
-    $('.select2-single').select2();
+   $('.select2-single').select2();
+
+   // move cursor to new row Type
+   setTimeout(function(){
+      $("#type_" + add_more_count).focus();
+   },100);
 
     // Attach change handler to the new Type select
     $(`#type_${add_more_count}`).change(function () {
@@ -540,13 +559,13 @@ $(document).ready(function () {
   });
 });
 
-    $(".add_more").on('keydown', function(event) {
+    $(document).on('keydown', '.add_more', function(event) {
       if (event.key === "Enter") {
         event.preventDefault(); // prevent default behavior
         $(this).click(); // trigger click event (which submits)
       }
     });
-      $(".remove").on('keydown', function(event) {
+      $(document).on('keydown', '.remove', function(event) {
       if (event.key === "Enter") {
         event.preventDefault(); // prevent default behavior
         $(this).click(); // trigger click event (which submits)
@@ -578,6 +597,102 @@ submitBtn.addEventListener('blur', resetColor);
         $(this).click(); // trigger click event (which submits)
       }
     });
+// Narration → focus remove button
+$(document).on("keydown", ".narration", function(e){
 
+    if(e.key === "Tab" && !e.shiftKey){
+
+        let id = $(this).data("id");
+
+        let removeBtn = $("#tr_"+id).find(".remove");
+
+        if(removeBtn.length){
+            e.preventDefault();
+            removeBtn.focus();
+        }
+
+    }
+
+});
+// Remove → focus +
+$(document).on("keydown", ".remove", function(e){
+
+    if(e.key === "Tab" && !e.shiftKey){
+
+        e.preventDefault();
+
+        let id = $(this).data("id");
+        let nextRow = $("#tr_" + (parseInt(id) + 1));
+
+        if(nextRow.length){
+            nextRow.find(".type").focus();   // go to next row type
+        }else{
+            $(".add_more").focus();          // last row → +
+        }
+
+    }
+
+});
+// Prevent Enter moving to next field
+$(document).on("keydown", "input, textarea", function(e) {
+
+    if (e.key === "Enter") {
+
+        if ($(e.target).closest(".add_more, .remove, .submit_data").length) {
+            return;
+        }
+
+        if ($(this).hasClass("select2-search__field")) {
+            return;
+        }
+
+        e.preventDefault();
+        return false;
+    }
+
+});
+$(document).ready(function () {
+    $("#date").focus();
+});
+$(document).ready(function(){
+
+    let isEditPage = true; 
+   $('#series_no').change(function(){
+
+         let selected = $(this).find(':selected');
+
+         let prefix = selected.data('invoice_prefix') ?? '';
+         let start = selected.data('invoice_start_from') ?? '';
+         let manual = selected.attr('data-manual_enter_invoice_no');
+         if(!isEditPage){
+
+            if(manual == '0'){ 
+               $('#voucher_prefix').val(prefix);
+               $('#voucher_no').val(start);
+            }else{
+               $('#voucher_prefix').val('');
+               $('#voucher_no').val('');
+            }
+
+         }
+
+      $('#manual_enter_invoice_no').val(manual ?? '');
+
+      if(manual === undefined || manual === null || manual === ''){
+         $('#voucher_prefix').prop('readonly', false);
+      }
+      else if(manual == '1'){
+         $('#voucher_prefix').prop('readonly', false);
+      }
+      else if(manual == '0'){
+         $('#voucher_prefix').prop('readonly', true);
+      }
+      isEditPage = false;
+
+   });
+
+    $('#series_no').trigger('change');
+
+});
 </script>
 @endsection

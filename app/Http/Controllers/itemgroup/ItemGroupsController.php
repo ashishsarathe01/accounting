@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Session;
 use Gate;
+use DB;
 class ItemGroupsController extends Controller
 {
    /**
@@ -20,7 +21,15 @@ class ItemGroupsController extends Controller
    public function index(){
       Gate::authorize('view-module', 7);
       $com_id = Session::get('user_company_id');
-      $itemgroups = ItemGroups::where('company_id', $com_id)->where('delete', '=', '0')->get();
+      $itemgroups = ItemGroups::select(
+                                        'item_groups.*',
+                                        DB::raw("
+                                        IF(
+                                            EXISTS(SELECT 1 FROM manage_items ps WHERE ps.g_name = item_groups.id),1,0) as is_used
+                                        ")
+                                    )->where('company_id', $com_id)
+                              ->where('delete', '=', '0')
+                              ->get();
       return view('itemgroup/accountItemGroup')->with('itemgroups', $itemgroups);
    }
 

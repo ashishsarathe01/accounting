@@ -8,4 +8,11 @@ use Illuminate\Database\Eloquent\Model;
 class PrivilegesModuleMapping extends Model
 {
     use HasFactory;
+    protected $fillable = [
+    'module_id',
+    'employee_id',
+    'company_id',
+    'status',
+];
+
 }

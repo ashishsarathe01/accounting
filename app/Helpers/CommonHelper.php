@@ -106,6 +106,7 @@ class CommonHelper
             }
         }  
         
+        
         return $final_stock_value;
          
     }
@@ -113,22 +114,166 @@ class CommonHelper
     {      
         $max_date = ItemAverage::where('item_id',$item)->where('series_no',$series)->max('stock_date');
         $startDate = Carbon::parse($date);
-        $endDate = Carbon::parse($max_date);
-        if($endDate < $startDate){
-            $endDate = $startDate;
-        }
+          $endDate = Carbon::today();
+        // $endDate = Carbon::parse($max_date);
+        // if($endDate < $startDate){
+        //     $endDate = $startDate;
+        // }
         //die('RewriteItemAverageByItem'.$startDate."-".$endDate);
         // Loop through the date range
+        $purchaseWeightLog = [];
         for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
             ItemAverage::where('item_id',$item)
                     ->where('series_no',$series)
                     ->where('stock_date',$date->toDateString())
                     ->delete();
-            $average_detail = ItemAverageDetail::where('item_id',$item)
-                                                ->where('series_no',$series)
-                                                ->where('entry_date',$date->toDateString())
-                                                ->get();
-            if(count($average_detail)>0){
+                $average_detail = ItemAverageDetail::where('item_id',$item)
+                                                    ->where('series_no',$series)
+                                                    ->where('entry_date',$date->toDateString())
+                                                    ->get();
+                if(count($average_detail)>0){
+                $purchase_weight = $average_detail->sum('purchase_weight');
+                $purchase_amount = $average_detail->sum('purchase_total_amount');
+                $sale_weight = $average_detail->sum('sale_weight');
+                $stock_transfer_weight = $average_detail->sum('stock_transfer_weight');
+                $purchase_return_weight = $average_detail->sum(function ($item) {
+                    return (float) $item->purchase_return_weight;
+                });
+                $purchase_return_amount = $average_detail->sum('purchase_return_amount');
+                $purchase_return_amount = $purchase_return_amount*2;
+                $sale_return_weight = $average_detail->pluck('sale_return_weight')
+                                     ->filter(fn($val) => is_numeric($val))
+                                     ->sum();
+                if($sale_return_weight==''){
+                    $sale_return_weight = 0;
+                }
+                $stock_transfer_in_weight = $average_detail->sum('stock_transfer_in_weight');
+                $stock_transfer_in_amount = $average_detail->sum('stock_transfer_in_amount');
+                
+                $stock_journal_out_weight = $average_detail->sum(function ($item) {
+                    return (float) $item->stock_journal_out_weight;
+                });
+                $stock_journal_in_weight = $average_detail->sum(function ($item) {
+                    return (float) $item->stock_journal_in_weight;
+                });
+                $stock_journal_in_amount = $average_detail->sum(function ($item) {
+                    return (float) $item->stock_journal_in_amount;
+                });
+                // $stock_journal_out_weight = $average_detail->sum('stock_journal_out_weight');
+                // $stock_journal_in_weight = $average_detail->sum('stock_journal_in_weight');
+                // $stock_journal_in_amount = $average_detail->sum('stock_journal_in_amount');
+                 if(!empty($stock_journal_in_weight)){
+                    $purchase_weight = $purchase_weight + $stock_journal_in_weight;
+                }
+                if(!empty($stock_journal_in_amount)){
+                    $purchase_amount = $purchase_amount + $stock_journal_in_amount;
+                }
+                //Production
+                $production_out_weight = $average_detail->sum('production_out_weight');
+                $production_in_weight = $average_detail->sum('production_in_weight');
+                $production_in_amount = $average_detail->sum('production_in_amount');
+                 if(!empty($production_in_weight)){
+                    $purchase_weight = $purchase_weight + $production_in_weight;
+                }
+                if(!empty($production_in_amount)){
+                    $purchase_amount = $purchase_amount + $production_in_amount;
+                }
+                if(!empty($stock_transfer_in_weight)){
+                    $purchase_weight = $purchase_weight + $stock_transfer_in_weight;
+                }
+                if(!empty($stock_transfer_in_amount)){
+                    $purchase_amount = $purchase_amount + $stock_transfer_in_amount;
+                }
+                $on_date_purchase_weight = $purchase_weight + $sale_return_weight;
+                $average = ItemAverage::where('item_id',$item)
+                        ->where('stock_date','<',$date->toDateString())
+                        ->where('series_no',$series)
+                        ->orderBy('stock_date','desc')
+                        ->orderBy('id','desc')
+                        ->first();
+                if($average){
+                    
+                }
+               
+                $purchase_weight1=0;
+                if($average){
+                   if($average->price == 0){ 
+                     $avgWeight = max(0, $average->average_weight ?? 0);
+                     $purchase_weight1 = $purchase_weight - $purchase_return_weight + abs($avgWeight);
+                                        }else{
+                                        $purchase_weight1 = $purchase_weight - $purchase_return_weight + abs($average->average_weight);
+                                        }
+                    $purchase_weight = $purchase_weight - $purchase_return_weight + $average->average_weight;
+                     
+                    $purchase_amount = $purchase_amount - $purchase_return_amount + abs($average->amount);
+                }else{
+                    $opening = ItemLedger::where('item_id',$item)
+                                    ->where('series_no',$series)
+                                    ->where('source','-1')
+                                    ->first();
+                    if($opening){
+                        $purchase_weight1 = $purchase_weight - $purchase_return_weight + $opening->in_weight;
+                        $purchase_weight = $purchase_weight - $purchase_return_weight + $opening->in_weight;
+                        $purchase_amount = $purchase_amount - $purchase_return_amount + $opening->total_price;                        
+                    }else{
+                        $purchase_weight1 = $purchase_weight - $purchase_return_weight;
+                        $purchase_weight = $purchase_weight - $purchase_return_weight;
+                        $purchase_amount = $purchase_amount - $purchase_return_amount; 
+                    }
+                }  
+                      
+                if($purchase_amount != 0 && $purchase_amount != "" && $purchase_weight != 0 && $purchase_weight != "" && $purchase_weight1 != 0){
+                    $average_price = round($purchase_amount / $purchase_weight1,6);
+                    $average_price =  abs($average_price);
+                }else{
+                    $average_price = 0;
+                }    
+
+                $stock_average_amount = ($purchase_weight - $sale_weight - $stock_transfer_weight - $stock_journal_out_weight - $production_out_weight + $sale_return_weight) * $average_price;
+                $stock_average_amount =  round($stock_average_amount,2);
+                $average = new ItemAverage;
+                $average->item_id = $item;
+                $average->series_no = $series;
+                $average->sale_weight = $sale_weight + $stock_transfer_weight + $stock_journal_out_weight + $production_out_weight + $purchase_return_weight;
+                $average->purchase_weight = $on_date_purchase_weight;
+                $average->average_weight = $purchase_weight - $sale_weight - $stock_transfer_weight  - $production_out_weight - $stock_journal_out_weight + $sale_return_weight;
+                $average->price = $average_price;
+                $average->company_id = Session::get('user_company_id');
+                $average->amount = $stock_average_amount;
+                $average->stock_date = $date->toDateString();
+                $average->created_at = Carbon::now();
+                $average->save();
+            }  
+                
+        }     
+      
+    
+    }
+    
+    public static function RewriteItemAverageByItemApi($date,$item,$series=null,$company_id)
+    {     
+        
+        $max_date = ItemAverage::where('item_id',$item)->where('series_no',$series)->max('stock_date');
+        $startDate = Carbon::parse($date);
+         $endDate = Carbon::today();
+        // $endDate = Carbon::parse($max_date);
+        // if($endDate < $startDate){
+        //     $endDate = $startDate;
+        // }
+        
+        //die('RewriteItemAverageByItem'.$startDate."-".$endDate);
+        // Loop through the date range
+        $purchaseWeightLog = [];
+        for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
+            ItemAverage::where('item_id',$item)
+                    ->where('series_no',$series)
+                    ->where('stock_date',$date->toDateString())
+                    ->delete();
+                $average_detail = ItemAverageDetail::where('item_id',$item)
+                                                    ->where('series_no',$series)
+                                                    ->where('entry_date',$date->toDateString())
+                                                    ->get();
+                if(count($average_detail)>0){
                 $purchase_weight = $average_detail->sum('purchase_weight');
                 $purchase_amount = $average_detail->sum('purchase_total_amount');
                 $sale_weight = $average_detail->sum('sale_weight');
@@ -156,7 +301,16 @@ class CommonHelper
                 if(!empty($stock_journal_in_amount)){
                     $purchase_amount = $purchase_amount + $stock_journal_in_amount;
                 }
-
+                //Production
+                $production_out_weight = $average_detail->sum('production_out_weight');
+                $production_in_weight = $average_detail->sum('production_in_weight');
+                $production_in_amount = $average_detail->sum('production_in_amount');
+                 if(!empty($production_in_weight)){
+                    $purchase_weight = $purchase_weight + $production_in_weight;
+                }
+                if(!empty($production_in_amount)){
+                    $purchase_amount = $purchase_amount + $production_in_amount;
+                }
                 if(!empty($stock_transfer_in_weight)){
                     $purchase_weight = $purchase_weight + $stock_transfer_in_weight;
                 }
@@ -171,43 +325,63 @@ class CommonHelper
                         ->orderBy('id','desc')
                         ->first();
                 if($average){
+                    
+                }
+               
+                $purchase_weight1=0;
+                if($average){
+                   if($average->price == 0){ 
+                     $avgWeight = max(0, $average->average_weight ?? 0);
+                     $purchase_weight1 = $purchase_weight - $purchase_return_weight + abs($avgWeight);
+                                        }else{
+                                        $purchase_weight1 = $purchase_weight - $purchase_return_weight + abs($average->average_weight);
+                                        }
                     $purchase_weight = $purchase_weight - $purchase_return_weight + $average->average_weight;
-                    $purchase_amount = $purchase_amount - $purchase_return_amount + $average->amount;
+                     
+                    $purchase_amount = $purchase_amount - $purchase_return_amount + abs($average->amount);
                 }else{
                     $opening = ItemLedger::where('item_id',$item)
                                     ->where('series_no',$series)
                                     ->where('source','-1')
                                     ->first();
                     if($opening){
+                        $purchase_weight1 = $purchase_weight - $purchase_return_weight + $opening->in_weight;
                         $purchase_weight = $purchase_weight - $purchase_return_weight + $opening->in_weight;
                         $purchase_amount = $purchase_amount - $purchase_return_amount + $opening->total_price;                        
                     }else{
+                        $purchase_weight1 = $purchase_weight - $purchase_return_weight;
                         $purchase_weight = $purchase_weight - $purchase_return_weight;
                         $purchase_amount = $purchase_amount - $purchase_return_amount; 
                     }
-                }        
-                if($purchase_amount != 0 && $purchase_amount != "" && $purchase_weight != 0 && $purchase_weight != ""){
-                    $average_price = $purchase_amount / $purchase_weight;
-                    $average_price =  round($average_price,6);
+                }  
+                    
+                if($purchase_amount != 0 && $purchase_amount != "" && $purchase_weight != 0 && $purchase_weight != "" && $purchase_weight1 != 0){
+                    $average_price = round($purchase_amount / $purchase_weight1,6);
+                    $average_price =  abs($average_price);
                 }else{
                     $average_price = 0;
-                }               
-                $stock_average_amount = ($purchase_weight - $sale_weight - $stock_transfer_weight - $stock_journal_out_weight + $sale_return_weight) * $average_price;
+                }    
+
+                $stock_average_amount = ($purchase_weight - $sale_weight - $stock_transfer_weight - $stock_journal_out_weight - $production_out_weight + $sale_return_weight) * $average_price;
                 $stock_average_amount =  round($stock_average_amount,2);
                 $average = new ItemAverage;
                 $average->item_id = $item;
                 $average->series_no = $series;
-                $average->sale_weight = $sale_weight + $stock_transfer_weight + $stock_journal_out_weight + $purchase_return_weight;
+                $average->sale_weight = $sale_weight + $stock_transfer_weight + $stock_journal_out_weight + $production_out_weight + $purchase_return_weight;
                 $average->purchase_weight = $on_date_purchase_weight;
-                $average->average_weight = $purchase_weight - $sale_weight - $stock_transfer_weight - $stock_journal_out_weight + $sale_return_weight;
+                $average->average_weight = $purchase_weight - $sale_weight - $stock_transfer_weight - $production_out_weight - $stock_journal_out_weight + $sale_return_weight;
                 $average->price = $average_price;
-                $average->company_id = Session::get('user_company_id');
+                $average->company_id = $company_id;
                 $average->amount = $stock_average_amount;
                 $average->stock_date = $date->toDateString();
                 $average->created_at = Carbon::now();
                 $average->save();
-            }        
-        }         
+                 
+            }  
+              
+        }     
+      
+  
     }
     public static function sendWhatsappMessage($request){
         $curl = curl_init();
@@ -242,14 +416,50 @@ class CommonHelper
             $to_date = date('Y-m-d',strtotime($ilter_to_date));
         }
         $profitloss = 0;
-        $stock_in_hand = CommonHelper::ClosingStock($to_date);
-        $stock_in_hand = round($stock_in_hand,2);    
-        $previous_date = Carbon::parse($from_date)->subDay();        
-        $opening_stock = CommonHelper::ClosingStock($previous_date);
-        $opening_stock = round($opening_stock,2);
-        //Purchase
-
         $company_id = Session::get('user_company_id');
+        $closing_stock = CommonHelper::ClosingStock($to_date);
+        $closing_stock = round($closing_stock,2);  
+        
+        $baseQuery = DB::table('purchases')
+    ->whereRaw("STR_TO_DATE(date, '%Y-%m-%d') <= ?", [$to_date])
+    ->whereDate('stock_entry_date', '>', $to_date)
+    ->where('company_id',$company_id)
+    ->where('status', '1')
+    ->where('delete', '0');
+
+    $purchase_in_transit_ids = (clone $baseQuery)->pluck('id')->toArray();
+    
+    $stock_in_transit_value = (clone $baseQuery)
+        ->selectRaw("SUM(CAST(taxable_amt AS DECIMAL(15,2))) as total")
+        ->value('total');
+    
+    $stock_in_transit_value = round($stock_in_transit_value ?? 0, 2);
+
+   $stock_in_hand = $closing_stock + $stock_in_transit_value;
+   
+   
+   
+        $previous_date = Carbon::parse($from_date)->subDay();        
+        $opening_stock1 = CommonHelper::ClosingStock($previous_date);
+        $opening_stock1 = round($opening_stock1,2);
+        //Purchase
+        
+        $baseQuery1 = DB::table('purchases')
+                        ->whereRaw("STR_TO_DATE(date, '%Y-%m-%d') < ?", [$from_date])
+                        ->whereDate('stock_entry_date', '>=', $from_date)
+                        ->where('company_id',$company_id)
+                        ->where('status', '1')
+                        ->where('delete', '0');
+
+    $purchase_in_transit_opening_ids = (clone $baseQuery1)->pluck('id')->toArray();
+    $stock_in_transit_opening_value = (clone $baseQuery1)
+        ->selectRaw("SUM(CAST(taxable_amt AS DECIMAL(15,2))) as total")
+        ->value('total');
+    
+    $stock_in_transit_opening_value = round($stock_in_transit_opening_value ?? 0, 2);
+    $opening_stock = $opening_stock1 + $stock_in_transit_opening_value;
+
+        
         
         $tot_purchase_amt = DB::table('purchases')
                             ->join('purchase_descriptions','purchases.id','=','purchase_descriptions.purchase_id')
@@ -284,7 +494,7 @@ class CommonHelper
         $sale_sundry = DB::table('sales')
                             ->join('sale_sundries','sales.id','=','sale_sundries.sale_id')
                             ->join('bill_sundrys','sale_sundries.bill_sundry','=','bill_sundrys.id')
-                            ->where(['sales.delete' => '0', 'sales.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
+                            ->where(['sales.delete' => '0','sales.status' => '1', 'sales.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes'])
                             ->whereBetween('date', [$from_date, $to_date])
                             ->select('bill_sundry_type','amount')
                             ->get();
@@ -300,7 +510,7 @@ class CommonHelper
         //Purchase Return
         $tot_purchase_return_amt = DB::table('purchase_returns')
                                         ->join('purchase_return_descriptions','purchase_returns.id','=','purchase_return_descriptions.purchase_return_id')
-                                        ->where(['purchase_returns.delete' => '0', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
+                                        ->where(['purchase_returns.delete' => '0','purchase_return_descriptions.delete' => '0','purchase_returns.status' => '1', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
                                         ->whereBetween('date', [$from_date, $to_date])
                                         ->get()
                                         ->sum("amount");
@@ -323,7 +533,7 @@ class CommonHelper
          //Sale Return With  PURCHASE
         $tot_sale_return_amt_purchase = DB::table('sales_returns')
          ->join('sale_return_descriptions','sales_returns.id','=','sale_return_descriptions.sale_return_id')
-         ->where(['sales_returns.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
+         ->where(['sales_returns.delete' => '0','sale_return_descriptions.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
          ->whereBetween('date', [$from_date, $to_date])
          //->get()
          ->sum("amount");
@@ -346,7 +556,7 @@ class CommonHelper
         //Sale Return
         $tot_sale_return_amt = DB::table('sales_returns')
                                     ->join('sale_return_descriptions','sales_returns.id','=','sale_return_descriptions.sale_return_id')
-                                    ->where(['sales_returns.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE'])
+                                    ->where(['sales_returns.delete' => '0','sale_return_descriptions.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE'])
                                     ->whereBetween('date', [$from_date, $to_date])
                                     ->get()
                                     ->sum("amount");
@@ -369,14 +579,14 @@ class CommonHelper
         //Purchase Return With Sale
         $tot_purchase_return_amt_sale = DB::table('purchase_returns')
             ->join('purchase_return_descriptions','purchase_returns.id','=','purchase_return_descriptions.purchase_return_id')
-            ->where(['purchase_returns.delete' => '0', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE'])
+            ->where(['purchase_returns.delete' => '0','purchase_returns.status' => '1','purchase_return_descriptions.delete' => '0', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE'])
             ->whereBetween('date', [$from_date, $to_date])
             ->get()
             ->sum("amount");
         $purchase_return_sundry_sale = DB::table('purchase_returns')
             ->join('purchase_return_sundries','purchase_returns.id','=','purchase_return_sundries.purchase_return_id')
             ->join('bill_sundrys','purchase_return_sundries.bill_sundry','=','bill_sundrys.id')
-            ->where(['purchase_returns.delete' => '0', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE','adjust_purchase_amt'=>'Yes'])
+            ->where(['purchase_returns.delete' => '0','purchase_returns.status' => '1', 'purchase_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'SALE','adjust_purchase_amt'=>'Yes'])
             ->whereBetween('date', [$from_date, $to_date])
             ->select('bill_sundry_type','amount')
             ->get();
@@ -562,20 +772,151 @@ class CommonHelper
         }
         return $result->toArray();
     }
-    public static function getAllChildGroupIds($group_id, $company_id)
-    {
-        $child_ids = AccountGroups::where('heading', $group_id)
-                        ->where('delete', '0')
-                        ->whereIn('heading_type',['group','head'])
-                        ->whereIn('company_id', [$company_id, 0])
-                        ->pluck('id')
-                        ->toArray();
-
-        $all_ids = $child_ids;
-        foreach ($child_ids as $child_id) {
-            $all_ids = array_merge($all_ids, CommonHelper::getAllChildGroupIds($child_id, $company_id));
-        }
-        return $all_ids;
+    public static function getAllChildGroupIds($group_id, $company_id, &$visited = [])
+{
+    // STOP if already visited (prevents infinite loop)
+    if (in_array($group_id, $visited)) {
+        return [];
     }
 
+    // mark this group as visited
+    $visited[] = $group_id;
+
+    $child_ids = AccountGroups::where('heading', $group_id)
+        ->where('delete', '0')
+        ->where('heading_type', 'group')
+        ->whereIn('company_id', [$company_id, 0])
+        ->pluck('id')
+        ->toArray();
+
+    $all_ids = [];
+
+    foreach ($child_ids as $child_id) {
+        $all_ids[] = $child_id;
+
+        $all_ids = array_merge(
+            $all_ids,
+            self::getAllChildGroupIds($child_id, $company_id, $visited)
+        );
+    }
+
+    return $all_ids;
+}
+    
+     public static function RewriteAllItemAverage()
+{
+    $companyId = Session::get('user_company_id');
+
+    // 1️⃣ Get company book start date
+    $company = Companies::find($companyId);
+    if (!$company || empty($company->books_start_from)) {
+        return false;
+    }
+
+    $startDate = Carbon::parse($company->books_start_from)->toDateString();
+
+    // 2️⃣ Get all SERIES (same logic as ClosingStock)
+    if ($company->gst_config_type == "single_gst") {
+
+        $series = DB::table('gst_settings')
+            ->where([
+                'company_id' => $companyId,
+                'gst_type' => 'single_gst'
+            ])->pluck('series')->toArray();
+
+        $branchSeries = GstBranch::where([
+                'delete' => '0',
+                'company_id' => $companyId
+            ])
+            ->pluck('branch_series')
+            ->toArray();
+
+        $series = array_merge($series, $branchSeries);
+
+    } else {
+
+        $series = DB::table('gst_settings_multiple')
+            ->where([
+                'company_id' => $companyId,
+                'gst_type' => 'multiple_gst'
+            ])
+            ->pluck('series')
+            ->toArray();
+
+        $branchSeries = GstBranch::where([
+                'delete' => '0',
+                'company_id' => $companyId
+            ])
+            ->pluck('branch_series')
+            ->toArray();
+
+        $series = array_merge($series, $branchSeries);
+    }
+
+    $series = array_unique(array_filter($series));
+
+    // 3️⃣ Get all items which have ANY stock movement
+    $items = ItemAverageDetail::where('company_id', $companyId)
+        ->distinct()
+        ->pluck('item_id');
+
+    // 4️⃣ Recalculate item-wise, series-wise
+    foreach ($items as $itemId) {
+        foreach ($series as $seriesNo) {
+
+            self::RewriteItemAverageByItem(
+                $startDate,
+                $itemId,
+                $seriesNo
+            );
+
+        }
+    }
+
+    return true;
+}
+public static function getAllChildGroupIdsOptimizeCode($group_id, $company_id)
+{
+    $rows = AccountGroups::where('delete', '0')
+        ->whereIn('heading_type', ['group', 'head'])
+        ->whereIn('company_id', [$company_id, 0])
+        ->get(['id', 'heading']);
+
+    $map = [];
+
+    foreach ($rows as $row) {
+        $map[$row->heading][] = $row->id;
+    }
+
+    $result = [];
+    $visited = [];
+
+    $walk = function ($parent) use (&$walk, &$map, &$result, &$visited) {
+        if (isset($visited[$parent])) {
+            return;
+        }
+
+        $visited[$parent] = true;
+
+        foreach ($map[$parent] ?? [] as $childId) {
+            $result[] = $childId;
+            $walk($childId);
+        }
+    };
+
+    $walk($group_id);
+
+    return array_unique($result);
+}
+    public static function getFinancialYear($date)
+    {
+        $year = date('Y', strtotime($date));
+        $month = date('n', strtotime($date));
+    
+        if ($month >= 4) {
+            return date('y', strtotime($date)) . '-' . substr($year + 1, -2);
+        } else {
+            return substr($year - 1, -2) . '-' . date('y', strtotime($date));
+        }
+    }
 }

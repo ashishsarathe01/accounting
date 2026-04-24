@@ -41,5 +41,12 @@ class ManageItems extends Model
     {
         return $this->hasMany(ItemSizeStock::class, 'item_id');
     }
-
+    public function subItems()
+    {
+        return $this->hasMany(SubItem::class, 'parent_item_id');
+    }
+    public function unit()
+{
+    return $this->belongsTo(\App\Models\Units::class, 'u_name');
 }
+}   

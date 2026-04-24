@@ -19,11 +19,28 @@
                 </div>
                 @endif
                 
-
+                <div id="progressBox" style="display:none;">
+                    <div style="background:#eee;">
+                        <div id="progressBar" style="width:0%; background:green; color:white; text-align:center;">
+                            0%
+                        </div>
+                    </div>
+                    <small id="progressText"></small>
+                </div>
                 <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
                     <h5 class="transaction-table-title m-0 py-2">
-                        List of Purchase Voucher
+                        List of Purchase Voucher   
                     </h5>
+                        <!--<form id="roundoffForm">-->
+                        <!--    @csrf-->
+                        
+                        <!--    <input type="date" name="from_date" required value="{{ request('from_date') }}">-->
+                        <!--    <input type="date" name="to_date" required value="{{ request('to_date') }}">-->
+                        
+                        <!--    <button type="submit" class="btn btn-danger">-->
+                        <!--        Fix Round-Off (Filtered)-->
+                        <!--    </button>-->
+                        <!--</form>-->
                     <form  action="{{ route('purchase.index') }}" method="GET">
                        @csrf
                        <div class="d-md-flex d-block">                  
@@ -36,9 +53,11 @@
                           <button class="btn btn-info" style="margin-left: 5px;">Search</button>
                        </div>
                     </form>
-                     <div class="d-md-flex d-block"> 
+                    <div class="d-md-flex d-block"> 
                         <input type="text" id="search" class="form-control" placeholder="Search">
-                     </div>
+                        <button class="btn btn-info ms-2 export_csv">CSV</button>
+                        <button class="btn btn-info ms-2  print_btn">PRINT</button>
+                    </div>
                     @can('action-module',83)
                         <a href="{{ route('purchase.create') }}" class="btn btn-xs-primary">
                         ADD
@@ -50,7 +69,7 @@
                     
                 </div>
                <div class="transaction-table bg-white table-view shadow-sm purchase_table">
-                  <table class="table-striped table m-0 shadow-sm">
+                  <table class="table-striped table-bordered table m-0 shadow-sm" id="purchase_table">
                      <thead>
                         <tr class=" font-12 text-body bg-light-pink ">
                            <th>Date </th>
@@ -125,15 +144,17 @@
                                             </tr>
                                         @endforeach
                                     </table>
-                                    @php $qty_total = $qty_total + $v->qty; @endphp
+                                    @php $qty_total = $qty_total + floatval($v->qty); @endphp
                                 @endforeach
                               </td>
                               <!-- <td style="text-align: right;">{{$qty_total}}</td> -->
                               <td style="text-align: right;">
                                  <?php 
                                  echo $value->total;
-                                 
-                                 $tot_amt = $tot_amt + $value->total; ?>
+                                 if(!empty($value->total)){
+                                     $tot_amt = $tot_amt + $value->total; 
+                                 }
+                                 ?>
                               </td>
                               <td class="w-min-120  text-center">
                                  <?php 
@@ -152,6 +173,24 @@
                                  <a title="View Invoice" href="{{ URL::to('purchase-invoice/' . $value->id) }}" target="__blank"><img src="{{ URL::asset('public/assets/imgs/eye-icon.svg')}}" class="px-1" alt=""></a>
                               </td>
                            </tr>
+                           <tr class="font-12 text-muted bg-light">
+                            <td colspan="6" class="ps-4 py-1" style="text-align:left;">
+                                
+                                <strong>Created By:</strong> 
+                                {{ $value->created_by_name ?? '-' }}
+
+                                &nbsp;&nbsp;|&nbsp;&nbsp;
+
+                                <strong>Approved By:</strong> 
+                                @if($value->approved_status == 1)
+                                    {{ $value->approved_by_name ?? '-' }}
+                                    <small>({{ date('d-m-Y H:i', strtotime($value->approved_at)) }})</small>
+                                @else
+                                    -
+                                @endif
+
+                            </td>
+                            </tr>
                            <?php 
                         } ?>
                         <tr class="font-14 font-heading bg-white">
@@ -351,5 +390,280 @@
          });
       });
    });
+   
+
+// document.getElementById('roundoffForm').addEventListener('submit', function(e) {
+//     e.preventDefault(); // ❗ STOP page reload
+
+//     if (!confirm('Fix roundoff?')) return;
+
+//     startTracking(); // start progress
+
+//     let formData = new FormData(this);
+
+//     fetch("{{ route('purchase.bulk.roundoff') }}", {
+//         method: "POST",
+//         headers: {
+//             'X-CSRF-TOKEN': "{{ csrf_token() }}"
+//         },
+//         body: formData
+//     })
+//     .then(res => res.text())
+//     .then(data => {
+//         console.log("Completed");
+//     });
+// });
+
+function startTracking() {
+
+    let box = document.getElementById('progressBox');
+    if (box) box.style.display = 'block'; // ✅ safe check
+
+    let interval = setInterval(() => {
+
+            fetch("{{ url('/purchase/roundoff-progress') }}")
+.then(res => {
+    if (!res.ok) throw new Error("Server error");
+    return res.json();
+})
+.then(data => {
+
+    if (!data || data.error) return; // ✅ prevent crash
+             let percent = data.percent;
+            let bar = document.getElementById('progressBar');
+            let text = document.getElementById('progressText');
+
+            if (bar) {
+                bar.style.width = percent + '%';
+                bar.innerText = percent + '%';
+            }
+
+            if (text) {
+                text.innerText = data.done + " / " + data.total + " processed";
+            }
+
+            if (data.done >= data.total && data.total > 0) {
+                clearInterval(interval);
+                alert("Round-off update completed ✅");
+            }
+        });
+
+    }, 1000);
+}
+$(".export_csv").click(function () {
+
+        let csv = [];
+
+        let from_date = $("input[name='from_date']").val();
+        let to_date   = $("input[name='to_date']").val();
+
+        function formatDate(dateStr){
+            if(!dateStr) return '';
+            let parts = dateStr.split("-");
+            return parts[2] + "-" + parts[1] + "-" + parts[0];
+        }
+
+        csv.push("From Date: " + formatDate(from_date));
+        csv.push("To Date: " + formatDate(to_date));
+        csv.push("");
+
+        let header = [];
+        $("#purchase_table thead th").each(function (index) {
+            if(index != 5){
+                header.push($(this).text().trim());
+            }
+        });
+        csv.push(header.join(","));
+
+        $("#purchase_table tbody tr").each(function () {
+
+            if($(this).hasClass("bg-light")){
+                return;
+            }
+
+            let cols = [];
+            let items = [];
+
+            $(this).find("td").each(function (index) {
+
+                if(index == 5) return; // skip action
+
+                if(index == 3){
+                    $(this).find("strong").each(function () {
+                        items.push($(this).text().trim().replace(/,/g,''));
+                    });
+                } else {
+                    let text = $(this).text().trim()
+                        .replace(/\n/g, '')
+                        .replace(/,/g, '');
+
+                    cols.push(text);
+                }
+
+            });
+
+            if(items.length > 0){
+                let firstRow = [...cols];
+                firstRow.splice(3, 0, items[0]); // insert item at correct position
+                csv.push(firstRow.join(","));
+
+                for(let i = 1; i < items.length; i++){
+                    let emptyRow = ["", "", "", items[i], ""];
+                    csv.push(emptyRow.join(","));
+                }
+            } else {
+                csv.push(cols.join(","));
+            }
+
+        });
+
+        let csvString = csv.join("\n");
+
+        let blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+        let url = window.URL.createObjectURL(blob);
+
+        let a = document.createElement("a");
+        a.href = url;
+        a.download = "purchase_report.csv";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    });
+
+    $(".print_btn").click(function () {
+
+        let from_date = $("input[name='from_date']").val();
+        let to_date   = $("input[name='to_date']").val();
+
+        function formatDate(dateStr){
+            if(!dateStr) return '';
+            let parts = dateStr.split("-");
+            return parts[2] + "-" + parts[1] + "-" + parts[0];
+        }
+
+        from_date = formatDate(from_date);
+        to_date   = formatDate(to_date);
+
+        let printWindow = window.open('', '', 'width=900,height=700');
+
+        let tableHTML = `
+            <html>
+            <head>
+                <title>Purchase Report</title>
+                <style>
+                    body { font-family: Arial; font-size: 12px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                    th, td { border: 1px solid #000; padding: 5px; }
+                    th { background: #f2f2f2; }
+                    .text-right { text-align: right; }
+                </style>
+            </head>
+            <body>
+
+            <h2 style="text-align:center; text-decoration: underline;">
+                List of Purchase Voucher
+            </h2>
+
+            <p style="text-align:center;">
+                From: ${from_date} &nbsp;&nbsp; To: ${to_date}
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Vch/Bill No</th>
+                        <th>Particular</th>
+                        <th>Item Details</th>
+                        <th class="text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        let total = 0;
+
+        $("#purchase_table tbody tr").each(function () {
+
+            if($(this).hasClass("bg-light")){
+                return;
+            }
+
+            let tds = $(this).find("td");
+
+            if($(tds[0]).text().trim().toLowerCase() === "total"){
+                total = $(tds[4]).text().trim();
+                return;
+            }
+
+            let date = $(tds[0]).text().trim();
+            let vch  = $(tds[1]).text().trim();
+            let party= $(tds[2]).text().trim();
+            let amt  = $(tds[4]).text().trim();
+
+            let items = [];
+
+            $(tds[3]).find("strong").each(function () {
+                items.push($(this).text().trim());
+            });
+
+            if(items.length > 0){
+
+                tableHTML += `
+                    <tr>
+                        <td>${date}</td>
+                        <td>${vch}</td>
+                        <td>${party}</td>
+                        <td>${items[0]}</td>
+                        <td class="text-right">${amt}</td>
+                    </tr>
+                `;
+
+                for(let i = 1; i < items.length; i++){
+                    tableHTML += `
+                        <tr>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td>${items[i]}</td>
+                            <td></td>
+                        </tr>
+                    `;
+                }
+
+            } else {
+
+                tableHTML += `
+                    <tr>
+                        <td>${date}</td>
+                        <td>${vch}</td>
+                        <td>${party}</td>
+                        <td></td>
+                        <td class="text-right">${amt}</td>
+                    </tr>
+                `;
+            }
+
+        });
+
+        tableHTML += `
+            <tr>
+                <td colspan="4" style="font-weight:bold;">TOTAL</td>
+                <td class="text-right" style="font-weight:bold;">${total}</td>
+            </tr>
+        `;
+
+        tableHTML += `
+                </tbody>
+            </table>
+
+            </body>
+            </html>
+        `;
+
+        printWindow.document.write(tableHTML);
+        printWindow.document.close();
+        printWindow.print();
+    });
 </script>
 @endsection

@@ -2,6 +2,7 @@
 @section('content')
 <!-- header-section -->
 @include('layouts.header')
+@section('title', 'Edit Bill Sundrys')
 <!-- list-view-company-section -->
 <div class="list-of-view-company ">
     <section class="list-of-view-company-section container-fluid">
@@ -29,15 +30,25 @@
                         </div>
                         <div class="mb-4 col-md-4">
                            <label class="form-label font-14 font-heading">Nature Of Sundry</label>
-                           <select class="form-select form-select-lg select2-single" name="nature_of_sundry" id="nature_of_sundry" aria-label="form-select-lg example" required onchange="showHideGstCalculation()">
-                              <option value="">Select Nature Of Sundry</option>
-                              <option value="CGST" data-sequence="1" @if($editbill->nature_of_sundry=='CGST') selected @endif>CGST</option>
-                              <option value="SGST" data-sequence="2" @if($editbill->nature_of_sundry=='SGST') selected @endif>SGST</option>
-                              <option value="IGST" data-sequence="3" @if($editbill->nature_of_sundry=='IGST') selected @endif>IGST</option>
-                              <option value="TCS" data-sequence="4" @if($editbill->nature_of_sundry=='TCS') selected @endif>TCS/TDS</option>
-                              <option value="TDS" data-sequence="5" @if($editbill->nature_of_sundry=='TDS') selected @endif>TDS</option>
-                              <option value="OTHER" data-sequence="0" @if($editbill->nature_of_sundry=='OTHER') selected @endif>OTHER</option>
-                           </select>
+                           <select class="form-select form-select-lg select2-single"name="nature_of_sundry"id="nature_of_sundry"requiredonchange="showHideGstCalculation()">
+                                <option value="">Select Nature Of Sundry</option>
+                                <option value="CGST" data-sequence="1"{{ in_array('CGST', $usedNatures) && $editbill->nature_of_sundry != 'CGST' ? 'disabled' : '' }}{{ $editbill->nature_of_sundry == 'CGST' ? 'selected' : '' }}>CGST</option>
+                                <option value="SGST" data-sequence="2"{{ in_array('SGST', $usedNatures) && $editbill->nature_of_sundry != 'SGST' ? 'disabled' : '' }}{{ $editbill->nature_of_sundry == 'SGST' ? 'selected' : '' }}>SGST</option>
+                                <option value="IGST" data-sequence="3"{{ in_array('IGST', $usedNatures) && $editbill->nature_of_sundry != 'IGST' ? 'disabled' : '' }}{{ $editbill->nature_of_sundry == 'IGST' ? 'selected' : '' }}>IGST</option>
+                                <option value="TCS" data-sequence="4"{{ in_array('TCS', $usedNatures) && $editbill->nature_of_sundry != 'TCS' ? 'disabled' : '' }}{{ $editbill->nature_of_sundry == 'TCS' ? 'selected' : '' }}>TCS</option>
+                                <option value="TDS" data-sequence="5"{{ in_array('TDS', $usedNatures) && $editbill->nature_of_sundry != 'TDS' ? 'disabled' : '' }}{{ $editbill->nature_of_sundry == 'TDS' ? 'selected' : '' }}>TDS</option>
+                                <option value="IGST_IMPORT" data-sequence="6"
+                                    {{ in_array('IGST_IMPORT', $usedNatures) && $editbill->nature_of_sundry != 'IGST_IMPORT' ? 'disabled' : '' }}
+                                    {{ $editbill->nature_of_sundry == 'IGST_IMPORT' ? 'selected' : '' }}>
+                                    IGST IMPORT
+                                </option>
+                                <option value="CUSTOM_DUTY" data-sequence="7"
+                                    {{ in_array('CUSTOM_DUTY', $usedNatures) && $editbill->nature_of_sundry != 'CUSTOM_DUTY' ? 'disabled' : '' }}
+                                    {{ $editbill->nature_of_sundry == 'CUSTOM_DUTY' ? 'selected' : '' }}>
+                                    CUSTOM DUTY
+                                </option>
+                                <option value="OTHER" data-sequence="0"{{ $editbill->nature_of_sundry == 'OTHER' ? 'selected' : '' }}>OTHER</option>
+                            </select>
                            <input type="hidden" name="sequence" id="sequence" value="{{ $editbill->sequence }}">
                         </div>
                         
@@ -73,6 +84,37 @@
                                      $sel= 'selected';?>
                                     <option <?php echo $sel; ?>  value="<?php echo $value->id; ?>"><?php echo $value->account_name ?></option>
                                 <?php } ?>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row" id="party_section" style="display:none;">
+                        <div class="mb-4 col-md-4">
+                            <label class="form-label font-14 font-heading">
+                                Adjust in Party Amount
+                            </label>
+                            <select class="form-select form-select-lg select2-single"
+                                    name="adjust_party_amt"
+                                    id="adjust_party_amt">
+                                <option value="No" {{ $editbill->adjust_party_amt == 'No' ? 'selected' : '' }}>No</option>
+                                <option value="Yes" {{ $editbill->adjust_party_amt == 'Yes' ? 'selected' : '' }}>Yes</option>
+                            </select>
+                        </div>
+                        <div class="mb-4 col-md-4">
+                            <label class="form-label font-14 font-heading">
+                                List Of Account
+                                <span id="party_required_star" class="text-danger" style="display:none;">*</span>
+                            </label>
+                            <select class="form-select form-select-lg select2-single"
+                                    name="party_amt_account"
+                                    id="party_amt_account"
+                                    {{ $editbill->adjust_party_amt == 'No' ? '' : 'disabled' }}>
+                                <option value="">Select</option>
+                                @foreach($account as $value)
+                                    <option value="{{ $value->id }}"
+                                        {{ $editbill->party_amt_account == $value->id ? 'selected' : '' }}>
+                                        {{ $value->account_name }}
+                                    </option>
+                                @endforeach
                             </select>
                         </div>
                     </div>
@@ -287,6 +329,77 @@ $(document).ready(function () {
     // Run initially (e.g., on edit form load)
     toggleSaleAccountRequirement();
     togglePurchaseAccountRequirement();
+});
+$('#nature_of_sundry').on('select2:selecting', function (e) {
+    if ($(e.params.args.data.element).prop('disabled')) {
+        e.preventDefault();
+    }
+});
+$(document).ready(function () {
+
+    function togglePartySection() {
+        const nature = $('#nature_of_sundry').val();
+
+        if (nature === 'IGST_IMPORT' || nature === 'CUSTOM_DUTY') {
+            $('#party_section').slideDown();
+        } else {
+    $('#party_section').slideUp();
+
+    $('#adjust_party_amt').val('No').trigger('change');
+
+    $('#party_amt_account')
+        .prop('required', false)
+        .prop('disabled', true)
+        .val(null)
+        .trigger('change.select2');
+
+    $('#party_required_star').hide();
+}
+}
+
+
+    function togglePartyAccountRequirement() {
+
+    const isVisible = $('#party_section').is(':visible');
+    const adjustValue = $('#adjust_party_amt').val();
+
+    if (isVisible && adjustValue === 'No') {
+
+        $('#party_amt_account')
+            .prop('disabled', false)
+            .prop('required', true);
+
+        $('#party_required_star').show();
+
+    } else {
+
+        $('#party_amt_account')
+            .prop('required', false)
+            .prop('disabled', true)
+            .val(null)
+            .trigger('change.select2');
+
+        $('#party_required_star').hide();
+    }
+}
+
+
+    $('#nature_of_sundry').on('change', togglePartySection);
+    $('#adjust_party_amt').on('change', togglePartyAccountRequirement);
+
+    // Initial load (VERY important for edit)
+    togglePartySection();
+    togglePartyAccountRequirement();
+
+    // Prevent opening if disabled
+    $('#party_amt_account').on('select2:opening', function (e) {
+        if ($(this).prop('disabled')) {
+            e.preventDefault();
+        }
+    });
+});
+$('form').on('submit', function () {
+    $('select:disabled').prop('required', false);
 });
 
 

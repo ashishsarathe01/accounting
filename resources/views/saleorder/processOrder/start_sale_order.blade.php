@@ -27,6 +27,7 @@
         padding: 6px 12px;         /* optional, adds spacing inside */
         font-size: 14px;           /* optional, bigger text */
         border-radius: 8px;
+        width: 200px;
     }
 
     /* Adjust the arrow alignment */
@@ -35,7 +36,7 @@
         top: 50%;
         transform: translateY(-50%);
     }
-
+    
 </style>
 
 <div class="list-of-view-company">
@@ -57,24 +58,28 @@
                     <div class="row mb-3">
                         <div class="col-md-3">
                             <label for="bill_to" class="form-label font-14 font-heading">Bill To</label>
-                            <input type="text" class="form-control" value="{{$saleOrder->billTo->account_name}}" readonly>
+                            <input type="text" class="form-control" value="{{$saleOrder->billTo->account_name}}" id="bill_to" readonly>
                             <input type="hidden" id="bill_to_id" value="{{$saleOrder->billTo->id}}">
                         </div>
                         <div class="col-md-3">
-                            <label for="bill_to" class="form-label font-14 font-heading">Shipp To</label>
-                            <input type="text" class="form-control" value="{{$saleOrder->shippTo->account_name}}" readonly>
+                            <label for="shipp_to" class="form-label font-14 font-heading">Shipp To</label>
+                            <input type="text" class="form-control" value="{{$saleOrder->shippTo->account_name}}" id="shipp_to" readonly>
                             <input type="hidden" id="shipp_to_id" value="{{$saleOrder->shippTo->id}}">
                         </div>
                         <div class="col-md-3">
-                            <label for="bill_to" class="form-label font-14 font-heading">Purchase Order No.</label>
-                            <input type="text" class="form-control" value="{{$saleOrder->purchase_order_no}}" readonly>
+                            <label for="purchase_order_no" class="form-label font-14 font-heading">Purchase Order No.</label>
+                            <input type="text" class="form-control" value="{{$saleOrder->purchase_order_no}}" id="purchase_order_no" readonly>
                         </div>
                         <div class="col-md-3">
-                            <label for="bill_to" class="form-label font-14 font-heading">Purchase Order Date</label>
-                            <input type="text" class="form-control" value="@empty(!$saleOrder->purchase_order_date)
-                                {{date('d-m-Y',strtotime($saleOrder->purchase_order_date))}}
-                            @endempty " readonly>
-                        </div>
+                                <label class="form-label font-14 font-heading">Purchase Order Date</label>
+                                <input type="text"
+                                       class="form-control"
+                                       style="text-align:left; overflow:visible;"
+                                       value="{{ !empty($saleOrder->purchase_order_date) 
+                                           ? date('d-m-Y', strtotime($saleOrder->purchase_order_date)) 
+                                           : '' }}"
+                                       readonly>
+                            </div>
                         <div class="col-md-3">
                             <label for="bill_to" class="form-label font-14 font-heading">Freight</label>
                             <input type="text"  class="form-control" value="@if($saleOrder->freight==1) Yes @else No @endif" readonly>
@@ -97,18 +102,18 @@
                                         <input type="hidden" class="item" value="{{$value->item->id}}" data-item_index="{{$item_index}}" data-item_name="{{$value->item->name}}">
                                     </div>
                                     <div class="col-md-3 mb-3">
-                                        <label for="price_1" class="form-label font-14 font-heading">Price</label>
+                                        <label for="price_{{$item_index}}" class="form-label font-14 font-heading">Price</label>
                                         <input type="text" class="form-control" value="{{$value->price}}" readonly>
-                                        <input type="hidden" class="price" id="price_{{$value->item->id}}" value="@if($value->bill_price){{$value->bill_price}}@else{{$value->price}}@endif">
+                                        <input type="hidden" class="price" id="price_{{$item_index}}" value="@if($value->bill_price){{$value->bill_price}}@else{{$value->price}}@endif">
                                     </div>
                                     {{-- <div class="clearfix"></div> --}}
                                     <div class="col-md-3 mb-3">
-                                        <label for="unit_1" class="form-label font-14 font-heading">Unit</label>
+                                        <label for="unit_{{$item_index}}" class="form-label font-14 font-heading">Unit</label>
                                         <input type="text" class="form-control" value="{{$value->unitMaster->s_name}}" id="unit_{{$item_index}}" readonly>
                                     </div>
                                     <div class="mb-3 col-md-3">
-                                        <label for="sub_unit_1" class="form-label font-14 font-heading">Sub Unit</label>
-                                        <input type="text" class="form-control" value="{{$value->sub_unit}}" readonly>
+                                        <label for="sub_unit_{{$item_index}}" class="form-label font-14 font-heading">Sub Unit</label>
+                                        <input type="text" class="form-control" value="{{$value->sub_unit}}" readonly id="sub_unit_{{$item_index}}">
                                     </div>
                                 </div>
 
@@ -125,12 +130,19 @@
                                             </table>
                                             <table class="table table-bordered" id="table_1_1">
                                                 <tr>
-                                                    <td>SIZES</td>
-                                                    <td class="qty_title_1">{{$value->unitMaster->s_name}}</td>
-                                                    <td style="width:55%"></td>
+                                                    <td style="width:20%">SIZES</td>
+                                                    <td style="width:20%" class="qty_title_1">{{$value->unitMaster->s_name}}</td>
+                                                    <td style="width:60%"></td>
                                                 </tr>
                                                 @php $qty_total = 0; $detail_index = 1;@endphp
                                                 @foreach($gsm->details as $k2 => $detail)
+                                                    @php                                                    
+                                                    $reel_count = '';
+                                                    if(isset($selected_weight[$value->item->id."X".$detail->size."X".$gsm->gsm])){
+                                                        $reel_count = count($selected_weight[$value->item->id."X".$detail->size."X".$gsm->gsm]);
+                                                    }
+                                                    
+                                                    @endphp
                                                      <tr>
                                                         <td>
                                                             <input type="text" name="items[1][gsms][1][details][{{ $k2 }}][size]" class="form-control size size_1_1 size_value_{{$item_index}}_{{$gsm_index}}" value="{{$detail->size}}" data-detail_index={{$detail_index}} readonly >
@@ -159,7 +171,7 @@
                                                                 <input type="hidden" id='reel_weight_id_{{$item_index}}_{{$gsm_index}}_{{$detail_index}}_1' class='reel_weight_id_{{$detail->id}}'>
                                                             @elseif ($value->SaleOrderSettingUnitMaster->unit_type=="REEL" || $value->SaleOrderSettingUnitMaster->unit_type=="KG")
                                                                 
-                                                                <input type="text" class="form-control order_quantity @if($value->SaleOrderSettingUnitMaster->unit_type=="KG") order_weight_kg_{{$item_index}}_{{$gsm_index}} order_weight_kg_{{$item_index}}_{{$gsm_index}}_{{$detail_index}} order_weight_detail_kg_{{$detail->id}}@endif" data-actual_qty="{{$detail->quantity}}" data-unit_type="{{$value->SaleOrderSettingUnitMaster->unit_type}}" data-item_index="{{$item_index}}" data-gsm_index="{{$gsm_index}}" data-detail_index="{{$detail_index}}" placeholder="Reel" data-detail_row_id="{{$detail->id}}" data-weight="{{json_encode($reel_weight_arr)}}">
+                                                                <input type="text" style="padding:3px;" class="form-control order_quantity @if($value->SaleOrderSettingUnitMaster->unit_type=="KG") order_weight_kg_{{$item_index}}_{{$gsm_index}} order_weight_kg_{{$item_index}}_{{$gsm_index}}_{{$detail_index}} order_weight_detail_kg_{{$detail->id}}@endif" data-actual_qty="{{$detail->quantity}}" data-unit_type="{{$value->SaleOrderSettingUnitMaster->unit_type}}" data-item_index="{{$item_index}}" data-gsm_index="{{$gsm_index}}" data-detail_index="{{$detail_index}}" placeholder="Reel" data-detail_row_id="{{$detail->id}}" data-weight="{{json_encode($reel_weight_arr)}}"  data-selected_weight="@if($reel_count!=''){{json_encode($selected_weight[$value->item->id."X".$detail->size."X".$gsm->gsm])}}@endif" value="{{$detail->estimate_quantity}}">
                                                             @endif
                                                             @if($value->SaleOrderSettingUnitMaster->unit_type=="REEL" || $value->SaleOrderSettingUnitMaster->unit_type=="KG")
                                                                 <span id="weight_box_{{$item_index}}_{{$gsm_index}}_{{$detail_index}}"></span>
@@ -177,7 +189,7 @@
                                                     <td>
                                                         <input type="number" class="form-control quantity_total" id="quantity_total_1_1" value="{{$qty_total}}" readonly>
                                                     </td>
-                                                    <td><input type="number" class="form-control order_quantity_total_{{$item_index}}" id="order_quantity_total_{{$item_index}}_{{$gsm_index}}"  readonly></td>
+                                                    <td><input type="number" class="form-control qualty_total_qty order_quantity_total_{{$item_index}}" id="order_quantity_total_{{$item_index}}_{{$gsm_index}}"  readonly></td>
                                                 </tr>
                                             </table>
                                             {{-- <span class="add_row" data-item="1" data-gsm="1" style="color:#3c8dbc;cursor:pointer;">Add Row</span> --}}
@@ -191,6 +203,12 @@
                             @php $item_index++; @endphp
                         @endforeach
                     </div>
+                    <div class="row mt-3">
+                        <div class="col-md-12 text-end">
+                            <h4>Total Weight: <span id="total_weight_all">0</span></h4>
+                        </div>
+                    </div>
+                    <br>
                     <div class="d-flex">
                         <div class="ms-auto">
                             <input type="button" value="NEXT" class="btn btn-primary start_order">
@@ -209,19 +227,11 @@
         <div class="modal-content border-0 shadow-lg rounded-3">
 
             <div class="modal-header border-0 bg-light">
-                <h5 class="modal-title fw-semibold" id="nextStepModalLabel">Review Sale Order Details</h5>
+                <h5 class="modal-title fw-semibold" id="nextStepModalLabel">Review Sale Order Details ({{ $saleOrder->billTo->account_name ?? '-' }} - {{ \Carbon\Carbon::parse($saleOrder->created_at)->format('d M Y') ?? '-' }})</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
-            <div class="modal-body">
-                <div class="mb-3">
-                    <h6 class="fw-semibold text-primary mb-1">Party Details</h6>
-                    <p class="mb-0">
-                        <strong>Party Name:</strong> {{ $saleOrder->billTo->account_name ?? '-' }}<br>
-                        <strong>Date:</strong> {{ \Carbon\Carbon::parse($saleOrder->created_at)->format('d M Y') ?? '-' }}
-                    </p>
-                </div>
-                <hr>
+            <div class="modal-body">                
                 <div class="table-responsive">
                     <table class="table table-bordered align-middle challan_table">
                         <thead class="table-light">
@@ -236,15 +246,44 @@
                             </tr>
                         </thead>
                         <tbody>
-                            
                         </tbody>
                     </table>
+                    <div class="mb-3">
+                        <h3 class="fw-semibold text-primary mb-1 text-center">Vehicle Details</h3>                    
+                        <select class="form-select" id="vehicle_info">
+                            <option value="">SELECT VEHICLE</option>
+                            <option value="TO PAY" data-type="to_pay" @if($saleOrder->freight_type=="to_pay") selected @endif>TO PAY</option>
+                            @foreach($vehicles as $vehicle)
+                                <option value="{{$vehicle->id}}" data-type="vehicle" @if($saleOrder->freight_vehicle_id==$vehicle->id) selected @endif>VEHICLE - {{$vehicle->vehicle_no}}</option>
+                            @endforeach
+                            @foreach($selectedTransporters as $transporter)
+                                <option value="{{$transporter->account_id}}" data-type="transporter" @if($saleOrder->freight_transporter_id==$transporter->account_id) selected @endif>TRANSPORTER - {{$transporter->account_name}}</option>  
+                            @endforeach
+                            <option value="PARTY VEHICLE" data-type="party_vehicle" @if($saleOrder->freight_type=="party_vehicle") selected @endif>PARTY VEHICLE</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" style="display: none" id="to_pay_freight_div">
+                        TO PAY FREIGHT : 
+                        <input type="text" class="form-control" id="to_pay_freight"  style="width: 200px; display: inline-block; margin-left: 10px;" value="{{$saleOrder->location_price}}">
+                        OTHER CHARGES : 
+                        <input type="text" class="form-control" id="to_pay_other_charges" style="width: 200px; display: inline-block; margin-left: 10px;" placeholder="OTHER CHARGES" value="{{$saleOrder->other_freight_amount}}">
+                    </div>
+                    <div class="mb-3" style="display: none" id="vehicle_freight_div">
+                        {{$saleOrder->shippTo->location}} FREIGHT : 
+                        <input type="text" class="form-control" id="vehicle_freight"  style="width: 200px; display: inline-block; margin-left: 10px;" value="{{$saleOrder->location_price}}">
+                    </div>
+                    <div class="mb-3" style="display: none" id="transporter_freight_div">
+                        {{$saleOrder->shippTo->location}} FREIGHT : 
+                        <input type="text" class="form-control" id="transporter_freight"  style="width: 200px; display: inline-block; margin-left: 10px;" value="{{$saleOrder->location_price}}">
+                        OTHER CHARGES : 
+                        <input type="text" class="form-control" id="transporter_other_charges" style="width: 200px; display: inline-block; margin-left: 10px;" placeholder="OTHER CHARGES" value="{{$saleOrder->other_freight_amount}}">
+                    </div>
                 </div>
             </div>
 
             <div class="modal-footer border-0 bg-light">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
-                <button type="button" id="reviewNextBtn" class="btn btn-success px-4">Next</button>
+                <button type="button" id="reviewNextBtn" class="btn btn-success px-4">Submit</button>
             </div>
         </div>
     </div>
@@ -293,7 +332,32 @@
 
 <script>
     var current_index = 1;
+    var sale_id = "{{$sale_id}}";
+    var expense_arr = JSON.parse('@json($expense)');
+    var account_location = "{{$saleOrder->shippTo->location}}";
+    var location_price = "{{$saleOrder->location_price}}";
+    if(account_location==""){
+        alert("Please Update Shipp To Account Location");
+    }
+    if(account_location!="" && location_price==""){
+        
+        alert("Please Update "+account_location+" Location Price");
+    }
+    function calculateTotalWeight() {
+        let total_weight = 0;
+        $(".qualty_total_qty").each(function(){
+            let val = parseFloat($(this).val()) || 0;
+            total_weight += val;
+        });
+        $("#total_weight_all").text(total_weight);
+    }
 $(document).ready(function(){
+    initSelect2();
+    var sale_order_status = "{{$saleOrder->status}}";
+   
+    $(".order_quantity").each(function(){
+        $(this).change();
+    });
     $(".add_weight").click(function(){
         current_index++;
         let item_index = $(this).attr('data-item_index');
@@ -311,6 +375,8 @@ $(document).ready(function(){
 
         // weight_box_html+="<input type='text' class='form-control order_quantity order_weight_kg_"+item_index+"_"+gsm_index+" order_weight_kg_"+item_index+"_"+gsm_index+"_"+detail_index+" order_weight_detail_kg_"+detail_row_id+"' style='margin-left: 6px;' placeholder='KG' data-item_index='"+item_index+"' data-gsm_index='"+gsm_index+"' data-detail_index='"+detail_index+"' data-actual_qty='"+actual_qty+"' data-detail_row_id='"+detail_row_id+"' data-unit_type='KG'>";
         $("#weight_box_"+item_index+"_"+gsm_index+"_"+detail_index).append(weight_box_html);
+        initSelect2("#weight_box_" + item_index + "_" + gsm_index + "_" + detail_index);
+
     });
     $("#reviewNextBtn").click(function(){
         let bill_to_id = $("#bill_to_id").val();
@@ -318,11 +384,39 @@ $(document).ready(function(){
         let freight = $("#freight").val();
         let item_arr = [];
         let sale_order_id = "{{$saleOrder->id}}";
+        let vehicle_info = $("#vehicle_info").val();
+        let vehicle_info_type = $("#vehicle_info option:selected").attr('data-type');
         
+        if(vehicle_info==""){
+            alert("Please select vehicle information.");
+            return;
+        }
+        if(vehicle_info_type=="to_pay"){
+            if($("#to_pay_freight").val()==""){
+                alert("Please enter to pay freight.");
+                return;
+            }
+        }
+        if(vehicle_info_type=="transporter"){
+            if($("#transporter_freight").val()==""){
+                alert("Please enter transporter freight.");
+                return;
+            }
+            if(expense_arr==null || expense_arr.length==0){                
+                alert("Please add transporter freight expense account.");
+                    return;
+            }
+        }
+        if(vehicle_info_type=="vehicle"){
+             if($("#vehicle_freight").val()==""){
+                alert("Please enter vehicle freight.");
+                return;
+            }
+        }
         $(".item").each(function(){
             let item_id = $(this).val();
             let item_index = $(this).attr('data-item_index');
-            let price = $("#price_"+item_id).val();
+            let price = $("#price_"+item_index).val();
             let total_weight = 0;
             $(".order_quantity_total_" + item_index).each(function() {
                 let val = parseFloat($(this).val()) || 0;
@@ -331,7 +425,6 @@ $(document).ready(function(){
             if(total_weight>0){
                 item_arr.push({'item_id':item_id,'price':price,'total_weight':total_weight})
             }
-            
         });
         let sale_enter_data = [];let pending_order_html = "";pending_order_status = 0;
         $(".order_quantity").each(function(){
@@ -369,7 +462,8 @@ $(document).ready(function(){
                 });
                     
             }
-            sale_enter_data.push({'detail_row_id':detail_row_id,'enter_qty':enter_qty,'unit_type':unit_type,'reel_weight_arr':reel_weight_arr,"reel_weight_id":reel_weight_id});
+            
+            sale_enter_data.push({'detail_row_id':detail_row_id,'enter_qty':enter_qty,'unit_type':unit_type,'reel_weight_arr':reel_weight_arr,"reel_weight_id":reel_weight_id,"index":item_index+"_1"});
             
             //Pending Order
             if(unit_type=="REEL"){
@@ -380,7 +474,6 @@ $(document).ready(function(){
                     }
                 });
                 if(actual_qty>detail_row){
-                    //pending_order_html+="<tr><td>Item</td><td>"+$("#item_id_"+item_index).val()+"</td></tr>";
                     pending_order_status = 1;
                 }
             }else{
@@ -391,18 +484,33 @@ $(document).ready(function(){
                     }
                 });
                 if(actual_qty>order_weight_detail_kg_sum){
-                    //pending_order_html+="<tr><td>Item</td><td>"+$("#item_id_"+item_index).val()+"</td></tr>";
                     pending_order_status = 1;
                 }
             }
         });
+       
+        if(item_arr.length==0){
+            alert("Please enter at least one item quantity.");
+            return;
+        }
+        if(bill_to_id=="" || shipp_to_id=="" || sale_order_id==""){
+            alert("Something went wrong. Please try again later.");
+            return;
+        }
         
-        let sale_order_url = "{{url('sale/create')}}?bill_to_id="+bill_to_id+"&shipp_to_id="+shipp_to_id+"&sale_order_id="+sale_order_id+"&freight="+freight+"&item_arr="+JSON.stringify(item_arr)+"&sale_enter_data="+JSON.stringify(sale_enter_data);
+        let sale_order_url = "";
+        if(sale_id!=""){
+            sale_order_url = "{{url('edit-sale')}}/"+sale_id+"?bill_to_id="+bill_to_id+"&shipp_to_id="+shipp_to_id+"&sale_order_id="+sale_order_id+"&freight="+freight+"&item_arr="+JSON.stringify(item_arr)+"&sale_enter_data="+JSON.stringify(sale_enter_data)+"&vehicle_info="+vehicle_info+"&vehicle_info_type="+vehicle_info_type+
+            "&to_pay_freight="+$("#to_pay_freight").val()+"&to_pay_other_charges="+$("#to_pay_other_charges").val()+"&vehicle_freight="+$("#vehicle_freight").val()+"&transporter_freight="+$("#transporter_freight").val()+"&transporter_other_charges="+$("#transporter_other_charges").val()+"&vehicle_transporter="+$("#vehicle_info option:selected").text();
+        }else{
+            // sale_order_url = "{{url('sale/create')}}?bill_to_id="+bill_to_id+"&shipp_to_id="+shipp_to_id+"&sale_order_id="+sale_order_id+"&freight="+freight+"&item_arr="+JSON.stringify(item_arr)+"&sale_enter_data="+JSON.stringify(sale_enter_data)+"&vehicle_info="+vehicle_info+"&vehicle_info_type="+vehicle_info_type+"&to_pay_freight="+$("#to_pay_freight").val()+"&to_pay_other_charges="+$("#to_pay_other_charges").val()+"&vehicle_freight="+$("#vehicle_freight").val()+"&transporter_freight="+$("#transporter_freight").val()+"&transporter_other_charges="+$("#transporter_other_charges").val();
+            sale_order_url = "{{url('order-preview')}}?bill_to_id="+bill_to_id+"&shipp_to_id="+shipp_to_id+"&sale_order_id="+sale_order_id+"&freight="+freight+"&item_arr="+JSON.stringify(item_arr)+"&sale_enter_data="+JSON.stringify(sale_enter_data)+"&vehicle_info="+vehicle_info+"&vehicle_info_type="+vehicle_info_type+"&to_pay_freight="+$("#to_pay_freight").val()+"&to_pay_other_charges="+$("#to_pay_other_charges").val()+"&vehicle_freight="+$("#vehicle_freight").val()+"&transporter_freight="+$("#transporter_freight").val()+"&transporter_other_charges="+$("#transporter_other_charges").val()+"&vehicle_transporter="+$("#vehicle_info option:selected").text();
+        }
         if(pending_order_status==1){
             $("#sale_order_url").val(sale_order_url);
             $("#pendingOrderModal").modal('toggle');
             return;
-        }       
+        }
         window.location = sale_order_url+"&new_order=0";
     });
 // MAIN "Next" button → ONLY open Review Sale Order Modal
@@ -411,7 +519,7 @@ $(document).ready(function(){
         $(".item").each(function(){
             let item_index = $(this).attr('data-item_index');
             let item_name = $(this).attr('data-item_name');
-            html_content+="<tr><td style='background-color: #f2f2f2; font-weight: bold;'>"+item_name+"</td>";
+            html_content+="<tr><td style='background-color: #f2f2f2; font-weight: bold; vertical-align: top;'>"+item_name+"</td>";
             html_content+="<td style='background-color: #e6e6e6; font-weight: bold;'>";
             let weight = "";let reel_count = 0;let weight_total = 0;
             $(".gsm_" + item_index).each(function() {
@@ -438,18 +546,18 @@ $(document).ready(function(){
             html_content+="<td style='background-color: #e6e6e6; font-weight: bold;'>";
             html_content+=weight;
             html_content+="</td>";
-            html_content+="<td style='background-color: #e6e6e6; font-weight: bold;'>";
+            html_content+="<td style='background-color: #e6e6e6; font-weight: bold; vertical-align: bottom;'>";
             html_content+=reel_count;
             html_content+="</td>";
-            html_content+="<td style='background-color: #e6e6e6; font-weight: bold;'>";
+            html_content+="<td style='background-color: #e6e6e6; font-weight: bold; vertical-align: bottom;'>";
             html_content+=weight_total;
             html_content+="</td>";
-            let price = $("#price_"+$(this).val()).val();
+            let price = $("#price_"+item_index).val();
             let amount = parseFloat(price) * parseFloat(weight_total);
-            html_content+="<td style='background-color: #e6e6e6; font-weight: bold;'>";
+            html_content+="<td style='background-color: #e6e6e6; font-weight: bold; vertical-align: bottom;'>";
             html_content+=price;
             html_content+="</td>";
-            html_content+="<td style='background-color: #e6e6e6; font-weight: bold;'>";
+            html_content+="<td style='background-color: #e6e6e6; font-weight: bold; vertical-align: bottom;'>";
             html_content+=amount;
             html_content+="</td>";
             html_content+="</tr>";
@@ -479,50 +587,87 @@ $(document).ready(function(){
         // Redirect to final sale order URL
         window.location.href = sale_order_url + "&new_order=" + selected;
     });
+    calculateTotalWeight();
+});
+$(document).on('change', '.order_quantity', function () {
+    let unit_type = $(this).data('unit_type');
+    let actual_qty = $(this).data('actual_qty');
+    let item_index = $(this).data('item_index');
+    let gsm_index = $(this).data('gsm_index');
+    let detail_index = $(this).data('detail_index');
+    let detail_row_id = $(this).data('detail_row_id');
+
+    let order_qty = parseInt($(this).val());
+    let size_weights = JSON.parse($(this).attr('data-weight'));
+
+    let selected_weight = [];
+    if ($(this).attr('data-selected_weight')) {
+        selected_weight = JSON.parse($(this).attr('data-selected_weight'));
+    }
+
+    // prepare options
+    let weight_box_option = "";
+    size_weights.forEach(w => {
+        weight_box_option += "<option value='" + w.weight + "' data-id='" + w.id + "'>Reel No.-" + w.reel_no + "(" + w.weight + ")</option>";
+    });
+    selected_weight.forEach(w => {
+        weight_box_option += "<option value='" + w.weight + "' data-id='" + w.id + "'>Reel No.-" + w.reel_no + "(" + w.weight + ")</option>";
+    });
+
+    let weight_box_html = "";
+    for (let i = 1; i <= order_qty; i++) {
+        weight_box_html += `
+            <select style="width:200px;"
+                class="form-select reel_weight select2-single reel_weight_${item_index}_${gsm_index}
+                size_weight_${item_index}_${gsm_index}_${detail_index}
+                reel_weight_detail_row_${detail_row_id}"
+                data-item_index="${item_index}"
+                data-gsm_index="${gsm_index}"
+                data-detail_index="${detail_index}"
+                data-curr_index="${i}"
+                data-actual_qty="${actual_qty}"
+                data-unit_type="REEL">
+                    <option value="">Weight</option>
+                    ${weight_box_option}
+            </select>
+            <input type='hidden'
+                id='reel_weight_id_${item_index}_${gsm_index}_${detail_index}_${i}'
+                class='reel_weight_id_${detail_row_id}'>
+            <br>
+        `;
+        
+    }
+
+    // Put HTML in container
+    let container = "#weight_box_" + item_index + "_" + gsm_index + "_" + detail_index;
+    $(container).html(weight_box_html);
+   // $(container).find('.select2-single').select2('destroy');
+    initSelect2(container);
+
+    
+    selected_weight.forEach((w, index) => {
+        let selects = $(container + " .size_weight_" + item_index + "_" + gsm_index + "_" + detail_index);
+        if (!selects.length || index >= selects.length) return;
+
+        let select = selects.eq(index);
+
+        // Clear selection first
+        select.prop('selectedIndex', 0);
+
+        // Select option by data-id (not value)
+        select.find('option').each(function () {
+            if ($(this).data('id') == w.id) {
+                $(this).prop('selected', true);
+                return false; // break loop
+            }
+        });
+
+        select.trigger('change');
+    });
+
 
 });
-$(document).on('change','.order_quantity',function(){
-    let unit_type = $(this).attr('data-unit_type');
-    let actual_qty = $(this).attr('data-actual_qty');
-    let item_index = $(this).attr('data-item_index');
-    let gsm_index = $(this).attr('data-gsm_index');
-    let detail_index = $(this).attr('data-detail_index');
-    let order_qty = $(this).val();
-    let detail_row_id = $(this).attr('data-detail_row_id');
-    if(unit_type=="REEL" && order_qty>actual_qty){
-        //alert("Invalid Quantity");
-        // $(this).val('');
-        // return;
-    }else if(unit_type=="KG"){
-        let weight_total = 0;
-        $(".order_weight_kg_"+item_index+"_"+gsm_index+"_"+detail_index).each(function(){
-            weight_total = parseFloat(weight_total) + parseFloat($(this).val());
-        });
-        if(actual_qty<weight_total){            
-            //alert("Invalid Quantity");
-            // $(this).val('');
-            // return;
-        }
-    }
-    if(unit_type=="REEL" || unit_type=="KG"){
-        let weight_box_html = "";
-        let size_weights = JSON.parse($(this).attr('data-weight'));
-        let weight_box_option = "";
-        size_weights.forEach(function(weight){
-            //weight_box_option+="<option value='"+weight+"'>"+weight+"</option>";
-            weight_box_option+="<option value='"+weight['weight']+"' data-id='"+weight['id']+"'>Reel No.-"+weight['reel_no']+"("+weight['weight']+")</option>";
-        });
-        let i = 1;
-        while(order_qty>0){
-            weight_box_html+="<select style='width: 150px;' class='form-select reel_weight reel_weight_"+item_index+"_"+gsm_index+" size_weight_"+item_index+"_"+gsm_index+"_"+detail_index+" reel_weight_detail_row_"+detail_row_id+"' data-item_index='"+item_index+"' data-gsm_index='"+gsm_index+"' data-detail_index='"+detail_index+"' data-curr_index='"+i+"' data-actual_qty='"+actual_qty+"' data-unit_type='REEL'><option value=''>Weight</option>"+weight_box_option+"</select><input type='hidden' id='reel_weight_id_"+item_index+"_"+gsm_index+"_"+detail_index+"_"+i+"' class='reel_weight_id_"+detail_row_id+"''><br>";
 
-            // weight_box_html+="<input type='text' class='form-control reel_weight reel_weight_"+item_index+"_"+gsm_index+" reel_weight_detail_row_"+detail_row_id+"' style='margin-left: 6px;' placeholder='Weight' data-item_index='"+item_index+"' data-gsm_index='"+gsm_index+"' data-detail_index='"+detail_index+"' data-actual_qty='"+actual_qty+"' data-unit_type='REEL'><br>";
-            i++;
-            order_qty--
-        }
-        $("#weight_box_"+item_index+"_"+gsm_index+"_"+detail_index).html(weight_box_html);
-    }
-});
 $(document).on('change', '.reel_weight', function () {
     let item_index = $(this).attr('data-item_index');
     let gsm_index = $(this).attr('data-gsm_index');
@@ -538,25 +683,30 @@ $(document).on('change', '.reel_weight', function () {
     let total = 0;
     $(".reel_weight_" + item_index + "_" + gsm_index).each(function () {
         let val = $(this).val();
+        console.log(val);
         if (val !== "") {
             total += parseFloat(val);
         }
     });
     $("#reel_weight_id_" + item_index + "_" + gsm_index + "_" + detail_index + "_" + curr_index).val(weight_id);
+    
     $("#order_quantity_total_" + item_index + "_" + gsm_index).val(total);
 
     // ===Manage duplicate prevention ===
     let groupSelector = ".reel_weight[data-item_index='" + item_index + "'][data-gsm_index='" + gsm_index + "'][data-detail_index='" + detail_index + "']";
-
-    // Re-enable the previously selected value in all dropdowns
-    if (prev_value) {
-        $(groupSelector).not(this).find("option[data-id='" + prev_value + "']").prop("disabled", false).show();
-    }
-
-    // Disable the newly selected option in other dropdowns
-    if (weight_id) {
-        $(groupSelector).not(this).find("option[data-id='" + weight_id + "']").prop("disabled", true).hide();
-    }
+    //if(sale_id==""){
+        // Re-enable the previously selected value in all dropdowns
+        if (prev_value) {
+            $(groupSelector).not(this).find("option[data-id='" + prev_value + "']").prop("disabled", false).show();
+        }
+    
+        // Disable the newly selected option in other dropdowns
+        if (weight_id) {
+            $(groupSelector).not(this).find("option[data-id='" + weight_id + "']").prop("disabled", true).hide();
+        }
+    //}
+    calculateTotalWeight();
+    
 });
 $(document).on('change','.order_quantity',function(){
     let item_index = $(this).attr('data-item_index');
@@ -566,15 +716,59 @@ $(document).on('change','.order_quantity',function(){
     let weight_id = $(this).find(':selected').attr('data-id');
     if($(this).attr('data-unit_type')=="KG"){
         let total = 0;
-        $(".order_weight_kg_"+item_index+"_"+gsm_index).each(function(){
-            if($(this).val()!=""){
-                total = parseFloat(total) + parseFloat($(this).val());
-            }        
+        // $(".order_weight_kg_"+item_index+"_"+gsm_index).each(function(){
+        //     if($(this).val()!=""){
+        //         total = parseFloat(total) + parseFloat($(this).val());
+        //     }        
+        // });
+        $(".reel_weight_" + item_index + "_" + gsm_index).each(function () {
+            let val = $(this).val();
+            if (val !== "") {
+                total += parseFloat(val);
+            }
         });
         $("#order_quantity_total_"+item_index+"_"+gsm_index).val(total);
+        
         $("#reel_weight_id_"+item_index+"_"+gsm_index+"_"+detail_index+"_"+current_index).val(weight_id);
     }
-    
+    calculateTotalWeight();
 });
+function initSelect2(context = document) {
+    $(context).find('.select2-single').select2({
+        width: '100%'
+    });
+}
+$("#vehicle_info").change(function(){
+    $("#to_pay_freight_div").hide();
+    $("#vehicle_freight_div").hide();
+    $("#transporter_freight_div").hide();
+    $("#other_charges").val("");
+    $("#to_pay_other_charges").val("");
+    $("#transporter_other_charges").val("");
+    $("#to_pay_freight").val("");
+    if($(this).val()=="TO PAY"){
+        $("#to_pay_freight").val("{{$saleOrder->location_price}}");
+        $("#to_pay_freight_div").show();
+    }else if($(this).find(':selected').data('type')=="vehicle"){
+        $("#vehicle_freight").val("{{$saleOrder->location_price}}");
+        $("#vehicle_freight_div").show();
+    }else if($(this).find(':selected').data('type')=="transporter"){
+        $("#transporter_freight").val("{{$saleOrder->location_price}}");
+        $("#transporter_freight_div").show();
+    }
+});
+if(sale_id!=""){
+    let freight_type = "{{$saleOrder->freight_type}}";
+    if(freight_type=="to_pay"){
+        $("#to_pay_freight").val("{{$saleOrder->location_price}}");
+        $("#to_pay_freight_div").show();
+    }else if(freight_type=="vehicle"){
+        $("#vehicle_freight").val("{{$saleOrder->location_price}}");
+        $("#vehicle_freight_div").show();
+    }else if(freight_type=="transporter"){
+        $("#transporter_freight").val("{{$saleOrder->location_price}}");
+        $("#transporter_freight_div").show();
+    }
+}
 </script>
 @endsection

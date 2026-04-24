@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Sales extends Model
 {
     use HasFactory;
+    protected $guarded = [];
    public function saleSundry() {
       return $this->hasMany('App\Models\SaleSundry','sale_id','id')
                   ->join('bill_sundrys','sale_sundries.bill_sundry', '=','bill_sundrys.id')

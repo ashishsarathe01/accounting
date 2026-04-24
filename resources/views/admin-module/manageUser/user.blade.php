@@ -23,16 +23,11 @@
                     </ol>
                 </nav>
 
-                @php
-                    $currentAdmin = DB::table('admins')->where('id', Session::get('admin_id'))->first();
-                @endphp
-
                 <div class="d-flex justify-content-between align-items-center bg-plum-viloet shadow-sm py-2 px-4 border-radius-4">
                     <h5 class="m-0 py-2">List of Users</h5>
-                    {{-- Add button only for SUPERADMIN or ADMIN --}}
-                    @if($currentAdmin->type == 'SUPERADMIN' || $currentAdmin->type == 'ADMIN')
-                        <a href="{{ route('admin.manageUser.create') }}" class="btn btn-xs-primary">ADD</a>
-                    @endif
+                    <a href="{{ route('admin.manageUser.create') }}" class="btn btn-xs-primary">
+                        ADD
+                    </a>
                 </div>
 
                 <div class="bg-white table-view shadow-sm">
@@ -42,7 +37,6 @@
                                 <th>Name</th>
                                 <th>Mobile</th>
                                 <th>Email</th>
-                                <th>Role</th>
                                 <th>Date of Appointment</th>
                                 <th>Status</th>
                                 <th class="text-center">Action</th>
@@ -50,19 +44,10 @@
                         </thead>
                         <tbody>
                             @foreach($users as $user)
-                                @php
-                                    $canManage = false;
-                                    if($currentAdmin->type == 'SUPERADMIN') {
-                                        $canManage = true;
-                                    } elseif($currentAdmin->type == 'ADMIN' && $user->type == 'SUBADMIN' && $user->created_by == $currentAdmin->id) {
-                                        $canManage = true;
-                                    }
-                                @endphp
                                 <tr class="font-14 bg-white">
                                     <td>{{ $user->name }}</td>
                                     <td>{{ $user->mobile }}</td>
                                     <td>{{ $user->email }}</td>
-                                    <td>{{ $user->type }}</td>
                                     <td>{{ $user->date_of_appointment }}</td>
                                     <td>
                                         <span class="bg-secondary-opacity-16 border-radius-4 text-secondary py-1 px-2 fw-bold">
@@ -70,19 +55,17 @@
                                         </span>
                                     </td>
                                     <td class="text-center">
-                                        @if($canManage)
-                                            <a href="{{ route('admin.manageUser.edit', $user->id) }}">
-                                                <img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" alt="Edit">
-                                            </a>
+                                        <a href="{{ route('admin.manageUser.edit', $user->id) }}">
+                                            <img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" alt="Edit">
+                                        </a>
 
-                                            <button type="button" class="border-0 bg-transparent delete" data-id="{{ $user->id }}">
-                                                <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" alt="Delete">
-                                            </button>
+                                        <button type="button" class="border-0 bg-transparent delete" data-id="{{ $user->id }}">
+                                            <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" alt="Delete">
+                                        </button>
 
-                                            <a href="{{ route('admin.manageUser.privileges', $user->id) }}">
-                                                <img src="{{ URL::asset('public/assets/imgs/permission.png')}}" alt="Privileges" style="width: 30px;">
-                                            </a>
-                                        @endif
+                                        <a href="{{ route('admin.manageUser.privileges', $user->id) }}">
+                                            <img src="{{ URL::asset('public/assets/imgs/permission.png')}}" alt="Privileges" style="width: 30px;">
+                                        </a>
                                     </td>
                                 </tr>
                             @endforeach
@@ -95,7 +78,6 @@
     </section>
 </div>
 
-{{-- Delete Modal --}}
 <div class="modal fade" id="delete_user" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog w-360 modal-dialog-centered">
         <div class="modal-content p-4 border-radius-8">
@@ -123,9 +105,10 @@
 
 <script>
 $(document).ready(function() {
+    // Update Delete Form action to use the new route
     $(".delete").click(function() {
         var id = $(this).data("id");
-        var url = "{{ url('admin/manageUser') }}/" + id;
+        var url = "{{ url('admin/manageUser') }}/" + id; // Updated to match route for admins table
         $("#deleteForm").attr("action", url);
         $("#delete_user").modal("show");
     });

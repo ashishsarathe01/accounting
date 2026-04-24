@@ -213,11 +213,41 @@
       </div>
    </div>
 </div>
+<div class="modal fade" id="unlinkInvoiceModal" tabindex="-1">
+   <div class="modal-dialog modal-lg">
+     <div class="modal-content">
+       <div class="modal-header">
+         <h5 class="modal-title">Unlinked  Invoices</h5>
+         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+       </div>
+ 
+       <div class="modal-body">
+         <table class="table table-bordered">
+           <thead>
+             <tr>
+               <th>Voucher No</th>
+               <th>Date</th>
+               <th style="text-align: right">Total</th>
+             </tr>
+           </thead>
+           <tbody id="unlinkInvoiceBody"></tbody>
+         </table>
+       </div>
+     </div>
+   </div>
+ </div>
+ 
 </body>
 @include('layouts.footer')
 <script>
    $(document).ready(function(){
-      $(".submit_btn").click(function(){
+     
+         let month = $("#month").val();
+         let gstin = $("#gstin").val();
+         //getGSTR2BData(month,gstin);
+      
+      
+       $(".submit_btn").click(function(){
          let month = $("#month").val();
          let gstin = $("#gstin").val();
          getGSTR2BData(month,gstin);
@@ -293,6 +323,7 @@
                         if(element.amount!=element.book_value){
                            color = 'style="color:red;"';
                         }
+
                         html+="<tr style='cursor:pointer;'><td><a "+color+" href='"+fullUrl+"'>"+element.trdnm+" ("+element.ctin+")</a></td><td style='text-align:right'><a "+color+" href='"+fullUrl+"'>"+Number(element.amount).toLocaleString('en-IN', {
                                        minimumFractionDigits: 2,
                                        maximumFractionDigits: 2
@@ -309,7 +340,7 @@
                            })+"</th><th style='text-align:right'>"+Number(total_book_amount).toLocaleString('en-IN', {
                            minimumFractionDigits: 2,
                            maximumFractionDigits: 2
-                           })+"</th></tr>";
+                           })+"</th><th></th></tr>";
                      $(".gst_table tbody").html(html);
                      $("#gst_div").show();
                   }
@@ -322,5 +353,9 @@
          }
       });
    }
+   
+
+
+
 </script>
 @endsection

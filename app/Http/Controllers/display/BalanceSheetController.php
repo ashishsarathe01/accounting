@@ -22,7 +22,288 @@ class BalanceSheetController extends Controller{
      *
      * @return \Illuminate\Http\Response
    */
-   public function index(){
+   private function getAllChildGroups1($parentIds, $companyId)
+    {
+        $rows = AccountGroups::where('heading_type', 'group')
+            ->where('delete', '0')
+            ->whereIn('company_id', [$companyId, 0])
+            ->get(['id', 'heading']);
+    
+        // Build parent => children map
+        $map = [];
+    
+        foreach ($rows as $row) {
+            $map[(int)$row->heading][] = (int)$row->id;
+        }
+    
+        $result = [];
+        $queue = array_map('intval', (array)$parentIds);
+        $visited = [];
+    
+        while (!empty($queue)) {
+            $parent = array_shift($queue);
+    
+            if (isset($visited[$parent])) {
+                continue;
+            }
+    
+            $visited[$parent] = true;
+    
+            foreach ($map[$parent] ?? [] as $childId) {
+                $result[] = $childId;
+                $queue[] = $childId;
+            }
+        }
+    
+        return array_values(array_unique($result));
+    }
+    public function index(Request $request){
+        ini_set('memory_limit', '-1');
+        $financialYear = Session::get('default_fy');
+        $companyId     = Session::get('user_company_id');
+        [$startYear, $endYear] = explode('-', $financialYear);
+        
+        /*
+        |--------------------------------------------------------------------------
+        | Financial Year Date Range
+        |--------------------------------------------------------------------------
+        */
+        $currentYear = date('m') <= 3
+            ? (date('y') - 1) . '-' . date('y')
+            : date('y') . '-' . (date('y') + 1);
+        
+        if ($financialYear == $currentYear) {
+            $fromDate = $startYear . '-04-01';
+            $toDate   = date('Y-m-d');
+        } else {
+            $fromDate = $startYear . '-04-01';
+            $toDate   = $endYear . '-03-31';
+        }
+        
+        $fromDate = Carbon::parse($fromDate)->format('Y-m-d');
+        $toDate   = Carbon::parse($toDate)->format('Y-m-d');
+        if(isset($request->from_date) && !empty($request->from_date) && isset($request->to_date) && !empty($request->to_date)){
+            
+            $fromDate = Carbon::parse($request->from_date)->format('Y-m-d');
+            $toDate = Carbon::parse($request->to_date)->format('Y-m-d');
+        }
+        /*
+        |--------------------------------------------------------------------------
+        | Load All Heads Once
+        |--------------------------------------------------------------------------
+        */
+        $heads = AccountHeading::select('id', 'name', 'bs_profile','show_in_balance_sheet')
+            ->where('status', '1')
+            ->where('delete', '0')
+            ->where('id', '!=','4')
+            ->where('company_id', 0)
+            ->get();
+        
+        /*
+        |--------------------------------------------------------------------------
+        | Preload Groups Once
+        |--------------------------------------------------------------------------
+        */
+        $allGroups = AccountGroups::select('id', 'heading', 'heading_type','stock_in_hand')
+            ->where(function ($q) {
+                        $q->whereNull('heading_type')
+                          ->orWhere('heading_type', 'head')
+                          ->orWhere('heading_type', '');
+                    })
+            ->whereIn('company_id', [$companyId, 0])
+            ->where('status', '1')
+            ->where('delete', '0')
+            ->get();
+        /*
+        |--------------------------------------------------------------------------
+        | Preload Groups Once Stock In Hand
+        |--------------------------------------------------------------------------
+        */
+        $stockInHandGroups = AccountGroups::select('id')
+                            ->where('stock_in_hand', '1')
+                            ->whereIn('company_id', [$companyId, 0])
+                            ->where('status', '1')
+                            ->where('delete', '0')
+                            ->first();
+        
+        /*
+        |--------------------------------------------------------------------------
+        | Preload Accounts Once
+        |--------------------------------------------------------------------------
+        */
+        $allAccounts = Accounts::select('id', 'under_group', 'under_group_type')
+            ->whereIn('company_id', [$companyId, 0])
+            ->where('status', '1')
+            ->where('delete', '0')
+            ->get();
+       
+        /*
+        |--------------------------------------------------------------------------
+        | Preload Ledger Sum Once
+        |--------------------------------------------------------------------------
+        */
+       
+        $ledgerSums = DB::table('account_ledger')
+            ->selectRaw('account_id, SUM(debit) as debit, SUM(credit) as credit')
+            ->where('company_id', $companyId)
+            ->where('status', '1')
+            ->where('delete_status', '0')
+            ->where(function ($q) use ($toDate) {
+                $q->where('txn_date', '<=', $toDate)
+                  ->orWhere('entry_type', '-1');
+            })
+            ->groupBy('account_id')
+            ->get()
+            ->keyBy('account_id');
+        /*
+        |--------------------------------------------------------------------------
+        | Stock In hand
+        |--------------------------------------------------------------------------
+        */
+        $stock_in_hand = CommonHelper::ClosingStock($toDate);
+        $stock_in_hand = round($stock_in_hand,2);
+        $baseQuery = DB::table('purchases')
+                        ->whereRaw("STR_TO_DATE(date, '%Y-%m-%d') <= ?", [$toDate])
+                        ->whereDate('stock_entry_date', '>', $toDate)
+                        ->where('company_id',Session::get('user_company_id'))
+                        ->where('status', '1')
+                        ->where('delete', '0');
+        $purchase_in_transit_ids = (clone $baseQuery)->pluck('id')->toArray();
+    
+        $stock_in_transit_value = (clone $baseQuery)
+                        ->selectRaw("SUM(CAST(taxable_amt AS DECIMAL(15,2))) as total")
+                        ->value('total');
+    
+        $stock_in_transit_value = round($stock_in_transit_value ?? 0, 2);
+        $stock_in_hand = $stock_in_hand + $stock_in_transit_value;
+          
+        /*
+        |--------------------------------------------------------------------------
+        | Process Each Head
+        |--------------------------------------------------------------------------
+        */
+        
+        foreach ($heads as $head) {
+        
+            /*
+            |--------------------------------------------------------------
+            | Head Main Groups
+            |--------------------------------------------------------------
+            */
+            $groupIds = $allGroups
+                ->filter(function ($row) use ($head) {
+                    return $row->heading == $head->id;
+                })
+                ->pluck('id')
+                ->toArray();
+        
+            /*
+            |--------------------------------------------------------------
+            | Recursive Child Groups
+            |--------------------------------------------------------------
+            */
+            $childIds = $this->getAllChildGroups1($groupIds, $companyId);
+        
+            $finalGroupIds = array_unique(array_merge($groupIds, $childIds));
+        
+            /*
+            |--------------------------------------------------------------
+            | Accounts Under Groups + Head
+            |--------------------------------------------------------------
+            */
+            $accountIds = $allAccounts
+                ->filter(function ($acc) use ($finalGroupIds, $head) {
+                    return (
+                        ($acc->under_group_type == 'group' &&
+                         in_array($acc->under_group, $finalGroupIds))
+                        ||
+                        ($acc->under_group_type == 'head' &&
+                         $acc->under_group == $head->id)
+                    );
+                })
+                ->pluck('id')
+                ->toArray();
+        
+            /*
+            |--------------------------------------------------------------
+            | Balance Calculation
+            |--------------------------------------------------------------
+            */
+            $debit  = 0;
+            $credit = 0;
+        
+            foreach ($accountIds as $accId) {
+                if (isset($ledgerSums[$accId])) {
+                    $debit  += $ledgerSums[$accId]->debit;
+                    $credit += $ledgerSums[$accId]->credit;
+                }
+            }
+            if(in_array($stockInHandGroups->id,$finalGroupIds)){
+                $debit  += $stock_in_hand;
+            }
+            $balance = round($debit - $credit, 2);
+        
+            $head->balance = $balance;
+        }
+        $grouped = $heads->groupBy('bs_profile');
+        // echo "<pre>";
+        // print_r($grouped->toArray());
+        // die;
+        // Check Current Year Profit & Loss Journal Entry
+        $current_journal_amount = Journal::where('journals.company_id', Session::get('user_company_id'))
+                                        ->where('journals.financial_year', $financialYear)
+                                        ->where('journals.delete', '0')
+                                        ->where('form_source', 'profitloss')
+                                        ->join('journal_details', 'journals.id', '=', 'journal_details.journal_id')
+                                        ->where('journal_details.delete', '0')
+                                        ->where('journal_details.id', '!=', 13319)
+                                        ->sum('journal_details.debit');
+        $profit_loss_amount = 0;$prev_year_profitloss = 0;
+        
+        //profit & Loss
+       $profit_loss_amount = CommonHelper::profitLoss($financialYear,$fromDate,$toDate);
+       
+        //Prevoius year profit & loss
+        list($start, $end) = explode('-', $financialYear);
+        $prevFy = str_pad($start - 1, 2, '0', STR_PAD_LEFT) . '-' . str_pad($end - 1, 2, '0', STR_PAD_LEFT);
+        $prev_year_profitloss =  CommonHelper::profitLoss($prevFy);
+        //Check Profit & Loss Account Entry
+        $jouranl = Journal::select('id')
+                         ->withSum(['journal_details' => function ($query) {
+                            $query->where('id','!=','13319')
+                            ->where('journal_details.delete','0');
+                         }], 'debit')->where('journals.company_id',Session::get('user_company_id'))
+                         ->where('journals.financial_year',$prevFy)
+                         ->where('journals.delete','0')
+                         ->where('form_source','profitloss')
+                         ->get();
+                         
+        $journal_amount = 0;
+        if(count($jouranl)>0){
+            foreach ($jouranl as $key => $value) {
+                $journal_amount = $journal_amount + $value->journal_details_sum_debit;
+            }
+        }
+        $prev_year_profit_status = 0;
+        if($prev_year_profitloss<0){
+            $prev_year_profit_status = 1;
+        }
+        $prev_year_profitloss = abs($prev_year_profitloss) - $journal_amount;
+        return view('display/balanceSheet',[
+            'heads'=>$heads,
+            'from_date'=>$fromDate,
+            'to_date'=>$toDate,
+            'current_journal_amount'=>$current_journal_amount,
+            'profit_loss_amount'=>$profit_loss_amount,
+            'prev_year_profitloss'=>$prev_year_profitloss,
+            'prev_year_profit_status'=>$prev_year_profit_status,
+            'prevFy'=>$prevFy,
+            'stock_in_hand'=>$stock_in_hand
+        ]);
+    }
+   public function index1(){
+       ini_set('memory_limit', '1024M');
+       ini_set('memory_limit', '-1');
       $financial_year = Session::get('default_fy');
       $y = explode("-",$financial_year);
       $from_date = $y['0']."-04-01";
@@ -180,13 +461,29 @@ class BalanceSheetController extends Controller{
      
       $stock_in_hand = round($stock_in_hand,2); 
       $profitloss = CommonHelper::profitLoss($financial_year);
+      $baseQuery = DB::table('purchases')
+                        ->whereRaw("STR_TO_DATE(date, '%Y-%m-%d') <= ?", [$to_date])
+                        ->whereDate('stock_entry_date', '>', $to_date)
+                        ->where('company_id',Session::get('user_company_id'))
+                        ->where('status', '1')
+                        ->where('delete', '0');
+        $purchase_in_transit_ids = (clone $baseQuery)->pluck('id')->toArray();
+    
+        $stock_in_transit_value = (clone $baseQuery)
+                        ->selectRaw("SUM(CAST(taxable_amt AS DECIMAL(15,2))) as total")
+                        ->value('total');
+    
+        $stock_in_transit_value = round($stock_in_transit_value ?? 0, 2);
+        $stock_in_hand = $stock_in_hand + $stock_in_transit_value;
       
       //Check Current Year Profit & Loss Account Entry
       $current_jouranl = Journal::select('id')
                      ->withSum(['journal_details' => function ($query) {
-                        $query->where('id','!=','13319');
+                        $query->where('id','!=','13319')
+                        ->where('journal_details.delete','0');
                      }], 'debit')->where('journals.company_id',Session::get('user_company_id'))
                      ->where('journals.financial_year',$financial_year)
+                     ->where('journals.delete','0')
                      ->where('form_source','profitloss')
                      ->get();
       $current_journal_amount = 0;
@@ -200,14 +497,18 @@ class BalanceSheetController extends Controller{
       $prevFy = str_pad($start - 1, 2, '0', STR_PAD_LEFT) . '-' . str_pad($end - 1, 2, '0', STR_PAD_LEFT);
       
       $prev_year_profitloss =  CommonHelper::profitLoss($prevFy);
+      
       //Check Profit & Loss Account Entry
       $jouranl = Journal::select('id')
                      ->withSum(['journal_details' => function ($query) {
-                        $query->where('id','!=','13319');
+                        $query->where('id','!=','13319')
+                        ->where('journal_details.delete','0');
                      }], 'debit')->where('journals.company_id',Session::get('user_company_id'))
                      ->where('journals.financial_year',$prevFy)
+                     ->where('journals.delete','0')
                      ->where('form_source','profitloss')
                      ->get();
+                     
       $journal_amount = 0;
       if(count($jouranl)>0){
          foreach ($jouranl as $key => $value) {
@@ -215,9 +516,11 @@ class BalanceSheetController extends Controller{
          }
       }
       $prev_year_profit_status = 0;
+      
       if($prev_year_profitloss<0){
          $prev_year_profit_status = 1;
-      }   
+      } 
+      
       $prev_year_profitloss = abs($prev_year_profitloss) - $journal_amount;
       return view('display/balanceSheet',['liability'=>$liability,'assets'=>$assets,'from_date'=>$from_date,'to_date'=>$to_date,"stock_in_hand"=>$stock_in_hand,"profitloss"=>$profitloss])->with('prev_year_profitloss',$prev_year_profitloss)->with('prev_year_profit_status',$prev_year_profit_status)->with('prevFy',$prevFy)->with('current_journal_amount',$current_journal_amount);
    }
@@ -419,14 +722,31 @@ class BalanceSheetController extends Controller{
       
       $stock_in_hand = CommonHelper::ClosingStock($to_date);
       $stock_in_hand = round($stock_in_hand,2);
+      //transit
+      $baseQuery = DB::table('purchases')
+                        ->whereRaw("STR_TO_DATE(date, '%Y-%m-%d') <= ?", [$to_date])
+                        ->whereDate('stock_entry_date', '>', $to_date)
+                        ->where('company_id',Session::get('user_company_id'))
+                        ->where('status', '1')
+                        ->where('delete', '0');
+        $purchase_in_transit_ids = (clone $baseQuery)->pluck('id')->toArray();
+    
+        $stock_in_transit_value = (clone $baseQuery)
+                        ->selectRaw("SUM(CAST(taxable_amt AS DECIMAL(15,2))) as total")
+                        ->value('total');
+    
+        $stock_in_transit_value = round($stock_in_transit_value ?? 0, 2);
+        $stock_in_hand = $stock_in_hand + $stock_in_transit_value;
       $profitloss = CommonHelper::profitLoss($financial_year,$from_date,$to_date);
       
       //Check Current Year Profit & Loss Account Entry
       $current_jouranl = Journal::select('id')
                      ->withSum(['journal_details' => function ($query) {
-                        $query->where('id','!=','13319');
+                        $query->where('id','!=','13319')
+                        ->where('journal_details.delete','0');
                      }], 'debit')->where('journals.company_id',Session::get('user_company_id'))
                      ->where('journals.financial_year',$financial_year)
+                     ->where('journals.delete','0')
                      ->where('form_source','profitloss')
                      ->get();
       $current_journal_amount = 0;
@@ -442,9 +762,11 @@ class BalanceSheetController extends Controller{
       //Check Previous Profit & Loss Account Entry
       $jouranl = Journal::select('id')
                      ->withSum(['journal_details' => function ($query) {
-                        $query->where('id','!=','13319');
+                        $query->where('id','!=','13319')
+                        ->where('delete','0');
                      }], 'debit')->where('journals.company_id',Session::get('user_company_id'))
                      ->where('journals.financial_year',$prevFy)
+                     ->where('delete','0')
                      ->where('form_source','profitloss')
                      ->get();
       $journal_amount = 0;
@@ -456,7 +778,7 @@ class BalanceSheetController extends Controller{
       $prev_year_profit_status = 0;
       if($prev_year_profitloss<0){
          $prev_year_profit_status = 1;
-      }   
+      }
       $prev_year_profitloss = abs($prev_year_profitloss) - $journal_amount;
       
       return view('display/balanceSheet',['liability'=>$liability,'assets'=>$assets,'from_date'=>$from_date,'to_date'=>$to_date,"stock_in_hand"=>$stock_in_hand,"profitloss"=>$profitloss])->with('prev_year_profitloss',$prev_year_profitloss)->with('prev_year_profit_status',$prev_year_profit_status)->with('prevFy',$prevFy)->with('current_journal_amount',$current_journal_amount);
@@ -639,22 +961,22 @@ class BalanceSheetController extends Controller{
                         ->get();                              
       $head_account = Accounts::withSum([
                             'accountLedger' => function ($query) use ($financial_year,$from_date,$to_date) { 
-                              $query->where(function($q1) use ($to_date,$financial_year){
+                              $query->where(function($q1) use ($to_date,$from_date,$financial_year){
                                  $q1->where('financial_year', $financial_year);
                                  $q1->where('delete_status','0');
                                  $q1->where('company_id',Session::get('user_company_id'));
-                              })->where(function($q2) use ($to_date){
+                              })->where(function($q2) use ($to_date,$from_date){
                                  $q2->whereRaw("STR_TO_DATE(txn_date,'%Y-%m-%d')<=STR_TO_DATE('".$to_date."','%Y-%m-%d')");
                                  $q2->orWhere('entry_type','-1');
                               });                                 
                             }], 'debit')
                            ->withSum([
                             'accountLedger' => function ($query) use ($financial_year,$from_date,$to_date) { 
-                              $query->where(function($q1) use ($to_date,$financial_year){
+                              $query->where(function($q1) use ($to_date,$from_date,$financial_year){
                                  $q1->where('financial_year', $financial_year);
                                  $q1->where('delete_status','0');
                                  $q1->where('company_id',Session::get('user_company_id'));
-                              })->where(function($q2) use ($to_date){
+                              })->where(function($q2) use ($to_date,$from_date){
                                  $q2->whereRaw("STR_TO_DATE(txn_date,'%Y-%m-%d')<=STR_TO_DATE('".$to_date."','%Y-%m-%d')");
                                  $q2->orWhere('entry_type','-1');
                               });                                 
@@ -688,11 +1010,17 @@ class BalanceSheetController extends Controller{
          }
       }
       $result = array();
+     
       foreach ($item_in_data as $element){
          if($element->opening==1){
-            $result[$element->item_id][] = $element->total_price/$element->in_weight;
+          $result[$element->item_id][] = $element->total_price/$element->in_weight;
          }else{
-            $result[$element->item_id][] = round($element->total_price/$element->in_weight,2);
+            if(!empty($element->in_weight)){
+               $result[$element->item_id][] = round($element->total_price/$element->in_weight,2);
+            }else{
+               $result[$element->item_id][] = 0;
+            }
+            
          }
       }
       $stock_in_hand = 0;$total_weight = 0;
@@ -705,10 +1033,27 @@ class BalanceSheetController extends Controller{
       }
       $stock_in_hand = CommonHelper::ClosingStock($to_date);
       $stock_in_hand = round($stock_in_hand,2);
+      
+      $baseQuery = DB::table('purchases')
+    ->whereRaw("STR_TO_DATE(date, '%Y-%m-%d') <= ?", [$to_date])
+    ->where('company_id',Session::get('user_company_id'))
+    ->whereDate('stock_entry_date', '>', $to_date)
+    ->where('status', '1')
+    ->where('delete', '0');
+
+    $purchase_in_transit_ids = (clone $baseQuery)->pluck('id')->toArray();
+    
+    $stock_in_transit_value = (clone $baseQuery)
+        ->selectRaw("SUM(CAST(taxable_amt AS DECIMAL(15,2))) as total")
+        ->value('total');
+    
+    $stock_in_transit_value = round($stock_in_transit_value ?? 0, 2);
+
+   $total_closing_stock = $stock_in_hand + $stock_in_transit_value;
    //   echo "<pre>";
    //   print_r($undergroup->toArray());
    //   echo "</pre>";
-      return view('display/group_balance_by_head',["from_date"=>$from_date,"to_date"=>$to_date,"head"=>$head,"group"=>$group,"head_account"=>$head_account,"stock_in_hand"=>$stock_in_hand,"undergroup"=>$undergroup]);
+      return view('display/group_balance_by_head',["financial_year"=>$financial_year,"stock_in_transit_value"=>$stock_in_transit_value,"total_closing_stock"=>$total_closing_stock,"from_date"=>$from_date,"to_date"=>$to_date,"head"=>$head,"group"=>$group,"head_account"=>$head_account,"stock_in_hand"=>$stock_in_hand,"undergroup"=>$undergroup]);
    }
    public function accountBalanceByGroup(Request $request,$id,$from_date,$to_date,$type){
       $financial_year = Session::get('default_fy');
@@ -864,11 +1209,11 @@ class BalanceSheetController extends Controller{
                      ->sum('credit');
                                  
             $inner_group[$key]->account_ledger_sum_debit = $debit_sum;         
-            $inner_group[$key]->account_ledger_sum_credit = $credit_sum;                     
+            $inner_group[$key]->account_ledger_sum_credit = round($credit_sum,2);                     
             $inner_group[$key]->type = 1;
          }
          $account = $account->merge($inner_group);
       }
-      return view('display/account_balance_by_group')->with('data',$account)->with('group',$group)->with('financial_year',$financial_year)->with('type',$type)->with('from_date',$from_date)->with('to_date',$to_date);
+      return view('display/account_balance_by_group_bs')->with('data',$account)->with('group',$group)->with('financial_year',$financial_year)->with('type',$type)->with('from_date',$from_date)->with('to_date',$to_date);
    }
 }

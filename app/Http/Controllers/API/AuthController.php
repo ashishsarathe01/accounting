@@ -72,58 +72,99 @@ class AuthController extends Controller
 }
 
 public function sendOtp(Request $request)
-    {
-        /* Validate Data */
-  
-        $validator = Validator::make($request->all(), [
+{
+    /* Validate Input */
+    $validator = Validator::make($request->all(), [
+        'mobile_no' => 'required',
+        // company_id removed from required
+    ], [
+        'mobile_no.required' => 'Mobile no is required.',
+    ]);
 
-            'mobile_no' => 'required|exists:users,mobile_no',  
-        ], [            
-            'mobile_no.required' => 'Mobile no is required.',
-
-        ]);
-        if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
-        }
-        /* Generate An OTP */
-        $userOtp = $this->generateOtp($request->mobile_no);
-       // $userOtp->sendSMS($request->mobile_no);
-        if($this->sendSMS($request->mobile_no,$userOtp->otp))
-        {
-            return response()->json(['code' => 200, 'message' => 'OTP has been sent on Your Mobile Number.','user_id'=> $userOtp->user_id]);
-        }
-        else
-        {
-            return response()->json(['code' => 422, 'message' => 'Error in sending otp, try again!']);
-        }
-        
+    if ($validator->fails()) {
+        return response()->json(['code' => 422, 'errors' => $validator->errors()]);
     }
+
+    /* Check if company_id is provided */
+    if (!empty($request->company_id)) {
+
+        // Case 1: Check using mobile + company_id
+        $user = User::where('mobile_no', $request->mobile_no)
+                    ->where('company_id', $request->company_id)
+                    ->first();
+
+    } else {
+
+        // Case 2: Check using only mobile_no
+        $user = User::where('mobile_no', $request->mobile_no)
+                    ->first();
+    }
+
+    if (!$user) {
+        return response()->json([
+            'code' => 2,
+            'message' => 'Mobile number does not exist.'
+        ]);
+    }
+
+    /* Generate OTP */
+    $userOtp = $this->generateOtp($request->mobile_no, $user->company_id ?? null);
+
+    if ($this->sendSMS($request->mobile_no, $userOtp->otp)) {
+        return response()->json([
+            'code' => 200,
+            'message' => 'OTP has been sent on your mobile number.',
+            'user_id' => $userOtp->user_id
+        ]);
+    } else {
+        return response()->json([
+            'code' => 422,
+            'message' => 'Error in sending otp, try again!'
+        ]);
+    }
+}
+
   
     /**
      * Write code on Method
      *
      * @return response()
      */
-    public function generateOtp($mobile_no)
-    {
-        $user = User::where('mobile_no', $mobile_no)->first();
-  
-        /* User Does not Have Any Existing OTP */
-        $userOtp = UserOtp::where('user_id', $user->id)->latest()->first();
-  
-        $now = now();
-  
-        if($userOtp && $now->isBefore($userOtp->expire_at)){
-            return $userOtp;
-        }
-  
-        /* Create a New OTP */
-        return UserOtp::create([
-            'user_id' => $user->id,
-            'otp' => rand(1234, 9999),
-            'expire_at' => $now->addMinutes(10)
-        ]);
+   public function generateOtp($mobile_no, $company_id = null)
+{
+    /* Find User Based on Condition */
+    if (!empty($company_id)) {
+        $user = User::where('mobile_no', $mobile_no)
+                    ->where('company_id', $company_id)
+                    ->first();
+    } else {
+        $user = User::where('mobile_no', $mobile_no)
+                    ->first();
     }
+
+    if (!$user) {
+        return null; // Safety check
+    }
+
+    /* Check if User Has Existing Valid OTP */
+    $userOtp = UserOtp::where('user_id', $user->id)
+                        ->latest()
+                        ->first();
+
+    $now = now();
+
+    if ($userOtp && $now->isBefore($userOtp->expire_at)) {
+        return $userOtp;
+    }
+
+    /* Create New OTP */
+    return UserOtp::create([
+        'user_id'   => $user->id,
+        'otp'       => rand(1234, 9999),
+        'expire_at' => $now->copy()->addMinutes(10)
+    ]);
+}
+
   
     /**
      * Write code on Method
@@ -356,7 +397,9 @@ public function resetMpin(Request $request)
             return response()->json(['code' => 422, 'message' => 'Your Mpin is not correct.']);
         }
     
-        $user = User::whereId($request->user_id)->first();
+        $user = User::whereId($request->user_id)
+                            ->where('status',"!=",'0')
+                            ->first();
         if($user){
             Auth::login($user);
             $token = auth()->user()->createToken('Token')->accessToken;

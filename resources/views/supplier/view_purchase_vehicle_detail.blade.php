@@ -1452,7 +1452,9 @@ input::-webkit-inner-spin-button {
                         if(res.item_price){
 
                             $(".contract_rate").each(function(){
-                                $(this).val(res.item_price);
+                                
+                                    $(this).val(res.item_price);
+                                
                             });
                             $("#contract_rate_cut").val(res.item_price);
                             var qty = $("#qty_cut").val();
