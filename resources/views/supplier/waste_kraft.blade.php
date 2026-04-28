@@ -241,22 +241,22 @@ input::-webkit-inner-spin-button {
                                             style="width:220px"
                                             onchange="window.location='{{ url('waste-kraft') }}?status=' + this.value">
                                          @can('view-module', 184)
-        <option value="0" {{ $status == 0 ? 'selected' : '' }}>
-            Pending, In Process
-        </option>
-    @endcan
-
-    @can('view-module', 185)
-        <option value="2" {{ $status == 2 ? 'selected' : '' }}>
-            Pending For Approval
-        </option>
-    @endcan
-
-    @can('view-module', 186)
-        <option value="3" {{ $status == 3 ? 'selected' : '' }}>
-            Approved
-        </option>
-    @endcan
+                                            <option value="0" {{ $status == 0 ? 'selected' : '' }}>
+                                                Pending, In Process
+                                            </option>
+                                        @endcan
+                                    
+                                        @can('view-module', 185)
+                                            <option value="2" {{ $status == 2 ? 'selected' : '' }}>
+                                                Pending For Approval
+                                            </option>
+                                        @endcan
+                                    
+                                        @can('view-module', 186)
+                                            <option value="3" {{ $status == 3 ? 'selected' : '' }}>
+                                                Approved
+                                            </option>
+                                        @endcan
                                     </select>
                                 </div>
                                 <h5 class="transaction-table-title m-0"
@@ -376,22 +376,22 @@ input::-webkit-inner-spin-button {
                                         style="width:220px"
                                         onchange="window.location='{{ url('waste-kraft') }}?status=' + this.value">
                                           @can('view-module', 184)
-        <option value="0" {{ $status == 0 ? 'selected' : '' }}>
-            Pending, In Process
-        </option>
-    @endcan
-
-    @can('view-module', 185)
-        <option value="2" {{ $status == 2 ? 'selected' : '' }}>
-            Pending For Approval
-        </option>
-    @endcan
-
-    @can('view-module', 186)
-        <option value="3" {{ $status == 3 ? 'selected' : '' }}>
-            Approved
-        </option>
-    @endcan
+                                                <option value="0" {{ $status == 0 ? 'selected' : '' }}>
+                                                    Pending, In Process
+                                                </option>
+                                            @endcan
+                                        
+                                            @can('view-module', 185)
+                                                <option value="2" {{ $status == 2 ? 'selected' : '' }}>
+                                                    Pending For Approval
+                                                </option>
+                                            @endcan
+                                        
+                                            @can('view-module', 186)
+                                                <option value="3" {{ $status == 3 ? 'selected' : '' }}>
+                                                    Approved
+                                                </option>
+                                            @endcan
                                 </select>
                         </div>
                         </div>
@@ -418,7 +418,7 @@ input::-webkit-inner-spin-button {
                                             <td>{{$value->group_name}}</td>
                                             <td>{{$value->account_name}}</td>
                                             <td>{{$value->gross_weight-$value->tare_weight}}</td>
-                                            <td>{{$value->voucher_no}}</td>
+                                            <td>{{$value->voucher_no}} @if($value->reapproval==1) {{$value->updated_by_name}}  @endif</td>
                                             <td class="w-min-120 text-center">
                                                 <button class="btn btn-info start" data-gross_weight="{{$value->gross_weight}}" data-account_id="{{$value->account_id}}" id="start_btn_{{$value->id}}" data-id="<?php echo $value->id; ?>" data-group_id="<?php echo $value->group_id; ?>" data-map_purchase_id="<?php echo $value->map_purchase_id; ?>" data-price="<?php echo $value->price; ?>" data-purchase_amount="<?php echo $value->purchase_amount; ?>" data-purchase_date="<?php echo $value->purchase_date; ?>" data-purchase_voucher_no="<?php echo $value->purchase_voucher_no; ?>" data-status="2" data-vehicle_no="{{$value->vehicle_no}}" data-purchase_qty="<?php echo $value->purchase_qty; ?>" data-entry_date="{{$value->entry_date}}" data-purchase_taxable_amount="{{$value->purchase_taxable_amount}}" data-purchase_price="<?php echo $value->prices; ?>">View</button>
                                             </td>
@@ -441,22 +441,22 @@ input::-webkit-inner-spin-button {
                                     style="width:220px"
                                     onchange="window.location='{{ url('waste-kraft') }}?status=' + this.value">
                                            @can('view-module', 184)
-        <option value="0" {{ $status == 0 ? 'selected' : '' }}>
-            Pending, In Process
-        </option>
-    @endcan
-
-    @can('view-module', 185)
-        <option value="2" {{ $status == 2 ? 'selected' : '' }}>
-            Pending For Approval
-        </option>
-    @endcan
-
-    @can('view-module', 186)
-        <option value="3" {{ $status == 3 ? 'selected' : '' }}>
-            Approved
-        </option>
-    @endcan
+                                                <option value="0" {{ $status == 0 ? 'selected' : '' }}>
+                                                    Pending, In Process
+                                                </option>
+                                            @endcan
+                                        
+                                            @can('view-module', 185)
+                                                <option value="2" {{ $status == 2 ? 'selected' : '' }}>
+                                                    Pending For Approval
+                                                </option>
+                                            @endcan
+                                        
+                                            @can('view-module', 186)
+                                                <option value="3" {{ $status == 3 ? 'selected' : '' }}>
+                                                    Approved
+                                                </option>
+                                            @endcan
                             </select>
                         </div>
                         <div class="d-md-flex d-block">

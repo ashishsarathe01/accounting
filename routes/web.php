@@ -101,7 +101,8 @@ use App\Http\Controllers\LandingPage\LandingController;
 use App\Http\Controllers\display\TestController;
 use App\Http\Controllers\DaraReport\DaraReportController;
 use App\Http\Controllers\Retail\ManageRateController;
-
+use App\Http\Controllers\ContactUsController;
+use App\Http\Controllers\YieldReport\YieldReportController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -284,6 +285,7 @@ Route::group(['middleware' => ['merchantloginstatus']], function () {
    Route::post('account-manage-item-delete', [ManageItemsController::class, 'delete'])->name('account-manage-item.delete');
    Route::get('item-import-view', [ManageItemsController::class, 'itemImportView'])->name('item-import-view');
    Route::post('item-import-process', [ManageItemsController::class, 'itemImportProcess'])->name('item-import-process');
+   Route::get('item-ledger-detailed-csv', [ItemLedgerController::class, 'exportDetailedCsv']);
       Route::get('itemledger-update-all', [ItemLedgerController::class, 'recalculateStock'])->name('recalculate.stock');
 
    Route::Resource('account-bill-sundry', BillSundrysController::class);
@@ -1221,4 +1223,26 @@ Route::get('/journal/print/{id}', [JournalController::class, 'print'])->name('jo
     Route::get('retail-rate/delete/{party_id}', [ManageRateController::class, 'destroy'])->name('retail-rate.delete');
     Route::post('/check-latest-datetime', [ManageRateController::class, 'checkLatestDateTime'])->name('check.latest.datetime');
     Route::post('/get-item-rate-by-date', [ManageRateController::class, 'getItemRateByDate'])->name('get.item.rate.by.date');
+    Route::get('/profitability-report', [ManageRateController::class, 'profitabilityReport'])->name('profitability.report');
+    
+    
+     Route::post('/contact-us/update-status', [ContactUsController::class, 'updateStatus'])->name('contact.updateStatus');
+     Route::prefix('yield-report')->group(function () {
+        Route::get('/', [YieldReportController::class, 'index'])
+            ->name('yield-report.index');
+    
+        Route::get('/create', [YieldReportController::class, 'create'])
+            ->name('yield-report.create');
+    
+        Route::post('/store', [YieldReportController::class, 'store'])
+            ->name('yield-report.store');
+    
+        Route::get('/{id}/edit', [YieldReportController::class, 'edit'])
+            ->name('yield-report.edit');
+    
+        Route::post('/{id}/update', [YieldReportController::class, 'update'])
+            ->name('yield-report.update');
+        Route::get('/report', [YieldReportController::class, 'report'])
+            ->name('yield-report.report');
+    });
 });

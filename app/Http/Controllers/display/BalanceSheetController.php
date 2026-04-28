@@ -789,6 +789,7 @@ class BalanceSheetController extends Controller{
       $head = AccountHeading::select('name')
                               ->where('id',$id)
                               ->first(); 
+                              
       $group = AccountGroups::with(['account'=>function($query)use($to_date){
                                     $query->select('id','account_name','under_group');
                                     $query->withSum(['accountLedger'=>function($q1)use($to_date){
@@ -962,7 +963,7 @@ class BalanceSheetController extends Controller{
       $head_account = Accounts::withSum([
                             'accountLedger' => function ($query) use ($financial_year,$from_date,$to_date) { 
                               $query->where(function($q1) use ($to_date,$from_date,$financial_year){
-                                 $q1->where('financial_year', $financial_year);
+                                // $q1->where('financial_year', $financial_year);
                                  $q1->where('delete_status','0');
                                  $q1->where('company_id',Session::get('user_company_id'));
                               })->where(function($q2) use ($to_date,$from_date){
@@ -973,7 +974,7 @@ class BalanceSheetController extends Controller{
                            ->withSum([
                             'accountLedger' => function ($query) use ($financial_year,$from_date,$to_date) { 
                               $query->where(function($q1) use ($to_date,$from_date,$financial_year){
-                                 $q1->where('financial_year', $financial_year);
+                               //  $q1->where('financial_year', $financial_year);
                                  $q1->where('delete_status','0');
                                  $q1->where('company_id',Session::get('user_company_id'));
                               })->where(function($q2) use ($to_date,$from_date){

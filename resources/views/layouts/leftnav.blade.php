@@ -1148,6 +1148,9 @@
                                 <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue" style="border: 1px solid #007bff;">
                                     <a href="{{ route('dara.report') }}" class="text-blue">Dara Report</a>
                                 </li>
+                                <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue" style="border: 1px solid #007bff;">
+                                    <a href="{{ route('yield-report.report') }}" class="text-blue">Yield Report</a>
+                                </li>
                         </ul>
                      </div>
                   </div>

@@ -1512,6 +1512,7 @@ class SupplierPurchaseController extends Controller
         if ($status == 2) {
             $pending_for_approval_report =  SupplierPurchaseVehicleDetail::join('accounts','supplier_purchase_vehicle_details.account_id','=','accounts.id')
                     ->leftJoin('purchases','supplier_purchase_vehicle_details.map_purchase_id','=','purchases.id')
+                    ->leftJoin('users','purchases.updated_by','=','users.id')
                     ->join('item_groups','supplier_purchase_vehicle_details.group_id','=','item_groups.id')
                     ->where('supplier_purchase_vehicle_details.company_id', Session::get('user_company_id'))
                     ->where('supplier_purchase_vehicle_details.status', 2)
@@ -1532,15 +1533,16 @@ class SupplierPurchaseController extends Controller
                         'purchases.total as purchase_amount',
                         'purchases.taxable_amt as purchase_taxable_amount',
                         'entry_date',
+                        'users.name as updated_by_name',
                         'reapproval',
                         DB::raw('(SELECT group_type FROM `sale-order-settings` WHERE `sale-order-settings`.item_id = supplier_purchase_vehicle_details.group_id and setting_for="PURCHASE ORDER" and setting_type="PURCHASE GROUP" LIMIT 1) as group_type'),
                         DB::raw('(SELECT sum(qty) FROM purchase_descriptions WHERE purchase_descriptions.purchase_id = purchases.id) as purchase_qty'),
                         DB::raw('(SELECT price FROM purchase_descriptions WHERE purchase_descriptions.purchase_id = purchases.id LIMIT 1) as price'),
-                    DB::raw('(SELECT CONCAT("[", GROUP_CONCAT(CAST(price AS DECIMAL(10,2)) SEPARATOR ","), "]") 
-            FROM purchase_descriptions 
-            WHERE purchase_descriptions.purchase_id = purchases.id) as prices') )
-            ->orderBy('supplier_purchase_vehicle_details.entry_date', 'asc')
-            ->orderBy('supplier_purchase_vehicle_details.voucher_no', 'asc')
+                        DB::raw('(SELECT CONCAT("[", GROUP_CONCAT(CAST(price AS DECIMAL(10,2)) SEPARATOR ","), "]") 
+                            FROM purchase_descriptions 
+                            WHERE purchase_descriptions.purchase_id = purchases.id) as prices') )
+                            ->orderBy('supplier_purchase_vehicle_details.entry_date', 'asc')
+                            ->orderBy('supplier_purchase_vehicle_details.voucher_no', 'asc')
                     ->get();  
         }  
              
