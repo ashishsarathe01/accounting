@@ -80,7 +80,7 @@
                   
                </div>
             </div>
-<div class="print-area">
+            <div class="print-area">
             <table style="font-family: 'Source Sans Pro', sans-serif;letter-spacing: 0.05em;color: #404040;font-size: 12px;font-weight: 500;padding: 10px;">
                <tbody>
                   <tr>
@@ -112,6 +112,7 @@
 
                            <div style="text-align:center; line-height:1; margin:0; padding:0;">
                               <p style="margin:0;"><u>Delivery Challan</u></p>
+                              <p style="margin:0;">Only For Job Work</p>
                               <p style="margin:0; font-size: {{ $fontSize }}; font-weight: bold;">{{ $companyName }}</p>
                               <p style="margin:0;">
                                  <small style="font-size: 12px; display:inline-block; max-width:50%; word-break:break-word;">

@@ -305,6 +305,9 @@ $(document).ready(function() {
         // Trigger change to set initial value on page load (if needed)
         $('#gst_rate').trigger('change');
     }); 
+    $(document).on("input", "#name", function () {
+        this.value = this.value.replace(/['"]/g, '');
+    });
 </script>
 
 @endsection

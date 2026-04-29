@@ -1241,7 +1241,7 @@ class JobWorkController extends Controller
         $configuration = SaleInvoiceConfiguration::with(['terms','banks'])->where('company_id', $companyId)->first();
         
         $seller_info = (object)[
-            'gst_no' => $company_data->gst_no ?? '',
+            'gst_no' => $company_data->gst ?? '',
             'address' => $company_data->address ?? $company_data->billing_address ?? '',
             'pincode' => $company_data->pin_code ?? '',
             'sname' => $company_data->sname ?? ''

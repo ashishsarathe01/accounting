@@ -266,7 +266,9 @@
         });
     });
 
-
+    $(document).on("input", "#name", function () {
+        this.value = this.value.replace(/['"]/g, '');
+    });
 </script>
 
 @endsection

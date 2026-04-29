@@ -792,5 +792,8 @@ $(document).ready(function () {
             @endif
         @endif
     });
+    $(document).on("input", "#account_name", function () {
+        this.value = this.value.replace(/"/g, '');
+    });
 </script>
 @endsection

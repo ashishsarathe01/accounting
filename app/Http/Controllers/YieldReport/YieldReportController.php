@@ -86,7 +86,7 @@ class YieldReportController extends Controller
 
             $insertData = [];
 
-            // 🔹 SECTION 1: MATERIAL REQUIRED
+            // ðŸ”¹ SECTION 1: MATERIAL REQUIRED
             if (!empty($request->material)) {
                 foreach ($request->material as $row) {
 
@@ -309,17 +309,18 @@ class YieldReportController extends Controller
 
         $yieldReportId = $yieldReport->id;
 
-
+       
         /* ================= PRODUCTION ================= */
         $totalProduction = DB::table('deckle_processes as dp')
-        ->join('item_size_stocks as iss', 'iss.deckle_id', '=', 'dp.deckle_no')
+        ->join('item_size_stocks as iss', 'iss.deckle_id', '=', 'dp.id')
         ->whereDate('dp.reel_generated_at', '>=', $from_date)
         ->whereDate('dp.reel_generated_at', '<=', $to_date)
         ->where('dp.status', 4)
         ->where('dp.company_id', $companyId)
+        ->where('iss.company_id', $companyId)
         ->sum('iss.weight');
         $productionDetails = DB::table('deckle_processes as dp')
-            ->join('item_size_stocks as iss', 'iss.deckle_id', '=', 'dp.deckle_no')
+            ->join('item_size_stocks as iss', 'iss.deckle_id', '=', 'dp.id')
             ->join('manage_items as mi', 'mi.id', '=', 'iss.item_id')
             ->select(
                 'iss.item_id',
@@ -330,6 +331,7 @@ class YieldReportController extends Controller
             ->whereDate('dp.reel_generated_at', '<=', $to_date)
             ->where('dp.status', 4)
             ->where('dp.company_id', $companyId)
+             ->where('iss.company_id', $companyId)
             ->groupBy('iss.item_id', 'mi.name')
             ->get();
 

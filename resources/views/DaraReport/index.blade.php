@@ -293,7 +293,7 @@
 
             </div>
             
-        <div class="col-lg-1 d-none d-lg-flex justify-content-center px-1">
+        <div class="col-lg-1 d-none d-lg-flex justify-content-center px-1 header-section ">
             <div class="shortcut-key w-100">
                 <p class="font-14 fw-500 font-heading m-0">Shortcut Keys</p>
 
