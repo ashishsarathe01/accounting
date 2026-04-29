@@ -11,11 +11,39 @@
       height: 49px !important;
    }
    .select2-container .select2-selection--single{
-      height: 49px !important;
+      height: 52px !important;
    }
-   .select2-container{
-      width: 300px !important;
-   }
+   .select2-container {
+    width: 100% !important;
+}
+
+.select2-container--default .select2-selection--single {
+    height: 52px !important;
+    border-radius: 12px !important;
+    display: flex;
+    align-items: center;
+}
+
+.select2-container--default .select2-selection__rendered {
+    line-height: normal !important;
+    padding-left: 12px !important;
+}
+
+.select2-container--default .select2-selection__arrow {
+    height: 100% !important;
+}
+
+.select2-dropdown {
+    z-index: 9999 !important;
+}
+
+.bs-btn-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
    .select2-container--default .select2-selection--single{
       border-radius: 12px !important;
    }
@@ -278,6 +306,45 @@ border-radius:12px;
                            </td>
                            <td><button type="button" class="btn btn-info add_more_tr">+</button></td>
                         </tr>
+                        <tr class="bg-light">
+                           <td colspan="6"><strong>Bill Sundry</strong></td>
+                        </tr>
+
+                        <tbody id="bill_sundry_section">
+
+                        <tr id="bs_row_1">
+                           <td colspan="2">
+                              <select name="bill_sundry[]" class="form-control bill_sundry select2-single" data-id="1" id="bs_select_1"
+                                 onchange="gstCalculation()">
+                                 <option value="">Select</option>
+                                 @foreach($billsundry as $bs)
+                                    <option value="{{$bs->id}}"
+                                       data-type="{{$bs->bill_sundry_type}}"
+                                       data-adjust="{{$bs->adjust_purchase_amt}}">
+                                       {{$bs->name}}
+                                    </option>
+                                 @endforeach
+                              </select>
+                           </td>
+
+                           <td colspan="2">
+                              <input type="number" step="0.01"
+                                 name="bill_sundry_amount[]"
+                                 class="form-control bs_amount"
+                                 data-id="1"
+                                 id="bs_amount_1"
+                                 placeholder="Amount"
+                                 oninput="gstCalculation()">
+                           </td>
+
+                           <td colspan="2">
+                              <div class="bs-btn-wrap">
+                                 <button type="button" class="icon-btn add-btn add_bs">+</button>
+                              </div>
+                           </td>
+                        </tr>
+
+                        </tbody>
                         <tr class="font-14 font-heading bg-white">
                            <td></td>
                            <td style="text-align: right;vertical-align:middle;">Net Amount</td>
@@ -285,6 +352,7 @@ border-radius:12px;
                               <input type="text" class="form-control" id="net_amount" name="net_amount" placeholder="Net Amount" readonly>
                            </td>
                         </tr>
+                        
                         <tr class="font-14 font-heading bg-white cgst_tr" style="display: none;">
                            <td></td>
                            <td style="text-align: right;vertical-align:middle;vertical-align:middle;">CGST</td>
@@ -706,7 +774,7 @@ border-radius:12px;
 
       @endif
    });
-    function checkGSTVendor() {
+   function checkGSTVendor() {
         if (ignoreVendorChange) {
             ignoreVendorChange = false;
             return;
@@ -732,86 +800,283 @@ border-radius:12px;
         }
     
         gstCalculation();
-    }
+   }
 
    function gstCalculation(){
+
       let vendor_gstin_full = $("#vendor option:selected").attr("data-gstin") || "";
       let company_gstin_full = company_gst || "";
 
-      let vendor_gstin = vendor_gstin_full.length >= 2 ? vendor_gstin_full.substr(0,2) : "";
-      let company_gstin = company_gstin_full.length >= 2 ? company_gstin_full.substr(0,2) : "";
+      let vendor_state = vendor_gstin_full.length >= 2 ? vendor_gstin_full.substr(0,2) : "";
+      let company_state = company_gstin_full.length >= 2 ? company_gstin_full.substr(0,2) : "";
+
       let net_total = 0;
+
+      $(".item").each(function(){
+         if($(this).val() !== ""){
+            let id = $(this).attr('data-index');
+            let amount = parseFloat($("#amount_"+id).val()) || 0;
+            net_total += amount;
+         }
+      });
+
+      let bs_adjust_total = 0;
+      let bs_non_adjust_total = 0;
+
+      $("#bill_sundry_section tr").each(function(){
+
+         let select = $(this).find(".bill_sundry");
+         let amtInput = $(this).find(".bs_amount");
+
+         let selectedOption = select.find("option:selected");
+         let val = parseFloat(amtInput.val()) || 0;
+
+         if(!select.val() || val === 0 || selectedOption.length === 0){
+            return;
+         }
+
+         let type = selectedOption.attr("data-type");
+         let rawAdjust = selectedOption.attr("data-adjust");
+
+         if(typeof type === "undefined" || typeof rawAdjust === "undefined"){
+            return;
+         }
+
+         let adjust = rawAdjust.toString().toLowerCase();
+
+         if(adjust === "1" || adjust === "yes"){
+            if(type === "additive"){
+               bs_adjust_total += val;
+            } else if(type === "subtractive"){
+               bs_adjust_total -= val;
+            }
+         } else {
+            bs_non_adjust_total += val;
+         }
+
+      });
+
+      let item_data = [];
+
+      $(".item").each(function(){
+
+         if($(this).val() !== ""){
+
+            let id = $(this).attr('data-index');
+
+            let amount = parseFloat($("#amount_"+id).val()) || 0;
+            let pct = parseFloat($("#percentage_"+id).val()) || 0;
+
+            let ratio = net_total > 0 ? (amount / net_total) : 0;
+            let adjustment = bs_adjust_total * ratio;
+            let final_amount = amount + adjustment;
+
+            item_data.push({
+               id: id,
+               amount: final_amount,
+               percentage: pct
+            });
+
+            let adjusted_item_total = 0;
+            item_data.forEach(i => adjusted_item_total += i.amount);
+
+            // distribute NON-adjust ONLY for GST
+            item_data.forEach(item => {
+
+               let ratio = adjusted_item_total > 0 ? (item.amount / adjusted_item_total) : 0;
+
+               let extra = bs_non_adjust_total * ratio;
+
+               item.amount_for_gst = item.amount + extra;
+            });
+         }
+      });
+
+      let gst_summary = {};
+
+      item_data.forEach(item => {
+
+         let pct = item.percentage;
+         let amt = item.amount_for_gst;
+
+         if(pct <= 0 || amt <= 0) return;
+
+         if(!gst_summary[pct]){
+            gst_summary[pct] = {
+               taxable: 0,
+               igst: 0,
+               cgst: 0,
+               sgst: 0
+            };
+         }
+
+         gst_summary[pct].taxable += amt;
+
+         if(vendor_state === company_state){
+
+            let cgst = (amt * (pct/2) / 100);
+            let sgst = cgst;
+
+            cgst = Math.round(cgst * 100) / 100;
+            sgst = Math.round(sgst * 100) / 100;
+
+            gst_summary[pct].cgst += cgst;
+            gst_summary[pct].sgst += sgst;
+
+                  } else {
+
+                     let igst = (amt * pct / 100);
+            igst = Math.round(igst * 100) / 100;
+
+            gst_summary[pct].igst += igst;
+         }
+
+      });
+
       let total_cgst = 0;
       let total_sgst = 0;
       let total_igst = 0;
-      $(".item").each(function(){
-         if($(this).val()!=""){
-            let id = $(this).attr('data-index');
-            let percentage = $("#percentage_"+id).val();
-            let amount = $("#amount_"+id).val();
-            if(percentage!="" && amount!=""){
-               let IGST = amount*percentage/100;
-               let CGST = amount*(percentage/2)/100;
-               let SGST = CGST;               
-               IGST = Math.round(IGST * 100) / 100;
-                IGST = IGST.toFixed(2);
-                IGST = IGST.toString().match(/^-?\d+(?:\.\d{0,2})?/)[0];
-                IGST = parseFloat(IGST);
 
-               CGST = Math.round(CGST * 100) / 100;
-               CGST = CGST.toFixed(2);
-               CGST = CGST.toString().match(/^-?\d+(?:\.\d{0,2})?/)[0];
-               CGST = parseFloat(CGST);
+      // compute ONLY ONCE
+      for (let pct in gst_summary) {
 
-               SGST = Math.round(SGST * 100) / 100;
-               SGST = SGST.toFixed(2);
-               SGST = SGST.toString().match(/^-?\d+(?:\.\d{0,2})?/)[0];
-               SGST = parseFloat(SGST);
- 
-               total_cgst = parseFloat(total_cgst) + parseFloat(CGST);
-               total_sgst = parseFloat(total_sgst) + parseFloat(SGST);
-               total_igst = parseFloat(total_igst) + parseFloat(IGST);
-               net_total = parseFloat(net_total) + parseFloat(amount);
-            }                        
-         }
-      });
+         total_cgst += gst_summary[pct].cgst;
+         total_sgst += gst_summary[pct].sgst;
+         total_igst += gst_summary[pct].igst;
+      }
+
+      total_cgst = Math.round(total_cgst * 100) / 100;
+      total_sgst = Math.round(total_sgst * 100) / 100;
+      total_igst = Math.round(total_igst * 100) / 100;
+
+      let total_gst = (vendor_state === company_state)
+         ? (total_cgst + total_sgst)
+         : total_igst;
+
       $("#cgst").val("");
       $("#sgst").val("");
       $("#igst").val("");
-      if(vendor_gstin==company_gstin){
+
+      if(vendor_state === company_state){
+
          $(".cgst_tr").show();
          $(".sgst_tr").show();
-         $(".igst_tr").hide();          
-         $("#cgst").val(total_cgst);
-         $("#sgst").val(total_sgst); 
-          tamount = parseFloat(net_total || 0) 
-            + parseFloat(total_cgst || 0) 
-            + parseFloat(total_sgst || 0);
-      }else{
-         $("#igst").val(total_igst);
+         $(".igst_tr").hide();
+
+         if(total_cgst > 0) $("#cgst").val(total_cgst.toFixed(2));
+         if(total_sgst > 0) $("#sgst").val(total_sgst.toFixed(2));
+
+      } else {
+
          $(".cgst_tr").hide();
          $(".sgst_tr").hide();
          $(".igst_tr").show();
-         tamount = parseFloat(net_total || 0) 
-            + parseFloat(total_igst || 0);
+
+         if(total_igst > 0) $("#igst").val(total_igst.toFixed(2));
       }
-      $("#net_amount").val(parseFloat(net_total || 0).toFixed(2));
 
-// ✅ Total amount (rounded)
-let rounded_total = Math.round(tamount);
-$("#total_amount").val(rounded_total);
+      let adjusted_item_total = 0;
+      item_data.forEach(i => adjusted_item_total += i.amount);
 
-// ✅ Round off
-let round_off = (rounded_total - tamount).toFixed(2);
-$("#round_off").val(round_off);
+      let final_net_amount = adjusted_item_total + bs_non_adjust_total;
+      $("#net_amount").val(final_net_amount.toFixed(2));
 
-// ✅ Show/hide roundoff row
-if (parseFloat(round_off) === 0) {
-    $(".roundoff_tr").hide();
-} else {
-    $(".roundoff_tr").show();
-}
+      let calculated_total = final_net_amount + total_gst;
+
+      let rounded_total = Math.round(calculated_total);
+      let round_off = parseFloat((rounded_total - calculated_total).toFixed(2));
+
+      if(round_off === 0){
+         $("#round_off").val("");
+         $(".roundoff_tr").hide();
+      } else {
+         $("#round_off").val(round_off);
+         $(".roundoff_tr").show();
+      }
+
+      $("#total_amount").val(rounded_total);
+
    }
+   var bs_count = 1;
+
+   $(document).on("click", ".add_bs", function(){
+
+      // Validate current rows before adding
+      let empty = false;
+      $("#bill_sundry_section tr").each(function(){
+         let sel = $(this).find(".bill_sundry").val();
+         let amt = $(this).find(".bs_amount").val();
+         if(sel === "" || amt === ""){
+            empty = true;
+         }
+      });
+      if(empty){
+         alert("Please fill all bill sundry fields before adding.");
+         return;
+      }
+
+      bs_count++;
+
+      let options = `<option value="">Select</option>`;
+      @foreach($billsundry as $bs)
+      options += `<option value="{{ $bs->id }}"
+         data-type="{{ $bs->bill_sundry_type }}"
+         data-adjust="{{ $bs->adjust_purchase_amt }}">
+         {{ $bs->name }}
+      </option>`;
+      @endforeach
+
+      let newRow = `
+      <tr id="bs_row_${bs_count}">
+         <td colspan="2">
+            <select name="bill_sundry[]" class="form-control bill_sundry"
+               data-id="${bs_count}" id="bs_select_${bs_count}"
+               onchange="gstCalculation()">
+               ${options}
+            </select>
+         </td>
+         <td colspan="2">
+            <input type="number" step="0.01"
+               name="bill_sundry_amount[]"
+               class="form-control bs_amount"
+               data-id="${bs_count}"
+               id="bs_amount_${bs_count}"
+               placeholder="Amount"
+               oninput="gstCalculation()">
+         </td>
+         <td colspan="2">
+            <div class="bs-btn-wrap">
+               <button type="button" class="icon-btn remove-btn remove_bs" data-id="${bs_count}">−</button>
+               <button type="button" class="icon-btn add-btn add_bs" data-id="${bs_count}">+</button>
+            </div>
+         </td>
+      </tr>`;
+
+      // Move add button: remove from previous last row, append new row
+      $("#bill_sundry_section tr:last").find(".add_bs").remove();
+      $("#bill_sundry_section").append(newRow);
+      fixBillSundryButtons();
+      $('#bs_select_' + bs_count).select2({
+         width: '100%',
+         dropdownParent: $('body')
+      });
+      gstCalculation();
+   });
+
+   $(document).on("click", ".remove_bs", function(){
+      let id = $(this).data("id");
+      $("#bs_row_" + id).remove();
+
+      // Ensure last row has add button
+      let lastRow = $("#bill_sundry_section tr:last");
+      if(lastRow.find(".add_bs").length === 0){
+         lastRow.find("td:last").append(
+            `<button type="button" class="icon-btn add-btn add_bs">+</button>`
+         );
+      }
+      fixBillSundryButtons();
+      gstCalculation();
+   });
    var add_more_count_withgst = 1;
    $(document).on("click",".add_more_tr",function(){
 
@@ -1102,6 +1367,10 @@ if (parseFloat(round_off) === 0) {
       });
       $(document).ready(function(){
          $("#date").focus();
+         $('.bill_sundry').select2({
+            width: '100%',
+            dropdownParent: $('body')
+         });
       });
       $(document).on('select2:select', '#vendor', function () {
 
@@ -1219,5 +1488,22 @@ if (parseFloat(round_off) === 0) {
          $('#series_no').trigger('change');
 
       });
+      $(document).on('wheel', 'input[type=number]', function (e) {
+    $(this).blur();
+});
+function fixBillSundryButtons() {
+
+    let rows = $("#bill_sundry_section tr");
+
+    rows.find(".add_bs").remove();
+
+    let lastRow = rows.last();
+
+    if(lastRow.length){
+        lastRow.find("td:last .bs-btn-wrap").append(
+            `<button type="button" class="icon-btn add-btn add_bs">+</button>`
+        );
+    }
+}
 </script>
 @endsection

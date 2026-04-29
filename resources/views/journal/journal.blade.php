@@ -126,6 +126,38 @@
                                     </td>
                                  </tr>
                                 <?php if($is_last){ ?>
+                                @if(isset($sundries[$value->jon_id]))
+                                @foreach($sundries[$value->jon_id] as $sundry)
+
+                                    <tr class="font-14 font-heading bg-white">
+
+                                <td></td>
+                                <td></td>
+                                <td class="w-min-120">
+                                    {{ $sundry->name }}
+                                </td>
+
+                                <td class="w-min-120" style="text-align: right;">
+                                    @if(strtolower($sundry->bill_sundry_type) == 'additive')
+                                        {{ number_format($sundry->amount, 2) }}
+                                        <?php $tot_dbt += (float)$sundry->amount; ?>
+                                    @endif
+                                </td>
+
+                                <td class="w-min-120" style="text-align: right;">
+                                    @if(strtolower($sundry->bill_sundry_type) == 'subtractive')
+                                        {{ number_format($sundry->amount, 2) }}
+                                        <?php $tot_crt += (float)$sundry->amount; ?>
+                                    @endif
+                                </td>
+
+                                <td></td>
+                                <td></td>
+
+                                </tr>
+
+                                @endforeach
+                                @endif
                                 <tr class="font-12 text-muted bg-light">
                                 <td colspan="7" class="ps-4 py-1" style="text-align:left;">
                                     

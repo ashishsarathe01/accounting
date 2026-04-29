@@ -15,9 +15,31 @@
    .select2-container .select2-selection--single{
       height: 52px !important;
    }
-   .select2-container{
-          width: 300 px !important;
-   }
+   /* FIX SELECT2 FULL UI */
+.select2-container {
+    width: 100% !important;
+}
+
+.select2-container--default .select2-selection--single {
+    height: 52px !important;
+    border-radius: 12px !important;
+    display: flex;
+    align-items: center;
+}
+
+.select2-container--default .select2-selection__rendered {
+    line-height: normal !important;
+    padding-left: 12px !important;
+}
+
+.select2-container--default .select2-selection__arrow {
+    height: 100% !important;
+}
+
+/* FIX DROPDOWN */
+.select2-dropdown {
+    z-index: 9999 !important;
+}
    .select2-container--default .select2-selection--single{
       border-radius: 12px !important;
    }
@@ -60,18 +82,28 @@
 td .icon-btn{
     margin:auto;
 }
-@media print {
-    table {
-        /*width: 100% !important;*/
-    }
-    .header-section {
-        display: none !important; /* hide buttons only */
-    }
-    .sidebar {
-        display: none !important; /* hide buttons only */
-    }
+/* Remove spinner (Chrome, Safari, Edge) */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
-@page { size: auto;  margin: 0mm; }
+
+/* Remove spinner (Firefox) */
+input[type=number] {
+    -moz-appearance: textfield;
+    .bs-btn-wrap {
+    display: flex;
+    justify-content: center;   /* center both buttons */
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.bs-btn-wrap .icon-btn {
+    margin: 0 !important;
+}
+}
 </style>
 <!-- list-view-company-section -->
 <div class="list-of-view-company ">
@@ -80,11 +112,22 @@ td .icon-btn{
             @include('layouts.leftnav')
             <!-- view-table-Content -->
             <div class="col-md-12 ml-sm-auto  col-lg-9 px-md-4 bg-mint">
-               
-                <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm ">
-                    Edit Journal Voucher 
+                <div class="d-md-flex justify-content-between py-4 px-2 align-items-center">
+                    <nav aria-label="breadcrumb meri-breadcrumb ">
+                        <ol class="breadcrumb meri-breadcrumb m-0  ">
+                            <li class="breadcrumb-item">
+                                <a class="font-12 text-body text-decoration-none" href="#">Dashboard</a>
+                            </li>
+                            <li class="breadcrumb-item p-0">
+                                <a class="fw-bold font-heading font-12  text-decoration-none" href="#">
+                                Journal </a>
+                            </li>
+                        </ol>
+                    </nav>
+                </div>
+                <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">
+                    Edit Journal Voucher
                 </h5>
-                
                 <?php 
                 $account_html = '<option value="">Select</option>';            
                 foreach ($party_list as $value) {
@@ -166,7 +209,7 @@ td .icon-btn{
                                 <tbody>
                                     <tr class="font-14 font-heading bg-white" id="tr_<?php echo $i?>">
                                         <td class="">
-                                            <select class="form-control type" name="type[]" data-id="<?php echo $i ?>" id="type_<?php echo $i ?>">
+                                            <select class="form-control type" name="type[]" data-id="<?php echo $i ?>" id="type_<?php echo $i ?>" onchange="onTypeChange(<?php echo $i ?>)">
                                                 <option value="">Type</option>
                                                 <option <?php echo $value->type == 'Credit' ? 'selected' : ''; ?> value="Credit">Credit</option>
                                                 <option <?php echo $value->type == 'Debit' ? 'selected' : ''; ?> value="Debit">Debit</option>
@@ -277,7 +320,82 @@ td .icon-btn{
                                  }
                                  $j++;
                               } ?>
-                              
+                                <tr class="bg-light">
+                                    <td colspan="6"><strong>Bill Sundry</strong></td>
+                                </tr>
+
+                                    <tbody id="bill_sundry_section">
+                                        @php $bs_index = 1; @endphp
+                                        @if(isset($bill_sundry_rows) && count($bill_sundry_rows) > 0)
+                                            @foreach($bill_sundry_rows as $bs_row)
+                                            <tr id="bs_row_{{ $bs_index }}">
+                                                <td colspan="2">
+                                                <select name="bill_sundry[]" class="form-control bill_sundry select2-single"
+                                                    data-id="{{ $bs_index }}" id="bs_select_{{ $bs_index }}"
+                                                    onchange="gstCalculation()">
+                                                    <option value="">Select</option>
+                                                    @foreach($billsundry as $bs)
+                                                        <option value="{{ $bs->id }}"
+                                                            data-type="{{ $bs->bill_sundry_type }}"
+                                                            data-adjust="{{ $bs->adjust_purchase_amt }}"
+                                                            {{ $bs_row->bill_sundry == $bs->id ? 'selected' : '' }}>
+                                                            {{ $bs->name }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                                </td>
+                                                <td colspan="2">
+                                                <input type="number" step="0.01"
+                                                    name="bill_sundry_amount[]"
+                                                    class="form-control bs_amount"
+                                                    data-id="{{ $bs_index }}"
+                                                    id="bs_amount_{{ $bs_index }}"
+                                                    placeholder="Amount"
+                                                    value="{{ $bs_row->amount }}"
+                                                    oninput="gstCalculation()">
+                                                </td>
+                                                <td colspan="2">
+                                                    <div class="bs-btn-wrap">
+                                                        <button type="button" class="icon-btn remove-btn remove_bs" data-id="{{ $bs_index }}">−</button>
+                                                        <button type="button" class="icon-btn add-btn add_bs" data-id="{{ $bs_index }}">+</button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            @php $bs_index++; @endphp
+                                            @endforeach
+                                        @else
+                                        <tr id="bs_row_1">
+                                            <td colspan="2">
+                                                <select name="bill_sundry[]" class="form-control bill_sundry select2-single"
+                                                data-id="1" id="bs_select_1"
+                                                onchange="gstCalculation()">
+                                                <option value="">Select</option>
+                                                @foreach($billsundry as $bs)
+                                                    <option value="{{ $bs->id }}"
+                                                        data-type="{{ $bs->bill_sundry_type }}"
+                                                        data-adjust="{{ $bs->adjust_purchase_amt }}">
+                                                        {{ $bs->name }}
+                                                    </option>
+                                                @endforeach
+                                                </select>
+                                            </td>
+                                            <td colspan="2">
+                                                <input type="number" step="0.01"
+                                                name="bill_sundry_amount[]"
+                                                class="form-control bs_amount"
+                                                data-id="1"
+                                                id="bs_amount_1"
+                                                placeholder="Amount"
+                                                oninput="gstCalculation()">
+                                            </td>
+                                            <td colspan="2">
+                                                <div class="bs-btn-wrap">
+                                                    <button type="button" class="icon-btn add-btn add_bs" data-id="1">+</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        @endif
+                                    </tbody>
                               <tr class="font-14 font-heading bg-white">
                                  <td></td>
                                  <td style="text-align: right; vertical-align:middle;">Net Amount</td>
@@ -347,7 +465,7 @@ td .icon-btn{
                     </div>
 
 
-                    <div class=" d-flex header-section">
+                    <div class=" d-flex">
 
                         <div class="ms-auto">
                            <button type="button" onclick="redirectBack()" class="btn btn-danger">QUIT</button>
@@ -359,7 +477,7 @@ td .icon-btn{
                     </div>
                 </form>
             </div>
-            <div class="col-lg-1 d-flex justify-content-center header-section">
+            <div class="col-lg-1 d-flex justify-content-center">
                 <div class="shortcut-key ">
                     <p class="font-14 fw-500 font-heading m-0">Shortcut Keys</p>
                     <button class="p-2 transaction-shortcut-btn my-2 ">
@@ -543,75 +661,150 @@ td .icon-btn{
     let originalVendorId = $("#vendor").val(); 
     let pageLoaded = false;
     var company_gst = "{{$company_gst}}";
-    var claim_gst_status = "{{$journal->claim_gst_status}}";
-   $(document).on("change", ".type", function() {
-      let id = $(this).attr('data-id');
-      $("#debit_" + id).val('');
+    function onTypeChange(id){
+        $("#debit_" + id).val('');
         $("#credit_" + id).val('');
+
         let debit_total = 0;
         $(".debit").each(function(){
-           if($(this).val()!=""){
-              debit_total = parseFloat(debit_total) + parseFloat($(this).val());
-           }
+            if($(this).val()!=""){
+                debit_total += parseFloat($(this).val());
+            }
         });
+
         let credit_total = 0;
         $(".credit").each(function(){
-           if($(this).val()!=""){
-              credit_total = parseFloat(credit_total) + parseFloat($(this).val());
-           }
+            if($(this).val()!=""){
+                credit_total += parseFloat($(this).val());
+            }
         });
-        
-        if($("#type_" + id).val() == "Credit") {
+
+        if($("#type_" + id).val() == "Credit"){
             $("#debit_" + id).prop('readonly', true);
             $("#credit_" + id).prop('readonly', false);
+
             let amount = debit_total - credit_total;
             if(amount>0){
-               $("#credit_"+id).val(amount.toFixed(2));
+                $("#credit_"+id).val(amount.toFixed(2));
             }
-        }else if ($("#type_" + id).val() == "Debit") {
+
+        }else if ($("#type_" + id).val() == "Debit"){
             $("#debit_" + id).prop('readonly', false);
             $("#credit_" + id).prop('readonly', true);
+
             let amount = credit_total - debit_total;
             if(amount>0){
-               $("#debit_"+id).val(amount.toFixed(2));
+                $("#debit_"+id).val(amount.toFixed(2));
             }
         }
-         $("#account_" + id).html(`{!! $account_html !!}`);
+
+        $("#account_" + id).html(`{!! $account_html !!}`);
+
+        $("#account_" + id).select2();
+
+        setTimeout(function(){
+            $("#account_" + id).select2('open');
+        },100);
+
+        debitTotal();
+        creditTotal();
+    }
+    var claim_gst_status = "{{$journal->claim_gst_status}}";
+    $(document).on("change", ".type", function() {
+
+        let id = $(this).attr('data-id');
+
+        $("#debit_" + id).val('');
+        $("#credit_" + id).val('');
+
+        let debit_total = 0;
+        $(".debit").each(function(){
+            if($(this).val()!=""){
+                debit_total += parseFloat($(this).val());
+            }
+        });
+
+        let credit_total = 0;
+        $(".credit").each(function(){
+            if($(this).val()!=""){
+                credit_total += parseFloat($(this).val());
+            }
+        });
+
+        if($("#type_" + id).val() == "Credit") {
+
+            $("#debit_" + id).prop('readonly', true);
+            $("#credit_" + id).prop('readonly', false);
+
+            let amount = debit_total - credit_total;
+            if(amount > 0){
+                $("#credit_"+id).val(amount.toFixed(2));
+            }
+
+        } else if ($("#type_" + id).val() == "Debit") {
+
+            $("#debit_" + id).prop('readonly', false);
+            $("#credit_" + id).prop('readonly', true);
+
+            let amount = credit_total - debit_total;
+            if(amount > 0){
+                $("#debit_"+id).val(amount.toFixed(2));
+            }
+        }
+
+        $("#account_" + id).html(`{!! $account_html !!}`);
+
+        $("#account_" + id).select2();
+
+        setTimeout(function(){
+            $("#account_" + id).select2('open');
+        },100);
+
         debitTotal();
         creditTotal();
     });
 
-     var add_more_count = '<?php echo $i;?>';
-     $(document).on("click",".add_more",function(){
-         add_more_count++;
-         var $curRow = $(this).closest('tr');
-         var optionElements = "";
-         let type_option = '<option value="Credit">Credit</option><option value="Debit">Debit</option>';
-         let debit_count = 0; let credit_count = 0;
-         $(".type").each(function(){
-            if(this.value == 'Credit') {
-               credit_count++;
-            }else if(this.value == 'Debit'){
-               debit_count++;
-            }
-         });
-         // if(debit_count>1){
-         //    type_option = '<option value="Debit">Debit</option>';
-         // }else if(credit_count>1){
-         //    type_option = '<option value="Credit">Credit</option>';
-         // }
-        newRow = '<tr id="tr_' + add_more_count + '"><td><select class="form-control type" name="type[]"  data-id="' + add_more_count + '" id="type_' + add_more_count + '"><option value="">Type</option>'+type_option+'</select></td><td><select class="form-control account select2-single" name="account_name[]" data-id="' + add_more_count + '" id="account_' + add_more_count + '">';
-        newRow += optionElements;
-        newRow += '</select></td><td><input type="text" name="debit[]" class="form-control debit" data-id="' + add_more_count + '" id="debit_' + add_more_count + '" placeholder="Debit Amount" readonly onkeyup="debitTotal();"></td><td><input type="text" name="credit[]" class="form-control credit" data-id="' + add_more_count + '" id="credit_' + add_more_count + '" placeholder="Credit Amount" readonly onkeyup="creditTotal();"></td><td><input type="text" name="narration[]" class="form-control narration" data-id="' + add_more_count + '" id="narration_' + add_more_count + '" placeholder="Enter Narration"></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td><td class="add_btn_cell_without"></td></tr>';
-        $curRow.before(newRow);
+    var add_more_count = '<?php echo $i;?>';
+    $(document).on("click", ".add_more", function() {
 
-            $('.select2-single').select2();
-            
-            // focus new row type (same as ADD page)
-            setTimeout(function(){
-               $("#type_" + add_more_count).focus();
-            },100);
-            // ✅ FIX "+" ONLY FOR WITHOUT GST
+        add_more_count++;
+
+        var $curRow = $(this).closest('tr');
+
+        var optionElements = `{!! $account_html !!}`;
+
+        let type_option = '<option value="Credit">Credit</option><option value="Debit">Debit</option>';
+
+        let newRow =
+        '<tr id="tr_' + add_more_count + '">' +
+
+        '<td><select class="form-control type" name="type[]" data-id="' + add_more_count + '" id="type_' + add_more_count + '" onchange="onTypeChange('+add_more_count+')">' +
+        '<option value="">Type</option>'+type_option+'</select></td>' +
+
+        '<td><select class="form-control account select2-single" name="account_name[]" data-id="' + add_more_count + '" id="account_' + add_more_count + '">' +
+        optionElements + '</select></td>' +
+
+        '<td><input type="text" name="debit[]" class="form-control debit" data-id="' + add_more_count + '" id="debit_' + add_more_count + '" readonly onkeyup="debitTotal();"></td>' +
+
+        '<td><input type="text" name="credit[]" class="form-control credit" data-id="' + add_more_count + '" id="credit_' + add_more_count + '" readonly onkeyup="creditTotal();"></td>' +
+
+        '<td><input type="text" name="narration[]" class="form-control narration" data-id="' + add_more_count + '" id="narration_' + add_more_count + '"></td>' +
+
+        '<td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td>' +
+
+        '<td class="add_btn_cell_without"></td>' +
+
+        '</tr>';
+
+        $curRow.after(newRow);
+
+        $('.select2-single').select2();
+
+        setTimeout(function(){
+            $("#type_" + add_more_count).focus();
+        },100);
+
+        // ✅ FIX "+" ONLY FOR WITHOUT GST
         $("#without_gst_section .add_more").remove();
 
         $("#without_gst_section tr[id^='tr_']:last")
@@ -620,6 +813,7 @@ td .icon-btn{
     });
 
     $(document).on("click", ".remove", function() {
+
         let rows = $("#without_gst_section tr[id^='tr_']");
 
         // ✅ prevent deleting last row
@@ -627,20 +821,28 @@ td .icon-btn{
             alert("At least one row required");
             return;
         }
+
         let id = $(this).data('id');
+
         let currentRow = $("#tr_"+id);
+
         let nextRow = currentRow.next("tbody").find("tr");
         let prevRow = currentRow.prev("tbody").find("tr");
+
         currentRow.remove();
+
         debitTotal();
         creditTotal();
+
         // ✅ fix + button (ONLY WITHOUT GST)
         $("#without_gst_section .add_more").remove();
 
         $("#without_gst_section tr[id^='tr_']:last")
         .find(".add_btn_cell_without")
         .html('<button type="button" class="icon-btn add-btn add_more">+</button>');
+
         setTimeout(function(){
+
             if(nextRow.length){
                 nextRow.find(".type").focus();
             }
@@ -648,9 +850,11 @@ td .icon-btn{
                 prevRow.find(".narration").focus();
             }
             else{
-                $(".add_more").focus();
+                $("#without_gst_section .add_more").focus();
             }
+
         },100);
+
     });
     function debitTotal() {
        let total_debit_amount = 0;
@@ -672,7 +876,7 @@ td .icon-btn{
     }
     $(".select2-single").select2();
     $(document).ready(function() {
-      if($("#claim_gst").val() == "YES"){
+        if($("#claim_gst").val() == "YES"){
             $("#without_gst_section").hide();
             $(".with_gst_section").show();
         }else{
@@ -701,7 +905,7 @@ td .icon-btn{
       }
        debitTotal();
        creditTotal();
-       $("#without_gst_section tr[id^='tr_']:last")
+        $("#without_gst_section tr[id^='tr_']:last")
         .find(".add_btn_cell_without")
         .html('<button type="button" class="icon-btn add-btn add_more">+</button>');
        $(".add_btn_cell").last().html('<button type="button" class="icon-btn add-btn add_more_tr">+</button>');
@@ -765,8 +969,8 @@ td .icon-btn{
          // }
          dr = parseFloat(dr || 0).toFixed(2);
          cr = parseFloat(cr || 0).toFixed(2);
-    // dr = dr.toFixed(2);
-    //      cr = cr.toFixed(2);
+        // dr = dr.toFixed(2);
+        //      cr = cr.toFixed(2);
           if(parseFloat(cr)!= parseFloat(dr) && claim_gst_status=="NO") {
              alert("Debit and credit amounts should be equal.");
              return false;
@@ -785,6 +989,8 @@ td .icon-btn{
           if($(this).val()=="YES"){
              $(".with_gst_section").show();
              $("#vendor").attr('required',true);
+
+             addDefaultGstRowIfNone();
              $("#item_1").attr('required',true);
              $("#percentage_1").attr('required',true);
              $("#amount_1").attr('required',true);
@@ -809,7 +1015,7 @@ td .icon-btn{
       setTimeout(() => {
          pageLoaded = true;
       }, 0);
-      setTimeout(function(){
+        setTimeout(function(){
             let lastRow = $("#without_gst_section tr[id^='tr_']").last();
 
             if(lastRow.length){
@@ -846,7 +1052,8 @@ td .icon-btn{
         },200);
     });
     function addDefaultGstRowIfNone() {
-       if ($(".with_gst_section tr[id^='withgst_tr_']").length === 0) {
+
+        if ($(".with_gst_section tr[id^='withgst_tr_']").length === 0) {
 
             add_more_count_withgst++;
 
@@ -881,162 +1088,232 @@ td .icon-btn{
         }
     }
     function gstCalculation(){
-        if($("#vendor option:selected").attr("data-gstin")==undefined){
-            return;
-        }
-       let vendor_gstin = $("#vendor option:selected").attr("data-gstin").substr(0,2);
-       let company_gstin = company_gst.substr(0,2);
-       let net_total = 0;
-       let total_cgst = 0;
-       let total_sgst = 0;
-       let total_igst = 0;
-       $(".item").each(function(){
-          if($(this).val()!=""){
-             let id = $(this).attr('data-index');
-             let percentage = $("#percentage_"+id).val();
-            let amount = $("#amount_"+id).val();
 
-            if(percentage!="" && amount!=""){
-            
-                // ✅ ROUND ITEM FIRST
-                let roundedAmount = parseFloat(amount).toFixed(2);
-            
-                // update input (auto UI fix)
-                $("#amount_"+id).val(roundedAmount);
-            
-                // use rounded value everywhere
-                let IGST = roundedAmount * percentage / 100;
-                let CGST = roundedAmount * (percentage/2) / 100;
-                let SGST = CGST;
-            
-                // round GST also
-                IGST = parseFloat(IGST).toFixed(2);
-                CGST = parseFloat(CGST).toFixed(2);
-                SGST = parseFloat(SGST).toFixed(2);
-            
-                total_cgst += parseFloat(CGST);
-                total_sgst += parseFloat(SGST);
-                total_igst += parseFloat(IGST);
-            
-                // ✅ IMPORTANT: add rounded amount only
-                net_total += parseFloat(roundedAmount);
-            }                   
-          }
-       });
+        let vendor_gstin_full = $("#vendor option:selected").attr("data-gstin") || "";
+        let company_gstin_full = company_gst || "";
+
+        let vendor_state = vendor_gstin_full.length >= 2 ? vendor_gstin_full.substr(0,2) : "";
+        let company_state = company_gstin_full.length >= 2 ? company_gstin_full.substr(0,2) : "";
+
+        let net_total = 0;
+
+        $(".item").each(function(){
+            if($(this).val() !== ""){
+                let id = $(this).attr('data-index');
+                let amount = parseFloat($("#amount_"+id).val()) || 0;
+                net_total += amount;
+            }
+        });
+
+        let bs_adjust_total = 0;
+        let bs_non_adjust_total = 0;
+
+        $("#bill_sundry_section tr").each(function(){
+
+            let select = $(this).find(".bill_sundry");
+            let amtInput = $(this).find(".bs_amount");
+
+            let selectedOption = select.find("option:selected");
+            let val = parseFloat(amtInput.val()) || 0;
+
+            if(!select.val() || val === 0 || selectedOption.length === 0){
+                return;
+            }
+
+            let type = selectedOption.attr("data-type");
+            let rawAdjust = selectedOption.attr("data-adjust");
+
+            if(typeof type === "undefined" || typeof rawAdjust === "undefined"){
+                return;
+            }
+
+            let adjust = rawAdjust.toString().toLowerCase();
+
+            if(adjust === "yes" || adjust === "1"){
+                if(type === "additive"){
+                    bs_adjust_total += val;
+                } else {
+                    bs_adjust_total -= val;
+                }
+            } else {
+                // IMPORTANT: keep sign for non-adjust too
+                if(type === "additive"){
+                    bs_non_adjust_total += val;
+                } else {
+                    bs_non_adjust_total -= val;
+                }
+            }
+
+        });
+
+        let item_data = [];
+
+        $(".item").each(function(){
+
+            if($(this).val() !== ""){
+
+                let id = $(this).attr('data-index');
+
+                let amount = parseFloat($("#amount_"+id).val()) || 0;
+                let pct = parseFloat($("#percentage_"+id).val()) || 0;
+
+                let ratio = net_total > 0 ? (amount / net_total) : 0;
+
+                let final_amount = amount + (bs_adjust_total * ratio);
+
+                item_data.push({
+                    amount: final_amount,
+                    percentage: pct
+                });
+            }
+        });
+
+        let adjusted_total = 0;
+        item_data.forEach(i => adjusted_total += i.amount);
+
+        item_data.forEach(item => {
+
+            let ratio = adjusted_total > 0 ? (item.amount / adjusted_total) : 0;
+
+            item.amount_for_gst = item.amount + (bs_non_adjust_total * ratio);
+        });
+
+        let total_cgst = 0;
+        let total_sgst = 0;
+        let total_igst = 0;
+
+        item_data.forEach(item => {
+
+            let pct = item.percentage;
+            let amt = item.amount_for_gst;
+
+            if(pct <= 0 || amt <= 0) return;
+
+            if(vendor_state === company_state){
+                let cgst = (amt * (pct/2) / 100);
+                let sgst = cgst;
+
+                total_cgst += cgst;
+                total_sgst += sgst;
+
+            } else {
+                let igst = (amt * pct / 100);
+                total_igst += igst;
+            }
+        });
+
+        total_cgst = Math.round(total_cgst * 100) / 100;
+        total_sgst = Math.round(total_sgst * 100) / 100;
+        total_igst = Math.round(total_igst * 100) / 100;
+
+        let total_gst = (vendor_state === company_state)
+            ? (total_cgst + total_sgst)
+            : total_igst;
+
         $("#cgst").val("");
-$("#sgst").val("");
-$("#igst").val("");
+        $("#sgst").val("");
+        $("#igst").val("");
 
-let tamount = 0;
+        if(vendor_state === company_state){
+            $(".cgst_tr").show();
+            $(".sgst_tr").show();
+            $(".igst_tr").hide();
 
-if (vendor_gstin == company_gstin) {
-    // ✅ Intra-state
-    $(".cgst_tr").show();
-    $(".sgst_tr").show();
-    $(".igst_tr").hide();
+            if(total_cgst > 0) $("#cgst").val(total_cgst.toFixed(2));
+            if(total_sgst > 0) $("#sgst").val(total_sgst.toFixed(2));
 
-    $("#cgst").val(total_cgst);
-    $("#sgst").val(total_sgst);
+        } else {
+            $(".cgst_tr").hide();
+            $(".sgst_tr").hide();
+            $(".igst_tr").show();
 
-    tamount = parseFloat(net_total) + parseFloat(total_cgst) + parseFloat(total_sgst);
+            if(total_igst > 0) $("#igst").val(total_igst.toFixed(2));
+        }
 
-} else {
-    // ✅ Inter-state
-    $(".cgst_tr").hide();
-    $(".sgst_tr").hide();
-    $(".igst_tr").show();
+        let net_amount = adjusted_total + bs_non_adjust_total;
+        $("#net_amount").val(net_amount.toFixed(2));
 
-    $("#igst").val(total_igst);
+        let calculated_total = net_amount + total_gst;
 
-    tamount = parseFloat(net_total) + parseFloat(total_igst);
-}
+        let rounded_total = Math.round(calculated_total);
+        let round_off = parseFloat((rounded_total - calculated_total).toFixed(2));
 
-$("#net_amount").val(net_total.toFixed(2));
+        if(round_off === 0){
+            $("#round_off").val("");
+            $(".roundoff_tr").hide();
+        } else {
+            $("#round_off").val(round_off);
+            $(".roundoff_tr").show();
+        }
 
-// ✅ Total amount
-$("#total_amount").val(Math.round(tamount));
-
-// ✅ Round off calculation
-let calculated_total = tamount;
-let rounded_total = Math.round(calculated_total);
-let round_off = (rounded_total - calculated_total).toFixed(2);
-
-
-$("#round_off").val(round_off);
-
-// ✅ Show/hide round off row
-if (parseFloat(round_off) === 0) {
-    $(".roundoff_tr").hide();
-} else {
-    $(".roundoff_tr").show();
-}
-       
-
-       
+        $("#total_amount").val(rounded_total);
     }
     var add_more_count_withgst = "{{$j}}";
 
-$(document).on("click",".add_more_tr",function(){
+    $(document).on("click",".add_more_tr",function(){
 
-    add_more_count_withgst++;
+        add_more_count_withgst++;
 
-    var $curRow = $(this).closest("tr");
+        var $curRow = $(this).closest("tr");
 
-    let newRow =
-    '<tr id="withgst_tr_'+add_more_count_withgst+'" class="font-14 font-heading bg-white">'+
-    '<td><select class="form-control item select2-single" id="item_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="item[]" onchange="gstCalculation()">'+
-    '<option value="">Select Item</option>@foreach($items as $item)<option value="{{$item->id}}">{{$item->account_name}}</option>@endforeach'+
-    '</select></td>'+
+        let newRow =
+        '<tr id="withgst_tr_'+add_more_count_withgst+'" class="font-14 font-heading bg-white">'+
+        '<td><select class="form-control item select2-single" id="item_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="item[]" onchange="gstCalculation()">'+
+        '<option value="">Select Item</option>@foreach($items as $item)<option value="{{$item->id}}">{{$item->account_name}}</option>@endforeach'+
+        '</select></td>'+
 
-    '<td><select class="form-control percentage" id="percentage_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="percentage[]" onchange="gstCalculation()">'+
-    '<option value="">Select GST(%)</option>'+
-    '<option value="0">0%</option>'+
-    '<option value="5">5%</option>'+
-    '<option value="12">12%</option>'+
-    '<option value="18">18%</option>'+
-    '<option value="28">28%</option>'+
-    '</select></td>'+
+        '<td><select class="form-control percentage" id="percentage_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="percentage[]" onchange="gstCalculation()">'+
+        '<option value="">Select GST(%)</option>'+
+        '<option value="0">0%</option>'+
+        '<option value="5">5%</option>'+
+        '<option value="12">12%</option>'+
+        '<option value="18">18%</option>'+
+        '<option value="28">28%</option>'+
+        '</select></td>'+
 
-    '<td><input type="text" class="form-control amount" id="amount_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="amount[]" onkeyup="gstCalculation()"></td>'+
+        '<td><input type="text" class="form-control amount" id="amount_'+add_more_count_withgst+'" data-index="'+add_more_count_withgst+'" name="amount[]" onkeyup="gstCalculation()"></td>'+
 
-    '<td><button type="button" class="icon-btn remove-btn remove_more_tr" data-id="'+add_more_count_withgst+'">&minus;</button></td>'+
-    '</tr>';
+        '<td><button type="button" class="icon-btn remove-btn remove_more_tr" data-id="'+add_more_count_withgst+'">&minus;</button></td>'+
+        '</tr>';
 
-    $curRow.after(newRow);
+        $curRow.after(newRow);
 
-    $(".add_more_tr").remove();
+        $(".add_more_tr").remove();
 
-    $("#withgst_tr_"+add_more_count_withgst).append(
-        '<td><button type="button" class="icon-btn add-btn add_more_tr">+</button></td>'
-    );
+        $("#withgst_tr_"+add_more_count_withgst).append(
+            '<td><button type="button" class="icon-btn add-btn add_more_tr">+</button></td>'
+        );
 
-    $("#item_"+add_more_count_withgst).select2();
-    setTimeout(function(){
-    $("#item_"+add_more_count_withgst).select2('open');
-},100);
-});
+        $("#item_"+add_more_count_withgst).select2();
+        setTimeout(function(){
+        $("#item_"+add_more_count_withgst).select2('open');
+    },100);
+    });
 
-$(document).on("click",".remove_more_tr",function(){
+    $(document).on("click",".remove_more_tr",function(){
 
-    let row = $(this).closest("tr");
-    let table = row.closest("tbody");
+        let table = $(this).closest("tbody");
 
-    row.remove();
+        let rows = table.find("tr[id^='withgst_tr_']");
 
-    table.find(".add_more_tr").remove();
+        if(rows.length <= 1){
+            alert("At least one GST row required");
+            return;
+        }
 
-    let lastRow = table.find("tr").has(".item").last();
+        let row = $(this).closest("tr");
 
-    if(lastRow.length){
-        lastRow.append('<td><button type="button" class="icon-btn add-btn add_more_tr">+</button></td>');
-    }
+        row.remove();
 
-    gstCalculation();
-});
-    $(document).on("click", ".remove_more_tr", function() {
-       let id = $(this).attr('data-id');
-       $("#withgst_tr_" + id).remove();
-       gstCalculation();
+        table.find(".add_more_tr").remove();
+
+        let lastRow = table.find("tr[id^='withgst_tr_']").last();
+
+        if(lastRow.length){
+            lastRow.append('<td><button type="button" class="icon-btn add-btn add_more_tr">+</button></td>');
+        }
+
+        gstCalculation();
     });
     function checkGSTVendor() {
         if (ignoreVendorChange) {
@@ -1120,7 +1397,6 @@ $(document).on("click",".remove_more_tr",function(){
     
                 if (data && data.status == 1) {
     
-                    // ðŸ‘‰ STATE
                     let stateCode = gstin.substr(0, 2);
                     let matched = $('#state option[data-state_code="' + stateCode + '"]').val();
     
@@ -1231,15 +1507,32 @@ $(document).on('select2:select', '#vendor', function () {
     },100);
 
 });
-$(document).on('select2:select', '.item', function () {
+    $(document).on('select2:select', '.item', function () {
 
-    let id = $(this).data('index');
+        let id = $(this).data('index');
 
-    setTimeout(function(){
-        $("#percentage_" + id).focus();
-    },100);
+        setTimeout(function(){
+            $("#percentage_" + id).focus();
+        },100);
 
-});
+    });
+    $(document).on('select2:select', '.account', function () {
+
+        let id = $(this).data('id');
+
+        let type = $("#type_" + id).val();
+
+        setTimeout(function(){
+
+            if(type === "Credit"){
+                $("#credit_" + id).focus();
+            }else if(type === "Debit"){
+                $("#debit_" + id).focus();
+            }
+
+        },100);
+
+    });
 $(document).on('change', '.percentage', function () {
 
     let id = $(this).data('index');
@@ -1301,12 +1594,90 @@ $(document).on('keydown', '.add_more_tr', function(e){
     }
 
 });
+
+var bs_count = {{ isset($bill_sundry_rows) ? count($bill_sundry_rows) : 1 }};
+
+$(document).on("click", ".add_bs", function(){
+
+   let empty = false;
+   $("#bill_sundry_section tr").each(function(){
+      let sel = $(this).find(".bill_sundry").val();
+      let amt = $(this).find(".bs_amount").val();
+      if(sel === "" || amt === ""){
+         empty = true;
+      }
+   });
+   if(empty){
+      alert("Please fill all bill sundry fields before adding.");
+      return;
+   }
+
+   bs_count++;
+
+   let options = `<option value="">Select</option>`;
+   @foreach($billsundry as $bs)
+   options += `<option value="{{ $bs->id }}"
+      data-type="{{ $bs->bill_sundry_type }}"
+      data-adjust="{{ $bs->adjust_purchase_amt }}">
+      {{ $bs->name }}
+   </option>`;
+   @endforeach
+
+   let newRow = `
+   <tr id="bs_row_${bs_count}">
+      <td colspan="2">
+         <select name="bill_sundry[]" class="form-control bill_sundry select2-single"
+            data-id="${bs_count}" id="bs_select_${bs_count}"
+            onchange="gstCalculation()">
+            ${options}
+         </select>
+      </td>
+      <td colspan="2">
+         <input type="number" step="0.01"
+            name="bill_sundry_amount[]"
+            class="form-control bs_amount"
+            data-id="${bs_count}"
+            id="bs_amount_${bs_count}"
+            placeholder="Amount"
+            oninput="gstCalculation()">
+      </td>
+      <td colspan="2">
+        <div class="bs-btn-wrap">
+            <button type="button" class="icon-btn remove-btn remove_bs" data-id="${bs_count}">−</button>
+            <button type="button" class="icon-btn add-btn add_bs" data-id="${bs_count}">+</button>
+        </div>
+      </td>
+   </tr>`;
+
+   $("#bill_sundry_section tr:last").find(".add_bs").remove();
+   $("#bill_sundry_section").append(newRow);
+   fixBillSundryButtons();
+    $('#bs_select_' + bs_count).select2({
+        width: '100%',
+        dropdownParent: $('body')
+    });
+   gstCalculation();
+});
+
+$(document).on("click", ".remove_bs", function(){
+   let id = $(this).data("id");
+   $("#bs_row_" + id).remove();
+
+   fixBillSundryButtons();
+
+   gstCalculation();
+});
 $(document).ready(function(){
    $("#date").focus();
    $("#vendor").select2({
-    placeholder: "Select Vendor",
-    width: '100%'
-});
+        placeholder: "Select Vendor",
+        width: '100%'
+    });
+    $('.bill_sundry').select2({
+        width: '100%',
+        dropdownParent: $('body')
+    });
+    fixBillSundryButtons();
 });
 
 $(document).ready(function(){
@@ -1352,10 +1723,30 @@ $(document).ready(function(){
     $('#series_no').trigger('change');
 
 });
-function printpage(){
-       //$('.sidebar').addClass('importantRule'); // only sidebar hide
-       window.print();
-       //$('.sidebar').removeClass('importantRule');
+    $(document).on('focus', 'input[type=number]', function () {
+        $(this).on('wheel.disableScroll', function (e) {
+            e.preventDefault();
+        });
+    });
+
+    $(document).on('blur', 'input[type=number]', function () {
+        $(this).off('wheel.disableScroll');
+    });
+    function fixBillSundryButtons() {
+
+        let rows = $("#bill_sundry_section tr");
+
+        // remove all add buttons first
+        rows.find(".add_bs").remove();
+
+        // add "+" only to last row
+        let lastRow = rows.last();
+
+        if(lastRow.length){
+            lastRow.find("td:last").append(
+                `<button type="button" class="icon-btn add-btn add_bs">+</button>`
+            );
+        }
     }
 </script>
 @endsection

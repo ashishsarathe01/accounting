@@ -116,6 +116,10 @@
                         class="btn btn-success btn-sm">
                         Export CSV
                      </a>
+                     <a href="{{ url('item-ledger-detailed-csv?items_id='.request()->items_id.'&from_date='.request()->from_date.'&to_date='.request()->to_date.'&series='.request()->series) }}" 
+                        class="btn btn-primary btn-sm">
+                        Detailed CSV
+                     </a>
             </div>
             <div class="display-sale-month  bg-white table-view shadow-sm">
                 <div id="printArea">

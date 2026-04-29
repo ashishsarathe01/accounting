@@ -19,6 +19,7 @@ use App\Models\GstBranch;
 use App\Models\AccountGroups;
 use App\Models\BillSundrys;
 use App\Models\ActivityLog;
+use App\Models\JournalSundry;
 use App\Models\SupplierPurchaseVehicleDetail;
 use DB;
 use Carbon\Carbon;
@@ -82,7 +83,6 @@ public function index(Request $request)
         ->leftJoin('users as approved_user', 'approved_user.id', '=', 'journals.approved_by')
         ->where('journal_details.company_id', $com_id)
         ->where('journals.delete', '0');
-
     // Apply date filter if set
     if ($from_date && $to_date) {
         $query->whereRaw("
@@ -107,13 +107,29 @@ public function index(Request $request)
         
         ->get();
 
+      $journal_ids = $journal->pluck('jon_id')->unique()->toArray();
+
+      $sundries = DB::table('journal_sundries as js')
+         ->join('bill_sundrys as bs', 'bs.id', '=', 'js.bill_sundry')
+         ->select(
+            'js.journal_id',
+            'js.amount',
+            'bs.name',
+            'bs.bill_sundry_type'
+         )
+         ->whereIn('js.journal_id', $journal_ids)
+         ->where('js.delete', '0')
+         ->where('js.company_id', $com_id) 
+         ->get()
+         ->groupBy('journal_id');
     // Fallback values if not set
     $from_date = $from_date ;
     $to_date = $to_date ;
-   //  echo "<pre>";
-   //  print_r($journal->toArray());die;
+    //echo "<pre>";
+    // print_r($journal->toArray());die;
     return view('journal/journal')
         ->with('journal', $journal)
+        ->with('sundries', $sundries) 
         ->with('month_arr', $month_arr)
         ->with('from_date', $from_date)
         ->with('to_date', $to_date);
@@ -345,7 +361,14 @@ public function index(Request $request)
          $mat_series[$key]->invoice_prefix = $invoice_prefix;
          $mat_series[$key]->manual_enter_invoice_no = $manual_enter_invoice_no;
       }
-      return view('journal/addJournal')->with('party_list', $party_list)->with('prefill_account_id', $prefill_account_id)->with('journal_type', $journal_type)->with('journal_amount', $journal_amount)->with('is_purchase_journal', $prefill_data ? true : false)->with('prefill_invoice_no', $prefill_invoice_no)->with('date', $bill_date)->with('mat_series', $mat_series)->with('vendors', $vendors)->with('items', $items)->with('company_gst', $companyData->gst)->with('state_list', $state_list);
+      $billsundry = BillSundrys::where('delete', '=', '0')
+                                 ->where('status', '=', '1')
+                                 ->whereIn('company_id',[Session::get('user_company_id'),0])
+                                 ->where('nature_of_sundry', 'OTHER')
+                                 //->OrwhereIn('id',[1,2,3,8,9])
+                                 ->orderBy('name')
+                                 ->get();
+      return view('journal/addJournal')->with('party_list', $party_list)->with('billsundry', $billsundry)->with('prefill_account_id', $prefill_account_id)->with('journal_type', $journal_type)->with('journal_amount', $journal_amount)->with('is_purchase_journal', $prefill_data ? true : false)->with('prefill_invoice_no', $prefill_invoice_no)->with('date', $bill_date)->with('mat_series', $mat_series)->with('vendors', $vendors)->with('items', $items)->with('company_gst', $companyData->gst)->with('state_list', $state_list);
    }
 
 
@@ -358,20 +381,26 @@ public function index(Request $request)
      */
    public function store(Request $request){
       //dd($request->data);
+      //dd($request->all());
       Gate::authorize('action-module',80);
-      $financial_year = CommonHelper::getFinancialYear($request->input('date'));
       $spare_part_id  = $request->input('spare_part_id');
       $closePurchase  = (int) $request->input('close_purchase') === 1;
       $itemsJson      = $request->input('items');
       $receivedItems = json_decode($itemsJson, true) ?? [];
+      $financial_year = Session::get('default_fy');
       $series_configuration = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
          ->where('series', $request->input('series_no'))
          ->where('configuration_for', 'JOURNAL')
          ->where('status', '1')
          ->first();
       $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
-      if ($series_configuration && $series_configuration->manual_numbering == "YES") {
-         $voucher_no = $request->input('voucher_no') ?: $request->input('voucher_prefix');
+      $voucher_prefix_input = $request->input('voucher_prefix');
+      if (!$series_configuration) {
+         $voucher_no = $voucher_prefix_input;
+         $voucher_no_prefix = $voucher_prefix_input;
+      } elseif ($series_configuration->manual_numbering == "YES") {
+         $voucher_no = $voucher_prefix_input;
+         $voucher_no_prefix = $voucher_prefix_input;
       } else {
          $last_voucher_no = DB::table('journals')
             ->where('company_id', Session::get('user_company_id'))
@@ -388,16 +417,58 @@ public function index(Request $request)
          } else {
             $voucher_no = sprintf("%0" . $number_digit . "d", ((int)$last_voucher_no + 1));
          }
+         $voucher_no_prefix = str_replace('{no}', $voucher_no, $voucher_prefix_input);
+      }
+      // ================= CALCULATE BASE FIRST =================
+
+      $amounts = $request->input('amount') ?? [];
+      $percentages = $request->input('percentage') ?? [];
+      $bill_sundrys = $request->input('bill_sundry') ?? [];
+      $bill_sundry_amounts = $request->input('bill_sundry_amount') ?? [];
+
+      $net_total = 0;
+      foreach($amounts as $amt){
+         $net_total += floatval($amt);
+      }
+
+
+      // SORT BY SEQUENCE
+      $billSundries = BillSundrys::whereIn('id', $bill_sundrys)
+         ->orderBy('sequence')
+         ->get()
+         ->keyBy('id');
+      $adjust_total = 0;
+      $non_adjust_total = 0;
+
+      $billSundries = BillSundrys::whereIn('id', $bill_sundrys)
+         ->get()
+         ->keyBy('id');
+
+      foreach($bill_sundrys as $key => $bill){
+
+         if(empty($bill) || empty($bill_sundry_amounts[$key])) continue;
+
+         $amount = floatval($bill_sundry_amounts[$key]);
+         $bs = $billSundries[$bill] ?? null;
+
+         if(!$bs) continue;
+
+         $sign = strtolower($bs->bill_sundry_type) == 'additive' ? 1 : -1;
+
+         if(strtolower($bs->adjust_purchase_amt) == 'yes'){
+            $adjust_total += ($sign * $amount);
+         } else {
+            $non_adjust_total += ($sign * $amount);
+         }
       }
       $journal = new Journal;
       $journal->date = $request->input('date');
-      $journal->voucher_no_prefix = $request->input('voucher_prefix');
+      $journal->voucher_no_prefix = $voucher_no_prefix;
       $journal->voucher_no = $voucher_no;
       $journal->series_no = $request->input('series_no');
       $journal->long_narration = $request->input('long_narration');
       $journal->company_id = Session::get('user_company_id');
       $journal->financial_year = $financial_year;
-      $journal->created_by = Session::get('user_id');
       $journal->claim_gst_status = $request->input('flexRadioDefault');
       $journal->merchant_gst = $request->input('merchant_gst');
       if($request->input('form_source') && !empty($request->input('form_source'))){
@@ -405,11 +476,65 @@ public function index(Request $request)
       }  
       if($request->input('flexRadioDefault')=="YES"){
          $journal->invoice_no = $request->input('invoice_no');
-         $journal->net_total = $request->input('net_amount');
-         $journal->cgst = $request->input('cgst');
-         $journal->sgst = $request->input('sgst');
-         $journal->igst = $request->input('igst');
-         $journal->total_amount = $request->input('total_amount');
+
+
+         $vendor = Accounts::find($request->input('vendor'));
+         $vendor_state = substr($vendor->gstin ?? '', 0, 2);
+         $company_state = substr($request->input('merchant_gst'), 0, 2);
+         $cgst = 0;
+         $sgst = 0;
+         $igst = 0;
+
+         $total_item_amount = array_sum($amounts);
+
+         // distribute adjust to items
+         $distributed_items = [];
+
+         foreach($amounts as $key => $amt){
+
+            $ratio = $total_item_amount > 0 ? ($amt / $total_item_amount) : 0;
+
+            $distributed = $amt + ($adjust_total * $ratio);
+
+            $distributed_items[$key] = $distributed;
+         }
+
+         // GST BASE = adjusted items + NON-adjust
+         $gst_base = array_sum($distributed_items) + $non_adjust_total;
+
+         foreach($distributed_items as $key => $amt){
+
+            $pct = floatval($percentages[$key] ?? 0);
+
+            if($pct <= 0) continue;
+
+            $ratio = $gst_base > 0 ? ($amt / array_sum($distributed_items)) : 0;
+
+            $amt_for_gst = $amt + ($non_adjust_total * $ratio);
+
+            if($vendor_state == $company_state){
+
+               $cgst += round(($amt_for_gst * ($pct/2) / 100), 2);
+               $sgst += round(($amt_for_gst * ($pct/2) / 100), 2);
+
+            } else {
+
+               $igst += round(($amt_for_gst * $pct / 100), 2);
+            }
+         }
+
+         $journal->cgst = $cgst;
+         $journal->sgst = $sgst;
+         $journal->igst = $igst;
+         $final_net = array_sum($distributed_items) + $non_adjust_total;
+
+         $total = $final_net + $cgst + $sgst + $igst;
+
+         $rounded_total = round($total);
+         $round_off = $rounded_total - $total;
+
+         $journal->net_total = $final_net;
+         $journal->total_amount = $rounded_total;
          $journal->remark = $request->input('remark');
          $journal->vendor = $request->input('vendor');
          if(!empty($request->input('vendor'))){
@@ -421,6 +546,60 @@ public function index(Request $request)
          }
       }
       $journal->save();
+
+      $bill_sundrys = $request->input('bill_sundry');
+      $bill_sundry_amounts = $request->input('bill_sundry_amount');
+
+      if(!empty($bill_sundrys)){
+
+         foreach($bill_sundrys as $key => $bill){
+
+            if(empty($bill) || empty($bill_sundry_amounts[$key])){
+               continue;
+            }
+
+            $amount = floatval($bill_sundry_amounts[$key]);
+
+            $bs = BillSundrys::where('id', $bill)->first();
+            if(!$bs) continue;
+
+            $sundry = new JournalSundry();
+            $sundry->journal_id = $journal->id;
+            $sundry->bill_sundry = $bill;
+            $sundry->amount = $amount;
+            $sundry->rate = 0; // optional (or pass from request)
+            $sundry->company_id = Session::get('user_company_id');
+            $sundry->status = '1';
+            $sundry->created_by = Session::get('user_id');
+            $sundry->save();
+
+            $type = strtolower($bs->bill_sundry_type);
+
+            if(strtolower($bs->adjust_purchase_amt) == 'no'){
+
+               $ledger = new AccountLedger();
+               $ledger->account_id = $bs->purchase_amt_account;
+
+               if($type == 'additive'){
+                  $ledger->debit = $amount;
+               } else {
+                  $ledger->credit = $amount;
+               }
+
+               $ledger->txn_date = $request->input('date');
+               $ledger->series_no = $request->input('series_no');
+               $ledger->company_id = Session::get('user_company_id');
+               $ledger->financial_year = Session::get('default_fy');
+               $ledger->entry_type = 7;
+               $ledger->entry_type_id = $journal->id;
+               $ledger->map_account_id = $request->input('vendor');
+               $ledger->created_by = Session::get('user_id');
+               $ledger->created_at = date('Y-m-d H:i:s');
+               $ledger->save();
+            }
+            
+         }
+      }
       if(isset($request->data) && !empty($request->data)){
 
          $decoded = json_decode($request->data, true);
@@ -462,7 +641,7 @@ public function index(Request $request)
             $ledger->credit = $request->input('total_amount');                       
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = $financial_year;
+            $ledger->financial_year = Session::get('default_fy');
             $ledger->entry_type = 7;
             $ledger->map_account_id = $vendor_mapp_id;
             $ledger->entry_type_id = $journal->id;
@@ -471,8 +650,9 @@ public function index(Request $request)
             $ledger->created_at = date('d-m-Y H:i:s');
             $ledger->save();
             //Round Off Caculation
-            $calculated_total = $request->input('net_amount') + floatval($request->input('cgst')) + floatval($request->input('sgst')) + floatval($request->input('igst'));
-            $round_off = round($request->input('total_amount') - $calculated_total, 2);
+            $calculated_total = $final_net + $cgst + $sgst + $igst;
+            $rounded_total = round($calculated_total);
+            $round_off = round($rounded_total - $calculated_total, 2);
             //Round Off Entry
             if($round_off<0){               
                $billsundry = BillSundrys::where('id',8)->first();
@@ -486,7 +666,7 @@ public function index(Request $request)
                $joundetail->credit = abs($round_off);
                $joundetail->type = "Credit";               
             }else{
-               $joundetail->debit = abs($round_off);
+               $joundetail->debit = round(abs($round_off), 2);
                $joundetail->type = "Debit";
             }            
             $joundetail->account_name = $billsundry->sale_amt_account;
@@ -502,7 +682,7 @@ public function index(Request $request)
             $ledger->series_no = $request->input('series_no');            
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = $financial_year;
+            $ledger->financial_year = Session::get('default_fy');
             $ledger->entry_type = 7;
             $ledger->map_account_id = $request->input('vendor');
             $ledger->entry_type_id = $journal->id;
@@ -510,26 +690,41 @@ public function index(Request $request)
             $ledger->created_by = Session::get('user_id');
             $ledger->created_at = date('d-m-Y H:i:s');
             $ledger->save();
-            foreach ($request->input('item') as $key => $item){
-               $percentage = $request->input('percentage')[$key];
-               $amount = $request->input('amount')[$key];
+            $items = $request->input('item');
+            $amounts = $request->input('amount');
+            $percentages = $request->input('percentage');
+
+            $total_item_amount = 0;
+            foreach($amounts as $amt){
+               $total_item_amount += floatval($amt);
+            }
+
+            foreach ($items as $key => $item){
+
+               $percentage = $percentages[$key] ?? 0;
+               $original_amount = floatval($amounts[$key] ?? 0);
+
+               $final_amount = round($distributed_items[$key] ?? $original_amount, 2);
+
+               // ================= JOURNAL DETAIL =================
                $joundetail = new JournalDetails;
                $joundetail->journal_id = $journal->id;
                $joundetail->company_id = Session::get('user_company_id');
                $joundetail->type = "Debit";
                $joundetail->account_name = $item;
-               $joundetail->debit = $amount;
+               $joundetail->debit = $original_amount;
                $joundetail->percentage = $percentage;   
                $joundetail->status = '1';
                $joundetail->save();
-               //Ledger Entry
+
+               // ================= LEDGER =================
                $ledger = new AccountLedger();
                $ledger->account_id = $item;
-               $ledger->debit = $amount;                       
+               $ledger->debit = $final_amount;                       
                $ledger->txn_date = $request->input('date');
                $ledger->series_no = $request->input('series_no');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = $financial_year;
+               $ledger->financial_year = Session::get('default_fy');
                $ledger->entry_type = 7;
                $ledger->map_account_id = $request->input('vendor');
                $ledger->entry_type_id = $journal->id;
@@ -554,7 +749,7 @@ public function index(Request $request)
                $joundetail->company_id = Session::get('user_company_id');
                $joundetail->type = "Debit";
                $joundetail->account_name = $account_name;
-               $joundetail->debit = $request->input('igst');
+               $joundetail->debit = round($request->input('igst'), 2);
                $joundetail->status = '1';
                $joundetail->save();
                //Ledger Entry
@@ -564,7 +759,7 @@ public function index(Request $request)
                $ledger->debit = $request->input('igst');                       
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = $financial_year;
+               $ledger->financial_year = Session::get('default_fy');
                $ledger->entry_type = 7;
                $ledger->map_account_id = $request->input('vendor');
                $ledger->entry_type_id = $journal->id;
@@ -608,7 +803,7 @@ public function index(Request $request)
                $ledger->debit = $request->input('cgst');                       
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = $financial_year;
+               $ledger->financial_year = Session::get('default_fy');
                $ledger->entry_type = 7;
                $ledger->map_account_id = $request->input('vendor');
                $ledger->entry_type_id = $journal->id;
@@ -631,7 +826,7 @@ public function index(Request $request)
                $ledger->debit = $request->input('sgst');                       
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = $financial_year;
+               $ledger->financial_year = Session::get('default_fy');
                $ledger->entry_type = 7;
                $ledger->map_account_id = $request->input('vendor');
                $ledger->entry_type_id = $journal->id;
@@ -689,7 +884,7 @@ public function index(Request $request)
                $ledger->series_no = $request->input('series_no');
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = $financial_year;
+               $ledger->financial_year = Session::get('default_fy');
                $ledger->entry_type = 7;
                $ledger->entry_type_id = $journal->id;
                $ledger->entry_narration = $narrations[$key];
@@ -698,42 +893,138 @@ public function index(Request $request)
                $ledger->created_at = date('d-m-Y H:i:s');
                $ledger->save();
             }
-            
+            // if($credit_count==1){
+            //    //Account Ledger Entry
+            //    $debit_arr = [];$credit_arr = [];
+            //    foreach($request->input('type') as $key => $type){
+            //       if($type=="Debit"){
+            //          array_push($debit_arr,array(
+            //             'type' => $type,
+            //             'account_name' => $request->input('account_name')[$key],
+            //             'debit' => $request->input('debit')[$key],
+            //             'credit' => 0,
+            //             'narration' => isset($request->input('narration')[$key]) ? $request->input('narration')[$key] : '',
+            //             'mapped_account_id' => $credit_id
+            //             ));
+            //             //Credit Array
+            //             $accountName = $request->input('account_name')[$key];
+            //             $debitValue  = $request->input('debit')[$key];
+            //             if(isset($credit_arr[$accountName])) {
+            //                   // If already exists, add credit
+            //                   $credit_arr[$accountName]['credit'] += $debitValue;
+            //             } else {
+            //                   // Otherwise, create new
+            //                   $credit_arr[$accountName] = [
+            //                      'type' => 'Credit',
+            //                      'account_name' => $credit_id,
+            //                      'debit' => 0,
+            //                      'credit' => $debitValue,
+            //                      'narration' => $entry_narration,
+            //                      'mapped_account_id' => $accountName
+            //                   ];
+            //             }
+            //       }
+            //    }
+            //    $final_arr = array_merge($debit_arr, array_values($credit_arr));
+            // }else if($debit_count==1){
+            //    //Account Ledger Entry
+            //    $debit_arr = [];$credit_arr = [];
+            //    foreach($request->input('type') as $key => $type){
+            //       if($type=="Credit"){
+            //          array_push($credit_arr,array(
+            //             'type' => $type,
+            //             'account_name' => $request->input('account_name')[$key],
+            //             'credit' => $request->input('credit')[$key],
+            //             'debit' => 0,
+            //             'narration' => isset($request->input('narration')[$key]) ? $request->input('narration')[$key] : '',
+            //             'mapped_account_id' => $debit_id
+            //          ));
+            //          //Credit Array
+            //          $accountName = $request->input('account_name')[$key];
+            //          $creditValue  = $request->input('credit')[$key];
+            //          if(isset($debit_arr[$accountName])) {
+            //                // If already exists, add credit
+            //                $debit_arr[$accountName]['debit'] += $creditValue;
+            //          } else {
+            //                // Otherwise, create new
+            //                $debit_arr[$accountName] = [
+            //                   'type' => 'Debit',
+            //                   'account_name' => $debit_id,
+            //                   'credit' => 0,
+            //                   'debit' => $creditValue,
+            //                   'narration' => $entry_narration,
+            //                   'mapped_account_id' => $accountName
+            //                ];
+            //          }
+            //       }
+            //    }
+            //    $final_arr = array_merge($debit_arr, array_values($credit_arr));
+            // }
+            // foreach ($final_arr as $key => $value) {
+            //    $ledger = new AccountLedger();
+            //    $ledger->account_id = $value['account_name'];
+            //    if(isset($value['debit']) && !empty($value['debit']) && $value['debit'] != 0){
+            //       $ledger->debit = $value['debit'];
+            //    }else{
+            //       $ledger->credit = $value['credit'];
+            //    }
+            //    $ledger->series_no = $request->input('series_no');
+            //    $ledger->txn_date = $request->input('date');
+            //    $ledger->company_id = Session::get('user_company_id');
+            //    $ledger->financial_year = Session::get('default_fy');
+            //    $ledger->entry_type = 7;
+            //    $ledger->entry_type_id = $journal->id;
+            //    $ledger->entry_narration = $value['narration'];
+            //    $ledger->map_account_id = $value['mapped_account_id'];
+            //    $ledger->created_by = Session::get('user_id');
+            //    $ledger->created_at = date('d-m-Y H:i:s');
+            //    $ledger->save();
+            // }
          }
          session(['previous_url_journal' => URL::previous()]);
          if ($spare_part_id) {
+
             $spare = SparePart::with('items')->find($spare_part_id);
+
             $remainingItems = [];
+
             foreach ($spare->items as $item) {
+
                $orderedQty = $item->quantity;
-                $gotQty = 0;
-                foreach ($receivedItems as $r) {
-                    if ((int)$r['item_id'] == (int)$item->item_id) {
-                       $gotQty = $r['quantity'];
-                       break;
-                    }
-                }
-                if($gotQty > $orderedQty){
-                    $gotQty = $orderedQty;
-                }
-                $item->quantity = $gotQty;
-                $item->save();
-                $pendingQty = $orderedQty - $gotQty;
-                if ($pendingQty > 0) {
-                    $remainingItems[] = [
+
+         $gotQty = 0;
+
+         foreach ($receivedItems as $r) {
+            if ((int)$r['item_id'] == (int)$item->item_id) {
+               $gotQty = $r['quantity'];
+               break;
+            }
+         }
+
+         if($gotQty > $orderedQty){
+            $gotQty = $orderedQty;
+         }
+
+         $item->quantity = $gotQty;
+         $item->save();
+
+         $pendingQty = $orderedQty - $gotQty;
+
+               if ($pendingQty > 0) {
+
+                     $remainingItems[] = [
                         'item_id' => $item->item_id,
                         'quantity' => $pendingQty,
                         'price' => $item->price,
                         'unit' => $item->unit,
                         'company_id' => $item->company_id
-                    ];
-                }
+                     ];
+               }
             }
+
             $spare->status = 3;
             $spare->save();
-            if(!empty($request->vehicle_entry_id)){
-                SupplierPurchaseVehicleDetail::where('id',$request->vehicle_entry_id)->update(['status'=>4]);
-            }
+
             if (!empty($remainingItems)) {
 
                $basePo = $spare->po_number;
@@ -980,9 +1271,21 @@ public function index(Request $request)
          $mat_series[$key]->invoice_prefix = $invoice_prefix;
          $mat_series[$key]->manual_enter_invoice_no = $manual_enter_invoice_no;
       }
-      return view('journal/editJournal')->with('fy_start_date', $fy_start_date)->with('fy_end_date', $fy_end_date)->with('journal', $journal)->with('party_list', $party_list)->with('journal_detail', $journal_detail)->with('mat_series', $mat_series)->with('vendors', $vendors)->with('items', $items)->with('company_gst', $companyData->gst)->with('sundry', $sundry_arr)->with('state_list', $state_list);
+      $billsundry = BillSundrys::where('delete', '=', '0')
+                                 ->where('status', '=', '1')
+                                 ->whereIn('company_id',[Session::get('user_company_id'),0])
+                                 ->where('nature_of_sundry', 'OTHER')
+                                 //->OrwhereIn('id',[1,2,3,8,9])
+                                 ->orderBy('name')
+                                 ->get();
+      $bill_sundry_rows = DB::table('journal_sundries') // ← use your actual table name
+    ->where('journal_id', $journal->id)
+    ->get();
+
+      return view('journal/editJournal')->with('fy_start_date', $fy_start_date)->with('bill_sundry_rows', $bill_sundry_rows)->with('billsundry', $billsundry)->with('fy_end_date', $fy_end_date)->with('journal', $journal)->with('party_list', $party_list)->with('journal_detail', $journal_detail)->with('mat_series', $mat_series)->with('vendors', $vendors)->with('items', $items)->with('company_gst', $companyData->gst)->with('sundry', $sundry_arr)->with('state_list', $state_list);
    }
    public function update(Request $request){
+      //dd($request->all());
       Gate::authorize('action-module',53);
       
       $validator = Validator::make($request->all(), [
@@ -993,8 +1296,12 @@ public function index(Request $request)
       if($validator->fails()){
          return response()->json($validator->errors(), 422);
       }
-      $financial_year = CommonHelper::getFinancialYear($request->input('date'));
       $receipt =  Journal::find($request->journal_id);
+      JournalDetails::where('journal_id', $receipt->id)->delete();
+      JournalSundry::where('journal_id', $receipt->id)->delete();
+      AccountLedger::where('entry_type',7)
+         ->where('entry_type_id',$receipt->id)
+         ->delete();
       $oldSnapshot = [
          'journal' => $receipt->toArray(),
          'details' => JournalDetails::where('journal_id', $receipt->id)
@@ -1002,48 +1309,32 @@ public function index(Request $request)
                         ->get()
                         ->toArray(),
       ];
-      $series_changed = ($receipt->series_no != $request->input('series_no'));
       $series_configuration = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
          ->where('series', $request->input('series_no'))
          ->where('configuration_for', 'JOURNAL')
          ->where('status', '1')
          ->first();
-      $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
+      $voucher_prefix_input = $request->input('voucher_prefix');
       $voucher_no = $receipt->voucher_no;
-      if ($series_configuration && $series_configuration->manual_numbering == "YES") {
-         $voucher_no = $request->input('voucher_no') ?: $request->input('voucher_prefix');
-      } elseif ($series_changed) {
-         $last_voucher_no = DB::table('journals')
-            ->where('company_id', Session::get('user_company_id'))
-            ->where('series_no', $request->input('series_no'))
-            ->where('financial_year', $financial_year)
-            ->where('delete', '0')
-            ->max(DB::raw("cast(voucher_no as SIGNED)"));
-         if (!$last_voucher_no) {
-            if ($series_configuration && $series_configuration->invoice_start != "") {
-               $voucher_no = sprintf("%0" . $number_digit . "d", (int)$series_configuration->invoice_start);
-            } else {
-               $voucher_no = sprintf("%0" . $number_digit . "d", 1);
-            }
+      $voucher_no_prefix = $receipt->voucher_no_prefix;
+      if ($voucher_prefix_input !== $receipt->voucher_no_prefix) {
+         if (!$series_configuration || $series_configuration->manual_numbering == "YES") {
+            $voucher_no = $voucher_prefix_input;
+            $voucher_no_prefix = $voucher_prefix_input;
          } else {
-            $voucher_no = sprintf("%0" . $number_digit . "d", ((int)$last_voucher_no + 1));
+            $voucher_no_prefix = str_replace('{no}', $voucher_no, $voucher_prefix_input);
          }
       }
       $receipt->voucher_no = $voucher_no;
+      $receipt->voucher_no_prefix = $voucher_no_prefix;
       $receipt->series_no = $request->input('series_no');
-      $receipt->voucher_no_prefix = $request->input('voucher_prefix');
       $receipt->long_narration = $request->input('long_narration');
       $receipt->date = $request->input('date');
       $receipt->merchant_gst = $request->input('merchant_gst');
       $receipt->claim_gst_status = $request->input('flexRadioDefault');
-      $receipt->updated_by = Session::get('user_id');
       if($request->input('flexRadioDefault')=="YES"){
          $receipt->invoice_no = $request->input('invoice_no');
-         $receipt->net_total = $request->input('net_amount');
-         $receipt->cgst = $request->input('cgst');
-         $receipt->sgst = $request->input('sgst');
-         $receipt->igst = $request->input('igst');
-         $receipt->total_amount = $request->input('total_amount');
+         
          $receipt->remark = $request->input('remark');
          $receipt->vendor = $request->input('vendor');
          if(!empty($request->input('vendor'))){
@@ -1055,20 +1346,136 @@ public function index(Request $request)
          }
       }else{
          $receipt->invoice_no = "";
-         $receipt->net_total = 0;
-         $receipt->cgst = 0;
-         $receipt->sgst = 0;
-         $receipt->igst = 0;
-         $receipt->total_amount = 0;
+
          $receipt->remark = "";
          $receipt->vendor = "";
          $receipt->vendor_gstin = "";
       }
+      $amounts = $request->input('amount') ?? [];
+      $percentages = $request->input('percentage') ?? [];
+      $bill_sundrys = $request->input('bill_sundry') ?? [];
+      $bill_sundry_amounts = $request->input('bill_sundry_amount') ?? [];
+
+      $total_item_amount = array_sum($amounts);
+
+      $billSundries = BillSundrys::whereIn('id', $bill_sundrys)
+         ->get()
+         ->keyBy('id');
+
+      $adjust_total = 0;
+      $non_adjust_total = 0;
+
+      foreach($bill_sundrys as $key => $bill){
+
+         if(empty($bill) || empty($bill_sundry_amounts[$key])) continue;
+
+         $amount = floatval($bill_sundry_amounts[$key]);
+         $bs = $billSundries[$bill] ?? null;
+
+         if(!$bs) continue;
+
+         $sign = strtolower($bs->bill_sundry_type) == 'additive' ? 1 : -1;
+
+         if(strtolower($bs->adjust_purchase_amt) == 'yes'){
+            $adjust_total += ($sign * $amount);
+         } else {
+            $non_adjust_total += ($sign * $amount);
+         }
+      }
+
+      $distributed_items = [];
+
+      foreach($amounts as $key => $amt){
+         $ratio = $total_item_amount > 0 ? ($amt / $total_item_amount) : 0;
+         $distributed_items[$key] = $amt + ($adjust_total * $ratio);
+      }
+
+      $vendor = Accounts::find($request->input('vendor'));
+      $vendor_state = substr($vendor->gstin ?? '', 0, 2);
+      $company_state = substr($request->input('merchant_gst'), 0, 2);
+
+      $cgst = 0;
+      $sgst = 0;
+      $igst = 0;
+
+      $adjusted_total = array_sum($distributed_items);
+
+      foreach($distributed_items as $key => $amt){
+
+         $pct = floatval($percentages[$key] ?? 0);
+         if($pct <= 0) continue;
+
+         $ratio = $adjusted_total > 0 ? ($amt / $adjusted_total) : 0;
+         $amt_for_gst = $amt + ($non_adjust_total * $ratio);
+
+         if($vendor_state == $company_state){
+            $cgst += round(($amt_for_gst * ($pct/2) / 100), 2);
+            $sgst += round(($amt_for_gst * ($pct/2) / 100), 2);
+         } else {
+            $igst += round(($amt_for_gst * $pct / 100), 2);
+         }
+      }
+
+      $final_net = $adjusted_total + $non_adjust_total;
+
+      $total = $final_net + $cgst + $sgst + $igst;
+      $rounded_total = round($total);
+      $round_off = round($rounded_total - $total, 2);
+      $receipt->invoice_no = "";
+      $receipt->net_total = $final_net;
+      $receipt->cgst = $cgst;
+      $receipt->sgst = $sgst;
+      $receipt->igst = $igst;
+      $receipt->total_amount = $rounded_total;
+      $receipt->remark = "";
+      $receipt->vendor = $request->input('vendor');
+      $receipt->vendor_gstin = $vendor->gstin ?? "";
+      foreach($bill_sundrys as $key => $bill){
+
+         if(empty($bill) || empty($bill_sundry_amounts[$key])) continue;
+
+         $amount = floatval($bill_sundry_amounts[$key]);
+
+         $bs = $billSundries[$bill] ?? null;
+         if(!$bs) continue;
+
+         $sundry = new JournalSundry();
+         $sundry->journal_id = $receipt->id;
+         $sundry->bill_sundry = $bill;
+         $sundry->amount = $amount;
+         $sundry->rate = 0;
+         $sundry->company_id = Session::get('user_company_id');
+         $sundry->status = '1';
+         $sundry->created_by = Session::get('user_id');
+         $sundry->save();
+
+         if(strtolower($bs->adjust_purchase_amt) == 'no'){
+
+            $type = strtolower($bs->bill_sundry_type);
+
+            $ledger = new AccountLedger();
+            $ledger->account_id = $bs->purchase_amt_account;
+
+            if($type == 'additive'){
+               $ledger->debit = $amount;
+            } else {
+               $ledger->credit = $amount;
+            }
+
+            $ledger->txn_date = $request->input('date');
+            $ledger->series_no = $request->input('series_no');
+            $ledger->company_id = Session::get('user_company_id');
+            $ledger->financial_year = Session::get('default_fy');
+            $ledger->entry_type = 7;
+            $ledger->entry_type_id = $receipt->id;
+            $ledger->map_account_id = $request->input('vendor');
+            $ledger->created_by = Session::get('user_id');
+            $ledger->created_at = now();
+            $ledger->save();
+         }
+      }
       $receipt->save();
-      $receipt_detail = JournalDetails::where('journal_id', '=', $request->journal_id)->delete();
-      AccountLedger::where('entry_type',7)
-                       ->where('entry_type_id',$request->journal_id)
-                       ->delete();
+
       if($request->input('flexRadioDefault')=="YES"){
          //Journal Entry
          $joundetail = new JournalDetails;
@@ -1092,7 +1499,7 @@ public function index(Request $request)
          $ledger->series_no = $request->input('series_no');                     
          $ledger->txn_date = $request->input('date');
          $ledger->company_id = Session::get('user_company_id');
-         $ledger->financial_year = $financial_year;
+         $ledger->financial_year = Session::get('default_fy');
          $ledger->entry_type = 7;
          $ledger->map_account_id = $vendor_mapp_id;
          $ledger->entry_type_id = $request->journal_id;
@@ -1134,7 +1541,7 @@ public function index(Request $request)
          $ledger->series_no = $request->input('series_no');            
          $ledger->txn_date = $request->input('date');
          $ledger->company_id = Session::get('user_company_id');
-         $ledger->financial_year = $financial_year;
+         $ledger->financial_year = Session::get('default_fy');
          $ledger->entry_type = 7;
          $ledger->map_account_id = $request->input('vendor');
          $ledger->entry_type_id = $request->journal_id;
@@ -1144,7 +1551,7 @@ public function index(Request $request)
          $ledger->save();
          foreach ($request->input('item') as $key => $item){
             $percentage = $request->input('percentage')[$key];
-           $amount = round((float)$request->input('amount')[$key], 2);
+            $amount = $request->input('amount')[$key];
             $joundetail = new JournalDetails;
             $joundetail->journal_id = $request->journal_id;
             $joundetail->company_id = Session::get('user_company_id');
@@ -1157,11 +1564,11 @@ public function index(Request $request)
             //Ledger Entry
             $ledger = new AccountLedger();
             $ledger->account_id = $item;
-            $ledger->debit = $amount;                       
+            $ledger->debit = round($distributed_items[$key] ?? $amount, 2);                   
             $ledger->txn_date = $request->input('date');
             $ledger->series_no = $request->input('series_no');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = $financial_year;
+            $ledger->financial_year = Session::get('default_fy');
             $ledger->entry_type = 7;
             $ledger->map_account_id = $request->input('vendor');
             $ledger->entry_type_id = $request->journal_id;
@@ -1196,7 +1603,7 @@ public function index(Request $request)
             $ledger->debit = $request->input('igst');                       
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = $financial_year;
+            $ledger->financial_year = Session::get('default_fy');
             $ledger->entry_type = 7;
             $ledger->map_account_id = $request->input('vendor');
             $ledger->entry_type_id = $request->journal_id;
@@ -1239,7 +1646,7 @@ public function index(Request $request)
             $ledger->debit = $request->input('cgst');                       
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = $financial_year;
+            $ledger->financial_year = Session::get('default_fy');
             $ledger->entry_type = 7;
             $ledger->map_account_id = $request->input('vendor');
             $ledger->entry_type_id = $request->journal_id;
@@ -1261,7 +1668,7 @@ public function index(Request $request)
             $ledger->debit = $request->input('sgst');                       
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = $financial_year;
+            $ledger->financial_year = Session::get('default_fy');
             $ledger->entry_type = 7;
             $ledger->map_account_id = $request->input('vendor');
             $ledger->entry_type_id = $request->journal_id;
@@ -1318,7 +1725,7 @@ public function index(Request $request)
             $ledger->series_no = $request->input('series_no');
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = $financial_year;
+            $ledger->financial_year = Session::get('default_fy');
             $ledger->entry_type = 7;
             $ledger->entry_type_id = $request->journal_id;
             $ledger->entry_narration = $narrations[$key];            

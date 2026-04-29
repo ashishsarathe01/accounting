@@ -258,6 +258,7 @@ class JobWorkControllerIn extends Controller
                 $value->duplicate_voucher = "";
                 $value->blank_voucher = "";
                 $value->invoice_prefix = "";
+                $value->invoice_start_from= "";
                 continue; 
             }
 

@@ -1744,5 +1744,202 @@ public function exportMainLedgerCsv(Request $request)
 
     return response()->stream($callback, 200, $headers);
 }
-   
+   public function exportDetailedCsv(Request $request)
+   {
+      $item_id = $request->items_id;
+      $from = $request->from_date;
+      $to = $request->to_date;
+      $series = $request->series;
+
+      $company = Companies::find(Session::get('user_company_id'));
+      $item = ManageItems::find($item_id);
+
+      $average_data = ItemAverage::where('item_id', $item_id)
+         ->where('series_no', $series)
+         ->whereBetween('stock_date', [$from, $to])
+         ->orderBy('stock_date')
+         ->get();
+
+      $filename = "item_ledger_detailed.csv";
+
+      $headers = [
+         "Content-type" => "text/csv",
+         "Content-Disposition" => "attachment; filename=$filename",
+      ];
+
+      $callback = function () use ($company, $item, $series, $from, $to, $average_data, $item_id) {
+
+         $file = fopen('php://output', 'w');
+
+         fputcsv($file, [$company->company_name]);
+         fputcsv($file, ["Item Ledger Detailed Report"]);
+         fputcsv($file, ["Item: " . ($item->name ?? '')]);
+         fputcsv($file, ["Series: " . $series]);
+         fputcsv($file, ["From: $from To: $to"]);
+         fputcsv($file, []);
+
+         fputcsv($file, [
+               "Date",
+               "Type",
+               "Invoice No",
+               "Party",
+               "Qty",
+               "Amount"
+         ]);
+
+         foreach ($average_data as $row) {
+
+               $date = $row->stock_date;
+
+               $details = ItemAverageDetail::where('item_average_details.item_id', $item_id)
+                  ->where('item_average_details.entry_date', $date)
+                  ->where('item_average_details.series_no', $series)
+
+                  ->leftJoin('sales', 'item_average_details.sale_id', '=', 'sales.id')
+                  ->leftJoin('accounts as sales_account', 'sales.party', '=', 'sales_account.id')
+
+                  ->leftJoin('purchases', 'item_average_details.purchase_id', '=', 'purchases.id')
+                  ->leftJoin('accounts as purchase_account', 'purchases.party', '=', 'purchase_account.id')
+
+                  ->leftJoin('sales_returns', 'item_average_details.sale_return_id', '=', 'sales_returns.id')
+                  ->leftJoin('accounts as sr_account', 'sales_returns.party', '=', 'sr_account.id')
+
+                  ->leftJoin('purchase_returns', 'item_average_details.purchase_return_id', '=', 'purchase_returns.id')
+                  ->leftJoin('accounts as pr_account', 'purchase_returns.party', '=', 'pr_account.id')
+
+                  ->leftJoin('stock_transfers as st_out', 'item_average_details.stock_transfer_id', '=', 'st_out.id')
+                  ->leftJoin('stock_transfers as st_in', 'item_average_details.stock_transfer_in_id', '=', 'st_in.id')
+
+                  ->leftJoin('stock_journal as sj_out', 'item_average_details.stock_journal_out_id', '=', 'sj_out.id')
+                  ->leftJoin('stock_journal as sj_in', 'item_average_details.stock_journal_in_id', '=', 'sj_in.id')
+
+                  ->leftJoin('account_productions as ap_out', 'item_average_details.production_out_id', '=', 'ap_out.id')
+                  ->leftJoin('account_productions as ap_in', 'item_average_details.production_in_id', '=', 'ap_in.id')
+
+                  ->select(
+                     'item_average_details.*',
+
+                     'sales.voucher_no_prefix as sale_voucher',
+                     'sales_account.account_name as sale_account',
+
+                     'purchases.voucher_no as purchase_voucher',
+                     'purchase_account.account_name as purchase_account',
+
+                     'sales_returns.sr_prefix as sr_voucher',
+                     'sr_account.account_name as sr_account',
+
+                     'purchase_returns.sr_prefix as pr_voucher',
+                     'pr_account.account_name as pr_account',
+
+                     'st_out.voucher_no_prefix as st_out_voucher',
+                     'st_out.material_center_to as st_ot_account',
+
+                     'st_in.material_center_from as st_in_account',
+                     'st_in.voucher_no_prefix as st_in_voucher',
+
+                     'sj_out.voucher_no_prefix as sj_out_voucher',
+                     'sj_out.series_no as sj_out_account',
+
+                     'sj_in.voucher_no_prefix as sj_in_voucher',
+                     'sj_in.series_no as sj_in_account',
+
+                     'ap_out.voucher_no_prefix as ap_out_voucher',
+                     'ap_out.series_no as ap_out_account',
+
+                     'ap_in.voucher_no_prefix as ap_in_voucher',
+                     'ap_in.series_no as ap_in_account'
+                  )
+                  ->get();
+
+               foreach ($details as $d) {
+
+                  $invoice = '';
+                  $party = '';
+                  $qty = 0;
+                  $amount = 0;
+
+                  switch ($d->type) {
+
+                     case "PURCHASE":
+                           $invoice = $d->purchase_voucher ?? '';
+                           $party = $d->purchase_account ?? '';
+                           $qty = (float)($d->purchase_weight ?? 0);
+                           $amount = (float)($d->purchase_total_amount ?? 0);
+                           break;
+
+                     case "SALE":
+                           $invoice = $d->sale_voucher ?? '';
+                           $party = $d->sale_account ?? '';
+                           $qty = (float)($d->sale_weight ?? 0);
+                           break;
+
+                     case "PURCHASE RETURN":
+                           $invoice = $d->pr_voucher ?? '';
+                           $party = $d->pr_account ?? '';
+                           $qty = (float)($d->purchase_return_weight ?? 0);
+                           $amount = (float)($d->purchase_return_amount ?? 0);
+                           break;
+
+                     case "SALE RETURN":
+                           $invoice = $d->sr_voucher ?? '';
+                           $party = $d->sr_account ?? '';
+                           $qty = (float)($d->sale_return_weight ?? 0);
+                           break;
+
+                     case "STOCK TRANSFER IN":
+                           $invoice = $d->st_in_voucher ?? '';
+                           $party = $d->st_in_account ?? '';
+                           $qty = (float)($d->stock_transfer_in_weight ?? 0);
+                           $amount = (float)($d->stock_transfer_in_amount ?? 0);
+                           break;
+
+                     case "STOCK TRANSFER OUT":
+                           $invoice = $d->st_out_voucher ?? '';
+                           $party = $d->st_ot_account ?? '';
+                           $qty = (float)($d->stock_transfer_weight ?? 0);
+                           break;
+
+                     case "STOCK JOURNAL GENERATE":
+                           $invoice = $d->sj_in_voucher ?? '';
+                           $party = $d->sj_in_account ?? '';
+                           $qty = (float)($d->stock_journal_in_weight ?? 0);
+                           $amount = (float)($d->stock_journal_in_amount ?? 0);
+                           break;
+
+                     case "STOCK JOURNAL CONSUME":
+                           $invoice = $d->sj_out_voucher ?? '';
+                           $party = $d->sj_out_account ?? '';
+                           $qty = (float)($d->stock_journal_out_weight ?? 0);
+                           break;
+
+                     case "PRODUCTION GENERATE":
+                           $invoice = $d->ap_in_voucher ?? '';
+                           $party = $d->ap_in_account ?? '';
+                           $qty = (float)($d->production_in_weight ?? 0);
+                           $amount = (float)($d->production_in_amount ?? 0);
+                           break;
+
+                     case "PRODUCTION CONSUME":
+                           $invoice = $d->ap_out_voucher ?? '';
+                           $party = $d->ap_out_account ?? '';
+                           $qty = (float)($d->production_out_weight ?? 0);
+                           break;
+                  }
+
+                  fputcsv($file, [
+                     $date,
+                     $d->type ?? '',
+                     $invoice,
+                     $party,
+                     $qty,
+                     $amount
+                  ]);
+               }
+         }
+
+         fclose($file);
+      };
+
+      return response()->stream($callback, 200, $headers);
+   }
 }
