@@ -1245,4 +1245,6 @@ Route::get('/journal/print/{id}', [JournalController::class, 'print'])->name('jo
         Route::get('/report', [YieldReportController::class, 'report'])
             ->name('yield-report.report');
     });
+
+    Route::get('item-ledger-detailed-csv', [ItemLedgerController::class, 'exportDetailedCsv']);
 });
