@@ -218,7 +218,6 @@
 <tr class="font-12 text-body bg-light-pink">
     <th class="w-min-50 border-none bg-light-pink text-body" text-center py-2 style="width: 1%;">S.No</th>
     <th class="w-min-50 border-none bg-light-pink text-body" style="width: 22%;">Item</th>
-    <th class="w-min-50 border-none bg-light-pink text-body" style="width: 22%;">Description</th>
     <th class="w-min-50 border-none bg-light-pink text-body text-right pr-3 py-2" style="width: 8%;">Qty</th>
     <th class="w-min-50 border-none bg-light-pink text-body text-center py-2" style="width: 8%;">Unit</th>
     <th class="w-min-50 border-none bg-light-pink text-body text-right pr-3 py-2" style="width: 10%;">Rate</th>
@@ -268,7 +267,10 @@
     <td class="py-2 align-middle">
         <div class="d-flex align-items-center gap-2 h-100">
             <select class="form-control item_id select2-single flex-grow-1" 
-                    name="goods_discription[]" id="item_id_1" data-id="1" data-modal="itemModal">
+                    name="goods_discription[]" 
+                    id="item_id_1" 
+                    data-id="1" 
+                    data-modal="itemModal">
                 <option value="">Select Item</option>
                 @foreach($items as $item_list)
                     <option value="{{ $item_list->id }}"
@@ -279,20 +281,19 @@
                 @endforeach
             </select>
         </div>
-        <input type="hidden" name="in_desc_id[]" id="in_desc_id_1">
-    </td>
-    
-    <!-- Item Description Column - CLEAN DESIGN -->
-    <td class="py-2 align-middle">
-        <div class="position-relative">
-            <textarea class="form-control form-control-sm item_description h-100" 
-                      name="item_description[]" id="item_description_1" data-id="1" 
-                      rows="2" placeholder="Item description (optional)"
-                      style="resize: none; font-size: 13px; line-height: 1.3; padding: 6px 8px; border-radius: 6px; border: 1px solid #d1d5db;"></textarea>
-            <div class="position-absolute top-0 end-0 p-1">
-                <small class="text-muted">Optional</small>
+
+        <div class="description-wrapper mt-1" data-index="0">
+            <div class="d-flex mb-1">
+                <input type="text" 
+                    name="description_lines[0][]" 
+                    class="form-control description-input" 
+                    placeholder="Enter description line">
+
+                <button type="button" class="btn btn-success add-desc ms-1">+</button>
+                <button type="button" class="btn btn-danger remove-desc ms-1">-</button>
             </div>
         </div>
+        <input type="hidden" name="in_desc_id[]" id="in_desc_id_1">
     </td>
     
     <!-- Rest of columns (Qty, Unit, Rate, Amount, Action) remain SAME -->
@@ -332,7 +333,6 @@
                     <tr class="font-14 font-heading bg-white">
                         <td></td> <!-- S.No -->
                         <td></td> <!-- Item -->
-                        <td></td> <!-- Description -->
                         <td></td> <!-- Qty -->
                         <td></td> <!-- Unit -->
 
@@ -643,6 +643,7 @@ function addMoreItem() {
 
     row_uid++;
 
+let rowIndex = row_uid - 1;
 let newRow = `
 <tr id="tr_${row_uid}" class="item-row font-14 font-heading bg-white">
     <td class="w-min-50 text-center py-3 srn">${row_uid}</td>
@@ -657,25 +658,19 @@ let newRow = `
                     style="height: 34px;">
                 <option value="">Select Item</option>
             </select>
-
         </div>
 
-        <input type="hidden" name="in_desc_id[]" id="in_desc_id_${row_uid}">
+        <div class="description-wrapper mt-1" data-index="${rowIndex}">
+            <div class="d-flex mb-1">
+                <input type="text" 
+                    name="description_lines[${rowIndex}][]"
+                    class="form-control description-input" 
+                    placeholder="Enter description line"/>
 
-    </td>
-    
-    <!-- Item Description - Professional Look -->
-    <td class="py-2 align-middle">
-        <div class="position-relative">
-            <textarea class="form-control form-control-sm item_description h-100" 
-                      name="item_description[]" id="item_description_${row_uid}" 
-                      data-id="${row_uid}" rows="2" 
-                      placeholder="Item description (optional)"
-                      style="resize: none; font-size: 13px; line-height: 1.3; padding: 6px 8px; border-radius: 6px; border: 1px solid #d1d5db; height: 68px;"></textarea>
-            <div class="position-absolute top-0 end-0 p-1">
-                <small class="text-muted">Opt.</small>
+                <button type="button" class="btn btn-success add-desc ms-1">+</button>
             </div>
         </div>
+        <input type="hidden" name="in_desc_id[]" id="in_desc_id_${row_uid}">
     </td>
     
     <td class="text-right pr-3 py-2">
@@ -1059,5 +1054,58 @@ $('#shipping_address_select').on('change', function () {
     $('#shipping_pan').val(selected.data('pan') || '');
     $('#shipping_state').val(selected.data('state') || '');
 });
+    $(document).on("click", ".add-desc", function () {
+
+        let wrapper = $(this).closest(".description-wrapper");
+        let rowIndex = wrapper.data("index"); 
+
+        let html = `
+            <div class="d-flex mb-1">
+                <input type="text" 
+                    name="description_lines[${rowIndex}][]" 
+                    class="form-control description-input">
+
+                <button type="button" class="btn btn-success add-desc ms-1">+</button>
+                <button type="button" class="btn btn-danger remove-desc ms-1">-</button>
+            </div>
+        `;
+
+        wrapper.append(html);
+
+        updateDescButtons(wrapper); 
+    });
+    $(document).on('click', '.remove-desc', function () {
+        let wrapper = $(this).closest('.description-wrapper');
+
+        $(this).closest('.d-flex').remove();
+
+        updateDescButtons(wrapper); 
+    });
+    function updateDescButtons(wrapper) {
+        let rows = wrapper.find('.d-flex');
+
+        rows.each(function (index) {
+
+            // remove old buttons
+            $(this).find('.add-desc').remove();
+            $(this).find('.remove-desc').remove();
+
+            if (rows.length === 1) {
+                $(this).append('<button type="button" class="btn btn-success add-desc ms-1">+</button>');
+            } 
+            else if (index === rows.length - 1) {
+                $(this).append('<button type="button" class="btn btn-danger remove-desc ms-1">-</button>');
+                $(this).append('<button type="button" class="btn btn-success add-desc ms-1">+</button>');
+            } 
+            else {
+                $(this).append('<button type="button" class="btn btn-danger remove-desc ms-1">-</button>');
+            }
+        });
+    }
+    $(document).ready(function () {
+        $('.description-wrapper').each(function () {
+            updateDescButtons($(this));
+        });
+    });
 </script>
 @endsection

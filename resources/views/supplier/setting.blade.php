@@ -54,6 +54,14 @@
                                                     @if(isset($selectedGroupType[$group->id]) && $selectedGroupType[$group->id]=="SPARE PART") checked @endif>
                                                 <label class="form-check-label">SPARE PART</label>
                                             </div>
+                                            <div class="form-check form-check-inline">
+                                                <input type="radio" 
+                                                    name="group_type_{{ $group->id }}" 
+                                                    value="JOB WORK"
+                                                    class="form-check-input group_type_{{ $group->id }}"
+                                                    @if(isset($selectedGroupType[$group->id]) && $selectedGroupType[$group->id]=="JOB WORK") checked @endif>
+                                                <label class="form-check-label">JOB WORK</label>
+                                            </div>
                                         </td>
                                     </tr>
                                     @endforeach

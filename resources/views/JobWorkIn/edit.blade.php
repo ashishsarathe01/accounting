@@ -104,6 +104,8 @@ Edit Job Work In – Finished Goods
             <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('jobworkin.update', $jobWork->id) }}" id="jobWorkForm">
             <input type="hidden" id="edit_id" value="{{ $jobWork->id }}">
             <input type="hidden" name="page_type" id="page_type" value="{{ $type }}">
+            <input type="hidden" id="existing_create_journal" value="{{ $jobWork->create_journal ?? 0 }}">
+            <input type="hidden" id="existing_journal_id" value="{{ $jobWork->journal_id ?? '' }}">
             @csrf
             <input type="hidden" name="voucher_prefix" value="">
 
@@ -158,7 +160,27 @@ Edit Job Work In – Finished Goods
             @endforeach
         </select>
     </div>
+    {{-- Vehicle Entry --}}
+    @if($type == 'finished')
+    <div class="col-md-4">
+        <label class="form-label">Vehicle Entry</label>
+        <select class="form-select select2-single"
+                name="vehicle_entry_id"
+                id="vehicle_entry_id">
 
+            <option value="">Select Vehicle</option>
+
+            @foreach($jobWorkVehicleEntries as $v)
+                <option value="{{ $v->id }}"
+                    data-vehicle_no="{{ $v->vehicle_no }}"
+                    {{ $jobWork->vehicle_entry_id == $v->id ? 'selected' : '' }}>
+                    {{ $v->vehicle_no }}
+                </option>
+            @endforeach
+
+        </select>
+    </div>
+    @endif
     {{-- Job Work OUT Voucher (same as Add) --}}
     <div class="col-md-4" id="outVoucherCol" style="display:none;">
         <label class="form-label">Job Work OUT Voucher</label>
@@ -193,7 +215,6 @@ Edit Job Work In – Finished Goods
 <tr class="font-12 text-body bg-light-pink">
     <th class="w-min-50 border-none bg-light-pink text-body" text-center py-2 style="width: 1%;">S.No</th>
     <th class="w-min-50 border-none bg-light-pink text-body" style="width: 22%;">Item</th>
-    <th class="w-min-50 border-none bg-light-pink text-body" style="width: 22%;">Description</th>
     <th class="w-min-50 border-none bg-light-pink text-body text-right pr-3 py-2" style="width: 8%;">Qty</th>
     <th class="w-min-50 border-none bg-light-pink text-body text-center py-2" style="width: 8%;">Unit</th>
     <th class="w-min-50 border-none bg-light-pink text-body text-right pr-3 py-2" style="width: 10%;">Rate</th>
@@ -227,12 +248,39 @@ Edit Job Work In – Finished Goods
                 @endforeach
             </select>
         </div>
-    </td>
+        @php
+            $descLines = $jobWorkDescLines[$desc->id] ?? [];
+        @endphp
 
-    <td>
-        <textarea name="item_description[]"
-            class="form-control form-control-sm item_description"
-            data-id="{{ $row }}">{{ $desc->item_description }}</textarea>
+        <div class="description-wrapper mt-1" data-index="{{ $loop->index }}">
+
+            @if(count($descLines) > 0)
+                @foreach($descLines as $line)
+                    <div class="d-flex mb-1">
+                        <input type="text"
+                            name="description_lines[{{ $loop->parent->index }}][]"
+                            value="{{ $line->line_text }}"
+                            class="form-control description-input">
+
+                        <button type="button" class="btn btn-danger remove-desc ms-1">-</button>
+
+                        @if($loop->last)
+                            <button type="button" class="btn btn-success add-desc ms-1">+</button>
+                        @endif
+                    </div>
+                @endforeach
+            @else
+                <div class="d-flex mb-1">
+                    <input type="text"
+                        name="description_lines[{{ $loop->index }}][]"
+                        class="form-control description-input">
+
+                    <button type="button" class="btn btn-success add-desc ms-1">+</button>
+                </div>
+            @endif
+
+        </div>
+
     </td>
 
     <td>
@@ -283,7 +331,6 @@ Edit Job Work In – Finished Goods
                      </tbody>
                      <tfoot>
    <tr class="font-14 font-heading bg-white">
-      <td></td>
       <td></td>
       <td></td>
       <td></td>
@@ -353,9 +400,27 @@ Edit Job Work In – Finished Goods
       </div>
    </section>
 </div>
-
+@if($type == 'finished')
+<div class="modal fade" id="journalConfirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create Journal</h5>
+            </div>
+            <div class="modal-body text-center">
+                <p>Do you want to create Journal for this Job Work?</p>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-secondary" id="journalNoBtn">No</button>
+                <button type="button" class="btn btn-primary" id="journalYesBtn">Yes</button>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
 @include('layouts.footer')
 <script>
+    let JOBWORK_VEHICLES = @json($jobWorkVehicleEntries);
     let EDIT_SELECTED_ITEMS = {};
 let EDIT_ITEM_META = {};
 let EDIT_BOOTSTRAP_DONE = false;
@@ -482,7 +547,7 @@ function addMoreItem() {
     }
 
     row_uid++;
-
+let rowIndex = row_uid - 1;
 let newRow = `
 <tr id="tr_${row_uid}" class="item-row font-14 font-heading bg-white">
     <td class="w-min-50 text-center py-3 srn">${row_uid}</td>
@@ -498,18 +563,15 @@ let newRow = `
                 <option value="">Select Item</option>
             </select>
         </div>
-    </td>
     
-    <!-- Item Description - Professional Look -->
-    <td class="py-2 align-middle">
-        <div class="position-relative">
-            <textarea class="form-control form-control-sm item_description h-100" 
-                      name="item_description[]" id="item_description_${row_uid}" 
-                      data-id="${row_uid}" rows="2" 
-                      placeholder="Item description (optional)"
-                      style="resize: none; font-size: 13px; line-height: 1.3; padding: 6px 8px; border-radius: 6px; border: 1px solid #d1d5db; height: 68px;"></textarea>
-            <div class="position-absolute top-0 end-0 p-1">
-                <small class="text-muted">Opt.</small>
+        <div class="description-wrapper mt-1" data-index="${rowIndex}">
+            <div class="d-flex mb-1">
+                <input type="text"
+                    name="description_lines[${rowIndex}][]"
+                    class="form-control description-input"
+                    placeholder="Enter description line">
+
+                <button type="button" class="btn btn-success add-desc ms-1">+</button>
             </div>
         </div>
     </td>
@@ -672,7 +734,26 @@ function recalcRowByElement(el) {
 $(document).on('change', '#party_id', function () {
     let partyId = $(this).val();
     let pageType = $('#page_type').val();
+    $('#vehicle_entry_id').val('').trigger('change');
 
+    $('input[name="vehicle_no"]').val('');
+
+    let html = '<option value="">Select Vehicle</option>';
+
+    if (partyId) {
+        let filtered = JOBWORK_VEHICLES.filter(v => v.account_id == partyId);
+
+        if (filtered.length === 0) {
+            html += '<option value="">No vehicle found</option>';
+        }
+
+        filtered.forEach(v => {
+            html += `<option value="${v.id}" data-vehicle_no="${v.vehicle_no}">
+                ${v.vehicle_no}
+            </option>`;
+        });
+    }
+    $('#vehicle_entry_id').html(html);
     $('#job_work_out_id')
         .empty()
         .append('<option value="">Select OUT Voucher</option>');
@@ -963,12 +1044,26 @@ $('#voucher_no').on('blur', function () {
 
 // ✅ FINAL SUBMIT CHECK (EDIT SAFE)
 $('#jobWorkForm').on('submit', function(e){
+    let pageType = $('#page_type').val();
+    let existingCreate = $('#existing_create_journal').val();
+    let existingJournal = $('#existing_journal_id').val();
 
+    if (pageType === 'finished' && !window.journalDecisionTaken) {
+
+        if (existingCreate == 1 && !existingJournal) {
+            return true;
+        }
+
+        if (existingCreate == 0) {
+            e.preventDefault();
+            $('#journalConfirmModal').modal('show');
+            return false;
+        }
+    }
     let voucherNo = $('#voucher_no').val();
     let partyId   = $('#party_id').val();
     let seriesNo  = $('#series_no').val();
     let editId    = $('#edit_id').val();
-    let pageType  = $('#page_type').val();
 
     let isDuplicate = false;
 
@@ -1011,5 +1106,122 @@ $('#jobWorkForm').on('submit', function(e){
     }
 
 });
+    $(document).on("click", ".add-desc", function () {
+
+        let wrapper = $(this).closest(".description-wrapper");
+        let rowIndex = wrapper.data("index");
+
+        let html = `
+            <div class="d-flex mb-1">
+                <input type="text" 
+                    name="description_lines[${rowIndex}][]" 
+                    class="form-control description-input">
+
+                <button type="button" class="btn btn-success add-desc ms-1">+</button>
+                <button type="button" class="btn btn-danger remove-desc ms-1">-</button>
+            </div>
+        `;
+
+        wrapper.append(html);
+        updateDescButtons(wrapper);
+    });
+
+    $(document).on('click', '.remove-desc', function () {
+        let wrapper = $(this).closest('.description-wrapper');
+        $(this).closest('.d-flex').remove();
+        updateDescButtons(wrapper);
+    });
+
+    function updateDescButtons(wrapper) {
+
+        let rows = wrapper.find('.d-flex');
+
+        rows.each(function (index) {
+
+            $(this).find('.add-desc').remove();
+            $(this).find('.remove-desc').remove();
+
+            if (rows.length === 1) {
+                $(this).append('<button class="btn btn-success add-desc ms-1">+</button>');
+            } 
+            else if (index === rows.length - 1) {
+                $(this).append('<button class="btn btn-danger remove-desc ms-1">-</button>');
+                $(this).append('<button class="btn btn-success add-desc ms-1">+</button>');
+            } 
+            else {
+                $(this).append('<button class="btn btn-danger remove-desc ms-1">-</button>');
+            }
+        });
+    }
+
+    $(document).ready(function () {
+        $('.description-wrapper').each(function () {
+            updateDescButtons($(this));
+        });
+    });
+    $(document).on('change', '#vehicle_entry_id', function () {
+
+        let vehicleNo = $(this).find(':selected').data('vehicle_no') || '';
+
+        if (vehicleNo) {
+            $('input[name="vehicle_no"]').val(vehicleNo);
+        }
+    });
+    $(document).ready(function () {
+
+        let partyId = $('#party_id').val();
+        let selectedVehicleId = "{{ $jobWork->vehicle_entry_id }}";
+
+        let html = '<option value="">Select Vehicle</option>';
+
+        if (partyId) {
+
+            let filtered = JOBWORK_VEHICLES.filter(v => v.account_id == partyId);
+
+            if (filtered.length === 0) {
+                html += '<option value="">No vehicle found</option>';
+            }
+
+            filtered.forEach(v => {
+
+                let selected = (v.id == selectedVehicleId) ? 'selected' : '';
+
+                html += `<option value="${v.id}" data-vehicle_no="${v.vehicle_no}" ${selected}>
+                    ${v.vehicle_no}
+                </option>`;
+            });
+        }
+
+        $('#vehicle_entry_id').html(html);
+
+        $('#vehicle_entry_id').trigger('change');
+    });
+    @if($type == 'finished')
+        $('#journalNoBtn').on('click', function () {
+            window.journalDecisionTaken = true;
+
+            $('<input>').attr({
+                type: 'hidden',
+                name: 'create_journal',
+                value: 'no'
+            }).appendTo('#jobWorkForm');
+
+            $('#journalConfirmModal').modal('hide');
+            $('#jobWorkForm').submit();
+        });
+
+        $('#journalYesBtn').on('click', function () {
+            window.journalDecisionTaken = true;
+
+            $('<input>').attr({
+                type: 'hidden',
+                name: 'create_journal',
+                value: 'yes'
+            }).appendTo('#jobWorkForm');
+
+            $('#journalConfirmModal').modal('hide');
+            $('#jobWorkForm').submit();
+        });
+    @endif
 </script>
 @endsection

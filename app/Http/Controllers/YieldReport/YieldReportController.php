@@ -313,8 +313,8 @@ class YieldReportController extends Controller
         /* ================= PRODUCTION ================= */
         $totalProduction = DB::table('deckle_processes as dp')
         ->join('item_size_stocks as iss', 'iss.deckle_id', '=', 'dp.id')
-        ->whereDate('dp.reel_generated_at', '>=', $from_date)
-        ->whereDate('dp.reel_generated_at', '<=', $to_date)
+        ->whereDate('dp.end_time_stamp', '>=', $from_date)
+        ->whereDate('dp.end_time_stamp', '<=', $to_date)
         ->where('dp.status', 4)
         ->where('dp.company_id', $companyId)
         ->where('iss.company_id', $companyId)
@@ -327,8 +327,8 @@ class YieldReportController extends Controller
                 'mi.name as item_name',
                 DB::raw('SUM(iss.weight) as total')
             )
-            ->whereDate('dp.reel_generated_at', '>=', $from_date)
-            ->whereDate('dp.reel_generated_at', '<=', $to_date)
+            ->whereDate('dp.end_time_stamp', '>=', $from_date)
+            ->whereDate('dp.end_time_stamp', '<=', $to_date)
             ->where('dp.status', 4)
             ->where('dp.company_id', $companyId)
              ->where('iss.company_id', $companyId)

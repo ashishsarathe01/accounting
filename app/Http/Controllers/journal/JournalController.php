@@ -383,6 +383,7 @@ public function index(Request $request)
       //dd($request->data);
       //dd($request->all());
       Gate::authorize('action-module',80);
+      $jobWorkId = $request->input('job_work_id');
       $spare_part_id  = $request->input('spare_part_id');
       $closePurchase  = (int) $request->input('close_purchase') === 1;
       $itemsJson      = $request->input('items');
@@ -463,6 +464,9 @@ public function index(Request $request)
       }
       $journal = new Journal;
       $journal->date = $request->input('date');
+      if (!empty($jobWorkId)) {
+         $journal->job_work_id = $jobWorkId;
+      }
       $journal->voucher_no_prefix = $voucher_no_prefix;
       $journal->voucher_no = $voucher_no;
       $journal->series_no = $request->input('series_no');
@@ -546,7 +550,14 @@ public function index(Request $request)
          }
       }
       $journal->save();
-
+      if (!empty($jobWorkId)) {
+         DB::table('job_works')
+            ->where('id', $jobWorkId)
+            ->update([
+                  'journal_id' => $journal->id,
+                  'updated_at' => now()
+            ]);
+      }
       $bill_sundrys = $request->input('bill_sundry');
       $bill_sundry_amounts = $request->input('bill_sundry_amount');
 
@@ -1762,6 +1773,7 @@ public function index(Request $request)
    public function delete(Request $request){
       Gate::authorize('action-module',54);
       $journal =  Journal::find($request->journal_id);
+      $jobWorkId = $journal->job_work_id ?? null;
       $oldSnapshot = [
          'journal' => $journal->toArray(),
          'details' => JournalDetails::where('journal_id', $journal->id)
@@ -1780,6 +1792,18 @@ public function index(Request $request)
             'action_id' => null,
             'action_type' => null
          ]);
+         if ($jobWorkId) {
+
+            DB::table('job_works')
+               ->where('id', $jobWorkId)
+               ->update([
+                     'journal_id' => null,
+                     'updated_at' => now()
+               ]);
+
+            $journal->job_work_id = null;
+            $journal->save();
+         }
       if($journal){
          JournalDetails::where('journal_id',$request->journal_id)
                         ->update(['delete'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);

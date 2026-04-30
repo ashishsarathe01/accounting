@@ -147,6 +147,9 @@ input[type=number] {
             }
         });
         $("#group").trigger('change');
+        setTimeout(function(){
+            $('#group').trigger('change');
+        }, 200);
     });
     $("#group").change(function(){
         let group_id = $(this).val();
@@ -191,13 +194,15 @@ input[type=number] {
         type: 'GET',
         success: function (response) {
 
-            if (response.group_type && response.group_type.toUpperCase().includes('SPARE')) {
+            if (response.group_type === 'SPARE PART' || response.group_type === 'JOB WORK') {
 
                 $('#item_div').addClass('d-none');
                 $('#item').prop('required', false).val('');
 
                 $('#bill_no_div').removeClass('d-none');
                 $('#amount_div').removeClass('d-none');
+                $('#bill_no').prop('required', true);
+                $('#amount').prop('required', true);
 
             } else {
 
@@ -206,6 +211,8 @@ input[type=number] {
 
                 $('#bill_no_div').addClass('d-none');
                 $('#amount_div').addClass('d-none');
+                $('#bill_no').prop('required', false);
+                $('#amount').prop('required', false);
             }
         }
     });

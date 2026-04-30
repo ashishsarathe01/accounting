@@ -1,0 +1,272 @@
+@extends('layouts.app')
+@section('content')
+<!-- header-section -->
+@include('layouts.header')
+<!-- list-view-company-section -->
+<div class="list-of-view-company ">
+    <section class="list-of-view-company-section container-fluid">
+        <div class="row vh-100">
+            @include('layouts.leftnav')
+            <!-- view-table-Content -->
+            <div class="col-md-12 ml-sm-auto  col-lg-10 px-md-4 bg-mint">
+                @if (session('error'))
+                <div class="alert alert-danger" role="alert"> {{session('error')}}
+                </div>
+                @endif
+                @if (session('success'))
+                <div class="alert alert-success" role="alert">
+                    {{ session('success') }}
+                </div>
+                @endif
+                <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
+                    <h5 class="transaction-table-title m-0 py-2">
+                        Job Work Invoice Configuration
+                    </h5>
+                    <a href="{{route('job-work-invoice-preview')}}" target="_blank"><button class="btn btn-info">Preview</button></a>
+                </div>
+                <div class="transaction-table bg-white table-view shadow-sm purchase_table">
+                    <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{route('add-job-work-invoice-configuration')}}" enctype="multipart/form-data">
+                        @csrf
+                        <div class="row">
+                            <div class="mb-3 col-md-3">
+                                <label for="company_logo_status" class="form-label font-14 font-heading">SHOW COMPANY LOGO</label>
+                                <select class="form-select form-select-lg select2-single" name="company_logo_status" id="company_logo_status" aria-label="form-select-lg example" required>
+                                    <option value="">Select Status</option>
+                                    <option value="1" @if($jobwork_configuration && $jobwork_configuration->company_logo_status==1) selected @endif>Yes</option>
+                                    <option value="0" @if($jobwork_configuration && $jobwork_configuration->company_logo_status==0) selected @endif>No</option>
+                                </select>
+                            </div>
+                            <div class="mb-4 col-md-4 company_logo_div" style="display:none">
+                                <label for="company_logo" class="form-label font-14 font-heading">ATTACH LOGO</label>
+                                <input type="file" class="form-control" id="company_logo" name="company_logo">
+                                @if($jobwork_configuration && !empty($jobwork_configuration->company_logo))
+                                    <img src="{{ URL::asset('public/images')}}/{{$jobwork_configuration->company_logo}}" style="width: 50px;">
+                                @endif
+                            </div>
+                            <div class="mb-4 col-md-4 company_logo_div" style="display:none">
+                                <label for="pricompany_logont_name" class="form-label font-14 font-heading">LOGO SHOW IN</label><br>
+                                <input type="checkbox" class="logo_position" id="logo_position_left" name="logo_position_left" @if($jobwork_configuration && $jobwork_configuration->logo_position_left==1) checked @endif> LEFT
+
+                                <input type="checkbox" class="logo_position_right" id="logo_position_right" name="logo_position_right" @if($jobwork_configuration && $jobwork_configuration->logo_position_right==1) checked @endif> RIGHT
+                            </div>
+                            <div class="clearfix"></div>
+                            <div class="mb-43 col-md-3">
+                                <label for="bank_detail_status" class="form-label font-14 font-heading">SHOW BANK DETAILS</label>
+                                <select class="form-select form-select-lg select2-single" name="bank_detail_status" id="bank_detail_status" aria-label="form-select-lg example" required>
+                                    <option value="">Select Status</option>
+                                    <option value="1" @if($jobwork_configuration && $jobwork_configuration->bank_detail_status==1) selected @endif>Yes</option>
+                                    <option value="0" @if($jobwork_configuration && $jobwork_configuration->bank_detail_status==0) selected @endif>No</option>
+                                </select>
+                            </div>
+                            <div class="mb-4 col-md-4 bank_div" style="display:none">
+                                <label for="bank_name" class="form-label font-14 font-heading">SELECT BANK</label>
+                                <select class="form-select form-select-lg select2-single" name="bank_name" id="bank_name" aria-label="form-select-lg example" required>
+                                    <option value="">Select Bank</option>
+                                    @foreach($banks as $bank)
+                                        <option value="{{$bank->id}}" @if($jobwork_configuration && $jobwork_configuration->bank_name==$bank->id) selected @endif>{{$bank->bank_name}}({{$bank->account_no}})</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="clearfix"></div>
+                            <div class="clearfix"></div>
+                            <div class="mb-3 col-md-3">
+                                <label for="term_status" class="form-label font-14 font-heading">SHOW TERMS & CONDITIONS</label>
+                                <select class="form-select form-select-lg select2-single" name="term_status" id="term_status" aria-label="form-select-lg example" required>
+                                    <option value="">Select Status</option>
+                                    <option value="1" @if($jobwork_configuration && $jobwork_configuration->term_status==1) selected @endif>Yes</option>
+                                    <option value="0" @if($jobwork_configuration && $jobwork_configuration->term_status==0) selected @endif>No</option>
+                                </select>
+                            </div>
+                            <div class="mb-8 col-md-8 term_div" style="display:none">
+                                <label for="terms" class="form-label font-14 font-heading">TERMS & CONDITIONS</label>
+                                @if($jobwork_configuration && $jobwork_configuration->terms && count($jobwork_configuration->terms)>0)
+                                    @foreach($jobwork_configuration->terms as $k=>$t)
+                                        <span style="display: flex">
+                                            <input type="text" class="form-control terms term_remove_div_{{$k}}" id="terms_{{$k}}" name="terms[]" placeholder="ENTER TERMS & CONDITIONS" data-id="{{$k}}" value="{{$t->term}}">
+
+                                            <svg style="color: red;cursor: pointer;margin-top:12px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-file-minus-fill remove_term terms term_remove_div_{{$k}}" data-id="{{$k}}" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"></path></svg>
+                                        </span>
+                                    @endforeach
+                                    @php $term_index = $k; @endphp
+                                @else
+                                @php $term_index = 1; @endphp
+                                    <input type="text" class="form-control terms" id="terms_1" name="terms[]" placeholder="ENTER TERMS & CONDITIONS" data-id="1">
+                                @endif                                
+                            </div>                            
+                            <div class="mb-1 col-md-1 term_div" style="display:none">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle add_terms" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor:pointer;margin-top: 40px;"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg>
+                            </div>
+                            <div id="append_div" class="row"></div>
+                            <div class="clearfix"></div>
+                             <div class="mb-3 col-md-12"></div>
+                            <div class="mb-3 col-md-6">
+                                <label class="form-label font-14 font-heading">CUSTOM HEADING (Above Tax Invoice)</label>
+                                <input type="text" 
+                                    class="form-control" 
+                                    name="invoice_header_text"
+                                    value="{{ $jobwork_configuration->invoice_header_text ?? '' }}" placeholder="CUSTOM HEADING (Above Tax Invoice)">
+                            </div>
+                            <div class="mb-3 col-md-3">
+                                <label class="form-label font-14 font-heading">PURCHASE ORDER DETAIL</label>
+                                <select class="form-select" name="purchase_order_status" id="purchase_order_status" required>
+                                    <option value="">Select Status</option>
+                                    <option value="1" @if($jobwork_configuration && $jobwork_configuration->purchase_order_status==1) selected @endif>Yes</option>
+                                    <option value="0" @if($jobwork_configuration && $jobwork_configuration->purchase_order_status==0) selected @endif>No</option>
+                                </select>
+                            </div>
+                            <div class="mb-3 col-md-3 purchase_order_show_ledger_div" style="display:none">
+                                <label class="form-label font-14 font-heading">PURCHASE SHOW IN LEDGER</label>
+                                <select class="form-select" name="purchase_order_info_show_in_ledger" id="purchase_order_info_show_in_ledger">
+                                    <option value="">Select Status</option>
+                                    <option value="1" @if($jobwork_configuration && $jobwork_configuration->purchase_order_info_show_in_ledger==1) selected @endif>Yes</option>
+                                    <option value="0" @if($jobwork_configuration && $jobwork_configuration->purchase_order_info_show_in_ledger==0) selected @endif>No</option>
+                                </select>
+                            </div>
+                            <div class="mb-3 col-md-3">
+                                <label class="form-label font-14 font-heading">SHOW DESCRIPTION IN SALE</label>
+                                <select class="form-select" name="show_description">
+                                    <option value="0" @if($jobwork_configuration && $jobwork_configuration->show_description==0) selected @endif>No</option>
+                                    <option value="1" @if($jobwork_configuration && $jobwork_configuration->show_description==1) selected @endif>Yes</option>
+                                </select>
+                            </div>
+                            <div class="mb-3 col-md-3">
+                                <label class="form-label font-14 font-heading">SHOW ITEM NAME IN INVOICE</label>
+                                <select class="form-select" name="show_item_name">
+                                    <option value="0" @if($jobwork_configuration && $jobwork_configuration->show_item_name==0) selected @endif>No</option>
+                                    <option value="1" @if($jobwork_configuration && $jobwork_configuration->show_item_name==1) selected @endif>Yes</option>
+                                </select>
+                            </div>
+                            <div class="mb-3 col-md-3">
+                                <label class="form-label font-14 font-heading">COMPANY NAME COLOR</label>
+                                <input type="color" 
+                                   name="company_name_color" 
+                                   class="form-control form-control-color"
+                                   value="{{ $jobwork_configuration->company_name_color ?? '#000000' }}" 
+                                   title="Choose color">
+                            </div>
+                            <div class="mb-3 col-md-3">
+                                <label class="form-label font-14 font-heading">COMPANY NAME FONT SIZE</label>
+                                <select class="form-select" name="company_name_font_size">
+                                    <option value="14px" @if($jobwork_configuration && $jobwork_configuration->company_name_font_size=='14px') selected @endif>Small (14px)</option>
+                                    <option value="16px" @if($jobwork_configuration && $jobwork_configuration->company_name_font_size=='16px') selected @endif>Normal (16px)</option>
+                                    <option value="18px" @if($jobwork_configuration && $jobwork_configuration->company_name_font_size=='18px') selected @endif>Medium (18px)</option>
+                                    <option value="20px" @if($jobwork_configuration && $jobwork_configuration->company_name_font_size=='20px') selected @endif>Large (20px)</option>
+                                    <option value="24px" @if($jobwork_configuration && $jobwork_configuration->company_name_font_size=='24px') selected @endif>Extra Large (24px)</option>
+                                </select>
+                            </div>
+                            <div class="mb-3 col-md-3">
+                                        <label class="form-label font-14 font-heading">ADDRESS COLOR</label>
+                                         <input type="color" 
+                                   name="address_color" 
+                                   class="form-control form-control-color"
+                                   value="{{ $jobwork_configuration->address_color ?? '#000000' }}" 
+                                   title="Choose color">
+                            </div>
+                            <div class="mb-3 col-md-3">
+                                <label class="form-label font-14 font-heading">SHOW SIGNATURE</label>
+                                <select class="form-select" name="signature_status" id="signature_status" required>
+                                    <option value="">Select Status</option>
+                                    <option value="1" @if($jobwork_configuration && $jobwork_configuration->signature_status==1) selected @endif>Yes</option>
+                                    <option value="0" @if($jobwork_configuration && $jobwork_configuration->signature_status==0) selected @endif>No</option>
+                                </select>
+                            </div>
+                            <div class="mb-4 col-md-4 signature_div" style="display:none">
+                                <label class="form-label font-14 font-heading">UPLOAD SIGNATURE</label>
+                                <input type="file" class="form-control" id="signature" name="signature">
+                            </div>
+
+
+                            <div class="mb-4 col-md-4 signature_div" style="display:none">
+                                @if($jobwork_configuration && !empty($jobwork_configuration->signature))
+                                    <img src="{{ URL::asset('public/images')}}/{{$jobwork_configuration->signature}}" style="width: 50px;">
+                                @endif
+                            </div>
+                        </div>
+                        <div class="text-start">
+                            <button type="submit" class="btn btn-xs-primary save_btn">SUBMIT</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+         </div>
+</div>
+</section>
+</div>
+</body>
+@include('layouts.footer')
+<script>
+    $(document).ready(function() {  
+        changeLogoStatus();
+        changeBankStatus();
+        changeTerm();
+        $("#bank_detail_status").change();
+        $("#term_status").change();
+        $("#company_logo_status").change(function(){
+            changeLogoStatus();
+        });
+        $("#bank_detail_status").change(function(){
+            changeBankStatus();
+        });
+        $("#term_status").change(function(){
+            changeTerm();
+        });
+        let term_index = {{$term_index}};
+        $(".add_terms").click(function(){
+            term_index++;
+            $("#append_div").append('<div class="mb-3 col-md-3 term_remove_div_'+term_index+'"></div><div class="mb-8 col-md-8 term_div term_remove_div_'+term_index+'" style="display:block"><input type="text" class="form-control terms" id="terms_'+term_index+'" name="terms[]" placeholder="ENTER TERMS & CONDITIONS" data-id="'+term_index+'"></div><div class="mb-1 col-md-1 term_div term_remove_div_'+term_index+'" style="display:block"><svg style="color: red;cursor: pointer;margin-top:12px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-file-minus-fill remove_term" data-id="'+term_index+'" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></div>');
+        });
+        changeSignatureStatus();
+        $("#signature_status").change(function(){
+            changeSignatureStatus();
+        });
+        function changeSignatureStatus(){
+            $(".signature_div").hide();
+            if($("#signature_status").val() == "1"){
+                $(".signature_div").show();
+            }
+        }
+        $("#purchase_order_status").change();
+    });
+    $(document).on('click','.remove_term',function(){
+        $(".term_remove_div_"+$(this).attr('data-id')).remove();
+    });  
+    function changeLogoStatus(){
+        $(".company_logo_div").hide();
+        $("#company_logo").attr("required",false);
+        if($("#company_logo_status").val()=="1"){
+            $(".company_logo_div").show();
+            //$("#company_logo").attr("required",true);
+        }
+    }
+    function changeBankStatus(){
+        $(".bank_div").hide();
+        $("#bank_name").attr("required",false);
+        if($("#bank_detail_status").val()=="1"){
+            $(".bank_div").show();
+            $("#bank_name").attr("required",true);
+        }
+    }
+    function changeLogoStatus(){
+        $(".company_logo_div").hide();
+        $("#company_logo").attr("required",false);
+        if($("#company_logo_status").val()=="1"){
+            $(".company_logo_div").show();
+            //$("#company_logo").attr("required",true);
+        }
+    }
+    function changeTerm(){
+        $(".term_div").hide();
+        if($("#term_status").val()=="1"){
+            $(".term_div").show();
+        }
+    }
+    $("#purchase_order_status").change(function(){
+        if($(this).val()==1){
+            $(".purchase_order_show_ledger_div").show();
+        }else{
+            $("#purchase_order_info_show_in_ledger").val(0);
+            $(".purchase_order_show_ledger_div").hide();
+        }
+    });
+</script>
+@endsection

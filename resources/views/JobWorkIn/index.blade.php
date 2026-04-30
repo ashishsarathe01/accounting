@@ -58,6 +58,9 @@ action="{{ $type == 'raw' ? route('jobworkin.raw') : route('jobworkin.finished')
    <th>Party Name</th>
    <th class="text-end">Amount</th>
    <th class="text-center">Action</th>
+   @if($type == 'finished')
+   <th class="text-center">Journal</th>
+   @endif
 </tr>
 </thead>
 <tbody>
@@ -88,6 +91,21 @@ action="{{ $type == 'raw' ? route('jobworkin.raw') : route('jobworkin.finished')
 </a> -->
 
    </td>
+   @if($type == 'finished')
+      <td class="text-center">
+
+         @if($row->create_journal == 0)
+            No
+
+         @elseif($row->create_journal == 1 && empty($row->journal_id))
+            Pending
+
+         @elseif($row->create_journal == 1 && $row->journal_id)
+            Complete
+         @endif
+
+      </td>
+   @endif
 </tr>
 @endforeach
 

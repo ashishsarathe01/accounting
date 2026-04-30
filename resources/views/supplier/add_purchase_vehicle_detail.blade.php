@@ -250,7 +250,7 @@ $('#group').on('change', function () {
         type: 'GET',
         success: function (response) {
 
-            if (response.group_type === 'SPARE PART') {
+            if (response.group_type === 'SPARE PART' || response.group_type === 'JOB WORK') {
                 // ❌ Item NOT required
                 // Hide Item dropdown
                 $('#item_div').addClass('d-none');

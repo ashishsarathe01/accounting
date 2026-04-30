@@ -193,7 +193,6 @@ Edit Job Work Out – Finished Goods
       <tr class="font-12 text-body bg-light-pink">
          <th class="w-min-50 border-none bg-light-pink text-body" style="width: 1%;">S.No</th>
          <th class="w-min-50 border-none bg-light-pink text-body" style="width: 22%;">Item</th>
-         <th class="w-min-50 border-none bg-light-pink text-body" style="width: 22%;">Description</th>
          <th class="w-min-50 border-none bg-light-pink text-body text-right pr-3 py-2" style="width: 8%;">Qty</th>
          <th class="w-min-50 border-none bg-light-pink text-body text-center py-2" style="width: 8%;">Unit</th>
          <th class="w-min-50 border-none bg-light-pink text-body text-right pr-3 py-2" style="width: 10%;">Rate</th>
@@ -208,7 +207,7 @@ Edit Job Work Out – Finished Goods
       @endphp
       
       @forelse($jobWorkDescriptions as $row)
-         <tr id="tr_{{ $add_more_count }}" class="item-row font-14 font-heading bg-white">
+        <tr id="tr_{{ $add_more_count }}" class="item-row font-14 font-heading bg-white">
             <td class="w-min-50 text-center py-3" id="srn_{{ $add_more_count }}">{{ $add_more_count }}</td>
             
             <!-- 🎯 ITEM COLUMN (1st column) -->
@@ -238,22 +237,41 @@ Edit Job Work Out – Finished Goods
                      @endforeach
                   </select>
                </div>
-            </td>
-            
-            <!-- 🎯 DESCRIPTION COLUMN (2nd column) - NEW! -->
-            <td class="py-2 align-middle">
-               <div class="position-relative">
-                  <textarea class="form-control form-control-sm item_description h-100" 
-                            name="item_description[]" 
-                            id="item_description_{{ $add_more_count }}" 
-                            data-id="{{ $add_more_count }}" 
-                            rows="2" 
-                            placeholder="Item description (optional)"
-                            style="resize: none; font-size: 13px; line-height: 1.3; padding: 6px 8px; border-radius: 6px; border: 1px solid #d1d5db;">{{ $row->item_description ?? '' }}</textarea>
-                  <div class="position-absolute top-0 end-0 p-1">
-                     <small class="text-muted">Optional</small>
-                  </div>
-               </div>
+                @php
+                    $descLines = $jobWorkDescLines[$row->id] ?? [];
+                @endphp
+
+                <div class="description-wrapper mt-1" data-index="{{ $loop->index }}">
+
+                    @if(count($descLines) > 0)
+                        @foreach($descLines as $line)
+                            <div class="d-flex mb-1">
+                                <input type="text"
+                                    name="description_lines[{{ $loop->parent->index }}][]"
+                                    value="{{ $line->line_text }}"
+                                    class="form-control description-input"
+                                    placeholder="Enter description line">
+
+                                <button type="button" class="btn btn-danger remove-desc ms-1">-</button>
+
+                                @if($loop->last)
+                                    <button type="button" class="btn btn-success add-desc ms-1">+</button>
+                                @endif
+                            </div>
+                        @endforeach
+                    @else
+                        <div class="d-flex mb-1">
+                            <input type="text"
+                                name="description_lines[{{ $loop->index }}][]"
+                                class="form-control description-input"
+                                placeholder="Enter description line">
+
+                            <button type="button" class="btn btn-success add-desc ms-1">+</button>
+                        </div>
+                    @endif
+
+                </div>
+
             </td>
             
             <!-- Qty -->
@@ -340,17 +358,16 @@ Edit Job Work Out – Finished Goods
                      <i class="fas fa-cog text-muted"></i>
                   </button>
                </div>
-            </td>
-            <td class="py-2 align-middle">
-               <div class="position-relative">
-                  <textarea class="form-control form-control-sm item_description h-100" 
-                            name="item_description[]" id="item_description_1" data-id="1" 
-                            rows="2" placeholder="Item description (optional)"
-                            style="resize: none; font-size: 13px; line-height: 1.3; padding: 6px 8px; border-radius: 6px; border: 1px solid #d1d5db;"></textarea>
-                  <div class="position-absolute top-0 end-0 p-1">
-                     <small class="text-muted">Optional</small>
-                  </div>
-               </div>
+                <div class="description-wrapper mt-1" data-index="0">
+                    <div class="d-flex mb-1">
+                        <input type="text"
+                            name="description_lines[0][]"
+                            class="form-control description-input"
+                            placeholder="Enter description line">
+
+                        <button type="button" class="btn btn-success add-desc ms-1">+</button>
+                    </div>
+                </div>
             </td>
             <td class="text-right pr-3 py-2">
                <input type="number" class="quantity form-control form-control-sm" id="quantity_tr_1" 
@@ -375,7 +392,6 @@ Edit Job Work Out – Finished Goods
    </tbody>
    <tfoot>
       <tr class="font-14 font-heading bg-white">
-         <td></td>
          <td></td>
          <td></td>
          <td></td>
@@ -820,20 +836,15 @@ let newRow = `
                 <i class="fas fa-cog text-muted"></i>
             </button>
         </div>
-    </td>
 
-    <!-- DESCRIPTION -->
-    <td class="py-2 align-middle">
-        <div class="position-relative">
-            <textarea class="form-control form-control-sm item_description h-100"
-                name="item_description[]"
-                id="item_description_${row_uid}"
-                data-id="${row_uid}"
-                rows="2"
-                placeholder="Item description (optional)"
-                style="resize:none;font-size:13px;line-height:1.3;padding:6px 8px;border-radius:6px;border:1px solid #d1d5db;"></textarea>
-            <div class="position-absolute top-0 end-0 p-1">
-                <small class="text-muted">Optional</small>
+        <div class="description-wrapper mt-1" data-index="${row_uid - 1}">
+            <div class="d-flex mb-1">
+                <input type="text"
+                    name="description_lines[${row_uid - 1}][]"
+                    class="form-control description-input"
+                    placeholder="Enter description line">
+
+                <button type="button" class="btn btn-success add-desc ms-1">+</button>
             </div>
         </div>
     </td>
@@ -1358,5 +1369,58 @@ $('#shipping_address_select').on('change', function () {
     $('#shipping_pan').val(selected.data('pan') || '');
 $('#shipping_state').val(selected.data('state') || '');
 });
+    $(document).on("click", ".add-desc", function () {
+
+        let wrapper = $(this).closest(".description-wrapper");
+        let rowIndex = wrapper.data("index");
+
+        let html = `
+            <div class="d-flex mb-1">
+                <input type="text" 
+                    name="description_lines[${rowIndex}][]" 
+                    class="form-control description-input">
+
+                <button type="button" class="btn btn-success add-desc ms-1">+</button>
+                <button type="button" class="btn btn-danger remove-desc ms-1">-</button>
+            </div>
+        `;
+
+        wrapper.append(html);
+        updateDescButtons(wrapper);
+    });
+
+    $(document).on("click", ".remove-desc", function () {
+        let wrapper = $(this).closest('.description-wrapper');
+        $(this).closest('.d-flex').remove();
+        updateDescButtons(wrapper);
+    });
+
+    function updateDescButtons(wrapper) {
+
+        let rows = wrapper.find('.d-flex');
+
+        rows.each(function (index) {
+
+            $(this).find('.add-desc').remove();
+            $(this).find('.remove-desc').remove();
+
+            if (rows.length === 1) {
+                $(this).append('<button type="button" class="btn btn-success add-desc ms-1">+</button>');
+            } 
+            else if (index === rows.length - 1) {
+                $(this).append('<button type="button" class="btn btn-danger remove-desc ms-1">-</button>');
+                $(this).append('<button type="button" class="btn btn-success add-desc ms-1">+</button>');
+            } 
+            else {
+                $(this).append('<button type="button" class="btn btn-danger remove-desc ms-1">-</button>');
+            }
+        });
+    }
+
+    $(document).ready(function () {
+        $('.description-wrapper').each(function () {
+            updateDescButtons($(this));
+        });
+    });
 </script>
 @endsection

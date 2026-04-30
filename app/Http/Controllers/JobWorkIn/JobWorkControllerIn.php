@@ -44,6 +44,9 @@ class JobWorkControllerIn extends Controller
                 'job_works.voucher_no_prefix',
                 'job_works.total',
                 'job_works.series_no',
+                'job_works.create_journal',
+                'job_works.journal_id',
+                'job_works.party_id',
                 DB::raw('(select account_name from accounts where accounts.id = job_works.party_id limit 1) as account_name')
             )
             ->where('job_works.company_id', $companyId)
@@ -303,7 +306,34 @@ class JobWorkControllerIn extends Controller
         }
 
         $GstSettings = $GstSettings->values();
+        $jobWorkVehicleEntries = [];
 
+        if ($type === 'finished') {
+
+            $jobWorkGroupIds = DB::table('sale-order-settings')
+                ->where('company_id', $companyId)
+                ->where('setting_type', 'PURCHASE GROUP')
+                ->where('setting_for', 'PURCHASE ORDER')
+                ->where('group_type', 'JOB WORK')
+                ->pluck('item_id')
+                ->toArray();
+
+            $jobWorkVehicleEntries = DB::table('supplier_purchase_vehicle_details')
+                ->join('accounts', 'supplier_purchase_vehicle_details.account_id', '=', 'accounts.id')
+                ->where('supplier_purchase_vehicle_details.company_id', $companyId)
+                ->whereIn('supplier_purchase_vehicle_details.group_id', $jobWorkGroupIds)
+                ->where('supplier_purchase_vehicle_details.status', 0)
+                ->select(
+                    'supplier_purchase_vehicle_details.id',
+                    'supplier_purchase_vehicle_details.vehicle_no',
+                    'supplier_purchase_vehicle_details.account_id',
+                    'supplier_purchase_vehicle_details.entry_date',
+                    'supplier_purchase_vehicle_details.gross_weight',
+                    'accounts.account_name'
+                )
+                ->orderBy('supplier_purchase_vehicle_details.entry_date', 'desc')
+                ->get();
+        }
         return view('JobWorkIn.create')->with([
             'type' => $type,
             'fy_start_date'            => $fy_start_date,
@@ -315,12 +345,13 @@ class JobWorkControllerIn extends Controller
             'transport'                => $transport,
             'production_module_status' => $production_module_status,
             'GstSettings'   => $GstSettings,
+            'jobWorkVehicleEntries' => $jobWorkVehicleEntries
         ]);
     }
 
     public function store(Request $request)
     {
-        
+        //dd($request->all());
         $request->validate([
             'series_no'         => 'required',
             'date'              => 'required',
@@ -337,6 +368,7 @@ class JobWorkControllerIn extends Controller
             'reverse_charge'  => 'nullable|in:Yes,No',
             'gr_rr_no'        => 'nullable|string|max:50',
             'station'         => 'nullable|string|max:100',
+            'vehicle_entry_id' => 'nullable|exists:supplier_purchase_vehicle_details,id',
         ]);
 
         $companyId = session('user_company_id');
@@ -352,10 +384,10 @@ class JobWorkControllerIn extends Controller
                 'job_work_type'     => 'IN',
                 'job_work_out_id'   => $request->job_work_out_id,
                 'date'              => $request->date,
-
+                'vehicle_entry_id' => $request->vehicle_entry_id,
                 'voucher_no_prefix' => $request->voucher_prefix ?? null,
                 'voucher_no'        => $request->voucher_no,
-
+                'create_journal' => $request->create_journal == 'yes' ? 1 : 0,
                 'party_id'          => $request->party_id,
                 'material_center'   => $request->material_center,
                 'total'             => $request->total,
@@ -371,7 +403,18 @@ class JobWorkControllerIn extends Controller
                 'created_by'        => $userId,
                 'created_at'        => now(),
             ]);
+            if ($request->vehicle_entry_id) {
 
+                DB::table('supplier_purchase_vehicle_details')
+                    ->where('id', $request->vehicle_entry_id)
+                    ->update([
+                        'action_type' => 'JOB WORK',
+                        'action_id'   => $jobWorkId,
+                        'status'      => 4,
+                        'updated_at'  => now()
+                    ]);
+            }
+            $description_lines = $request->description_lines ?? [];
             foreach ($request->goods_discription as $i => $value) {
 
                 if (!$value || !$request->qty[$i] || !$request->price[$i]) {
@@ -408,7 +451,6 @@ class JobWorkControllerIn extends Controller
                     'job_work_id'           => $jobWorkId,
                     'goods_discription'     => $itemId,
                     'jw_out_description_id' => $jwOutDescId,
-                    'item_description'      => $request->item_description[$i] ?? null,
                     'qty'                   => $qty,
                     'unit'                  => $request->units[$i],
                     'price'                 => $price,
@@ -419,7 +461,24 @@ class JobWorkControllerIn extends Controller
                     'created_by'            => $userId,
                     'created_at'            => now(),
                 ]);
+                if (isset($description_lines[$i]) && is_array($description_lines[$i])) {
 
+                    foreach ($description_lines[$i] as $lineIndex => $lineText) {
+
+                        if (!empty(trim($lineText))) {
+
+                            DB::table('jobwork_description_lines')->insert([
+                                'job_work_id'         => $jobWorkId,
+                                'job_work_detail_id'  => $descId,
+                                'line_text'           => $lineText,
+                                'sort_order'          => $lineIndex + 1,
+                                'company_id'          => $companyId,
+                                'created_at'          => now(),
+                                'updated_at'          => now(),
+                            ]);
+                        }
+                    }
+                }
             }
 
             if ($request->job_work_out_id) {
@@ -469,9 +528,25 @@ class JobWorkControllerIn extends Controller
 
             $type = $request->page_type ?? 'raw';
 
+            $type = $request->page_type ?? 'raw';
+
+            if ($type === 'finished' && $request->create_journal === 'yes') {
+
+                return redirect()->to(
+                    url('journal/create') .
+                    '?job_work_id=' . $jobWorkId .
+                    '&date=' . urlencode($request->date) .
+                    '&series_no=' . urlencode($request->series_no) .
+                    '&voucher_no=' . urlencode($request->voucher_no) .
+                    '&party_id=' . $request->party_id .
+                    '&vehicle_entry_id=' . ($request->vehicle_entry_id ?? '') .
+                    '&from=jobwork'
+                );
+            }
+
             return redirect()
                 ->route($type == 'raw' ? 'jobworkin.raw' : 'jobworkin.finished')
-                        ->with('success', 'Job Work IN saved successfully');
+                ->with('success', 'Job Work IN saved successfully');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -638,7 +713,12 @@ class JobWorkControllerIn extends Controller
                 ->first();
 
             if (!$config) {
-                continue;
+                $value->manual_enter_invoice_no = "";
+                $value->duplicate_voucher = "";
+                $value->blank_voucher = "";
+                $value->invoice_prefix = "";
+                $value->invoice_start_from= "";
+                continue; 
             }
 
             $voucher_no = DB::table('job_works')
@@ -681,14 +761,40 @@ class JobWorkControllerIn extends Controller
         }
 
         $GstSettings = $GstSettings->values();
-
-        return view('JobWorkIn.edit', compact(
+        $jobWorkDescLines = DB::table('jobwork_description_lines')
+            ->where('job_work_id', $id)
+            ->orderBy('sort_order')
+            ->get()
+            ->groupBy('job_work_detail_id');
+        $jobWorkVehicleEntries = DB::table('supplier_purchase_vehicle_details')
+            ->where('company_id', $companyId)
+            ->whereIn('group_id', function($q) use ($companyId){
+                $q->select('item_id')
+                ->from('sale-order-settings')
+                ->where('company_id', $companyId)
+                ->where('setting_type', 'PURCHASE GROUP')
+                ->where('setting_for', 'PURCHASE ORDER')
+                ->where('group_type', 'JOB WORK');
+            })
+            ->where(function($q) use ($id){
+                $q->where('status', 0) 
+                ->orWhere(function($q2) use ($id){
+                    $q2->where('status', 4)
+                        ->where('action_type', 'JOB WORK')
+                        ->where('action_id', $id); 
+                });
+            })
+            ->orderBy('entry_date', 'desc')
+            ->get();
+                return view('JobWorkIn.edit', compact(
             'type',
             'jobWork',
             'jobWorkDescriptions',
             'party_list',
             'items',
+            'jobWorkDescLines',
             'GstSettings',
+            'jobWorkVehicleEntries'
         ));
     }
 
@@ -708,14 +814,17 @@ class JobWorkControllerIn extends Controller
                 'party_id'           => 'required',
                 'material_center'    => 'required',
                 'goods_discription'  => 'required|array|min:1',
-                'item_description'   => 'nullable|array',
+                'description_lines'   => 'nullable|array',
                 'qty'                => 'required|array',
                 'units'              => 'required|array',
                 'price'              => 'required|array',
                 'total'              => 'required',
+                'vehicle_entry_id' => 'nullable|exists:supplier_purchase_vehicle_details,id',
             ]);
 
-
+            $oldVehicleId = DB::table('job_works')
+                ->where('id', $id)
+                ->value('vehicle_entry_id');
             DB::table('job_works')
                 ->where('id', $id)
                 ->where('company_id', $companyId)
@@ -725,6 +834,8 @@ class JobWorkControllerIn extends Controller
                     'date'             => $request->date,
                     'voucher_no'       => $request->voucher_no,
                     'party_id'         => $request->party_id,
+                    'vehicle_entry_id' => $request->vehicle_entry_id,
+                    'create_journal' => $request->create_journal === 'yes' ? 1 : DB::raw('create_journal'),
                     'job_work_out_id'  => $request->job_work_out_id,
                     'material_center'  => $request->material_center,
                     'total'            => $request->total,
@@ -737,17 +848,14 @@ class JobWorkControllerIn extends Controller
                     'updated_at'       => now(),
                 ]);
 
-            
-
-            $existingDescriptions = DB::table('job_work_descriptions')
+            DB::table('job_work_descriptions')
                 ->where('job_work_id', $id)
-                ->where('company_id', $companyId)
-                ->where('delete', 0)
-                ->get()
-                ->keyBy('id');
+                ->delete();
 
-
-            $usedItemIds = [];
+            DB::table('jobwork_description_lines')
+                ->where('job_work_id', $id)
+                ->delete();
+            $description_lines = $request->description_lines ?? [];
 
             foreach ($request->goods_discription as $index => $value) {
 
@@ -762,15 +870,12 @@ class JobWorkControllerIn extends Controller
                         $itemId    = $outRow->goods_discription;
                         $jwOutDesc = $value;
                     } else {
-                        // fallback if edit sends item_id
                         $itemId    = $value;
                         $jwOutDesc = null;
                     }
-                }
-                else {
+                } else {
 
-                    $itemId    = $value;              
-                    $mapKey    = $value;
+                    $itemId    = $value;
                     $jwOutDesc = null;
                 }
 
@@ -779,66 +884,68 @@ class JobWorkControllerIn extends Controller
                 $amount = $qty * $price;
                 $unit   = $request->units[$index];
 
-                $incomingDescId = $request->desc_id[$index] ?? null;
+                $descId = DB::table('job_work_descriptions')->insertGetId([
+                    'job_work_id'           => $id,
+                    'goods_discription'     => $itemId,
+                    'jw_out_description_id' => $jwOutDesc,
+                    'qty'                   => $qty,
+                    'unit'                  => $unit,
+                    'price'                 => $price,
+                    'amount'                => $amount,
+                    'company_id'            => $companyId,
+                    'status'                => 1,
+                    'delete'                => 0,
+                    'created_by'            => Session::get('user_id'),
+                    'created_at'            => now(),
+                ]);
 
-                if ($incomingDescId && isset($existingDescriptions[$incomingDescId])) {
+                if (isset($description_lines[$index]) && is_array($description_lines[$index])) {
 
-                    DB::table('job_work_descriptions')
-                        ->where('id', $incomingDescId)
+                    foreach ($description_lines[$index] as $lineIndex => $lineText) {
+
+                        if (!empty(trim($lineText))) {
+
+                            DB::table('jobwork_description_lines')->insert([
+                                'job_work_id'         => $id,
+                                'job_work_detail_id'  => $descId,
+                                'line_text'           => $lineText,
+                                'sort_order'          => $lineIndex + 1,
+                                'company_id'          => $companyId,
+                                'created_at'          => now(),
+                                'updated_at'          => now(),
+                            ]);
+                        }
+                    }
+                }
+            }
+            $newVehicleId = $request->vehicle_entry_id;
+
+            if ($oldVehicleId != $newVehicleId) {
+
+                if ($oldVehicleId) {
+                    DB::table('supplier_purchase_vehicle_details')
+                        ->where('id', $oldVehicleId)
+                        ->where('action_type', 'JOB WORK')
+                        ->where('action_id', $id)
                         ->update([
-                            'goods_discription' => $itemId,
-                            'item_description' => $request->item_description[$index] ?? null,
-                            'qty'              => $qty,
-                            'unit'             => $unit,
-                            'price'            => $price,
-                            'amount'           => $amount,
-                            'updated_by'       => Session::get('user_id'),
-                            'updated_at'       => now(),
+                            'action_type' => null,
+                            'action_id'   => null,
+                            'status'      => 0,
+                            'updated_at'  => now()
                         ]);
-
-                    $usedItemIds[] = $incomingDescId;
-
-                } else {
-
-                    $newId = DB::table('job_work_descriptions')->insertGetId([
-                        'job_work_id'           => $id,
-                        'goods_discription'     => $itemId,
-                        'jw_out_description_id' => $jwOutDesc,
-                        'item_description'      => $request->item_description[$index] ?? null,
-                        'qty'                   => $qty,
-                        'unit'                  => $unit,
-                        'price'                 => $price,
-                        'amount'                => $amount,
-                        'company_id'            => $companyId,
-                        'status'                => 1,
-                        'delete'                => 0,
-                        'created_by'            => Session::get('user_id'),
-                        'created_at'            => now(),
-                    ]);
-
-                    $usedItemIds[] = $newId;
                 }
 
-            }
-
-            $submittedDescIds = collect($request->desc_id ?? [])
-                ->filter()
-                ->map(fn ($v) => (int) $v)
-                ->values();
-
-            $itemsToDelete = collect($existingDescriptions)
-                ->keys()
-                ->diff($submittedDescIds);
-
-            if ($itemsToDelete->isNotEmpty()) {
-                DB::table('job_work_descriptions')
-                    ->where('job_work_id', $id)
-                    ->whereIn('id', $itemsToDelete)
-                    ->update([
-                        'status' => 0,
-                        'delete' => 1,
-                    ]);
-            }
+                if ($newVehicleId) {
+                    DB::table('supplier_purchase_vehicle_details')
+                        ->where('id', $newVehicleId)
+                        ->update([
+                            'action_type' => 'JOB WORK',
+                            'action_id'   => $id,
+                            'status'      => 4,
+                            'updated_at'  => now()
+                        ]);
+                }
+            }            
             if ($request->job_work_out_id) {
 
                 $outId = $request->job_work_out_id;
@@ -886,6 +993,44 @@ class JobWorkControllerIn extends Controller
 
             $type = $request->page_type ?? 'raw';
 
+            $type = $request->page_type ?? 'raw';
+
+            if ($type === 'finished') {
+
+                if ($request->create_journal === 'yes') {
+
+                    return redirect()->to(
+                        url('journal/create') .
+                        '?job_work_id=' . $id .
+                        '&date=' . urlencode($request->date) .
+                        '&series_no=' . urlencode($request->series_no) .
+                        '&voucher_no=' . urlencode($request->voucher_no) .
+                        '&party_id=' . $request->party_id .
+                        '&vehicle_entry_id=' . ($request->vehicle_entry_id ?? '') .
+                        '&from=jobwork'
+                    );
+                }
+
+                $existing = DB::table('job_works')
+                    ->where('id', $id)
+                    ->select('create_journal', 'journal_id')
+                    ->first();
+
+                if ($existing && $existing->create_journal == 1 && empty($existing->journal_id)) {
+
+                    return redirect()->to(
+                        url('journal/create') .
+                        '?job_work_id=' . $id .
+                        '&date=' . urlencode($request->date) .
+                        '&series_no=' . urlencode($request->series_no) .
+                        '&voucher_no=' . urlencode($request->voucher_no) .
+                        '&party_id=' . $request->party_id .
+                        '&vehicle_entry_id=' . ($request->vehicle_entry_id ?? '') .
+                        '&from=jobwork'
+                    );
+                }
+            }
+
             return redirect()
                 ->route($type == 'raw' ? 'jobworkin.raw' : 'jobworkin.finished')
                 ->with('success', 'Job Work IN updated successfully');
@@ -900,8 +1045,11 @@ class JobWorkControllerIn extends Controller
     {
         $jobWorkId = $request->job_work_id;
         $companyId = Session::get('user_company_id');
-
-        DB::transaction(function () use ($jobWorkId, $companyId) {
+        $vehicleEntryId = DB::table('job_works')
+            ->where('id', $jobWorkId)
+            ->where('company_id', $companyId)
+            ->value('vehicle_entry_id');
+        DB::transaction(function () use ($jobWorkId, $companyId, $vehicleEntryId) {
 
             DB::table('job_works')
                 ->where('id', $jobWorkId)
@@ -909,9 +1057,21 @@ class JobWorkControllerIn extends Controller
                 ->update([
                     'status' => 0,
                     'delete' => 1,
+                    'vehicle_entry_id' => null,
                 ]);
-
-            DB::table('job_work_descriptions')
+            if ($vehicleEntryId) {
+                DB::table('supplier_purchase_vehicle_details')
+                    ->where('id', $vehicleEntryId)
+                    ->where('action_type', 'JOB WORK')
+                    ->where('action_id', $jobWorkId)
+                    ->update([
+                        'action_type' => null,
+                        'action_id'   => null,
+                        'status'      => 0,
+                        'updated_at'  => now()
+                    ]);
+            }
+                DB::table('job_work_descriptions')
                 ->where('job_work_id', $jobWorkId)
                 ->where('company_id', $companyId)
                 ->update([

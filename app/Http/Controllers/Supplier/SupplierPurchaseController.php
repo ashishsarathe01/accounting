@@ -1220,6 +1220,8 @@ class SupplierPurchaseController extends Controller
                 return redirect()->route('supplier.boiler_fuel')->with('success','Vehicle Entry Saved Successfully.');
             }else if($group_type && $group_type->group_type=="SPARE PART"){
                 return redirect()->route('spare-part.vehicle.index')->with('success','Vehicle Entry Saved Successfully.');
+            }else if($group_type && $group_type->group_type=="JOB WORK"){
+                return redirect()->route('jobwork.vehicle.index')->with('success','Vehicle Entry Saved Successfully.');
             }else{
                 return redirect()->route('add-purchase-info')->with('success','Vehicle Entry Saved Successfully.');
             }
@@ -1235,6 +1237,7 @@ class SupplierPurchaseController extends Controller
                         ->where('item_id', $purchase_info->group_id)
                         ->select('group_type')
                         ->first();
+        $supplier = [];
         if($group_type && $group_type->group_type == "BOILER FUEL"){
                 $supplier = FuelSupplier::select('account_id')
                                 ->where('status', 1)
@@ -1245,7 +1248,7 @@ class SupplierPurchaseController extends Controller
                                 ->where('status', 1)
                                 ->where('company_id',Session::get('user_company_id'))
                                 ->pluck('account_id');
-        }else if($group_type && $group_type->group_type == "SPARE PART"){
+        }else if($group_type && in_array($group_type->group_type, ['SPARE PART','JOB WORK'])){
             
                 $supplier = SparePartSupplier::where('status', 1)
                                         ->Where('company_id',Session::get('user_company_id'))
@@ -1286,7 +1289,7 @@ class SupplierPurchaseController extends Controller
                         ->select('group_type')
                         ->first();
 
-        if($group_type && $group_type->group_type == "SPARE PART"){
+        if($group_type && in_array($group_type->group_type, ['SPARE PART','JOB WORK'])){
             $purchase_info->bill_no = $request->bill_no;
             $purchase_info->amount = $request->amount;
         }else{
@@ -1305,7 +1308,9 @@ class SupplierPurchaseController extends Controller
                 return redirect()->route('supplier.boiler_fuel')->with('success','Vehicle Entry Saved Successfully.');
             }else if($group_type && $group_type->group_type=="SPARE PART"){
                 return redirect()->route('spare-part.vehicle.index')->with('success','Vehicle Entry Saved Successfully.');
-            }else{
+            }else if($group_type && $group_type->group_type=="JOB WORK"){
+                    return redirect()->route('jobwork.vehicle.index')->with('success','Vehicle Entry Saved Successfully.');
+                }else{
                 return redirect()->route('add-purchase-info')->with('success','Vehicle Entry Saved Successfully.');
             }
             //return redirect()->route('add-purchase-info')->with('success','Info Updated Successfully');
@@ -1404,7 +1409,7 @@ class SupplierPurchaseController extends Controller
                     ->toArray();
 
                 $accounts = array_merge($accounts, $kraftAccounts);
-            } elseif ($item->group_type == 'SPARE PART') {
+            } elseif (in_array($item->group_type, ['SPARE PART','JOB WORK'])) {
                 // Waste kraft supplier accounts
                 $spareAccounts = SparePartSupplier::where('status', 1)
                     ->where('company_id',Session::get('user_company_id'))
@@ -2758,7 +2763,45 @@ public function getUserDefaultStatusBoilerFuel()
         compact('vehicle_entries')
     );
 }
+    public function jobWorkVehicleEntry()
+    {
+        $companyId = Session::get('user_company_id');
 
+        $jobWorkGroupIds = SaleOrderSetting::where('company_id', $companyId)
+            ->where('setting_type', 'PURCHASE GROUP')
+            ->where('setting_for', 'PURCHASE ORDER')
+            ->where('group_type', 'JOB WORK')
+            ->pluck('item_id')
+            ->toArray();
+
+        $vehicle_entries = SupplierPurchaseVehicleDetail::join(
+                'accounts',
+                'supplier_purchase_vehicle_details.account_id',
+                '=',
+                'accounts.id'
+            )
+            ->join(
+                'item_groups',
+                'supplier_purchase_vehicle_details.group_id',
+                '=',
+                'item_groups.id'
+            )
+            ->where('supplier_purchase_vehicle_details.company_id', $companyId)
+            ->whereIn('supplier_purchase_vehicle_details.group_id', $jobWorkGroupIds)
+            ->where('supplier_purchase_vehicle_details.status', 0) 
+            ->select(
+                'supplier_purchase_vehicle_details.*',
+                'accounts.account_name',
+                'item_groups.group_name'
+            )
+            ->orderBy('supplier_purchase_vehicle_details.entry_date', 'desc')
+            ->get();
+
+        return view(
+            'JobWorkIn.vehicle_index',
+            compact('vehicle_entries')
+        );
+    }
 public function getGroupType($groupId)
 {
     $companyId = Session::get('user_company_id');

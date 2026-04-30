@@ -123,6 +123,7 @@ border-radius:12px;
                <input type="hidden" name="spare_part_id" value="{{ request('spare_part_id') }}">
                <input type="hidden" name="vehicle_entry_id" value="{{ request('vehicle_entry_id') }}">
                <input type="hidden" name="close_purchase" value="{{ request('close_purchase') }}">
+               <input type="hidden" name="job_work_id" value="{{ request('job_work_id') }}">
                <div class="row">
                   <div class="mb-2 col-md-2">
                      <label for="name" class="form-label font-14 font-heading">Date</label>
@@ -626,7 +627,48 @@ border-radius:12px;
       // -------- AUTO SELECT VENDOR --------
       const params = new URLSearchParams(window.location.search);
       const accountId = params.get('account_id');
+      const dateParam       = params.get('date');
+      const seriesParam     = params.get('series_no');
+      const voucherParam    = params.get('voucher_no');
+      const partyParam      = params.get('party_id');
 
+      if (dateParam) {
+         $('#date').val(dateParam);
+      }
+
+      if (seriesParam) {
+         $('#series_no').val(seriesParam).trigger('change');
+      }
+
+      if (voucherParam) {
+         $('#voucher_no').val(voucherParam);
+         if ($('#claim_gst').val() === 'YES') {
+            $('#invoice_no').val(voucherParam);
+         }
+      }
+
+      if (partyParam) {
+         $('#account_1').val(partyParam).trigger('change');
+
+         $('#vendor').val(partyParam).trigger('change');
+      }
+      const fromParam = params.get('from');
+
+      if (fromParam === 'jobwork') {
+
+         $('#claim_gst').val('YES').trigger('change');
+
+         $('#claim_gst').prop('disabled', true);
+
+         if ($('#claim_gst_hidden').length === 0) {
+            $('<input>').attr({
+                  type: 'hidden',
+                  id: 'claim_gst_hidden',
+                  name: 'flexRadioDefault',
+                  value: 'YES'
+            }).appendTo('#frm');
+         }
+      }
       if (accountId) {
          $("#vendor").val(accountId).trigger("change");
       }

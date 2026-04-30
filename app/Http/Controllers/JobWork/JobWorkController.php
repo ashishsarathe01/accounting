@@ -10,6 +10,9 @@ use App\Models\JobWork;
 use App\Models\GstBranch;
 use App\Models\VoucherSeriesConfiguration;
 use App\Models\SaleInvoiceConfiguration;
+use App\Models\JobWorkInvoiceConfiguration;
+use App\Models\JobWorkInvoiceTermCondition;
+use App\Models\Bank;
 use Session;
 use DB;
 
@@ -348,7 +351,6 @@ class JobWorkController extends Controller
             'total' => 'required',
 
             'goods_discription' => 'required|array|min:1',
-            'item_description' => 'nullable|array',
             'qty' => 'required|array|min:1',
             'units' => 'required|array|min:1',
             'price' => 'required|array|min:1',
@@ -468,7 +470,7 @@ class JobWorkController extends Controller
             'created_at'        => now(),
         ]);
 
-
+        $description_lines = $request->description_lines ?? [];
         foreach ($request->goods_discription as $key => $itemId) {
 
             if (
@@ -486,11 +488,10 @@ class JobWorkController extends Controller
 
             $inDescId = $request->in_desc_id[$key] ?? null;
 
-            DB::table('job_work_descriptions')->insert([
+            $detailId = DB::table('job_work_descriptions')->insertGetId([
                 'job_work_id'          => $jobWorkId,
                 'goods_discription'    => $itemId,      // item_id
                 'jw_in_description_id' => $inDescId,    // IN desc id
-                'item_description'     => $request->item_description[$key] ?? null,
                 'qty'                  => $qty,
                 'unit'                 => $request->units[$key],
                 'price'                => $price,
@@ -501,6 +502,24 @@ class JobWorkController extends Controller
                 'created_by'           => Session::get('user_id'),
                 'created_at'           => now(),
             ]);
+            if (isset($description_lines[$key]) && is_array($description_lines[$key])) {
+
+                foreach ($description_lines[$key] as $lineIndex => $lineText) {
+
+                    if (!empty($lineText)) {
+
+                        DB::table('jobwork_description_lines')->insert([
+                            'job_work_id'         => $jobWorkId,
+                            'job_work_detail_id'  => $detailId,
+                            'line_text'           => $lineText,
+                            'sort_order'          => $lineIndex + 1,
+                            'company_id'          => $companyId,
+                            'created_at'          => now(),
+                            'updated_at'          => now(),
+                        ]);
+                    }
+                }
+            }
         }
 
 
@@ -752,6 +771,11 @@ class JobWorkController extends Controller
                 ->first();
 
             if (!$config) {
+                $value->manual_enter_invoice_no = "";
+                $value->duplicate_voucher = "";
+                $value->blank_voucher = "";
+                $value->invoice_prefix = "";
+                $value->invoice_start_from = "";
                 continue;
             }
 
@@ -834,7 +858,11 @@ class JobWorkController extends Controller
             ->select('id', 'voucher_no')
             ->orderBy('voucher_no')
             ->get();
-
+        $jobWorkDescLines = DB::table('jobwork_description_lines')
+            ->where('job_work_id', $id)
+            ->orderBy('sort_order')
+            ->get()
+            ->groupBy('job_work_detail_id');
         return view('JobWork.edit')->with([
             'type'              => $type,
             'jobWork'           => $jobWork,
@@ -846,6 +874,7 @@ class JobWorkController extends Controller
             'itemGroups'        => $itemGroups,
             'units'             => $units,
             'transport'         => $transport,
+            'jobWorkDescLines'         => $jobWorkDescLines,
             'GstSettings'       => $GstSettings,
             'inVouchers'        => $inVouchers,
             'selectedInId'      => $selectedInId,
@@ -1002,14 +1031,19 @@ class JobWorkController extends Controller
                 ]);
 
         $hasJobWorkIn = !empty($request->job_work_in_id);
-        $existingDescriptions = DB::table('job_work_descriptions')
-            ->where('job_work_id', $id)
-            ->where('company_id', $companyId)
-            ->where('delete', 0)
-            ->get()
-            ->keyBy('id');
+            DB::table('job_works')
+                ->where('id', $id)
+                ->update([
+                    'job_work_in_id' => $request->job_work_in_id ?? null
+                ]);
+            DB::table('job_work_descriptions')
+                ->where('job_work_id', $id)
+                ->delete();
 
-        $handledDescIds = [];
+            DB::table('jobwork_description_lines')
+                ->where('job_work_id', $id)
+                ->delete();
+                $description_lines = $request->description_lines ?? [];
 
             foreach ($request->goods_discription as $key => $itemId) {
 
@@ -1026,82 +1060,42 @@ class JobWorkController extends Controller
                 $price  = (float) $request->price[$key];
                 $amount = $qty * $price;
 
-                $incomingDescId = $request->desc_id[$key] ?? null; 
                 $inDescId = $request->in_desc_id[$key] ?? null;
 
-                if ($incomingDescId && isset($existingDescriptions[$incomingDescId])) {
-
-                    DB::table('job_work_descriptions')
-                ->where('id', $incomingDescId)
-                ->update([
-                    'goods_discription'      => $itemId,
-                    'jw_in_description_id'   => $inDescId,   
-                    'item_description'       => $request->item_description[$key] ?? '',
-                    'qty'                    => $qty,
-                    'unit'                   => $request->units[$key],
-                    'price'                  => $price,
-                    'amount'                 => $amount,
-                    'updated_at'             => now(),
+                $detailId = DB::table('job_work_descriptions')->insertGetId([
+                    'job_work_id'          => $id,
+                    'goods_discription'    => $itemId,
+                    'jw_in_description_id' => $inDescId,
+                    'qty'                  => $qty,
+                    'unit'                 => $request->units[$key],
+                    'price'                => $price,
+                    'amount'               => $amount,
+                    'company_id'           => $companyId,
+                    'status'               => 1,
+                    'delete'               => 0,
+                    'created_by'           => Session::get('user_id'),
+                    'created_at'           => now(),
                 ]);
 
+                if (isset($description_lines[$key])) {
 
-                    $descId = $incomingDescId;
-                    $handledDescIds[] = $descId;
+                    foreach ($description_lines[$key] as $lineIndex => $lineText) {
 
+                        if (!empty(trim($lineText))) {
 
-                } 
-                else {
-
-                    $descId = DB::table('job_work_descriptions')->insertGetId([
-                        'job_work_id'          => $id,
-                        'goods_discription'    => $itemId,
-                        'jw_in_description_id' => $inDescId,   
-                        'item_description'     => $request->item_description[$key] ?? '',
-                        'qty'                  => $qty,
-                        'unit'                 => $request->units[$key],
-                        'price'                => $price,
-                        'amount'               => $amount,
-                        'company_id'           => $companyId,
-                        'status'               => 1,
-                        'delete'               => 0,
-                        'created_by'           => Session::get('user_id'),
-                        'created_at'           => now(),
-                    ]);
-
-                    $handledDescIds[] = $descId;
+                            DB::table('jobwork_description_lines')->insert([
+                                'job_work_id'         => $id,
+                                'job_work_detail_id'  => $detailId,
+                                'line_text'           => $lineText,
+                                'sort_order'          => $lineIndex + 1,
+                                'company_id'          => $companyId,
+                                'created_at'          => now(),
+                                'updated_at'          => now(),
+                            ]);
+                        }
+                    }
                 }
-
             }
-            $toDelete = $existingDescriptions->keys()->diff($handledDescIds);
-
-            if ($toDelete->isNotEmpty()) {
-
-                DB::table('job_work_descriptions')
-                    ->whereIn('id', function ($q) use ($toDelete) {
-                        $q->select('jw_in_description_id')
-                        ->from('job_work_descriptions')
-                        ->whereIn('id', $toDelete)
-                        ->whereNotNull('jw_in_description_id'); 
-                    })
-                    ->update([
-                        'status' => 1,
-                        'updated_at' => now(),
-                    ]);
-
-                DB::table('job_work_descriptions')
-                    ->whereIn('id', $toDelete)
-                    ->update([
-                        'status' => 0,
-                        'delete' => 1,
-                        'updated_at' => now(),
-                    ]);
-            }
-
-            DB::table('job_works')
-                ->where('id', $id)
-                ->update([
-                    'job_work_in_id' => $request->job_work_in_id ?? null
-                ]);
             if ($hasJobWorkIn) {
 
                 $inId = $request->job_work_in_id;
@@ -1216,19 +1210,6 @@ class JobWorkController extends Controller
             'party'
         ])->findOrFail($id);
 
-        $items_detail = DB::table('job_work_descriptions as jwd')
-            ->leftJoin('manage_items', 'jwd.goods_discription', '=', 'manage_items.id')
-            ->where('jwd.job_work_id', $id)
-            ->select([
-                'manage_items.name as items_name',
-                'manage_items.hsn_code',
-                'jwd.item_description',
-                'jwd.qty',
-                'jwd.unit',
-                DB::raw('COALESCE(jwd.price, 0) as price'),
-                DB::raw('COALESCE(jwd.amount, jwd.qty * COALESCE(jwd.price, 0), 0) as amount')
-            ])
-            ->get();
 
 
 
@@ -1238,7 +1219,9 @@ class JobWorkController extends Controller
             ->select(['companies.*','states.name as sname'])
             ->first();
         
-        $configuration = SaleInvoiceConfiguration::with(['terms','banks'])->where('company_id', $companyId)->first();
+        $configuration = JobWorkInvoiceConfiguration::with(['terms'])
+            ->where('company_id', $companyId)
+            ->first();
         
         $seller_info = (object)[
             'gst_no' => $company_data->gst ?? '',
@@ -1246,8 +1229,19 @@ class JobWorkController extends Controller
             'pincode' => $company_data->pin_code ?? '',
             'sname' => $company_data->sname ?? ''
         ];
+        $lines = DB::table('jobwork_description_lines')
+            ->where('job_work_id', $id)
+            ->orderBy('sort_order')
+            ->get()
+            ->groupBy('job_work_detail_id');
 
-        return view('JobWork.view', compact('jobwork', 'items_detail', 'company_data', 'seller_info',  'configuration', 'type'));
+        foreach ($jobwork->descriptions as $desc) {
+            $desc->lines = $lines[$desc->id] ?? [];
+        }
+        $configuration = JobWorkInvoiceConfiguration::with(['terms','bank'])
+            ->where('company_id', $companyId)
+            ->first();
+        return view('JobWork.view', compact('jobwork',  'company_data', 'seller_info',  'configuration', 'type', ));
     }
 
     public function getItemSizeQuantity(Request $request)
@@ -1346,6 +1340,147 @@ class JobWorkController extends Controller
 
         return response()->json($rows);
     }
+    public function jobWorkInvoiceConfiguration(Request $request)
+    {
+        $configuration = JobWorkInvoiceConfiguration::with(['terms'])
+            ->where('company_id', Session::get('user_company_id'))
+            ->first();
 
+        $bank = Bank::where('company_id', Session::get('user_company_id'))
+            ->where('status', '1')
+            ->where('delete', '0')
+            ->get();
+
+        return view('JobWork.invoice_configuration', [
+            'jobwork_configuration' => $configuration,
+            'banks' => $bank
+        ]);
+    }
+    public function addJobWorkInvoiceConfiguration(Request $request)
+    {
+        $company_id = Session::get('user_company_id');
+
+        $check_conf = JobWorkInvoiceConfiguration::where('company_id', $company_id)->first();
+
+        if (!$check_conf) {
+
+            // LOGO
+            if ($request->company_logo_status == 1 && $request->company_logo) {
+                $logo = "logo_" . time() . '.' . $request->company_logo->extension();
+                $request->company_logo->move(public_path('images'), $logo);
+            } else {
+                $logo = "";
+            }
+
+            // SIGNATURE
+            if ($request->signature_status == 1 && $request->signature) {
+                $signature = "signature_" . time() . '.' . $request->signature->extension();
+                $request->signature->move(public_path('images'), $signature);
+            } else {
+                $signature = "";
+            }
+
+            $conf = new JobWorkInvoiceConfiguration();
+
+            $conf->company_logo_status = $request->company_logo_status;
+            $conf->company_logo = $logo;
+            $conf->logo_position_left = $request->logo_position_left ? 1 : 0;
+            $conf->logo_position_right = $request->logo_position_right ? 1 : 0;
+            $conf->bank_detail_status = $request->bank_detail_status;
+            $conf->bank_name = $request->bank_name;
+            $conf->term_status = $request->term_status;
+            $conf->invoice_header_text = $request->invoice_header_text;
+            $conf->purchase_order_status = $request->purchase_order_status;
+            $conf->purchase_order_info_show_in_ledger = $request->purchase_order_info_show_in_ledger;
+            $conf->show_description = $request->show_description ? 1 : 0;
+            $conf->show_item_name = $request->show_item_name ? 1 : 0;
+            $conf->company_name_color = $request->company_name_color;
+            $conf->company_name_font_size = $request->company_name_font_size;
+            $conf->address_color = $request->address_color;
+            $conf->signature_status = $request->signature_status;
+            $conf->signature = $signature;
+            $conf->company_id = $company_id;
+            $conf->created_at = now();
+
+            if ($conf->save()) {
+                if ($request->terms) {
+                    foreach ($request->terms as $value) {
+                        if (!empty($value)) {
+                            $term = new JobWorkInvoiceTermCondition();
+                            $term->parent_id = $conf->id;
+                            $term->term = $value;
+                            $term->status = 1;
+                            $term->company_id = $company_id;
+                            $term->save();
+                        }
+                    }
+                }
+            }
+
+        } else {
+
+
+            $logo = $check_conf->company_logo;
+            $signature = $check_conf->signature;
+
+            // LOGO UPDATE
+            if ($request->company_logo && !empty($request->company_logo)) {
+                $logo = "logo_" . time() . '.' . $request->company_logo->extension();
+                $request->company_logo->move(public_path('images'), $logo);
+            }
+
+            // SIGNATURE UPDATE
+            if ($request->signature && !empty($request->signature)) {
+                $signature = "signature_" . time() . '.' . $request->signature->extension();
+                $request->signature->move(public_path('images'), $signature);
+            }
+
+            if ($request->company_logo_status == 0) {
+                $logo = "";
+            }
+
+            $conf = JobWorkInvoiceConfiguration::find($check_conf->id);
+
+            $conf->company_logo_status = $request->company_logo_status;
+            $conf->company_logo = $logo;
+            $conf->logo_position_left = $request->logo_position_left ? 1 : 0;
+            $conf->logo_position_right = $request->logo_position_right ? 1 : 0;
+            $conf->bank_detail_status = $request->bank_detail_status;
+            $conf->bank_name = $request->bank_name;
+            $conf->term_status = $request->term_status;
+            $conf->invoice_header_text = $request->invoice_header_text;
+            $conf->purchase_order_status = $request->purchase_order_status;
+            $conf->purchase_order_info_show_in_ledger = $request->purchase_order_info_show_in_ledger;
+            $conf->show_description = $request->show_description ? 1 : 0;
+            $conf->show_item_name = $request->show_item_name ? 1 : 0;
+            $conf->company_name_font_size = $request->company_name_font_size;
+            $conf->company_name_color = $request->company_name_color;
+            $conf->address_color = $request->address_color;
+            $conf->signature_status = $request->signature_status;
+            $conf->signature = $signature;
+            $conf->updated_at = now();
+
+            if ($conf->save()) {
+
+                JobWorkInvoiceTermCondition::where('parent_id', $conf->id)->delete();
+
+                if ($request->terms) {
+                    foreach ($request->terms as $value) {
+                        if (!empty($value)) {
+                            $term = new JobWorkInvoiceTermCondition();
+                            $term->parent_id = $conf->id;
+                            $term->term = $value;
+                            $term->status = 1;
+                            $term->company_id = $company_id;
+                            $term->save();
+                        }
+                    }
+                }
+            }
+        }
+
+        return redirect('job-work-invoice-configuration')
+            ->withSuccess('Job Work Invoice Configuration Saved Successfully!');
+    }
 
 }

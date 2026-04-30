@@ -1247,4 +1247,17 @@ Route::get('/journal/print/{id}', [JournalController::class, 'print'])->name('jo
     });
 
     Route::get('item-ledger-detailed-csv', [ItemLedgerController::class, 'exportDetailedCsv']);
+
+    Route::get('job-work-invoice-configuration', [App\Http\Controllers\JobWork\JobWorkController::class, 'jobWorkInvoiceConfiguration'])
+    ->name('job-work-invoice-configuration');
+
+    Route::post('add-job-work-invoice-configuration', [App\Http\Controllers\JobWork\JobWorkController::class, 'addJobWorkInvoiceConfiguration'])
+        ->name('add-job-work-invoice-configuration');
+
+    Route::get('job-work-invoice-preview', [App\Http\Controllers\JobWork\JobWorkController::class, 'jobWorkInvoicePreview'])
+        ->name('job-work-invoice-preview');
+
+    Route::get('/jobwork/vehicle', [SupplierPurchaseController::class, 'jobWorkVehicleEntry'])
+        ->name('jobwork.vehicle.index');
+
 });
