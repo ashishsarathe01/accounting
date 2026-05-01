@@ -12,6 +12,9 @@ use App\Models\gstToken;
 use Carbon\Carbon;
 use DB;
 use Session;
+use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Support\Facades\Crypt;
+use App\Models\GstApiCredentials;
 class CommonHelper
 {
     public static function ClosingStock($date,$req_series=null)
@@ -917,6 +920,37 @@ public static function getAllChildGroupIdsOptimizeCode($group_id, $company_id)
             return date('y', strtotime($date)) . '-' . substr($year + 1, -2);
         } else {
             return substr($year - 1, -2) . '-' . date('y', strtotime($date));
+        }
+    }
+    public static function gstApiCredentials($type)
+    {
+        $credenatial = GstApiCredentials::where('type', $type)->first();
+        if ($credenatial) {
+            try {
+                $client_id = Crypt::decryptString($credenatial->client_id);
+            } catch (DecryptException $e) {
+                // handle error
+                $client_id = null;
+            }
+            try {
+                $client_secret = Crypt::decryptString($credenatial->client_secret);
+            } catch (DecryptException $e) {
+                // handle error
+                $client_secret = null;
+            }
+            if($client_id == null || $client_secret == null){
+                return json_encode(array("status" => false));
+            }
+            return json_encode(array(
+                "status" => true,
+                "base_url" => $credenatial->base_url,
+                "email_id" => $credenatial->email_id,
+                "client_id" => $client_id,
+                "client_secret" => $client_secret,
+                "ip_address" => $credenatial->ip_address
+            ));
+        } else {
+            return json_encode(array("status" => false));
         }
     }
 }
