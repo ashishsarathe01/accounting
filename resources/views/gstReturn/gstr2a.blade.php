@@ -313,10 +313,10 @@
                                         ${row.name} (${key})
                                     </a>
                                 </td>
-                                 <td style="text-align:right">
+                                 <td style="text-align:right; color:${parseFloat(row.b2b_portal) === parseFloat(row.b2b_books) ? 'blue' : ''}">
                                     ${Number(row.b2b_portal).toLocaleString('en-IN',{minimumFractionDigits:2})}
                                  </td>
-                                 <td style="text-align:right">
+                                 <td style="text-align:right; color:${parseFloat(row.b2b_portal) === parseFloat(row.b2b_books) ? 'blue' : ''}">
                                     ${Number(row.b2b_books).toLocaleString('en-IN',{minimumFractionDigits:2})}
                                  </td>
 

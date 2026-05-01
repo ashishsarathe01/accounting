@@ -2,7 +2,38 @@
 @section('content')
 
 @include('layouts.header')
+<style>
+@media print {
 
+    @page {
+        margin: 15mm;
+    }
+
+    body * {
+        visibility: hidden;
+    }
+
+    #printArea, #printArea * {
+        visibility: visible;
+    }
+
+    #printArea {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+    }
+
+    #printHeader {
+        display: block !important;
+    }
+
+    tr[style*="display: none"] {
+        display: none !important;
+    }
+
+}
+</style>
 <div class="list-of-view-company">
 <section class="list-of-view-company-section container-fluid">
 <div class="row vh-100">
@@ -48,6 +79,9 @@
                         Setting
                     </button>
                 </a>
+                <button type="button" onclick="printReport()" class="btn btn-sm btn-success">
+                    Print
+                </button>
             </div>
 
         </div>
@@ -56,8 +90,13 @@
 </div>
 
 {{-- REPORT TABLE --}}
-<div class="bg-white table-view shadow-sm" style="overflow-x:auto;">
-
+<div id="printArea" class="bg-white table-view shadow-sm">
+    <div id="printHeader" style="display:none; text-align:center; margin-bottom:10px;">
+        <h3 style="margin:0;">Yield Report</h3>
+        <p style="margin:0;">
+            From: {{ $from_date }} To: {{ $to_date }}
+        </p>
+    </div>
 <table class="table table-bordered table-striped m-0">
 
     <thead>
@@ -69,262 +108,109 @@
 
     <tbody>
 
-        <tr>
+        <tr onclick="toggleRow('productionRow')" style="cursor:pointer;">
             <td><strong>Total Production</strong></td>
             <td style="text-align:right;">
-                <a href="javascript:void(0)" onclick="openProductionModal()">
-                    {{ number_format($totalProduction ?? 0, 2) }}
-                </a>
+                {{ number_format($totalProduction ?? 0, 2) }}
             </td>
         </tr>
-
-        <tr>
+        <tr id="productionRow" style="display:none;">
+            <td colspan="2">
+                <table class="table table-bordered mb-0">
+                    @foreach($productionDetails as $row)
+                    <tr>
+                        <td>{{ $row->item_name }}</td>
+                        <td style="text-align:right;">
+                            {{ number_format($row->total, 2) }}
+                        </td>
+                    </tr>
+                    @endforeach
+                </table>
+            </td>
+        </tr>
+        <tr onclick="toggleRow('consumptionRow')" style="cursor:pointer;">
             <td><strong>Consumed Weight</strong></td>
             <td style="text-align:right;">
-                <a href="javascript:void(0)" onclick="openConsumptionModal()">
-                    {{ number_format($totalAdjustedConsumption ?? 0, 2) }}
-                </a>
+                {{ number_format($totalAdjustedConsumption ?? 0, 2) }}
             </td>
         </tr>
-
-        <tr>
-            <td><strong>Yield Loss</strong></td>
-            <td style="text-align:right;">
-                <a href="javascript:void(0)" onclick="openYieldLossModal()">
-                    {{ number_format($yieldLoss ?? 0, 2) }}
-                </a>
-            </td>
-        </tr>
-
-        <tr>
-            <td><strong>Total Waste</strong></td>
-            <td style="text-align:right;">
-                <a href="javascript:void(0)" onclick="openWasteModal()">
-                    {{ number_format($totalWaste ?? 0, 2) }}
-                </a>
-            </td>
-        </tr>
-
-        <tr class="bg-light">
-            <td><strong>Yield Loss %</strong></td>
-            <td style="text-align:right;">
-                <a href="javascript:void(0)" onclick="openYieldPercentModal()">
-                    {{ number_format($yieldPercent ?? 0, 2) }} %
-                </a>
-            </td>
-        </tr>
-
-    </tbody>
-
-</table>
-
-</div>
-
-</div>
-</div>
-</section>
-</div>
-<div class="modal fade" id="productionModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-
-            <div class="modal-header">
-                <h5 class="modal-title">Production Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-
-            <div class="modal-body">
-
-                <table class="table table-bordered">
+        <tr id="consumptionRow" style="display:none;">
+            <td colspan="2">
+                <table class="table table-bordered mb-0">
                     <thead>
                         <tr>
                             <th>Item</th>
-                            <th style="text-align:right;">Weight</th>
+                            <th>Total</th>
+                            <th>%</th>
+                            <th>Adjusted</th>
                         </tr>
                     </thead>
-
                     <tbody>
-
-                        @foreach($productionDetails as $row)
-                        <tr>
-                            <td>{{ $row->item_name }}</td>
-                            <td style="text-align:right;">
-                                {{ number_format($row->total, 2) }}
-                            </td>
-                        </tr>
-                        @endforeach
-
-                        <tr class="bg-light">
-                            <td><strong>Total</strong></td>
-                            <td style="text-align:right;">
-                                <strong>{{ number_format($totalProduction, 2) }}</strong>
-                            </td>
-                        </tr>
-
-                    </tbody>
-                </table>
-
-            </div>
-
-        </div>
-    </div>
-</div>
-<div class="modal fade" id="consumptionModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-
-            <div class="modal-header">
-                <h5 class="modal-title">Consumption Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-
-            <div class="modal-body">
-
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Item</th>
-                            <th style="text-align:right;">Total Weight</th>
-                            <th style="text-align:right;">%</th>
-                            <th style="text-align:right;">Adjusted</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-
                         @foreach($consumptionDetails as $row)
                         @php
                             $adjusted = ($row->total * $row->percent) / 100;
                         @endphp
                         <tr>
                             <td>{{ $row->item_name }}</td>
-                            <td style="text-align:right;">
-                                {{ number_format($row->total, 2) }}
-                            </td>
-                            <td style="text-align:right;">
-                                {{ number_format($row->percent, 2) }}%
-                            </td>
-                            <td style="text-align:right;">
-                                {{ number_format($adjusted, 2) }}
-                            </td>
+                            <td>{{ number_format($row->total, 2) }}</td>
+                            <td>{{ number_format($row->percent, 2) }}%</td>
+                            <td>{{ number_format($adjusted, 2) }}</td>
                         </tr>
                         @endforeach
-
-                        <tr class="bg-light">
-                            <td><strong>Total</strong></td>
-                            <td></td>
-                            <td></td>
-                            <td style="text-align:right;">
-                                <strong>{{ number_format($totalAdjustedConsumption, 2) }}</strong>
-                            </td>
-                        </tr>
-
                     </tbody>
                 </table>
-
-            </div>
-
-        </div>
-    </div>
-</div>
-<div class="modal fade" id="yieldLossModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-
-            <div class="modal-header">
-                <h5 class="modal-title">Yield Loss Calculation</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-
-            <div class="modal-body">
-
-                <table class="table table-bordered">
-
+            </td>
+        </tr>
+        <tr onclick="toggleRow('yieldLossRow')" style="cursor:pointer;">
+            <td><strong>Yield Loss</strong></td>
+            <td style="text-align:right;">
+                {{ number_format($yieldLoss ?? 0, 2) }}
+            </td>
+        </tr>
+        <tr id="yieldLossRow" style="display:none;">
+            <td colspan="2">
+                <table class="table table-bordered mb-0">
                     <tr>
                         <td>Total Production</td>
-                        <td style="text-align:right;">
-                            {{ number_format($totalProduction, 2) }}
-                        </td>
+                        <td style="text-align:right;">{{ number_format($totalProduction, 2) }}</td>
                     </tr>
-
                     <tr>
-                        <td>Consumed Weight</td>
+                        <td>Consumed</td>
+                        <td style="text-align:right;">{{ number_format($totalAdjustedConsumption, 2) }}</td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr onclick="toggleRow('wasteRow')" style="cursor:pointer;">
+            <td><strong>Total Waste</strong></td>
+            <td style="text-align:right;">
+                    {{ number_format($totalWaste ?? 0, 2) }}
+            </td>
+        </tr>
+        <tr id="wasteRow" style="display:none;">
+            <td colspan="2">
+                <table class="table table-bordered mb-0">
+                    @foreach($wasteDetails as $row)
+                    <tr>
+                        <td>{{ $row->item_name }}</td>
                         <td style="text-align:right;">
-                            {{ number_format($totalAdjustedConsumption, 2) }}
+                            {{ number_format($row->total, 2) }}
                         </td>
                     </tr>
-
-                    <tr class="bg-light">
-                        <td><strong>Yield Loss</strong></td>
-                        <td style="text-align:right;">
-                            <strong>{{ number_format($yieldLoss, 2) }}</strong>
-                        </td>
-                    </tr>
-
+                    @endforeach
                 </table>
-
-            </div>
-
-        </div>
-    </div>
-</div>
-<div class="modal fade" id="wasteModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-
-            <div class="modal-header">
-                <h5 class="modal-title">Waste Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-
-            <div class="modal-body">
-
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Item</th>
-                            <th style="text-align:right;">Waste Weight</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-
-                        @foreach($wasteDetails as $row)
-                        <tr>
-                            <td>{{ $row->item_name }}</td>
-                            <td style="text-align:right;">
-                                {{ number_format($row->total, 2) }}
-                            </td>
-                        </tr>
-                        @endforeach
-
-                        <tr class="bg-light">
-                            <td><strong>Total</strong></td>
-                            <td style="text-align:right;">
-                                <strong>{{ number_format($totalWaste, 2) }}</strong>
-                            </td>
-                        </tr>
-
-                    </tbody>
-                </table>
-
-            </div>
-
-        </div>
-    </div>
-</div>
-<div class="modal fade" id="yieldPercentModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-
-            <div class="modal-header">
-                <h5 class="modal-title">Yield Loss % Calculation</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-
-            <div class="modal-body">
-
-                <table class="table table-bordered">
+            </td>
+        </tr>
+        <tr class="bg-light" onclick="toggleRow('yieldPercentRow')" style="cursor:pointer;">
+            <td><strong>Yield Loss %</strong></td>
+            <td style="text-align:right;">
+                {{ number_format($yieldPercent ?? 0, 2) }} %
+            </td>
+            </td>
+        </tr>
+        <tr id="yieldPercentRow" style="display:none;" onclick="event.stopPropagation();">
+            <td colspan="2">
+                <table class="table table-bordered mb-0">
 
                     <tr>
                         <td>Yield Loss</td>
@@ -355,28 +241,33 @@
                     </tr>
 
                 </table>
+            </td>
+        </tr>
+    </tbody>
 
-            </div>
+</table>
 
-        </div>
-    </div>
 </div>
+
+</div>
+</div>
+</section>
+</div>
+
 @include('layouts.footer')
 <script>
-function openProductionModal() {
-    $('#productionModal').modal('show');
+
+function toggleRow(id) {
+    let row = document.getElementById(id);
+
+    if (row.style.display === "none") {
+        row.style.display = "table-row";
+    } else {
+        row.style.display = "none";
+    }
 }
-function openConsumptionModal() {
-    $('#consumptionModal').modal('show');
-}
-function openYieldLossModal() {
-    $('#yieldLossModal').modal('show');
-}
-function openWasteModal() {
-    $('#wasteModal').modal('show');
-}
-function openYieldPercentModal() {
-    $('#yieldPercentModal').modal('show');
+function printReport() {
+    window.print();
 }
 </script>
 @endsection
