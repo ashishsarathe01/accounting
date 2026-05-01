@@ -87,13 +87,23 @@
                <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm gst_head"></h5>
                <table class="table table-ordered bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm gst_table">
                   <thead>
-                    <tr>
-                        <th>Account Name</th>
-                        <th style="text-align:right">GSTR-2A</th>
+                     <tr>
+                        <th rowspan="2">Account Name</th>
+
+                        <th colspan="2" style="text-align:center">B2B INV</th>
+
+                        <th colspan="2" style="text-align:center">B2B CDNR</th>
+
+                        <th rowspan="2" style="text-align:right">Difference</th>
+                     </tr>
+                     <tr>
+                        <th style="text-align:right">Purchase</th>
                         <th style="text-align:right">Books</th>
-                        <th style="text-align:right">Difference</th>
-                    </tr>
-                    </thead>
+
+                        <th style="text-align:right">Dr/Cr</th>
+                        <th style="text-align:right">Books</th>
+                     </tr>
+                  </thead>
                     <tbody style="font-size: 15px;">
                      
                     </tbody>
@@ -285,9 +295,13 @@
                   }else if(obj.message=="GSTR2A"){
                      $(".gst_head").html('GSTR2A - Last Created Date : '+obj.last_created_date+' - <button type="button" class="btn btn-xs-primary new_data_btn">Refresh</button>');
                      let html = "";
-                    let total_portal = 0;
-                    let total_book = 0;
-                    let total_diff = 0;
+                     let total_b2b_portal = 0;
+                     let total_b2b_books = 0;
+
+                     let total_cdnr_portal = 0;
+                     let total_cdnr_books = 0;
+
+                     let total_diff = 0;
                     for (let key in obj.data) {
                         let row = obj.data[key];
                         let baseUrl = "{{ url('/gstr2a-all-info') }}";
@@ -299,31 +313,46 @@
                                         ${row.name} (${key})
                                     </a>
                                 </td>
-                                <td style="text-align:right">
-                                    ${Number(row.portal_amt).toLocaleString('en-IN',{minimumFractionDigits:2})}
-                                </td>
-                                <td style="text-align:right">
-                                    ${Number(row.book_amt).toLocaleString('en-IN',{minimumFractionDigits:2})}
-                                </td>
+                                 <td style="text-align:right">
+                                    ${Number(row.b2b_portal).toLocaleString('en-IN',{minimumFractionDigits:2})}
+                                 </td>
+                                 <td style="text-align:right">
+                                    ${Number(row.b2b_books).toLocaleString('en-IN',{minimumFractionDigits:2})}
+                                 </td>
+
+                                 <td style="text-align:right">
+                                    ${Number(row.cdnr_portal).toLocaleString('en-IN',{minimumFractionDigits:2})}
+                                 </td>
+                                 <td style="text-align:right">
+                                    ${Number(row.cdnr_books).toLocaleString('en-IN',{minimumFractionDigits:2})}
+                                 </td>
                                 <td style="text-align:right; color:${row.diff_amt!=0 ? 'red' : 'green'}">
                                     ${Number(row.diff_amt).toLocaleString('en-IN',{minimumFractionDigits:2})}
                                 </td>
                             </tr>
                         `;
                     
-                        total_portal += parseFloat(row.portal_amt);
-                        total_book   += parseFloat(row.book_amt);
+                        total_b2b_portal += parseFloat(row.b2b_portal);
+                        total_b2b_books  += parseFloat(row.b2b_books);
+
+                        total_cdnr_portal += parseFloat(row.cdnr_portal);
+                        total_cdnr_books  += parseFloat(row.cdnr_books);
                         total_diff   += parseFloat(row.diff_amt);
                     }
 
                     html += `
-                    <tr>
+                     <tr>
                         <th>Total</th>
-                        <th style="text-align:right">${Number(total_portal).toLocaleString('en-IN',{minimumFractionDigits:2})}</th>
-                        <th style="text-align:right">${Number(total_book).toLocaleString('en-IN',{minimumFractionDigits:2})}</th>
+
+                        <th style="text-align:right">${Number(total_b2b_portal).toLocaleString('en-IN',{minimumFractionDigits:2})}</th>
+                        <th style="text-align:right">${Number(total_b2b_books).toLocaleString('en-IN',{minimumFractionDigits:2})}</th>
+
+                        <th style="text-align:right">${Number(total_cdnr_portal).toLocaleString('en-IN',{minimumFractionDigits:2})}</th>
+                        <th style="text-align:right">${Number(total_cdnr_books).toLocaleString('en-IN',{minimumFractionDigits:2})}</th>
+
                         <th style="text-align:right">${Number(total_diff).toLocaleString('en-IN',{minimumFractionDigits:2})}</th>
-                    </tr>
-                    `;
+                     </tr>
+                     `;
 
                     $(".gst_table tbody").html(html);
                     $("#gst_div").show();

@@ -395,27 +395,31 @@ class GSTR2AController extends Controller
                             + $journal_book_data
                             + $sale_return_book_data
                             - $purchase_return_data;
+                        $b2b_books = $purchase_book_data + $journal_book_data;
+                        $cdnr_books = $sale_return_book_data - $purchase_return_data;
         
                         /* ---------------- MERGE ---------------- */
         
                         if (isset($gstr2a_arr[$b2b->ctin])) {
-                            $gstr2a_arr[$b2b->ctin]['portal_amt'] += $portal_amt;
-                            $gstr2a_arr[$b2b->ctin]['book_amt']   += $book_amt;
+                            $gstr2a_arr[$b2b->ctin]['b2b_portal'] += $portal_amt;
+
+                            $gstr2a_arr[$b2b->ctin]['b2b_books']  += $b2b_books;
+                            $gstr2a_arr[$b2b->ctin]['cdnr_books'] += $cdnr_books;
                         } else {
                             $gstr2a_arr[$b2b->ctin] = [
-                                'name'        => $account_name,
-                                'portal_amt'  => round($portal_amt, 2),
-                                'book_amt'    => round($book_amt, 2),
-                                'diff_amt'    => 0
+                                'name' => $account_name,
+
+                                'b2b_portal' => round($portal_amt, 2),
+                                'b2b_books'  => round($b2b_books, 2),
+
+                                'cdnr_portal' => 0,
+                                'cdnr_books'  => round($cdnr_books, 2),
+
+                                'diff_amt' => 0
                             ];
                         }
 
-                        $gstr2a_arr[$b2b->ctin]['diff_amt'] =
-                        round(
-                            $gstr2a_arr[$b2b->ctin]['portal_amt']
-                            - $gstr2a_arr[$b2b->ctin]['book_amt'],
-                            2
-                        );
+                        
                     }
             }
 
@@ -436,15 +440,28 @@ class GSTR2AController extends Controller
                     }
                 }
 
-                if (isset($gstr2a_arr[$b2b->ctin])) {
-                    $gstr2a_arr[$b2b->ctin]['portal_amt'] += $portal_amt;
-                    $gstr2a_arr[$b2b->ctin]['diff_amt'] =
-                        round(
-                            $gstr2a_arr[$b2b->ctin]['portal_amt']
-                            - $gstr2a_arr[$b2b->ctin]['book_amt'],
-                            2
-                        );
+                if (!isset($gstr2a_arr[$b2b->ctin])) {
+
+                    $account = Accounts::select('account_name')
+                        ->where('company_id', Session::get('user_company_id'))
+                        ->where('gstin', $b2b->ctin)
+                        ->first();
+
+                    $account_name = $account ? $account->account_name : $b2b->ctin;
+
+                    $gstr2a_arr[$b2b->ctin] = [
+                        'name' => $account_name,
+
+                        'b2b_portal' => 0,
+                        'b2b_books'  => 0,
+
+                        'cdnr_portal' => 0,
+                        'cdnr_books'  => 0,
+
+                        'diff_amt' => 0
+                    ];
                 }
+                $gstr2a_arr[$b2b->ctin]['cdnr_portal'] += $portal_amt;
             }
         }
     }
@@ -454,7 +471,16 @@ class GSTR2AController extends Controller
     });
 
     $last_created_date = Carbon::parse($last_created_date)->format('d-m-Y H:i:s');
+        foreach ($gstr2a_arr as $ctin => $row) {
 
+            $total_portal = $row['b2b_portal'] + $row['cdnr_portal'];
+            $total_books  = $row['b2b_books']  + $row['cdnr_books'];
+
+            $gstr2a_arr[$ctin]['diff_amt'] = round(
+                $total_portal - $total_books,
+                2
+            );
+        }
     return json_encode([
         'status' => true,
         'message' => 'GSTR2A',
