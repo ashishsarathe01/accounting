@@ -1141,16 +1141,21 @@
                                   </div>
                                </li>
                                @endcan
-                               
+                                @can('view-module', 266)
                                <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue" style="border: 1px solid #007bff;">
-                                          <a href="{{ route('machine.time.loss') }}" class="text-blue">Machine Time Loss</a>
-                                       </li>
-                                <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue" style="border: 1px solid #007bff;">
-                                    <a href="{{ route('dara.report') }}" class="text-blue">Dara Report</a>
-                                </li>
-                                <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue" style="border: 1px solid #007bff;">
-                                    <a href="{{ route('yield-report.report') }}" class="text-blue">Yield Report</a>
-                                </li>
+                                  <a href="{{ route('machine.time.loss') }}" class="text-blue">Machine Time Loss</a>
+                               </li>
+                               @endcan
+                               @can('view-module', 264)
+                                    <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue" style="border: 1px solid #007bff;">
+                                        <a href="{{ route('dara.report') }}" class="text-blue">Dara Report</a>
+                                    </li>
+                                @endcan
+                                @can('view-module', 265)
+                                    <li class="font-14 fw-500 m-0 py-12 px-2 bg-white border-radius-4 clickable-row-blue" style="border: 1px solid #007bff;">
+                                        <a href="{{ route('yield-report.report') }}" class="text-blue">Yield Report</a>
+                                    </li>
+                                @endcan
                         </ul>
                      </div>
                   </div>
@@ -1213,6 +1218,9 @@
                     </div>
                     <div id="jobWorkCollapse" class="collapse" aria-labelledby="jobWorkHeading" data-bs-parent="#accordion">
                         <ul class="nav flex-column">
+                           <a href="{{ route('jobwork.vehicle.index') }}">
+                                   <li class="font-14  fw-500 m-0 py-12 px-2 text-white  border-radius-4 clickable-row">Vehicle Entry</li>
+                                </a>
                             @can('view-module', 258)
                                 <a href="{{ route('jobwork.out.raw') }}">
                                    <li class="font-14  fw-500 m-0 py-12 px-2 text-white  border-radius-4 clickable-row">Job Work Out (RAW)</li>
@@ -1256,7 +1264,7 @@
          
          
           <?php
-                     if (Session::get('user_id') == '1' || Session::get('user_id') == '3') { ?>
+                     if (Session::get('user_id') == '1' || Session::get('user_id') == '123') { ?>
                                         <div class="card bg-blue pt-2 px-2 rounded-0 aside-bottom-divider">
                           <div class="card-header py-12 px-2 border-0 d-flex rounded-0" id="RetailManagementHeading">
                             
@@ -1284,6 +1292,10 @@
                                   Manage Rate
                                 </li>
                               </a>
+                              
+                                <a href="{{ route('profit.report') }}" class="btn btn-success">
+    <i class="fa fa-chart-line"></i> Profit Report
+</a>
                             </ul>
                         
                           </div>

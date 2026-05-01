@@ -64,8 +64,8 @@ class SalesController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-   public function index(Request $request)
-{
+    public function index(Request $request)
+    {
     Gate::authorize('action-module', 10);
     $input = $request->all();
     // Initialize dates
@@ -91,6 +91,13 @@ class SalesController extends Controller
         $from . '-04', $from . '-05', $from . '-06', $from . '-07', $from . '-08', $from . '-09',
         $from . '-10', $from . '-11', $from . '-12', $to . '-01', $to . '-02', $to . '-03'
     ];
+    $maxVoucher = DB::table('sales')
+    ->where('company_id', $companyId)
+    ->where('delete', '0')
+    ->where('financial_year',$financial_year )
+    ->where('entry_source', 1)
+    ->max(DB::raw('CAST(voucher_no AS UNSIGNED)'));
+    
     // Base query
     $query = DB::table('sales')
         ->select(
@@ -155,7 +162,8 @@ class SalesController extends Controller
         ->with('sale', $sale)
         ->with('month_arr', $month_arr)
         ->with('from_date', $from_date)
-        ->with('to_date', $to_date);
+        ->with('to_date', $to_date)
+         ->with('maxVoucher', $maxVoucher);
 }
 
     /**
@@ -164,11 +172,14 @@ class SalesController extends Controller
      * @return \Illuminate\Http\Response
      */
 
-   public function create(Request $request){
+    public function create(Request $request){
       Gate::authorize('action-module',85);
       $financial_year = Session::get('default_fy');
       [$startYY, $endYY] = explode('-', $financial_year);
-
+      $current_financial_year = CommonHelper::getFinancialYear(date('Y-m-d'));
+      if($financial_year!=$current_financial_year){
+            //return $this->failedMessage('This entry does not belong to the current financial year!','sale');
+      }
       $fy_start_date = '20' . $startYY . '-04-01'; 
       $fy_end_date   = '20' . $endYY   . '-03-31';   
       $companyData = Companies::where('id', Session::get('user_company_id'))->first();
@@ -507,9 +518,13 @@ class SalesController extends Controller
          }
       }
     if(Session::get('user_company_id')==37 || Session::get('user_company_id')==1){
-      return view('addsaleretail')->with('fy_start_date', $fy_start_date)->with('config', $config)->with('itemGroups', $itemGroups)->with('accountunit', $accountunit)->with('series', $series)->with('state_list', $state_list)->with('allowedAccountGroups', $allowedAccountGroups)->with('credit_days', $credit_days)->with('fy_end_date', $fy_end_date)->with('party_list', $party_list)->with('billsundry', $billsundry)->with('bill_date', $bill_date)->with('GstSettings', $GstSettings)->with('item', $item)->with('bill_to_id', $bill_to_id)->with('shipp_to_id', $shipp_to_id)->with('freight', $freight)->with('sale_order_id', $sale_order_id)->with('sale_order_items',$sale_order_items)->with('sale_enter_data',$sale_enter_data)->with('new_order',$new_order)->with('production_module_status',$production_module_status)->with('bill_to_address_id',$bill_to_address_id)->with('shipp_to_address_id',$shipp_to_address_id)->with('shipp_to_other_address',$shipp_to_other_address)->with('shipp_to_other_pincode',$shipp_to_other_pincode)->with('cash_group_ids',$cash_group_ids);
+      return view('addsaleretail')
+      ->with('current_financial_year',$current_financial_year)
+      ->with('fy_start_date', $fy_start_date)->with('config', $config)->with('itemGroups', $itemGroups)->with('accountunit', $accountunit)->with('series', $series)->with('state_list', $state_list)->with('allowedAccountGroups', $allowedAccountGroups)->with('credit_days', $credit_days)->with('fy_end_date', $fy_end_date)->with('party_list', $party_list)->with('billsundry', $billsundry)->with('bill_date', $bill_date)->with('GstSettings', $GstSettings)->with('item', $item)->with('bill_to_id', $bill_to_id)->with('shipp_to_id', $shipp_to_id)->with('freight', $freight)->with('sale_order_id', $sale_order_id)->with('sale_order_items',$sale_order_items)->with('sale_enter_data',$sale_enter_data)->with('new_order',$new_order)->with('production_module_status',$production_module_status)->with('bill_to_address_id',$bill_to_address_id)->with('shipp_to_address_id',$shipp_to_address_id)->with('shipp_to_other_address',$shipp_to_other_address)->with('shipp_to_other_pincode',$shipp_to_other_pincode)->with('cash_group_ids',$cash_group_ids);
       }
-      else{return view('addSale')->with('fy_start_date', $fy_start_date)->with('config', $config)->with('itemGroups', $itemGroups)->with('accountunit', $accountunit)->with('series', $series)->with('state_list', $state_list)->with('allowedAccountGroups', $allowedAccountGroups)->with('credit_days', $credit_days)->with('fy_end_date', $fy_end_date)->with('party_list', $party_list)->with('billsundry', $billsundry)->with('bill_date', $bill_date)->with('GstSettings', $GstSettings)->with('item', $item)->with('bill_to_id', $bill_to_id)->with('shipp_to_id', $shipp_to_id)->with('freight', $freight)->with('sale_order_id', $sale_order_id)->with('sale_order_items',$sale_order_items)->with('sale_enter_data',$sale_enter_data)->with('new_order',$new_order)->with('production_module_status',$production_module_status)->with('bill_to_address_id',$bill_to_address_id)->with('shipp_to_address_id',$shipp_to_address_id)->with('shipp_to_other_address',$shipp_to_other_address)->with('shipp_to_other_pincode',$shipp_to_other_pincode)->with('cash_group_ids',$cash_group_ids);
+      else{return view('addSale')
+      ->with('current_financial_year',$current_financial_year)
+      ->with('fy_start_date', $fy_start_date)->with('config', $config)->with('itemGroups', $itemGroups)->with('accountunit', $accountunit)->with('series', $series)->with('state_list', $state_list)->with('allowedAccountGroups', $allowedAccountGroups)->with('credit_days', $credit_days)->with('fy_end_date', $fy_end_date)->with('party_list', $party_list)->with('billsundry', $billsundry)->with('bill_date', $bill_date)->with('GstSettings', $GstSettings)->with('item', $item)->with('bill_to_id', $bill_to_id)->with('shipp_to_id', $shipp_to_id)->with('freight', $freight)->with('sale_order_id', $sale_order_id)->with('sale_order_items',$sale_order_items)->with('sale_enter_data',$sale_enter_data)->with('new_order',$new_order)->with('production_module_status',$production_module_status)->with('bill_to_address_id',$bill_to_address_id)->with('shipp_to_address_id',$shipp_to_address_id)->with('shipp_to_other_address',$shipp_to_other_address)->with('shipp_to_other_pincode',$shipp_to_other_pincode)->with('cash_group_ids',$cash_group_ids);
     }
    }
    

@@ -152,7 +152,7 @@
                            @foreach($account as $head)
                               @php 
                               if($head->id==4){
-                                continue;
+                                //continue;
                               }
                               $head_total = 0; 
                                  $head_total = $head_total + $head->debit; 

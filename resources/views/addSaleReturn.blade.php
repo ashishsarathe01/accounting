@@ -1258,7 +1258,7 @@
                }   
                let production_status = 0;
                //
-               console.log(production_items);
+              
                if ($.inArray(val.item_id, production_items) !== -1) {
                     production_status = 1;
                 }
@@ -1363,7 +1363,7 @@
       $(this).find('.amount').keyup();
    }
 }
-               console.log(amount);
+              
                if(amount!=0){
                   $(this).find('.amount').val(parseFloat(amount).toFixed(2));
                   $(this).find('.amount').keyup();
@@ -1699,12 +1699,15 @@
             }
          }); 
          final_total = Math.round(final_total);
-         var formattedNumber = final_total.toLocaleString('en-IN', {
-            style: 'currency',
-            currency: 'INR',
-            minimumFractionDigits: 2
-         });
-         $("#bill_sundry_amt").html(formattedNumber);
+         if(!isNaN(final_total) && final_total!=0){
+             var formattedNumber = final_total.toLocaleString('en-IN', {
+                style: 'currency',
+                currency: 'INR',
+                minimumFractionDigits: 2
+             });
+             $("#bill_sundry_amt").html(formattedNumber);
+         }
+         
          $("#total_amounts").val(final_total);         
          let roundoff = parseFloat(final_total) - parseFloat($("#total_taxable_amounts").val()) - parseFloat(gstamount);     
             
@@ -1861,7 +1864,7 @@
       let qtyInput = $('#quantity_' + data);
       qtyInput.attr('max', maxQty);
       qtyInput.attr('title', 'Max allowed: ' + maxQty);
-      console.log("**");
+      
       qtyInput.off('input').on('input', function () {
          let enteredQty = parseFloat($(this).val());
          if (enteredQty > maxQty) {
@@ -2100,7 +2103,7 @@
             $("#voucher_no").append(optionElements);
             $("#voucher_no").html(optionElements);
             if(get_data!="" && get_data!=null){
-                console.log(get_data);
+               
                $("#voucher_no").val('OTHER');
                $("#voucher_no").change();
                $("#other_invoice_against").val('PURCHASE');
@@ -3037,30 +3040,25 @@
 
       let currentItem = $("#goods_discription_tr_" + currentRowId).val();
       if (!currentItem) return;
-
       let totalQty = 0;
       let maxQty = 0;
-
+      maxQty = $("#goods_discription_tr_" + currentRowId).attr('data-qty');
+      
       $(".goods_items").each(function () {
-
          let rowId = $(this).attr("data-id");
 
          if ($(this).val() == currentItem) {
-
-               let qty = parseFloat($("#quantity_tr_" + rowId).val()) || 0;
-               totalQty += qty;
-
-               let text = $(this).find("option:selected").text();
-
-               let match = text.match(/\((\d+)/);
-
-               if (match) {
-                  maxQty = parseInt(match[1]);
-               }
+              let qty = parseFloat($("#quantity_tr_" + rowId).val()) || 0;
+              totalQty += qty;
+              let text = $(this).find("option:selected").text();
+              let match = text.match(/\((\d+)/);
+              if (match) {
+                  //maxQty = parseInt(match[1]);
+              }
          }
       });
-
-      if (maxQty > 0 && totalQty > maxQty) {
+    
+      if (maxQty > 0 && parseFloat(totalQty) > parseFloat(maxQty)) {
 
          alert("Max allowed quantity is " + maxQty);
 

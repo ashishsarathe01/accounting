@@ -253,6 +253,7 @@
                         <li><a class="dropdown-item" href="{{ route('purchase.configuration.index') }}">Purchase Configuration Settings</a></li>
                         <li><a class="dropdown-item" href="{{ route('configuration.settings') }}">Dashboard Configuration Settings</a></li>
                         <li><a class="dropdown-item" href="{{ route('payroll.configuration.index') }}">Payroll Configuration Settings</a></li>
+                        <li><a class="dropdown-item" href="{{ route('job-work-invoice-configuration') }}">Job Work Configuration</a></li>
                         <li><a class="dropdown-item" href="#">TDS Configuration</a></li>
                         <li><a class="dropdown-item" href="#">ESI</a></li>
                         <li><a class="dropdown-item" href="#">PF</a></li>

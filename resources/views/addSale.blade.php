@@ -80,7 +80,7 @@
                </div>
             @endif
             
-            <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Add Sales Voucher</h5>
+            <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Add Sales Voucher </h5>
             <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('sale.store') }}" id="saleForm">
                @csrf
 
@@ -96,6 +96,7 @@
                   <input type="hidden" name="sale_order_id" value="{{$sale_order_id}}">
                   <input type="hidden" name="new_order" value="{{$new_order}}">
                   <input type="hidden" name="sale_enter_data" value="@if($sale_enter_data){{$sale_enter_data}}@endif">
+                  <h5 style="color: red;">@if($current_financial_year!=Session::get('default_fy')) This entry does not belong to the current financial year @endif</h5>
                   <div class="mb-3 col-md-3">
                      <label for="name" class="form-label font-14 font-heading">Series No.</label>
                      <select id="series_no" name="series_no" class="form-select" required autofocus>
@@ -706,7 +707,8 @@
                <div class=" d-flex">
                   
                   <div class="ms-auto">
-                     <input type="submit" value="SAVE" class="btn btn-xs-primary" id="saveBtn">
+                      @if($current_financial_year==Session::get('default_fy')) <input type="submit" value="SAVE" class="btn btn-xs-primary" id="saveBtn"> @endif
+                     
                      <a href="{{ route('sale.index') }}" class="btn  btn-black ">QUIT</a>
                   </div>
                </div>

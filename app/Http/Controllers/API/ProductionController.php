@@ -880,7 +880,6 @@ class ProductionController extends Controller
         );
         return response()->json(['code' => 200, 'message' => "Machine Stop Reason List.",'data'=>$reason_list]);
     }
-    
     public function editPopRollReel(Request $request)
     {
         $request->validate([
@@ -909,16 +908,20 @@ class ProductionController extends Controller
                 );
             }
         ])
-        ->select('id', 'deckle_no', 'start_time_stamp', 'end_time_stamp')
+        ->select('id', 'deckle_no', 'start_time_stamp', 'end_time_stamp','stock_journal_status')
         ->find($request->deckle_id);
-    
         if (!$start_deckle) {
             return response()->json([
                 'status'  => false,
                 'message' => 'Pop Roll not found'
             ], 404);
         }
-    
+        if ($start_deckle && $start_deckle->stock_journal_status!='0') {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Not Allowed. Production Entry Passed'
+            ], 404);
+        }
         // 2️⃣ Get existing reels
         $item_reel = DeckleItem::where('deckle_id', $request->deckle_id)
             ->where('status', 1)
@@ -975,557 +978,549 @@ class ProductionController extends Controller
             ]
         ]);
     }
-
-    
     public function updatePopRollReel(Request $request)
-{
-   
-
-        /* -------------------------------------------------
-         | 1️⃣ FETCH EXISTING ACTIVE DECKLE ITEM IDS
-         -------------------------------------------------*/
-        $item_id_arr = DeckleItem::where('deckle_items.deckle_id', $request->pop_roll_id)
-            ->join('item_size_stocks', 'item_size_stocks.reel_no', '=', 'deckle_items.reel_no')
-            ->where('deckle_items.status', 1)
-            ->where('item_size_stocks.status', 1)
-            ->where('item_size_stocks.company_id', $request->company_id)
-            ->where('item_size_stocks.deckle_id',$request->pop_roll_id)
-            ->where('item_size_stocks.deckle_id','!=','0')
-            ->pluck('deckle_items.id')
-            ->map(fn ($id) => (int) $id)
-            ->toArray();
-
-        /* -------------------------------------------------
-         | 2️⃣ DELETE EXISTING STOCK (KEEP CREATED_AT)
-         -------------------------------------------------*/
-        $sizeStock = ItemSizeStock::where('deckle_id', $request->pop_roll_id)->first();
-
-        ItemSizeStock::where('deckle_id', $request->pop_roll_id)
-            ->where('status', 1)
-            ->delete();
-
-        $quality_weight_arr = [];
-
-        /* -------------------------------------------------
-         | 3️⃣ PROCESS POP ROLL → REELS
-         -------------------------------------------------*/
-        foreach ($request->pop_rolls as $value) {
-            foreach ($value['reels'] as $v) {
-
-                if (!empty($v['deleted']) && $v['deleted'] == 1) {
-                    continue;
-                }
-
-                /* -------------------------------
-                 | QUALITY PRESENT
-                 --------------------------------*/
-                if (!empty($v['quality_id'])) {
-
-                    // Check if reel already sold
-                    $size_sale_status = ItemSizeStock::where('status', 0)
-                        ->where('reel_no', $v['reel_no'])
-                        ->where('item_id', $v['quality_id'])
-                        ->where('company_id', $request->company_id)
-                        ->where('deckle_id',$request->pop_roll_id)
-                        ->first();
-
-                    /* ---- UPDATE EXISTING ---- */
-                    if (!empty($v['row_id'])) {
-
-                        $deckleItem = DeckleItem::find($v['row_id']);
-
+    {
+       
+    
+            /* -------------------------------------------------
+             | 1️⃣ FETCH EXISTING ACTIVE DECKLE ITEM IDS
+             -------------------------------------------------*/
+            $item_id_arr = DeckleItem::where('deckle_items.deckle_id', $request->pop_roll_id)
+                ->join('item_size_stocks', 'item_size_stocks.reel_no', '=', 'deckle_items.reel_no')
+                ->where('deckle_items.status', 1)
+                ->where('item_size_stocks.status', 1)
+                ->where('item_size_stocks.company_id', $request->company_id)
+                ->where('item_size_stocks.deckle_id',$request->pop_roll_id)
+                ->where('item_size_stocks.deckle_id','!=','0')
+                ->pluck('deckle_items.id')
+                ->map(fn ($id) => (int) $id)
+                ->toArray();
+    
+            /* -------------------------------------------------
+             | 2️⃣ DELETE EXISTING STOCK (KEEP CREATED_AT)
+             -------------------------------------------------*/
+            $sizeStock = ItemSizeStock::where('deckle_id', $request->pop_roll_id)->first();
+    
+            ItemSizeStock::where('deckle_id', $request->pop_roll_id)
+                ->where('status', 1)
+                ->delete();
+    
+            $quality_weight_arr = [];
+    
+            /* -------------------------------------------------
+             | 3️⃣ PROCESS POP ROLL → REELS
+             -------------------------------------------------*/
+            foreach ($request->pop_rolls as $value) {
+                foreach ($value['reels'] as $v) {
+    
+                    if (!empty($v['deleted']) && $v['deleted'] == 1) {
+                        continue;
+                    }
+    
+                    /* -------------------------------
+                     | QUALITY PRESENT
+                     --------------------------------*/
+                    if (!empty($v['quality_id'])) {
+    
+                        // Check if reel already sold
+                        $size_sale_status = ItemSizeStock::where('status', 0)
+                            ->where('reel_no', $v['reel_no'])
+                            ->where('item_id', $v['quality_id'])
+                            ->where('company_id', $request->company_id)
+                            ->where('deckle_id',$request->pop_roll_id)
+                            ->first();
+    
+                        /* ---- UPDATE EXISTING ---- */
+                        if (!empty($v['row_id'])) {
+    
+                            $deckleItem = DeckleItem::find($v['row_id']);
+    
+                            if (
+                                $deckleItem &&
+                                (!isset($v['sold']) || $v['sold'] != 1) &&
+                                !$size_sale_status
+                            ) {
+                                $deckleItem->quality_id     = $v['quality_id'];
+                                $deckleItem->quality_row_id= $v['quality_row_id'];
+                                $deckleItem->size           = $v['size'];
+                                $deckleItem->reel_no        = $v['reel_no'];
+                                $deckleItem->weight         = $v['weight'];
+                                $deckleItem->bf             = $v['bf'];
+                                $deckleItem->gsm            = $v['gsm'];
+                                $deckleItem->unit           = $v['unit'];
+                                $deckleItem->updated_at     = Carbon::now();
+                                $deckleItem->save();
+                           }
+    
+                            if (($k = array_search($v['row_id'], $item_id_arr)) !== false) {
+                                unset($item_id_arr[$k]);
+                            }
+    
+                        } 
+                        /* ---- CREATE NEW ---- */
+                        else {
+                            $deckle = new DeckleItem;
+                            $deckle->deckle_id      = $request->pop_roll_id;
+                            $deckle->quality_id     = $v['quality_id'];
+                            $deckle->quality_row_id = $v['quality_row_id'];
+                            $deckle->size           = $v['size'];
+                            $deckle->reel_no        = $v['reel_no'];
+                            $deckle->weight         = $v['weight'];
+                            $deckle->bf             = $v['bf'];
+                            $deckle->gsm            = $v['gsm'];
+                            $deckle->unit           = $v['unit'];
+                            $deckle->company_id     = $request->company_id;
+                            $deckle->created_by     = $request->user_id;
+                            $deckle->created_at     = Carbon::now();
+                            $deckle->save();
+                        }
+    
+                        /* ---- RECREATE STOCK ---- */
                         if (
-                            $deckleItem &&
                             (!isset($v['sold']) || $v['sold'] != 1) &&
                             !$size_sale_status
                         ) {
-                            $deckleItem->quality_id     = $v['quality_id'];
-                            $deckleItem->quality_row_id= $v['quality_row_id'];
-                            $deckleItem->size           = $v['size'];
-                            $deckleItem->reel_no        = $v['reel_no'];
-                            $deckleItem->weight         = $v['weight'];
-                            $deckleItem->bf             = $v['bf'];
-                            $deckleItem->gsm            = $v['gsm'];
-                            $deckleItem->unit           = $v['unit'];
-                            $deckleItem->updated_at     = Carbon::now();
-                            $deckleItem->save();
-                       }
-
+                            $stock = new ItemSizeStock;
+                            $stock->item_id        = $v['quality_id'];
+                            $stock->quality_row_id = $v['quality_row_id'];
+                            $stock->weight         = $v['weight'];
+                            $stock->reel_no        = $v['reel_no'];
+                            $stock->size           = $v['size'];
+                            $stock->bf             = $v['bf'];
+                            $stock->gsm            = $v['gsm'];
+                            $stock->unit           = $v['unit'];
+                            $stock->deckle_id      = $request->pop_roll_id;
+                            $stock->company_id     = $request->company_id;
+                            $stock->created_by     = $request->user_id;
+                            $stock->created_at     = $sizeStock->created_at ?? Carbon::now();
+                            $stock->save();
+                        }
+    
+                        /* ---- WEIGHT FOR LEDGER ---- */
+                        $quality_weight_arr[$v['quality_id']] =
+                            ($quality_weight_arr[$v['quality_id']] ?? 0) + $v['weight'];
+                    }
+    
+                    /* -------------------------------
+                     | QUALITY EMPTY BUT SOLD
+                     --------------------------------*/
+                    else if (!empty($v['sold']) && $v['sold'] == 1) {
+    
+                        $ditem = DeckleItem::find($v['row_id']);
+                        if ($ditem) {
+                            $quality_weight_arr[$ditem->quality_id] =
+                                ($quality_weight_arr[$ditem->quality_id] ?? 0) + $v['weight'];
+                        }
+    
                         if (($k = array_search($v['row_id'], $item_id_arr)) !== false) {
                             unset($item_id_arr[$k]);
                         }
-
-                    } 
-                    /* ---- CREATE NEW ---- */
-                    else {
-                        $deckle = new DeckleItem;
-                        $deckle->deckle_id      = $request->pop_roll_id;
-                        $deckle->quality_id     = $v['quality_id'];
-                        $deckle->quality_row_id = $v['quality_row_id'];
-                        $deckle->size           = $v['size'];
-                        $deckle->reel_no        = $v['reel_no'];
-                        $deckle->weight         = $v['weight'];
-                        $deckle->bf             = $v['bf'];
-                        $deckle->gsm            = $v['gsm'];
-                        $deckle->unit           = $v['unit'];
-                        $deckle->company_id     = $request->company_id;
-                        $deckle->created_by     = $request->user_id;
-                        $deckle->created_at     = Carbon::now();
-                        $deckle->save();
-                    }
-
-                    /* ---- RECREATE STOCK ---- */
-                    if (
-                        (!isset($v['sold']) || $v['sold'] != 1) &&
-                        !$size_sale_status
-                    ) {
-                        $stock = new ItemSizeStock;
-                        $stock->item_id        = $v['quality_id'];
-                        $stock->quality_row_id = $v['quality_row_id'];
-                        $stock->weight         = $v['weight'];
-                        $stock->reel_no        = $v['reel_no'];
-                        $stock->size           = $v['size'];
-                        $stock->bf             = $v['bf'];
-                        $stock->gsm            = $v['gsm'];
-                        $stock->unit           = $v['unit'];
-                        $stock->deckle_id      = $request->pop_roll_id;
-                        $stock->company_id     = $request->company_id;
-                        $stock->created_by     = $request->user_id;
-                        $stock->created_at     = $sizeStock->created_at ?? Carbon::now();
-                        $stock->save();
-                    }
-
-                    /* ---- WEIGHT FOR LEDGER ---- */
-                    $quality_weight_arr[$v['quality_id']] =
-                        ($quality_weight_arr[$v['quality_id']] ?? 0) + $v['weight'];
-                }
-
-                /* -------------------------------
-                 | QUALITY EMPTY BUT SOLD
-                 --------------------------------*/
-                else if (!empty($v['sold']) && $v['sold'] == 1) {
-
-                    $ditem = DeckleItem::find($v['row_id']);
-                    if ($ditem) {
-                        $quality_weight_arr[$ditem->quality_id] =
-                            ($quality_weight_arr[$ditem->quality_id] ?? 0) + $v['weight'];
-                    }
-
-                    if (($k = array_search($v['row_id'], $item_id_arr)) !== false) {
-                        unset($item_id_arr[$k]);
                     }
                 }
             }
-        }
-
-        /* -------------------------------------------------
-         | 4️⃣ RESET LEDGER & AVERAGE
-         -------------------------------------------------*/
-        ItemLedger::where('deckle_id', $request->pop_roll_id)->delete();
-        ItemAverageDetail::where('deckle_id', $request->pop_roll_id)->delete();
-
-        if (!empty($quality_weight_arr)) {
-
-            $companyData = Companies::find($request->company_id);
-             if($companyData->gst_config_type == "single_gst"){
-                $GstSettings = DB::table('gst_settings')
-                                ->where(['company_id' => $request->company_id, 'gst_type' => "single_gst"])
-                                ->get();
-                $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series','branch_invoice_start_from as invoice_start_from')
-                                ->where(['delete' => '0', 'company_id' => $request->company_id,'gst_setting_id'=>$GstSettings[0]->id])
-                                ->get();
-                if(count($branch)>0){
-                    $GstSettings = $GstSettings->merge($branch);
+    
+            /* -------------------------------------------------
+             | 4️⃣ RESET LEDGER & AVERAGE
+             -------------------------------------------------*/
+            ItemLedger::where('deckle_id', $request->pop_roll_id)->delete();
+            ItemAverageDetail::where('deckle_id', $request->pop_roll_id)->delete();
+    
+            if (!empty($quality_weight_arr)) {
+    
+                $companyData = Companies::find($request->company_id);
+                 if($companyData->gst_config_type == "single_gst"){
+                    $GstSettings = DB::table('gst_settings')
+                                    ->where(['company_id' => $request->company_id, 'gst_type' => "single_gst"])
+                                    ->get();
+                    $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series','branch_invoice_start_from as invoice_start_from')
+                                    ->where(['delete' => '0', 'company_id' => $request->company_id,'gst_setting_id'=>$GstSettings[0]->id])
+                                    ->get();
+                    if(count($branch)>0){
+                        $GstSettings = $GstSettings->merge($branch);
+                    }
+                    
+                }else if($companyData->gst_config_type == "multiple_gst"){
+                    $GstSettings = DB::table('gst_settings_multiple')
+                                    ->select('id','gst_no','mat_center','series','invoice_start_from')
+                                    ->where(['company_id' => $request->company_id, 'gst_type' => "multiple_gst"])
+                                    ->get();
+                    foreach ($GstSettings as $key => $value) {
+                        $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series','branch_invoice_start_from as invoice_start_from')
+                                    ->where(['delete' => '0', 'company_id' => $request->company_id,'gst_setting_multiple_id'=>$value->id])
+                                    ->get();
+                        if(count($branch)>0){
+                        $GstSettings = $GstSettings->merge($branch);
+                        }
+                    }         
+                }
+                $series = $GstSettings[0]->series;
+                
+                $deckle = DeckleProcess::find($request->pop_roll_id);
+    
+                foreach ($quality_weight_arr as $key => $value) {
+                    //ADD IN Stock
+                    $item_ledger = new ItemLedger();
+                    $item_ledger->item_id = $key;
+                    $item_ledger->series_no = $series;
+                    $item_ledger->in_weight = $value;
+                    $item_ledger->txn_date = date('Y-m-d',strtotime($deckle->end_time_stamp));
+                    $item_ledger->price = 1;
+                    $item_ledger->total_price = $value;
+                    $item_ledger->company_id = $request->company_id;
+                    $item_ledger->source = 7;
+                    $item_ledger->deckle_id = $request->pop_roll_id;
+                    $item_ledger->created_by = $request->user_id;
+                    $item_ledger->created_at = date('d-m-Y H:i:s');
+                    $item_ledger->save();
+                        //Add Data In Average Details table
+                    $average_detail = new ItemAverageDetail;
+                    $average_detail->series_no = $series;
+                    $average_detail->entry_date = date('Y-m-d',strtotime($deckle->end_time_stamp));
+                    $average_detail->item_id = $key;
+                    $average_detail->type = 'PRODUCTION GENERATE';
+                    $average_detail->deckle_id = $request->pop_roll_id;
+                    $average_detail->production_in_weight = $value;
+                    $average_detail->production_in_amount = $value;
+                    $average_detail->company_id = $request->company_id;
+                    $average_detail->created_at = Carbon::now();
+                    $average_detail->save();
+                  
+                    CommonHelper::RewriteItemAverageByItemApi(date('Y-m-d',strtotime($deckle->reel_generated_at)),$key,$series,$request->company_id);
+                      
                 }
                 
-            }else if($companyData->gst_config_type == "multiple_gst"){
-                $GstSettings = DB::table('gst_settings_multiple')
-                                ->select('id','gst_no','mat_center','series','invoice_start_from')
-                                ->where(['company_id' => $request->company_id, 'gst_type' => "multiple_gst"])
-                                ->get();
-                foreach ($GstSettings as $key => $value) {
-                    $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series','branch_invoice_start_from as invoice_start_from')
-                                ->where(['delete' => '0', 'company_id' => $request->company_id,'gst_setting_multiple_id'=>$value->id])
-                                ->get();
-                    if(count($branch)>0){
-                    $GstSettings = $GstSettings->merge($branch);
-                    }
-                }         
             }
-            $series = $GstSettings[0]->series;
-            
-            $deckle = DeckleProcess::find($request->pop_roll_id);
-
-            foreach ($quality_weight_arr as $key => $value) {
-                //ADD IN Stock
-                $item_ledger = new ItemLedger();
-                $item_ledger->item_id = $key;
-                $item_ledger->series_no = $series;
-                $item_ledger->in_weight = $value;
-                $item_ledger->txn_date = date('Y-m-d',strtotime($deckle->end_time_stamp));
-                $item_ledger->price = 1;
-                $item_ledger->total_price = $value;
-                $item_ledger->company_id = $request->company_id;
-                $item_ledger->source = 7;
-                $item_ledger->deckle_id = $request->pop_roll_id;
-                $item_ledger->created_by = $request->user_id;
-                $item_ledger->created_at = date('d-m-Y H:i:s');
-                $item_ledger->save();
-                    //Add Data In Average Details table
-                $average_detail = new ItemAverageDetail;
-                $average_detail->series_no = $series;
-                $average_detail->entry_date = date('Y-m-d',strtotime($deckle->end_time_stamp));
-                $average_detail->item_id = $key;
-                $average_detail->type = 'PRODUCTION GENERATE';
-                $average_detail->deckle_id = $request->pop_roll_id;
-                $average_detail->production_in_weight = $value;
-                $average_detail->production_in_amount = $value;
-                $average_detail->company_id = $request->company_id;
-                $average_detail->created_at = Carbon::now();
-                $average_detail->save();
-              
-                CommonHelper::RewriteItemAverageByItemApi(date('Y-m-d',strtotime($deckle->reel_generated_at)),$key,$series,$request->company_id);
-                  
+    
+           
+            /* -------------------------------------------------
+             | 5️⃣ DEACTIVATE REMOVED REELS
+             -------------------------------------------------*/
+            if (!empty($item_id_arr)) {
+                DeckleItem::whereIn('id', $item_id_arr)->update(['status' => 0]);
             }
-            
-        }
-
-       
-        /* -------------------------------------------------
-         | 5️⃣ DEACTIVATE REMOVED REELS
-         -------------------------------------------------*/
-        if (!empty($item_id_arr)) {
-            DeckleItem::whereIn('id', $item_id_arr)->update(['status' => 0]);
-        }
-
-        if (!empty($request->deleted_row_ids)) {
-            DeckleItem::whereIn(
-                'id',
-                explode(',', $request->deleted_row_ids)
-            )->update(['status' => 0]);
-        }
-
-     
-
-        return response()->json([
-            'status'  => true,
-            'message' => 'Pop Roll Reel updated successfully'
-        ]);
-
-
+    
+            if (!empty($request->deleted_row_ids)) {
+                DeckleItem::whereIn(
+                    'id',
+                    explode(',', $request->deleted_row_ids)
+                )->update(['status' => 0]);
+            }
+    
+         
+    
+            return response()->json([
+                'status'  => true,
+                'message' => 'Pop Roll Reel updated successfully'
+            ]);
+    
+    
 }
-
-public function cancelPopRollReelApi(Request $request)
-{
-    $request->validate([
-        'pop_roll_id' => 'required|integer'
-    ]);
-
-    DB::beginTransaction();
-
-    try {
-
-        /* -------------------------------------------------
-         | 1️⃣ CHECK IF ANY REEL IS ALREADY USED / SOLD
-         -------------------------------------------------*/
-        $blockedStock = ItemSizeStock::where('deckle_id', $request->pop_roll_id)
-                                    ->where('company_id',$request->company_id)
-            ->where('status', 0)
-            ->first();
-
-        if ($blockedStock) {
-
-            // if sale_id exists → SOLD
-            if (!empty($blockedStock->sale_id)) {
+    public function cancelPopRollReelApi(Request $request)
+    {
+        $request->validate([
+            'pop_roll_id' => 'required|integer'
+        ]);
+    
+        DB::beginTransaction();
+    
+        try {
+    
+            /* -------------------------------------------------
+             | 1️⃣ CHECK IF ANY REEL IS ALREADY USED / SOLD
+             -------------------------------------------------*/
+            $blockedStock = ItemSizeStock::where('deckle_id', $request->pop_roll_id)
+                                        ->where('company_id',$request->company_id)
+                ->where('status', 0)
+                ->first();
+    
+            if ($blockedStock) {
+    
+                // if sale_id exists → SOLD
+                if (!empty($blockedStock->sale_id)) {
+                    return response()->json([
+                        'status'  => false,
+                        'message' => 'Reel of the Pop Roll already sold.'
+                    ], 400);
+                }
+    
+                // otherwise → CONSUMED
                 return response()->json([
                     'status'  => false,
-                    'message' => 'Reel of the Pop Roll already sold.'
+                    'message' => 'Reel already consumed.'
                 ], 400);
             }
-
-            // otherwise → CONSUMED
-            return response()->json([
-                'status'  => false,
-                'message' => 'Reel already consumed.'
-            ], 400);
-        }
-
-        /* -------------------------------------------------
-         | 2️⃣ PROCEED WITH CANCELLATION
-         -------------------------------------------------*/
-        DeckleItem::where('deckle_id', $request->pop_roll_id)
-                    ->where('company_id',$request->company_id)
-            ->update(['status' => 0]);
-
-        ItemSizeStock::where('deckle_id', $request->pop_roll_id)
-                            ->where('company_id',$request->company_id)
-                            ->delete();
-
-        DeckleProcess::where('id', $request->pop_roll_id)
-            ->update([
-                'status' => 2,
-                'reel_generated_at' => null
-            ]);
-
-        ItemLedger::where('deckle_id', $request->pop_roll_id)
+    
+            /* -------------------------------------------------
+             | 2️⃣ PROCEED WITH CANCELLATION
+             -------------------------------------------------*/
+            DeckleItem::where('deckle_id', $request->pop_roll_id)
                         ->where('company_id',$request->company_id)
-                        ->delete();
-
-        ItemAverageDetail::where('deckle_id', $request->pop_roll_id)
+                ->update(['status' => 0]);
+    
+            ItemSizeStock::where('deckle_id', $request->pop_roll_id)
+                                ->where('company_id',$request->company_id)
+                                ->delete();
+    
+            DeckleProcess::where('id', $request->pop_roll_id)
+                ->update([
+                    'status' => 2,
+                    'reel_generated_at' => null
+                ]);
+    
+            ItemLedger::where('deckle_id', $request->pop_roll_id)
                             ->where('company_id',$request->company_id)
                             ->delete();
-
-        DB::commit();
-
-        return response()->json([
-            'status'  => true,
-            'message' => 'Pop Roll cancelled successfully.'
-        ], 200);
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-
-        return response()->json([
-            'status'  => false,
-            'message' => 'Something went wrong while cancelling Pop Roll.',
-            'error'   => $e->getMessage()
-        ], 500);
-    }
-}
-
-
-public function CancelCompletedDeckle(Request $request)
-{
-    $companyId = $request->company_id;
-    $user_id = $request->user_id;
-    $pop_roll_id = $request->pop_roll_id;
-    DB::beginTransaction();
-
-    try {
-        // Only cancel if status = 2 (Completed)
-        $updated = DeckleProcess::where('company_id', $companyId)
-            ->where('id', $pop_roll_id)
-            ->where('status', 2)
-            ->update([
-                'status'     => 5, // Cancelled
-                'deleted_by' => $user_id,
-                'deleted_at' => Carbon::now(),
-            ]);
-
-        if (!$updated) {
+    
+            ItemAverageDetail::where('deckle_id', $request->pop_roll_id)
+                                ->where('company_id',$request->company_id)
+                                ->delete();
+    
+            DB::commit();
+    
+            return response()->json([
+                'status'  => true,
+                'message' => 'Pop Roll cancelled successfully.'
+            ], 200);
+    
+        } catch (\Exception $e) {
             DB::rollBack();
-            
+    
             return response()->json([
                 'status'  => false,
-                'message' => 'Cannot cancel: Already in process for reel cutting.',
-                'error'   => 'Cannot cancel: Already in process for reel cutting.'
-            ]);
+                'message' => 'Something went wrong while cancelling Pop Roll.',
+                'error'   => $e->getMessage()
+            ], 500);
         }
-
-        DB::commit();
-        return response()->json([
-            'status'  => false,
-            'message' => 'Cancelled successfully.',
-            'error'   => ''
-        ]);
-
-    } catch (\Exception $e) {
-
-        DB::rollBack();
-        return response()->json([
-            'status'  => false,
-            'message' => $e->getMessage(),
-            'error'   => $e->getMessage()
-        ]);
-    }
 }
-
-
-public function editApi(Request $request)
-{
-    $company_id = $request->company_id;
-
-    try {
-
-        /* --------------------------------------
-         | 1️⃣ FETCH DECKLE WITH QUALITY DETAILS
-         --------------------------------------*/
-        $deckle = DeckleProcess::with([
-            'quality' => function ($q) {
-                $q->join(
-                    'manage_items',
-                    'deckle_process_qualities.item_id',
-                    '=',
-                    'manage_items.id'
-                )
-                ->select(
-                    'deckle_process_qualities.*',
-                    'manage_items.name'
-                );
+    public function CancelCompletedDeckle(Request $request)
+    {
+        $companyId = $request->company_id;
+        $user_id = $request->user_id;
+        $pop_roll_id = $request->pop_roll_id;
+        DB::beginTransaction();
+    
+        try {
+            // Only cancel if status = 2 (Completed)
+            $updated = DeckleProcess::where('company_id', $companyId)
+                ->where('id', $pop_roll_id)
+                ->where('status', 2)
+                ->update([
+                    'status'     => 5, // Cancelled
+                    'deleted_by' => $user_id,
+                    'deleted_at' => Carbon::now(),
+                ]);
+    
+            if (!$updated) {
+                DB::rollBack();
+                
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Cannot cancel: Already in process for reel cutting.',
+                    'error'   => 'Cannot cancel: Already in process for reel cutting.'
+                ]);
             }
-        ])
-        ->where('company_id', $company_id)
-        ->where('status', '!=', 5) // optional: skip deleted
-        ->find($request->pop_roll_id);
-
-        if (!$deckle) {
+    
+            DB::commit();
             return response()->json([
                 'status'  => false,
-                'message' => 'Deckle record not found'
-            ], 404);
-        }
-
-        /* --------------------------------------
-         | 2️⃣ FETCH PRODUCTION ITEMS
-         --------------------------------------*/
-        $items = ProductionItem::join(
-                    'manage_items',
-                    'production_items.item_id',
-                    '=',
-                    'manage_items.id'
-                )
-                ->select(
-                    'production_items.id',
-                    'manage_items.name',
-                    'production_items.bf',
-                    'production_items.gsm',
-                    'production_items.speed',
-                    'manage_items.id as item_id'
-                )
-                ->where('production_items.company_id', $company_id)
-                ->where('production_items.status', 1)
-                ->orderBy('manage_items.name')
-                ->get();
-
-        /* --------------------------------------
-         | 3️⃣ SUCCESS RESPONSE
-         --------------------------------------*/
-        return response()->json([
-            'status' => true,
-            'data'   => [
-                'deckle' => $deckle,
-                'items'  => $items
-            ]
-        ], 200);
-
-    } catch (\Exception $e) {
-
-        return response()->json([
-            'status'  => false,
-            'message' => 'Something went wrong',
-            'error'   => $e->getMessage()
-        ], 500);
-    }
-}
-
-public function updateApi(Request $request)
-{
-    $company_id = $request->company_id;
-    $user_id    = $request->user_id;
-    $id = $request->pop_roll_id;
-    DB::beginTransaction();
-
-    try {
-
-        /* --------------------------------------
-         | 1️⃣ DELETE OLD QUALITIES
-         --------------------------------------*/
-        DeckleProcessQuality::where('parent_id', $id)
-            ->where('company_id', $company_id)
-            ->delete();
-
-        /* --------------------------------------
-         | 2️⃣ MERGE OLD + NEW QUALITIES
-         --------------------------------------*/
-        $allQualities = [];
-
-        if ($request->has('qualities')) {
-            foreach ($request->qualities as $qData) {
-                $allQualities[] = $qData;
-            }
-        }
-
-        if ($request->has('new_qualities')) {
-            foreach ($request->new_qualities as $newData) {
-                $allQualities[] = $newData;
-            }
-        }
-
-        /* --------------------------------------
-         | 3️⃣ UPDATE DECKLE PROCESS
-         --------------------------------------*/
-        $updated = DeckleProcess::where('id', $id)
-            ->where('company_id', $company_id)
-            ->update([
-                'start_time_stamp' => date('Y-m-d H:i:s', strtotime($request->start_time)),
-                'end_time_stamp'   => date('Y-m-d H:i:s', strtotime($request->end_time)),
-                'updated_at'       => Carbon::now(),
+                'message' => 'Cancelled successfully.',
+                'error'   => ''
             ]);
-
-        if (!$updated) {
+    
+        } catch (\Exception $e) {
+    
             DB::rollBack();
             return response()->json([
                 'status'  => false,
-                'message' => 'Deckle process not found or not updated'
-            ], 404);
+                'message' => $e->getMessage(),
+                'error'   => $e->getMessage()
+            ]);
         }
-
-        /* --------------------------------------
-         | 4️⃣ RE-INSERT QUALITIES
-         --------------------------------------*/
-        foreach ($allQualities as $data) {
-
-            // ⛔ Skip if item not selected
-            if (empty($data['item_id'])) {
-                continue;
+}
+    public function editApi(Request $request)
+    {
+        $company_id = $request->company_id;
+    
+        try {
+    
+            /* --------------------------------------
+             | 1️⃣ FETCH DECKLE WITH QUALITY DETAILS
+             --------------------------------------*/
+            $deckle = DeckleProcess::with([
+                'quality' => function ($q) {
+                    $q->join(
+                        'manage_items',
+                        'deckle_process_qualities.item_id',
+                        '=',
+                        'manage_items.id'
+                    )
+                    ->select(
+                        'deckle_process_qualities.*',
+                        'manage_items.name'
+                    );
+                }
+            ])
+            ->where('company_id', $company_id)
+            ->where('status', '!=', 5) // optional: skip deleted
+            ->find($request->pop_roll_id);
+    
+            if (!$deckle) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Deckle record not found'
+                ], 404);
             }
-
-            // 🔍 Find ProductionItem (if exists)
-           
-
-            // 🎯 Resolve manage_items.id
-            $manage_item_id = $data['item_id'];
-
-            // 🎯 Resolve BF & GSM
-            $bf  = $data['bf']  ?? ($productionItem->bf  ?? null);
-            $gsm = $data['gsm'] ?? ($productionItem->gsm ?? null);
-
-            $deckle = new DeckleProcessQuality();
-            $deckle->parent_id = $id;
-            $deckle->company_id = $company_id;
-            $deckle->item_id = $manage_item_id;
-            $deckle->bf = $bf;
-            $deckle->gsm = $gsm;
-            $deckle->speed = $data['speed'] ?? null;
-            $deckle->production_in_kg = $data['production_in_kg'] ?? null;
-            $deckle->deckle_no = $request->deckle_no ?? null;
-            $deckle->start_time_stamp = date('Y-m-d H:i:s', strtotime($request->start_time));
-            $deckle->end_time_stamp = date('Y-m-d H:i:s', strtotime($request->end_time));
-            $deckle->started_by = $user_id;
-            $deckle->created_at = Carbon::now();
-            $deckle->save();
+    
+            /* --------------------------------------
+             | 2️⃣ FETCH PRODUCTION ITEMS
+             --------------------------------------*/
+            $items = ProductionItem::join(
+                        'manage_items',
+                        'production_items.item_id',
+                        '=',
+                        'manage_items.id'
+                    )
+                    ->select(
+                        'production_items.id',
+                        'manage_items.name',
+                        'production_items.bf',
+                        'production_items.gsm',
+                        'production_items.speed',
+                        'manage_items.id as item_id'
+                    )
+                    ->where('production_items.company_id', $company_id)
+                    ->where('production_items.status', 1)
+                    ->orderBy('manage_items.name')
+                    ->get();
+    
+            /* --------------------------------------
+             | 3️⃣ SUCCESS RESPONSE
+             --------------------------------------*/
+            return response()->json([
+                'status' => true,
+                'data'   => [
+                    'deckle' => $deckle,
+                    'items'  => $items
+                ]
+            ], 200);
+    
+        } catch (\Exception $e) {
+    
+            return response()->json([
+                'status'  => false,
+                'message' => 'Something went wrong',
+                'error'   => $e->getMessage()
+            ], 500);
         }
-
-        DB::commit();
-
-        /* --------------------------------------
-         | 5️⃣ SUCCESS RESPONSE
-         --------------------------------------*/
-        return response()->json([
-            'status'  => true,
-            'message' => 'Deckle updated successfully'
-        ], 200);
-
-    } catch (\Exception $e) {
-
-        DB::rollBack();
-
-        return response()->json([
-            'status'  => false,
-            'message' => 'Something went wrong',
-            'error'   => $e->getMessage()
-        ], 500);
-    }
+}
+    public function updateApi(Request $request)
+    {
+        $company_id = $request->company_id;
+        $user_id    = $request->user_id;
+        $id = $request->pop_roll_id;
+        DB::beginTransaction();
+    
+        try {
+    
+            /* --------------------------------------
+             | 1️⃣ DELETE OLD QUALITIES
+             --------------------------------------*/
+            DeckleProcessQuality::where('parent_id', $id)
+                ->where('company_id', $company_id)
+                ->delete();
+    
+            /* --------------------------------------
+             | 2️⃣ MERGE OLD + NEW QUALITIES
+             --------------------------------------*/
+            $allQualities = [];
+    
+            if ($request->has('qualities')) {
+                foreach ($request->qualities as $qData) {
+                    $allQualities[] = $qData;
+                }
+            }
+    
+            if ($request->has('new_qualities')) {
+                foreach ($request->new_qualities as $newData) {
+                    $allQualities[] = $newData;
+                }
+            }
+    
+            /* --------------------------------------
+             | 3️⃣ UPDATE DECKLE PROCESS
+             --------------------------------------*/
+            $updated = DeckleProcess::where('id', $id)
+                ->where('company_id', $company_id)
+                ->update([
+                    'start_time_stamp' => date('Y-m-d H:i:s', strtotime($request->start_time)),
+                    'end_time_stamp'   => date('Y-m-d H:i:s', strtotime($request->end_time)),
+                    'updated_at'       => Carbon::now(),
+                ]);
+    
+            if (!$updated) {
+                DB::rollBack();
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Deckle process not found or not updated'
+                ], 404);
+            }
+    
+            /* --------------------------------------
+             | 4️⃣ RE-INSERT QUALITIES
+             --------------------------------------*/
+            foreach ($allQualities as $data) {
+    
+                // ⛔ Skip if item not selected
+                if (empty($data['item_id'])) {
+                    continue;
+                }
+    
+                // 🔍 Find ProductionItem (if exists)
+               
+    
+                // 🎯 Resolve manage_items.id
+                $manage_item_id = $data['item_id'];
+    
+                // 🎯 Resolve BF & GSM
+                $bf  = $data['bf']  ?? ($productionItem->bf  ?? null);
+                $gsm = $data['gsm'] ?? ($productionItem->gsm ?? null);
+    
+                $deckle = new DeckleProcessQuality();
+                $deckle->parent_id = $id;
+                $deckle->company_id = $company_id;
+                $deckle->item_id = $manage_item_id;
+                $deckle->bf = $bf;
+                $deckle->gsm = $gsm;
+                $deckle->speed = $data['speed'] ?? null;
+                $deckle->production_in_kg = $data['production_in_kg'] ?? null;
+                $deckle->deckle_no = $request->deckle_no ?? null;
+                $deckle->start_time_stamp = date('Y-m-d H:i:s', strtotime($request->start_time));
+                $deckle->end_time_stamp = date('Y-m-d H:i:s', strtotime($request->end_time));
+                $deckle->started_by = $user_id;
+                $deckle->created_at = Carbon::now();
+                $deckle->save();
+            }
+    
+            DB::commit();
+    
+            /* --------------------------------------
+             | 5️⃣ SUCCESS RESPONSE
+             --------------------------------------*/
+            return response()->json([
+                'status'  => true,
+                'message' => 'Deckle updated successfully'
+            ], 200);
+    
+        } catch (\Exception $e) {
+    
+            DB::rollBack();
+    
+            return response()->json([
+                'status'  => false,
+                'message' => 'Something went wrong',
+                'error'   => $e->getMessage()
+            ], 500);
+        }
 }
 
 

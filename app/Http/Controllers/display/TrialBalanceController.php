@@ -66,25 +66,25 @@ class TrialBalanceController extends Controller
                                                     ->first();
                                 if($group && $group->heading == 4 && $group->heading_type == 'head'){
                                     $isUnderHeading4 = true;
-                                }else if($group->heading_type == 'group'){
+                                }else if($group && $group->heading_type == 'group'){
                                     $inner_group1 = AccountGroups::select('id', 'heading','heading_type')
                                                     ->where('id', $group->heading)
                                                     ->first();
                                     if($inner_group1 && $inner_group1->heading == 4 && $inner_group1->heading_type == 'head'){
                                         $isUnderHeading4 = true;
-                                    }else if($inner_group1->heading_type == 'group'){
+                                    }else if($inner_group1 && $inner_group1->heading_type == 'group'){
                                         $inner_group2 = AccountGroups::select('id', 'heading','heading_type')
                                                     ->where('id', $inner_group1->heading)
                                                     ->first();
                                         if($inner_group2 && $inner_group2->heading == 4 && $inner_group2->heading_type == 'head'){
                                             $isUnderHeading4 = true;
-                                        }else if($inner_group2->heading_type == 'group'){
+                                        }else if($inner_group2 && $inner_group2->heading_type == 'group'){
                                             $inner_group3 = AccountGroups::select('id', 'heading','heading_type')
                                                     ->where('id', $inner_group2->heading)
                                                     ->first();
                                             if($inner_group3 && $inner_group3->heading == 4 && $inner_group3->heading_type == 'head'){
                                                 $isUnderHeading4 = true;
-                                            }else if($inner_group3->heading_type == 'group'){
+                                            }else if($inner_group3 && $inner_group3->heading_type == 'group'){
                                                 $inner_group4 = AccountGroups::select('id', 'heading','heading_type')
                                                     ->where('id', $inner_group3->heading)
                                                     ->first();
@@ -301,7 +301,9 @@ class TrialBalanceController extends Controller
                 $account[$key]->credit = 0;
             }
             if(count($value->accountGroup)>0){
+                
                 foreach ($value->accountGroup as $k2 => $v2) {   
+                    
                     if($v2->id==30){           
                         $previous_date = Carbon::parse($from_date)->subDay();      
                         $stock_in_hand = CommonHelper::ClosingStock($previous_date);
@@ -314,14 +316,22 @@ class TrialBalanceController extends Controller
                             $value->accountGroup[$k2]->debit = $stock_in_hand;
                             $value->accountGroup[$k2]->credit = 0;  
                         }
-                    }else{                       
+                    }else{ 
+                       
                         $profit_loss_account = "";
                         $balance_sheet_account = "";                                     
                         if($v2->heading==4 && $v2->heading_type=='head'){
                             if(count($v2->account)>0){
                                 $profit_loss_account = implode(',', $v2->account->pluck('id')->toArray());
-                            }                        
-                        }else{                            
+                            }  
+                            $inner_group1 = CommonHelper::getAllChildGroupIds($v2->id,Session::get('user_company_id'));
+                            //Inner Group
+                            if($inner_group1){
+                                $acc_id = Accounts::whereIn('under_group',$inner_group1)->where('delete','0')->where('status','1')->pluck('id');
+                                $profit_loss_account.=",".implode(',', $acc_id->toArray());
+                                $profit_loss_account = trim($profit_loss_account,',');
+                            }
+                        }else{
                             if($v2->heading_type=='group'){
                                 //Inner Group
                                 $inner_group1 = AccountGroups::select('id', 'heading','heading_type')
@@ -331,7 +341,7 @@ class TrialBalanceController extends Controller
                                     if(count($v2->account)>0){
                                         $profit_loss_account.=",".implode(',', $v2->account->pluck('id')->toArray());
                                     }
-                                }else if($inner_group1->heading_type == 'group'){
+                                }else if($inner_group1 && $inner_group1->heading_type == 'group'){
                                     $inner_group2 = AccountGroups::select('id', 'heading','heading_type')
                                                 ->where('id', $inner_group1->heading)
                                                 ->first();
@@ -339,7 +349,7 @@ class TrialBalanceController extends Controller
                                         if(count($v2->account)>0){
                                             $profit_loss_account.=",".implode(',', $v2->account->pluck('id')->toArray());
                                         } 
-                                    }else if($inner_group2->heading_type == 'group'){
+                                    }else if($inner_group2 && $inner_group2->heading_type == 'group'){
                                         $inner_group3 = AccountGroups::select('id', 'heading','heading_type')
                                                 ->where('id', $inner_group2->heading)
                                                 ->first();
@@ -347,7 +357,7 @@ class TrialBalanceController extends Controller
                                             if(count($v2->account)>0){
                                                 $profit_loss_account.=",".implode(',', $v2->account->pluck('id')->toArray());
                                             } 
-                                        }else if($inner_group3->heading_type == 'group'){
+                                        }else if($inner_group3 && $inner_group3->heading_type == 'group'){
                                             $inner_group4 = AccountGroups::select('id', 'heading','heading_type')
                                                 ->where('id', $inner_group3->heading)
                                                 ->first();
@@ -360,79 +370,89 @@ class TrialBalanceController extends Controller
                                     }
                                 }                                
                             }else{
+                               
                                 $inner_group_account = [];
-                                $inner_group1 = AccountGroups::select('id')
-                                            ->where('company_id',Session::get('user_company_id'))
-                                            ->where('heading', $v2->id)
-                                            ->where('heading_type',"group")
-                                            ->pluck('id');
+                                //Inner Group
+                                $inner_group1 = CommonHelper::getAllChildGroupIds($v2->id,Session::get('user_company_id'));
                                 if($inner_group1){
-                                    $inner_group_account = Accounts::whereIn('under_group',$inner_group1)
-                                            ->where('under_group_type','group')
-                                            ->where('status','1')
-                                            ->where('delete','0')
-                                            ->pluck('id')
-                                            ->toArray();
-                                            if($v2->id=="2670"){
-                                                // echo "<pre>";print_r($inner_group_account);die;
-                                            }
-                                    $inner_group2 = AccountGroups::select('id')
-                                            ->where('company_id',Session::get('user_company_id'))
-                                            ->whereIn('heading', $inner_group1)
-                                            ->where('heading_type',"group")
-                                            ->pluck('id');
-                                    if($inner_group2){
-                                        $inner_group_account2 = Accounts::whereIn('under_group',$inner_group2)
-                                                ->where('under_group_type','group')
-                                                ->where('status','1')
-                                                ->where('delete','0')
-                                                ->pluck('id')
-                                                ->toArray();
-                                        $inner_group_account = array_merge($inner_group_account, $inner_group_account2);
-                                        $inner_group3 = AccountGroups::select('id')
-                                            ->where('company_id',Session::get('user_company_id'))
-                                            ->whereIn('heading', $inner_group2)
-                                            ->where('heading_type',"group")
-                                            ->pluck('id');
-                                        if($inner_group3){
-                                            $inner_group_account3 = Accounts::whereIn('under_group',$inner_group3)
-                                                    ->where('under_group_type','group')
-                                                    ->where('status','1')
-                                                    ->where('delete','0')
-                                                    ->pluck('id')
-                                                    ->toArray();
-                                            $inner_group_account = array_merge($inner_group_account, $inner_group_account3);
-                                            $inner_group4 = AccountGroups::select('id')
-                                            ->where('company_id',Session::get('user_company_id'))
-                                            ->whereIn('heading', $inner_group3)
-                                            ->where('heading_type',"group")
-                                            ->pluck('id');
-                                            if($inner_group4){
-                                                $inner_group_account4 = Accounts::whereIn('under_group',$inner_group4)
-                                                        ->where('under_group_type','group')
-                                                        ->where('status','1')
-                                                        ->where('delete','0')
-                                                        ->pluck('id')
-                                                        ->toArray();
-                                                $inner_group_account = array_merge($inner_group_account, $inner_group_account4);
-                                                $inner_group5 = AccountGroups::select('id')
-                                                    ->where('company_id',Session::get('user_company_id'))
-                                                    ->whereIn('heading', $inner_group4)
-                                                    ->where('heading_type',"group")
-                                                    ->pluck('id');
-                                                if($inner_group5){
-                                                    $inner_group_account5 = Accounts::whereIn('under_group',$inner_group5)
-                                                            ->where('under_group_type','group')
-                                                            ->where('status','1')
-                                                            ->where('delete','0')
-                                                            ->pluck('id')
-                                                            ->toArray();
-                                                    $inner_group_account = array_merge($inner_group_account, $inner_group_account5);
-                                                }                                                    
-                                            }
-                                        }
-                                    }
+                                    $acc_id = Accounts::whereIn('under_group',$inner_group1)->where('delete','0')->where('status','1')->pluck('id');
+                                    $inner_group_account = $acc_id->toArray();
+                                    //$inner_group_account = trim($profit_loss_account,',');
                                 }
+                                // $inner_group1 = AccountGroups::select('id')
+                                //             ->where('company_id',Session::get('user_company_id'))
+                                //             ->where('heading', $v2->id)
+                                //             ->where('heading_type',"group")
+                                //             ->pluck('id');
+                                            
+                                // if($inner_group1){
+                                    
+                                //     $inner_group_account = Accounts::whereIn('under_group',$inner_group1)
+                                //             ->where('under_group_type','group')
+                                //             ->where('status','1')
+                                //             ->where('delete','0')
+                                //             ->pluck('id')
+                                //             ->toArray();
+                                //             if($v2->id=="2670"){
+                                //                 // echo "<pre>";print_r($inner_group_account);die;
+                                //             }
+                                //     $inner_group2 = AccountGroups::select('id')
+                                //             ->where('company_id',Session::get('user_company_id'))
+                                //             ->whereIn('heading', $inner_group1)
+                                //             ->where('heading_type',"group")
+                                //             ->pluck('id');
+                                //     if($inner_group2){
+                                //         $inner_group_account2 = Accounts::whereIn('under_group',$inner_group2)
+                                //                 ->where('under_group_type','group')
+                                //                 ->where('status','1')
+                                //                 ->where('delete','0')
+                                //                 ->pluck('id')
+                                //                 ->toArray();
+                                //         $inner_group_account = array_merge($inner_group_account, $inner_group_account2);
+                                //         $inner_group3 = AccountGroups::select('id')
+                                //             ->where('company_id',Session::get('user_company_id'))
+                                //             ->whereIn('heading', $inner_group2)
+                                //             ->where('heading_type',"group")
+                                //             ->pluck('id');
+                                //         if($inner_group3){
+                                //             $inner_group_account3 = Accounts::whereIn('under_group',$inner_group3)
+                                //                     ->where('under_group_type','group')
+                                //                     ->where('status','1')
+                                //                     ->where('delete','0')
+                                //                     ->pluck('id')
+                                //                     ->toArray();
+                                //             $inner_group_account = array_merge($inner_group_account, $inner_group_account3);
+                                //             $inner_group4 = AccountGroups::select('id')
+                                //             ->where('company_id',Session::get('user_company_id'))
+                                //             ->whereIn('heading', $inner_group3)
+                                //             ->where('heading_type',"group")
+                                //             ->pluck('id');
+                                //             if($inner_group4){
+                                //                 $inner_group_account4 = Accounts::whereIn('under_group',$inner_group4)
+                                //                         ->where('under_group_type','group')
+                                //                         ->where('status','1')
+                                //                         ->where('delete','0')
+                                //                         ->pluck('id')
+                                //                         ->toArray();
+                                //                 $inner_group_account = array_merge($inner_group_account, $inner_group_account4);
+                                //                 $inner_group5 = AccountGroups::select('id')
+                                //                     ->where('company_id',Session::get('user_company_id'))
+                                //                     ->whereIn('heading', $inner_group4)
+                                //                     ->where('heading_type',"group")
+                                //                     ->pluck('id');
+                                //                 if($inner_group5){
+                                //                     $inner_group_account5 = Accounts::whereIn('under_group',$inner_group5)
+                                //                             ->where('under_group_type','group')
+                                //                             ->where('status','1')
+                                //                             ->where('delete','0')
+                                //                             ->pluck('id')
+                                //                             ->toArray();
+                                //                     $inner_group_account = array_merge($inner_group_account, $inner_group_account5);
+                                //                 }                                                    
+                                //             }
+                                //         }
+                                //     }
+                                // }
                                 if(count($v2->account)>0){
                                     if(count($inner_group_account)>0){
                                         $merged_accounts = array_merge($v2->account->pluck('id')->toArray(), $inner_group_account);
@@ -770,25 +790,25 @@ class TrialBalanceController extends Controller
                                     ->first();
                 if($group && $group->heading == 4 && $group->heading_type == 'head'){
                     $isUnderHeading4 = true;
-                }else if($group->heading_type == 'group'){
+                }else if($group &&  $group->heading_type == 'group'){
                     $inner_group1 = AccountGroups::select('id', 'heading','heading_type')
                                     ->where('id', $group->heading)
                                     ->first();
                     if($inner_group1 && $inner_group1->heading == 4 && $inner_group1->heading_type == 'head'){
                         $isUnderHeading4 = true;
-                    }else if($inner_group1->heading_type == 'group'){
+                    }else if($inner_group1 &&  $inner_group1->heading_type == 'group'){
                         $inner_group2 = AccountGroups::select('id', 'heading','heading_type')
                                     ->where('id', $inner_group1->heading)
                                     ->first();
                         if($inner_group2 && $inner_group2->heading == 4 && $inner_group2->heading_type == 'head'){
                             $isUnderHeading4 = true;
-                        }else if($inner_group2->heading_type == 'group'){
+                        }else if($inner_group2 &&  $inner_group2->heading_type == 'group'){
                             $inner_group3 = AccountGroups::select('id', 'heading','heading_type')
                                     ->where('id', $inner_group2->heading)
                                     ->first();
                             if($inner_group3 && $inner_group3->heading == 4 && $inner_group3->heading_type == 'head'){
                                 $isUnderHeading4 = true;
-                            }else if($inner_group3->heading_type == 'group'){
+                            }else if($inner_group3 &&  $inner_group3->heading_type == 'group'){
                                 $inner_group4 = AccountGroups::select('id', 'heading','heading_type')
                                     ->where('id', $inner_group3->heading)
                                     ->first();
