@@ -36,6 +36,36 @@
          </div>
          <div class="card  bg-blue pt-2 px-2 rounded-0 aside-bottom-divider">
             <div class="card-header py-12 px-2 border-0 d-flex rounded-0" id="administratorHeading">
+               <a class="nav-link text-white font-14 dropdown-icon-img d-flex fw-500  p-0 collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#GSTComplianceCollapse" aria-expanded="true" aria-controls="GSTComplianceCollapse">
+               <img src="{{ URL::asset('public/assets/imgs/administrator.svg')}}" class="me-2" alt="">Manage GST Compliance</a>
+            </div>
+            <div id="GSTComplianceCollapse" class="collapse" aria-labelledby="administratorHeading" data-bs-parent="#accordion">
+               <ul class="nav flex-column">
+                  <li class="font-14  fw-500 m-0 py-12 px-2  border-radius-4 bg-white">
+                     <a class=" text-decoration-none  d-flex  text-blue " href="{{ route('admin.gst-compliance.create') }}">
+                        List GST Compliance
+                     </a>
+                  </li>
+                  <li class="font-14  fw-500 m-0 py-12 px-2  border-radius-4 bg-white">
+                     <a class=" text-decoration-none  d-flex  text-blue " href="{{ route('admin.gst-compliance.report') }}">
+                        GST Compliance Report
+                     </a>
+                  </li> 
+                  <li class="font-14  fw-500 m-0 py-12 px-2  border-radius-4 bg-white">
+                     <a class=" text-decoration-none  d-flex  text-blue " href="{{ route('admin.tds-compliance.report') }}">
+                        TDS/TCS Compliance Report
+                     </a>
+                  </li> 
+                  <li class="font-14  fw-500 m-0 py-12 px-2  border-radius-4 bg-white">
+                     <a class=" text-decoration-none  d-flex  text-blue " href="{{ route('admin.esic-pf-compliance.report') }}">
+                        ESIC/PF Compliance Report
+                     </a>
+                  </li> 
+               </ul>
+            </div>
+         </div>
+         <div class="card  bg-blue pt-2 px-2 rounded-0 aside-bottom-divider">
+            <div class="card-header py-12 px-2 border-0 d-flex rounded-0" id="administratorHeading">
                <a class="nav-link text-white font-14 dropdown-icon-img d-flex fw-500  p-0 collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#adminCollapse" aria-expanded="true" aria-controls="adminCollapse">
                <img src="{{ URL::asset('public/assets/imgs/administrator.svg')}}" class="me-2" alt="">Master</a>
             </div>
