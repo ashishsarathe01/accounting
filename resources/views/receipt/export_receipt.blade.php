@@ -17,27 +17,42 @@
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-body">
 
-                    <form method="POST" action="{{ route('receipt-export') }}" class="row g-4">
+                   <form method="POST" action="{{ route('receipt-export') }}" class="row g-4">
                         @csrf
-
-                        <div class="col-md-4">
+                    
+                        <div class="col-md-3">
                             <label for="from_date" class="form-label fw-semibold">From Date</label>
                             <input type="date" id="from_date" name="from_date" class="form-control"
                                    required value="{{ old('from_date', date('Y-m-d')) }}">
                         </div>
-
-                        <div class="col-md-4">
+                    
+                        <div class="col-md-3">
                             <label for="to_date" class="form-label fw-semibold">To Date</label>
                             <input type="date" id="to_date" name="to_date" class="form-control"
                                    required value="{{ old('to_date', date('Y-m-d')) }}">
                         </div>
-                        <div class="col-md-4">
+                    
+                        <!-- ✅ New Date Type -->
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Date Type</label>
+                            <select name="date_type" class="form-select" required>
+                                <option value="created_at" {{ old('date_type') == 'created_at' ? 'selected' : '' }}>
+                                    Created Date
+                                </option>
+                                <option value="voucher_date" {{ old('date_type') == 'voucher_date' ? 'selected' : '' }}>
+                                    Voucher Date
+                                </option>
+                            </select>
+                        </div>
+                    
+                        <div class="col-md-3">
                             <label class="form-label fw-semibold">Export Type</label>
                             <select name="export_type" class="form-select">
                                 <option value="new">New CSV Format</option>
                                 <option value="old">Old CSV Format</option>
                             </select>
                         </div>
+                    
                         <div class="col-md-12 d-flex justify-content-end mt-3">
                             <button type="submit" class="btn btn-primary px-5 py-2 fw-semibold">
                                 Download CSV

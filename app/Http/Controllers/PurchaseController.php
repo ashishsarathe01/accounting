@@ -2919,40 +2919,59 @@ public function exportPurchasesView()
    {
       return view('purchase_bill_export');
    }
-    public function exportPurchaseBill(Request $request)
-   {
-      $request->validate([
-         'from_date'     => 'required|date',
-         'to_date'       => 'required|date',
-         'purchase_type' => 'required|in:LOCAL,CENTER',
-      ]);
+   public function exportPurchaseBill(Request $request)
+{
+    $request->validate([
+        'from_date'     => 'required|date',
+        'to_date'       => 'required|date',
+        'purchase_type' => 'required|in:LOCAL,CENTER',
+        'date_type'     => 'required|in:created_at,voucher_date',
+    ]);
 
-      $from         = $request->input('from_date');
-      $to           = $request->input('to_date');
-      $purchaseType = $request->input('purchase_type');
+    $from         = $request->input('from_date');
+    $to           = $request->input('to_date');
+    $purchaseType = $request->input('purchase_type');
+    $dateType     = $request->input('date_type');
 
-      $company_id = Session::get('user_company_id');
+    $company_id = Session::get('user_company_id');
 
-      $purchases = DB::table('purchases')
-         ->leftJoin('accounts', 'purchases.party', '=', 'accounts.id')
-         ->where('purchases.company_id', $company_id)
-         ->whereBetween('purchases.date', [$from, $to])
-         ->where(function ($q) {
-               $q->where('purchases.delete', '0')
-               ->orWhereNull('purchases.delete');
-         })
-         ->select([
-               'purchases.*',
-               'purchases.billing_gst',
-               'purchases.merchant_gst',
-               'accounts.account_name as party_name',
-               'accounts.id as party_alias',
-               'accounts.gstin as party_gst',
-               'accounts.address as party_address',
-         ])
-         ->orderBy('purchases.date')
-         ->get();
+    // ✅ Decide column dynamically
+    $dateColumn = $dateType === 'created_at' 
+        ? 'purchases.created_at' 
+        : 'purchases.date';
 
+    $query = DB::table('purchases')
+        ->leftJoin('accounts', 'purchases.party', '=', 'accounts.id')
+        ->where('purchases.company_id', $company_id)
+        ->where(function ($q) {
+            $q->where('purchases.delete', '0')
+              ->orWhereNull('purchases.delete');
+        });
+
+    // ✅ Apply date filter
+    if ($dateType === 'created_at') {
+        // created_at has datetime → use whereDate
+        $query->whereDate($dateColumn, '>=', $from)
+              ->whereDate($dateColumn, '<=', $to);
+    } else {
+        // voucher date is normal date
+        $query->whereBetween($dateColumn, [$from, $to]);
+    }
+
+    $purchases = $query
+        ->select([
+            'purchases.*',
+            'purchases.billing_gst',
+            'purchases.merchant_gst',
+            'accounts.account_name as party_name',
+            'accounts.id as party_alias',
+            'accounts.gstin as party_gst',
+            'accounts.address as party_address',
+        ])
+        ->orderBy($dateColumn)
+        ->get();
+
+   
       $filename = "purchase_bill_{$from}_to_{$to}_" . strtolower($purchaseType) . ".csv";
 
       $headers = [

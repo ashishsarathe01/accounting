@@ -13,6 +13,7 @@ use App\Models\Owner;
 use App\Models\Shareholder;
 use App\Models\User;
 use App\Models\PrivilegesModuleMapping;
+use App\Models\MerchantPrivilegeMapping;
 use Illuminate\Support\Facades\Gate;
 use DB;
 use Carbon\Carbon;
@@ -113,14 +114,38 @@ class CompanyController extends Controller{
          Session::put('to_date', $to_date);
          //Set Sub User Previlege
          if(Session::get('user_type')!="OWNER"){
-             foreach($privilege as $priv){
-                 $new_priv = new PrivilegesModuleMapping;
-                 $new_priv->employee_id = Session::get('user_id');
-                 $new_priv->module_id = $priv->module_id;
-                 $new_priv->company_id = $company->id;
-                 $new_priv->created_at = Carbon::now();
-                 $new_priv->save();
-             }
+            foreach($privilege as $priv){
+               $new_priv = new PrivilegesModuleMapping;
+               $new_priv->employee_id = Session::get('user_id');
+               $new_priv->module_id = $priv->module_id;
+               $new_priv->company_id = $company->id;
+               $new_priv->created_at = Carbon::now();
+               $new_priv->save();
+            }
+         }
+         //Set Default Merchant Privilege
+         $default_modules = [1,17,18,21,2,5,3,8,7,6,9,22,10,11,12,13,14,15,16,29.30,31,23,137,24,25,32,150,26,141,151,152,27,153,154,155,156,33,37,38,72,39,40,71,41,42,73,67,68,88,49,50,78,51,52,79,43,44,74,61,62,85,57.58,83,69,70,76,47,48,77,53,54,80,55,56,82,59,60,84,45,46,75,63,64,83,65,66,87]; // Dashboard and Company Management
+         // Get already existing module_ids in one query
+         $existingModules = MerchantPrivilegeMapping::where('merchant_id', $company->user_id)
+            ->where('company_id', $company->id)
+            ->whereIn('module_id', $default_modules)
+            ->pluck('module_id')
+            ->toArray();
+         // Find missing modules
+         $missingModules = array_diff($default_modules, $existingModules);
+         // Prepare bulk insert
+         $insertData = [];
+         foreach ($missingModules as $module_id) {
+            $insertData[] = [
+               'module_id'  => $module_id,
+               'merchant_id'=> $company->user_id,
+               'company_id' => $company->id,
+               'created_at' => now(),
+            ];
+         }
+         // Insert in one query
+         if (!empty($insertData)) {
+            MerchantPrivilegeMapping::insert($insertData);
          }
          return redirect('add-owner')->withSuccess('Company Created successfully!');
       }else{

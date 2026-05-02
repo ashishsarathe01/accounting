@@ -1144,22 +1144,40 @@ class ReceiptController extends Controller
   public function exportReceipt(Request $request)
 {
     $request->validate([
-        'from_date' => 'required|date',
-        'to_date'   => 'required|date',
-    ]);
-
-    $exportType = $request->export_type;
-
-    $company_id = Session::get('user_company_id');
-    $from = $request->from_date;
-    $to   = $request->to_date;
-
-    $receipts = DB::table('receipts')
-        ->where('company_id', $company_id)
-        ->where('delete', '0')
-        ->whereBetween('date', [$from, $to])
-        ->orderBy('date', 'asc')
-        ->get();
+    'from_date'   => 'required|date',
+    'to_date'     => 'required|date',
+    'date_type'   => 'required|in:created_at,voucher_date',
+    'export_type' => 'required|in:new,old',
+        ]);
+        
+        $exportType = $request->export_type;
+        
+        $company_id = Session::get('user_company_id');
+        $from = $request->from_date;
+        $to   = $request->to_date;
+        
+        $dateType   = $request->date_type;
+        $dateColumn = $dateType === 'created_at'
+            ? 'created_at'
+            : 'date';
+        
+        $query = DB::table('receipts')
+            ->where('company_id', $company_id)
+            ->where('delete', '0');
+        
+        /* ✅ Apply correct date filter */
+        if ($dateType === 'created_at') {
+            // created_at is datetime
+            $query->whereDate($dateColumn, '>=', $from)
+                  ->whereDate($dateColumn, '<=', $to);
+        } else {
+            // voucher date
+            $query->whereBetween($dateColumn, [$from, $to]);
+        }
+        
+        $receipts = $query
+            ->orderBy($dateColumn, 'asc')
+            ->get();
 
     $filename = "receipt_export_{$from}_to_{$to}.csv";
 
@@ -1172,7 +1190,7 @@ class ReceiptController extends Controller
 
         $out = fopen('php://output', 'w');
 
-        // ✅ HEADER
+        // âœ… HEADER
         if ($exportType == 'old') {
             fputcsv($out, [
                 'Series',
@@ -1207,7 +1225,7 @@ class ReceiptController extends Controller
 
             if ($details->isEmpty()) continue;
 
-            // ✅ BANK FROM DEBIT ENTRY
+            // âœ… BANK FROM DEBIT ENTRY
             $debitRow = $details->firstWhere('type', 'Debit');
 
             $bankName = "";
@@ -1245,7 +1263,7 @@ class ReceiptController extends Controller
             // ================= NEW EXPORT (FIXED) =================
             else {
 
-                // ✅ ONLY CREDIT ENTRIES (NO DEBIT ROW)
+                // âœ… ONLY CREDIT ENTRIES (NO DEBIT ROW)
                 foreach ($details->where('type','Credit') as $d) {
 
                     $acc = DB::table('accounts')
@@ -1258,8 +1276,8 @@ class ReceiptController extends Controller
                         $r->voucher_no,
                         $acc->account_name ?? '',          // party name
                         "",
-                        $d->credit,                        // ✅ credit amount
-                        $bankName,                         // 🔥 repeat bank
+                        $d->credit,                        // âœ… credit amount
+                        $bankName,                         // ðŸ”¥ repeat bank
                         $d->narration ?? ''
                     ]);
                 }

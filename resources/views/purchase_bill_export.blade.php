@@ -40,6 +40,14 @@
                     <input type="date" name="to_date" class="form-control"
                            value="{{ old('to_date', date('Y-m-d')) }}" required>
                 </div>
+                
+                <div class="col-md-4">
+    <label class="form-label fw-semibold">Date Type</label>
+    <select name="date_type" class="form-control" required>
+        <option value="created_at" selected>Created Date</option>
+        <option value="voucher_date">Voucher Date</option>
+    </select>
+</div>
 
                 <div class="col-md-4">
                     <label class="form-label fw-semibold">Purchase Type</label>

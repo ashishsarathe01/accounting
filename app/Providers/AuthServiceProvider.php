@@ -54,6 +54,16 @@ class AuthServiceProvider extends ServiceProvider
         Gate::define('view-module', function (User $user, $module_id) {
             $company_id = Session::get('user_company_id');
             if (Session()->get('user_type')=="OWNER" && !Session::get('admin_id')) {
+                if($module_id == 1 || $module_id == 17){
+                    return true;
+                    // $com = Companies::select('id')
+                    //         ->where('user_id', $user->id)
+                    //         ->first();
+                    // if(!$com){
+                    //     return true;
+                    // }
+                    
+                }
                 return \App\Models\MerchantPrivilegeMapping::where('merchant_id', $user->id)
                 ->where('company_id', $company_id)
                 ->where('module_id', $module_id)

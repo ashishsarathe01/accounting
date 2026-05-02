@@ -1154,22 +1154,40 @@ class PaymentController extends Controller
   public function exportPayment(Request $request)
 {
     $request->validate([
-        'from_date' => 'required|date',
-        'to_date'   => 'required|date',
-    ]);
-
-    $exportType = $request->export_type;
-
-    $company_id = Session::get('user_company_id');
-    $from = $request->from_date;
-    $to   = $request->to_date;
-
-    $payments = DB::table('payments')
-        ->where('company_id', $company_id)
-        ->where('delete', '0')
-        ->whereBetween('date', [$from, $to])
-        ->orderBy('date', 'asc')
-        ->get();
+    'from_date'   => 'required|date',
+    'to_date'     => 'required|date',
+    'date_type'   => 'required|in:created_at,voucher_date',
+    'export_type' => 'required|in:new,old',
+        ]);
+        
+        $exportType = $request->export_type;
+        $company_id = Session::get('user_company_id');
+        
+        $from = $request->from_date;
+        $to   = $request->to_date;
+        
+        $dateType   = $request->date_type;
+        $dateColumn = $dateType === 'created_at'
+            ? 'created_at'
+            : 'date';
+        
+        $query = DB::table('payments')
+            ->where('company_id', $company_id)
+            ->where('delete', '0');
+        
+        /* ✅ Apply correct date filter */
+        if ($dateType === 'created_at') {
+            // created_at is datetime
+            $query->whereDate($dateColumn, '>=', $from)
+                  ->whereDate($dateColumn, '<=', $to);
+        } else {
+            // voucher date
+            $query->whereBetween($dateColumn, [$from, $to]);
+        }
+        
+        $payments = $query
+            ->orderBy($dateColumn, 'asc')
+            ->get();
 
     $filename = "payment_export_{$from}_to_{$to}.csv";
 
@@ -1182,7 +1200,7 @@ class PaymentController extends Controller
 
         $out = fopen('php://output', 'w');
 
-        // ✅ HEADER
+        // âœ… HEADER
         if ($exportType == 'old') {
             fputcsv($out, [
                 'Series',
@@ -1217,7 +1235,7 @@ class PaymentController extends Controller
 
             if ($details->isEmpty()) continue;
 
-            // ✅ GET BANK FROM CREDIT ENTRY
+            // âœ… GET BANK FROM CREDIT ENTRY
             $creditRow = $details->firstWhere('type', 'Credit');
 
             $bankName = "";
@@ -1255,7 +1273,7 @@ class PaymentController extends Controller
             // ================= NEW EXPORT (FIXED) =================
             else {
 
-                // ✅ ONLY DEBIT ENTRIES (NO CREDIT ROW)
+                // âœ… ONLY DEBIT ENTRIES (NO CREDIT ROW)
                 foreach ($details->where('type', 'Debit') as $d) {
 
                     $acc = DB::table('accounts')
@@ -1269,7 +1287,7 @@ class PaymentController extends Controller
                         $acc->account_name ?? '',          // party name
                         "",
                         $d->debit,
-                        $bankName,                         // 🔥 bank repeated in every row
+                        $bankName,                         // ðŸ”¥ bank repeated in every row
                         $d->narration ?? ''
                     ]);
                 }

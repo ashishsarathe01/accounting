@@ -18,7 +18,7 @@
             <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
                <h5 class="master-table-title m-0 py-2">GST Configuration</h5>
             </div>
-            <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('gst-setting.update') }}">
+            <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('gst-setting.updates') }}">
                @csrf
                <div class="bg-white px-4 py-4 border-divider rounded-bottom-8 shadow-sm mb-4">
                   <?php

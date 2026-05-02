@@ -129,7 +129,7 @@
             </td>
         </tr>
         <tr onclick="toggleRow('consumptionRow')" style="cursor:pointer;">
-            <td><strong>Consumed Weight</strong></td>
+            <td><strong>Generated Weight from color & chemical</strong></td>
             <td style="text-align:right;">
                 {{ number_format($totalAdjustedConsumption ?? 0, 2) }}
             </td>
@@ -162,7 +162,7 @@
             </td>
         </tr>
         <tr onclick="toggleRow('yieldLossRow')" style="cursor:pointer;">
-            <td><strong>Yield Loss</strong></td>
+            <td><strong>Balance Production</strong></td>
             <td style="text-align:right;">
                 {{ number_format($yieldLoss ?? 0, 2) }}
             </td>

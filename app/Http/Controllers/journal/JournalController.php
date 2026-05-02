@@ -2495,26 +2495,46 @@ public function exportView()
 
 public function export(Request $request)
 {
-    $request->validate([
-        'from_date' => 'required|date',
-        'to_date'   => 'required|date',
+   $request->validate([
+    'from_date' => 'required|date',
+    'to_date'   => 'required|date',
+    'date_type' => 'required|in:created_at,voucher_date',
     ]);
-
+    
     $companyId = Session::get('user_company_id');
-
-    $journals = DB::table('journals')
+    
+    $dateType   = $request->date_type;
+    $dateColumn = $dateType === 'created_at'
+        ? 'created_at'
+        : 'date';
+    
+    $query = DB::table('journals')
         ->where('company_id', $companyId)
         ->where('status', '1')
         ->where(function ($q) {
             $q->where('delete', '0')
               ->orWhereNull('delete');
-        })
-        ->whereDate('date', '>=', $request->from_date)
-        ->whereDate('date', '<=', $request->to_date)
+        });
+    
+    /* ✅ Apply correct date filter */
+    if ($dateType === 'created_at') {
+        // created_at = datetime (2025-03-28 06:26:37)
+        $query->whereDate($dateColumn, '>=', $request->from_date)
+              ->whereDate($dateColumn, '<=', $request->to_date);
+    } else {
+        // voucher date = normal date
+        $query->whereBetween($dateColumn, [
+            $request->from_date,
+            $request->to_date
+        ]);
+    }
+    
+    $journals = $query
+        ->orderBy($dateColumn)
         ->orderBy('date')
         ->orderBy('voucher_no')
         ->get();
-
+    
     if ($journals->isEmpty()) {
         return back()->with('error', 'No Journal data found');
     }

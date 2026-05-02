@@ -65,5 +65,6 @@ class Kernel extends HttpKernel
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'merchantloginstatus' => \App\Http\Middleware\MerchantLoginStatus::class,
         'adminAuth' => \App\Http\Middleware\adminAuth::class,
+        'gst.configured' => \App\Http\Middleware\EnsureGstConfigured::class,
     ];
 }
