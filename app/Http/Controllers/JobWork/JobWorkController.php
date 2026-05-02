@@ -13,6 +13,7 @@ use App\Models\SaleInvoiceConfiguration;
 use App\Models\JobWorkInvoiceConfiguration;
 use App\Models\JobWorkInvoiceTermCondition;
 use App\Models\Bank;
+use App\Models\Accounts;
 use Session;
 use DB;
 
@@ -441,7 +442,9 @@ class JobWorkController extends Controller
 
             $voucherPrefix = $prefix;
         }
-
+        $account = Accounts::select('id', 'account_name', 'address', 'pin_code', 'gstin', 'pan','state')
+                            ->where('id', $request->party_id)
+                            ->first();
         $jobWorkId = DB::table('job_works')->insertGetId([
             'company_id'        => $companyId,
             'job_work_type'     => 'OUT', 
@@ -464,6 +467,13 @@ class JobWorkController extends Controller
             'shipping_gst'      => $request->shipping_gst ?: null,
             'shipping_pan'      => $request->shipping_pan ?: null,
             'shipping_state'    => $request->shipping_state ?: null,
+            'billing_name'     => $account->account_name ?: null,
+            'billing_address'  => $account->address ?: null,
+            'billing_pincode'  => $account->pin_code ?: null,
+            'billing_gst'      => $account->gstin ?: null,
+            'billing_pan'      => $account->pan ?: null,
+            'billing_state'    => $account->state ?: null,
+            'merchant_gst'      => $request->merchant_gst ?: null,
             'status'            => 1,
             'delete'            => 0,
             'created_by'        => Session::get('user_id'),
@@ -883,7 +893,7 @@ class JobWorkController extends Controller
 
     public function update(Request $request, $id)
     {
-        //dd($request->all());
+        
         $request->validate([
             'series_no' => 'required',
             'date' => 'required',
@@ -1005,6 +1015,9 @@ class JobWorkController extends Controller
                 $voucherPrefix = $prefix;
             }
         }
+        $account = Accounts::select('id', 'account_name', 'address', 'pin_code', 'gstin', 'pan','state')
+                            ->where('id', $request->party_id)
+                            ->first();
         DB::table('job_works')
             ->where('id', $id)
             ->update([
@@ -1026,6 +1039,13 @@ class JobWorkController extends Controller
                     'shipping_gst'      => $request->shipping_gst ?: null,
                     'shipping_pan'      => $request->shipping_pan ?: null,
                     'shipping_state'    => $request->shipping_state ?: null,
+                    'billing_address'  => $account->address ?: null,
+                    'billing_name'     => $account->account_name ?: null,
+                    'billing_pincode'  => $account->pin_code ?: null,
+                    'billing_gst'      => $account->gstin ?: null,
+                    'billing_pan'      => $account->pan ?: null,
+                    'billing_state'    => $account->state ?: null,
+                    'merchant_gst'      => $request->merchant_gst ?: null,
                     'updated_by'         => Session::get('user_id'),
                     'updated_at'         => now(),
                 ]);

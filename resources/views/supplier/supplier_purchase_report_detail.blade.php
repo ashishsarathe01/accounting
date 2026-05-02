@@ -260,12 +260,12 @@ select.no-arrow {
                             foreach (($value->purchaseReport ?? []) as $rp) {
                                 $headMap[$rp->head_id] = $rp;
                                 if (!isset($headTotals[$rp->head_id])) {
-                                $headTotals[$rp->head_id] = 0;
-                            }
-                            $headTotals[$rp->head_id] += $rp->head_qty ?? 0;
+                                    $headTotals[$rp->head_id] = 0;
+                                }
+                                $headTotals[$rp->head_id] += $rp->head_qty ?? 0;
                                 if(!empty($rp->head_qty) && $rp->head_qty!=0 && $rp->head_contract_rate!=0){
-                                            $contract_rate.=$rp->head_contract_rate." , ";
-                                        }
+                                    $contract_rate.=$rp->head_contract_rate." , ";
+                                }
                             }
                         @endphp
 
@@ -382,7 +382,8 @@ select.no-arrow {
 
                                 @if(in_array('contract_rate',$selectedDetailColumns))
                                 <td style="text-align:right;">
-                                    {{ rtrim($contract_rate, ' ,')}}
+                                  
+                                    {{ implode(',', array_reverse(explode(',', rtrim($contract_rate, ' ,')))) }}
                                 </td>
                                 @endif
 
@@ -1460,7 +1461,7 @@ $(document).on("click", ".start.wastekraft", function () {
             view_purchase_url = view_purchase_url.replace('map_id', map_purchase_id);
             view_purchase_url = view_purchase_url.replace('ids', id);
             
-            $("#wk_view_bill").attr('href', view_purchase_url); // ▶ correct anchor
+            $("#wk_view_bill").attr('href', view_purchase_url); // â–¶ correct anchor
             $("#wk_view_bill").show();
 
         }
@@ -2053,12 +2054,12 @@ const sensitiveColumns = [
     'cut_weight',
     'actual_weight',
 
-    // 🔥 ALL SUBHEADS (KRAFT, DUPLEX, etc)
+    // ðŸ”¥ ALL SUBHEADS (KRAFT, DUPLEX, etc)
     ...$('input[name="columns[]"]').map(function () {
         return $(this).val();
     }).get().filter(v => v.startsWith('sub_head_')),
 
-    // 🔥 ALL AMOUNT COLUMNS
+    // ðŸ”¥ ALL AMOUNT COLUMNS
     'invoice_amount',
     'gst_amount',
     'taxable_amount',

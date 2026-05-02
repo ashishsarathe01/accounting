@@ -111,7 +111,7 @@
 
     {{-- SERIES --}}
     <div class="col-md-3">
-        <label class="form-label font-14 font-heading">Series No.</label>
+        <label for="series_no" class="form-label font-14 font-heading" >Series No.</label>
         <select id="series_no" name="series_no" class="form-select" required>
             <option value="">Select</option>
             @foreach($GstSettings as $value)
@@ -156,7 +156,7 @@
 <input type="hidden" name="voucher_prefix" id="voucher_prefix">
 <input type="hidden" name="voucher_no" id="voucher_no">
 <input type="hidden" id="manual_enter_invoice_no">
-<input type="hidden" id="merchant_gst">
+<input type="hidden" id="merchant_gst" name="merchant_gst">
     </div>
 </div>
 
@@ -195,7 +195,7 @@
 
     {{-- Material Center --}}
     <div class="mb-4 col-md-4">
-                     <label for="name" class="form-label font-14 font-heading">Material Center</label>
+                     <label for="material_center" class="form-label font-14 font-heading">Material Center</label>
                      <select name="material_center" id="material_center" class="form-select" required>
                         <option value="">Select</option>
                         <?php

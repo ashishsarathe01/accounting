@@ -132,7 +132,7 @@ Edit Job Work Out – Finished Goods
         <input type="hidden" name="voucher_prefix" id="voucher_prefix" value="{{ $jobWork->voucher_no_prefix }}">
         <input type="hidden" name="voucher_no" id="voucher_no" value="{{ $jobWork->voucher_no }}">
         <input type="hidden" id="manual_enter_invoice_no">
-        <input type="hidden" id="merchant_gst">
+        <input type="hidden" id="merchant_gst" value="{{ $jobWork->merchant_gst }}" name="merchant_gst">
     </div>
 </div>
 
@@ -1139,7 +1139,7 @@ $('#series_no').on('change', function () {
     let manual      = $('option:selected', this).data('manual_enter_invoice_no');
     let matCenter   = $('option:selected', this).data('mat_center');
     let gst         = $('option:selected', this).data('gst_no');
-
+    console.log(gst);
     $('#merchant_gst').val(gst);
     $('#material_center').val(matCenter).trigger('change');
 
