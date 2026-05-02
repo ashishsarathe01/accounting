@@ -260,7 +260,7 @@
                     </ul>
                 </li>
                
-              
+                <li><a class="dropdown-item" href="{{ route('duties-compliance.index') }}">Duties Compliance</a></li>
                <li><a class="dropdown-item" href="{{ route('change-password-view') }}">Change Password</a></li>
                <li><a class="dropdown-item" href="{{ route('logout') }}">Log Out</a></li>
             </ul>

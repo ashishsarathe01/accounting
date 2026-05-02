@@ -103,6 +103,8 @@ use App\Http\Controllers\DaraReport\DaraReportController;
 use App\Http\Controllers\Retail\ManageRateController;
 use App\Http\Controllers\ContactUsController;
 use App\Http\Controllers\YieldReport\YieldReportController;
+use App\Http\Controllers\AdminModuleController\GSTComplianceController;
+use App\Http\Controllers\DutiesCompliance\DutiesComplianceController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -158,7 +160,16 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
         Route::get('merchant/backup/list/{user_id}/{company_id:?}',[MechantDatabaseBackupController::class,'backupList']);
         Route::post('merchant/backup/restore/{id}',[MechantDatabaseBackupController::class,'restoreBackup']);
         Route::post('merchant/backup/delete/{id}',[MechantDatabaseBackupController::class,'deleteBackup']);
-        
+        Route::get('/gst-compliance', [GSTComplianceController::class, 'create'])
+            ->name('gst-compliance.create');
+        Route::post('/gst-compliance/store', [GSTComplianceController::class, 'store'])
+            ->name('gst-compliance.store');
+        Route::get('/gst-compliance-report', [GSTComplianceController::class, 'report'])
+            ->name('gst-compliance.report');
+        Route::get('/tds-compliance-report', [GSTComplianceController::class, 'tdsReport'])
+            ->name('tds-compliance.report');
+        Route::get('/esic-pf-compliance-report', [GSTComplianceController::class, 'esicPfReport'])
+            ->name('esic-pf-compliance.report');
         Route::get('/tds-section', [TdsSectionController::class, 'index'])
             ->name('tds.index');
         Route::get('/tds-section/create', [TdsSectionController::class, 'create'])
@@ -1259,5 +1270,6 @@ Route::get('/journal/print/{id}', [JournalController::class, 'print'])->name('jo
 
     Route::get('/jobwork/vehicle', [SupplierPurchaseController::class, 'jobWorkVehicleEntry'])
         ->name('jobwork.vehicle.index');
-
+    Route::get('/duties-compliance', [DutiesComplianceController::class, 'index'])
+        ->name('duties-compliance.index');
 });
