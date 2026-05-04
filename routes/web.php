@@ -105,6 +105,7 @@ use App\Http\Controllers\ContactUsController;
 use App\Http\Controllers\YieldReport\YieldReportController;
 use App\Http\Controllers\AdminModuleController\GSTComplianceController;
 use App\Http\Controllers\DutiesCompliance\DutiesComplianceController;
+use App\Http\Controllers\AdminModuleController\DefaultPrivilegesController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -170,6 +171,11 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
             ->name('tds-compliance.report');
         Route::get('/esic-pf-compliance-report', [GSTComplianceController::class, 'esicPfReport'])
             ->name('esic-pf-compliance.report');
+        Route::get('/default-privileges', [DefaultPrivilegesController::class, 'index'])
+            ->name('default-privileges.index');
+
+        Route::post('/default-privileges/store', [DefaultPrivilegesController::class, 'store'])
+            ->name('default-privileges.store');
         Route::get('/tds-section', [TdsSectionController::class, 'index'])
             ->name('tds.index');
         Route::get('/tds-section/create', [TdsSectionController::class, 'create'])

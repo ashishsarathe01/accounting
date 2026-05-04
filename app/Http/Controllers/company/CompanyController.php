@@ -124,7 +124,9 @@ class CompanyController extends Controller{
             }
          }
          //Set Default Merchant Privilege
-         $default_modules = [1,17,18,21,2,5,3,8,7,6,9,22,10,11,12,13,14,15,16,29.30,31,23,137,24,25,32,150,26,141,151,152,27,153,154,155,156,33,37,38,72,39,40,71,41,42,73,67,68,88,49,50,78,51,52,79,43,44,74,61,62,85,57.58,83,69,70,76,47,48,77,53,54,80,55,56,82,59,60,84,45,46,75,63,64,83,65,66,87]; // Dashboard and Company Management
+         $default_modules = DB::table('default_privilege_mappings')
+            ->pluck('module_id')
+            ->toArray();
          // Get already existing module_ids in one query
          $existingModules = MerchantPrivilegeMapping::where('merchant_id', $company->user_id)
             ->where('company_id', $company->id)
