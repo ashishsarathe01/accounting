@@ -63,7 +63,7 @@
                   {{ session('success') }}
                </div>
             @endif
-            <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">GSTR2B Details ({{$ctin}}) - {{$account_name}}</h5>
+            <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">GSTR2A Details ({{$ctin}}) - {{$account_name}}</h5>
             <ul class="nav nav-fill nav-tabs" role="tablist">
                <li class="nav-item" role="presentation">
                   <a class="nav-link active" id="fill-tab-0" data-bs-toggle="tab" href="#fill-tabpanel-0" role="tab" aria-controls="fill-tabpanel-0" aria-selected="true"><h5 class="px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius" style="text-align: center;">B2B</h5></a>
@@ -95,6 +95,33 @@
                             <tbody>{!!$b2b_invoices!!}</tbody>
                          </table>
                     </div>
+                     @if(!empty($books_only_invoices))
+                        <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm" style="text-align: center;">
+                           Invoices Only In Books But Not Portal for the Current Month
+                        </h5>
+
+                        <div class="table-responsive">
+                           <table class="table table-bordered table-striped table-hover">
+                                 <thead>
+                                    <tr>
+                                       <th>#</th>
+                                       <th>Type</th>
+                                       <th>Invoice No.</th>
+                                       <th>Invoice Date</th>
+                                       <th style="text-align: right">Book Value</th>
+                                       <th style="text-align: right">Taxable Value</th>
+                                       <th style="text-align: right">IGST</th>
+                                       <th style="text-align: right">CGST</th>
+                                       <th style="text-align: right">SGST</th>
+                                       <th style="text-align: right">Cess</th>
+                                    </tr>
+                                 </thead>
+                                 <tbody>
+                                    {!! $books_only_invoices !!}
+                                 </tbody>
+                           </table>
+                        </div>
+                     @endif
                     <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm" style="text-align: center;">B2B-Debit notes</h5>
                     <div class="table-responsive">
                          <table class="table table-bordered table-striped table-hover">

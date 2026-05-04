@@ -90,17 +90,17 @@
                      <tr>
                         <th rowspan="2">Account Name</th>
 
-                        <th colspan="2" style="text-align:center">B2B INV</th>
+                        <th colspan="2" style="text-align:center">B2B-INVOICE</th>
 
-                        <th colspan="2" style="text-align:center">B2B CDNR</th>
+                        <th colspan="2" style="text-align:center">B2B-CDNR</th>
 
                         <th rowspan="2" style="text-align:right">Difference</th>
                      </tr>
                      <tr>
-                        <th style="text-align:right">Purchase</th>
+                        <th style="text-align:right">Portal</th>
                         <th style="text-align:right">Books</th>
 
-                        <th style="text-align:right">Dr/Cr</th>
+                        <th style="text-align:right">Portal</th>
                         <th style="text-align:right">Books</th>
                      </tr>
                   </thead>

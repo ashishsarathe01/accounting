@@ -531,6 +531,33 @@ class GSTR2AController extends Controller
                                 ->where('company_id',Session::get('user_company_id'))
                                 ->where('res_month',$request->month)
                                 ->get();   
+        $bill_sundry_igst = BillSundrys::where('company_id', Session::get('user_company_id'))
+                                        ->where('nature_of_sundry', 'IGST')
+                                        ->where('delete','0')
+                                        ->value('id');
+ 
+        $bill_sundry_cgst = BillSundrys::where('company_id', Session::get('user_company_id'))
+                                        ->where('nature_of_sundry', 'CGST')
+                                        ->where('delete','0')
+                                        ->value('id');
+ 
+        $bill_sundry_sgst = BillSundrys::where('company_id', Session::get('user_company_id'))
+                                        ->where('nature_of_sundry', 'SGST')
+                                        ->where('delete','0')
+                                        ->value('id');
+ 
+        $portalInvoiceKeys = [];
+        foreach ($gstr2a as $portalRow) {
+            if (!in_array($portalRow->res_type, ['B2B', 'B2BA'])) continue;
+            $portalResType = ($portalRow->res_type === 'B2B') ? 'b2b' : 'b2ba';
+            $portalDecoded = json_decode($portalRow->res_data);
+            foreach ($portalDecoded->$portalResType as $portalSupplier) {
+                if ($portalSupplier->ctin !== $request->ctin) continue;
+                foreach ($portalSupplier->inv as $portalInv) {
+                    $portalInvoiceKeys[strtoupper(trim($portalInv->inum))] = true;
+                }
+            }
+        }
         $total_val = 0;$total_book_value = 0;$total_txval = 0;$total_igst = 0;$total_cgst = 0;$total_sgst = 0;$total_cess = 0;
         $b2ba_total_val = 0;$b2ba_total_book_value = 0;$b2ba_total_txval = 0;$b2ba_total_igst = 0;$b2ba_total_cgst = 0;$b2ba_total_sgst = 0;$b2ba_total_cess = 0;
         $debit_total_val = 0;$debit_total_book_value = 0;$debit_total_txval = 0;$debit_total_igst = 0;$debit_total_cgst = 0;$debit_total_sgst = 0;$debit_total_cess = 0;
@@ -572,17 +599,36 @@ class GSTR2AController extends Controller
                                 $csamt = $inv->itms[0]->itm_det->csamt;
                             }
                             //Book Value
-                            $book_data = Purchase::select('total')
-                                                ->where('billing_gst',$request->ctin)
-                                                ->where('company_id',Session::get('user_company_id'))
-                                                ->where('merchant_gst',$request->gstin)
-                                                ->where('voucher_no',$inv->inum)
-                                                ->where('status','1')
-                                                ->where('delete','0')
-                                                ->first();
                             $book_value = 0;
-                            if($book_data){
-                                $book_value = $book_data->total;
+
+                            // Purchase
+                            $purchase_data = Purchase::where('billing_gst', $request->ctin)
+                                ->where('company_id', Session::get('user_company_id'))
+                                ->where('merchant_gst', $request->gstin)
+                                ->where('voucher_no', $inv->inum)
+                                ->where('status','1')
+                                ->where('delete','0')
+                                ->first();
+
+                            if ($purchase_data) {
+                                $book_value += $purchase_data->total;
+                            }
+
+                            // Journal
+                            $journal_data = Journal::where('vendor_gstin', $request->ctin)
+                                ->where('company_id', Session::get('user_company_id'))
+                                ->where('merchant_gst', $request->gstin)
+                                ->where(function($q) use ($inv) {
+                                    $q->where('invoice_no', $inv->inum)
+                                    ->orWhere('gstr2b_invoice_id', $inv->inum); 
+                                })
+                                ->where('claim_gst_status', 'YES')
+                                ->where('status','1')
+                                ->where('delete','0')
+                                ->first();
+
+                            if ($journal_data) {
+                                $book_value += $journal_data->total_amount;
                             }
                             $style = "";
                             if($book_value!=$inv->val){
@@ -632,17 +678,36 @@ class GSTR2AController extends Controller
                                 $csamt = $inv->itms[0]->itm_det->csamt;
                             }
                             //Book Value
-                            $book_data = Purchase::select('total')
-                                                ->where('billing_gst',$request->ctin)
-                                                ->where('company_id',Session::get('user_company_id'))
-                                                ->where('merchant_gst',$request->gstin)
-                                                ->where('voucher_no',$inv->inum)
-                                                ->where('status','1')
-                                                ->where('delete','0')
-                                                ->first();
                             $book_value = 0;
-                            if($book_data){
-                                $book_value = $book_data->total;
+
+                            // Purchase
+                            $purchase_data = Purchase::where('billing_gst', $request->ctin)
+                                ->where('company_id', Session::get('user_company_id'))
+                                ->where('merchant_gst', $request->gstin)
+                                ->where('voucher_no', $inv->inum)
+                                ->where('status','1')
+                                ->where('delete','0')
+                                ->first();
+
+                            if ($purchase_data) {
+                                $book_value += $purchase_data->total;
+                            }
+
+                            // Journal
+                            $journal_data = Journal::where('vendor_gstin', $request->ctin)
+                                ->where('company_id', Session::get('user_company_id'))
+                                ->where('merchant_gst', $request->gstin)
+                                ->where(function($q) use ($inv) {
+                                    $q->where('invoice_no', $inv->inum)
+                                    ->orWhere('gstr2b_invoice_id', $inv->inum); 
+                                })
+                                ->where('claim_gst_status', 'YES')
+                                ->where('status','1')
+                                ->where('delete','0')
+                                ->first();
+
+                            if ($journal_data) {
+                                $book_value += $journal_data->total_amount;
                             }
                             $style = "";
                             if($book_value!=$inv->val){
@@ -912,21 +977,128 @@ class GSTR2AController extends Controller
                             <th style='text-align: right'>".formatIndianNumber($cdna_credit_total_sgst)."</th>
                             <th style='text-align: right'>".formatIndianNumber($cdna_credit_total_cess)."</th>
                         </tr>";
-        $bill_sundry_igst = BillSundrys::where('company_id', Session::get('user_company_id'))
-                                                ->where('nature_of_sundry', 'IGST')
-                                                ->where('delete','0')
-                                                ->value('id');
-                                           
+        $purchases_books_only = Purchase::select(
+                'purchases.id',
+                'purchases.voucher_no',
+                'purchases.date',
+                'purchases.total',
+                'purchases.taxable_amt',
+                DB::raw('IFNULL(igst.amount, 0) as igst_amount'),
+                DB::raw('IFNULL(cgst.amount, 0) as cgst_amount'),
+                DB::raw('IFNULL(sgst.amount, 0) as sgst_amount'),
+                DB::raw('0 as cess_amount')
+            )
+            ->where('purchases.billing_gst', $request->ctin)
+            ->where('purchases.company_id', Session::get('user_company_id'))
+            ->where('purchases.merchant_gst', $request->gstin)
+            ->where('purchases.date', 'like', $request->month . '%')
+            ->where('purchases.status', '1')
+            ->where('purchases.delete', '0')
+            ->whereNotNull('purchases.voucher_no')
+            ->where('purchases.voucher_no', '!=', '')
+            ->leftJoin('purchase_sundries as igst', function ($join) use ($bill_sundry_igst) {
+                $join->on('purchases.id', '=', 'igst.purchase_id')
+                     ->where('igst.bill_sundry', $bill_sundry_igst);
+            })
+            ->leftJoin('purchase_sundries as cgst', function ($join) use ($bill_sundry_cgst) {
+                $join->on('purchases.id', '=', 'cgst.purchase_id')
+                     ->where('cgst.bill_sundry', $bill_sundry_cgst);
+            })
+            ->leftJoin('purchase_sundries as sgst', function ($join) use ($bill_sundry_sgst) {
+                $join->on('purchases.id', '=', 'sgst.purchase_id')
+                     ->where('sgst.bill_sundry', $bill_sundry_sgst);
+            })
+            ->get();
+ 
+        // journals table: invoice_no = invoice number, net_total = taxable, igst/cgst/sgst = direct columns
+        $journals_books_only = Journal::select(
+                'journals.id',
+                'journals.invoice_no as voucher_no',
+                'journals.gstr2b_invoice_id',
+                'journals.date',
+                'journals.total_amount as total',
+                'journals.net_total as taxable_amt',
+                DB::raw('IFNULL(journals.igst, 0) as igst_amount'),
+                DB::raw('IFNULL(journals.cgst, 0) as cgst_amount'),
+                DB::raw('IFNULL(journals.sgst, 0) as sgst_amount'),
+                DB::raw('0 as cess_amount')
+            )
+            ->where('journals.vendor_gstin', $request->ctin)
+            ->where('journals.company_id', Session::get('user_company_id'))
+            ->where('journals.merchant_gst', $request->gstin)
+            ->where('journals.claim_gst_status', 'YES')
+            ->where('journals.date', 'like', $request->month . '%')
+            ->where('journals.status', '1')
+            ->where('journals.delete', '0')
+            ->whereNotNull('journals.invoice_no')
+            ->where('journals.invoice_no', '!=', '')
+            ->get();
+ 
+        $books_only_html = '';
+        $books_only_total_val = $books_only_total_txval = 0;
+        $books_only_total_igst = $books_only_total_cgst = $books_only_total_sgst = $books_only_total_cess = 0;
+        $rowIndex = 0;
+ 
+        foreach ($purchases_books_only as $p) {
+            // Skip if already shown in portal section
+            if (isset($portalInvoiceKeys[strtoupper(trim((string)$p->voucher_no))])) continue;
+            $books_only_total_val   += $p->total;
+            $books_only_total_txval += $p->taxable_amt;
+            $books_only_total_igst  += $p->igst_amount;
+            $books_only_total_cgst  += $p->cgst_amount;
+            $books_only_total_sgst  += $p->sgst_amount;
+            $books_only_total_cess  += $p->cess_amount;
+            $rowIndex++;
+            $books_only_html .= "<tr>
+                <td>{$rowIndex}</td>
+                <td>Purchase</td>
+                <td>".htmlspecialchars($p->voucher_no)."</td>
+                <td>".date('d-m-Y', strtotime($p->date))."</td>
+                <td style='text-align:right'>".formatIndianNumber($p->total)."</td>
+                <td style='text-align:right'>".formatIndianNumber($p->taxable_amt)."</td>
+                <td style='text-align:right'>".formatIndianNumber($p->igst_amount)."</td>
+                <td style='text-align:right'>".formatIndianNumber($p->cgst_amount)."</td>
+                <td style='text-align:right'>".formatIndianNumber($p->sgst_amount)."</td>
+                <td style='text-align:right'>".formatIndianNumber($p->cess_amount)."</td>
+            </tr>";
+        }
+ 
+        foreach ($journals_books_only as $j) {
 
-                $bill_sundry_cgst = BillSundrys::where('company_id', Session::get('user_company_id'))
-                                                ->where('nature_of_sundry', 'CGST')
-                                                ->where('delete','0')
-                                                ->value('id');
+            // skip if already matched with portal
+            if (isset($portalInvoiceKeys[strtoupper(trim((string)$j->voucher_no))])) continue;
 
-                $bill_sundry_sgst = BillSundrys::where('company_id', Session::get('user_company_id'))
-                                                ->where('nature_of_sundry', 'SGST')
-                                                ->where('delete','0')
-                                                ->value('id');
+            // ✅ NEW: skip if manually linked
+            if (!empty($j->gstr2b_invoice_id)) continue;
+            $books_only_total_val   += $j->total;
+            $books_only_total_txval += $j->taxable_amt;
+            $books_only_total_igst  += $j->igst_amount;
+            $books_only_total_cgst  += $j->cgst_amount;
+            $books_only_total_sgst  += $j->sgst_amount;
+            $rowIndex++;
+            $books_only_html .= "<tr>
+                <td>{$rowIndex}</td>
+                <td>Journal</td>
+                <td>".htmlspecialchars($j->voucher_no)."</td>
+                <td>".date('d-m-Y', strtotime($j->date))."</td>
+                <td style='text-align:right'>".formatIndianNumber($j->total)."</td>
+                <td style='text-align:right'>".formatIndianNumber($j->taxable_amt)."</td>
+                <td style='text-align:right'>".formatIndianNumber($j->igst_amount)."</td>
+                <td style='text-align:right'>".formatIndianNumber($j->cgst_amount)."</td>
+                <td style='text-align:right'>".formatIndianNumber($j->sgst_amount)."</td>
+                <td style='text-align:right'>0.00</td>
+            </tr>";
+        }
+ 
+        $books_only_html .= "<tr style='font-weight:bold;background:#f3f6fa'>
+                    <th colspan='4' style='text-align:right'>Total</th>
+                    <th style='text-align:right'>".formatIndianNumber($books_only_total_val)."</th>
+                    <th style='text-align:right'>".formatIndianNumber($books_only_total_txval)."</th>
+                    <th style='text-align:right'>".formatIndianNumber($books_only_total_igst)."</th>
+                    <th style='text-align:right'>".formatIndianNumber($books_only_total_cgst)."</th>
+                    <th style='text-align:right'>".formatIndianNumber($books_only_total_sgst)."</th>
+                    <th style='text-align:right'>".formatIndianNumber($books_only_total_cess)."</th>
+                </tr>";
 
                $b2b_credit_note_unlinked_current_month = SalesReturn::whereNull('sales_returns.gstr2b_invoice_id')
                                                                     ->where('sales_returns.company_id', Session::get('user_company_id'))
@@ -1101,6 +1273,7 @@ class GSTR2AController extends Controller
             'b2ba_debit_note' => $b2ba_debit_note,
             'b2b_credit_note_unlinked' => $b2b_credit_note_unlinked,
             'b2b_debit_note_unlinked' => $b2b_debit_note_unlinked,
+            'books_only_invoices' => $books_only_html,
         ]);
     }
 }
