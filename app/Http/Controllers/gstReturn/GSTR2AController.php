@@ -481,16 +481,155 @@ class GSTR2AController extends Controller
                 2
             );
         }
+        $pending_notes = [];
+        $bill_sundry_igst = BillSundrys::where('company_id', Session::get('user_company_id'))
+                                        ->where('nature_of_sundry', 'IGST')
+                                        ->where('delete','0')
+                                        ->value('id');
+ 
+        $bill_sundry_cgst = BillSundrys::where('company_id', Session::get('user_company_id'))
+                                        ->where('nature_of_sundry', 'CGST')
+                                        ->where('delete','0')
+                                        ->value('id');
+ 
+        $bill_sundry_sgst = BillSundrys::where('company_id', Session::get('user_company_id'))
+                                        ->where('nature_of_sundry', 'SGST')
+                                        ->where('delete','0')
+                                        ->value('id');
+        $sr = 1;
+
+        $financial_year = Session::get('default_fy');
+        $y = explode("-", $financial_year);
+
+        $from = \DateTime::createFromFormat('y', $y[0])->format('Y');
+        $to   = \DateTime::createFromFormat('y', $y[1])->format('Y');
+
+        $fy_start = $from . '-04-01';
+        $month_end = date('Y-m-t', strtotime($request->month));
+
+        $debit = PurchaseReturn::whereNull('purchase_returns.gstr2b_invoice_id')
+
+            ->leftJoin('accounts', 'accounts.id', '=', 'purchase_returns.party')
+            ->leftJoin('purchase_return_sundries as igst', function ($join) use ($bill_sundry_igst) {
+                $join->on('purchase_returns.id', '=', 'igst.purchase_return_id')
+                    ->where('igst.bill_sundry', $bill_sundry_igst);
+            })
+
+            ->leftJoin('purchase_return_sundries as cgst', function ($join) use ($bill_sundry_cgst) {
+                $join->on('purchase_returns.id', '=', 'cgst.purchase_return_id')
+                    ->where('cgst.bill_sundry', $bill_sundry_cgst);
+            })
+
+            ->leftJoin('purchase_return_sundries as sgst', function ($join) use ($bill_sundry_sgst) {
+                $join->on('purchase_returns.id', '=', 'sgst.purchase_return_id')
+                    ->where('sgst.bill_sundry', $bill_sundry_sgst);
+            })
+            ->where('purchase_returns.company_id', Session::get('user_company_id'))
+            ->where('purchase_returns.merchant_gst', $request->gstin)
+            ->whereBetween('purchase_returns.date', [$fy_start, $month_end])
+            ->where('purchase_returns.voucher_type', 'PURCHASE')
+            ->where('purchase_returns.sr_nature', 'WITH GST')
+            ->where('purchase_returns.delete','0')
+            ->where('purchase_returns.status','1')
+
+            ->select(
+                'purchase_returns.*',
+                'accounts.account_name as party_name',
+                DB::raw('IFNULL(igst.amount,0) as igst_amount'),
+                DB::raw('IFNULL(cgst.amount,0) as cgst_amount'),
+                DB::raw('IFNULL(sgst.amount,0) as sgst_amount')
+            )
+            ->get();
+
+        foreach($debit as $d){
+            $pending_notes[] = [
+                'sr_no' => $sr++,
+                'party' => $d->party_name ?? '',
+                'type' => 'DR',
+                'invoice_no' => $d->sr_prefix ?? $d->voucher_no ?? '-',
+                'date' => date('d-m-Y', strtotime($d->date)),
+                'book_value' => $d->total,
+                'taxable' => $d->taxable_amt,
+                'igst' => $d->igst_amount,
+                'cgst' => $d->cgst_amount,
+                'sgst' => $d->sgst_amount,
+                'cess' => 0
+            ];
+        }
+
+        $credit = SalesReturn::whereNull('sales_returns.gstr2b_invoice_id')
+
+            ->leftJoin('accounts', 'accounts.id', '=', 'sales_returns.party')
+            ->leftJoin('sale_return_sundries as igst', function ($join) use ($bill_sundry_igst) {
+                $join->on('sales_returns.id', '=', 'igst.sale_return_id')
+                    ->where('igst.bill_sundry', $bill_sundry_igst);
+            })
+
+            ->leftJoin('sale_return_sundries as cgst', function ($join) use ($bill_sundry_cgst) {
+                $join->on('sales_returns.id', '=', 'cgst.sale_return_id')
+                    ->where('cgst.bill_sundry', $bill_sundry_cgst);
+            })
+
+            ->leftJoin('sale_return_sundries as sgst', function ($join) use ($bill_sundry_sgst) {
+                $join->on('sales_returns.id', '=', 'sgst.sale_return_id')
+                    ->where('sgst.bill_sundry', $bill_sundry_sgst);
+            })
+
+            ->where('sales_returns.company_id', Session::get('user_company_id'))
+            ->where('sales_returns.merchant_gst', $request->gstin)
+            ->whereBetween('sales_returns.date', [$fy_start, $month_end])
+            ->where('sales_returns.voucher_type', 'PURCHASE')
+            ->where('sales_returns.sr_nature', 'WITH GST')
+            ->where('sales_returns.delete','0')
+            ->where('sales_returns.status','1')
+
+            ->select(
+                'sales_returns.*',
+                'accounts.account_name as party_name',
+                DB::raw('IFNULL(igst.amount,0) as igst_amount'),
+                DB::raw('IFNULL(cgst.amount,0) as cgst_amount'),
+                DB::raw('IFNULL(sgst.amount,0) as sgst_amount')
+            )
+            ->get();
+
+        foreach($credit as $c){
+            $pending_notes[] = [
+                'sr_no' => $sr++,
+                'party' => $c->party_name ?? '',
+                'type' => 'CR',
+                'invoice_no' => $c->sr_prefix ?? $c->voucher_no ?? '-',
+                'date' => date('d-m-Y', strtotime($c->date)),
+                'book_value' => $c->total,
+                'taxable' => $c->taxable_amt,
+                'igst' => $c->igst_amount,
+                'cgst' => $c->cgst_amount,
+                'sgst' => $c->sgst_amount,
+                'cess' => 0
+            ];
+        }
     return json_encode([
         'status' => true,
         'message' => 'GSTR2A',
         'data' => $gstr2a_arr,
+        'pending_notes' => $pending_notes ?? [],
         'last_created_date' => $last_created_date
     ]);
 }
 
     }
     public function gstr2aAllInfo(Request $request){
+        $financial_year = Session::get('default_fy');
+        $y = explode("-", $financial_year);
+
+        $from = \DateTime::createFromFormat('y', $y[0])->format('Y');
+        $to   = \DateTime::createFromFormat('y', $y[1])->format('Y');
+
+        $month_input = date('Y-m', strtotime($request->month));
+
+        $month_end = date('Y-m-t', strtotime($month_input));
+
+        // FY start based on your system
+        $fy_start = $from . '-04-01';
         $account = Accounts::select('account_name')
                             ->where('company_id',Session::get('user_company_id'))
                             ->where('gstin',$request->ctin)
@@ -1108,7 +1247,7 @@ class GSTR2AController extends Controller
                                                                     ->where('sales_returns.sr_nature', 'WITH GST')
                                                                     ->where('sales_returns.delete', '0')
                                                                     ->where('sales_returns.status', '1')
-                                                                    ->where('sales_returns.date', 'like', $request->month . '%')
+                                                                    ->whereBetween('sales_returns.date', [$fy_start, $month_end])
 
                                                                     // IGST
                                                                     ->leftJoin('sale_return_sundries as igst', function ($join) use ($bill_sundry_igst) {
@@ -1139,19 +1278,7 @@ class GSTR2AController extends Controller
                                                                     )
                                                                     ->get();
 
-                $b2b_debit_note_unlinked_current_month = PurchaseReturn::where(function ($q) use ($request) {
-
-        // Case 1: Unlinked → gstr2b_invoice_id IS NULL (no month condition)
-                                                                                $q->whereNull('purchase_returns.gstr2b_invoice_id')
-                                                                        
-                                                                                  // OR
-                                                                        
-                                                                                  // Case 2: Linked → gstr2b_invoice_id IS NOT NULL AND month matches
-                                                                                  ->orWhere(function ($q2) use ($request) {
-                                                                                      $q2->whereNotNull('purchase_returns.gstr2b_invoice_id')
-                                                                                         ->where('purchase_returns.linked_month','!=', $request->month);
-                                                                                  });
-                                                                            })
+                $b2b_debit_note_unlinked_current_month = PurchaseReturn::whereNull('purchase_returns.gstr2b_invoice_id')
                                                                         ->where('purchase_returns.company_id', Session::get('user_company_id'))
                                                                         ->where('purchase_returns.merchant_gst', $request->gstin)
                                                                         ->where('purchase_returns.billing_gst', $request->ctin)
@@ -1159,7 +1286,7 @@ class GSTR2AController extends Controller
                                                                         ->where('purchase_returns.sr_nature', 'WITH GST')
                                                                         ->where('purchase_returns.delete', '0')
                                                                         ->where('purchase_returns.status', '1')
-                                                                        ->where('purchase_returns.date', 'like', $request->month . '%')
+                                                                        ->whereBetween('purchase_returns.date', [$fy_start, $month_end])
 
                                                                         // IGST
                                                                         ->leftJoin('purchase_return_sundries as igst', function ($join) use ($bill_sundry_igst) {

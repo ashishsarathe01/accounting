@@ -354,7 +354,58 @@
                      </tr>
                      `;
 
-                    $(".gst_table tbody").html(html);
+                     let finalHtml = html;
+
+                     if(obj.pending_notes && obj.pending_notes.length){
+
+                        finalHtml += `
+                        <tr>
+                           <td colspan="6">
+                                 <h6 style="margin-top:15px;">Pending Credit / Debit Notes (Unlinked)</h6>
+                                 <table class="table table-bordered">
+                                    <thead>
+                                       <tr>
+                                             <th>Sr No</th>
+                                             <th>Party</th>
+                                             <th>Type</th>
+                                             <th>Invoice No</th>
+                                             <th>Date</th>
+                                             <th>Book Value</th>
+                                             <th>Taxable</th>
+                                             <th>IGST</th>
+                                             <th>CGST</th>
+                                             <th>SGST</th>
+                                             <th>Cess</th>
+                                       </tr>
+                                    </thead>
+                                    <tbody>
+                        `;
+
+                        obj.pending_notes.forEach(r => {
+                           finalHtml += `
+                           <tr>
+                                 <td>${r.sr_no}</td>
+                                 <td>${r.party}</td>
+                                 <td>${r.type}</td>
+                                 <td>${r.invoice_no}</td>
+                                 <td>${r.date}</td>
+                                 <td style="text-align:right">${Number(r.book_value).toLocaleString('en-IN')}</td>
+                                 <td style="text-align:right">${Number(r.taxable).toLocaleString('en-IN')}</td>
+                                 <td style="text-align:right">${Number(r.igst).toLocaleString('en-IN')}</td>
+                                 <td style="text-align:right">${Number(r.cgst).toLocaleString('en-IN')}</td>
+                                 <td style="text-align:right">${Number(r.sgst).toLocaleString('en-IN')}</td>
+                                 <td style="text-align:right">${Number(r.cess).toLocaleString('en-IN')}</td>
+                           </tr>`;
+                        });
+
+                        finalHtml += `
+                                    </tbody>
+                                 </table>
+                           </td>
+                        </tr>`;
+                     }
+
+                     $(".gst_table tbody").html(finalHtml);
                     $("#gst_div").show();
 
                   }
