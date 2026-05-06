@@ -14,6 +14,8 @@ use App\Models\JobWorkInvoiceConfiguration;
 use App\Models\JobWorkInvoiceTermCondition;
 use App\Models\Bank;
 use App\Models\Accounts;
+use App\Models\State;
+use App\Models\JobWorkDescription;
 use Session;
 use DB;
 
@@ -1502,5 +1504,394 @@ class JobWorkController extends Controller
         return redirect('job-work-invoice-configuration')
             ->withSuccess('Job Work Invoice Configuration Saved Successfully!');
     }
+public function getJobWorkJson(Request $request)
+{
+    ini_set('serialize_precision', '-1');
+    $jobwork = JobWork::join('accounts', 'job_works.party_id', '=', 'accounts.id')
+        ->join('companies', 'job_works.company_id', '=', 'companies.id')
+        ->leftJoin('states', 'job_works.billing_state', '=', 'states.id')
+        ->where('job_works.id', $request->id)
+        ->first([
+            'job_works.*',
+            'accounts.account_name',
+            'accounts.print_name',
+            'accounts.gstin',
+            'accounts.address',
+            'accounts.pin_code',
+            'states.name as state_name',
+            'companies.company_name',
+            'companies.gst_config_type'
+        ]);
+    if (!$jobwork) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Job Work Not Found'
+        ]);
+    }
+    $seller_Gstin = "";
+    $seller_LglNm = "";
+    $seller_TrdNm = "";
+    $seller_Addr1 = "";
+    $seller_Loc = "";
+    $seller_Pin = "";
+    $seller_Stcd = "";
+    if ($jobwork->gst_config_type == "multiple_gst") {
+        $gst_info = DB::table('gst_settings_multiple')
+            ->where([
+                'company_id' => $jobwork->company_id,
+                'gst_type' => 'multiple_gst'
+            ])
+            ->get();
+        foreach ($gst_info as $value) {
+            if ($value->series == $jobwork->series_no) {
+                $st = State::select('name')
+                    ->where('id', $value->state)
+                    ->first();
+                $seller_Gstin = $value->gst_no;
+                $seller_LglNm = $jobwork->company_name;
+                $seller_TrdNm = $jobwork->company_name;
+                $seller_Addr1 = $value->address;
+                $seller_Loc = $st->name ?? "";
+                $seller_Pin = $value->pincode;
+                $seller_Stcd = substr($value->gst_no, 0, 2);
+                break;
+            } else {
+                $branch = GstBranch::select(
+                    'id',
+                    'gst_number',
+                    'branch_address',
+                    'branch_pincode'
+                )
+                ->where([
+                    'delete' => '0',
+                    'company_id' => $jobwork->company_id,
+                    'gst_setting_id' => $value->id,
+                    'branch_series' => $jobwork->series_no
+                ])
+                ->first();
+                if ($branch) {
+                    $st = State::select('name')
+                        ->where('id', $value->state)
+                        ->first();
+                    $seller_Gstin = $branch->gst_number;
+                    $seller_LglNm = $jobwork->company_name;
+                    $seller_TrdNm = $jobwork->company_name;
+                    $seller_Addr1 = $branch->branch_address;
+                    $seller_Loc = $st->name ?? "";
+                    $seller_Pin = $branch->branch_pincode;
+                    $seller_Stcd = substr($branch->gst_number, 0, 2);
+                    break;
+                }
+            }
+        }
+    } else if ($jobwork->gst_config_type == "single_gst") {
+        $gst_info = DB::table('gst_settings')
+            ->where([
+                'company_id' => $jobwork->company_id,
+                'gst_type' => 'single_gst'
+            ])
+            ->first();
+        if ($gst_info) {
+            if ($gst_info->series == $jobwork->series_no) {
+                $st = State::select('name')
+                    ->where('id', $gst_info->state)
+                    ->first();
+                $seller_Gstin = $gst_info->gst_no;
+                $seller_LglNm = $jobwork->company_name;
+                $seller_TrdNm = $jobwork->company_name;
+                $seller_Addr1 = $gst_info->address;
+                $seller_Loc = $st->name ?? "";
+                $seller_Pin = $gst_info->pincode;
+                $seller_Stcd = substr($gst_info->gst_no, 0, 2);
+            } else {
+                $branch = GstBranch::select(
+                    'id',
+                    'gst_number',
+                    'branch_address',
+                    'branch_pincode'
+                )
+                ->where([
+                    'delete' => '0',
+                    'company_id' => $jobwork->company_id,
+                    'gst_setting_id' => $gst_info->id,
+                    'branch_series' => $jobwork->series_no
+                ])
+                ->first();
+                if ($branch) {
+                    $st = State::select('name')
+                        ->where('id', $gst_info->state)
+                        ->first();
+                    $seller_Gstin = $branch->gst_number;
+                    $seller_LglNm = $jobwork->company_name;
+                    $seller_TrdNm = $jobwork->company_name;
+                    $seller_Addr1 = $branch->branch_address;
+                    $seller_Loc = $st->name ?? "";
+                    $seller_Pin = $branch->branch_pincode;
+                    $seller_Stcd = substr($branch->gst_number, 0, 2);
+                }
+            }
+        }
+    }
+    if (!empty($jobwork->shipping_name)) {
 
+        $shipp_name = $jobwork->shipping_name;
+        $shipp_address = $jobwork->shipping_address;
+        $shipp_gst = $jobwork->shipping_gst;
+        $shipp_state = $jobwork->shipping_state;
+        $shipp_pincode = $jobwork->shipping_pincode;
+    } else {
+        $shipp_name = $jobwork->billing_name;
+        $shipp_address = $jobwork->billing_address;
+        $shipp_gst = $jobwork->billing_gst;
+        $shipp_state = $jobwork->state_name;
+        $shipp_pincode = $jobwork->billing_pincode;
+    }
+    $CGST = 0;
+    $SGST = 0;
+    $IGST = 0;
+    $TCS = 0;
+    $roundOff = 0;
+    $sundry_amount = 0;
+    $total_item_price = JobWorkDescription::where(
+        'job_work_id',
+        $request->id
+    )->sum('amount');
+    $net_total = $total_item_price;
+    $grand_total = $jobwork->total;
+    $AssVal = $net_total + $sundry_amount;
+    $OthChrg = $TCS + $roundOff;
+    $TotInvVal = $grand_total;
+    $SellerDtls = array(
+        "Gstin" => $seller_Gstin,
+        "LglNm" => $seller_LglNm,
+        "TrdNm" => $seller_TrdNm,
+        "Addr1" => $seller_Addr1,
+        "Addr2" => null,
+        "Loc" => $seller_Loc,
+        "Pin" => (int)$seller_Pin,
+        "Stcd" => $seller_Stcd,
+        "Ph" => null,
+        "Em" => null,
+    );
+    $BuyerDtls = array(
+        "Gstin" => $jobwork->billing_gst,
+        "LglNm" => $jobwork->billing_name,
+        "TrdNm" => $jobwork->billing_name,
+        "Pos" => substr($jobwork->billing_gst, 0, 2),
+        "Addr1" => $jobwork->billing_address,
+        "Addr2" => null,
+        "Loc" => $jobwork->state_name,
+        "Pin" => (int)$jobwork->billing_pincode,
+        "Stcd" => substr($jobwork->billing_gst, 0, 2),
+        "Ph" => null,
+        "Em" => null
+    );
+    $DispDtls = array(
+        "Nm" => $seller_LglNm,
+        "Addr1" => $seller_Addr1,
+        "Addr2" => null,
+        "Loc" => $seller_Loc,
+        "Pin" => (int)$seller_Pin,
+        "Stcd" => $seller_Stcd,
+    );
+    $ShipDtls = array(
+        "Gstin" => $shipp_gst,
+        "LglNm" => $shipp_name,
+        "TrdNm" => $shipp_name,
+        "Addr1" => $shipp_address,
+        "Addr2" => null,
+        "Loc" => $shipp_state,
+        "Pin" => (int)$shipp_pincode,
+        "Stcd" => !empty($shipp_gst)
+            ? substr($shipp_gst, 0, 2)
+            : null,
+    );
+    $ValDtls = array(
+        "AssVal" => (float)round($AssVal, 2),
+        "CgstVal" => (float)round($CGST, 2),
+        "SgstVal" => (float)round($SGST, 2),
+        "IgstVal" => (float)round($IGST, 2),
+        "CesVal" => null,
+        "StCesVal" => null,
+        "Discount" => 0,
+        "OthChrg" => (float)round($OthChrg, 2),
+        "RndOffAmt" => 0,
+        "TotInvVal" => (float)round($TotInvVal, 2),
+        "TotInvValFc" => null
+    );
+    $ItemList = [];
+    $item_data = JobWorkDescription::join(
+            'manage_items',
+            'job_work_descriptions.goods_discription',
+            '=',
+            'manage_items.id'
+        )
+        ->join(
+            'units',
+            'manage_items.u_name',
+            '=',
+            'units.id'
+        )
+        ->where('job_work_id', $request->id)
+        ->groupBy('manage_items.hsn_code')
+        ->get([
+            DB::raw('SUM(job_work_descriptions.qty) as tweight'),
+            DB::raw('SUM(job_work_descriptions.amount) as tprice'),
+            DB::raw('manage_items.hsn_code'),
+            DB::raw('manage_items.p_name as name'),
+            DB::raw('job_work_descriptions.price'),
+            DB::raw('manage_items.u_name'),
+            DB::raw('manage_items.gst_rate'),
+            DB::raw('units.s_name as unit_name')
+        ]);
+    $i = 1;
+    if (count($item_data) > 0) {
+        foreach ($item_data as $value) {
+            $unit = $value->unit_name;
+            $item_total = $value->tprice;
+            $unit_price = $item_total / $value->tweight;
+            $item_cgst = 0;
+            $item_sgst = 0;
+            $item_igst = 0;
+            $itax = $value->gst_rate;
+            $item_cgst = 0;
+            $item_sgst = 0;
+            $item_igst = 0;
+            $unit_price = round($unit_price, 2);
+            $item_total = round($item_total, 2);
+            $final_item_totol = $item_total;
+            $final_item_totol = round($final_item_totol, 2);
+            array_push($ItemList, array(
+                "SlNo" => (String)$i,
+                "IsServc" => "N",
+                "PrdDesc" => $value->name,
+                "HsnCd" => $value->hsn_code,
+                "Barcde" => null,
+                "BchDtls" => array(
+                    "Nm" => "123",
+                    "Expdt" => null,
+                    "wrDt" => null
+                ),
+                "Qty" => (float)$value->tweight,
+                "QtyUnit" => $unit,
+                "FreeQty" => null,
+                "Unit" => $unit,
+                "UnitPrice" => (float)round($unit_price, 2),
+                "TotAmt" => (float)$item_total,
+                "Discount" => null,
+                "PreTaxVal" => null,
+                "AssAmt" => (float)$item_total,
+                "GstRt" => (float)$itax,
+                "SgstAmt" => (float)round($item_sgst, 2),
+                "IgstAmt" => (float)round($item_igst, 2),
+                "CgstAmt" => (float)round($item_cgst, 2),
+                "CesRt" => null,
+                "CesAmt" => null,
+                "CesNonAdvlAmt" => null,
+                "StateCesRt" => null,
+                "StateCesAmt" => null,
+                "StateCesNonAdvlAmt" => null,
+                "OthChrg" => null,
+                "TotItemVal" => (float)round($final_item_totol, 2),
+                "OrdLineRef" => null,
+                "OrgCntry" => null,
+                "PrdSlNo" => null,
+            ));
+            $i++;
+        }
+    }
+    $transactionType = !empty($jobwork->shipping_name) ? 2 : 1;
+    $supplyType = "O";
+    $subSupplyType = "1";
+    $subSupplyDesc = "";
+    $docType = "INV";
+    $docNo = $jobwork->voucher_no_prefix;
+    $vehicleNo = $jobwork->vehicle_no ?? "";
+    $transporterName = $jobwork->transport_name ?? "";
+    $transDocNo = $jobwork->gr_rr_no ?? "";
+    $transDocDate = !empty($jobwork->date)
+        ? date('d/m/Y', strtotime($jobwork->date))
+        : "";
+    $vehicleType = "R";
+    $transDistance = 0;
+    $jobwork_json = array(
+        "Version" => "1.1",
+        "TranDtls" => array(
+            "TaxSch" => "GST",
+            "SupTyp" => "JOBWORK",
+            "RegRev" => "N",
+            "EcmGstin" => null,
+            "IgstOnIntra" => "N",
+            "TransMode" => "1",
+            "Distance" => (int)$transDistance,
+            "TransId" => null,
+            "TransName" => $transporterName,
+            "TransDocDt" => $transDocDate,
+            "TransDocNo" => $transDocNo,
+            "VehNo" => $vehicleNo,
+            "VehType" => $vehicleType
+        ),
+        "DocDtls" => array(
+            "Typ" => $docType,
+            "No" => $docNo,
+            "Dt" => date(
+                'd/m/Y',
+                strtotime($jobwork->date)
+            )
+        ),
+        "SellerDtls" => $SellerDtls,
+        "BuyerDtls" => $BuyerDtls,
+        "DispDtls" => $DispDtls,
+        "ShipDtls" => $ShipDtls,
+        "ValDtls" => $ValDtls,
+        "ItemList" => $ItemList,
+        "EwbDtls" => array(
+            "TransId" => null,
+            "TransName" => $transporterName,
+            "Distance" => (int)$transDistance,
+            "TransDocNo" => $transDocNo,
+            "TransDocDt" => $transDocDate,
+            "VehNo" => $vehicleNo,
+            "VehType" => $vehicleType
+        ),
+        "ExpDtls" => array(
+            "ShipBNo" => null,
+            "ShipBDt" => null,
+            "Port" => null,
+            "RefClm" => null,
+            "ForCur" => null,
+            "CntCode" => null
+        ),
+        "PayDtls" => array(
+            "Nm" => null,
+            "AccDet" => null,
+            "Mode" => null,
+            "FinInsBr" => null,
+            "PayTerm" => null,
+            "PayInstr" => null,
+            "CrTrn" => null,
+            "DirDr" => null,
+            "CrDay" => null,
+            "PaidAmt" => null,
+            "PaymtDue" => null
+        ),
+        "RefDtls" => array(
+            "InvRm" => "JOB WORK",
+            "DocPerdDtls" => array(
+                "InvStDt" => date(
+                    'd/m/Y',
+                    strtotime($jobwork->date)
+                ),
+                "InvEndDt" => date(
+                    'd/m/Y',
+                    strtotime($jobwork->date)
+                )
+            )
+        )
+    );
+    return response()->json([
+        'success' => true,
+        'data' => $jobwork_json
+    ]);
+}
 }

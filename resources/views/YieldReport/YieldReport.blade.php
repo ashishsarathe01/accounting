@@ -82,6 +82,9 @@
                 <button type="button" onclick="printReport()" class="btn btn-sm btn-success">
                     Print
                 </button>
+                <button type="button" onclick="downloadPDF()" class="btn btn-sm btn-danger">
+                    PDF
+                </button>
             </div>
 
         </div>
@@ -91,16 +94,18 @@
 
 {{-- REPORT TABLE --}}
 <div id="printArea" class="bg-white table-view shadow-sm">
-    <div id="printHeader" style="display:none; text-align:center; margin-bottom:10px;">
+    <div id="printHeader" style="display:none; text-align:center; margin-bottom:20px;">
         <h3 style="margin:0;">Yield Report</h3>
-        <p style="margin:0;">
-            From: {{ $from_date }} To: {{ $to_date }}
+        <p style="margin:0; font-size:14px;">
+            From Date : {{ \Carbon\Carbon::parse($from_date)->format('d-m-Y') }}
+            &nbsp;&nbsp;&nbsp;
+            To Date : {{ \Carbon\Carbon::parse($to_date)->format('d-m-Y') }}
         </p>
     </div>
-<table class="table table-bordered table-striped m-0">
+<table class="table table-bordered m-0">
 
     <thead>
-        <tr class="bg-light-pink text-body">
+        <tr style="background-color:#d9edf7; color:#000;">
             <th style="width:30%">Particulars</th>
             <th style="width:20%; text-align:right;">Weight</th>
         </tr>
@@ -108,13 +113,7 @@
 
     <tbody>
 
-        <tr onclick="toggleRow('productionRow')" style="cursor:pointer;">
-            <td><strong>Total Production</strong></td>
-            <td style="text-align:right;">
-                {{ number_format($totalProduction ?? 0, 2) }}
-            </td>
-        </tr>
-        <tr id="productionRow" style="display:none;">
+        <tr id="productionRow">
             <td colspan="2">
                 <table class="table table-bordered mb-0">
                     @foreach($productionDetails as $row)
@@ -128,66 +127,51 @@
                 </table>
             </td>
         </tr>
-        <tr onclick="toggleRow('consumptionRow')" style="cursor:pointer;">
-            <td><strong>Generated Weight from color & chemical</strong></td>
+
+        <tr style="background-color:#d0d0d0;">
+            <td><strong>Total Production</strong></td>
             <td style="text-align:right;">
-                {{ number_format($totalAdjustedConsumption ?? 0, 2) }}
+                <strong>{{ number_format($totalProduction ?? 0, 2) }}</strong>
             </td>
         </tr>
-        <tr id="consumptionRow" style="display:none;">
+        <tr id="consumptionRow">
             <td colspan="2">
                 <table class="table table-bordered mb-0">
-                    <thead>
-                        <tr>
-                            <th>Item</th>
-                            <th>Total</th>
-                            <th>%</th>
-                            <th>Adjusted</th>
-                        </tr>
-                    </thead>
                     <tbody>
                         @foreach($consumptionDetails as $row)
                         @php
                             $adjusted = ($row->total * $row->percent) / 100;
                         @endphp
                         <tr>
-                            <td>{{ $row->item_name }}</td>
-                            <td>{{ number_format($row->total, 2) }}</td>
-                            <td>{{ number_format($row->percent, 2) }}%</td>
-                            <td>{{ number_format($adjusted, 2) }}</td>
+                            <td>
+                                <strong>Less (-) Produced</strong> {{ $row->item_name }}
+                            </td>
+
+                            <td class="text-end">
+                                {{ number_format($row->total, 2) }}
+                            </td>
+
+                            <td class="text-end">
+                                {{ number_format($row->percent, 2) }}%
+                            </td>
+
+                            <td class="text-end">
+                                {{ number_format($adjusted, 2) }}
+                            </td>
                         </tr>
                         @endforeach
                     </tbody>
                 </table>
             </td>
         </tr>
-        <tr onclick="toggleRow('yieldLossRow')" style="cursor:pointer;">
+
+        <tr style="background-color:#d0d0d0;">
             <td><strong>Balance Production</strong></td>
             <td style="text-align:right;">
-                {{ number_format($yieldLoss ?? 0, 2) }}
+                <strong>{{ number_format($yieldLoss ?? 0, 2) }}</strong>
             </td>
         </tr>
-        <tr id="yieldLossRow" style="display:none;">
-            <td colspan="2">
-                <table class="table table-bordered mb-0">
-                    <tr>
-                        <td>Total Production</td>
-                        <td style="text-align:right;">{{ number_format($totalProduction, 2) }}</td>
-                    </tr>
-                    <tr>
-                        <td>Consumed</td>
-                        <td style="text-align:right;">{{ number_format($totalAdjustedConsumption, 2) }}</td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-        <tr onclick="toggleRow('wasteRow')" style="cursor:pointer;">
-            <td><strong>Total Waste</strong></td>
-            <td style="text-align:right;">
-                    {{ number_format($totalWaste ?? 0, 2) }}
-            </td>
-        </tr>
-        <tr id="wasteRow" style="display:none;">
+        <tr id="wasteRow">
             <td colspan="2">
                 <table class="table table-bordered mb-0">
                     @foreach($wasteDetails as $row)
@@ -201,46 +185,28 @@
                 </table>
             </td>
         </tr>
-        <tr class="bg-light" onclick="toggleRow('yieldPercentRow')" style="cursor:pointer;">
-            <td><strong>Yield Loss %</strong></td>
+
+        <tr style="background-color:#d0d0d0;">
+            <td><strong>Total Waste</strong></td>
             <td style="text-align:right;">
-                {{ number_format($yieldPercent ?? 0, 2) }} %
-            </td>
+                <strong>{{ number_format($totalWaste ?? 0, 2) }}</strong>
             </td>
         </tr>
-        <tr id="yieldPercentRow" style="display:none;" onclick="event.stopPropagation();">
-            <td colspan="2">
-                <table class="table table-bordered mb-0">
 
-                    <tr>
-                        <td>Yield Loss</td>
-                        <td style="text-align:right;">
-                            {{ number_format($yieldLoss, 2) }}
-                        </td>
-                    </tr>
+        <tr style="background-color:#d0d0d0;">
+            <td><strong>Yield Recovery %</strong></td>
+            <td style="text-align:right;">
+                <strong>{{ number_format($yieldPercent, 2) }} %</strong>
+            </td>
+        </tr>
 
-                    <tr>
-                        <td>Total Waste</td>
-                        <td style="text-align:right;">
-                            {{ number_format($totalWaste, 2) }}
-                        </td>
-                    </tr>
 
-                    <tr>
-                        <td>Formula</td>
-                        <td style="text-align:right;">
-                            (Yield Loss ÷ Waste) × 100
-                        </td>
-                    </tr>
-
-                    <tr class="bg-light">
-                        <td><strong>Yield Loss %</strong></td>
-                        <td style="text-align:right;">
-                            <strong>{{ number_format($yieldPercent, 2) }} %</strong>
-                        </td>
-                    </tr>
-
-                </table>
+        <tr style="background-color:#d0d0d0;">
+            <td><strong>Overall Yield Recovery %</strong></td>
+            <td style="text-align:right;">
+                <strong>
+                    {{ $totalWaste > 0 ? number_format(($totalProduction / $totalWaste) * 100, 2) : 0 }} %
+                </strong>
             </td>
         </tr>
     </tbody>
@@ -255,6 +221,7 @@
 </div>
 
 @include('layouts.footer')
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script>
 
 function toggleRow(id) {
@@ -268,6 +235,38 @@ function toggleRow(id) {
 }
 function printReport() {
     window.print();
+}
+function downloadPDF() {
+
+    let element = document.getElementById('printArea');
+
+    // SHOW HEADER FOR PDF
+    document.getElementById('printHeader').style.display = 'block';
+
+    let opt = {
+        margin: 0.5,
+        filename: 'Yield_Report.pdf',
+        image: { type: 'jpeg', quality: 1 },
+        html2canvas: {
+            scale: 2
+        },
+        jsPDF: {
+            unit: 'in',
+            format: 'a4',
+            orientation: 'portrait'
+        }
+    };
+
+    html2pdf()
+        .set(opt)
+        .from(element)
+        .save()
+        .then(() => {
+
+            // HIDE HEADER AGAIN AFTER DOWNLOAD
+            document.getElementById('printHeader').style.display = 'none';
+
+        });
 }
 </script>
 @endsection
