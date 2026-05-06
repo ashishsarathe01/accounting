@@ -62,15 +62,27 @@
    .bil_logo img{
       max-width:100%;
    }
-   @media print{
-      .noprint{
-         display:none;
-      }
-   }
+    @media print {
+        
+        .header-section {
+            display: none !important; /* hide buttons only */
+        }
+        .sidebar {
+            display: none !important; /* hide buttons only */
+        }
+        table, th, td {
+            border: 1px solid #000 !important;
+            border-collapse: collapse;
+        }
+        body {
+            margin: 10px;
+        }
+    }
+    
    @page { size: auto;  margin: 0mm; }
-   .importantRule { 
-   display: none !important;  /* Force hide anything with this class */
-}
+       .importantRule { 
+       display: none !important;  /* Force hide anything with this class */
+    }
 </style>
 <div class="list-of-view-company ">
    <section class="list-of-view-company-section container-fluid">
@@ -435,10 +447,10 @@
                   distance : distance
                },
                success: function(data){                  
-                  if(res.success==true){
-                     alert(res.message)
+                  if(data.success==true){
+                     alert(data.message)
                      location.reload();
-                     //$("#jsonhtml").html("<pre>" + JSON.stringify(res.data) + "</pre>");
+                     //$("#jsonhtml").html("<pre>" + JSON.stringify(data.data) + "</pre>");
                   }else{
                      alert(res.message)
                   } 
@@ -494,9 +506,7 @@
       });
    });
       function printpage(){
-         $('.header-section').addClass('importantRule');
          window.print();
-         $('.header-section').removeClass('importantRule');
       }
     $(document).on('click','#approveDebitNote',function(){
         if(confirm("Approve this Debit Note ?")){

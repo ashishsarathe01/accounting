@@ -405,9 +405,15 @@ public function datatable(Request $request)
         $item_gst_rate = ItemGstRate::select('effective_from')
                               ->where('item_id',$id)
                               ->where('gst_rate', $manageitems->gst_rate)
-                              ->orderBy('id','desc')
+                              ->orderBy('effective_from','desc')
                               ->first();
          $manageitems->effective_from = $item_gst_rate->effective_from;
+         $item_gst_rate_list = ItemGstRate::select('effective_from','gst_rate','id')
+                              ->where('item_id',$id)                             
+                              ->orderBy('effective_from')
+                              ->get();
+                              
+                              
          $series_open = ItemBalanceBySeries::select('series','opening_amount','opening_quantity','type')->where('item_id',$id)->get();
          $grouped = $series_open->groupBy('series')->toArray();
          foreach ($series as $key => $value) {
@@ -430,7 +436,8 @@ public function datatable(Request $request)
                                 ->where('company_id', $com_id)
                                 ->exists();
 
-        return view('manageitem/editAccountManageItems')->with('production_item',$production_item)->with('accountunit', $accountunit)->with('itemGroups', $itemGroups)->with('manageitems', $manageitems)->with('series',$series);
+        return view('manageitem/editAccountManageItems')->with('production_item',$production_item)->with('accountunit', $accountunit)->with('itemGroups', $itemGroups)->with('manageitems', $manageitems)->with('series',$series)
+        ->with('item_gst_rate_list',$item_gst_rate_list);
     }
     /**
      * Update the specified resource in storage.
@@ -1203,7 +1210,7 @@ public function datatable(Request $request)
 
       $consumed_reels = ItemSizeStock::where('company_id',Session::get('user_company_id'))
                                        ->where('sj_consumption_id',$id)
-                                       ->whereNull('sj_generated_detail_id')
+                                       //->whereNull('sj_generated_detail_id')
                                        ->select('item_id','size','weight','reel_no','id','unit')
                                        ->get();
 
@@ -2464,7 +2471,7 @@ public function getItemGstRate(Request $request){
         ]);
       }else{
          return response()->json([
-            'status'  => true,
+            'status'  => false,
             'gst_rate'    => 0
         ]);
       }

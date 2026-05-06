@@ -217,6 +217,7 @@
                                           <option value="{{$item_list->id}}" @if($item_list->id==$sale_order_item['item_id']) selected @endif data-unit_id="{{$item_list->u_name}}" data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id="{{$item_list->id}}" data-itemid="{{$item_list->id}}" data-available_item="{{$item_list->available_item}}" data-parameterized_stock_status="{{$item_list->parameterized_stock_status}}" data-config_status="{{$item_list->config_status}}" data-group_id="{{$item_list->group_id}}">{{$item_list->name}}</option>
                                        @endforeach
                                     </select>
+                                    <span id="gst_rate_span_{{$add_more_count}}" style="color: red;"></span>
                                     @if($config && $config->show_description == 1) 
                                        
                                     <div class="description-wrapper mt-1" data-row="{{ $add_more_count-1 }}">
@@ -272,7 +273,7 @@
                                           </option>
                                        @endforeach
                                     </select>
-                                   
+                                    <span id="gst_rate_span_1" style="color: red;"></span>
                                     <!-- ⚙️ Button -->
                                     <button type="button" 
                                           class="btn btn-outline-secondary p-1 px-2 editItemDetailsBtn" 
@@ -1293,7 +1294,7 @@
                               '{{ $item_list->name }}' +
                         '</option>' +
                      '@endforeach' +
-               '</select>' +
+               '</select><span id="gst_rate_span_' + add_more_count + '" style="color: red;"></span>' +
 
                '<button type="button" class="btn btn-outline-secondary p-1 px-2 editItemDetailsBtn d-none" ' +
                   'data-row="tr_' + add_more_count + '" title="Configure item">⚙️</button>' +
@@ -2491,7 +2492,7 @@ function removeItem() {
       $('#unit_tr_'+rowId).attr('data-config_status',$('option:selected', this).attr('data-config_status'));
 
       call_fun('tr_'+rowId);
-      //getItemGstRate(newItemId,rowId);
+      getItemGstRate(newItemId,rowId);
       if($('option:selected', this).attr('data-parameterized_stock_status') == 1){
          $('#unit_tr_'+rowId).css({ cursor: 'pointer' });
       }
@@ -3882,10 +3883,11 @@ function calculateToPayAmount(){
 }  
 function getItemGstRate(item_id,index){
    let date = $("#date").val();
-   if(date==""){
+   if(date=="" || item_id==""){
       return;
    }
    var token = '<?php echo csrf_token(); ?>';
+   $("#gst_rate_span_" + index).text("");
    $.ajax({
       url: "{{ route('get-item-gst-rate') }}",
       type: "POST",
@@ -3895,6 +3897,11 @@ function getItemGstRate(item_id,index){
             let $select = $("#item_id_" + index);
             $select.find(':selected').attr('data-percent', res.gst_rate);
             calculateAmount();
+         }else if(res.status==false){
+            $("#item_id_" + index).focus();
+            $("#item_id_" + index).val('');
+            gst_rate_span_tr = $("#gst_rate_span_" + index);
+            gst_rate_span_tr.text("GST Rate Not Found");
          }
       }
    });
@@ -3904,7 +3911,7 @@ $("#date").on("change", function(){
       let item_id = $(this).val();
       let index = $(this).data("id");
       if(item_id){
-         //getItemGstRate(item_id,index);
+         getItemGstRate(item_id,index);
       }
    });   
 });
@@ -3967,7 +3974,7 @@ function checkPartyItemPrice(rowId) {
     if (!party_id || !item_id) return;
 
     $.ajax({
-        url: '/get-party-item-price',
+        url: '{{ url("get-party-item-price") }}',
         type: 'GET',
         data: {
             party_id: party_id,
@@ -4005,7 +4012,6 @@ $('#party_id').on('change', function () {
 });
 
 $(document).ready(function () {
-
     setTimeout(function () {
         $('.item_id').each(function () {
             let rowId = $(this).data('id');

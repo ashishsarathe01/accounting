@@ -4759,7 +4759,12 @@ public function hsnSummary(Request $request){
         ->select(
             'sale_descriptions.sale_id',
             'states.name as state_name',
-            'sale_descriptions.qty',
+            DB::raw("
+                    CASE 
+                        WHEN manage_items.maintain_stock = 'No' THEN 0 
+                        ELSE sale_descriptions.qty 
+                    END as qty
+                "),
             'sale_descriptions.amount',
             'manage_items.gst_rate',
             'units.unit_code',
@@ -5546,7 +5551,12 @@ $payments = DB::table('payments')
             ->select(
                 'sale_descriptions.sale_id',
                 'states.name as state_name',
-                'sale_descriptions.qty',
+                DB::raw("
+                    CASE 
+                        WHEN manage_items.maintain_stock = 'No' THEN 0 
+                        ELSE sale_descriptions.qty 
+                    END as qty
+                "),
                 'sale_descriptions.amount',
                 'manage_items.gst_rate',
                 'units.unit_code',
@@ -5623,7 +5633,12 @@ $payments = DB::table('payments')
             ->select(
                 'sale_return_descriptions.sale_return_id',
                 'states.name as state_name',
-                'sale_return_descriptions.qty',
+                DB::raw("
+                        CASE 
+                            WHEN manage_items.maintain_stock = 'No' THEN 0 
+                            ELSE sale_return_descriptions.qty 
+                        END as qty
+                    "),
                 'manage_items.gst_rate',
                 'sale_return_descriptions.amount',
                 'units.unit_code',
@@ -5739,7 +5754,12 @@ $payments = DB::table('payments')
                 'purchase_return_descriptions.purchase_return_id',
                 'states.name as state_name',
                 'manage_items.gst_rate',
-                'purchase_return_descriptions.qty',
+                DB::raw("
+                            CASE 
+                                WHEN manage_items.maintain_stock = 'No' THEN 0 
+                                ELSE purchase_return_descriptions.qty 
+                            END as qty
+                        "),
                 'purchase_return_descriptions.amount',
                 'units.unit_code',
                 'manage_items.hsn_code'

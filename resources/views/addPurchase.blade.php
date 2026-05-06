@@ -182,7 +182,8 @@
                                     <option value="{{$item_list->id}}" data-unit_id="{{$item_list->u_name}}" data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id="{{$item_list->id}}" data-itemid="{{$item_list->id}}"  data-parameterized_stock_status="{{$item_list->parameterized_stock_status}}" data-config_status="{{$item_list->config_status}}" data-group_id="{{$item_list->group_id}}">{{$item_list->name}}</option>
                                  @endforeach
                               </select>
-                           </td>                           
+                              <span id="gst_rate_span_1" style="color: red;"></span>
+                           </td>
                            <td class=" w-min-50">
                               <input type="number" step="any" class="quantity w-100 form-control" id="quantity_tr_1" name="qty[]" placeholder="Quantity" style="text-align:right;" value="@isset($in_quantity){{$in_quantity}}@endisset"/>
                            </td>
@@ -1060,7 +1061,7 @@
       var tr_id = 'tr_' + add_more_count;
       newRow = '<tr id="tr_' + add_more_count + '" class="font-14 font-heading bg-white"><td class="w-min-50">' + add_more_count + '</td><td class=""><select class="form-control item_id select2-single" name="goods_discription[]" id="item_id_' + add_more_count + '" data-id="' + add_more_count + '" data-modal="itemModal"><option value="">Select Item</option>@foreach($items as $item_list)<option value="{{$item_list->id}}" data-unit_id="{{$item_list->u_name}}" data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id="{{$item_list->id}}" data-itemid="{{$item_list->id}}"  data-parameterized_stock_status="{{$item_list->parameterized_stock_status}}" data-config_status="{{$item_list->config_status}}" data-group_id="{{$item_list->group_id}}">{{$item_list->name}}</option>@endforeach</select>';
       //newRow += optionElements;
-      newRow += '</td><td class=""><input type="number" step="any" class="quantity w-100 form-control" name="qty[]" id="quantity_tr_' + add_more_count + '" placeholder="Quantity" style="text-align:right;"  /></td><td class=" w-min-50"><input type="text" class="w-100 form-control unit" id="unit_tr_'+add_more_count+'" readonly style="text-align:center;" data-id="'+add_more_count+'"/><input type="hidden" class="units w-100" name="units[]" id="units_tr_' + add_more_count + '"/></td><td class=" w-min-50"><input type="number" step="any" class="price w-100 form-control" name="price[]" id="price_tr_' + add_more_count + '" placeholder="Price" style="text-align:right;" /></td><td class=" w-min-50"><input type="number" step="any" class="amount w-100 form-control" name="amount[]" id="amount_tr_' + add_more_count + '" data-id="' + add_more_count + '" placeholder="Amount" style="text-align:right;" /></td><td class="w-min-50" style="display:flex" ></td><input type="hidden" name="item_parameters[]" id="item_parameters_'+add_more_count+'"><input type="hidden" name="config_status[]" id="config_status_'+add_more_count+'"></tr>';
+      newRow += '<span id="gst_rate_span_' + add_more_count + '" style="color: red;"></span></td><td class=""><input type="number" step="any" class="quantity w-100 form-control" name="qty[]" id="quantity_tr_' + add_more_count + '" placeholder="Quantity" style="text-align:right;"  /></td><td class=" w-min-50"><input type="text" class="w-100 form-control unit" id="unit_tr_'+add_more_count+'" readonly style="text-align:center;" data-id="'+add_more_count+'"/><input type="hidden" class="units w-100" name="units[]" id="units_tr_' + add_more_count + '"/></td><td class=" w-min-50"><input type="number" step="any" class="price w-100 form-control" name="price[]" id="price_tr_' + add_more_count + '" placeholder="Price" style="text-align:right;" /></td><td class=" w-min-50"><input type="number" step="any" class="amount w-100 form-control" name="amount[]" id="amount_tr_' + add_more_count + '" data-id="' + add_more_count + '" placeholder="Amount" style="text-align:right;" /></td><td class="w-min-50" style="display:flex" ></td><input type="hidden" name="item_parameters[]" id="item_parameters_'+add_more_count+'"><input type="hidden" name="config_status[]" id="config_status_'+add_more_count+'"></tr>';
       $("#max_sale_descrption").val(add_more_count);
       $("#purchase_tbl").append(newRow);
       
@@ -2051,7 +2052,7 @@ $( ".select2-single, .select2-multiple" ).select2();
       $('#units_tr_'+id).val($('option:selected', this).attr('data-unit_id'));
       $('#config_status_'+id).val($('option:selected', this).attr('data-config_status'));
       call_fun('tr_'+id);
-      //getItemGstRate($(this).val(),id);
+      getItemGstRate($(this).val(),id);
    });
    var paremeter_table_add_more_data = "";
    $(document).on('click',".unit",function(){
@@ -3244,6 +3245,7 @@ function getItemGstRate(item_id,index){
       return;
    }
    var token = '<?php echo csrf_token(); ?>';
+   $("#gst_rate_span_" + index).text("");
    $.ajax({
       url: "{{ route('get-item-gst-rate') }}",
       type: "POST",
@@ -3253,6 +3255,17 @@ function getItemGstRate(item_id,index){
             let $select = $("#item_id_" + index);
             $select.find(':selected').attr('data-percent', res.gst_rate);
             calculateAmount();
+            $("#purchaseBtn").show();
+         }else if(res.status==false){
+            $("#item_id_" + index).focus();
+            $("#item_id_" + index).val('');
+            gst_rate_span_tr = $("#gst_rate_span_" + index);
+            gst_rate_span_tr.text("GST Rate Not Found");
+            
+            let $select = $("#item_id_" + index);
+            $select.find(':selected').attr('data-percent', res.gst_rate);
+            calculateAmount();
+            $("#purchaseBtn").hide();
          }
       }
    });
@@ -3262,7 +3275,7 @@ $("#date").on("change", function(){
       let item_id = $(this).val();
       let index = $(this).data("id");
       if(item_id){
-         //getItemGstRate(item_id,index);
+         getItemGstRate(item_id,index);
       }
    });   
 });

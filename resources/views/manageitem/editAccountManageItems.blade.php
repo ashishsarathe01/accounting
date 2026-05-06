@@ -139,7 +139,27 @@
                                 <div class="mb-3 col-md-3">
                                     <label for="name" class="form-label font-14 font-heading">HSN CODE</label>
                                     <input type="text" class="form-control" id="hsn_code" name="hsn_code" value="{{ $manageitems->hsn_code }}" placeholder="ENTER HSN CODE" />
-                                </div>                        
+                                </div>
+                                
+                                <div class="mb-3 col-md-6">
+                                    <label class="form-label font-14 font-heading">GST RATE LIST</label>
+                                    <table class="table table-bordered">
+                                        <thead>
+                                            <tr>
+                                                <th>GST RATE</th>
+                                                <th>EFFECTIVE FROM</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($item_gst_rate_list as $gst_rate)
+                                            <tr>
+                                                <td>{{ $gst_rate->gst_rate }}%</td>
+                                                <td>{{ date('d-m-Y', strtotime($gst_rate->effective_from)) }}</td>
+                                            </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
                                 <div class="mb-3 col-md-12"></div>
                                 <div class="mb-3 col-md-3">
                                     <label class="form-label font-14 font-heading">STATUS</label>

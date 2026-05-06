@@ -232,7 +232,7 @@
                                     @endforeach
 
                                     </select>
-
+                                    <span id="gst_rate_span_1" style="color: red;"></span>
 
                                     <!-- ⚙️ Button -->
                                     <button type="button" class="btn btn-outline-secondary p-1 px-2 editItemDetailsBtn"
@@ -256,6 +256,7 @@
                                     </option>
                                     @endforeach
                                  </select>
+                                 <span id="gst_rate_span_1" style="color: red;"></span>
                               @endif
 
                               <input type="hidden" name="item_size_info[]" id="item_size_info_tr_1" value="">
@@ -994,7 +995,7 @@
          '<td class="position-relative"><div class="d-flex align-items-center gap-2">' +
             '<select onchange="' + onchangeFunction + '" id="goods_discription_' + tr_id + '" class="border-0 form-select goods_items select2-single" name="goods_discription[]" required data-id="'+numericId+'">' +
             optionElements +
-            '</select>' +
+            '</select><span id="gst_rate_span_' + numericId + '" style="color: red;"></span>' +
             '<button type="button" class="btn btn-outline-secondary p-1 px-2 editItemDetailsBtn" data-row="' + tr_id + '" title="Configure item">⚙️</button>' +
             '</div>' +
             '<input type="hidden" name="item_size_info[]" id="item_size_info_tr_' + numericId + '" value="">' +
@@ -3003,7 +3004,7 @@
       if (productionData['tr_' + numeric]) {
          delete productionData['tr_' + numeric];
       }
-
+      getItemGstRate($(this).val(),$(this).attr('data-id'));
       // Reset modal content to one empty row
       const reelContainer = $('#reelContainer');
       reelContainer.html(`
@@ -3149,6 +3150,55 @@
       if ($(this).val() < 0) {
          $(this).val('');
       }
+   });
+   var gstRatesError = [];
+   function getItemGstRate(item_id,index){
+      let date = $("#date").val();
+      if(date==""){
+         return;
+      }
+      var token = '<?php echo csrf_token(); ?>';
+      $("#gst_rate_span_" + index).text("");
+      $.ajax({
+         url: "{{ route('get-item-gst-rate') }}",
+         type: "POST",
+         data : {'item_id':item_id,'txn_date':$("#date").val(),'_token':token},
+         success : function(res) {
+            if(res.status==true){
+               let $select = $("#goods_discription_tr_" + index);
+               $select.find(':selected').attr('data-percent', res.gst_rate);
+               calculateAmount();
+               $("#saleReturnBtn").show();
+            }else if(res.status==false){
+               $("#goods_discription_tr_" + index).focus();
+               
+               gst_rate_span_tr = $("#gst_rate_span_" + index);
+               gst_rate_span_tr.text("GST Rate Not Found");
+               gstRatesError.push(index);
+               let $select = $("#goods_discription_tr_" + index);
+               $select.find(':selected').attr('data-percent', res.gst_rate);
+               $("#goods_discription_tr_" + index).val('');
+               calculateAmount();
+               $("#saleReturnBtn").hide();
+            }
+         }
+      });
+   }
+   setTimeout(function() {
+      if(gstRatesError.length>0){
+         alert("GST Rate Not Found For Items In Rows: " + gstRatesError.join(", ") + " On Selected Date");
+         $("#saleReturnBtn").hide();
+      }
+   }, 2000);
+
+   $("#date").on("change", function(){      
+      $(".goods_items").each(function(){
+         let item_id = $(this).val();
+         let index = $(this).data("id");
+         if(item_id){
+            getItemGstRate(item_id,index);
+         }
+      });   
    });
 </script>
 @endsection

@@ -216,6 +216,7 @@
                                     <option value="{{$item->id}}" unit_id="{{$item->u_name}}" data-val="{{$item->unit}}"  data-percent="{{$item->gst_rate}}">{{$item->name}}</option>
                                  @endforeach
                               </select>
+                              <span id="gst_rate_span_1" style="color: red;"></span>
                            </td>                           
                            <td class="w-min-50">
                               <input type="number" class="quantity w-100 form-control" id="quantity_tr_1" name="qty[]" placeholder="Quantity" style="text-align:right;" step="0.01"/>
@@ -672,13 +673,15 @@
                            <td class="w-min-120 fw-bold" id="total_debit" name="total_debit"></td>
                            <td></td>
                         </tr>
-                        <tr class="font-14 font-heading bg-white">
+                        {{-- <tr class="font-14 font-heading bg-white">
                            <td colspan="3"><input type="text" class="form-control" placeholder="Enter Long Narration" name="long_narration"></td>
-                        </tr>
+                        </tr> --}}
                      </div>
                   </table>
                </div>
+               <input type="text" class="form-control" placeholder="Enter Long Narration" name="long_narration"><br>
                <div class=" d-flex">
+                  
                   <div class="ms-auto">
                      <input type="submit" value="SAVE" class="btn btn-xs-primary" id="purchaseReturnBtn">
                      <a href="{{ route('purchase-return.index') }}" class="btn  btn-black ">QUIT</a>
@@ -867,7 +870,7 @@
       var tr_id = 'tr_' + add_more_count;
       newRow = '<tr id="tr_' + add_more_count + '" class="font-14 font-heading bg-white"><td class="w-min-50">' + add_more_count + '</td><td class=""><select onchange="call_fun(\'tr_' + add_more_count + '\');" id="goods_discription_tr_' + add_more_count + '" class="border-0 w-95-parsent  goods_items form-select" name="goods_discription[]" required data-id="'+add_more_count+'">';
       newRow += optionElements;
-      newRow += '</select></td><td class=""><input type="number" class="quantity w-100 form-control" name="qty[]" id="quantity_tr_' + add_more_count + '" placeholder="Quantity"  style="text-align:right;" /></td><td class="w-min-50"><input type="text" class="w-100 form-control unit form-control" id="unit_tr_'+add_more_count+'" readonly style="text-align:center;"/ data-id="'+add_more_count+'"><input type="hidden" class="units w-100" name="units[]" id="units_tr_' + add_more_count + '"/></td><td class=" w-min-50"><input type="number" class="price w-100 form-control" name="price[]" id="price_tr_' + add_more_count + '" placeholder="Price"  style="text-align:right;" step="0.01"/></td><td class=" w-min-50"><input type="number" class="amount w-100 form-control" name="amount[]" id="amount_tr_' + add_more_count + '" placeholder="Amount"  style="text-align:right;" step="0.01"/></td><td class="w-min-50"><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td><input type="hidden" name="item_parameters[]" id="item_parameters_'+add_more_count+'"><input type="hidden" name="config_status[]" id="config_status_'+add_more_count+'"></tr>';
+      newRow += '</select><span id="gst_rate_span_'+add_more_count+'" style="color: red;"></span></td><td class=""><input type="number" class="quantity w-100 form-control" name="qty[]" id="quantity_tr_' + add_more_count + '" placeholder="Quantity"  style="text-align:right;" /></td><td class="w-min-50"><input type="text" class="w-100 form-control unit form-control" id="unit_tr_'+add_more_count+'" readonly style="text-align:center;"/ data-id="'+add_more_count+'"><input type="hidden" class="units w-100" name="units[]" id="units_tr_' + add_more_count + '"/></td><td class=" w-min-50"><input type="number" class="price w-100 form-control" name="price[]" id="price_tr_' + add_more_count + '" placeholder="Price"  style="text-align:right;" step="0.01"/></td><td class=" w-min-50"><input type="number" class="amount w-100 form-control" name="amount[]" id="amount_tr_' + add_more_count + '" placeholder="Amount"  style="text-align:right;" step="0.01"/></td><td class="w-min-50"><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td><input type="hidden" name="item_parameters[]" id="item_parameters_'+add_more_count+'"><input type="hidden" name="config_status[]" id="config_status_'+add_more_count+'"></tr>';
       $("#max_sale_descrption").val(add_more_count);
       $("#example11").append(newRow);
       $("#goods_discription_tr_"+add_more_count).select2();
@@ -1184,11 +1187,14 @@
          final_total = total;
          let total_item_taxable_amount = 0;
          let on_tcs_amount = 0;
-         if(customer_gstin==merchant_gstin.substring(0,2)){            
+         if(vendor_state==company_state){
+            
             var maxPercent = Math.max.apply(null, result.map(function(item){
               return item.percent;
             }))
+            
             if(result.length>0){
+               
                let index = 1;
                $(".extra_gst").remove();
                let bill_sundry_total = 0;
@@ -1239,6 +1245,7 @@
                         taxSundryArray['sgst'] = sundry_amount;
                      }
                      //CGST
+                     console.log(taxSundryArray['cgst']);
                      $("#bill_sundry_amount_cgst").val(taxSundryArray['cgst']);
                      //$("#bill_sundry_amount_cgst").prop('readonly',true);
                      $("#tax_amt_cgst").html(e.percent/2+" %");
@@ -1860,6 +1867,7 @@
       }else{
          $("#goods_discription_tr_"+id+"-error").hide();
       }
+       getItemGstRate($(this).val(),$(this).attr('data-id'));
       $('#unit_tr_'+id).val($('option:selected', this).attr('data-val'));
       $('#unit_tr_'+id).attr('data-parameterized_stock_status',$('option:selected', this).attr('data-parameterized_stock_status'));
       $('#unit_tr_'+id).attr('data-assign_param',$('option:selected', this).attr('data-assign_param'));
@@ -2725,6 +2733,55 @@
       merchant_gstin = $("#series_no option:selected").data("gst_no") || "";
 
       gstCalculation();
+   });
+   var gstRatesError = [];
+   function getItemGstRate(item_id,index){
+      let date = $("#date").val();
+      if(date==""){
+         return;
+      }
+      var token = '<?php echo csrf_token(); ?>';
+      $("#gst_rate_span_" + index).text("");
+      $.ajax({
+         url: "{{ route('get-item-gst-rate') }}",
+         type: "POST",
+         data : {'item_id':item_id,'txn_date':$("#date").val(),'_token':token},
+         success : function(res) {
+            if(res.status==true){
+               let $select = $("#goods_discription_tr_" + index);
+               $select.find(':selected').attr('data-percent', res.gst_rate);
+               calculateAmount();
+               $("#purchaseReturnBtn").show();
+            }else if(res.status==false){
+               $("#goods_discription_tr_" + index).focus();
+               
+               gst_rate_span_tr = $("#gst_rate_span_" + index);
+               gst_rate_span_tr.text("GST Rate Not Found");
+               gstRatesError.push(index);
+               let $select = $("#goods_discription_tr_" + index);
+               $select.find(':selected').attr('data-percent', res.gst_rate);
+               $("#goods_discription_tr_" + index).val('');
+               calculateAmount();
+               $("#purchaseReturnBtn").hide();
+            }
+         }
+      });
+   }
+   setTimeout(function() {
+      if(gstRatesError.length>0){
+         alert("GST Rate Not Found For Items In Rows: " + gstRatesError.join(", ") + " On Selected Date");
+         $("#purchaseReturnBtn").hide();
+      }
+   }, 2000);
+
+   $("#date").on("change", function(){      
+      $(".goods_items").each(function(){
+         let item_id = $(this).val();
+         let index = $(this).data("id");
+         if(item_id){
+            getItemGstRate(item_id,index);
+         }
+      });   
    });
 </script>
 @endsection

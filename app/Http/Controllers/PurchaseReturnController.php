@@ -600,6 +600,8 @@ class PurchaseReturnController extends Controller
       $purchase->tax_cgst = $request->input('cgst');
       $purchase->tax_sgst = $request->input('sgst');
       $purchase->tax_igst = $request->input('igst');
+      $purchase->remark = $request->input('long_narration');
+      
       $purchase->created_by = Session::get('user_id');
       //$purchase->other_invoice_no = $request->input('other_invoice_no');
       //$purchase->other_invoice_date = $request->input('other_invoice_date');
@@ -4324,33 +4326,50 @@ class PurchaseReturnController extends Controller
      public function export(Request $request)
 {
 
-   $request->validate([
-      'from_date'     => 'required|date',
-      'to_date'       => 'required|date',
-      'sr_type'       => 'required|in:WITH ITEM,RATE DIFFERENCE',
-      'purchase_area' => 'required|in:LOCAL,CENTER',
-   ]);
-
-   $companyId = Session::get('user_company_id');
-   $purchaseArea = $request->purchase_area;
-   $srType = $request->sr_type;
-
-   $purchaseReturns = \App\Models\PurchaseReturn::with([
-      'purchaseReturnDescription.item',
-      'purchaseReturnDescription.unitMaster',
-      'purchaseReturnSundry.billSundry',
-      'account'
-   ])
-      ->where('company_id', $companyId)
-      ->where('sr_type', $srType)
-      ->where('status','1')
-      ->where(function ($q) {
-         $q->where('delete', '0')->orWhereNull('delete');
-      })
-      ->whereDate('date', '>=', $request->from_date)
-      ->whereDate('date', '<=', $request->to_date)
-      ->orderBy('date')
-      ->get();
+  $request->validate([
+                    'from_date'     => 'required|date',
+                    'to_date'       => 'required|date',
+                    'date_type'     => 'required|in:created_at,voucher_date',
+                    'sr_type'       => 'required|in:WITH ITEM,RATE DIFFERENCE',
+                    'purchase_area' => 'required|in:LOCAL,CENTER',
+                ]);
+                
+                $companyId    = Session::get('user_company_id');
+                $purchaseArea = $request->purchase_area;
+                $srType       = $request->sr_type;
+                
+                $dateType   = $request->date_type;
+                $dateColumn = $dateType === 'created_at'
+                    ? 'created_at'
+                    : 'date';
+                
+                $query = \App\Models\PurchaseReturn::with([
+                        'purchaseReturnDescription.item',
+                        'purchaseReturnDescription.unitMaster',
+                        'purchaseReturnSundry.billSundry',
+                        'account'
+                    ])
+                    ->where('company_id', $companyId)
+                    ->where('sr_type', $srType)
+                    ->where('status','1')
+                    ->where(function ($q) {
+                        $q->where('delete', '0')->orWhereNull('delete');
+                    });
+                
+                /* ✅ Apply date filter */
+                if ($dateType === 'created_at') {
+                    $query->whereDate($dateColumn, '>=', $request->from_date)
+                          ->whereDate($dateColumn, '<=', $request->to_date);
+                } else {
+                    $query->whereBetween($dateColumn, [
+                        $request->from_date,
+                        $request->to_date
+                    ]);
+                }
+                
+                $purchaseReturns = $query
+                    ->orderBy($dateColumn)
+                    ->get();
 
    if ($purchaseReturns->isEmpty()) {
       return back()->with('error', 'No Purchase Return data found');

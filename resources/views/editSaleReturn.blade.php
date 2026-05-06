@@ -101,7 +101,7 @@
                            class="form-control"
                            value="{{ \Carbon\Carbon::parse($sale_return->date)->format('d-m-Y') }}"
                            readonly>
-                     <input type="hidden" name="date" value="{{$sale_return->date}}">
+                     <input id="date" type="hidden" name="date" value="{{$sale_return->date}}">
                      <ul style="color: red;">
                         @error('date'){{$message}}@enderror                        
                      </ul>
@@ -262,6 +262,7 @@
                                                 </option>
                                              @endforeach
                                           </select>
+                                          <span id="gst_rate_span_{{ $i }}" style="color: red;"></span>
                                           <button type="button" class="btn btn-outline-secondary p-1 px-2 editItemDetailsBtn"
                                                 data-row="tr_{{ $i }}" title="Configure item">
                                              ⚙️
@@ -284,6 +285,7 @@
                                              </option>
                                           @endforeach
                                     </select>
+                                    <span id="gst_rate_span_{{ $i }}" style="color: red;"></span>
                                  @endif
 
                                  <input type="hidden" name="item_size_info[]" id="item_size_info_tr_{{ $i }}" 
@@ -363,6 +365,7 @@
                               @endforeach
 
                            </select>
+                           <span id="gst_rate_span_1" style="color: red;"></span>
                         </td>
 
                         <td class="w-min-50">
@@ -1227,7 +1230,7 @@
                            data-id="${numericId}">
                      ${optionElements}
                   </select>
-
+                     <span id="gst_rate_span_${numericId}" style="color: red;"></span>
                   <button type="button"
                            class="btn btn-outline-secondary p-1 px-2 editItemDetailsBtn"
                            data-row="${tr_id}" 
@@ -1930,7 +1933,8 @@
       }
    $(document).ready(function(){  
       sectionHideShow();
-      $('#party').change();   
+      $('#party').change();
+      $('#date').change(); 
       calculateAmount();
       gstCalculation();
       // Calculate amount on input change
@@ -3119,6 +3123,55 @@ if (invoiceNo !== 'OTHER' && enteredQty > maxQty) {
       if ($(this).val() < 0) {
          $(this).val('');
       }
+   });
+   var gstRatesError = [];
+   function getItemGstRate(item_id,index){
+      let date = $("#date").val();
+      if(date==""){
+         return;
+      }
+      var token = '<?php echo csrf_token(); ?>';
+      $("#gst_rate_span_" + index).text("");
+      $.ajax({
+         url: "{{ route('get-item-gst-rate') }}",
+         type: "POST",
+         data : {'item_id':item_id,'txn_date':$("#date").val(),'_token':token},
+         success : function(res) {
+            if(res.status==true){
+               let $select = $("#goods_discription_tr_" + index);
+               $select.find(':selected').attr('data-percent', res.gst_rate);
+               calculateAmount();
+               $("#saleReturnBtn").show();
+            }else if(res.status==false){
+               $("#goods_discription_tr_" + index).focus();
+               
+               gst_rate_span_tr = $("#gst_rate_span_" + index);
+               gst_rate_span_tr.text("GST Rate Not Found");
+               gstRatesError.push(index);
+               let $select = $("#goods_discription_tr_" + index);
+               $select.find(':selected').attr('data-percent', res.gst_rate);
+               $("#goods_discription_tr_" + index).val('');
+               calculateAmount();
+               $("#saleReturnBtn").hide();
+            }
+         }
+      });
+   }
+   setTimeout(function() {
+      if(gstRatesError.length>0){
+         alert("GST Rate Not Found For Items In Rows: " + gstRatesError.join(", ") + " On Selected Date");
+         $("#saleReturnBtn").hide();
+      }
+   }, 2000);
+
+   $("#date").on("change", function(){      
+      $(".goods_items").each(function(){
+         let item_id = $(this).val();
+         let index = $(this).data("id");
+         if(item_id){
+            getItemGstRate(item_id,index);
+         }
+      });   
    });
 </script>
 @endsection

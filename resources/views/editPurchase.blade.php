@@ -184,7 +184,8 @@ foreach ($manageitems as $value) {
                                        <?php 
                                     } ?>
                                  </select>
-                              </td>                              
+                                 <span id="gst_rate_span_{{$i}}" style="color: red;"></span>
+                              </td>
                               <td class=" w-min-50">
                                  <input type="number" class="quantity form-control w-100" id="quantity_tr_{{$i}}" name="qty[]" value="{{$item->qty}}" style="text-align:right" @if($stock_status==0) readonly @endif/>
                               </td>
@@ -1136,7 +1137,7 @@ foreach ($manageitems as $value) {
       var tr_id = 'tr_' + add_more_count;
       newRow = '<tr id="tr_' + add_more_count + '" class="font-14 font-heading bg-white"><td class="w-min-50" id="srn_'+add_more_count+'">' + srn + '</td><td class=""><select onchange="call_fun(\'tr_' + add_more_count + '\');" id="goods_discription_tr_' + add_more_count + '" class="border-0 w-95-parsent  goods_items" name="goods_discription[]" required data-id="'+add_more_count+'" data-modal="itemModal">';
       newRow += optionElements;
-      newRow += '</select></td><td class="w-min-50"><input type="number" data-id="'+add_more_count+'" class="quantity w-100 form-control" name="qty[]" id="quantity_tr_' + add_more_count + '"/ style="text-align:right"></td><td class=" w-min-50"><input type="text" class="w-100 form-control unit"data-id="'+add_more_count+'" id="unit_tr_'+add_more_count+'" readonly style="text-align:center;"/><input type="hidden" class="units w-100" name="units[]" id="units_tr_' + add_more_count + '"/></td><td class=" w-min-50"><input type="number" class="price w-100 form-control" data-id="'+add_more_count+'" name="price[]" id="price_tr_' + add_more_count + '" style="text-align:right"/></td><td class=" w-min-50"><input type="number" class="amount w-100 form-control" name="amount[]"data-id="'+ add_more_count +'" id="amount_tr_' + add_more_count + '"  style="text-align:right"/></td><td class="w-min-50" style="display:flex"></td><input type="hidden" name="item_parameters[]" id="item_parameters_tr_' + add_more_count + '"><input type="hidden" name="config_status[]" id="config_status_tr_' + add_more_count + '"></tr>';
+      newRow += '</select><span id="gst_rate_span_' + add_more_count + '" style="color: red;"></span></td><td class="w-min-50"><input type="number" data-id="'+add_more_count+'" class="quantity w-100 form-control" name="qty[]" id="quantity_tr_' + add_more_count + '"/ style="text-align:right"></td><td class=" w-min-50"><input type="text" class="w-100 form-control unit"data-id="'+add_more_count+'" id="unit_tr_'+add_more_count+'" readonly style="text-align:center;"/><input type="hidden" class="units w-100" name="units[]" id="units_tr_' + add_more_count + '"/></td><td class=" w-min-50"><input type="number" class="price w-100 form-control" data-id="'+add_more_count+'" name="price[]" id="price_tr_' + add_more_count + '" style="text-align:right"/></td><td class=" w-min-50"><input type="number" class="amount w-100 form-control" name="amount[]"data-id="'+ add_more_count +'" id="amount_tr_' + add_more_count + '"  style="text-align:right"/></td><td class="w-min-50" style="display:flex"></td><input type="hidden" name="item_parameters[]" id="item_parameters_tr_' + add_more_count + '"><input type="hidden" name="config_status[]" id="config_status_tr_' + add_more_count + '"></tr>';
       $("#max_sale_descrption").val(add_more_count);
       $("#example11").append(newRow);
       $("#goods_discription_tr_"+add_more_count).select2();
@@ -2293,14 +2294,14 @@ foreach ($manageitems as $value) {
          return false;
       }
    });
-   $(".goods_items").change(function(){
+   $(document).on('change','.goods_items',function(){  
       let id = $(this).attr('data-id');
       if($(this).val()==""){
          $("#goods_discription_tr_"+id+"-error").show();
       }else{
          $("#goods_discription_tr_"+id+"-error").hide();
       }
-      //getItemGstRate($(this).val(),id);
+      getItemGstRate($(this).val(),id);
    });
    $("#series_no").change(function(){
       let series = $(this).val();      
@@ -3218,12 +3219,14 @@ $('#saveItemBtn').on('click', function () {
         }
     });
 });
+var gstRatesError = [];
 function getItemGstRate(item_id,index){
    let date = $("#date").val();
    if(date==""){
       return;
    }
    var token = '<?php echo csrf_token(); ?>';
+   $("#gst_rate_span_" + index).text("");
    $.ajax({
       url: "{{ route('get-item-gst-rate') }}",
       type: "POST",
@@ -3233,16 +3236,34 @@ function getItemGstRate(item_id,index){
             let $select = $("#goods_discription_tr_" + index);
             $select.find(':selected').attr('data-percent', res.gst_rate);
             calculateAmount();
+             $("#purchaseBtn").show();
+         }else if(res.status==false){
+            $("#goods_discription_tr_" + index).focus();
+            $("#goods_discription_tr_" + index).val('');
+            gst_rate_span_tr = $("#gst_rate_span_" + index);
+            
+            gst_rate_span_tr.text("GST Rate Not Found");
+            gstRatesError.push(index);
+            let $select = $("#goods_discription_tr_" + index);
+            $select.find(':selected').attr('data-percent', res.gst_rate);
+            calculateAmount();
+            $("#purchaseBtn").hide();
          }
       }
    });
 }
+setTimeout(function() {
+    if(gstRatesError.length>0){
+        alert("GST Rate Not Found For Items In Rows: " + gstRatesError.join(", ") + " On Selected Date");
+        $("#purchaseBtn").hide();
+    }
+}, 2000);
 $("#date").on("change", function(){
    $(".goods_items").each(function(){
       let item_id = $(this).val();
       let index = $(this).data("id");
       if(item_id){
-         //getItemGstRate(item_id,index);
+         getItemGstRate(item_id,index);
       }
    });   
 });

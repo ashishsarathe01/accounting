@@ -241,7 +241,9 @@ foreach($manageitems as $value) {
                                           <option data-unit_id="<?php echo $value->u_name; ?>" data-itemid="<?php echo $value->id; ?>" data-val="<?php echo $value->unit; ?>" data-percent="<?php echo $value->gst_rate; ?>" value="<?php echo $value->id; ?>" <?php if($value->id==$sale_order_item['item_id']){ echo "selected";} ?>><?php echo $value->name; ?></option>
                                           <?php 
                                        } ?>
+                                       
                                     </select>
+                                    <span id="gst_rate_span_{{$i}}" style="color: red;"></span>
                                     @if($config && $config->show_description == 1)
                                     <div class="description-wrapper mt-1" data-row="{{ $i-1 }}">
                                        <div class="d-flex mb-1">
@@ -329,6 +331,7 @@ foreach($manageitems as $value) {
                                              </option>
                                           @endforeach
                                        </select>
+                                       <span id="gst_rate_span_{{$i}}" style="color: red;"></span>
                                        <button type="button"class="btn btn-outline-secondary p-1 px-2 editItemDetailsBtn"data-row="{{$i}}"title="Configure item">⚙️</button>
                                     </div>
                                      @if($config && $config->show_description == 1)
@@ -1514,7 +1517,7 @@ let newRow = `
             <option value="">Select Item</option>
             ${optionElements}
         </select>
-
+        <span id="gst_rate_span_${add_more_count}" style="color: red;"></span>
         <button type="button"
                 class="btn btn-outline-secondary p-1 px-2 editItemDetailsBtn d-none"
                 data-row="${add_more_count}">
@@ -2515,14 +2518,14 @@ $(".goods_items").each(function (index) {
          return false;
       }
    });
-   $(".goods_items").change(function(){
+   $(document).on('change','.goods_items',function(){   
       let id = $(this).attr('data-id');
       if($(this).val()==""){
          $("#goods_discription_tr_"+id+"-error").show();
       }else{
          $("#goods_discription_tr_"+id+"-error").hide();
       }
-      //getItemGstRate($(this).val(),$(this).attr('data-id'));
+      getItemGstRate($(this).val(),$(this).attr('data-id'));
    });
    $("#series_no").change(function(){
       let series = $(this).val();      
@@ -3630,12 +3633,14 @@ function calculateToPayAmount(){
       });
    }
 }
+var gstRatesError = [];
 function getItemGstRate(item_id,index){
    let date = $("#date").val();
    if(date==""){
       return;
    }
    var token = '<?php echo csrf_token(); ?>';
+   $("#gst_rate_span_" + index).text("");
    $.ajax({
       url: "{{ route('get-item-gst-rate') }}",
       type: "POST",
@@ -3645,17 +3650,33 @@ function getItemGstRate(item_id,index){
             let $select = $("#goods_discription_tr_" + index);
             $select.find(':selected').attr('data-percent', res.gst_rate);
             calculateAmount();
+         }else if(res.status==false){
+            $("#goods_discription_tr_" + index).focus();
+            $("#goods_discription_tr_" + index).val('');
+            gst_rate_span_tr = $("#gst_rate_span_" + index);
+            gst_rate_span_tr.text("GST Rate Not Found");
+            gstRatesError.push(index);
+            let $select = $("#goods_discription_tr_" + index);
+            $select.find(':selected').attr('data-percent', res.gst_rate);
+            calculateAmount();
          }
       }
    });
 }
+setTimeout(function() {
+    if(gstRatesError.length>0){
+        alert("GST Rate Not Found For Items In Rows: " + gstRatesError.join(", ") + " On Selected Date");
+        $("#saveBtn").hide();
+    }
+}, 2000);
+
 $("#date").on("change", function(){
    
    $(".goods_items").each(function(){
       let item_id = $(this).val();
       let index = $(this).data("id");
       if(item_id){
-         //getItemGstRate(item_id,index);
+         getItemGstRate(item_id,index);
       }
    });   
 });
@@ -3714,11 +3735,11 @@ function checkPartyItemPriceEdit(rowId) {
 
     let party_id = $('#party').val(); // IMPORTANT
     let item_id  = $('#goods_discription_tr_' + rowId).val();
-console.log("----");
+
     if (!party_id || !item_id) return;
 
     $.ajax({
-        url: '/get-party-item-price',
+        url: '{{ url("get-party-item-price") }}',
         type: 'GET',
         data: {
             party_id: party_id,
@@ -3741,7 +3762,6 @@ console.log("----");
 }
 
 $('#party').on('change', function () {
-
     $('.goods_items').each(function () {
         let rowId = $(this).data('id');
         checkPartyItemPriceEdit(rowId);
