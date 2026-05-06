@@ -62,7 +62,7 @@
    .bil_logo img{
       max-width:100%;
    }
-    @media print {
+   @media print {
         
         .header-section {
             display: none !important; /* hide buttons only */
@@ -77,12 +77,12 @@
         body {
             margin: 10px;
         }
-    }
+   }
     
    @page { size: auto;  margin: 0mm; }
-       .importantRule { 
+   .importantRule { 
        display: none !important;  /* Force hide anything with this class */
-    }
+   }
 </style>
 <div class="list-of-view-company ">
    <section class="list-of-view-company-section container-fluid">

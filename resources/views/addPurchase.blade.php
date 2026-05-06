@@ -3241,7 +3241,7 @@ function updatePurchaseType(stateCode){
 }
 function getItemGstRate(item_id,index){
    let date = $("#date").val();
-   if(date==""){
+   if(date=="" || item_id==""){
       return;
    }
    var token = '<?php echo csrf_token(); ?>';

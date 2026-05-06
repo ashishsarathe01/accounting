@@ -40,110 +40,110 @@ class PurchaseController extends Controller{
      *
      * @return \Illuminate\Http\Response
      */
-   public function index(Request $request)
-{
-    Gate::authorize('action-module', 11);
-    $input = $request->all();
-    $from_date = null;
-    $to_date = null;
-    if (!empty($input['from_date']) && !empty($input['to_date'])) {
-        $from_date = date('d-m-Y', strtotime($input['from_date']));
-        $to_date = date('d-m-Y', strtotime($input['to_date']));
-        session(['purchase_from_date' => $from_date, 'purchase_to_date' => $to_date]);
-    } elseif (session()->has('purchase_from_date') && session()->has('purchase_to_date')) {
-        $from_date = session('purchase_from_date');
-        $to_date = session('purchase_to_date');
-    }
-    Session::put('redirect_url', '');
-    // Financial year setup
-    $financial_year = Session::get('default_fy');
-    $y = explode("-", $financial_year);
-    $from = DateTime::createFromFormat('y', $y[0])->format('Y');
-    $to = DateTime::createFromFormat('y', $y[1])->format('Y');
-    $month_arr = [
-        $from . '-04', $from . '-05', $from . '-06', $from . '-07', $from . '-08', $from . '-09',
-        $from . '-10', $from . '-11', $from . '-12', $to . '-01', $to . '-02', $to . '-03'
-    ];
-
-    // Base query
-    $query = Purchase::with([
-        'purchaseDescription' => function ($query) {
-            $query->with([
-                'item:id,name',
-                'units:id,name',
-                'parameterColumnInfo' => function ($q2) {
-                    $q2->leftJoin('item_paremeter_list as param1', 'purchase_parameter_info.parameter1_id', '=', 'param1.id');
-                    $q2->leftJoin('item_paremeter_list as param2', 'purchase_parameter_info.parameter2_id', '=', 'param2.id');
-                    $q2->leftJoin('item_paremeter_list as param3', 'purchase_parameter_info.parameter3_id', '=', 'param3.id');
-                    $q2->leftJoin('item_paremeter_list as param4', 'purchase_parameter_info.parameter4_id', '=', 'param4.id');
-                    $q2->leftJoin('item_paremeter_list as param5', 'purchase_parameter_info.parameter5_id', '=', 'param5.id');
-                    $q2->select(
-                        'purchase_parameter_info.id',
-                        'purchase_desc_row_id',
-                        'parameter1_id', 'parameter2_id', 'parameter3_id', 'parameter4_id', 'parameter5_id',
-                        'parameter1_value', 'parameter2_value', 'parameter3_value', 'parameter4_value', 'parameter5_value',
-                        'param1.paremeter_name as paremeter_name1',
-                        'param2.paremeter_name as paremeter_name2',
-                        'param3.paremeter_name as paremeter_name3',
-                        'param4.paremeter_name as paremeter_name4',
-                        'param5.paremeter_name as paremeter_name5'
-                    );
-                }
+    public function index(Request $request)
+    {
+        Gate::authorize('action-module', 11);
+        $input = $request->all();
+        $from_date = null;
+        $to_date = null;
+        if (!empty($input['from_date']) && !empty($input['to_date'])) {
+            $from_date = date('d-m-Y', strtotime($input['from_date']));
+            $to_date = date('d-m-Y', strtotime($input['to_date']));
+            session(['purchase_from_date' => $from_date, 'purchase_to_date' => $to_date]);
+        } elseif (session()->has('purchase_from_date') && session()->has('purchase_to_date')) {
+            $from_date = session('purchase_from_date');
+            $to_date = session('purchase_to_date');
+        }
+        Session::put('redirect_url', '');
+        // Financial year setup
+        $financial_year = Session::get('default_fy');
+        $y = explode("-", $financial_year);
+        $from = DateTime::createFromFormat('y', $y[0])->format('Y');
+        $to = DateTime::createFromFormat('y', $y[1])->format('Y');
+        $month_arr = [
+            $from . '-04', $from . '-05', $from . '-06', $from . '-07', $from . '-08', $from . '-09',
+            $from . '-10', $from . '-11', $from . '-12', $to . '-01', $to . '-02', $to . '-03'
+        ];
+    
+        // Base query
+        $query = Purchase::with([
+            'purchaseDescription' => function ($query) {
+                $query->with([
+                    'item:id,name',
+                    'units:id,name',
+                    'parameterColumnInfo' => function ($q2) {
+                        $q2->leftJoin('item_paremeter_list as param1', 'purchase_parameter_info.parameter1_id', '=', 'param1.id');
+                        $q2->leftJoin('item_paremeter_list as param2', 'purchase_parameter_info.parameter2_id', '=', 'param2.id');
+                        $q2->leftJoin('item_paremeter_list as param3', 'purchase_parameter_info.parameter3_id', '=', 'param3.id');
+                        $q2->leftJoin('item_paremeter_list as param4', 'purchase_parameter_info.parameter4_id', '=', 'param4.id');
+                        $q2->leftJoin('item_paremeter_list as param5', 'purchase_parameter_info.parameter5_id', '=', 'param5.id');
+                        $q2->select(
+                            'purchase_parameter_info.id',
+                            'purchase_desc_row_id',
+                            'parameter1_id', 'parameter2_id', 'parameter3_id', 'parameter4_id', 'parameter5_id',
+                            'parameter1_value', 'parameter2_value', 'parameter3_value', 'parameter4_value', 'parameter5_value',
+                            'param1.paremeter_name as paremeter_name1',
+                            'param2.paremeter_name as paremeter_name2',
+                            'param3.paremeter_name as paremeter_name3',
+                            'param4.paremeter_name as paremeter_name4',
+                            'param5.paremeter_name as paremeter_name5'
+                        );
+                    }
+                ]);
+                $query->select('id', 'goods_discription', 'qty', 'purchase_id', 'unit');
+            },
+            'account:id,account_name'
+        ])
+        ->select([
+            'id',
+            'date',
+            'voucher_no',
+            'total',
+            'party',
+            'approved_status',
+            'approved_by',
+            'approved_at',
+            'created_by',
+            DB::raw("(SELECT name FROM users WHERE users.id = purchases.approved_by LIMIT 1) as approved_by_name"),
+            DB::raw("(SELECT name FROM users WHERE users.id = purchases.created_by LIMIT 1) as created_by_name"),
+            DB::raw("(SELECT voucher_no 
+                          FROM supplier_purchase_vehicle_details 
+                          WHERE map_purchase_id = purchases.id 
+                          LIMIT 1) AS vehicle_voucher_no"),
+            
+        ])
+            ->where('company_id', Session::get('user_company_id'))
+            ->where('delete', '0');
+    
+        if ($from_date && $to_date) {
+            $query->whereBetween(DB::raw("STR_TO_DATE(purchases.date, '%Y-%m-%d')"), [
+                date('Y-m-d', strtotime($from_date)),
+                date('Y-m-d', strtotime($to_date))
             ]);
-            $query->select('id', 'goods_discription', 'qty', 'purchase_id', 'unit');
-        },
-        'account:id,account_name'
-    ])
-    ->select([
-        'id',
-        'date',
-        'voucher_no',
-        'total',
-        'party',
-        'approved_status',
-        'approved_by',
-        'approved_at',
-        'created_by',
-        DB::raw("(SELECT name FROM users WHERE users.id = purchases.approved_by LIMIT 1) as approved_by_name"),
-        DB::raw("(SELECT name FROM users WHERE users.id = purchases.created_by LIMIT 1) as created_by_name"),
-        DB::raw("(SELECT voucher_no 
-                      FROM supplier_purchase_vehicle_details 
-                      WHERE map_purchase_id = purchases.id 
-                      LIMIT 1) AS vehicle_voucher_no"),
-        
-    ])
-        ->where('company_id', Session::get('user_company_id'))
-        ->where('delete', '0');
-
-    if ($from_date && $to_date) {
-        $query->whereBetween(DB::raw("STR_TO_DATE(purchases.date, '%Y-%m-%d')"), [
-            date('Y-m-d', strtotime($from_date)),
-            date('Y-m-d', strtotime($to_date))
-        ]);
-
-        $query->orderBy('purchases.date', 'ASC')
-              ->orderBy(DB::raw("CAST(voucher_no AS SIGNED)"), 'ASC');
-    } else {
-        //  Fetch latest 10
-        $query->orderBy('purchases.date', 'DESC')
-              ->orderBy(DB::raw("CAST(voucher_no AS SIGNED)"), 'DESC')
-              ->limit(10);
+    
+            $query->orderBy('purchases.date', 'ASC')
+                  ->orderBy(DB::raw("CAST(voucher_no AS SIGNED)"), 'ASC');
+        } else {
+            //  Fetch latest 10
+            $query->orderBy('purchases.date', 'DESC')
+                  ->orderBy(DB::raw("CAST(voucher_no AS SIGNED)"), 'DESC')
+                  ->limit(10);
+        }
+    
+        // Get data
+        $purchase = $query->get();
+    
+        // ⬆️ Reverse only when showing the latest 10 (no date filter)
+        if (!$from_date && !$to_date) {
+            $purchase = $purchase->reverse()->values();
+        }
+    
+        return view('purchase')
+            ->with('purchase', $purchase)
+            ->with('month_arr', $month_arr)
+            ->with('from_date', $from_date)
+            ->with('to_date', $to_date);
     }
-
-    // Get data
-    $purchase = $query->get();
-
-    // ⬆️ Reverse only when showing the latest 10 (no date filter)
-    if (!$from_date && !$to_date) {
-        $purchase = $purchase->reverse()->values();
-    }
-
-    return view('purchase')
-        ->with('purchase', $purchase)
-        ->with('month_arr', $month_arr)
-        ->with('from_date', $from_date)
-        ->with('to_date', $to_date);
-}
 
 
     /**
@@ -282,16 +282,6 @@ class PurchaseController extends Controller{
       $item = DB::table('manage_items')
     ->join('units', 'manage_items.u_name', '=', 'units.id')
     ->join('item_groups', 'item_groups.id', '=', 'manage_items.g_name')
-    ->leftjoin(DB::raw('(SELECT igr.item_id, igr.gst_rate 
-                     FROM item_gst_rate igr
-                     WHERE igr.effective_from <= "'.$bill_date.'"
-                     AND igr.effective_from = (
-                         SELECT MAX(effective_from) 
-                         FROM item_gst_rate 
-                         WHERE item_id = igr.item_id 
-                         AND effective_from <= "'.$bill_date.'"
-                     )
-                    ) as gst'), 'gst.item_id', '=', 'manage_items.id')
     ->where('manage_items.delete', '=', '0')
     ->where('manage_items.status', '=', '1')
     ->where('manage_items.company_id', Session::get('user_company_id'))
@@ -439,7 +429,7 @@ if ($companyData->gst_config_type == "single_gst") {
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-   public function store(Request $request){
+    public function store(Request $request){
       Gate::authorize('action-module',83);
       $validated = $request->validate([
          'series_no' => 'required',
@@ -1032,19 +1022,19 @@ if ($companyData->gst_config_type == "single_gst") {
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-   public function purchaseInvoice($id){
-      $company_data = Companies::join('states','companies.state','=','states.id')
+    public function purchaseInvoice($id){
+        $company_data = Companies::join('states','companies.state','=','states.id')
                         ->where('companies.id', Session::get('user_company_id'))
                         ->select(['companies.*','states.name as sname'])
                         ->first();
-      $items_detail = DB::table('purchase_descriptions')->where('purchase_id', $id)
+        $items_detail = DB::table('purchase_descriptions')->where('purchase_id', $id)
             ->select('units.s_name as unit', 'units.id as unit_id', 'purchase_descriptions.qty', 'purchase_descriptions.price', 'purchase_descriptions.amount', 'manage_items.name as items_name', 'manage_items.id as item_id', 'purchases.*', 'accounts.*','manage_items.hsn_code','manage_items.gst_rate')
             ->join('units', 'purchase_descriptions.unit', '=', 'units.id')
             ->join('purchases', 'purchases.id', '=', 'purchase_descriptions.purchase_id')
             ->join('manage_items', 'purchase_descriptions.goods_discription', '=', 'manage_items.id')
             ->join('accounts', 'accounts.id', '=', 'purchases.party')
             ->get();
-      $sale_detail = purchase::leftjoin('states','purchases.billing_state','=','states.id')
+        $sale_detail = purchase::leftjoin('states','purchases.billing_state','=','states.id')
                            ->leftjoin('accounts','purchases.shipping_name','=','accounts.id')
                            ->where('purchases.id', $id)
                            ->select(['purchases.*','states.name as sname','accounts.account_name as shipp_name'])
@@ -1140,7 +1130,7 @@ if ($companyData->gst_config_type == "single_gst") {
         ];
       return view('purchaseInvoice')->with(['items_detail' => $items_detail, 'sale_sundry' => $sale_sundry, 'party_detail' => $party_detail,'month_arr' => $month_arr, 'company_data' => $company_data, 'sale_detail' => $sale_detail,'gst_detail'=>$gst_detail]);
    }
-   public function delete(Request $request){
+    public function delete(Request $request){
       Gate::authorize('action-module',58);
       $check_entry_in_cn_dn = DB::table('purchases')
                   ->select(
@@ -1255,10 +1245,10 @@ if ($companyData->gst_config_type == "single_gst") {
          return redirect('purchase')->withSuccess('Purchase deleted successfully!');
       }
    }
-   public function failedMessage($msg,$url){
+    public function failedMessage($msg,$url){
       return redirect($url)->withError($msg);
-   }
-   public function purchaseEdit(Request $request,$id){
+    }
+    public function purchaseEdit(Request $request,$id){
       $groupId = "";
       Gate::authorize('action-module',57);
       $rowId     = $request->query('row_id'); 
@@ -1359,16 +1349,6 @@ if ($companyData->gst_config_type == "single_gst") {
       $manageitems = DB::table('manage_items')
                      ->join('units', 'manage_items.u_name', '=', 'units.id')
                      ->join('item_groups', 'item_groups.id', '=', 'manage_items.g_name')
-                     ->leftjoin(DB::raw('(SELECT igr.item_id, igr.gst_rate 
-                                       FROM item_gst_rate igr
-                                       WHERE igr.effective_from <= "'.$bill_date.'"
-                                       AND igr.effective_from = (
-                                          SELECT MAX(effective_from) 
-                                          FROM item_gst_rate 
-                                          WHERE item_id = igr.item_id 
-                                          AND effective_from <= "'.$bill_date.'"
-                                       )
-                                    ) as gst'), 'gst.item_id', '=', 'manage_items.id')
                      ->where('manage_items.delete', '=', '0')
                      ->where('manage_items.status', '=', '1')
                      ->where('manage_items.company_id', Session::get('user_company_id'))
