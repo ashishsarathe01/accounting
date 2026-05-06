@@ -229,7 +229,7 @@
                               <input type="number" class="price form-control" id="price_tr_1" name="price[]" placeholder="Price" style="text-align:right;" step="0.01"/>
                            </td>
                            <td class="w-min-50">
-                              <input type="number" id="amount_tr_1" class="amount w-100 form-control" name="amount[]" placeholder="Amount" style="text-align:right;" step="0.01" value="@isset($_GET['data']){{$amount}}@endisset"/>
+                              <input type="number" id="amount_tr_1" class="amount w-100 form-control" name="amount[]" placeholder="Amount" style="text-align:right;" step="any" value="@isset($_GET['data']){{$amount}}@endisset"/>
                            </td>
                            <td class="">
                               <svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle add_more" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg>
@@ -906,7 +906,9 @@
          $("#goods_discription_tr_1").val('');
          $("#quantity_tr_1").val('');
          $("#price_tr_1").val('');
-         $("#amount_tr_1").val('');
+         if (get_data == "" || get_data == null) {
+            $("#amount_tr_1").val('');
+         }
          $("#unit_tr_1").val('');
          $("#units_tr_1").val('');
 
@@ -1012,7 +1014,9 @@
             $("#goods_discription_tr_1").val('');
             $("#quantity_tr_1").val('');
             $("#price_tr_1").val('');
-            $("#amount_tr_1").val('');
+            if (get_data == "" || get_data == null) {
+                $("#amount_tr_1").val('');
+            }
             $("#unit_tr_1").val('');
             $("#units_tr_1").val('');
             add_more_count = 1;
@@ -2215,7 +2219,9 @@
       });
       $("#quantity_tr_1").val('');
       $("#price_tr_1").val('');
-      $("#amount_tr_1").val('');
+      if (get_data == "" || get_data == null) {
+        $("#amount_tr_1").val('');
+      }
       $("#unit_tr_1").val('');
       $("#units_tr_1").val('');
 

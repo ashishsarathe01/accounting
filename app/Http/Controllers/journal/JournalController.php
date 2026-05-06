@@ -994,35 +994,24 @@ public function index(Request $request)
          }
          session(['previous_url_journal' => URL::previous()]);
          if ($spare_part_id) {
-
             $spare = SparePart::with('items')->find($spare_part_id);
-
             $remainingItems = [];
-
             foreach ($spare->items as $item) {
-
                $orderedQty = $item->quantity;
-
-         $gotQty = 0;
-
-         foreach ($receivedItems as $r) {
-            if ((int)$r['item_id'] == (int)$item->item_id) {
-               $gotQty = $r['quantity'];
-               break;
-            }
-         }
-
-         if($gotQty > $orderedQty){
-            $gotQty = $orderedQty;
-         }
-
-         $item->quantity = $gotQty;
-         $item->save();
-
-         $pendingQty = $orderedQty - $gotQty;
-
+               $gotQty = 0;
+               foreach ($receivedItems as $r) {
+                  if ((int)$r['item_id'] == (int)$item->item_id) {
+                     $gotQty = $r['quantity'];
+                     break;
+                  }
+               }
+               if($gotQty > $orderedQty){
+                  $gotQty = $orderedQty;
+               }
+               $item->quantity = $gotQty;
+               $item->save();
+               $pendingQty = $orderedQty - $gotQty;
                if ($pendingQty > 0) {
-
                      $remainingItems[] = [
                         'item_id' => $item->item_id,
                         'quantity' => $pendingQty,
@@ -1032,18 +1021,21 @@ public function index(Request $request)
                      ];
                }
             }
-
+            $spare->map_vehicle_entry_id = $request->input('vehicle_entry_id');
             $spare->status = 3;
             $spare->save();
-
+            //Update Vehicle Entry
+               SupplierPurchaseVehicleDetail::where('id', $request->input('vehicle_entry_id'))
+                  ->update([
+                     'status' => 4,
+                     'action_id' => $journal->id,
+                     'action_type' => 'JOURNAL'
+                  ]);
+               // If there are remaining items, create a new Spare Part entry
             if (!empty($remainingItems)) {
-
                $basePo = $spare->po_number;
-
                $count = SparePart::where('po_number', 'like', $basePo.'%')->count();
-
                $newPoNumber = $basePo . '-' . $count;
-
                $newSpare = SparePart::create([
                      'po_number' => $newPoNumber,
                      'po_date' => $spare->po_date,
@@ -1059,9 +1051,7 @@ public function index(Request $request)
                      'company_id' => $spare->company_id,
                      'created_by' => auth()->id(),
                ]);
-
                foreach ($remainingItems as $row) {
-
                      SparePartItem::create([
                         'spare_part_id' => $newSpare->id,
                         'item_id' => $row['item_id'],

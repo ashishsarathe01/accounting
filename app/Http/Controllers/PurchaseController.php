@@ -879,7 +879,7 @@ if ($companyData->gst_config_type == "single_gst") {
             // }
              if ($request->filled('spare_part_id')) {
 
-            DB::transaction(function () use ($request, $purchase) {
+            DB::transaction(function () use ($request, $purchase,$vehicleEntryId) {
         
                 $spare = SparePart::with('items')
                     //->lockForUpdate()

@@ -469,7 +469,7 @@ public function datatable(Request $request)
       $items->updated_by = Session::get('user_id');
       if($items->update()){
          $gst_rate = ItemGstRate::where('item_id',$request->mangeitem_id)
-                                 ->where('gst_rate',$request->input('gst_rate'))
+                                 //->where('gst_rate',$request->input('gst_rate'))
                                  ->where('effective_from',$request->input('gst_rate_effective_date'))
                                  ->first();
          if(!$gst_rate){
@@ -482,6 +482,12 @@ public function datatable(Request $request)
             $item_gst_rate->created_at = Carbon::now();
             $item_gst_rate->created_by = Session::get('user_id');
             $item_gst_rate->save();
+         }else{
+            $gst_rate->gst_rate = $request->input('gst_rate');
+            $gst_rate->item_type = $request->input('item_type');
+            $gst_rate->updated_at = Carbon::now();
+            $gst_rate->updated_by = Session::get('user_id');
+            $gst_rate->update();
          }
          ItemBalanceBySeries::where('item_id',$items->id)->delete();
          ItemLedger::where('item_id',$items->id)->where('source','-1')->delete();
