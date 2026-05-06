@@ -493,6 +493,11 @@ Route::group(['middleware' => ['merchantloginstatus']], function () {
         Route::get('gst2a', [GSTR2AController::class, 'index'])->name('gst2a');
         Route::post('gstr2a-detail', [GSTR2AController::class, 'gstr2aDetail'])->name('gstr2a-detail');
         Route::get('gstr2a-all-info/{month}/{gstin}/{ctin}', [GSTR2AController::class, 'gstr2aAllInfo'])->name('gstr2a-all-info');
+        Route::get('gstr2a-reconciliation-data/{month}/{gstin}', [GSTR2AController::class, 'gstr2aReconciliationData'])
+    ->name('gstr2a-reconciliation-data');
+
+Route::post('gstr2a-reconciliation-detail', [GSTR2AController::class, 'gstr2aReconciliationDetail'])
+    ->name('gstr2a-reconciliation-detail');
         Route::get('parameterized-stock', [ParameterizedStockController::class,'index'])->name('parameterized-stock');  
         Route::get('gst2b', [GSTR2BController::class, 'index'])->name('gst2b');  
         Route::post('gstr2b-detail', [GSTR2BController::class, 'gstr2bDetail'])->name('gstr2b-detail');

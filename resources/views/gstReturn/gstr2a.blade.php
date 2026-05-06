@@ -84,7 +84,10 @@
                </div>
             </form>
             <div id="gst_div" style="display: none">
-               <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm gst_head"></h5>
+               <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm gst_head">
+                  GSTR2A
+                  <button class="btn btn-info reconciliation" style="float:right;">Reconciliation</button>
+               </h5>
                <table class="table table-ordered bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm gst_table">
                   <thead>
                      <tr>
@@ -293,7 +296,11 @@
                      }
                      getGstData(month,gstin);
                   }else if(obj.message=="GSTR2A"){
-                     $(".gst_head").html('GSTR2A - Last Created Date : '+obj.last_created_date+' - <button type="button" class="btn btn-xs-primary new_data_btn">Refresh</button>');
+                     $(".gst_head").html(`
+                        GSTR2A - Last Created Date : ${obj.last_created_date}
+                        <button type="button" class="btn btn-xs-primary new_data_btn">Refresh</button>
+                        <button type="button" class="btn btn-info reconciliation" style="margin-left:10px;">Reconciliation</button>
+                     `);
                      let html = "";
                      let total_b2b_portal = 0;
                      let total_b2b_books = 0;
@@ -425,6 +432,17 @@
          refresh = 1;
          getGstData(month,gstin);
       }
+   });
+   $(document).on('click', '.reconciliation', function () {
+
+      let month = $("#month").val();
+      let gstin = $("#gstin").val();
+
+      let url = "{{url('gstr2a-reconciliation-data')}}/month/gstin";
+      url = url.replace('month', month);
+      url = url.replace('gstin', gstin);
+
+      window.location = url;
    });
 </script>
 @endsection

@@ -1403,4 +1403,202 @@ class GSTR2AController extends Controller
             'books_only_invoices' => $books_only_html,
         ]);
     }
+    public function gstr2aReconciliationData($month, $gstin)
+    {
+        $request = new \Illuminate\Http\Request();
+        $request->merge([
+            'month' => $month,
+            'gstin' => $gstin
+        ]);
+
+        $response = $this->gstr2aDetail($request);
+        $data = json_decode($response, true);
+
+        if (!$data['status']) {
+            return back()->with('error', $data['message']);
+        }
+
+        $rows = $data['data'];
+        $startOfMonth = date('Y-m-01', strtotime($month));
+
+        $previous_b2b_invoice = 0;
+
+        $gstr2a = \App\Models\GSTR2A::where('company_gstin', $gstin)
+            ->where('company_id', \Session::get('user_company_id'))
+            ->where('res_month', $month)
+            ->get();
+
+        foreach ($gstr2a as $value) {
+
+            if ($value->res_type != "B2B") continue;
+
+            $b2b_data = json_decode($value->res_data);
+
+            if (empty($b2b_data->b2b)) continue;
+
+            foreach ($b2b_data->b2b as $b2b) {
+
+                foreach ($b2b->inv as $inv) {
+
+                    $invoice_no = trim($inv->inum);
+
+                    $purchase = \App\Models\Purchase::where('billing_gst', $b2b->ctin)
+                        ->where('company_id', \Session::get('user_company_id'))
+                        ->where('merchant_gst', $gstin)
+                        ->whereRaw('TRIM(voucher_no) = ?', [$invoice_no])
+                        ->first();
+
+                    $journal = \App\Models\Journal::where('vendor_gstin', $b2b->ctin)
+                        ->where('company_id', \Session::get('user_company_id'))
+                        ->where('merchant_gst', $gstin)
+                        ->where(function($q) use ($invoice_no) {
+                            $q->whereRaw('TRIM(invoice_no) = ?', [$invoice_no])
+                            ->orWhereRaw('TRIM(gstr2b_invoice_id) = ?', [$invoice_no]);
+                        })
+                        ->where('claim_gst_status', 'YES')
+                        ->first();
+
+                    $linked_date = null;
+
+                    if ($purchase) {
+                        $linked_date = $purchase->date;
+                    } elseif ($journal) {
+                        $linked_date = $journal->date;
+                    }
+
+                    if ($linked_date && $linked_date < $startOfMonth) {
+
+                        $previous_b2b_invoice += ($inv->val ?? 0);
+                    }
+                }
+            }
+        }
+
+        $previous_cdnr_credit = 0;
+        $previous_cdnr_debit  = 0;
+
+        foreach ($gstr2a as $value) {
+
+            if (!in_array($value->res_type, ["CDN","CDNA"])) continue;
+
+            $cdn_data = json_decode($value->res_data);
+
+            $type = ($value->res_type == "CDN") ? "cdn" : "cdna";
+
+            if (empty($cdn_data->$type)) continue;
+
+            foreach ($cdn_data->$type as $b2b) {
+
+                foreach ($b2b->nt as $nt) {
+
+                    $note_no = trim($nt->nt_num);
+
+                    $linked_date = null;
+
+                    if ($nt->ntty == "D") {
+                        $saleReturn = \App\Models\SalesReturn::whereRaw('TRIM(gstr2b_invoice_id) = ?', [$note_no])
+                            ->first();
+
+                        if ($saleReturn) {
+                            $linked_date = $saleReturn->date;
+                        }
+                    }
+
+                    elseif ($nt->ntty == "C") {
+                        $purchaseReturn = \App\Models\PurchaseReturn::whereRaw('TRIM(gstr2b_invoice_id) = ?', [$note_no])
+                            ->first();
+
+                        if ($purchaseReturn) {
+                            $linked_date = $purchaseReturn->date;
+                        }
+                    }
+
+                    if ($linked_date && $linked_date < $startOfMonth) {
+
+                        if ($nt->ntty == "D") {
+                            $previous_cdnr_debit += ($nt->val ?? 0);
+                        } elseif ($nt->ntty == "C") {
+                            $previous_cdnr_credit += ($nt->val ?? 0);
+                        }
+                    }
+                }
+            }
+        }
+        $previous_cdnr = $previous_cdnr_credit - $previous_cdnr_debit;
+            $b2b_portal = 0;
+            $b2b_books  = 0;
+            $cdnr_portal = 0;
+            $cdnr_books  = 0;
+
+            $only_portal_b2b = 0;
+            $only_books_b2b  = 0;
+
+            $only_portal_cdnr = 0;
+            $only_books_cdnr  = 0;
+
+            foreach ($rows as $r) {
+
+
+                $portal = round($r['b2b_portal'], 2);
+                $books  = round($r['b2b_books'], 2);
+
+                $b2b_portal += $portal;
+                $b2b_books  += $books;
+
+                $diff = round($portal - $books, 2);
+
+                // IGNORE SMALL DIFF
+                if (abs($diff) <= 1) {
+                    $diff = 0;
+                }
+
+                if ($diff > 0) {
+                    $only_portal_b2b += $diff;
+                } elseif ($diff < 0) {
+                    $only_books_b2b += abs($diff);
+                }
+
+
+                $portal_c = round($r['cdnr_portal'], 2);
+                $books_c  = round($r['cdnr_books'], 2);
+
+                $cdnr_portal += $portal_c;
+                $cdnr_books  += $books_c;
+
+                $diff_c = round($portal_c - $books_c, 2);
+
+                if (abs($diff_c) <= 1) {
+                    $diff_c = 0;
+                }
+
+                if ($diff_c > 0) {
+                    $only_portal_cdnr += $diff_c;
+                } elseif ($diff_c < 0) {
+                    $only_books_cdnr += abs($diff_c);
+                }
+            }
+
+        $summary = [
+            'b2b_invoice' => [
+                'portal' => $b2b_portal,
+                'only_portal' => $only_portal_b2b,
+                'only_books'  => $only_books_b2b,
+                'previous' => $previous_b2b_invoice,
+                'total' => $b2b_portal,
+                'books' => $b2b_books,
+                'diff'  => $only_portal_b2b - $only_books_b2b
+            ],
+            'b2b_cdnr' => [
+                'portal' => $cdnr_portal,
+                'only_portal' => $only_portal_cdnr,
+                'only_books'  => $only_books_cdnr,
+                'previous' => $previous_cdnr,
+                'total' => $cdnr_portal,
+                'books' => $cdnr_books,
+                'diff'  => $only_portal_cdnr - $only_books_cdnr
+            ]
+        ];
+
+        return view('gstReturn.gstr2a_reconciliation', compact('summary','month','gstin'));
+    }
 }
