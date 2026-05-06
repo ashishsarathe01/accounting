@@ -173,7 +173,30 @@
                                     @else
                                         <span>-</span>
                                     @endif
-
+                                    &nbsp;&nbsp;|&nbsp;&nbsp;
+                                    <?php
+                                    $journal_entries = collect($journal)
+                                        ->where('jon_id', $value->jon_id);
+                                    $is_gst_journal = $journal_entries->contains(function($item){
+                                        $acc_name = strtolower($item->acc_name);
+                                        return strpos($acc_name, 'cgst') !== false ||
+                                            strpos($acc_name, 'sgst') !== false ||
+                                            strpos($acc_name, 'igst') !== false ||
+                                            strpos($acc_name, 'round off') !== false;
+                                    });
+                                    if($is_gst_journal){
+                                        $voucher_total = $journal_entries->max(function($item){
+                                            return (float) str_replace(',', '', $item->credit);
+                                        });
+                                    }else{
+                                        $voucher_total = $journal_entries->sum(function($item){
+                                            return (float) str_replace(',', '', $item->debit);
+                                        });
+                                    }
+                                    ?>
+                                    <div class="text-center fw-bold" style="font-size:14px;">
+                                        Total : {{ number_format($voucher_total, 2) }}
+                                    </div>
                                 </td>
                                 </tr>
 
@@ -193,6 +216,7 @@
                                 } ?>
                             <tr class="font-14 font-heading bg-white">
                                 <td class="w-min-120 fw-bold font-heading">TOTAL</td>
+                                <td></td>
                                 <td></td>
                                 <td class="w-min-120 fw-bold font-heading" style="text-align: right;"><?php echo $tot_dbt;?></td>
                                 <td class="w-min-120 fw-bold font-heading" style="text-align: right;"><?php echo $tot_crt;?></td>

@@ -118,7 +118,13 @@
                               }?>
                            </td>
                         </tr>
-                        <?php if($is_last){ ?>
+                        <?php if($is_last){ 
+                           $voucher_total = collect($receipt)
+                              ->where('rec_id', $value->rec_id)
+                              ->sum(function($item){
+                                 return str_replace(',', '', $item->credit);
+                              });
+                           ?>
                         <tr class="font-12 text-muted bg-light">
                            <td colspan="7" class="ps-4 py-1" style="text-align:left;">
                               
@@ -134,7 +140,10 @@
                               @else
                                  -
                               @endif
-
+                              &nbsp;&nbsp;|&nbsp;&nbsp;
+                              <div class="text-center fw-bold" style="font-size:14px;">
+                                 Total : {{ number_format($voucher_total, 2) }}
+                              </div>
                            </td>
                         </tr>
                         <?php } ?>

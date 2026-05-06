@@ -118,7 +118,13 @@
                 <table class="table table-bordered mb-0">
                     @foreach($productionDetails as $row)
                     <tr>
-                        <td>{{ $row->item_name }}</td>
+                        <td>
+                            <a href="javascript:void(0)"
+                            class="text-primary production-item"
+                            data-item="{{ $row->item_id }}">
+                                {{ $row->item_name }}
+                            </a>
+                        </td>
                         <td style="text-align:right;">
                             {{ number_format($row->total, 2) }}
                         </td>
@@ -144,7 +150,12 @@
                         @endphp
                         <tr>
                             <td>
-                                <strong>Less (-) Produced</strong> {{ $row->item_name }}
+                                <strong>Less (-) Produced</strong> 
+                                <a href="javascript:void(0)"
+                                    class="text-primary consumption-item"
+                                    data-item="{{ $row->consume_item }}">
+                                    {{ $row->item_name }}
+                                </a>
                             </td>
 
                             <td class="text-end">
@@ -176,7 +187,15 @@
                 <table class="table table-bordered mb-0">
                     @foreach($wasteDetails as $row)
                     <tr>
-                        <td>{{ $row->item_name }}</td>
+                        <td>
+                            <a href="javascript:void(0)"
+                            class="text-primary waste-item"
+                            data-item="{{ $row->consume_item }}">
+
+                                {{ $row->item_name }}
+
+                            </a>
+                        </td>
                         <td style="text-align:right;">
                             {{ number_format($row->total, 2) }}
                         </td>
@@ -219,7 +238,42 @@
 </div>
 </section>
 </div>
+<div class="modal fade" id="productionModal" tabindex="-1">
+    <div class="modal-dialog modal-md" style="max-width:700px;">
+        <div class="modal-content">
 
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    Production Details -
+                    <span id="productionItemName"></span>
+                </h5>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal">
+                </button>
+            </div>
+
+            <div class="modal-body">
+
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th style="text-align:right;">Weight</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="productionModalBody">
+
+                    </tbody>
+                </table>
+
+            </div>
+
+        </div>
+    </div>
+</div>
 @include('layouts.footer')
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script>
@@ -268,5 +322,126 @@ function downloadPDF() {
 
         });
 }
+$(document).on('click', '.production-item', function () {
+
+    let itemId = $(this).data('item');
+    let itemName = $(this).text().trim();
+
+    $.ajax({
+        url: "{{ url('/yield-report-production-details') }}/" + itemId,
+        type: "GET",
+        data: {
+            from_date: "{{ $from_date }}",
+            to_date: "{{ $to_date }}"
+        },
+        success: function (response) {
+
+            let html = '';
+
+            response.forEach(function(row){
+
+                html += `
+                    <tr>
+                        <td>${new Date(row.date).toLocaleDateString('en-GB')}</td>
+                        <td style="text-align:right;">
+                            ${parseFloat(row.weight).toFixed(2)}
+                        </td>
+                    </tr>
+                `;
+            });
+
+            $('#productionModalBody').html(html);
+            $('#productionItemName').text(itemName);
+            $('#productionModal').modal('show');
+        }
+    });
+
+});
+$(document).on('click', '.consumption-item', function () {
+
+    let itemId = $(this).data('item');
+    let itemName = $(this).text().trim();
+
+    $.ajax({
+
+        url: "{{ url('/yield-report-consumption-details') }}/" + itemId,
+
+        type: "GET",
+
+        data: {
+            from_date: "{{ $from_date }}",
+            to_date: "{{ $to_date }}"
+        },
+
+        success: function (response) {
+
+            let html = '';
+
+            response.forEach(function(row){
+
+                html += `
+                    <tr>
+                        <td>${new Date(row.date).toLocaleDateString('en-GB')}</td>
+
+                        <td style="text-align:right;">
+                            ${parseFloat(row.weight).toFixed(2)}
+                        </td>
+                    </tr>
+                `;
+            });
+
+            $('#productionModalBody').html(html);
+
+            $('#productionItemName').text(itemName);
+
+            $('#productionModal').modal('show');
+        }
+    });
+
+});
+$(document).on('click', '.waste-item', function () {
+
+    let itemId = $(this).data('item');
+    let itemName = $(this).text().trim();
+
+    $.ajax({
+
+        url: "{{ url('/yield-report-waste-details') }}/" + itemId,
+
+        type: "GET",
+
+        data: {
+            from_date: "{{ $from_date }}",
+            to_date: "{{ $to_date }}"
+        },
+
+        success: function (response) {
+
+            let html = '';
+
+            response.forEach(function(row){
+
+                html += `
+                    <tr>
+                        <td>${new Date(row.date).toLocaleDateString('en-GB')}</td>
+
+                        <td style="text-align:right;">
+                            ${parseFloat(row.weight).toFixed(2)}
+                        </td>
+                    </tr>
+                `;
+            });
+
+            $('#productionModalBody').html(html);
+
+            $('#productionItemName').text(
+                'Waste - ' + itemName
+            );
+
+            $('#productionModal').modal('show');
+        }
+    });
+
+});
 </script>
 @endsection

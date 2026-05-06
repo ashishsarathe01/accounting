@@ -1288,4 +1288,7 @@ Route::post(
     'job-work-json',
     [JobWorkController::class, 'getJobWorkJson']
 );
+Route::get('/yield-report-production-details/{item}',[YieldReportController::class, 'productionDetails'])->name('yield-report.production-details');
+Route::get('/yield-report-consumption-details/{item}',[YieldReportController::class, 'consumptionDetails'])->name('yield-report.consumption-details');
+Route::get('/yield-report-waste-details/{item}',[YieldReportController::class, 'wasteDetailsModal'])->name('yield-report.waste-details');
 });

@@ -436,4 +436,70 @@ class YieldReportController extends Controller
             'wasteDetails'
         ));
     }
+
+    public function productionDetails(Request $request, $itemId)
+    {
+        $companyId = Session::get('user_company_id');
+
+        $from_date = $request->from_date;
+        $to_date   = $request->to_date;
+
+        $data = DB::table('deckle_processes as dp')
+            ->join('item_size_stocks as iss', 'iss.deckle_id', '=', 'dp.id')
+            ->select(
+                'dp.end_time_stamp as date',
+                'dp.id as voucher_no',
+                'iss.weight'
+            )
+            ->where('iss.item_id', $itemId)
+            ->whereDate('dp.end_time_stamp', '>=', $from_date)
+            ->whereDate('dp.end_time_stamp', '<=', $to_date)
+            ->where('dp.status', 4)
+            ->where('dp.company_id', $companyId)
+            ->where('iss.company_id', $companyId)
+            ->orderBy('dp.end_time_stamp', 'asc')
+            ->get();
+
+        return response()->json($data);
+    }
+    public function consumptionDetails(Request $request, $itemId)
+    {
+        $companyId = Session::get('user_company_id');
+
+        $from_date = $request->from_date;
+        $to_date   = $request->to_date;
+
+        $data = DB::table('account_production_details')
+            ->select(
+                'production_date as date',
+                'consume_weight as weight'
+            )
+            ->where('consume_item', $itemId)
+            ->whereBetween('production_date', [$from_date, $to_date])
+            ->where('company_id', $companyId)
+            ->orderBy('production_date', 'asc')
+            ->get();
+
+        return response()->json($data);
+    }
+    public function wasteDetailsModal(Request $request, $itemId)
+    {
+        $from_date = $request->from_date ?? date('Y-m-01');
+        $to_date   = $request->to_date ?? date('Y-m-d');
+
+        $companyId = Session::get('user_company_id');
+
+        $data = DB::table('account_production_details as apd')
+            ->select(
+                'apd.production_date as date',
+                'apd.consume_weight as weight'
+            )
+            ->where('apd.consume_item', $itemId)
+            ->whereBetween('apd.production_date', [$from_date, $to_date])
+            ->where('apd.company_id', $companyId)
+            ->orderBy('apd.production_date', 'asc')
+            ->get();
+
+        return response()->json($data);
+    }
 }
