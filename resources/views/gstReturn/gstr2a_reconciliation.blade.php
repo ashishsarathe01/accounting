@@ -18,7 +18,13 @@
         GSTR2A Reconciliation
     </h5>
 
-    <div>
+    <div style="display:flex; align-items:center; gap:12px;">
+
+        <span class="print_btn"
+            title="Print"
+            style="cursor:pointer; font-size:22px;">
+            🖨️
+        </span>
         <a href="{{ url()->previous() }}" class="btn btn-xs-secondary">
             Back
         </a>
@@ -130,5 +136,93 @@
 </div>
 </section>
 </div>
+@include('layouts.footer')
+<script>
+$(".print_btn").click(function () {
 
+    let printWindow = window.open('', '', 'width=900,height=700');
+
+    let tableHTML = `
+        <html>
+        <head>
+
+            <title>GSTR2A Reconciliation</title>
+
+            <style>
+
+                body{
+                    font-family: Arial;
+                    font-size: 12px;
+                    padding:20px;
+                }
+
+                h2{
+                    text-align:center;
+                    margin-bottom:10px;
+                }
+
+                .info{
+                    text-align:center;
+                    margin-bottom:20px;
+                    font-size:14px;
+                }
+
+                table{
+                    width:100%;
+                    border-collapse:collapse;
+                }
+
+                table th,
+                table td{
+                    border:1px solid #000;
+                    padding:8px;
+                    text-align:center;
+                }
+
+                table th{
+                    background:#f2f2f2;
+                }
+
+                .text-start{
+                    text-align:left;
+                }
+
+            </style>
+
+        </head>
+
+        <body>
+
+            <h2>GSTR2A Reconciliation</h2>
+
+            <div class="info">
+
+                <strong>Month:</strong>
+                {{ date('F, Y', strtotime($month)) }}
+
+                &nbsp;&nbsp;&nbsp;
+
+                <strong>GSTIN:</strong>
+                {{ $gstin }}
+
+            </div>
+
+            ${$('.table').prop('outerHTML')}
+
+        </body>
+
+        </html>
+    `;
+
+    printWindow.document.write(tableHTML);
+
+    printWindow.document.close();
+
+    printWindow.focus();
+
+    printWindow.print();
+
+});
+
+</script>
 @endsection

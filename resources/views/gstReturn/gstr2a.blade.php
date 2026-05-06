@@ -368,8 +368,30 @@
                         finalHtml += `
                         <tr>
                            <td colspan="6">
-                                 <h6 style="margin-top:15px;">Pending Credit / Debit Notes (Unlinked)</h6>
-                                 <table class="table table-bordered">
+                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;">
+
+                                    <h6 style="margin:0;">
+                                       Pending Credit / Debit Notes (Unlinked)
+                                    </h6>
+
+                                    <div style="display:flex; align-items:center; gap:12px; font-size:20px;">
+
+                                       <span class="pending_print_btn"
+                                          title="Print"
+                                          style="cursor:pointer;">
+                                          🖨️
+                                       </span>
+
+                                       <span class="pending_excel_btn"
+                                          title="Export Excel"
+                                          style="cursor:pointer;">
+                                          📥
+                                       </span>
+
+                                    </div>
+
+                                 </div>
+                                 <table class="table table-bordered pending_notes_table">
                                     <thead>
                                        <tr>
                                              <th>Sr No</th>
@@ -444,5 +466,145 @@
 
       window.location = url;
    });
+
+   $(document).on('click', '.pending_print_btn', function () {
+
+      let month = $("#month").val();
+      let gstin = $("#gstin").val();
+
+      let printWindow = window.open('', '', 'width=1200,height=700');
+
+      let tableHTML = `
+         <html>
+         <head>
+
+               <title>Pending Credit / Debit Notes</title>
+
+               <style>
+
+                  body{
+                     font-family: Arial;
+                     font-size: 12px;
+                     padding:20px;
+                  }
+
+                  h2{
+                     text-align:center;
+                     margin-bottom:10px;
+                  }
+
+                  .info{
+                     text-align:center;
+                     margin-bottom:20px;
+                     font-size:14px;
+                  }
+
+                  table{
+                     width:100%;
+                     border-collapse:collapse;
+                  }
+
+                  table th,
+                  table td{
+                     border:1px solid #000;
+                     padding:6px;
+                     font-size:12px;
+                  }
+
+                  table th{
+                     background:#f2f2f2;
+                  }
+
+               </style>
+
+         </head>
+
+         <body>
+
+               <h2>Pending Credit / Debit Notes (Unlinked)</h2>
+
+               <div class="info">
+
+                  <strong>Month:</strong>
+                  ${month}
+
+                  &nbsp;&nbsp;&nbsp;
+
+                  <strong>GSTIN:</strong>
+                  ${gstin}
+
+               </div>
+
+               ${$('.pending_notes_table').prop('outerHTML')}
+
+         </body>
+
+         </html>
+      `;
+
+      printWindow.document.write(tableHTML);
+
+      printWindow.document.close();
+
+      printWindow.focus();
+
+      printWindow.print();
+
+   });
+
+   $(document).on('click', '.pending_excel_btn', function () {
+
+      let month = $("#month").val();
+      let gstin = $("#gstin").val();
+
+      let table = `
+         <table border="1">
+
+               <tr>
+                  <th colspan="11" style="font-size:18px;">
+                     GSTR2A
+                  </th>
+               </tr>
+
+               <tr>
+                  <td colspan="11">
+                     <strong>Month:</strong> ${month}
+                     &nbsp;&nbsp;&nbsp;
+                     <strong>GSTIN:</strong> ${gstin}
+                  </td>
+               </tr>
+
+               <tr>
+                  <th colspan="11" style="font-size:16px;">
+                     Pending Credit / Debit Notes (Unlinked)
+                  </th>
+               </tr>
+
+               ${$('.pending_notes_table').html()}
+
+         </table>
+      `;
+
+      let blob = new Blob(
+         ['\ufeff' + table],
+         { type: 'application/vnd.ms-excel' }
+      );
+
+      let url = window.URL.createObjectURL(blob);
+
+      let a = document.createElement("a");
+
+      a.href = url;
+
+      a.download = "pending_credit_debit_notes.xls";
+
+      document.body.appendChild(a);
+
+      a.click();
+
+      document.body.removeChild(a);
+
+   });
+
 </script>
 @endsection
