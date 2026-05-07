@@ -1297,4 +1297,5 @@ Route::get('gst-rate-update-manage-item', [ManageItemsController::class, 'gstRat
 
 Route::post('gst-rate-update-manage-item-store', [ManageItemsController::class, 'gstRateUpdateStore'])
     ->name('gst-rate-update-manage-item-store');
+    Route::post('check-gstin', [AjaxController::class, 'checkGstin']);
 });
