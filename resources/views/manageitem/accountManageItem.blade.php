@@ -37,6 +37,11 @@
                             </select>
                         </div>
                     </form>
+                    <div class="d-flex gap-2">
+                        <a href="{{ route('gst-rate-update-manage-item') }}"
+                        class="btn btn-xs-primary">
+                            GST RATE UPDATE
+                        </a>
                     @can('action-module',79)
                         <a href="{{ route('account-manage-item.create') }}" class="btn btn-xs-primary">
                             ADD
@@ -45,7 +50,7 @@
                             </svg>
                         </a>
                     @endcan
-                    
+                    </div>
                 </div>
                 <div class="   bg-white table-view shadow-sm">
                     <table id="example" class="table-striped table m-0 shadow-sm">

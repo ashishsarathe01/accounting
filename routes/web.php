@@ -1291,4 +1291,10 @@ Route::post(
 Route::get('/yield-report-production-details/{item}',[YieldReportController::class, 'productionDetails'])->name('yield-report.production-details');
 Route::get('/yield-report-consumption-details/{item}',[YieldReportController::class, 'consumptionDetails'])->name('yield-report.consumption-details');
 Route::get('/yield-report-waste-details/{item}',[YieldReportController::class, 'wasteDetailsModal'])->name('yield-report.waste-details');
+
+Route::get('gst-rate-update-manage-item', [ManageItemsController::class, 'gstRateUpdate'])
+    ->name('gst-rate-update-manage-item');
+
+Route::post('gst-rate-update-manage-item-store', [ManageItemsController::class, 'gstRateUpdateStore'])
+    ->name('gst-rate-update-manage-item-store');
 });

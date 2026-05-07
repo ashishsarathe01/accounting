@@ -2483,4 +2483,71 @@ public function getItemGstRate(Request $request){
         ]);
       }
    }
+
+
+public function gstRateUpdate()
+{
+
+    $items = ManageItems::where('delete', '0')
+                ->where('company_id', Session::get('user_company_id'))
+                ->orderBy('name', 'ASC')
+                ->get();
+
+    return view('manageitem.GSTRateUpdateManageItem')
+            ->with('items', $items);
+}
+public function gstRateUpdateStore(Request $request)
+{
+    $effective_date = $request->effective_date;
+
+    if(empty($effective_date)){
+        return redirect()->back()->withErrors([
+            'effective_date' => 'Effective date is required.'
+        ]);
+    }
+
+    if(isset($request->gst_rate) && count($request->gst_rate) > 0){
+
+        foreach($request->gst_rate as $item_id => $gst_rate){
+
+            if($gst_rate == ''){
+                continue;
+            }
+
+            $item_type = $request->item_type[$item_id] ?? '';
+
+            $item = ManageItems::where('id', $item_id)
+                        ->where('company_id', Session::get('user_company_id'))
+                        ->first();
+
+            if(!$item){
+                continue;
+            }
+
+            if(
+                $item->gst_rate == $gst_rate &&
+                $item->item_type == $item_type
+            ){
+                continue;
+            }
+
+            $gstHistory = new ItemGstRate;
+            $gstHistory->item_id = $item_id;
+            $gstHistory->gst_rate = $gst_rate;
+            $gstHistory->item_type = $item_type;
+            $gstHistory->comp_id = Session::get('user_company_id');
+            $gstHistory->effective_from = $effective_date;
+            $gstHistory->created_at = Carbon::now();
+            $gstHistory->updated_at = Carbon::now();
+            $gstHistory->save();
+
+            $item->gst_rate = $gst_rate;
+            $item->item_type = $item_type;
+            $item->updated_at = Carbon::now();
+            $item->save();
+        }
+    }
+
+    return redirect()->back()->withSuccess('GST Rate updated successfully!');
+}
 }
