@@ -311,28 +311,22 @@ class YieldReportController extends Controller
 
        
         /* ================= PRODUCTION ================= */
-        $totalProduction = DB::table('deckle_processes as dp')
-        ->join('item_size_stocks as iss', 'iss.deckle_id', '=', 'dp.id')
-        ->whereDate('dp.end_time_stamp', '>=', $from_date)
-        ->whereDate('dp.end_time_stamp', '<=', $to_date)
-        ->where('dp.status', 4)
-        ->where('dp.company_id', $companyId)
-        ->where('iss.company_id', $companyId)
-        ->sum('iss.weight');
-        $productionDetails = DB::table('deckle_processes as dp')
-            ->join('item_size_stocks as iss', 'iss.deckle_id', '=', 'dp.id')
-            ->join('manage_items as mi', 'mi.id', '=', 'iss.item_id')
+
+        $totalProduction = DB::table('account_production_details')
+            ->whereBetween('production_date', [$from_date, $to_date])
+            ->where('company_id', $companyId)
+            ->sum('new_weight');
+
+        $productionDetails = DB::table('account_production_details as apd')
+            ->join('manage_items as mi', 'mi.id', '=', 'apd.new_item')
             ->select(
-                'iss.item_id',
+                'apd.new_item as item_id',
                 'mi.name as item_name',
-                DB::raw('SUM(iss.weight) as total')
+                DB::raw('SUM(apd.new_weight) as total')
             )
-            ->whereDate('dp.end_time_stamp', '>=', $from_date)
-            ->whereDate('dp.end_time_stamp', '<=', $to_date)
-            ->where('dp.status', 4)
-            ->where('dp.company_id', $companyId)
-             ->where('iss.company_id', $companyId)
-            ->groupBy('iss.item_id', 'mi.name')
+            ->whereBetween('apd.production_date', [$from_date, $to_date])
+            ->where('apd.company_id', $companyId)
+            ->groupBy('apd.new_item', 'mi.name')
             ->get();
 
         /* ================= MATERIAL REQUIRED ================= */
@@ -444,20 +438,15 @@ class YieldReportController extends Controller
         $from_date = $request->from_date;
         $to_date   = $request->to_date;
 
-        $data = DB::table('deckle_processes as dp')
-            ->join('item_size_stocks as iss', 'iss.deckle_id', '=', 'dp.id')
+        $data = DB::table('account_production_details')
             ->select(
-                'dp.end_time_stamp as date',
-                'dp.id as voucher_no',
-                'iss.weight'
+                'production_date as date',
+                'new_weight as weight'
             )
-            ->where('iss.item_id', $itemId)
-            ->whereDate('dp.end_time_stamp', '>=', $from_date)
-            ->whereDate('dp.end_time_stamp', '<=', $to_date)
-            ->where('dp.status', 4)
-            ->where('dp.company_id', $companyId)
-            ->where('iss.company_id', $companyId)
-            ->orderBy('dp.end_time_stamp', 'asc')
+            ->where('new_item', $itemId)
+            ->whereBetween('production_date', [$from_date, $to_date])
+            ->where('company_id', $companyId)
+            ->orderBy('production_date', 'asc')
             ->get();
 
         return response()->json($data);

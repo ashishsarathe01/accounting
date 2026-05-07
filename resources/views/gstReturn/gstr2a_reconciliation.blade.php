@@ -89,8 +89,9 @@
             <td>
                 {{ number_format(
                     ($summary['b2b_cdnr']['portal'] ?? 0)
-                    - ($summary['b2b_cdnr']['only_portal'] ?? 0)
-                    + ($summary['b2b_cdnr']['only_books'] ?? 0),
+                    + ($summary['b2b_cdnr']['only_portal'] ?? 0)
+                    + ($summary['b2b_cdnr']['only_books'] ?? 0)
+                    + ($summary['b2b_cdnr']['previous'] ?? 0),
                 2) }}
             </td>
         </tr>
@@ -118,8 +119,9 @@
                 {{ number_format(
                     (
                         ($summary['b2b_cdnr']['portal'] ?? 0)
-                        - ($summary['b2b_cdnr']['only_portal'] ?? 0)
+                        + ($summary['b2b_cdnr']['only_portal'] ?? 0)
                         + ($summary['b2b_cdnr']['only_books'] ?? 0)
+                        + ($summary['b2b_cdnr']['previous'] ?? 0)
                     )
                     - ($summary['b2b_cdnr']['books'] ?? 0),
                 2) }}

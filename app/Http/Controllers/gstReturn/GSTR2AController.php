@@ -1525,6 +1525,56 @@ class GSTR2AController extends Controller
             }
         }
         $previous_cdnr = $previous_cdnr_credit - $previous_cdnr_debit;
+        $only_portal_cdnr = 0;
+
+        foreach ($gstr2a as $value) {
+
+            if (!in_array($value->res_type, ["CDN", "CDNA"])) {
+                continue;
+            }
+
+            $cdn_data = json_decode($value->res_data);
+
+            $type = ($value->res_type == "CDN") ? "cdn" : "cdna";
+
+            if (empty($cdn_data->$type)) {
+                continue;
+            }
+
+            foreach ($cdn_data->$type as $b2b) {
+
+                foreach ($b2b->nt as $nt) {
+
+                    $note_no = trim($nt->nt_num);
+
+                    // DEBIT NOTE
+                    if ($nt->ntty == "D") {
+
+                        $linked = \App\Models\SalesReturn::whereRaw(
+                            'TRIM(gstr2b_invoice_id) = ?',
+                            [$note_no]
+                        )->exists();
+
+                        if (!$linked) {
+                            $only_portal_cdnr -= ($nt->val ?? 0);
+                        }
+                    }
+
+                    // CREDIT NOTE
+                    else if ($nt->ntty == "C") {
+
+                        $linked = \App\Models\PurchaseReturn::whereRaw(
+                            'TRIM(gstr2b_invoice_id) = ?',
+                            [$note_no]
+                        )->exists();
+
+                        if (!$linked) {
+                                $only_portal_cdnr += ($nt->val ?? 0);
+                            }
+                    }
+                }
+            }
+        }
             $b2b_portal = 0;
             $b2b_books  = 0;
             $cdnr_portal = 0;
@@ -1533,9 +1583,30 @@ class GSTR2AController extends Controller
             $only_portal_b2b = 0;
             $only_books_b2b  = 0;
 
-            $only_portal_cdnr = 0;
-            $only_books_cdnr  = 0;
+            $only_books_cdnr = 0;
 
+            if (!empty($data['pending_notes'])) {
+
+                foreach ($data['pending_notes'] as $note) {
+
+                    $bookValue = (float)$note['book_value'];
+
+                    // DR = Debit Note = Positive
+                    if ($note['type'] == 'CR') {
+
+                        // Credit Note / Sales Return = Positive
+                        $only_books_cdnr += $bookValue;
+
+                    }
+
+                    // Debit Note / Purchase Return = Negative
+                    else if ($note['type'] == 'DR') {
+
+                        $only_books_cdnr -= $bookValue;
+
+                    }
+                }
+            }
             foreach ($rows as $r) {
 
 
@@ -1571,11 +1642,6 @@ class GSTR2AController extends Controller
                     $diff_c = 0;
                 }
 
-                if ($diff_c > 0) {
-                    $only_portal_cdnr += $diff_c;
-                } elseif ($diff_c < 0) {
-                    $only_books_cdnr += abs($diff_c);
-                }
             }
 
         $summary = [
