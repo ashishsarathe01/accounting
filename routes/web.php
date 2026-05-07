@@ -352,7 +352,7 @@ Route::group(['middleware' => ['merchantloginstatus']], function () {
    Route::post('cancel-ewaybill-sale-return', [SalesReturnController::class, 'cancelEwaybillSaleReturn'])->name('cancel-ewaybill-sale-return');
    Route::get('/purchase-return/export',[PurchaseReturnController::class, 'exportView'])->name('purchase-return-export-view');
 
-Route::post('/purchase-return/export',[PurchaseReturnController::class, 'export'])->name('purchase-return-export');
+    Route::post('/purchase-return/export',[PurchaseReturnController::class, 'export'])->name('purchase-return-export');
    Route::Resource('purchase-return', PurchaseReturnController::class);
    Route::post('purchase-return-update', [PurchaseReturnController::class, 'update'])->name('purchase-return-update');
    Route::post('purchase-return-delete', [PurchaseReturnController::class, 'delete'])->name('purchase-return.delete');

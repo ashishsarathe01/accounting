@@ -330,6 +330,7 @@ public function datatable(Request $request)
       $request->validate([
          'account_name' => 'required',
          'print_name'   => 'required',
+         'under_group'   => 'required',
       ]);
 
       $check = Accounts::select('id')

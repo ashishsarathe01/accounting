@@ -2412,7 +2412,11 @@ var fuelModal  = $("#boilerfuel_report_modal");
             let headerRow = [];
             $('#'+table_id+' thead th').each(function () {
                 if (!$(this).hasClass('header-section')) {
-                    headerRow.push('"' + $(this).text().trim() + '"');
+                    let text = $(this).text().trim();
+                    // remove comma from header
+                    text = text.replace(/,/g, '');
+        
+                    headerRow.push('"' + text + '"');
                     colCount++;
                 }
             });
@@ -2435,7 +2439,8 @@ var fuelModal  = $("#boilerfuel_report_modal");
 
                     let colspan = parseInt($(this).attr('colspan')) || 1;
                     let text = $(this).text().trim().replace(/\s+/g, ' ');
-                    text = text.replace(/"/g, '""');
+                    text = text.replace(/,/g, '');
+                    //text = text.replace(/"/g, '""');
 
                     for (let i = 0; i < colspan; i++) {
                         row.push('"' + text + '"');
