@@ -111,121 +111,121 @@ class ManageItemsController extends Controller
         return view('manageitem/accountManageItem')
             ->with('purchase_management_module_status',$purchase_management_module_status);
     }
-public function datatable(Request $request)
-{
-   
-    $com_id = Session::get('user_company_id');
-
-    $status = ['1','0'];
-
-    if ($request->filter === 'Enable') {
-        $status = ['1'];
-    } elseif ($request->filter === 'Disable') {
-        $status = ['0'];
-    }
-
-    $query = DB::table('manage_items')
-        ->select(
-            'manage_items.id',
-            'manage_items.name',
-            'manage_items.hsn_code',
-            'manage_items.gst_rate',
-            'manage_items.status',
-            'units.name as unit_name',
-            'item_groups.group_name'
-        )
-        ->join('units', 'units.id', '=', 'manage_items.u_name')
-        ->join('item_groups', 'item_groups.id', '=', 'manage_items.g_name')
-        ->where('manage_items.company_id', $com_id)
-        ->where('manage_items.delete', '0')
-        ->whereIn('manage_items.status', $status);
-
-        if ($request->filter === 'InComplete') {
+    public function datatable(Request $request)
+    {
+       
+        $com_id = Session::get('user_company_id');
     
-            $query->where(function($q){
-                $q->orWhere('manage_items.u_name', '')
-                  ->orWhereNull('manage_items.u_name')
-                  ->orWhere('manage_items.hsn_code', '')
-                  ->orWhereNull('manage_items.hsn_code')
-                  ->orWhere('manage_items.gst_rate', '')
-                  ->orWhereNull('manage_items.gst_rate');
-            });
+        $status = ['1','0'];
     
+        if ($request->filter === 'Enable') {
+            $status = ['1'];
+        } elseif ($request->filter === 'Disable') {
+            $status = ['0'];
         }
-
-    return DataTables::of($query)
-
-        ->addColumn('opening_stock', function ($row) {
-            $series = ItemBalanceBySeries::where('item_id',$row->id)->get();
-
-            if ($series->count() == 0) {
-                return '';
+    
+        $query = DB::table('manage_items')
+            ->select(
+                'manage_items.id',
+                'manage_items.name',
+                'manage_items.hsn_code',
+                'manage_items.gst_rate',
+                'manage_items.status',
+                'units.name as unit_name',
+                'item_groups.group_name'
+            )
+            ->join('units', 'units.id', '=', 'manage_items.u_name')
+            ->join('item_groups', 'item_groups.id', '=', 'manage_items.g_name')
+            ->where('manage_items.company_id', $com_id)
+            ->where('manage_items.delete', '0')
+            ->whereIn('manage_items.status', $status);
+    
+            if ($request->filter === 'InComplete') {
+        
+                $query->where(function($q){
+                    $q->orWhere('manage_items.u_name', '')
+                      ->orWhereNull('manage_items.u_name')
+                      ->orWhere('manage_items.hsn_code', '')
+                      ->orWhereNull('manage_items.hsn_code')
+                      ->orWhere('manage_items.gst_rate', '')
+                      ->orWhereNull('manage_items.gst_rate');
+                });
+        
             }
-
-            $html = '<table class="table table-bordered">
-                        <thead>
-                            <tr>
-                                <th>Series</th>
-                                <th>Amount</th>
-                                <th>Weight</th>
-                            </tr>
-                        </thead>
-                        <tbody>';
-
-            foreach ($series as $s) {
-
-                $html .= '<tr>
-                            <td>'.$s->series.'</td>
-                            <td style="text-align:right;">'.$s->opening_amount.'</td>
-                            <td style="text-align:right;">'.$s->opening_quantity.'</td>
-                        </tr>';
-
-            }
-
-            $html .= '</tbody></table>';
-
-            return $html;
-        })
-
-        ->addColumn('status_label', function ($row) {
-
-            if ($row->status == 1) {
-                return '<span class="bg-secondary-opacity-16 border-radius-4 text-secondary py-1 px-2 fw-bold">Enable</span>';
-            }
-
-            return '<span class="bg-danger-opacity-16 border-radius-4 text-danger py-1 px-2 fw-bold">Disable</span>';
-        })
-
-        ->addColumn('action', function ($row) {
-
-            $html = '';
-
-            if (Gate::allows('action-module', 51)) {
-
-                $html .= '<a href="'.url('account-manage-item/'.$row->id.'/edit').'">
-                            <img src="'.asset('public/assets/imgs/edit-icon.svg').'" title="Edit">
-                          </a>';
-            }
-
-            $exist = ItemLedger::where('item_id', $row->id)
-                ->where('source', '!=', '-1')
-                ->where('delete_status', '0')
-                ->first();
-
-            if (!$exist && Gate::allows('action-module', 52)) {
-
-                $html .= '<button type="button" class="border-0 bg-transparent delete_partner" data-id="'.$row->id.'">
-                            <img src="'.asset('public/assets/imgs/delete-icon.svg').'" title="Delete">
-                          </button>';
-            }
-
-            return $html;
-        })
-
-        ->rawColumns(['opening_stock','status_label','action'])
-
-        ->make(true);
-}
+    
+        return DataTables::of($query)
+    
+            ->addColumn('opening_stock', function ($row) {
+                $series = ItemBalanceBySeries::where('item_id',$row->id)->get();
+    
+                if ($series->count() == 0) {
+                    return '';
+                }
+    
+                $html = '<table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Series</th>
+                                    <th>Amount</th>
+                                    <th>Weight</th>
+                                </tr>
+                            </thead>
+                            <tbody>';
+    
+                foreach ($series as $s) {
+    
+                    $html .= '<tr>
+                                <td>'.$s->series.'</td>
+                                <td style="text-align:right;">'.$s->opening_amount.'</td>
+                                <td style="text-align:right;">'.$s->opening_quantity.'</td>
+                            </tr>';
+    
+                }
+    
+                $html .= '</tbody></table>';
+    
+                return $html;
+            })
+    
+            ->addColumn('status_label', function ($row) {
+    
+                if ($row->status == 1) {
+                    return '<span class="bg-secondary-opacity-16 border-radius-4 text-secondary py-1 px-2 fw-bold">Enable</span>';
+                }
+    
+                return '<span class="bg-danger-opacity-16 border-radius-4 text-danger py-1 px-2 fw-bold">Disable</span>';
+            })
+    
+            ->addColumn('action', function ($row) {
+    
+                $html = '';
+    
+                if (Gate::allows('action-module', 51)) {
+    
+                    $html .= '<a href="'.url('account-manage-item/'.$row->id.'/edit').'">
+                                <img src="'.asset('public/assets/imgs/edit-icon.svg').'" title="Edit">
+                              </a>';
+                }
+    
+                $exist = ItemLedger::where('item_id', $row->id)
+                    ->where('source', '!=', '-1')
+                    ->where('delete_status', '0')
+                    ->first();
+    
+                if (!$exist && Gate::allows('action-module', 52)) {
+    
+                    $html .= '<button type="button" class="border-0 bg-transparent delete_partner" data-id="'.$row->id.'">
+                                <img src="'.asset('public/assets/imgs/delete-icon.svg').'" title="Delete">
+                              </button>';
+                }
+    
+                return $html;
+            })
+    
+            ->rawColumns(['opening_stock','status_label','action'])
+    
+            ->make(true);
+    }
     /**
      * Show the specified resources in storage.
      *
@@ -374,40 +374,41 @@ public function datatable(Request $request)
          $this->failedMessage();
       }
    }
-   public function edit($id){
-      Gate::authorize('view-module', 51);
-      $companyData = Companies::where('id', Session::get('user_company_id'))->first();      
-      if($companyData->gst_config_type == "single_gst"){
-         $series = DB::table('gst_settings')
+    public function edit($id){
+        Gate::authorize('view-module', 51);
+        $companyData = Companies::where('id', Session::get('user_company_id'))->first();      
+        if($companyData->gst_config_type == "single_gst"){
+            $series = DB::table('gst_settings')
                            ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])
                            ->get();
-         $branch = GstBranch::select('id','branch_series as series')
+            $branch = GstBranch::select('id','branch_series as series')
                            ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_id'=>$series[0]->id])
                            ->get();
-         if(count($branch)>0){
-            $series = $series->merge($branch);
-         }         
-      }else if($companyData->gst_config_type == "multiple_gst"){
-         $series = DB::table('gst_settings_multiple')
+            if(count($branch)>0){
+                $series = $series->merge($branch);
+            }         
+        }else if($companyData->gst_config_type == "multiple_gst"){
+            $series = DB::table('gst_settings_multiple')
                            ->select('id','series')
                            ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst"])
                            ->get();
-         foreach ($series as $key => $value) {
-            $branch = GstBranch::select('id','branch_series as series')
-                        ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_multiple_id'=>$value->id])
-                        ->get();
-            if(count($branch)>0){
-               $series = $series->merge($branch);
+            foreach ($series as $key => $value) {
+                $branch = GstBranch::select('id','branch_series as series')
+                            ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_multiple_id'=>$value->id])
+                            ->get();
+                if(count($branch)>0){
+                   $series = $series->merge($branch);
+                }
             }
-         }
-      }
+        }
         $manageitems = ManageItems::find($id);
-        $item_gst_rate = ItemGstRate::select('effective_from')
+        $item_gst_rate = ItemGstRate::select('effective_from','gst_rate')
                               ->where('item_id',$id)
-                              ->where('gst_rate', $manageitems->gst_rate)
+                              //->where('gst_rate', $manageitems->gst_rate)
                               ->orderBy('effective_from','desc')
                               ->first();
-         $manageitems->effective_from = $item_gst_rate->effective_from;
+        $manageitems->effective_from = $item_gst_rate->effective_from;
+        $manageitems->gst_rate = $item_gst_rate->gst_rate;
          $item_gst_rate_list = ItemGstRate::select('effective_from','gst_rate','id')
                               ->where('item_id',$id)                             
                               ->orderBy('effective_from')

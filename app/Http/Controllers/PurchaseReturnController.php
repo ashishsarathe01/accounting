@@ -27,6 +27,7 @@ use App\Models\ItemParameterStock;
 use App\Models\Sales;
 use App\Models\ManageItems;
 use App\Models\ActivityLog;
+use App\Models\ItemGstRate;
 use App\Models\SupplierPurchaseVehicleDetail;
 use Carbon\Carbon;
 use DB;
@@ -2653,6 +2654,7 @@ class PurchaseReturnController extends Controller
                                 DB::raw('SUM(amount) as tprice'),
                                 DB::raw('hsn_code'),
                                 DB::raw('manage_items.name'),
+                                DB::raw('manage_items.id as item_id'),
                                 DB::raw('price'),
                                 DB::raw('u_name'),
                                 DB::raw('gst_rate'),
@@ -2670,7 +2672,22 @@ class PurchaseReturnController extends Controller
             $item_total = $item_total + $item_freight;            
             $unit_price = $item_total / $value->tweight;
             $item_cgst = 0;$item_sgst = 0;$item_igst = 0;
-            $itax = $value->gst_rate;
+            $gst_rate = ItemGstRate::select('gst_rate')
+                                 ->where('item_id', $value->item_id)
+                                 ->where('comp_id', Session::get('user_company_id'))
+                                 ->whereDate('effective_from', '<=', $sale->date)
+                                 ->orderBy('effective_from', 'desc') // 👈 key fix
+                                 ->first();
+            if($gst_rate){
+                  $itax = $gst_rate->gst_rate;
+            }else{
+               $response = [
+                           'success' => false,
+                           'data'    => "",
+                           'message' => "Gst Rate Required",
+                        ];
+               return response()->json($response, 200);
+            }
             $ctax = $itax/2;
             if(!empty($CGST) && $CGST!=0){
                $item_cgst = ($item_total*$ctax)/100;

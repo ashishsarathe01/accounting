@@ -35,6 +35,7 @@ use App\Helpers\CommonHelper;
 use App\Models\ActivityLog;
 use App\Models\EinvoiceToken;
 use App\Models\GstBranch;
+use App\Models\ItemGstRate;
 use Session;
 use DateTime;
 use Gate;
@@ -2762,6 +2763,7 @@ class SalesReturnController extends Controller
                                 DB::raw('manage_items.p_name as name'),
                                 DB::raw('price'),
                                 DB::raw('u_name'),
+                                DB::raw('manage_items.id as item_id'),
                                 DB::raw('gst_rate'),
                                 DB::raw('units.s_name as unit_name')
                               ));
@@ -2777,7 +2779,22 @@ class SalesReturnController extends Controller
             $item_total = $item_total + $item_freight;            
             $unit_price = $item_total / $value->tweight;
             $item_cgst = 0;$item_sgst = 0;$item_igst = 0;
-            $itax = $value->gst_rate;
+            $gst_rate = ItemGstRate::select('gst_rate')
+                                 ->where('item_id', $value->item_id)
+                                 ->where('comp_id', Session::get('user_company_id'))
+                                 ->whereDate('effective_from', '<=', $sale->date)
+                                 ->orderBy('effective_from', 'desc') // 👈 key fix
+                                 ->first();
+            if($gst_rate){
+                  $itax = $gst_rate->gst_rate;
+            }else{
+               $response = [
+                           'success' => false,
+                           'data'    => "",
+                           'message' => "Gst Rate Required",
+                        ];
+            return response()->json($response, 200);
+            }
             $ctax = $itax/2;
             if(!empty($CGST) && $CGST!=0){
                $item_cgst = ($item_total*$ctax)/100;
@@ -4410,34 +4427,50 @@ class SalesReturnController extends Controller
    public function export(Request $request)
     {
     
-        $request->validate([
-          'from_date'  => 'required|date',
-          'to_date'    => 'required|date',
-          'sr_type'    => 'required|in:WITH ITEM,RATE DIFFERENCE',
-          'sale_area'  => 'required|in:LOCAL,CENTER',
-       ]);
-    
-    
-       $companyId = Session::get('user_company_id');
-       $saleArea = $request->sale_area;
-       $srType = $request->sr_type;
-    
-       $saleReturns = SalesReturn::with([
-            'saleReturnDescriptions.item',
-            'saleReturnDescriptions.unitMaster',
-            'saleReturnSundry.billSundry',
-            'account'
-         ])
-         ->where('company_id', $companyId)
-         ->where('sr_type', $srType)
-         ->where('status','1')
-         ->where(function ($q) {
-            $q->where('delete', '0')->orWhereNull('delete');
-         })
-         ->whereDate('date', '>=', $request->from_date)
-         ->whereDate('date', '<=', $request->to_date)
-         ->orderBy('date')
-         ->get();
+       $request->validate([
+                'from_date'  => 'required|date',
+                'to_date'    => 'required|date',
+                'date_type'  => 'required|in:created_at,voucher_date',
+                'sr_type'    => 'required|in:WITH ITEM,RATE DIFFERENCE',
+                'sale_area'  => 'required|in:LOCAL,CENTER',
+            ]);
+            
+            $companyId = Session::get('user_company_id');
+            $saleArea  = $request->sale_area;
+            $srType    = $request->sr_type;
+            
+            $dateType   = $request->date_type;
+            $dateColumn = $dateType === 'created_at'
+                ? 'created_at'
+                : 'date';
+            
+            $query = SalesReturn::with([
+                    'saleReturnDescriptions.item',
+                    'saleReturnDescriptions.unitMaster',
+                    'saleReturnSundry.billSundry',
+                    'account'
+                ])
+                ->where('company_id', $companyId)
+                ->where('sr_type', $srType)
+                ->where('status','1')
+                ->where(function ($q) {
+                    $q->where('delete', '0')->orWhereNull('delete');
+                });
+            
+            /* ✅ Apply date filter */
+            if ($dateType === 'created_at') {
+                $query->whereDate($dateColumn, '>=', $request->from_date)
+                      ->whereDate($dateColumn, '<=', $request->to_date);
+            } else {
+                $query->whereBetween($dateColumn, [
+                    $request->from_date,
+                    $request->to_date
+                ]);
+            }
+            
+            $saleReturns = $query
+                ->orderBy($dateColumn)
+                ->get();
     
        if ($saleReturns->isEmpty()) {
           return back()->with('error', 'No Sale Return data found');

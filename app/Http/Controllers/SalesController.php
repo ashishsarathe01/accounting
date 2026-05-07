@@ -41,6 +41,7 @@ use App\Models\ActivityLog;
 use App\Models\Journal;
 use App\Models\JournalDetails;
 use App\Models\SaleVehicleTxn;
+use App\Models\ItemGstRate;
 use App\Helpers\CommonHelper;
 use App\Mail\SaleInvoiceMail;
 use App\Helpers\MailHelper;
@@ -3518,6 +3519,7 @@ class SalesController extends Controller
                                 DB::raw('SUM(amount) as tprice'),
                                 DB::raw('hsn_code'),
                                 DB::raw('manage_items.p_name as name'),
+                                DB::raw('manage_items.id as item_id'),
                                 DB::raw('price'),
                                 DB::raw('u_name'),
                                 DB::raw('gst_rate'),
@@ -3535,7 +3537,24 @@ class SalesController extends Controller
             $item_total = $item_total + $item_freight;            
             $unit_price = $item_total / $value->tweight;
             $item_cgst = 0;$item_sgst = 0;$item_igst = 0;
-            $itax = $value->gst_rate;
+            $gst_rate = ItemGstRate::select('gst_rate')
+               ->where('item_id', $value->item_id)
+               ->where('comp_id', Session::get('user_company_id'))
+               ->whereDate('effective_from', '<=', $sale->date)
+               ->orderBy('effective_from', 'desc') // 👈 key fix
+               ->first();
+              if($gst_rate){
+                   $itax = $gst_rate->gst_rate;
+              }else{
+                  $response = [
+                              'success' => false,
+                              'data'    => "",
+                              'message' => "Gst Rate Required",
+                           ];
+               return response()->json($response, 200);
+              }
+              
+            //$itax = $value->gst_rate;
             $ctax = $itax/2;
             if(!empty($CGST) && $CGST!=0){
                $item_cgst = ($item_total*$ctax)/100;
@@ -4005,7 +4024,8 @@ class SalesController extends Controller
                                  DB::raw('SUM(qty) as tweight'),
                                  DB::raw('SUM(amount) as tprice'),
                                  DB::raw('hsn_code'),
-                                    DB::raw('manage_items.p_name as name'),
+                                 DB::raw('manage_items.p_name as name'),
+                                 DB::raw('manage_items.id as item_id'),
                                  DB::raw('price'),
                                  DB::raw('u_name'),
                                  DB::raw('gst_rate')
@@ -4024,7 +4044,23 @@ class SalesController extends Controller
                $unit_price = $item_total / $value->tweight;
                $item_cgst = 0;$item_sgst = 0;$item_igst = 0;
                $cgst_rate = 0;$sgst_rate = 0;$igst_rate = 0;
-               $itax = $value->gst_rate;
+               $gst_rate = ItemGstRate::select('gst_rate')
+                        ->where('item_id', $value->item_id)
+                        ->where('comp_id', Session::get('user_company_id'))
+                        ->whereDate('effective_from', '<=', $sale->date)
+                        ->orderBy('effective_from', 'desc') // 👈 key fix
+                        ->first();
+              if($gst_rate){
+                   $itax = $gst_rate->gst_rate;
+              }else{
+                  $response = [
+                              'success' => false,
+                              'data'    => "",
+                              'message' => "Gst Rate Required",
+                           ];
+               return response()->json($response, 200);
+              }               
+               //$itax = $value->gst_rate;
                $ctax = $itax/2;
                if(!empty($CGST) && $CGST!=0){
                   $item_cgst = ($item_total*$ctax)/100;
@@ -4858,48 +4894,63 @@ class SalesController extends Controller
    }
 public function exportSales(Request $request)
    {
-      $request->validate([
-         'from_date' => 'required|date',
-         'to_date'   => 'required|date',
-         'sale_type' => 'required|in:LOCAL,CENTER',
-      ]);
-
-      $from     = $request->input('from_date');
-      $to       = $request->input('to_date');
-      $saleType = $request->input('sale_type');
-
-      $company_id = Session::get('user_company_id');
-    
-      $sales = DB::table('sales')
-         ->leftJoin('accounts', 'sales.party', '=', 'accounts.id')
-         ->leftJoin('states', 'accounts.state', '=', 'states.id')
-         ->where('sales.company_id', $company_id)
-         ->where(function ($q) {
-               $q->where('sales.delete', '0')
-               ->orWhereNull('sales.delete');
-         })
-         //->where('voucher_no_prefix','1396/GST/25-26')
-         ->whereBetween('sales.date', [$from, $to])
-         ->select([
-               'sales.id as sale_id',
-               'sales.series_no',
-               'sales.date',
-               'sales.voucher_no_prefix',
-               'sales.material_center',
-               'sales.vehicle_no',
-               'sales.transport_name',
-               'sales.billing_gst',
-               'sales.merchant_gst',
-               'accounts.id as party_alias',
-               'accounts.account_name as party_name',
-               'accounts.gstin as party_gst',
-               'accounts.address as party_address',
-               'states.state_code as party_state_code',
-               'states.name as party_state_name',
-         ])
-         ->orderBy('sales.date')
-         ->get();
-
+                 $request->validate([
+                'from_date' => 'required|date',
+                'to_date'   => 'required|date',
+                'sale_type' => 'required|in:LOCAL,CENTER',
+                'date_type' => 'required|in:created_at,voucher_date',
+                ]);
+                
+                $from     = $request->input('from_date');
+                $to       = $request->input('to_date');
+                $saleType = $request->input('sale_type');
+                $dateType = $request->input('date_type');
+                
+                $company_id = Session::get('user_company_id');
+                
+                /* ✅ Decide column */
+                $dateColumn = $dateType === 'created_at'
+                    ? 'sales.created_at'
+                    : 'sales.date';
+                
+                $query = DB::table('sales')
+                    ->leftJoin('accounts', 'sales.party', '=', 'accounts.id')
+                    ->leftJoin('states', 'accounts.state', '=', 'states.id')
+                    ->where('sales.company_id', $company_id)
+                    ->where('sales.sale_type', $saleType) // ✅ you missed this earlier
+                    ->where(function ($q) {
+                        $q->where('sales.delete', '0')
+                          ->orWhereNull('sales.delete');
+                    });
+                
+                /* ✅ Apply date filter */
+                if ($dateType === 'created_at') {
+                    $query->whereDate($dateColumn, '>=', $from)
+                          ->whereDate($dateColumn, '<=', $to);
+                } else {
+                    $query->whereBetween($dateColumn, [$from, $to]);
+                }
+                
+                $sales = $query
+                    ->select([
+                        'sales.id as sale_id',
+                        'sales.series_no',
+                        'sales.date',
+                        'sales.voucher_no_prefix',
+                        'sales.material_center',
+                        'sales.vehicle_no',
+                        'sales.transport_name',
+                        'sales.billing_gst',
+                        'sales.merchant_gst',
+                        'accounts.id as party_alias',
+                        'accounts.account_name as party_name',
+                        'accounts.gstin as party_gst',
+                        'accounts.address as party_address',
+                        'states.state_code as party_state_code',
+                        'states.name as party_state_name',
+                    ])
+                    ->orderBy($dateColumn)
+                    ->get();
       $filename = "sales_{$from}_to_{$to}_" . strtolower($saleType) . ".csv";
 
       $headers = [
