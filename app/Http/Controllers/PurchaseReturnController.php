@@ -90,7 +90,7 @@ class PurchaseReturnController extends Controller
             'sr_type',
             DB::raw('(select account_name from accounts where accounts.id = purchase_returns.party limit 1) as account_name'),
             DB::raw('(select manual_numbering from voucher_series_configurations where voucher_series_configurations.company_id = '.Session::get('user_company_id').' and configuration_for="DEBIT NOTE" and voucher_series_configurations.status=1 and voucher_series_configurations.series = purchase_returns.series_no limit 1) as manual_numbering_status'),
-            DB::raw('(select max(purchase_return_no) from purchase_returns as s where s.company_id = '.Session::get('user_company_id').' and s.delete="0" and s.series_no = purchase_returns.series_no) as max_voucher_no'),
+            DB::raw('(select max(purchase_return_no) from purchase_returns as s where s.company_id = '.Session::get('user_company_id').' and s.delete="0" and financial_year="'.Session::get('default_fy').'" and s.series_no = purchase_returns.series_no) as max_voucher_no'),
             DB::raw("(SELECT name FROM users WHERE users.id = purchase_returns.approved_by LIMIT 1) as approved_by_name"),
             DB::raw("(SELECT name FROM users WHERE users.id = purchase_returns.created_by LIMIT 1) as created_by_name")
          )

@@ -136,13 +136,13 @@
                               <td colspan="11" class="ps-4 py-1" style="text-align:left;">
                                  
                                  <strong>Created By:</strong> 
-                                 {{ $journal->created_by_name ?? '-' }}
+                                 {{ $created_by_name ?? '-' }}
 
                                  &nbsp;&nbsp;|&nbsp;&nbsp;
 
                                  <strong>Approved By:</strong> 
                                  @if($journal->approved_status == 1)
-                                    {{ $journal->approved_by_name ?? '-' }}
+                                    {{ $approved_by_name ?? '-' }}
                                     <small>({{ date('d-m-Y H:i', strtotime($journal->approved_at)) }})</small>
                                  @else
                                     -
@@ -179,9 +179,12 @@
                                  
                                     if($journal->consumption_entry_status==0){?>                                       
                                        @can('action-module',63)
-                                          <a href="{{ URL::to('edit-stock-journal/' . $journal->id) }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
+                                          <a href="{{ URL::to('edit-stock-journal/' . $journal->id) }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a> 
+                                          
                                        @endcan
                                        <?php 
+                                       $created_by_name = $journal->created_by_name ?? '-';
+                                       $approved_by_name = $journal->approved_by_name ?? '-';
                                     } ?>
                                     @if(!in_array($journal->id,$hideDeleteFor))
                                        @can('action-module',64)
@@ -217,7 +220,7 @@
                     {{-- Last entry total --}}
                     @if($currentParent !== null)
                     <tr class="bg-light fw-bold">
-                        <td colspan="3" class="text-end">Entry Total</td>
+                        <td colspan="3" class="text-end">Entry Total1</td>
                         <td class="text-end">{{ formatIndianNumber($genQty) }}</td>
                         <td></td>
                         <td></td>
@@ -228,6 +231,24 @@
                         <td class="text-end">{{ formatIndianNumber($conAmt) }}</td>
                         <td></td>
                     </tr>
+                    <tr class="font-12 text-muted bg-light">
+                              <td colspan="11" class="ps-4 py-1" style="text-align:left;">
+                                 
+                                 <strong>Created By:</strong> 
+                                 {{ $created_by_name ?? '-' }}
+
+                                 &nbsp;&nbsp;|&nbsp;&nbsp;
+
+                                 <strong>Approved By:</strong> 
+                                 @if($journal->approved_status == 1)
+                                    {{ $approved_by_name ?? '-' }}
+                                    <small>({{ date('d-m-Y H:i', strtotime($journal->approved_at)) }})</small>
+                                 @else
+                                    -
+                                 @endif
+
+                              </td>
+                           </tr>
                     @endif
                     
                     {{-- OVERALL TOTAL --}}

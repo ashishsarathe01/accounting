@@ -475,6 +475,7 @@ public function index(Request $request)
       $journal->financial_year = $financial_year;
       $journal->claim_gst_status = $request->input('flexRadioDefault');
       $journal->merchant_gst = $request->input('merchant_gst');
+      $journal->created_by = Session::get('user_id');
       if($request->input('form_source') && !empty($request->input('form_source'))){
          $journal->form_source = $request->input('form_source');
       }  
@@ -1333,6 +1334,7 @@ public function index(Request $request)
       $receipt->date = $request->input('date');
       $receipt->merchant_gst = $request->input('merchant_gst');
       $receipt->claim_gst_status = $request->input('flexRadioDefault');
+      $receipt->updated_by = Session::get('user_id');
       if($request->input('flexRadioDefault')=="YES"){
          $receipt->invoice_no = $request->input('invoice_no');
          
