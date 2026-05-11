@@ -655,6 +655,18 @@ class PurchaseReturnController extends Controller
                      $item_ledger->created_by = Session::get('user_id');
                      $item_ledger->created_at = date('d-m-Y H:i:s');
                      $item_ledger->save();
+                     CommonHelper::updateDailyReelStock(
+                        Session::get('user_company_id'),
+                        $good,
+
+                        $request->input('date'),
+
+                        0,
+                        0,
+
+                        0,
+                        $qtys[$key]
+                     );
                      //Parameter Info
                      if($item_parameters[$key]!=""){
                         $parameter = json_decode($item_parameters[$key],true);
@@ -1109,6 +1121,19 @@ class PurchaseReturnController extends Controller
                            ->delete();         
                $desc = PurchaseReturnDescription::where('purchase_return_id',$request->purchase_return_id)
                               ->get();
+               if($purchase_return->sr_type=="WITH ITEM"){
+                  foreach ($desc as $value) {
+                     CommonHelper::updateDailyReelStock(
+                        Session::get('user_company_id'),
+                        $value->goods_discription,
+                        $purchase_return->date,
+                        0,
+                        0,
+                        0,
+                        -$value->qty
+                     );
+                  }
+               }
                foreach ($desc as $key => $value) {
                   CommonHelper::RewriteItemAverageByItem($purchase_return->date,$value->goods_discription,$purchase_return->series_no);
                }
@@ -1744,6 +1769,7 @@ class PurchaseReturnController extends Controller
       }
      
       $last_date = $purchase->date;
+      $old_sr_type = $purchase->sr_type;
       $purchase->date = $request->input('date');
       
       $purchase->party = $request->input('party_id');
@@ -1804,6 +1830,21 @@ class PurchaseReturnController extends Controller
          $desc_item_arr = PurchaseReturnDescription::where('purchase_return_id',$purchase->id)
                                                    ->pluck('goods_discription')
                                                    ->toArray();
+         if($old_sr_type=="WITH ITEM"){
+            $oldDescriptions = PurchaseReturnDescription::where('purchase_return_id', $purchase->id)
+               ->get();
+            foreach ($oldDescriptions as $oldRow) {
+               CommonHelper::updateDailyReelStock(
+                  Session::get('user_company_id'),
+                  $oldRow->goods_discription,
+                  $last_date,
+                  0,
+                  0,
+                  0,
+                  -$oldRow->qty
+               );
+            }
+         }
          PurchaseReturnDescription::where('purchase_return_id',$purchase->id)->delete();
          ItemLedger::where('source_id',$purchase->id)->where('source',5)->delete();
          AccountLedger::where('entry_type_id',$purchase->id)->where('entry_type',4)->delete();
@@ -1852,7 +1893,18 @@ class PurchaseReturnController extends Controller
                      $item_ledger->created_by = Session::get('user_id');
                      $item_ledger->created_at = date('d-m-Y H:i:s');
                      $item_ledger->save();
+                     CommonHelper::updateDailyReelStock(
+                        Session::get('user_company_id'),
+                        $good,
 
+                        $request->input('date'),
+
+                        0,
+                        0,
+
+                        0,
+                        $qtys[$key]
+                     );
                      
                   }
                }

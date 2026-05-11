@@ -172,9 +172,42 @@
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <h5><input type="checkbox" name="partb" id="partb"> PART B</h5>
+                            <h5>
+                                <input type="checkbox"
+                                    name="partb"
+                                    id="partb"
+                                    @if($manageitems->dual_unit == 1) checked @endif>
+
+                                PART B
+                            </h5>
                             <hr>
-                            <div class="row"> </div>
+                            <div class="row">
+                                <div class="mb-6 col-md-6 partb_div"
+                                    style="@if($manageitems->section != '' || $manageitems->rate_of_tcs != '' || $manageitems->dual_unit == 1) display:block; @else display:none; @endif margin-bottom:15px;">
+
+                                    <label class="form-label font-14 font-heading">DUAL UNIT</label>
+
+                                    <select class="form-select form-select-lg select2-single"
+                                            name="dual_unit"
+                                            id="dual_unit">
+
+                                        <option value="0"
+                                            @if($manageitems->dual_unit == 0)
+                                                selected
+                                            @endif>
+                                            NO
+                                        </option>
+
+                                        <option value="1"
+                                            @if($manageitems->dual_unit == 1)
+                                                selected
+                                            @endif>
+                                            YES
+                                        </option>
+
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="text-start">

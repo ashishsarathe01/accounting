@@ -888,6 +888,279 @@ body {
         <p class="text-danger">No Sale or Sale Order item-size data found for this invoice.</p>
     @endif
 </div>
+@if(Session::get('user_company_id') == 1 || Session::get('user_company_id') == 12)
+
+<div id="taarobaarChallanPrintSection"
+     style="display:none; padding:20px; font-family:Arial, sans-serif; color:#000;">
+
+<style>
+
+#taarobaarChallanPrintSection{
+    width:100%;
+    font-family:Arial, sans-serif;
+    color:#000;
+}
+
+#taarobaarChallanPrintSection table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+#taarobaarChallanPrintSection th,
+#taarobaarChallanPrintSection td{
+    border:1px solid #000;
+    padding:6px;
+    vertical-align:top;
+    font-size:14px;
+}
+
+.text-center{
+    text-align:center;
+}
+
+.text-right{
+    text-align:right;
+}
+
+.font-bold{
+    font-weight:bold;
+}
+
+</style>
+
+<div style="border:1px solid #000; padding:0;">
+    <div style="text-align:center;
+                padding-top:10px;
+                padding-bottom:10px;">
+        <div style="font-size:24px;
+                    font-weight:bold;">
+            Estimate
+        </div>
+        <div style="font-size:28px;
+                    font-weight:bold;
+                    margin-top:5px;">
+            {{ strtoupper($company_data->company_name) }}
+        </div>
+    </div>
+    <table>
+      <tr>
+         <td style="width:65%; padding:3px 5px; vertical-align:top;">
+               <span style="font-size:11px; font-weight:bold; display:block;">Party Details:</span>
+               <span style="font-size:13px; font-weight:bold; display:block; line-height:1.3;">{{ strtoupper($sale_detail->billing_name) }}</span>
+               <span style="font-size:11px; display:block; line-height:1.3;">{{ strtoupper($sale_detail->billing_address) }}</span>
+         </td>
+         <td style="width:35%; padding:3px 5px; vertical-align:top;">
+               <table style="width:100%; border-collapse:collapse;">
+                  <tr>
+                     <td style="border:none; font-size:11px; font-weight:bold; padding:1px 0; white-space:nowrap;">Challan No.</td>
+                     <td style="border:none; font-size:11px; padding:1px 0;">: {{ $sale_detail->voucher_no_prefix }}</td>
+                  </tr>
+                  <tr>
+                     <td style="border:none; font-size:11px; font-weight:bold; padding:1px 0;">Dated</td>
+                     <td style="border:none; font-size:11px; padding:1px 0;">: {{ date('d-m-Y', strtotime($sale_detail->date)) }}</td>
+                  </tr>
+                  <tr>
+                     <td style="border:none; font-size:11px; font-weight:bold; padding:1px 0;">Vehicle No.</td>
+                     <td style="border:none; font-size:11px; padding:1px 0;">: {{ $sale_detail->vehicle_no }}</td>
+                  </tr>
+               </table>
+         </td>
+      </tr>
+   </table>
+    <table>
+        <thead>
+            <tr>
+                <th style="width:5%;">
+                    S.N.
+                </th>
+                <th style="width:35%;">
+                    Item Name
+                </th>
+                <th style="width:10%;">
+                    Qty
+                </th>
+                <th style="width:15%;">
+                    Weight
+                </th>
+                <th style="width:15%;">
+                    Kgs
+                </th>
+                <th style="width:10%;">
+                    Price
+                </th>
+                <th style="width:10%;">
+                    Amount(₹)
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @php
+                $i = 1;
+                $qtyTotal = 0;
+                $weightTotal = 0;
+                $amountTotal = 0;
+            @endphp
+            @foreach($items_detail as $item)
+                @php
+                    $pieceWeights = DB::table('taarobar_sale_description_piece_weights')
+                        ->where('sale_description_id', $item->sale_description_id)
+                        ->pluck('weight');
+                    if($item->dual_unit == 1){
+                        $displayQty = $item->taarobaar_qty;
+                        $displayTotalWeight = $item->qty;
+                    }else{
+                        $displayQty = $item->qty;
+                        $displayTotalWeight = 0;
+                    }
+                    $qtyTotal += $displayQty;
+                    $weightTotal += $displayTotalWeight;
+                    $amountTotal += $item->amount;
+                @endphp
+                <tr>
+                    <td class="text-center">
+                        {{ $i++ }}
+                    </td>
+                    <td>
+                        <strong>
+                            {{ strtoupper($item->p_name) }}
+                        </strong>
+                    </td>
+                    <td class="text-center">
+                        @if($item->dual_unit == 1)
+                            {{ number_format($displayQty,0) }}
+                        @else
+                            {{ number_format($displayQty,2) }}
+                        @endif
+                    </td>
+                    <td class="text-right"
+                        style="line-height:24px;">
+                        @if(count($pieceWeights) > 0)
+                            @foreach($pieceWeights as $pw)
+                                {{ number_format($pw,2) }}
+                                <br>
+                            @endforeach
+                        @else
+                            -
+                        @endif
+                    </td>
+                    <td class="text-center">
+                        @if($displayTotalWeight > 0)
+                            {{ number_format($displayTotalWeight,2) }} KGS
+                        @else
+                            -
+                        @endif
+                    </td>
+                    <td class="text-right">
+                        {{ number_format($item->price,2) }}
+                    </td>
+                    <td class="text-right">
+                        {{ number_format($item->amount,2) }}
+                    </td>
+                </tr>
+            @endforeach
+            <tr>
+                <td colspan="6"
+                    class="text-right font-bold"
+                    style="font-size:16px;">
+                    Total
+                </td>
+                <td class="text-right font-bold"
+                    style="font-size:16px;">
+                    {{ number_format($amountTotal,2) }}
+                </td>
+            </tr>
+            @foreach($sale_sundry as $sundry)
+            <tr>
+                <td colspan="6"
+                    class="text-right"
+                    style="border-top:none;
+                           border-bottom:none;">
+                    {{ $sundry->name }}
+                    @if($sundry->rate > 0)
+                        @ {{ $sundry->rate }}%
+                    @endif
+                </td>
+                <td class="text-right"
+                    style="border-top:none;
+                           border-bottom:none;">
+                    {{ number_format($sundry->amount,2) }}
+                </td>
+            </tr>
+            @endforeach
+            <tr>
+                <td colspan="4"
+                    class="text-right font-bold"
+                    style="font-size:20px;">
+                    Grand Total ₹
+                </td>
+                <td class="text-center font-bold"
+                    style="font-size:18px;">
+                    {{ number_format($weightTotal,2) }}
+                </td>
+                <td>
+                </td>
+                <td class="text-right font-bold"
+                    style="font-size:20px;">
+                    {{ number_format($sale_detail->total,2) }}
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<br>
+<div style="font-size:16px;">
+    <span class="bold">
+        Amount in Words :
+    </span>
+    <?php
+    function numberToWords($number) {
+        $no = floor($number);
+        $point = round($number - $no, 2) * 100;
+        $hundred = null;
+        $digits_1 = strlen($no);
+        $i = 0;
+        $str = array();
+        $words = array(
+            '0' => '', '1' => 'one', '2' => 'two',
+            '3' => 'three', '4' => 'four', '5' => 'five',
+            '6' => 'six', '7' => 'seven', '8' => 'eight',
+            '9' => 'nine', '10' => 'ten', '11' => 'eleven',
+            '12' => 'twelve', '13' => 'thirteen',
+            '14' => 'fourteen', '15' => 'fifteen',
+            '16' => 'sixteen', '17' => 'seventeen',
+            '18' => 'eighteen', '19' => 'nineteen',
+            '20' => 'twenty', '30' => 'thirty',
+            '40' => 'forty', '50' => 'fifty',
+            '60' => 'sixty', '70' => 'seventy',
+            '80' => 'eighty', '90' => 'ninety'
+        );
+        $digits = array('', 'hundred', 'thousand', 'lakh', 'crore');
+        while ($i < $digits_1) {
+            $divider = ($i == 2) ? 10 : 100;
+            $number = floor($no % $divider);
+            $no = floor($no / $divider);
+            $i += ($divider == 10) ? 1 : 2;
+            if ($number) {
+                $plural = (($counter = count($str)) && $number > 9) ? 's' : null;
+                $hundred = ($counter == 1 && $str[0]) ? ' and ' : null;
+                $str[] = ($number < 21)
+                    ? $words[$number] . " " . $digits[$counter] . $plural . " " . $hundred
+                    : $words[floor($number / 10) * 10]
+                        . " " . $words[$number % 10] . " "
+                        . $digits[$counter] . $plural . " " . $hundred;
+            } else {
+                $str[] = null;
+            }
+        }
+        $str = array_reverse($str);
+        $result = implode('', $str);
+        return ucfirst($result) . " Rupees Only";
+    }
+    echo numberToWords($sale_detail->total);
+    ?>
+</div>
+</div>
+@endif
 
 
 @include('layouts.footer')
@@ -1038,14 +1311,196 @@ console.log(companyName);
        //$('.sidebar').removeClass('importantRule');
     }
 
-   $(document).on('click', '#printChallanBtn', function() {
-      let printContents = document.getElementById('challanPrintSection').innerHTML;
-      let newWindow = window.open('', '', 'width=900,height=700');
-      newWindow.document.write('<html><head><title>Packaging Slip</title></head><body>');
-      newWindow.document.write(printContents);
-      newWindow.document.write('</body></html>');
-      newWindow.document.close();
-      newWindow.print();
+   $(document).on('click', '#printChallanBtn', function () {
+      let companyId = "{{ Session::get('user_company_id') }}";
+      let sectionId = 'challanPrintSection';
+      let pageTitle = 'Packaging Slip';
+      if (companyId == 1 || companyId == 12) {
+         sectionId = 'taarobaarChallanPrintSection';
+         pageTitle = 'Estimate';
+      }
+      let printContents = document.getElementById(sectionId).innerHTML;
+      let printWindow = window.open('', '', 'height=900,width=1200');
+      printWindow.document.write(`
+         <html>
+         <head>
+               <title>${pageTitle}</title>
+               <style>
+                  * {
+                     box-sizing: border-box;
+                     margin: 0;
+                     padding: 0;
+                  }
+                  body {
+                     font-family: Arial, sans-serif;
+                     color: #000;
+                     background: #fff;
+                  }
+                  table {
+                     width: 100%;
+                     border-collapse: collapse;
+                  }
+                  th, td {
+                     border: 1px solid #000;
+                     padding: 6px 8px;
+                     vertical-align: top;
+                  }
+                  thead {
+                     background: #f2f2f2;
+                  }
+                  .text-center { text-align: center; }
+                  .text-right  { text-align: right;  }
+                  .font-bold   { font-weight: bold;   }
+                  .total-row {
+                     font-weight: bold;
+                     background: #e8f5e9;
+                  }
+                  @media print and (orientation: portrait) {
+
+                     @page {
+                        margin: 6mm 8mm;
+                     }
+
+                     html, body {
+                        height: 100%;
+                        overflow: hidden;
+                     }
+
+                     body {
+                        padding: 0;
+                     }
+
+                     .challan-wrapper {
+                        display: flex;
+                        flex-direction: column;
+                        width: 100%;
+                        height: 99vh;
+                        gap: 3mm;
+                     }
+
+                     .challan-copy {
+                        flex: 1 1 0;
+                        min-height: 0;
+                        overflow: hidden;
+                        border: 1px solid #000;
+                        padding: 4px 6px;
+                        page-break-inside: avoid;
+                        break-inside: avoid;
+                     }
+
+                     .challan-divider {
+                        display: block;
+                        height: 0;
+                        border-top: 1px dashed #aaa;
+                        margin: 0;
+                        flex-shrink: 0;
+                     }
+
+                     /* Compress everything to fit both halves */
+                     table { font-size: 10px; }
+                     th, td { padding: 2px 4px; }
+                     h3 { font-size: 12px; margin: 0; }
+                     h4 { font-size: 11px; margin: 0 0 1px 0; }
+                     p, div { font-size: 10px; line-height: 1.2; }
+                     .header-row { margin-bottom: 1px; font-size: 10px; }
+                     .final-totals { font-size: 10px; margin-top: 2px; }
+                     hr { margin: 1px 0; }
+
+                     /* Compress party + challan header row */
+                     .header-row > div { padding: 0; }
+
+                     /* Hide D/L row entirely */
+                     .dl-row { display: none !important; }
+
+                     /* Tighten the two-column item grid */
+                     .two-column {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 3px;
+                     }
+
+                     .item-block {
+                        padding: 1px 2px;
+                        margin-bottom: 1px;
+                     }
+                  }
+                  @media print and (orientation: landscape) {
+                     @page {
+                           margin: 10mm 12mm;
+                     }
+                     body {
+                           padding: 0;
+                     }
+                     .challan-wrapper {
+                           display: flex;
+                           flex-direction: row;
+                           gap: 0;
+                           width: 100%;
+                           height: 100%;
+                           align-items: flex-start;
+                     }
+                     .challan-copy {
+                           flex: 1 1 0;
+                           min-width: 0;
+                           border: 1px solid #000;
+                           padding: 8px;
+                           page-break-inside: avoid;
+                           break-inside: avoid;
+                     }
+                     .challan-divider {
+                           width: 10mm;
+                           flex-shrink: 0;
+                           display: block;
+                           /* vertical dotted cut-line between the two copies */
+                           border-left: 1px dashed #aaa;
+                           align-self: stretch;
+                           margin: 0 2mm;
+                     }
+                     table { font-size: 11px; }
+                     th, td { padding: 4px 5px; }
+                  }
+                  @media screen {
+                     body { padding: 10px; background: #eee; }
+                     .challan-wrapper {
+                        display: flex;
+                        flex-direction: row;
+                        gap: 10px;
+                        flex-wrap: wrap;
+                     }
+                     .challan-copy {
+                        flex: 1 1 360px;
+                        background: #fff;
+                        border: 1px solid #000;
+                        padding: 10px;
+                        min-width: 280px;
+                     }
+                     .challan-divider {
+                        width: 1px;
+                        background: #ccc;
+                        align-self: stretch;
+                     }
+                     .dl-row { display: none !important; }
+                  }
+               </style>
+         </head>
+         <body>
+               <div class="challan-wrapper">
+                  <div class="challan-copy">
+                     ${printContents}
+                  </div>
+                  <div class="challan-divider"></div>
+                  <div class="challan-copy">
+                     ${printContents}
+                  </div>
+               </div>
+         </body>
+         </html>
+      `);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(function () {
+         printWindow.print();
+      }, 600);
    });
    
    function openGmailWithInvoice(id, email, voucherNo) {

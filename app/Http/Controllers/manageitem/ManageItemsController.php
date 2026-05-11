@@ -294,6 +294,7 @@ class ManageItemsController extends Controller
       $items->status = $request->input('status');
       $items->section = $request->input('section');
       $items->rate_of_tcs = $request->input('rate_of_tcs');
+      $items->dual_unit = $request->input('dual_unit');
       $items->gst_rate = $request->input('gst_rate');
       $items->created_by = Session::get('user_id');
       $items->created_at = Carbon::now();
@@ -402,20 +403,31 @@ class ManageItemsController extends Controller
             }
         }
         $manageitems = ManageItems::find($id);
-        $item_gst_rate = ItemGstRate::select('effective_from','gst_rate')
-                              ->where('item_id',$id)
-                              //->where('gst_rate', $manageitems->gst_rate)
-                              ->orderBy('effective_from','desc')
-                              ->first();
-        $manageitems->effective_from = $item_gst_rate->effective_from;
-        $manageitems->gst_rate = $item_gst_rate->gst_rate;
+         if (!$manageitems) {
+            abort(404);
+         }
+         $item_gst_rate = ItemGstRate::select('effective_from','gst_rate')
+                           ->where('item_id', $id)
+                           ->orderBy('effective_from', 'desc')
+                           ->first();
+         if ($item_gst_rate) {
+            $manageitems->effective_from = $item_gst_rate->effective_from;
+            $manageitems->gst_rate = $item_gst_rate->gst_rate;
+         } else {
+            $manageitems->effective_from = null;
+         }
          $item_gst_rate_list = ItemGstRate::select('effective_from','gst_rate','id')
-                              ->where('item_id',$id)                             
-                              ->orderBy('effective_from')
-                              ->get();
-                              
-                              
-         $series_open = ItemBalanceBySeries::select('series','opening_amount','opening_quantity','type')->where('item_id',$id)->get();
+                                 ->where('item_id', $id)
+                                 ->orderBy('effective_from')
+                                 ->get();
+         $series_open = ItemBalanceBySeries::select(
+                           'series',
+                           'opening_amount',
+                           'opening_quantity',
+                           'type'
+                        )
+                        ->where('item_id',$id)
+                        ->get();
          $grouped = $series_open->groupBy('series')->toArray();
          foreach ($series as $key => $value) {
             if(isset($grouped[$value->series])){
@@ -465,6 +477,7 @@ class ManageItemsController extends Controller
       $items->item_type = $request->input('item_type');
       $items->hsn_code = $request->input('hsn_code');
       $items->status = $request->input('status');
+      $items->dual_unit = $request->input('dual_unit');
       $items->gst_rate = $request->input('gst_rate');
       $items->updated_at = Carbon::now();
       $items->updated_by = Session::get('user_id');
@@ -938,6 +951,22 @@ class ManageItemsController extends Controller
             $item_ledger->created_by = Session::get('user_id');
             $item_ledger->created_at = date('d-m-Y H:i:s');
             $item_ledger->save();
+            $consume_reel_count = 0;
+            if($request->item_size_info[$key] != ""){
+               $item_size_info = json_decode($request->item_size_info[$key], true);
+               if(is_array($item_size_info)){
+                  $consume_reel_count = count($item_size_info);
+               }
+            }
+            CommonHelper::updateDailyReelStock(
+               Session::get('user_company_id'),
+               $consume_item[$key],
+               $request->input('date'),
+               0,
+               0,
+               $consume_reel_count,
+               $consume_weight[$key]
+            );
             //Add Data In Average Details table
             $average_detail = new ItemAverageDetail;
             $average_detail->entry_date = $request->date;
@@ -1024,6 +1053,26 @@ class ManageItemsController extends Controller
             $item_ledger->created_by = Session::get('user_id');
             $item_ledger->created_at = date('d-m-Y H:i:s');
             $item_ledger->save();
+            $generated_reel_count = 0;
+            if (isset($generated_size_info_arr[$key])) {
+               $generated_size_info = json_decode($generated_size_info_arr[$key], true);
+               if (
+                  !empty($generated_size_info)
+                  && isset($generated_size_info['sizes'])
+                  && is_array($generated_size_info['sizes'])
+               ) {
+                  $generated_reel_count = count($generated_size_info['sizes']);
+               }
+            }
+            CommonHelper::updateDailyReelStock(
+               Session::get('user_company_id'),
+               $generated_item[$key],
+               $request->input('date'),
+               $generated_reel_count,
+               $generated_weight[$key],
+               0,
+               0
+            );
             //Add Data In Average Details table
             $average_detail = new ItemAverageDetail;
             $average_detail->series_no = $request->input('series_no');
@@ -1095,6 +1144,35 @@ class ManageItemsController extends Controller
                         ->where('type','STOCK JOURNAL CONSUME')
                         ->delete();
          $desc = StockJournalDetail::where('parent_id',$id)->get();
+         foreach ($desc as $value) {
+            if(!empty($value->consume_item)) {
+               $consume_reel_count = ItemSizeStock::where('sj_consumption_id', $id)
+                     ->where('item_id', $value->consume_item)
+                     ->count();
+               CommonHelper::updateDailyReelStock(
+                     Session::get('user_company_id'),
+                     $value->consume_item,
+                     $stock_journal->jdate,
+                     0,
+                     0,
+                     -$consume_reel_count,
+                     -$value->consume_weight
+               );
+            }
+            if(!empty($value->new_item)) {
+               $generated_reel_count = ItemSizeStock::where('sj_generated_detail_id', $value->id)
+                     ->count();
+               CommonHelper::updateDailyReelStock(
+                     Session::get('user_company_id'),
+                     $value->new_item,
+                     $stock_journal->jdate,
+                     -$generated_reel_count,
+                     -$value->new_weight,
+                     0,
+                     0
+               );
+            }
+         }
          foreach ($desc as $key => $value) {
             if(!empty($value->consume_item)){
                CommonHelper::RewriteItemAverageByItem($stock_journal->jdate,$value->consume_item,$stock_journal->series_no);
@@ -1332,6 +1410,35 @@ class ManageItemsController extends Controller
                         ->delete();
 
          $desc = StockJournalDetail::where('parent_id',$request->input('edit_id'))->get();
+         foreach ($desc as $value) {
+            if(!empty($value->consume_item)) {
+               $old_consume_reels = ItemSizeStock::where('sj_consumption_id', $stockjournal->id)
+                     ->where('item_id', $value->consume_item)
+                     ->count();
+               CommonHelper::updateDailyReelStock(
+                     Session::get('user_company_id'),
+                     $value->consume_item,
+                     $last_date,
+                     0,
+                     0,
+                     -$old_consume_reels,
+                     -$value->consume_weight
+               );
+            }
+            if(!empty($value->new_item)) {
+               $old_generated_reels = ItemSizeStock::where('sj_generated_detail_id', $value->id)
+                     ->count();
+               CommonHelper::updateDailyReelStock(
+                     Session::get('user_company_id'),
+                     $value->new_item,
+                     $last_date,
+                     -$old_generated_reels,
+                     -$value->new_weight,
+                     0,
+                     0
+               );
+            }
+         }
          foreach ($desc as $key => $value) {
             if(!empty($value->consume_item)){
                CommonHelper::RewriteItemAverageByItem($stockjournal->jdate,$value->consume_item,$stockjournal->series_no);
@@ -1393,6 +1500,25 @@ class ManageItemsController extends Controller
             $item_ledger->created_by = Session::get('user_id');
             $item_ledger->created_at = date('d-m-Y H:i:s');
             $item_ledger->save();
+            $consume_reel_count = 0;
+            if (
+               isset($request->item_size_info[$key]) &&
+               !empty($request->item_size_info[$key])
+            ) {
+               $decoded = json_decode($request->item_size_info[$key], true);
+               if (is_array($decoded)) {
+                  $consume_reel_count = count($decoded);
+               }
+            }
+            CommonHelper::updateDailyReelStock(
+               Session::get('user_company_id'),
+               $consume_item[$key],
+               $request->input('date'),
+               0,
+               0,
+               $consume_reel_count,
+               $consume_weight[$key]
+            );
             //Add Data In Average Details table
             $average_detail = new ItemAverageDetail;
             $average_detail->entry_date = $request->date;
@@ -1486,7 +1612,22 @@ class ManageItemsController extends Controller
             $item_ledger->created_by = Session::get('user_id');
             $item_ledger->created_at = date('d-m-Y H:i:s');
             $item_ledger->save();
-
+            $generated_reel_count = 0;
+            if (!empty($generated_size_info_arr[$key])) {
+               $sizes = json_decode($generated_size_info_arr[$key], true);
+               if (is_array($sizes)) {
+                  $generated_reel_count = count($sizes);
+               }
+            }
+            CommonHelper::updateDailyReelStock(
+               Session::get('user_company_id'),
+               $generated_item[$key],
+               $request->input('date'),
+               $generated_reel_count,
+               $generated_weight[$key],
+               0,
+               0
+            );
             //Add Data In Average Details table
             $average_detail = new ItemAverageDetail;
             $average_detail->series_no = $request->input('series_no');

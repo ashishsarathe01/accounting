@@ -124,8 +124,24 @@
                             <h5><input type="checkbox" name="partb" id="partb"> PART B</h5>
                             <hr>
                             <div class="row">                                
-                                <div class="mb-6 col-md-6 partb_div" style="display:none">
-                                    <label for="name" class="form-label font-14 font-heading"><input type="checkbox" name="tcs_applicable" id="tcs_applicable"> TCS APPLICABLE </label>                               
+                                <div class="mb-6 col-md-6 partb_div" style="display:none; margin-bottom:15px;">
+                                    <label class="form-label font-14 font-heading">DUAL UNIT</label>
+
+                                    <select class="form-select form-select-lg select2-single"
+                                            name="dual_unit"
+                                            id="dual_unit">
+                                        <option value="0">NO</option>
+                                        <option value="1">YES</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-6 col-md-12 partb_div" style="display:none"></div>
+
+                                <div class="mb-6 col-md-6 partb_div" style="display:none; padding-top:10px;">
+                                    <label for="name" class="form-label font-14 font-heading">
+                                        <input type="checkbox" name="tcs_applicable" id="tcs_applicable">
+                                        TCS APPLICABLE
+                                    </label>
                                 </div>
                                 <div class="mb-6 col-md-12"></div>
                                 <div class="mb-6 col-md-6 partb_div tcs_applicable_div" style="display:none">

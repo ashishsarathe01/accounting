@@ -409,7 +409,7 @@ class SalesController extends Controller
             ->where('manage_items.status', '=', '1')
             ->where('manage_items.company_id',Session::get('user_company_id'))
             ->orderBy('manage_items.name')
-            ->select(['units.s_name as unit', 'manage_items.id','manage_items.u_name','manage_items.gst_rate','manage_items.name','parameterized_stock_status','config_status','item_groups.id as group_id'])
+            ->select(['units.s_name as unit', 'manage_items.id','manage_items.u_name','manage_items.dual_unit','manage_items.gst_rate','manage_items.name','parameterized_stock_status','config_status','item_groups.id as group_id'])
             ->get(); 
 
       $credit_days = DB::table('manage_credit_days')
@@ -518,10 +518,43 @@ class SalesController extends Controller
             $shipp_to_address_id = $saleOrderData->shipp_to_address_id;
          }
       }
-    if(Session::get('user_company_id')==37 || Session::get('user_company_id')==1){
+    if(Session::get('user_company_id')==37 || Session::get('user_company_id')==2){
       return view('addsaleretail')
       ->with('current_financial_year',$current_financial_year)
       ->with('fy_start_date', $fy_start_date)->with('config', $config)->with('itemGroups', $itemGroups)->with('accountunit', $accountunit)->with('series', $series)->with('state_list', $state_list)->with('allowedAccountGroups', $allowedAccountGroups)->with('credit_days', $credit_days)->with('fy_end_date', $fy_end_date)->with('party_list', $party_list)->with('billsundry', $billsundry)->with('bill_date', $bill_date)->with('GstSettings', $GstSettings)->with('item', $item)->with('bill_to_id', $bill_to_id)->with('shipp_to_id', $shipp_to_id)->with('freight', $freight)->with('sale_order_id', $sale_order_id)->with('sale_order_items',$sale_order_items)->with('sale_enter_data',$sale_enter_data)->with('new_order',$new_order)->with('production_module_status',$production_module_status)->with('bill_to_address_id',$bill_to_address_id)->with('shipp_to_address_id',$shipp_to_address_id)->with('shipp_to_other_address',$shipp_to_other_address)->with('shipp_to_other_pincode',$shipp_to_other_pincode)->with('cash_group_ids',$cash_group_ids);
+      }
+      else if(Session::get('user_company_id')==12 || Session::get('user_company_id')==1){
+
+         return view('addtaarobaarsale')
+         ->with('current_financial_year',$current_financial_year)
+         ->with('fy_start_date', $fy_start_date)
+         ->with('config', $config)
+         ->with('itemGroups', $itemGroups)
+         ->with('accountunit', $accountunit)
+         ->with('series', $series)
+         ->with('state_list', $state_list)
+         ->with('allowedAccountGroups', $allowedAccountGroups)
+         ->with('credit_days', $credit_days)
+         ->with('fy_end_date', $fy_end_date)
+         ->with('party_list', $party_list)
+         ->with('billsundry', $billsundry)
+         ->with('bill_date', $bill_date)
+         ->with('GstSettings', $GstSettings)
+         ->with('item', $item)
+         ->with('bill_to_id', $bill_to_id)
+         ->with('shipp_to_id', $shipp_to_id)
+         ->with('freight', $freight)
+         ->with('sale_order_id', $sale_order_id)
+         ->with('sale_order_items',$sale_order_items)
+         ->with('sale_enter_data',$sale_enter_data)
+         ->with('new_order',$new_order)
+         ->with('production_module_status',$production_module_status)
+         ->with('bill_to_address_id',$bill_to_address_id)
+         ->with('shipp_to_address_id',$shipp_to_address_id)
+         ->with('shipp_to_other_address',$shipp_to_other_address)
+         ->with('shipp_to_other_pincode',$shipp_to_other_pincode)
+         ->with('cash_group_ids',$cash_group_ids);
+
       }
       else{return view('addSale')
       ->with('current_financial_year',$current_financial_year)
@@ -533,6 +566,7 @@ class SalesController extends Controller
       // echo "<pre>";
       // print_r($request->all());
       // die;
+      //dd($request->all());
       Gate::authorize('action-module',85);
       $validated = $request->validate([
          'series_no' => 'required',
@@ -666,6 +700,7 @@ class SalesController extends Controller
          $item_descriptions = $request->input('item_description');
          $description_lines = $request->input('description_lines'); // NEW
          $qtys = $request->input('qty');
+         $total_weights = $request->input('total_weight');
          $units = $request->input('units');
          $prices = $request->input('price');
          $amounts = $request->input('amount');
@@ -682,10 +717,22 @@ class SalesController extends Controller
             }
             $item_quantity_total = $item_quantity_total + $qtys[$key];
             $desc = new SaleDescription;
+            $itemData = ManageItems::find($good);
             $desc->sale_id = $sale->id;
             $desc->goods_discription = $good;
             $desc->item_description = $item_descriptions[$key] ?? null;
-            $desc->qty = $qtys[$key];
+            if($itemData && $itemData->dual_unit == 1){
+               $desc->qty = rtrim(rtrim(number_format((float)($total_weights[$key] ?? 0), 2, '.', ''), '0'), '.');
+               $desc->taarobaar_qty = rtrim(rtrim(number_format((float)$qtys[$key], 2, '.', ''), '0'), '.');
+            }else{
+               $desc->qty = rtrim(rtrim(number_format((float)$qtys[$key], 2, '.', ''), '0'), '.');
+               $desc->taarobaar_qty =
+                  rtrim(rtrim(number_format((float)($total_weights[$key] ?? 0), 2, '.', ''), '0'), '.');
+            }
+            $desc->dual_unit =
+               ($itemData && $itemData->dual_unit == 1)
+               ? 1
+               : 0;
             $desc->unit = $units[$key];
             $desc->pricewithgst = $pricewithgst[$key] ?? 0;
             $desc->profit = $profit[$key] ?? 0;
@@ -694,6 +741,39 @@ class SalesController extends Controller
             $desc->company_id = Session::get('user_company_id');
             $desc->status = '1';
             $desc->save();
+            $row_no = $key + 1;
+            $piece_weights =
+               $request->input('piece_weight_'.$row_no);
+
+            if(is_array($piece_weights)){
+
+               foreach($piece_weights as $piece_no => $weight){
+
+                  if($weight == '' || $weight == 0){
+                     continue;
+                  }
+
+                  DB::table('taarobar_sale_description_piece_weights')
+                     ->insert([
+
+                        'sale_id' => $sale->id,
+
+                        'sale_description_id' => $desc->id,
+
+                        'item_id' => $good,
+
+                        'piece_no' => $piece_no + 1,
+
+                        'weight' => $weight,
+
+                        'company_id' => Session::get('user_company_id'),
+
+                        'created_at' => now(),
+
+                        'updated_at' => now()
+                     ]);
+               }
+            }
             array_push($desc_id_arr,$desc->id);
             //Item Description Lines
             if (isset($description_lines[$key]) && is_array($description_lines[$key])) {
@@ -714,8 +794,14 @@ class SalesController extends Controller
             //ADD ITEM LEDGER
             $item_ledger = new ItemLedger();
             $item_ledger->item_id = $good;
-            $item_ledger->out_weight = $qtys[$key];
-            $item_ledger->series_no = $request->input('series_no');
+            if($itemData && $itemData->dual_unit == 1){
+               $item_ledger->out_weight =
+                  $total_weights[$key] ?? 0;
+            }else{
+               $item_ledger->out_weight =
+                  $qtys[$key];
+            }
+                        $item_ledger->series_no = $request->input('series_no');
             $item_ledger->txn_date = $request->input('date');
             $item_ledger->price = $prices[$key];
             $item_ledger->total_price = $amounts[$key];
@@ -737,7 +823,19 @@ class SalesController extends Controller
                   }
                }
             }
-            
+            $reel_count = count($ids);
+
+            CommonHelper::updateDailyReelStock(
+               Session::get('user_company_id'),
+               $good,
+               $request->input('date'),
+
+               0,
+               0,
+
+               $reel_count,
+               $qtys[$key]
+            );
 
             if (count($ids) > 0) {
                ItemSizeStock::whereIn('id', $ids)
@@ -799,16 +897,30 @@ class SalesController extends Controller
          //Average Calculation
          $goods_discriptions = $request->input('goods_discription');
          $qtys = $request->input('qty');
+         $total_weights = $request->input('total_weight');
          $sale_item_array = [];
          foreach($goods_discriptions as $key => $good){
             if($good=="" || $qtys[$key]==""){
                continue;
             }
-            if(array_key_exists($good,$sale_item_array)){
-               $sale_item_array[$good] = $sale_item_array[$good] + $qtys[$key];
-            }else{
-               $sale_item_array[$good] = $qtys[$key];
-            }     
+            $itemData = ManageItems::find($good);
+
+$avg_qty = $qtys[$key];
+
+if($itemData && $itemData->dual_unit == 1){
+
+   $avg_qty =
+      $total_weights[$key] ?? 0;
+}
+
+if(array_key_exists($good,$sale_item_array)){
+
+   $sale_item_array[$good] += $avg_qty;
+
+}else{
+
+   $sale_item_array[$good] = $avg_qty;
+}   
          }
          foreach ($sale_item_array as $key => $value) {
             //Add Data In Average Details table
@@ -1309,6 +1421,7 @@ class SalesController extends Controller
             'units.s_name as unit',
             'manage_items.id',
             'manage_items.u_name',
+            'manage_items.dual_unit',
             'manage_items.gst_rate',
             'manage_items.name',
             'item_groups.parameterized_stock_status',
@@ -1513,6 +1626,10 @@ class SalesController extends Controller
             }
          }
          $config = SaleInvoiceConfiguration::where('company_id', Session::get('user_company_id'))->first();
+         $bill_to_address_id     = $sale->address_id ?? '';
+         $shipp_to_address_id    = '';
+         $shipp_to_other_address = '';
+         $shipp_to_other_pincode = '';
          if(Session::get('user_company_id')==37 || Session::get('user_company_id')==1){
               return view('editsaleretail')
             ->with('production_module_status', $production_module_status)
@@ -1542,6 +1659,40 @@ class SalesController extends Controller
             ->with('sale_enter_data',$sale_enter_data)
             ->with('new_order',$new_order)
             ->with('cash_group_ids',$cash_group_ids);
+         }else if(Session::get('user_company_id')==12 || Session::get('user_company_id')==1){
+            return view('edittaarobaarsale')
+               ->with('production_module_status', $production_module_status)
+               ->with('fy_start_date', $fy_start_date)
+               ->with('fy_end_date', $fy_end_date)
+               ->with('party_list', $party_list)
+               ->with('manageitems', $manageitems)
+               ->with('billsundry', $billsundry)
+               ->with('mat_center', $mat_center)
+               ->with('GstSettings', $GstSettings)
+               ->with('mat_series', $mat_series)
+               ->with('sale', $sale)
+               ->with('SaleDescription', $SaleDescription)
+               ->with('SaleSundry', $SaleSundry)
+               ->with('config',$config)
+               ->with('itemGroups', $itemGroups)
+               ->with('accountunit', $accountunit)
+               ->with('series', $series)
+               ->with('state_list', $state_list)
+               ->with('bill_to_address_id',$bill_to_address_id)
+               ->with('shipp_to_address_id',$shipp_to_address_id)
+               ->with('shipp_to_other_address',$shipp_to_other_address)
+               ->with('shipp_to_other_pincode',$shipp_to_other_pincode)
+               ->with('allowedAccountGroups', $allowedAccountGroups)
+               ->with('credit_days', $credit_days)
+               ->with('bill_to_id', $bill_to_id)
+               ->with('shipp_to_id', $shipp_to_id)
+               ->with('freight', $freight)
+               ->with('sale_order_id', $sale_order_id)
+               ->with('sale_order_items',$sale_order_items)
+               ->with('sale_enter_data',$sale_enter_data)
+               ->with('new_order',$new_order)
+               ->with('item', $manageitems)
+               ->with('cash_group_ids',$cash_group_ids);
          }else{
       return view('editSale')
             ->with('production_module_status', $production_module_status)
@@ -1591,6 +1742,8 @@ class SalesController extends Controller
                'units.s_name as unit',
                'units.id as unit_id',
                'sale_descriptions.qty',
+               'sale_descriptions.taarobaar_qty',
+               'sale_descriptions.dual_unit',
                'sale_descriptions.price',
                'sale_descriptions.amount',
                'manage_items.p_name',
@@ -1862,6 +2015,24 @@ class SalesController extends Controller
                            ->delete();         
          $desc = SaleDescription::where('sale_id',$request->sale_id)
                               ->get();
+         foreach ($desc as $value) {
+
+            $reel_count = ItemSizeStock::where('sale_description_id', $value->id)
+               ->count();
+
+            CommonHelper::updateDailyReelStock(
+               Session::get('user_company_id'),
+               $value->goods_discription,
+
+               $sale->date,
+
+               0,
+               0,
+
+               -$reel_count,
+               -$value->qty
+            );
+         }
          foreach ($desc as $key => $value) {
             CommonHelper::RewriteItemAverageByItem($sale->date,$value->goods_discription,$sale->series_no);
          }
@@ -1956,7 +2127,7 @@ class SalesController extends Controller
 
          $sale = Sales::find($request->input('sale_edit_id'));
       //Check Dulicate Invoice Number
-     
+     //dd($request->all());
       // echo "<pre>";
       // print_r($request->all());
       // $sale_enter_data = json_decode($request->sale_enter_data,true);
@@ -2045,6 +2216,7 @@ class SalesController extends Controller
          $item_descriptions = $request->input('item_description');
          $description_lines = $request->input('description_lines');
          $qtys   = $request->input('qty');
+         $total_weights = $request->input('total_weight');
          $units  = $request->input('units');
          $prices = $request->input('price');
          $amounts = $request->input('amount');
@@ -2055,7 +2227,35 @@ class SalesController extends Controller
          $old_size_ids = ItemSizeStock::where('sale_id', $sale->id)
                               ->pluck('id')
                               ->toArray();
+         $oldDescriptions = SaleDescription::where('sale_id', $sale->id)
+            ->get();
+
+         foreach ($oldDescriptions as $oldRow) {
+
+            $old_reel_count = ItemSizeStock::where('sale_description_id', $oldRow->id)
+               ->count();
+
+            CommonHelper::updateDailyReelStock(
+               Session::get('user_company_id'),
+               $oldRow->goods_discription,
+
+               $last_date,
+
+               0,
+               0,
+
+               -$old_reel_count,
+               -(
+                  $oldRow->dual_unit == 1
+                  ? $oldRow->taarobaar_qty
+                  : $oldRow->qty
+               )
+            );
+         }
          SaleDescription::where('sale_id', $sale->id)->delete();
+         DB::table('taarobar_sale_description_piece_weights')
+            ->where('sale_id', $sale->id)
+            ->delete();
          ItemLedger::where('source_id', $sale->id)->where('source', 1)->delete();
          ItemAverageDetail::where('sale_id', $sale->id)
                            ->where('type', 'SALE')
@@ -2073,7 +2273,30 @@ class SalesController extends Controller
             $desc->sale_id = $sale->id;
             $desc->goods_discription = $good;
             $desc->item_description = $item_descriptions[$key] ?? '';
-            $desc->qty = $qtys[$key];
+            $itemData = ManageItems::find($good);
+
+            if($itemData && $itemData->dual_unit == 1){
+
+               // Store Total Wt in qty
+               $desc->qty = rtrim(rtrim(number_format((float)($total_weights[$key] ?? 0), 2, '.', ''), '0'), '.');
+
+               // Store Qty in taarobaar_qty
+               $desc->taarobaar_qty = rtrim(rtrim(number_format((float)$qtys[$key], 2, '.', ''), '0'), '.');
+
+            }else{
+
+               // Normal items
+               $desc->qty = rtrim(rtrim(number_format((float)$qtys[$key], 2, '.', ''), '0'), '.');
+
+               $desc->taarobaar_qty =
+                  rtrim(rtrim(number_format((float)($total_weights[$key] ?? 0), 2, '.', ''), '0'), '.');
+            }
+
+            $desc->dual_unit =
+               ($itemData && $itemData->dual_unit == 1)
+               ? 1
+               : 0;
+
             $desc->unit = $units[$key];
             $desc->pricewithgst = $pricewithgst[$key] ?? 0;
             $desc->profit = $profit[$key] ?? 0;
@@ -2083,6 +2306,39 @@ class SalesController extends Controller
             $desc->status = '1';
             $desc->save();
             array_push($desc_id_arr,$desc->id);
+            $row_no = $key + 1;
+            $piece_weights =
+               $request->input('piece_weight_'.$row_no);
+
+            if(is_array($piece_weights)){
+
+               foreach($piece_weights as $piece_no => $weight){
+
+                  if($weight == '' || $weight == 0){
+                     continue;
+                  }
+
+                  DB::table('taarobar_sale_description_piece_weights')
+                     ->insert([
+
+                        'sale_id' => $sale->id,
+
+                        'sale_description_id' => $desc->id,
+
+                        'item_id' => $good,
+
+                        'piece_no' => $piece_no + 1,
+
+                        'weight' => $weight,
+
+                        'company_id' => Session::get('user_company_id'),
+
+                        'created_at' => now(),
+
+                        'updated_at' => now()
+                     ]);
+               }
+            }
             // Description lines
              if (isset($description_lines[$key]) && is_array($description_lines[$key])) {
                foreach ($description_lines[$key] as $lineIndex => $lineText) {
@@ -2102,7 +2358,13 @@ class SalesController extends Controller
             // Item ledger
             $item_ledger = new ItemLedger();
             $item_ledger->item_id = $good;
-            $item_ledger->out_weight = $qtys[$key];
+            if($itemData && $itemData->dual_unit == 1){
+               $item_ledger->out_weight =
+                  $total_weights[$key] ?? 0;
+            }else{
+               $item_ledger->out_weight =
+                  $qtys[$key];
+            }
             $item_ledger->series_no = $request->input('series_no');
             $item_ledger->txn_date = $request->input('date');
             $item_ledger->price = $prices[$key];
@@ -2113,7 +2375,7 @@ class SalesController extends Controller
             $item_ledger->created_by = Session::get('user_id');
             $item_ledger->created_at = date('d-m-Y H:i:s');
             $item_ledger->save();
-
+            $sizes = [];
             if(isset($request->input('item_size_info')[$key])){
                $item_size_info_raw = $request->input('item_size_info')[$key] ?? "[]";
                $sizes = json_decode($item_size_info_raw, true);
@@ -2131,7 +2393,24 @@ class SalesController extends Controller
                      ]);
                   }
                }
-            }            
+            } 
+            $reel_count = count($sizes);
+            CommonHelper::updateDailyReelStock(
+               Session::get('user_company_id'),
+               $good,
+
+               $request->input('date'),
+
+               0,
+               0,
+
+               $reel_count,
+               (
+                  $itemData && $itemData->dual_unit == 1
+                  ? ($total_weights[$key] ?? 0)
+                  : $qtys[$key]
+               )
+            );           
          }
          $removed_size_ids = array_diff($old_size_ids, $new_size_ids);
          if (!empty($removed_size_ids)) {
@@ -2190,11 +2469,17 @@ class SalesController extends Controller
             if($good=="" || $qtys[$key]==""){
                continue;
             }
+            $itemData = ManageItems::find($good);
+            $avg_qty = $qtys[$key];
+            if($itemData && $itemData->dual_unit == 1){
+               $avg_qty =
+                  $total_weights[$key] ?? 0;
+            }
             if(array_key_exists($good,$sale_item_array)){
-               $sale_item_array[$good] = $sale_item_array[$good] + $qtys[$key];
+               $sale_item_array[$good] += $avg_qty;
             }else{
-               $sale_item_array[$good] = $qtys[$key];
-            }     
+               $sale_item_array[$good] = $avg_qty;
+            }    
          }
          foreach ($sale_item_array as $key => $value) {
             //Add Data In Average Details table

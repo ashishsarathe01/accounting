@@ -571,6 +571,17 @@ if ($companyData->gst_config_type == "single_gst") {
             $item_ledger->created_by = Session::get('user_id');
             $item_ledger->created_at = date('d-m-Y H:i:s');
             $item_ledger->save();
+            CommonHelper::updateDailyReelStock(
+               Session::get('user_company_id'),
+               $good,
+               $finalStockEntryDate ?? $request->input('date'),
+
+               0,
+               $qtys[$key],
+
+               0,
+               0
+            );
             //ADD ITEM AVERAGE
 
 
@@ -1194,6 +1205,20 @@ if ($companyData->gst_config_type == "single_gst") {
                            ->delete();         
          $desc = PurchaseDescription::where('purchase_id',$request->purchase_id)
                               ->get();
+         foreach ($desc as $value) {
+            CommonHelper::updateDailyReelStock(
+               Session::get('user_company_id'),
+               $value->goods_discription,
+
+               $purchase->stock_entry_date ?? $purchase->date,
+
+               0,
+               -$value->qty,
+
+               0,
+               0
+            );
+         }                     
          foreach ($desc as $key => $value) {
             CommonHelper::RewriteItemAverageByItem($purchase->date,$value->goods_discription,$purchase->series_no);
          }
@@ -1666,6 +1691,24 @@ if ($companyData->gst_config_type == "single_gst") {
          $config_status = $request->input('config_status');
          $item_parameters = $request->input('item_parameters');
          $desc_item_arr = PurchaseDescription::where('purchase_id',$purchase->id)->pluck('goods_discription')->toArray();
+         $oldDescriptions = PurchaseDescription::where('purchase_id', $purchase->id)
+            ->get();
+
+         foreach ($oldDescriptions as $oldRow) {
+
+            CommonHelper::updateDailyReelStock(
+               Session::get('user_company_id'),
+               $oldRow->goods_discription,
+
+               $last_date,
+
+               0,
+               -$oldRow->qty,
+
+               0,
+               0
+            );
+         }
          PurchaseDescription::where('purchase_id',$purchase->id)->delete();
          ItemLedger::where('source_id',$purchase->id)->where('source',2)->delete();
          ItemAverageDetail::where('purchase_id',$purchase->id)
@@ -1701,6 +1744,18 @@ if ($companyData->gst_config_type == "single_gst") {
             $item_ledger->created_by = Session::get('user_id');
             $item_ledger->created_at = date('d-m-Y H:i:s');
             $item_ledger->save();
+            CommonHelper::updateDailyReelStock(
+               Session::get('user_company_id'),
+               $good,
+
+               $itemLedgerDate,
+
+               0,
+               $qtys[$key],
+
+               0,
+               0
+            );
             //Parameter Info
             if($item_parameters[$key]!=""){
                $parameter = json_decode($item_parameters[$key],true);

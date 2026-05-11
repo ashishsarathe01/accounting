@@ -1340,6 +1340,18 @@ if (!is_array($deletedReels)) {
                     foreach ($quality_weight_arr as $key => $value) {
                         //ADD IN Stock
                         $item_ledger = new ItemLedger();
+                        $generated_reel_count = ItemSizeStock::where('deckle_id', $currentPopRollId)
+                            ->where('item_id', $key)
+                            ->count();
+                        CommonHelper::updateDailyReelStock(
+                            Session::get('user_company_id'),
+                            $key,
+                            date('Y-m-d', strtotime($deckle->end_time_stamp)),
+                            $generated_reel_count,
+                            $value,
+                            0,
+                            0
+                        );
                         $item_ledger->item_id = $key;
                         $item_ledger->series_no = $series;
                         $item_ledger->in_weight = $value;
@@ -1433,6 +1445,28 @@ if (!is_array($deletedReels)) {
         return response()->json($grouped);
     }
     public function cancelPopRollReel(Request $request){
+        $deckle = DeckleProcess::find($request->pop_roll_id);
+        $stock_date = date('Y-m-d', strtotime($deckle->end_time_stamp));
+        $old_stock_summary = ItemSizeStock::select(
+            'item_id',
+            DB::raw('COUNT(id) as reels'),
+            DB::raw('SUM(weight) as weight')
+        )
+        ->where('deckle_id', $request->pop_roll_id)
+        ->where('status', 1)
+        ->groupBy('item_id')
+        ->get();
+        foreach ($old_stock_summary as $old) {
+            CommonHelper::updateDailyReelStock(
+                Session::get('user_company_id'),
+                $old->item_id,
+                $stock_date,
+                -$old->reels,
+                -$old->weight,
+                0,
+                0
+            );
+        }
         DeckleItem::where('deckle_id',$request->pop_roll_id)->update(['status'=>0]);
         ItemSizeStock::where('deckle_id',$request->pop_roll_id)->delete();
         DeckleProcess::where('id',$request->pop_roll_id)->update(['status'=>2,'reel_generated_at'=>null]);
@@ -1503,6 +1537,28 @@ if (!is_array($deletedReels)) {
         $redirect_url = Session::get('redirect_url');
         
         $sizeStock = ItemSizeStock::where('deckle_id',$request->pop_roll_id)->first();
+        $deckle = DeckleProcess::find($request->pop_roll_id);
+        $stock_date = date('Y-m-d', strtotime($deckle->end_time_stamp));
+        $old_stock_summary = ItemSizeStock::select(
+            'item_id',
+            DB::raw('COUNT(id) as reels'),
+            DB::raw('SUM(weight) as weight')
+        )
+        ->where('deckle_id', $request->pop_roll_id)
+        ->where('status', 1)
+        ->groupBy('item_id')
+        ->get();
+        foreach ($old_stock_summary as $old) {
+            CommonHelper::updateDailyReelStock(
+                Session::get('user_company_id'),
+                $old->item_id,
+                $stock_date,
+                -$old->reels,
+                -$old->weight,
+                0,
+                0
+            );
+        }
         ItemSizeStock::where('deckle_id',$request->pop_roll_id)
                     ->where('status',1)
                     ->delete();
@@ -1635,6 +1691,19 @@ if (!is_array($deletedReels)) {
             $series = $GstSettings[0]->series;
             $deckle = DeckleProcess::find($request->pop_roll_id);
             foreach ($quality_weight_arr as $key => $value) {
+                $generated_reel_count = ItemSizeStock::where('deckle_id', $request->pop_roll_id)
+                    ->where('item_id', $key)
+                    ->where('status', 1)
+                    ->count();
+                CommonHelper::updateDailyReelStock(
+                    Session::get('user_company_id'),
+                    $key,
+                    $stock_date,
+                    $generated_reel_count,
+                    $value,
+                    0,
+                    0
+                );
                 //ADD IN Stock
                 $item_ledger = new ItemLedger();
                 $item_ledger->item_id = $key;

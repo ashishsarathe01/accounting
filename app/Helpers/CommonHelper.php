@@ -953,4 +953,62 @@ public static function getAllChildGroupIdsOptimizeCode($group_id, $company_id)
             return json_encode(array("status" => false));
         }
     }
+    public static function updateDailyReelStock(
+        $company_id,
+        $item_id,
+        $date,
+        $in_reels = 0,
+        $in_weight = 0,
+        $out_reels = 0,
+        $out_weight = 0
+    ) {
+        $row = DB::table('item_daily_reel_stock')
+            ->where('company_id', $company_id)
+            ->where('item_id', $item_id)
+            ->where('stock_date', $date)
+            ->first();
+        if ($row) {
+            $new_in_reels   = $row->in_reels + $in_reels;
+            $new_in_weight  = $row->in_weight + $in_weight;
+            $new_out_reels  = $row->out_reels + $out_reels;
+            $new_out_weight = $row->out_weight + $out_weight;
+            $new_in_reels   = max(0, $new_in_reels);
+            $new_in_weight  = max(0, $new_in_weight);
+            $new_out_reels  = max(0, $new_out_reels);
+            $new_out_weight = max(0, $new_out_weight);
+            if (
+                $new_in_reels == 0 &&
+                $new_in_weight == 0 &&
+                $new_out_reels == 0 &&
+                $new_out_weight == 0
+            ) {
+                DB::table('item_daily_reel_stock')
+                    ->where('id', $row->id)
+                    ->delete();
+            } else {
+                DB::table('item_daily_reel_stock')
+                    ->where('id', $row->id)
+                    ->update([
+                        'in_reels'   => $new_in_reels,
+                        'in_weight'  => $new_in_weight,
+                        'out_reels'  => $new_out_reels,
+                        'out_weight' => $new_out_weight,
+                        'updated_at' => now(),
+                    ]);
+            }
+        } else {
+            DB::table('item_daily_reel_stock')
+                ->insert([
+                    'company_id' => $company_id,
+                    'item_id' => $item_id,
+                    'stock_date' => $date,
+                    'in_reels' => max(0, $in_reels),
+                    'in_weight' => max(0, $in_weight),
+                    'out_reels' => max(0, $out_reels),
+                    'out_weight' => max(0, $out_weight),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+        }
+    }
 }

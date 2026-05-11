@@ -638,7 +638,32 @@ class SalesReturnController extends Controller
                      $item_ledger->created_by = Session::get('user_id');
                      $item_ledger->created_at = date('d-m-Y H:i:s');
                      $item_ledger->save();
-                     
+                     $sizes = [];
+
+                     $json = $itemSizeInfos[$key] ?? null;
+
+                     if ($json) {
+                        $sizes = json_decode($json, true);
+
+                        if (!is_array($sizes)) {
+                           $sizes = [];
+                        }
+                     }
+
+                     $reel_count = count($sizes);
+
+                     CommonHelper::updateDailyReelStock(
+                        Session::get('user_company_id'),
+                        $good,
+
+                        $request->input('date'),
+
+                        $reel_count,
+                        $qtys[$key],
+
+                        0,
+                        0
+                     );
                      //Parameter Info
                      if($item_parameters[$key]!=""){
                         $parameter = json_decode($item_parameters[$key],true);
@@ -1199,6 +1224,19 @@ class SalesReturnController extends Controller
                            ->delete();         
                $desc = SaleReturnDescription::where('sale_return_id',$request->sale_return_id)
                               ->get();
+               foreach ($desc as $value) {
+                  $reel_count = ItemSizeStock::where('sale_return_desc_id', $value->id)
+                     ->count();
+                  CommonHelper::updateDailyReelStock(
+                     Session::get('user_company_id'),
+                     $value->goods_discription,
+                     $sale_return->date,
+                     -$reel_count,
+                     -$value->qty,
+                     0,
+                     0
+                  );
+               }
                foreach ($desc as $key => $value) {
                   CommonHelper::RewriteItemAverageByItem($sale_return->date,$value->goods_discription,$sale_return->series_no);
                }
@@ -1921,7 +1959,8 @@ class SalesReturnController extends Controller
          $sale->remark = $request->input('remark');
       }
       //$sale->voucher_type = $request->input('voucher_type');
-      $voucher_prefix = $request->input('voucher_prefix');      
+      $voucher_prefix = $request->input('voucher_prefix');  
+      $old_sr_type = $sale->sr_type;    
       $sale->sr_nature = $request->input('nature');
       $sale->sr_type = $request->input('type');
       $sale->sr_prefix = $voucher_prefix;
@@ -1948,6 +1987,23 @@ class SalesReturnController extends Controller
          $desc_item_arr = SaleReturnDescription::where('sale_return_id',$sale->id)
                                                    ->pluck('goods_discription')
                                                    ->toArray();
+         if($old_sr_type == "WITH ITEM"){
+            $oldDescriptions = SaleReturnDescription::where('sale_return_id', $sale->id)
+               ->get();
+            foreach ($oldDescriptions as $oldRow) {
+               $old_reel_count = ItemSizeStock::where('sale_return_desc_id', $oldRow->id)
+                  ->count();
+               CommonHelper::updateDailyReelStock(
+                  Session::get('user_company_id'),
+                  $oldRow->goods_discription,
+                  $last_date,
+                  -$old_reel_count,
+                  -$oldRow->qty,
+                  0,
+                  0
+               );
+            }
+         }
          SaleReturnDescription::where('sale_return_id',$sale->id)->delete();
          ItemLedger::where('source_id',$sale->id)->where('source',4)->delete();
          AccountLedger::where('entry_type_id',$sale->id)->where('entry_type',3)->delete();
@@ -2044,6 +2100,21 @@ class SalesReturnController extends Controller
                      $item_ledger->created_by = Session::get('user_id');
                      $item_ledger->created_at = date('d-m-Y H:i:s');
                      $item_ledger->save();
+                     if($request->input('type')=="WITH ITEM"){
+                        $reel_count = 0;
+                        if(isset($item_sizes) && is_array($item_sizes)){
+                           $reel_count = count($item_sizes);
+                        }
+                        CommonHelper::updateDailyReelStock(
+                           Session::get('user_company_id'),
+                           $good,
+                           $request->input('date'),
+                           $reel_count,
+                           $qtys[$key],
+                           0,
+                           0
+                        );
+                     }
                   }
                }
             }
