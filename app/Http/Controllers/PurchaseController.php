@@ -294,6 +294,7 @@ class PurchaseController extends Controller{
         'manage_items.id',
         'manage_items.u_name',
         'manage_items.gst_rate',
+        'manage_items.dual_unit',
         'manage_items.name',
         'parameterized_stock_status',
         'config_status',
@@ -394,6 +395,42 @@ if ($companyData->gst_config_type == "single_gst") {
         }
     }
 }
+   if(Session::get('user_company_id')==12 || Session::get('user_company_id')==1){
+
+      return view('addtaarobaarpurchase')
+         ->with('fy_start_date', $fy_start_date)
+         ->with('fy_end_date', $fy_end_date)
+         ->with('spare_part_id',$spare_part_id)
+         ->with('startItems',$startItems)
+         ->with('party_list', $party_list)
+         ->with('billsundry', $billsundry)
+         ->with('GstSettings', $GstSettings)
+         ->with('bill_date', $bill_date)
+         ->with('items', $item)
+         ->with('rowId', $rowId)
+         ->with('accountId', $accountId)
+         ->with('groupId', $groupId)
+         ->with("in_quantity",$in_quantity)
+         ->with("vehicle_no",$vehicle_no)
+         ->with("no_gst_group_ids",$no_gst_group_ids)
+         ->with("station",$station)
+         ->with('transport', $transport)
+         ->with('invoice_no', $invoice_no)
+         ->with('invoice_date', $invoice_date)
+         ->with('bill_sundry_id', $bill_sundry_id)
+         ->with('freight_amount', $freight_amount)
+         ->with('eway_bill_no', $eway_bill_no)
+         ->with('itemGroups', $itemGroups)
+         ->with('accountunit', $accountunit)
+         ->with('series', $series)
+         ->with('state_list', $state_list)
+         ->with('allowedAccountGroups', $allowedAccountGroups)
+         ->with('credit_days', $credit_days)
+         ->with('stockEntryEnabled', $stockEntryEnabled)
+         ->with('vehicleEntryDate', $vehicleEntryDate)
+         ->with("in_price",$in_price);
+
+   }else{
 
       return view('addPurchase')
             ->with('fy_start_date', $fy_start_date)
@@ -423,6 +460,7 @@ if ($companyData->gst_config_type == "single_gst") {
             ->with('vehicleEntryDate', $vehicleEntryDate)
             ->with("in_price",$in_price);
    }
+   }
     /**
      * Store a newly created resource in storage.
      *
@@ -440,6 +478,7 @@ if ($companyData->gst_config_type == "single_gst") {
          'total' => 'required',
          'goods_discription' => 'required|array|min:1',
       ]);
+      //dd($request->all());
       // echo "<pre>";
       // print_r($request->all());
       // die;
@@ -448,6 +487,7 @@ if ($companyData->gst_config_type == "single_gst") {
       // }
       $goods_discriptions = $request->input('goods_discription');
       $qtys = $request->input('qty');
+      $weights = $request->input('weight');
       $units = $request->input('units');
       $prices = $request->input('price');
       $amounts = $request->input('amount');
@@ -528,6 +568,7 @@ if ($companyData->gst_config_type == "single_gst") {
       if($purchase->id){
          $goods_discriptions = $request->input('goods_discription');
          $qtys = $request->input('qty');
+         $weights = $request->input('weight');
          $units = $request->input('units');
          $prices = $request->input('price');
          $amounts = $request->input('amount');
@@ -537,11 +578,20 @@ if ($companyData->gst_config_type == "single_gst") {
             if($good=="" || $qtys[$key]=="" || $units[$key]=="" || $prices[$key]=="" || $amounts[$key]==""){
                continue;
             }
+            $item = ManageItems::find($good);
             $desc = new PurchaseDescription;
             $desc->purchase_id = $purchase->id;
             $desc->company_id = Session::get('user_company_id');
             $desc->goods_discription = $good;
-            $desc->qty = $qtys[$key];
+            if($item && $item->dual_unit == 1){
+               $desc->qty = $weights[$key] ?? 0;
+               $desc->taarobaar_qty = $qtys[$key] ?? 0;
+               $desc->dual_unit = 1;
+            }else{
+               $desc->qty = $qtys[$key];
+               $desc->taarobaar_qty = null;
+               $desc->dual_unit = 0;
+            }
             $desc->unit = $units[$key];
             $desc->price = $prices[$key];
             $desc->amount = $amounts[$key];
@@ -561,7 +611,14 @@ if ($companyData->gst_config_type == "single_gst") {
             $item_ledger = new ItemLedger();
             $item_ledger->item_id = $good;
             $item_ledger->series_no = $request->input('series_no');
-            $item_ledger->in_weight = $qtys[$key];
+            if($item && $item->dual_unit == 1){
+
+               $item_ledger->in_weight = $weights[$key] ?? 0;
+
+            }else{
+
+               $item_ledger->in_weight = $qtys[$key];
+            }
             $item_ledger->txn_date = $finalStockEntryDate ?? $request->input('date');
             $item_ledger->price = $prices[$key];
             $item_ledger->total_price = $amounts[$key];
@@ -577,7 +634,9 @@ if ($companyData->gst_config_type == "single_gst") {
                $finalStockEntryDate ?? $request->input('date'),
 
                0,
-               $qtys[$key],
+               ($item && $item->dual_unit == 1)
+                  ? ($weights[$key] ?? 0)
+                  : $qtys[$key],
 
                0,
                0
@@ -797,6 +856,7 @@ if ($companyData->gst_config_type == "single_gst") {
          //Item Average Calculation Logic Start Here   
          $goods_discriptions = $request->input('goods_discription');
          $qtys = $request->input('qty');
+         $weights = $request->input('weight');
          $prices = $request->input('price');
          $amounts = $request->input('amount');
          $item_average_arr = [];$item_average_total = 0;
@@ -804,7 +864,14 @@ if ($companyData->gst_config_type == "single_gst") {
             if($good=="" || $qtys[$key]=="" || $prices[$key]=="" || $amounts[$key]==""){
                continue;
             }
-            array_push($item_average_arr,array("item"=>$good,"quantity"=>$qtys[$key],"price"=>$prices[$key],"amount"=>$amounts[$key]));
+            array_push($item_average_arr,array(
+               "item"=>$good,
+               "quantity"=>($item && $item->dual_unit == 1)
+                  ? ($weights[$key] ?? 0)
+                  : $qtys[$key],
+               "price"=>$prices[$key],
+               "amount"=>$amounts[$key]
+            ));
             $item_average_total = $item_average_total + $amounts[$key];
          }
          //Sundry
@@ -1386,6 +1453,7 @@ if ($companyData->gst_config_type == "single_gst") {
                         'manage_items.id',
                         'manage_items.u_name',
                         'manage_items.gst_rate',
+                        'manage_items.dual_unit',
                         'manage_items.name',
                         'parameterized_stock_status',
                         'config_status',
@@ -1528,8 +1596,8 @@ if ($companyData->gst_config_type == "single_gst") {
             }
          }
       }
-      
-      return view('editPurchase')
+      if(Session::get('user_company_id')==12 || Session::get('user_company_id')==1){
+         return view('edittaarobaarpurchase')
                ->with('fy_start_date', $fy_start_date)
                ->with('fy_end_date', $fy_end_date)
                ->with('party_list', $party_list)
@@ -1554,6 +1622,33 @@ if ($companyData->gst_config_type == "single_gst") {
                ->with('stockEntryEnabled', $stockEntryEnabled)
                ->with('gstApplicable', $gstApplicable)
                ->with('credit_days', $credit_days);
+      }else{
+         return view('editPurchase')
+               ->with('fy_start_date', $fy_start_date)
+               ->with('fy_end_date', $fy_end_date)
+               ->with('party_list', $party_list)
+               ->with('manageitems', $manageitems)
+               ->with('billsundry', $billsundry)
+               ->with('mat_center', $mat_center)
+               ->with('GstSettings', $GstSettings)
+               ->with('mat_series', $mat_series)
+               ->with('purchase', $purchase)
+               ->with('PurchaseDescription', $PurchaseDescription)
+               ->with('PurchaseSundry', $PurchaseSundry)
+               ->with("stock_status",$stock_status)
+               ->with('rowId',$rowId)
+               ->with('groupId',$groupId)
+               ->with('itemGroups', $itemGroups)
+               ->with('accountunit', $accountunit)
+               ->with('series', $series)
+               ->with('no_gst_group_ids',$no_gst_group_ids)
+               ->with('state_list', $state_list)
+               ->with('allowedAccountGroups', $allowedAccountGroups)
+               ->with('stock_entry_date', $purchase->stock_entry_date)
+               ->with('stockEntryEnabled', $stockEntryEnabled)
+               ->with('gstApplicable', $gstApplicable)
+               ->with('credit_days', $credit_days);
+      }
    }
    public function update(Request $request){
       // echo "<pre>";
@@ -1634,6 +1729,7 @@ if ($companyData->gst_config_type == "single_gst") {
     : $purchase->date;
       $goods_discriptions = $request->input('goods_discription');
       $qtys = $request->input('qty');
+      $weights = $request->input('weight');
       $units = $request->input('units');
       $prices = $request->input('price');
       $amounts = $request->input('amount');
@@ -1720,11 +1816,23 @@ if ($companyData->gst_config_type == "single_gst") {
             if($good=="" || $qtys[$key]=="" || $units[$key]=="" || $prices[$key]=="" || $amounts[$key]==""){
                continue;
             }
+            $item = ManageItems::find($good);
             $desc = new PurchaseDescription;
             $desc->purchase_id = $purchase->id;
             $desc->company_id = Session::get('user_company_id');
             $desc->goods_discription = $good;
-            $desc->qty = $qtys[$key];
+            if($item && $item->dual_unit == 1){
+
+               $desc->qty = $weights[$key] ?? 0;
+               $desc->taarobaar_qty = $qtys[$key] ?? 0;
+               $desc->dual_unit = 1;
+
+            }else{
+
+               $desc->qty = $qtys[$key];
+               $desc->taarobaar_qty = null;
+               $desc->dual_unit = 0;
+            }
             $desc->unit = $units[$key];
             $desc->price = $prices[$key];
             $desc->amount = $amounts[$key];
@@ -1734,7 +1842,11 @@ if ($companyData->gst_config_type == "single_gst") {
             $item_ledger = new ItemLedger();
             $item_ledger->item_id = $good;
             $item_ledger->series_no = $request->input('series_no');
-            $item_ledger->in_weight = $qtys[$key];
+            if($item && $item->dual_unit == 1){
+               $item_ledger->in_weight = $weights[$key] ?? 0;
+            }else{
+               $item_ledger->in_weight = $qtys[$key];
+            }
            $item_ledger->txn_date = $itemLedgerDate;
             $item_ledger->price = $prices[$key];
             $item_ledger->total_price = $amounts[$key];
@@ -1751,7 +1863,9 @@ if ($companyData->gst_config_type == "single_gst") {
                $itemLedgerDate,
 
                0,
-               $qtys[$key],
+               ($item && $item->dual_unit == 1)
+                  ? ($weights[$key] ?? 0)
+                  : $qtys[$key],
 
                0,
                0
@@ -1906,6 +2020,7 @@ if ($companyData->gst_config_type == "single_gst") {
          //Item Average Calculation Logic Start Here   
          $goods_discriptions = $request->input('goods_discription');
          $qtys = $request->input('qty');
+         $weights = $request->input('weight');
          $prices = $request->input('price');
          $amounts = $request->input('amount');
          $update_item__arr = [];$item_average_arr = [];$item_average_total = 0;$purchase_amt = 0;
@@ -1913,7 +2028,14 @@ if ($companyData->gst_config_type == "single_gst") {
             if($good=="" || $qtys[$key]=="" || $prices[$key]=="" || $amounts[$key]==""){
                continue;
             }
-            array_push($item_average_arr,array("item"=>$good,"quantity"=>$qtys[$key],"price"=>$prices[$key],"amount"=>$amounts[$key]));
+            array_push($item_average_arr,array(
+               "item"=>$good,
+               "quantity"=>($item && $item->dual_unit == 1)
+                  ? ($weights[$key] ?? 0)
+                  : $qtys[$key],
+               "price"=>$prices[$key],
+               "amount"=>$amounts[$key]
+            ));
             array_push($update_item__arr,$good);
             $item_average_total = $item_average_total + $amounts[$key];
          }
