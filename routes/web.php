@@ -106,6 +106,8 @@ use App\Http\Controllers\YieldReport\YieldReportController;
 use App\Http\Controllers\AdminModuleController\GSTComplianceController;
 use App\Http\Controllers\DutiesCompliance\DutiesComplianceController;
 use App\Http\Controllers\AdminModuleController\DefaultPrivilegesController;
+use App\Http\Controllers\ReceiptRegister\ReceiptRegisterController;
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -1305,5 +1307,5 @@ Route::post('gst-rate-update-manage-item-store', [ManageItemsController::class, 
     //TDS Report working
      Route::get('/tds-194c-report', [TdsReportController::class, 'tds194c'])->name('tds.194c.report');
      Route::get('/tds-194c-report/view', [TdsReportController::class, 'tds194cView'])->name('tds.194c.report.view');
-
+Route::get('/receipt-register', [ReceiptRegisterController::class, 'index'])->name('receipt_register');
 });
