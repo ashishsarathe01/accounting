@@ -488,10 +488,15 @@ class SalesController extends Controller
 
       //Check Production Module Permission
 
-      $comp = Companies::select('user_id')->where('id',Session::get('user_company_id'))->first();
-      $production_module_status = MerchantModuleMapping::where('module_id',4)->where('merchant_id',$comp->user_id)->where('company_id', Session()->get('user_company_id'))->first();
+      $comp = Companies::select('user_id','company_sale_type')
+                        ->where('id',Session::get('user_company_id'))
+                        ->first();
+      $production_module_status = MerchantModuleMapping::where('module_id',4)
+                                                      ->where('merchant_id',$comp->user_id)
+                                                      ->where('company_id', Session()
+                                                      ->get('user_company_id'))
+                                                      ->first();
       $production_module_status = $production_module_status ? 1 : 0;
-
       //Sale Order Other Address
       $bill_to_address_id = "";
       $shipp_to_address_id = "";
@@ -511,48 +516,46 @@ class SalesController extends Controller
             $shipp_to_address_id = $saleOrderData->shipp_to_address_id;
          }
       }
-    if(Session::get('user_company_id')==37 || Session::get('user_company_id')==2){
-      return view('addsaleretail')
-      ->with('current_financial_year',$current_financial_year)
-      ->with('fy_start_date', $fy_start_date)->with('config', $config)->with('itemGroups', $itemGroups)->with('accountunit', $accountunit)->with('series', $series)->with('state_list', $state_list)->with('allowedAccountGroups', $allowedAccountGroups)->with('credit_days', $credit_days)->with('fy_end_date', $fy_end_date)->with('party_list', $party_list)->with('billsundry', $billsundry)->with('bill_date', $bill_date)->with('GstSettings', $GstSettings)->with('item', $item)->with('bill_to_id', $bill_to_id)->with('shipp_to_id', $shipp_to_id)->with('freight', $freight)->with('sale_order_id', $sale_order_id)->with('sale_order_items',$sale_order_items)->with('sale_enter_data',$sale_enter_data)->with('new_order',$new_order)->with('production_module_status',$production_module_status)->with('bill_to_address_id',$bill_to_address_id)->with('shipp_to_address_id',$shipp_to_address_id)->with('shipp_to_other_address',$shipp_to_other_address)->with('shipp_to_other_pincode',$shipp_to_other_pincode)->with('cash_group_ids',$cash_group_ids);
-      }
-      else if(Session::get('user_company_id')==12 || Session::get('user_company_id')==1){
-
-         return view('addtaarobaarsale')
+      if($comp->company_sale_type=="RETAIL"){
+         return view('addsaleretail')
          ->with('current_financial_year',$current_financial_year)
-         ->with('fy_start_date', $fy_start_date)
-         ->with('config', $config)
-         ->with('itemGroups', $itemGroups)
-         ->with('accountunit', $accountunit)
-         ->with('series', $series)
-         ->with('state_list', $state_list)
-         ->with('allowedAccountGroups', $allowedAccountGroups)
-         ->with('credit_days', $credit_days)
-         ->with('fy_end_date', $fy_end_date)
-         ->with('party_list', $party_list)
-         ->with('billsundry', $billsundry)
-         ->with('bill_date', $bill_date)
-         ->with('GstSettings', $GstSettings)
-         ->with('item', $item)
-         ->with('bill_to_id', $bill_to_id)
-         ->with('shipp_to_id', $shipp_to_id)
-         ->with('freight', $freight)
-         ->with('sale_order_id', $sale_order_id)
-         ->with('sale_order_items',$sale_order_items)
-         ->with('sale_enter_data',$sale_enter_data)
-         ->with('new_order',$new_order)
-         ->with('production_module_status',$production_module_status)
-         ->with('bill_to_address_id',$bill_to_address_id)
-         ->with('shipp_to_address_id',$shipp_to_address_id)
-         ->with('shipp_to_other_address',$shipp_to_other_address)
-         ->with('shipp_to_other_pincode',$shipp_to_other_pincode)
-         ->with('cash_group_ids',$cash_group_ids);
+         ->with('fy_start_date', $fy_start_date)->with('config', $config)->with('itemGroups', $itemGroups)->with('accountunit', $accountunit)->with('series', $series)->with('state_list', $state_list)->with('allowedAccountGroups', $allowedAccountGroups)->with('credit_days', $credit_days)->with('fy_end_date', $fy_end_date)->with('party_list', $party_list)->with('billsundry', $billsundry)->with('bill_date', $bill_date)->with('GstSettings', $GstSettings)->with('item', $item)->with('bill_to_id', $bill_to_id)->with('shipp_to_id', $shipp_to_id)->with('freight', $freight)->with('sale_order_id', $sale_order_id)->with('sale_order_items',$sale_order_items)->with('sale_enter_data',$sale_enter_data)->with('new_order',$new_order)->with('production_module_status',$production_module_status)->with('bill_to_address_id',$bill_to_address_id)->with('shipp_to_address_id',$shipp_to_address_id)->with('shipp_to_other_address',$shipp_to_other_address)->with('shipp_to_other_pincode',$shipp_to_other_pincode)->with('cash_group_ids',$cash_group_ids);
+      }else if($comp->company_sale_type=="TAAROBAAR"){
+         return view('addtaarobaarsale')
+               ->with('current_financial_year',$current_financial_year)
+               ->with('fy_start_date', $fy_start_date)
+               ->with('config', $config)
+               ->with('itemGroups', $itemGroups)
+               ->with('accountunit', $accountunit)
+               ->with('series', $series)
+               ->with('state_list', $state_list)
+               ->with('allowedAccountGroups', $allowedAccountGroups)
+               ->with('credit_days', $credit_days)
+               ->with('fy_end_date', $fy_end_date)
+               ->with('party_list', $party_list)
+               ->with('billsundry', $billsundry)
+               ->with('bill_date', $bill_date)
+               ->with('GstSettings', $GstSettings)
+               ->with('item', $item)
+               ->with('bill_to_id', $bill_to_id)
+               ->with('shipp_to_id', $shipp_to_id)
+               ->with('freight', $freight)
+               ->with('sale_order_id', $sale_order_id)
+               ->with('sale_order_items',$sale_order_items)
+               ->with('sale_enter_data',$sale_enter_data)
+               ->with('new_order',$new_order)
+               ->with('production_module_status',$production_module_status)
+               ->with('bill_to_address_id',$bill_to_address_id)
+               ->with('shipp_to_address_id',$shipp_to_address_id)
+               ->with('shipp_to_other_address',$shipp_to_other_address)
+               ->with('shipp_to_other_pincode',$shipp_to_other_pincode)
+               ->with('cash_group_ids',$cash_group_ids);
 
+      }else{
+         return view('addSale')
+         ->with('current_financial_year',$current_financial_year)
+         ->with('fy_start_date', $fy_start_date)->with('config', $config)->with('itemGroups', $itemGroups)->with('accountunit', $accountunit)->with('series', $series)->with('state_list', $state_list)->with('allowedAccountGroups', $allowedAccountGroups)->with('credit_days', $credit_days)->with('fy_end_date', $fy_end_date)->with('party_list', $party_list)->with('billsundry', $billsundry)->with('bill_date', $bill_date)->with('GstSettings', $GstSettings)->with('item', $item)->with('bill_to_id', $bill_to_id)->with('shipp_to_id', $shipp_to_id)->with('freight', $freight)->with('sale_order_id', $sale_order_id)->with('sale_order_items',$sale_order_items)->with('sale_enter_data',$sale_enter_data)->with('new_order',$new_order)->with('production_module_status',$production_module_status)->with('bill_to_address_id',$bill_to_address_id)->with('shipp_to_address_id',$shipp_to_address_id)->with('shipp_to_other_address',$shipp_to_other_address)->with('shipp_to_other_pincode',$shipp_to_other_pincode)->with('cash_group_ids',$cash_group_ids);
       }
-      else{return view('addSale')
-      ->with('current_financial_year',$current_financial_year)
-      ->with('fy_start_date', $fy_start_date)->with('config', $config)->with('itemGroups', $itemGroups)->with('accountunit', $accountunit)->with('series', $series)->with('state_list', $state_list)->with('allowedAccountGroups', $allowedAccountGroups)->with('credit_days', $credit_days)->with('fy_end_date', $fy_end_date)->with('party_list', $party_list)->with('billsundry', $billsundry)->with('bill_date', $bill_date)->with('GstSettings', $GstSettings)->with('item', $item)->with('bill_to_id', $bill_to_id)->with('shipp_to_id', $shipp_to_id)->with('freight', $freight)->with('sale_order_id', $sale_order_id)->with('sale_order_items',$sale_order_items)->with('sale_enter_data',$sale_enter_data)->with('new_order',$new_order)->with('production_module_status',$production_module_status)->with('bill_to_address_id',$bill_to_address_id)->with('shipp_to_address_id',$shipp_to_address_id)->with('shipp_to_other_address',$shipp_to_other_address)->with('shipp_to_other_pincode',$shipp_to_other_pincode)->with('cash_group_ids',$cash_group_ids);
-    }
    }
    
    public function store(Request $request){
@@ -701,9 +704,7 @@ class SalesController extends Controller
          $desc_id_arr = [];$item_quantity_total = 0;
          $pricewithgst = $request->input('pricewithgst');
          $profit = $request->input('profit');
-         if(Session::get('user_company_id')==1){
-           //  dd($profit);
-         }
+         
          foreach($goods_discriptions as $key => $good){
             if($good=="" || $qtys[$key]=="" || $units[$key]=="" || $prices[$key]=="" || $amounts[$key]==""){
                continue;
@@ -1352,7 +1353,6 @@ if(array_key_exists($good,$sale_item_array)){
       if($request->query('item_arr')){
          $sale_order_items = json_decode($request->query('item_arr'),true);
       }
-      
       $sale_enter_data = [];
       if($request->query('item_arr')){
          $sale_enter_data = $request->query('sale_enter_data');
@@ -1526,7 +1526,7 @@ if(array_key_exists($good,$sale_item_array)){
                                  //->OrwhereIn('id',[1,2,3,8,9])
                                  ->orderBy('name')
                                  ->get();
-      $comp = Companies::select('user_id')
+      $comp = Companies::select('user_id','company_sale_type')
          ->where('id', Session::get('user_company_id'))
          ->first();
 
@@ -1625,36 +1625,36 @@ if(array_key_exists($good,$sale_item_array)){
          $shipp_to_address_id    = '';
          $shipp_to_other_address = '';
          $shipp_to_other_pincode = '';
-         if(Session::get('user_company_id')==37 || Session::get('user_company_id')==1){
-              return view('editsaleretail')
-            ->with('production_module_status', $production_module_status)
-            ->with('fy_start_date', $fy_start_date)
-            ->with('fy_end_date', $fy_end_date)
-            ->with('party_list', $party_list)
-            ->with('manageitems', $manageitems)
-            ->with('billsundry', $billsundry)
-            ->with('mat_center', $mat_center)
-            ->with('GstSettings', $GstSettings)
-            ->with('mat_series', $mat_series)
-            ->with('sale', $sale)
-            ->with('SaleDescription', $SaleDescription)
-            ->with('SaleSundry', $SaleSundry)
-            ->with('config',$config)
-            ->with('itemGroups', $itemGroups)
-            ->with('accountunit', $accountunit)
-            ->with('series', $series)
-            ->with('state_list', $state_list)
-            ->with('allowedAccountGroups', $allowedAccountGroups)
-            ->with('credit_days', $credit_days)
-            ->with('bill_to_id', $bill_to_id)
-            ->with('shipp_to_id', $shipp_to_id)
-            ->with('freight', $freight)
-            ->with('sale_order_id', $sale_order_id)
-            ->with('sale_order_items',$sale_order_items)
-            ->with('sale_enter_data',$sale_enter_data)
-            ->with('new_order',$new_order)
-            ->with('cash_group_ids',$cash_group_ids);
-         }else if(Session::get('user_company_id')==12 || Session::get('user_company_id')==1){
+         if($comp->company_sale_type=='RETAIL'){
+            return view('editsaleretail')
+                        ->with('production_module_status', $production_module_status)
+                        ->with('fy_start_date', $fy_start_date)
+                        ->with('fy_end_date', $fy_end_date)
+                        ->with('party_list', $party_list)
+                        ->with('manageitems', $manageitems)
+                        ->with('billsundry', $billsundry)
+                        ->with('mat_center', $mat_center)
+                        ->with('GstSettings', $GstSettings)
+                        ->with('mat_series', $mat_series)
+                        ->with('sale', $sale)
+                        ->with('SaleDescription', $SaleDescription)
+                        ->with('SaleSundry', $SaleSundry)
+                        ->with('config',$config)
+                        ->with('itemGroups', $itemGroups)
+                        ->with('accountunit', $accountunit)
+                        ->with('series', $series)
+                        ->with('state_list', $state_list)
+                        ->with('allowedAccountGroups', $allowedAccountGroups)
+                        ->with('credit_days', $credit_days)
+                        ->with('bill_to_id', $bill_to_id)
+                        ->with('shipp_to_id', $shipp_to_id)
+                        ->with('freight', $freight)
+                        ->with('sale_order_id', $sale_order_id)
+                        ->with('sale_order_items',$sale_order_items)
+                        ->with('sale_enter_data',$sale_enter_data)
+                        ->with('new_order',$new_order)
+                        ->with('cash_group_ids',$cash_group_ids);
+         }else if($comp->company_sale_type=='TAAROBAAR'){
             return view('edittaarobaarsale')
                ->with('production_module_status', $production_module_status)
                ->with('fy_start_date', $fy_start_date)
@@ -1689,34 +1689,34 @@ if(array_key_exists($good,$sale_item_array)){
                ->with('item', $manageitems)
                ->with('cash_group_ids',$cash_group_ids);
          }else{
-      return view('editSale')
-            ->with('production_module_status', $production_module_status)
-            ->with('fy_start_date', $fy_start_date)
-            ->with('fy_end_date', $fy_end_date)
-            ->with('party_list', $party_list)
-            ->with('manageitems', $manageitems)
-            ->with('billsundry', $billsundry)
-            ->with('mat_center', $mat_center)
-            ->with('GstSettings', $GstSettings)
-            ->with('mat_series', $mat_series)
-            ->with('sale', $sale)
-            ->with('SaleDescription', $SaleDescription)
-            ->with('SaleSundry', $SaleSundry)
-            ->with('config',$config)
-            ->with('itemGroups', $itemGroups)
-            ->with('accountunit', $accountunit)
-            ->with('series', $series)
-            ->with('state_list', $state_list)
-            ->with('allowedAccountGroups', $allowedAccountGroups)
-            ->with('credit_days', $credit_days)
-            ->with('bill_to_id', $bill_to_id)
-            ->with('shipp_to_id', $shipp_to_id)
-            ->with('freight', $freight)
-            ->with('sale_order_id', $sale_order_id)
-            ->with('sale_order_items',$sale_order_items)
-            ->with('sale_enter_data',$sale_enter_data)
-            ->with('new_order',$new_order)
-            ->with('cash_group_ids',$cash_group_ids);
+            return view('editSale')
+                     ->with('production_module_status', $production_module_status)
+                     ->with('fy_start_date', $fy_start_date)
+                     ->with('fy_end_date', $fy_end_date)
+                     ->with('party_list', $party_list)
+                     ->with('manageitems', $manageitems)
+                     ->with('billsundry', $billsundry)
+                     ->with('mat_center', $mat_center)
+                     ->with('GstSettings', $GstSettings)
+                     ->with('mat_series', $mat_series)
+                     ->with('sale', $sale)
+                     ->with('SaleDescription', $SaleDescription)
+                     ->with('SaleSundry', $SaleSundry)
+                     ->with('config',$config)
+                     ->with('itemGroups', $itemGroups)
+                     ->with('accountunit', $accountunit)
+                     ->with('series', $series)
+                     ->with('state_list', $state_list)
+                     ->with('allowedAccountGroups', $allowedAccountGroups)
+                     ->with('credit_days', $credit_days)
+                     ->with('bill_to_id', $bill_to_id)
+                     ->with('shipp_to_id', $shipp_to_id)
+                     ->with('freight', $freight)
+                     ->with('sale_order_id', $sale_order_id)
+                     ->with('sale_order_items',$sale_order_items)
+                     ->with('sale_enter_data',$sale_enter_data)
+                     ->with('new_order',$new_order)
+                     ->with('cash_group_ids',$cash_group_ids);
          }
    }
 
@@ -1903,30 +1903,29 @@ if(array_key_exists($good,$sale_item_array)){
       $configuration = SaleInvoiceConfiguration::with(['terms','banks'])->where('company_id',Session::get('user_company_id'))->first();
       // echo "<pre>";
       // print_r($seller_info);die;
-       Session::put('redirect_url', '');
-    
-        // Financial year processing
-        $financial_year = Session::get('default_fy');      
-        $y = explode("-", $financial_year);
-        $from = DateTime::createFromFormat('y', $y[0])->format('Y');
-        $to = DateTime::createFromFormat('y', $y[1])->format('Y');
-        $month_arr = [
-            $from.'-04', $from.'-05', $from.'-06', $from.'-07', $from.'-08', $from.'-09',
-            $from.'-10', $from.'-11', $from.'-12', $to.'-01', $to.'-02', $to.'-03'
-        ];
-         // Fetch sale order data for challan
-         $saleOrder = \App\Models\SaleOrder::with([
+      Session::put('redirect_url', '');    
+      // Financial year processing
+      $financial_year = Session::get('default_fy');      
+      $y = explode("-", $financial_year);
+      $from = DateTime::createFromFormat('y', $y[0])->format('Y');
+      $to = DateTime::createFromFormat('y', $y[1])->format('Y');
+      $month_arr = [
+         $from.'-04', $from.'-05', $from.'-06', $from.'-07', $from.'-08', $from.'-09',
+         $from.'-10', $from.'-11', $from.'-12', $to.'-01', $to.'-02', $to.'-03'
+      ];
+      // Fetch sale order data for challan
+      $saleOrder = \App\Models\SaleOrder::with([
             'billTo:id,print_name as account_name,gstin,address,pin_code,state,pan',
             'shippTo:id,print_name as account_name,gstin,address,pin_code,state,pan',
             'orderCreatedBy:id,name',
             'items.item:id,name,hsn_code',
             'items.unitMaster:id,s_name',
-         ])
-         ->where('id', $sale_detail->sale_order_id)
-         ->first();
-         if ($saleOrder) {
-            foreach ($saleOrder->items as $item) {
-               $item->itemSize = \DB::table('item_size_stocks')
+      ])
+      ->where('id', $sale_detail->sale_order_id)
+      ->first();
+      if ($saleOrder) {
+         foreach ($saleOrder->items as $item) {
+            $item->itemSize = \DB::table('item_size_stocks')
                      ->where('item_id', $item->item_id)
                      ->where(function ($query) use ($saleOrder, $id) {
                         $query->where('sale_order_id', $saleOrder->id)
@@ -1935,37 +1934,59 @@ if(array_key_exists($good,$sale_item_array)){
                      ->select('reel_no', 'size', 'gsm', 'bf', 'weight', 'unit')
                      ->get();
             }
-         } else {
-            $saleItems = \DB::table('sale_descriptions')
+      } else {
+         $saleItems = \DB::table('sale_descriptions')
                ->where('sale_id', $id)
                ->join('manage_items', 'sale_descriptions.goods_discription', '=', 'manage_items.id')
                ->select('manage_items.id as item_id', 'manage_items.name as item_name')
                ->get();
 
-            foreach ($saleItems as $item) {
-               $item->itemSize = \DB::table('item_size_stocks')
-                     ->where('item_id', $item->item_id)
-                     ->where('sale_id', $id)
-                     ->select('reel_no', 'size', 'gsm', 'bf', 'weight', 'unit')
-                     ->get();
-            }
+         foreach ($saleItems as $item) {
+            $item->itemSize = \DB::table('item_size_stocks')
+                  ->where('item_id', $item->item_id)
+                  ->where('sale_id', $id)
+                  ->select('reel_no', 'size', 'gsm', 'bf', 'weight', 'unit')
+                  ->get();
          }
-        $eway_bill_distance = "";
-        $e_waybill_distance = Sales::select('e_waybill_distance')
+      }
+      $eway_bill_distance = "";
+      $e_waybill_distance = Sales::select('e_waybill_distance')
                                     ->where('merchant_gst',$sale_detail->merchant_gst)
                                     ->where('billing_gst',$sale_detail->billing_gst)
                                     ->where('e_waybill_distance','!=','')
                                     ->first();
-        if($e_waybill_distance){
-            $eway_bill_distance = $e_waybill_distance->e_waybill_distance;
-        }
-        //Check Production Module Permission
-
-          $comp = Companies::select('user_id')->where('id',Session::get('user_company_id'))->first();
-          $production_module_status = MerchantModuleMapping::where('module_id',4)->where('merchant_id',$comp->user_id)->where('company_id', Session()->get('user_company_id'))->first();
-          $production_module_status = $production_module_status ? 1 : 0;
-        return view('saleInvoice')->with(['production_module_status'=>$production_module_status,'items_detail' => $items_detail, 'sale_sundry' => $sale_sundry, 'party_detail' => $party_detail,'month_arr' => $month_arr, 'company_data' => $company_data, 'sale_detail' => $sale_detail,'bank_detail' => $bank_detail,'gst_detail'=>$gst_detail,'einvoice_status'=>$GstSettings->einvoice,'ewaybill_status'=>$GstSettings->ewaybill,'configuration'=>$configuration,'seller_info'=>$seller_info,'saleOrder' => $saleOrder,"eway_bill_distance"=>$eway_bill_distance]);
-    }
+      if($e_waybill_distance){
+         $eway_bill_distance = $e_waybill_distance->e_waybill_distance;
+      }
+      //Check Production Module Permission
+      $comp = Companies::select('user_id')
+                        ->where('id',Session::get('user_company_id'))
+                        ->first();
+      $production_module_status = MerchantModuleMapping::where('module_id',4)
+                                                      ->where('merchant_id',$comp->user_id)
+                                                      ->where('company_id', Session()
+                                                      ->get('user_company_id'))
+                                                      ->first();
+      $production_module_status = $production_module_status ? 1 : 0;
+      return view('saleInvoice')
+            ->with([
+               'production_module_status'=>$production_module_status,
+               'items_detail' => $items_detail,
+               'sale_sundry' => $sale_sundry,
+               'party_detail' => $party_detail,
+               'month_arr' => $month_arr, 
+               'company_data' => $company_data,
+               'sale_detail' => $sale_detail,
+               'bank_detail' => $bank_detail,
+               'gst_detail'=>$gst_detail,
+               'einvoice_status'=>$GstSettings->einvoice,
+               'ewaybill_status'=>$GstSettings->ewaybill,
+               'configuration'=>$configuration,
+               'seller_info'=>$seller_info,
+               'saleOrder' => $saleOrder,
+               "eway_bill_distance"=>$eway_bill_distance
+            ]);
+   }
    public function delete(Request $request){
       Gate::authorize('action-module',62);
       $check_entry_in_cn_dn = DB::table('sales')

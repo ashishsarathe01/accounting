@@ -1000,7 +1000,8 @@ class CommonHelper
                     ]);
             }
         } else {
-            DB::table('item_daily_reel_stock')
+            if($in_reels >= 0 && $in_weight >= 0 && $out_reels >= 0 && $out_weight >= 0){
+                DB::table('item_daily_reel_stock')
                 ->insert([
                     'company_id' => $company_id,
                     'item_id' => $item_id,
@@ -1012,6 +1013,7 @@ class CommonHelper
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
+            }
         }
     }
 }

@@ -888,7 +888,7 @@ body {
         <p class="text-danger">No Sale or Sale Order item-size data found for this invoice.</p>
     @endif
 </div>
-@if(Session::get('user_company_id') == 1 || Session::get('user_company_id') == 12)
+@if($company_data->company_sale_type == 'TAAROBAAR')
 
 <div id="taarobaarChallanPrintSection"
      style="display:none; padding:20px; font-family:Arial, sans-serif; color:#000;">
@@ -1313,194 +1313,207 @@ console.log(companyName);
 
    $(document).on('click', '#printChallanBtn', function () {
       let companyId = "{{ Session::get('user_company_id') }}";
+      let company_sale_type = "{{ $company_data->company_sale_type }}";
+      
       let sectionId = 'challanPrintSection';
       let pageTitle = 'Packaging Slip';
-      if (companyId == 1 || companyId == 12) {
+      if (company_sale_type == "TAAROBAAR") {
          sectionId = 'taarobaarChallanPrintSection';
          pageTitle = 'Estimate';
       }
+      
       let printContents = document.getElementById(sectionId).innerHTML;
       let printWindow = window.open('', '', 'height=900,width=1200');
-      printWindow.document.write(`
-         <html>
-         <head>
-               <title>${pageTitle}</title>
-               <style>
-                  * {
-                     box-sizing: border-box;
-                     margin: 0;
-                     padding: 0;
-                  }
-                  body {
-                     font-family: Arial, sans-serif;
-                     color: #000;
-                     background: #fff;
-                  }
-                  table {
-                     width: 100%;
-                     border-collapse: collapse;
-                  }
-                  th, td {
-                     border: 1px solid #000;
-                     padding: 6px 8px;
-                     vertical-align: top;
-                  }
-                  thead {
-                     background: #f2f2f2;
-                  }
-                  .text-center { text-align: center; }
-                  .text-right  { text-align: right;  }
-                  .font-bold   { font-weight: bold;   }
-                  .total-row {
-                     font-weight: bold;
-                     background: #e8f5e9;
-                  }
-                  @media print and (orientation: portrait) {
-
-                     @page {
-                        margin: 6mm 8mm;
-                     }
-
-                     html, body {
-                        height: 100%;
-                        overflow: hidden;
-                     }
-
-                     body {
+      
+     
+      if (company_sale_type == "TAAROBAAR") {
+         printWindow.document.write(`
+            <html>
+            <head>
+                  <title>${pageTitle}</title>
+                  <style>
+                     * {
+                        box-sizing: border-box;
+                        margin: 0;
                         padding: 0;
                      }
-
-                     .challan-wrapper {
-                        display: flex;
-                        flex-direction: column;
-                        width: 100%;
-                        height: 99vh;
-                        gap: 3mm;
-                     }
-
-                     .challan-copy {
-                        flex: 1 1 0;
-                        min-height: 0;
-                        overflow: hidden;
-                        border: 1px solid #000;
-                        padding: 4px 6px;
-                        page-break-inside: avoid;
-                        break-inside: avoid;
-                     }
-
-                     .challan-divider {
-                        display: block;
-                        height: 0;
-                        border-top: 1px dashed #aaa;
-                        margin: 0;
-                        flex-shrink: 0;
-                     }
-
-                     /* Compress everything to fit both halves */
-                     table { font-size: 10px; }
-                     th, td { padding: 2px 4px; }
-                     h3 { font-size: 12px; margin: 0; }
-                     h4 { font-size: 11px; margin: 0 0 1px 0; }
-                     p, div { font-size: 10px; line-height: 1.2; }
-                     .header-row { margin-bottom: 1px; font-size: 10px; }
-                     .final-totals { font-size: 10px; margin-top: 2px; }
-                     hr { margin: 1px 0; }
-
-                     /* Compress party + challan header row */
-                     .header-row > div { padding: 0; }
-
-                     /* Hide D/L row entirely */
-                     .dl-row { display: none !important; }
-
-                     /* Tighten the two-column item grid */
-                     .two-column {
-                        display: grid;
-                        grid-template-columns: 1fr 1fr;
-                        gap: 3px;
-                     }
-
-                     .item-block {
-                        padding: 1px 2px;
-                        margin-bottom: 1px;
-                     }
-                  }
-                  @media print and (orientation: landscape) {
-                     @page {
-                           margin: 10mm 12mm;
-                     }
                      body {
-                           padding: 0;
+                        font-family: Arial, sans-serif;
+                        color: #000;
+                        background: #fff;
                      }
-                     .challan-wrapper {
-                           display: flex;
-                           flex-direction: row;
-                           gap: 0;
-                           width: 100%;
+                     table {
+                        width: 100%;
+                        border-collapse: collapse;
+                     }
+                     th, td {
+                        border: 1px solid #000;
+                        padding: 6px 8px;
+                        vertical-align: top;
+                     }
+                     thead {
+                        background: #f2f2f2;
+                     }
+                     .text-center { text-align: center; }
+                     .text-right  { text-align: right;  }
+                     .font-bold   { font-weight: bold;   }
+                     .total-row {
+                        font-weight: bold;
+                        background: #e8f5e9;
+                     }
+                     @media print and (orientation: portrait) {
+
+                        @page {
+                           margin: 6mm 8mm;
+                        }
+
+                        html, body {
                            height: 100%;
-                           align-items: flex-start;
-                     }
-                     .challan-copy {
+                           overflow: hidden;
+                        }
+
+                        body {
+                           padding: 0;
+                        }
+
+                        .challan-wrapper {
+                           display: flex;
+                           flex-direction: column;
+                           width: 100%;
+                           height: 99vh;
+                           gap: 3mm;
+                        }
+
+                        .challan-copy {
                            flex: 1 1 0;
-                           min-width: 0;
+                           min-height: 0;
+                           overflow: hidden;
                            border: 1px solid #000;
-                           padding: 8px;
+                           padding: 4px 6px;
                            page-break-inside: avoid;
                            break-inside: avoid;
-                     }
-                     .challan-divider {
-                           width: 10mm;
-                           flex-shrink: 0;
+                        }
+
+                        .challan-divider {
                            display: block;
-                           /* vertical dotted cut-line between the two copies */
-                           border-left: 1px dashed #aaa;
+                           height: 0;
+                           border-top: 1px dashed #aaa;
+                           margin: 0;
+                           flex-shrink: 0;
+                        }
+
+                        /* Compress everything to fit both halves */
+                        table { font-size: 10px; }
+                        th, td { padding: 2px 4px; }
+                        h3 { font-size: 12px; margin: 0; }
+                        h4 { font-size: 11px; margin: 0 0 1px 0; }
+                        p, div { font-size: 10px; line-height: 1.2; }
+                        .header-row { margin-bottom: 1px; font-size: 10px; }
+                        .final-totals { font-size: 10px; margin-top: 2px; }
+                        hr { margin: 1px 0; }
+
+                        /* Compress party + challan header row */
+                        .header-row > div { padding: 0; }
+
+                        /* Hide D/L row entirely */
+                        .dl-row { display: none !important; }
+
+                        /* Tighten the two-column item grid */
+                        .two-column {
+                           display: grid;
+                           grid-template-columns: 1fr 1fr;
+                           gap: 3px;
+                        }
+
+                        .item-block {
+                           padding: 1px 2px;
+                           margin-bottom: 1px;
+                        }
+                     }
+                     @media print and (orientation: landscape) {
+                        @page {
+                              margin: 10mm 12mm;
+                        }
+                        body {
+                              padding: 0;
+                        }
+                        .challan-wrapper {
+                              display: flex;
+                              flex-direction: row;
+                              gap: 0;
+                              width: 100%;
+                              height: 100%;
+                              align-items: flex-start;
+                        }
+                        .challan-copy {
+                              flex: 1 1 0;
+                              min-width: 0;
+                              border: 1px solid #000;
+                              padding: 8px;
+                              page-break-inside: avoid;
+                              break-inside: avoid;
+                        }
+                        .challan-divider {
+                              width: 10mm;
+                              flex-shrink: 0;
+                              display: block;
+                              /* vertical dotted cut-line between the two copies */
+                              border-left: 1px dashed #aaa;
+                              align-self: stretch;
+                              margin: 0 2mm;
+                        }
+                        table { font-size: 11px; }
+                        th, td { padding: 4px 5px; }
+                     }
+                     @media screen {
+                        body { padding: 10px; background: #eee; }
+                        .challan-wrapper {
+                           display: flex;
+                           flex-direction: row;
+                           gap: 10px;
+                           flex-wrap: wrap;
+                        }
+                        .challan-copy {
+                           flex: 1 1 360px;
+                           background: #fff;
+                           border: 1px solid #000;
+                           padding: 10px;
+                           min-width: 280px;
+                        }
+                        .challan-divider {
+                           width: 1px;
+                           background: #ccc;
                            align-self: stretch;
-                           margin: 0 2mm;
+                        }
+                        .dl-row { display: none !important; }
                      }
-                     table { font-size: 11px; }
-                     th, td { padding: 4px 5px; }
-                  }
-                  @media screen {
-                     body { padding: 10px; background: #eee; }
-                     .challan-wrapper {
-                        display: flex;
-                        flex-direction: row;
-                        gap: 10px;
-                        flex-wrap: wrap;
-                     }
-                     .challan-copy {
-                        flex: 1 1 360px;
-                        background: #fff;
-                        border: 1px solid #000;
-                        padding: 10px;
-                        min-width: 280px;
-                     }
-                     .challan-divider {
-                        width: 1px;
-                        background: #ccc;
-                        align-self: stretch;
-                     }
-                     .dl-row { display: none !important; }
-                  }
-               </style>
-         </head>
-         <body>
-               <div class="challan-wrapper">
-                  <div class="challan-copy">
-                     ${printContents}
+                  </style>
+            </head>
+            <body>
+                  <div class="challan-wrapper">
+                     <div class="challan-copy">
+                        ${printContents}
+                     </div>
+                     <div class="challan-divider"></div>
+                     <div class="challan-copy">
+                        ${printContents}
+                     </div>
                   </div>
-                  <div class="challan-divider"></div>
-                  <div class="challan-copy">
-                     ${printContents}
-                  </div>
-               </div>
-         </body>
-         </html>
-      `);
-      printWindow.document.close();
-      printWindow.focus();
-      setTimeout(function () {
+            </body>
+            </html>
+         `);
+         printWindow.document.close();
+         printWindow.focus();
+         setTimeout(function () {
+            printWindow.print();
+         }, 600);
+      }else{
+         printWindow.document.write('<html><head><title>Packaging Slip</title></head><body>');
+         printWindow.document.write(printContents);
+         printWindow.document.write('</body></html>');
+         printWindow.document.close();
          printWindow.print();
-      }, 600);
+      }
    });
    
    function openGmailWithInvoice(id, email, voucherNo) {
