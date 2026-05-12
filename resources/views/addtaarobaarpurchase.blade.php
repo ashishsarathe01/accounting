@@ -180,7 +180,7 @@
                               <select class="form-control item_id select2-single" name="goods_discription[]" id="item_id_1" data-id="1" data-modal="itemModal">
                                  <option value="">Select Item</option>
                                  @foreach($items as $item_list)
-                                    <option value="{{$item_list->id}}" data-unit_id="{{$item_list->u_name}}" data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id="{{$item_list->id}}" data-itemid="{{$item_list->id}}"  data-parameterized_stock_status="{{$item_list->parameterized_stock_status}}" data-config_status="{{$item_list->config_status}}" data-group_id="{{$item_list->group_id}}" data-dual_unit="{{$item_list->dual_unit}}">{{$item_list->name}}</option>
+                                    <option value="{{$item_list->id}}" data-unit_id="{{$item_list->u_name}}" data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id="{{$item_list->id}}" data-itemid="{{$item_list->id}}"  data-parameterized_stock_status="{{$item_list->parameterized_stock_status}}" data-config_status="{{$item_list->config_status}}" data-dual_unit="{{$item_list->dual_unit}}" data-fixed_weight="{{$item_list->fixed_weight ?? 0}}" data-fixed_weight_value="{{$item_list->fixed_weight_value ?? 0}}">{{$item_list->name}}</option>
                                  @endforeach
                               </select>
                               <span id="gst_rate_span_1" style="color: red;"></span>
@@ -196,7 +196,7 @@
                                  name="weight[]"
                                  placeholder="Weight"
                                  style="text-align:right;"
-                                 readonly />
+                                  />
                            </td>
                            <td class=" w-min-50">
                               <input type="text" class="w-100 form-control unit" id="unit_tr_1" readonly style="text-align:center;" data-id="1"/>
@@ -213,7 +213,9 @@
                            </td>
                            <input type="hidden" name="item_parameters[]" id="item_parameters_1">
                            <input type="hidden" name="config_status[]" id="config_status_1">
-                           
+                           <input type="hidden" name="dual_unit[]" id="dual_unit_1" value="0">
+                           <input type="hidden" name="fixed_weight[]" id="fixed_weight_1" value="0">
+                           <input type="hidden" name="fixed_weight_value[]" id="fixed_weight_value_1" value="0">
                         </tr>
                      </tbody>
                      
@@ -1071,9 +1073,9 @@
       add_more_count++;
       var optionElements = $('#goods_discription_tr_1').html();
       var tr_id = 'tr_' + add_more_count;
-      newRow = '<tr id="tr_' + add_more_count + '" class="font-14 font-heading bg-white"><td class="w-min-50">' + add_more_count + '</td><td class=""><select class="form-control item_id select2-single" name="goods_discription[]" id="item_id_' + add_more_count + '" data-id="' + add_more_count + '" data-modal="itemModal"><option value="">Select Item</option>@foreach($items as $item_list)<option value="{{$item_list->id}}" data-unit_id="{{$item_list->u_name}}" data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id="{{$item_list->id}}" data-itemid="{{$item_list->id}}"  data-parameterized_stock_status="{{$item_list->parameterized_stock_status}}" data-config_status="{{$item_list->config_status}}" data-group_id="{{$item_list->group_id}}" data-dual_unit="{{$item_list->dual_unit}}">{{$item_list->name}}</option>@endforeach</select>';
+      newRow = '<tr id="tr_' + add_more_count + '" class="font-14 font-heading bg-white"><td class="w-min-50">' + add_more_count + '</td><td class=""><select class="form-control item_id select2-single" name="goods_discription[]" id="item_id_' + add_more_count + '" data-id="' + add_more_count + '" data-modal="itemModal"><option value="">Select Item</option>@foreach($items as $item_list)<option value="{{$item_list->id}}" data-unit_id="{{$item_list->u_name}}" data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id="{{$item_list->id}}" data-itemid="{{$item_list->id}}"  data-parameterized_stock_status="{{$item_list->parameterized_stock_status}}" data-config_status="{{$item_list->config_status}}" data-group_id="{{$item_list->group_id}}" data-dual_unit="{{$item_list->dual_unit}}" data-fixed_weight="{{$item_list->fixed_weight ?? 0}}" data-fixed_weight_value="{{$item_list->fixed_weight_value ?? 0}}" >{{$item_list->name}}</option>@endforeach</select>';
       //newRow += optionElements;
-      newRow += '<span id="gst_rate_span_' + add_more_count + '" style="color: red;"></span></td><td class=""><input type="number" step="any" class="quantity w-100 form-control" name="qty[]" id="quantity_tr_' + add_more_count + '" placeholder="Quantity" style="text-align:right;" /></td><td class="w-min-50"><input type="number" step="any" class="weight w-100 form-control" name="weight[]" id="weight_tr_' + add_more_count + '" placeholder="Weight" style="text-align:right;" readonly /></td><td class="w-min-50"><input type="text" class="w-100 form-control unit" id="unit_tr_'+add_more_count+'" readonly style="text-align:center;" data-id="'+add_more_count+'"/><input type="hidden" class="units w-100" name="units[]" id="units_tr_' + add_more_count + '"/></td><td class="w-min-50"><input type="number" step="any" class="price w-100 form-control" name="price[]" id="price_tr_' + add_more_count + '" placeholder="Price" style="text-align:right;" /></td><td class="w-min-50"><input type="number" step="any" class="amount w-100 form-control" name="amount[]" id="amount_tr_' + add_more_count + '" data-id="' + add_more_count + '" placeholder="Amount" style="text-align:right;" /></td><td class="w-min-50" style="display:flex"></td><input type="hidden" name="item_parameters[]" id="item_parameters_'+add_more_count+'"><input type="hidden" name="config_status[]" id="config_status_'+add_more_count+'"></tr>';      $("#max_sale_descrption").val(add_more_count);
+      newRow += '<span id="gst_rate_span_' + add_more_count + '" style="color: red;"></span></td><td class=""><input type="number" step="any" class="quantity w-100 form-control" name="qty[]" id="quantity_tr_' + add_more_count + '" placeholder="Quantity" style="text-align:right;" /></td><td class="w-min-50"><input type="number" step="any" class="weight w-100 form-control" name="weight[]" id="weight_tr_' + add_more_count + '" placeholder="Weight" style="text-align:right;"  /></td><td class="w-min-50"><input type="text" class="w-100 form-control unit" id="unit_tr_'+add_more_count+'" readonly style="text-align:center;" data-id="'+add_more_count+'"/><input type="hidden" class="units w-100" name="units[]" id="units_tr_' + add_more_count + '"/></td><td class="w-min-50"><input type="number" step="any" class="price w-100 form-control" name="price[]" id="price_tr_' + add_more_count + '" placeholder="Price" style="text-align:right;" /></td><td class="w-min-50"><input type="number" step="any" class="amount w-100 form-control" name="amount[]" id="amount_tr_' + add_more_count + '" data-id="' + add_more_count + '" placeholder="Amount" style="text-align:right;" /></td><td class="w-min-50" style="display:flex"></td><input type="hidden" name="item_parameters[]" id="item_parameters_'+add_more_count+'"><input type="hidden" name="config_status[]" id="config_status_'+add_more_count+'"><input type="hidden" name="dual_unit[]" id="dual_unit_'+add_more_count+'" value="0"><input type="hidden" name="fixed_weight[]" id="fixed_weight_'+add_more_count+'" value="0"><input type="hidden" name="fixed_weight_value[]" id="fixed_weight_value_'+add_more_count+'" value="0"></tr>';      $("#max_sale_descrption").val(add_more_count);
       $("#purchase_tbl").append(newRow);
       
       let k = 1;
@@ -1168,7 +1170,63 @@
     calculateAmount();
   });
 }
-  
+   $(document).on('change input', '.item_id, .quantity', function () {
+
+      let row_id;
+
+      if ($(this).hasClass('item_id')) {
+         row_id = $(this).data('id');
+      } else {
+         row_id = $(this).attr('id').split('_').pop();
+      }
+
+      let selected = $('#item_id_' + row_id + ' option:selected');
+
+      let dual_unit = parseInt(selected.data('dual_unit')) || 0;
+
+      let fixed_weight = parseInt(selected.data('fixed_weight')) || 0;
+
+      let fixed_weight_value = parseFloat(selected.data('fixed_weight_value')) || 0;
+
+      let qty = parseFloat($('#quantity_tr_' + row_id).val()) || 0;
+
+      $('#dual_unit_' + row_id).val(dual_unit);
+
+      $('#fixed_weight_' + row_id).val(fixed_weight);
+
+      $('#fixed_weight_value_' + row_id).val(fixed_weight_value);
+
+      // DUAL UNIT NO
+      if (dual_unit == 0) {
+
+         $('#weight_tr_' + row_id)
+               .val('')
+               .prop('readonly', true);
+
+      }
+
+      // DUAL UNIT YES + FIXED WEIGHT YES
+      else if (dual_unit == 1 && fixed_weight == 1) {
+
+         let total_weight = qty * fixed_weight_value;
+
+         $('#weight_tr_' + row_id)
+               .val(total_weight)
+               .prop('readonly', true);
+
+      }
+
+      // DUAL UNIT YES + FIXED WEIGHT NO
+      else {
+
+         $('#weight_tr_' + row_id)
+               .prop('readonly', false);
+
+      }
+
+      calculateAmount();
+
+   });
       
    $(document).ready(function(){
        var mat_series = "<?php echo count($GstSettings);?>";
@@ -1211,7 +1269,8 @@
             var quantity = parseFloat($(this).find('.quantity').val()) || 0;
             var weight = parseFloat($(this).find('.weight').val()) || 0;
 
-            var dualUnit = $(this).attr('data-dual_unit');
+            let rowId = $(this).find('.item_id').data('id');
+            var dualUnit = $('#dual_unit_' + rowId).val();
 
             if(key=="A"){
 
@@ -3309,6 +3368,76 @@ $('#modal_gstin').on('change', function () {
             getItemGstRate(item_id,index);
          }
       });   
+   });
+   $(document).on('change', '.item_id', function () {
+
+      let row_id = $(this).data('id');
+
+      let selected = $(this).find(':selected');
+
+      let dual_unit = parseInt(selected.data('dual_unit')) || 0;
+
+      let fixed_weight = parseInt(selected.data('fixed_weight')) || 0;
+
+      let fixed_weight_value = parseFloat(selected.data('fixed_weight_value')) || 0;
+
+      $('#dual_unit_' + row_id).val(dual_unit);
+
+      $('#fixed_weight_' + row_id).val(fixed_weight);
+
+      $('#fixed_weight_value_' + row_id).val(fixed_weight_value);
+
+      // Dual Unit NO
+      if (dual_unit == 0) {
+
+         $('#weight_tr_' + row_id).val('');
+
+         $('#weight_tr_' + row_id).prop('readonly', true);
+      }
+
+      // Dual Unit YES + Fixed Weight YES
+      else if (fixed_weight == 1) {
+
+         let qty = parseFloat($('#quantity_tr_' + row_id).val()) || 0;
+
+         let total_weight = qty * fixed_weight_value;
+
+         $('#weight_tr_' + row_id).val(total_weight > 0 ? total_weight : '');
+
+         $('#weight_tr_' + row_id).prop('readonly', true);
+      }
+
+      // Dual Unit YES + Fixed Weight NO
+      else {
+
+         $('#weight_tr_' + row_id).prop('readonly', false);
+      }
+
+      calculateAmount();
+
+   });
+   $(document).on('input', '.quantity', function () {
+
+      let row_id = $(this).attr('id').split('_').pop();
+
+      let dual_unit = parseInt($('#dual_unit_' + row_id).val()) || 0;
+
+      let fixed_weight = parseInt($('#fixed_weight_' + row_id).val()) || 0;
+
+      let fixed_weight_value = parseFloat($('#fixed_weight_value_' + row_id).val()) || 0;
+
+      let qty = parseFloat($(this).val()) || 0;
+
+      // Dual Unit YES + Fixed Weight YES
+      if (dual_unit == 1 && fixed_weight == 1) {
+
+         let total_weight = qty * fixed_weight_value;
+
+         $('#weight_tr_' + row_id).val(total_weight > 0 ? total_weight : '');
+      }
+
+      calculateAmount();
+
    });
    $(document).on('change', '.item_id', function () {
 

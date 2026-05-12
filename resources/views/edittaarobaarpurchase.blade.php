@@ -52,7 +52,7 @@
 <?php
 $item_list = '<option value="">Select</option>';
 foreach ($manageitems as $value) {
-   $item_list.='<option unit_id="'.$value->u_name.'" data-val="'.$value->unit.'" data-percent="'.$value->gst_rate.'" value="'.$value->id.'" data-parameterized_stock_status="'.$value->parameterized_stock_status.'" data-config_status="'.$value->config_status.'" data-group_id="'.$value->group_id.'" data-dual_unit="'.$value->dual_unit.'">'.$value->name.'</option>';
+   $item_list.='<option unit_id="'.$value->u_name.'" data-val="'.$value->unit.'" data-percent="'.$value->gst_rate.'" value="'.$value->id.'" data-parameterized_stock_status="'.$value->parameterized_stock_status.'" data-config_status="'.$value->config_status.'" data-group_id="'.$value->group_id.'" data-dual_unit="'.$value->dual_unit.'" data-fixed_weight="'.($value->fixed_weight ?? 0).'" data-fixed_weight_value="'.($value->fixed_weight_value ?? 0).'">'.$value->name.'</option>';
 } ?>
 <div class="list-of-view-company ">
    <section class="list-of-view-company-section container-fluid">
@@ -181,7 +181,7 @@ foreach ($manageitems as $value) {
                                     <option value="">Select</option>
                                     <?php
                                     foreach ($manageitems as $value) { ?>
-                                       <option value="{{$value->id}}" unit_id="<?php echo $value->u_name; ?>" data-val="<?php echo $value->unit; ?>" data-percent="<?php echo $value->gst_rate; ?>" value="<?php echo $value->id; ?>" <?php if($value->id==$item->goods_discription){ echo "selected";} ?> data-parameterized_stock_status="{{$value->parameterized_stock_status}}" data-config_status="{{$value->config_status}}" data-group_id="{{$value->group_id}}" data-dual_unit="{{$value->dual_unit}}"><?php echo $value->name; ?></option>
+                                       <option value="{{$value->id}}" unit_id="<?php echo $value->u_name; ?>" data-val="<?php echo $value->unit; ?>" data-percent="<?php echo $value->gst_rate; ?>" value="<?php echo $value->id; ?>" <?php if($value->id==$item->goods_discription){ echo "selected";} ?> data-parameterized_stock_status="{{$value->parameterized_stock_status}}" data-config_status="{{$value->config_status}}" data-group_id="{{$value->group_id}}" data-dual_unit="{{$value->dual_unit}}" data-fixed_weight="{{$value->fixed_weight ?? 0}}" data-fixed_weight_value="{{$value->fixed_weight_value ?? 0}}"><?php echo $value->name; ?></option>
                                        <?php 
                                     } ?>
                                  </select>
@@ -204,7 +204,6 @@ foreach ($manageitems as $value) {
                                     name="weight[]"
                                     value="{{ $item->dual_unit == 1 ? $item->qty : '' }}"
                                     style="text-align:right"
-                                    @if($item->dual_unit != 1) readonly @endif
                                  />
                               </td>
                               <td class=" w-min-50">
@@ -274,6 +273,14 @@ foreach ($manageitems as $value) {
                               @endphp
                               <input type="hidden" name="item_parameters[]" id="item_parameters_tr_{{ $i }}" value="{{json_encode($final)}}">
                               <input type="hidden" name="config_status[]" id="config_status_tr_{{ $i }}">
+                              <input type="hidden" name="dual_unit[]" id="dual_unit_{{$i}}" value="{{$item->dual_unit ?? 0}}">
+                              @php
+                                 $selected_item = $manageitems->where('id', $item->goods_discription)->first();
+                              @endphp
+
+                              <input type="hidden" name="fixed_weight[]" id="fixed_weight_{{$i}}" value="{{$selected_item->fixed_weight ?? 0}}">
+
+                              <input type="hidden" name="fixed_weight_value[]" id="fixed_weight_value_{{$i}}" value="{{$selected_item->fixed_weight_value ?? 0}}">
                            </tr>
                            @php $i++; $total = $total + $item->amount; @endphp
                         @endforeach
@@ -1135,6 +1142,67 @@ foreach ($manageitems as $value) {
    var add_more_count = '<?php echo --$i;?>';
    var add_more_counts = 1;
    var add_more_bill_sundry_up_count = '<?php echo --$index;?>';
+   $(document).ready(function () {
+
+    $('[id^="goods_discription_tr_"]').each(function () {
+
+        let row_id = $(this).attr('id').split('_').pop();
+
+        let selected = $(this).find(':selected');
+
+        let dual_unit = parseInt(selected.data('dual_unit')) || 0;
+
+        let fixed_weight = parseInt(selected.data('fixed_weight')) || 0;
+
+        let fixed_weight_value = parseFloat(selected.data('fixed_weight_value')) || 0;
+
+        $('#dual_unit_' + row_id).val(dual_unit);
+
+        $('#fixed_weight_' + row_id).val(fixed_weight);
+
+        $('#fixed_weight_value_' + row_id).val(fixed_weight_value);
+
+        if (dual_unit == 0) {
+
+            $('#weight_tr_' + row_id)
+                .val('')
+                .prop('readonly', true);
+
+        }
+
+         else if (dual_unit == 1 && fixed_weight == 1) {
+
+            let qty = parseFloat($('#quantity_tr_' + row_id).val()) || 0;
+
+            let total_weight = qty * fixed_weight_value;
+
+            $('#weight_tr_' + row_id)
+               .val(total_weight)
+               .attr('readonly', true)
+               .prop('readonly', true);
+
+         }
+
+               // DUAL UNIT YES + FIXED WEIGHT NO
+         else {
+
+            $('#weight_tr_' + row_id)
+               .prop('readonly', false);
+
+         }
+
+         // FORCE readonly for fixed weight items
+         if (dual_unit == 1 && fixed_weight == 1) {
+
+            $('#weight_tr_' + row_id)
+               .attr('readonly', true)
+               .prop('readonly', true);
+
+         }
+
+      });
+
+   });
    var noGSTGroups = @json($no_gst_group_ids);
    function addMoreItem() {   
       let empty_status = 0;
@@ -1156,8 +1224,7 @@ foreach ($manageitems as $value) {
       var tr_id = 'tr_' + add_more_count;
       newRow = '<tr id="tr_' + add_more_count + '" class="font-14 font-heading bg-white" data-dual_unit="0"><td class="w-min-50" id="srn_'+add_more_count+'">' + srn + '</td><td class=""><select onchange="call_fun(\'tr_' + add_more_count + '\');" id="goods_discription_tr_' + add_more_count + '" class="border-0 w-95-parsent goods_items" name="goods_discription[]" required data-id="'+add_more_count+'" data-modal="itemModal">';
       newRow += optionElements;
-      newRow += '</select><span id="gst_rate_span_' + add_more_count + '" style="color:red;"></span></td><td class="w-min-50"><input type="number" data-id="'+add_more_count+'" class="quantity w-100 form-control" name="qty[]" id="quantity_tr_' + add_more_count + '" style="text-align:right"></td><td class="w-min-50"><input type="number" step="any" class="weight w-100 form-control" name="weight[]" id="weight_tr_' + add_more_count + '" style="text-align:right" readonly></td><td class="w-min-50"><input type="text" class="w-100 form-control unit" data-id="'+add_more_count+'" id="unit_tr_'+add_more_count+'" readonly style="text-align:center;"><input type="hidden" class="units w-100" name="units[]" id="units_tr_' + add_more_count + '"></td><td class="w-min-50"><input type="number" class="price w-100 form-control" data-id="'+add_more_count+'" name="price[]" id="price_tr_' + add_more_count + '" style="text-align:right"></td><td class="w-min-50"><input type="number" class="amount w-100 form-control" name="amount[]" data-id="'+ add_more_count +'" id="amount_tr_' + add_more_count + '" style="text-align:right"></td><td class="w-min-50" style="display:flex"></td><input type="hidden" name="item_parameters[]" id="item_parameters_tr_' + add_more_count + '"><input type="hidden" name="config_status[]" id="config_status_tr_' + add_more_count + '"></tr>';
-      $("#max_sale_descrption").val(add_more_count);
+      newRow += '</select><span id="gst_rate_span_' + add_more_count + '" style="color:red;"></span></td><td class="w-min-50"><input type="number" data-id="'+add_more_count+'" class="quantity w-100 form-control" name="qty[]" id="quantity_tr_' + add_more_count + '" style="text-align:right"></td><td class="w-min-50"><input type="number" step="any" class="weight w-100 form-control" name="weight[]" id="weight_tr_' + add_more_count + '" style="text-align:right"></td><td class="w-min-50"><input type="text" class="w-100 form-control unit" data-id="'+add_more_count+'" id="unit_tr_'+add_more_count+'" readonly style="text-align:center;"><input type="hidden" class="units w-100" name="units[]" id="units_tr_' + add_more_count + '"></td><td class="w-min-50"><input type="number" class="price w-100 form-control" data-id="'+add_more_count+'" name="price[]" id="price_tr_' + add_more_count + '" style="text-align:right"></td><td class="w-min-50"><input type="number" class="amount w-100 form-control" name="amount[]" data-id="'+ add_more_count +'" id="amount_tr_' + add_more_count + '" style="text-align:right"></td><td class="w-min-50" style="display:flex"></td><input type="hidden" name="item_parameters[]" id="item_parameters_tr_' + add_more_count + '"><input type="hidden" name="config_status[]" id="config_status_tr_' + add_more_count + '"><input type="hidden" name="dual_unit[]" id="dual_unit_' + add_more_count + '" value="0"><input type="hidden" name="fixed_weight[]" id="fixed_weight_' + add_more_count + '" value="0"><input type="hidden" name="fixed_weight_value[]" id="fixed_weight_value_' + add_more_count + '" value="0"></tr>';      $("#max_sale_descrption").val(add_more_count);
       $("#example11").append(newRow);
       $("#goods_discription_tr_"+add_more_count).select2();
       let k = 1;
@@ -1855,6 +1922,82 @@ foreach ($manageitems as $value) {
          }
          return;         
       }
+      $(document).on('change input', '.goods_items, .quantity', function () {
+
+    let row_id;
+
+    if ($(this).hasClass('goods_items')) {
+        row_id = $(this).data('id');
+    } else {
+        row_id = $(this).attr('id').split('_').pop();
+    }
+
+    let selected = $('#goods_discription_tr_' + row_id + ' option:selected');
+
+    let dual_unit = parseInt(selected.data('dual_unit')) || 0;
+
+    let fixed_weight = parseInt(selected.data('fixed_weight')) || 0;
+
+    let fixed_weight_value = parseFloat(selected.data('fixed_weight_value')) || 0;
+
+    let qty = parseFloat($('#quantity_tr_' + row_id).val()) || 0;
+
+    $('#dual_unit_' + row_id).val(dual_unit);
+
+    $('#fixed_weight_' + row_id).val(fixed_weight);
+
+    $('#fixed_weight_value_' + row_id).val(fixed_weight_value);
+
+    // DUAL UNIT NO
+    if (dual_unit == 0) {
+
+        $('#weight_tr_' + row_id)
+            .val('')
+            .prop('readonly', true);
+
+    }
+
+    // DUAL UNIT YES + FIXED WEIGHT YES
+    // DUAL UNIT YES + FIXED WEIGHT YES
+else if (dual_unit == 1 && fixed_weight == 1) {
+
+    let qty = parseFloat($('#quantity_tr_' + row_id).val()) || 0;
+
+    let total_weight = qty * fixed_weight_value;
+
+    $('#weight_tr_' + row_id)
+        .val(total_weight)
+        .attr('readonly', true)
+        .prop('readonly', true);
+
+}
+
+    // DUAL UNIT YES + FIXED WEIGHT NO
+else {
+
+    $('#weight_tr_' + row_id)
+        .prop('readonly', false);
+
+}
+
+// FORCE readonly again
+if (dual_unit == 1 && fixed_weight == 1) {
+
+    $('#weight_tr_' + row_id)
+        .attr('readonly', true)
+        .prop('readonly', true);
+
+}
+
+    calculateAmount();
+
+});
+
+$(document).ready(function(){
+
+    $('.quantity').trigger('input');
+
+});
       $(document).ready(function() {
          let si = "";
          $('.add_sundry_btn_class').each(function(){  
@@ -1985,12 +2128,35 @@ foreach ($manageitems as $value) {
 
             $('#' + data).attr('data-dual_unit', dual_unit);
 
-            if(dual_unit == 1){
+            let fixed_weight = $('#goods_discription_' + data + ' option:selected').attr('data-fixed_weight');
+
+            let fixed_weight_value = parseFloat(
+               $('#goods_discription_' + data + ' option:selected').attr('data-fixed_weight_value')
+            ) || 0;
+
+            let qty = parseFloat($('#quantity_' + data).val()) || 0;
+
+            // DUAL UNIT YES + FIXED WEIGHT YES
+            if (dual_unit == 1 && fixed_weight == 1) {
+
+               let total_weight = qty * fixed_weight_value;
+
+               $('#weight_' + data)
+                  .val(total_weight)
+                  .prop('readonly', true);
+
+            }
+
+            // DUAL UNIT YES + FIXED WEIGHT NO
+            else if (dual_unit == 1) {
 
                $('#weight_' + data)
                   .prop('readonly', false);
 
-            }else{
+            }
+
+            // DUAL UNIT NO
+            else {
 
                $('#weight_' + data)
                   .prop('readonly', true)
