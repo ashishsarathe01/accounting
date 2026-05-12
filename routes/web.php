@@ -1298,4 +1298,12 @@ Route::get('gst-rate-update-manage-item', [ManageItemsController::class, 'gstRat
 Route::post('gst-rate-update-manage-item-store', [ManageItemsController::class, 'gstRateUpdateStore'])
     ->name('gst-rate-update-manage-item-store');
     Route::post('check-gstin', [AjaxController::class, 'checkGstin']);
+    Route::get('/report/hsn/detail', [gstR1Controller::class, 'hsnDetail']);
+    
+    
+    
+    //TDS Report working
+     Route::get('/tds-194c-report', [TdsReportController::class, 'tds194c'])->name('tds.194c.report');
+     Route::get('/tds-194c-report/view', [TdsReportController::class, 'tds194cView'])->name('tds.194c.report.view');
+
 });
