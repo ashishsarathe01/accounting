@@ -60,48 +60,47 @@ use Gate;
 
 class SalesController extends Controller
 {
-    /**
+   /**
      * Show the specified resources in storage.
      *
      * @return \Illuminate\Http\Response
-     */
-    public function index(Request $request)
-    {
-    Gate::authorize('action-module', 10);
-    $input = $request->all();
-    // Initialize dates
-    $from_date = null;
-    $to_date = null;
-    // Handle date input and session persistence
-    if (!empty($input['from_date']) && !empty($input['to_date'])) {
-        $from_date = date('d-m-Y', strtotime($input['from_date']));
-        $to_date = date('d-m-Y', strtotime($input['to_date']));
-        session(['sales_from_date' => $from_date, 'sales_to_date' => $to_date]);
-    } elseif (session()->has('sales_from_date') && session()->has('sales_to_date')) {
-        $from_date = session('sales_from_date');
-        $to_date = session('sales_to_date');
-    }
-    Session::put('redirect_url', '');
-    $companyId = Session::get('user_company_id');
-    // Financial year processing
-    $financial_year = Session::get('default_fy');
-    $y = explode("-", $financial_year);
-    $from = DateTime::createFromFormat('y', $y[0])->format('Y');
-    $to = DateTime::createFromFormat('y', $y[1])->format('Y');
-    $month_arr = [
-        $from . '-04', $from . '-05', $from . '-06', $from . '-07', $from . '-08', $from . '-09',
-        $from . '-10', $from . '-11', $from . '-12', $to . '-01', $to . '-02', $to . '-03'
-    ];
-    $maxVoucher = DB::table('sales')
-    ->where('company_id', $companyId)
-    ->where('delete', '0')
-    ->where('financial_year',$financial_year )
-    ->where('entry_source', 1)
-    ->max(DB::raw('CAST(voucher_no AS UNSIGNED)'));
+   */
+   public function index(Request $request){
+      Gate::authorize('action-module', 10);
+      $input = $request->all();
+      // Initialize dates
+      $from_date = null;
+      $to_date = null;
+      // Handle date input and session persistence
+      if (!empty($input['from_date']) && !empty($input['to_date'])) {
+         $from_date = date('d-m-Y', strtotime($input['from_date']));
+         $to_date = date('d-m-Y', strtotime($input['to_date']));
+         session(['sales_from_date' => $from_date, 'sales_to_date' => $to_date]);
+      } elseif (session()->has('sales_from_date') && session()->has('sales_to_date')) {
+         $from_date = session('sales_from_date');
+         $to_date = session('sales_to_date');
+      }
+      Session::put('redirect_url', '');
+      $companyId = Session::get('user_company_id');
+      // Financial year processing
+      $financial_year = Session::get('default_fy');
+      $y = explode("-", $financial_year);
+      $from = DateTime::createFromFormat('y', $y[0])->format('Y');
+      $to = DateTime::createFromFormat('y', $y[1])->format('Y');
+      $month_arr = [
+         $from . '-04', $from . '-05', $from . '-06', $from . '-07', $from . '-08', $from . '-09',
+         $from . '-10', $from . '-11', $from . '-12', $to . '-01', $to . '-02', $to . '-03'
+      ];
+      $maxVoucher = DB::table('sales')
+                        ->where('company_id', $companyId)
+                        ->where('delete', '0')
+                        ->where('financial_year',$financial_year )
+                        ->where('entry_source', 1)
+                        ->max(DB::raw('CAST(voucher_no AS UNSIGNED)'));
     
-    // Base query
-    $query = DB::table('sales')
-        ->select(
+      // Base query
+      $query = DB::table('sales')
+         ->select(
             'sales.id as sales_id',
             'sales.date',
             'sales.voucher_no',
@@ -135,45 +134,40 @@ class SalesController extends Controller
         )
         ->where('sales.company_id', Session::get('user_company_id'))
         ->where('sales.delete', '0');
+         // Date filtering and sorting logic
+      if ($from_date && $to_date) {
+         // If date range provided
+         $query->whereBetween(DB::raw("STR_TO_DATE(sales.date, '%Y-%m-%d')"), [
+               date('Y-m-d', strtotime($from_date)),
+               date('Y-m-d', strtotime($to_date))
+         ]);
 
-    // Date filtering and sorting logic
-    if ($from_date && $to_date) {
-        // If date range provided
-        $query->whereBetween(DB::raw("STR_TO_DATE(sales.date, '%Y-%m-%d')"), [
-            date('Y-m-d', strtotime($from_date)),
-            date('Y-m-d', strtotime($to_date))
-        ]);
-
-        $query->orderBy('sales.date', 'ASC')
-              ->orderBy(DB::raw("CAST(voucher_no AS SIGNED)"), 'ASC');
-    } else {
-        $query->orderBy('sales.date', 'DESC')
-              ->orderBy(DB::raw("CAST(voucher_no AS SIGNED)"), 'DESC')
-              ->limit(10);
-    }
-
-    // Fetch results
-    $sale = $query->get();
-
-    if (!$from_date && !$to_date) {
-        $sale = $sale->reverse()->values();
-    }
-
-    return view('sale')
-        ->with('sale', $sale)
-        ->with('month_arr', $month_arr)
-        ->with('from_date', $from_date)
-        ->with('to_date', $to_date)
+         $query->orderBy('sales.date', 'ASC')
+               ->orderBy(DB::raw("CAST(voucher_no AS SIGNED)"), 'ASC');
+      } else {
+         $query->orderBy('sales.date', 'DESC')
+               ->orderBy(DB::raw("CAST(voucher_no AS SIGNED)"), 'DESC')
+               ->limit(10);
+      }
+      // Fetch results
+      $sale = $query->get();
+      if (!$from_date && !$to_date) {
+         $sale = $sale->reverse()->values();
+      }
+      return view('sale')
+         ->with('sale', $sale)
+         ->with('month_arr', $month_arr)
+         ->with('from_date', $from_date)
+         ->with('to_date', $to_date)
          ->with('maxVoucher', $maxVoucher);
-}
-
-    /**
+   }
+   /**
      * Show the specified resources in storage.
      *
      * @return \Illuminate\Http\Response
-     */
+   */
 
-    public function create(Request $request){
+   public function create(Request $request){
       Gate::authorize('action-module',85);
       $financial_year = Session::get('default_fy');
       [$startYY, $endYY] = explode('-', $financial_year);
@@ -370,7 +364,6 @@ class SalesController extends Controller
          $all_groups[] = $group_id; // include the top group itself
          $all_groups = array_merge($all_groups, CommonHelper::getAllChildGroupIds($group_id, Session::get('user_company_id')));
       }
-
       // Remove duplicates just in case
       $groups = array_unique($all_groups);
       $allowed_group_ids = array_unique($all_groups);
@@ -3936,10 +3929,33 @@ if(array_key_exists($good,$sale_item_array)){
                         ];
             return response()->json($response, 200);
          }
-      }      
+      }
+      //Get Api Credentails
+      $credentials = json_decode(CommonHelper::gstApiCredentials('EINVOICE'));
+      if(!$credentials){
+         $response = [
+                        'success' => false,
+                        'data'    => "",
+                        'message' => "Api Credentails Not Found ",
+                     ];
+         return response()->json($response, 200);
+      }
+      if($credentials->status != 1){
+         $response = [
+                        'success' => false,
+                        'data'    => "",
+                        'message' => "Api Credentails Not Found ",
+                     ];
+         return response()->json($response, 200);
+      }
+      $base_url = $credentials->base_url;
+      $email_id = $credentials->email_id;
+      $client_id = $credentials->client_id;
+      $client_secret = $credentials->client_secret;
+      $ip_address = $credentials->ip_address;
       $curl = curl_init();
       curl_setopt_array($curl, array(
-         CURLOPT_URL => 'https://api.mastergst.com/einvoice/type/GENERATE/version/V1_03?email=pram92500@gmail.com',
+         CURLOPT_URL => $base_url.'/einvoice/type/GENERATE/version/V1_03?email='.$email_id,
          CURLOPT_RETURNTRANSFER => true,
          CURLOPT_ENCODING => '',
          CURLOPT_MAXREDIRS => 10,
@@ -3949,9 +3965,9 @@ if(array_key_exists($good,$sale_item_array)){
          CURLOPT_CUSTOMREQUEST => 'POST',
          CURLOPT_POSTFIELDS =>json_encode($einvoice_requset),
          CURLOPT_HTTPHEADER => array(
-            'ip_address: 162.241.85.89',
-            'client_id: 964759f3-5071-4e4f-a03c-88c56aa8bd6f',
-            'client_secret: 35565aa5-3d2c-4507-b81f-3c3effd00238',
+            'ip_address: '.$ip_address,
+            'client_id: '.$client_id,
+            'client_secret: '.$client_secret,
             'username:'.$einvoice_username,
             'auth-token:'.$token,
             'gstin:'.$einvoice_gst,
@@ -4133,9 +4149,32 @@ if(array_key_exists($good,$sale_item_array)){
             "VehType"=>"R"
          );
          // print_r($eway_bill_request);die;
+         //Get Api Credentails
+         $credentials = json_decode(CommonHelper::gstApiCredentials('EINVOICE'));
+         if(!$credentials){
+             $response = [
+                        'success' => false,
+                        'data'    => "",
+                        'message' => "Api Credentails Not Found ",
+                     ];
+            return response()->json($response, 200);
+         }
+         if($credentials->status != 1){
+             $response = [
+                        'success' => false,
+                        'data'    => "",
+                        'message' => "Api Credentails Not Found ",
+                     ];
+            return response()->json($response, 200);
+         }
+         $base_url = $credentials->base_url;
+         $email_id = $credentials->email_id;
+         $client_id = $credentials->client_id;
+         $client_secret = $credentials->client_secret;
+         $ip_address = $credentials->ip_address;
          $curl = curl_init();
          curl_setopt_array($curl, array(
-            CURLOPT_URL => 'https://api.mastergst.com/einvoice/type/GENERATE_EWAYBILL/version/V1_03?email=pram92500@gmail.com',
+            CURLOPT_URL => $base_url.'/einvoice/type/GENERATE_EWAYBILL/version/V1_03?email='.$email_id,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_ENCODING => '',
             CURLOPT_MAXREDIRS => 10,
@@ -4145,9 +4184,9 @@ if(array_key_exists($good,$sale_item_array)){
             CURLOPT_CUSTOMREQUEST => 'POST',
             CURLOPT_POSTFIELDS =>json_encode($eway_bill_request),
             CURLOPT_HTTPHEADER => array(
-               'ip_address: 162.241.85.89',
-               'client_id: 964759f3-5071-4e4f-a03c-88c56aa8bd6f',
-               'client_secret: 35565aa5-3d2c-4507-b81f-3c3effd00238',
+               'ip_address: '.$ip_address,
+               'client_id: '.$client_id,
+               'client_secret: '.$client_secret,
                'username:'.$einvoice_username,
                'auth-token:'.$token,
                'gstin:'.$einvoice_gst,
@@ -4196,9 +4235,32 @@ if(array_key_exists($good,$sale_item_array)){
             }
          }
       }else{
-          $curl = curl_init();
+         //Get Api Credentails
+         $credentials = json_decode(CommonHelper::gstApiCredentials('EWAYBILL'));
+         if(!$credentials){
+             $response = [
+                        'success' => false,
+                        'data'    => "",
+                        'message' => "Api Credentails Not Found ",
+                     ];
+            return response()->json($response, 200);
+         }
+         if($credentials->status != 1){
+             $response = [
+                        'success' => false,
+                        'data'    => "",
+                        'message' => "Api Credentails Not Found ",
+                     ];
+            return response()->json($response, 200);
+         }
+         $base_url = $credentials->base_url;
+         $email_id = $credentials->email_id;
+         $client_id = $credentials->client_id;
+         $client_secret = $credentials->client_secret;
+         $ip_address = $credentials->ip_address;
+                  $curl = curl_init();
           curl_setopt_array($curl, array(
-             CURLOPT_URL => 'https://api.mastergst.com/ewaybillapi/v1.03/authenticate?email=pram92500@gmail.com&username='.trim($einvoice_username).'&password='.trim(decrypt($einvoice_password)),
+             CURLOPT_URL => $base_url.'/ewaybillapi/v1.03/authenticate?email='.$email_id.'&username='.trim($einvoice_username).'&password='.trim(decrypt($einvoice_password)),
              CURLOPT_RETURNTRANSFER => true,
              CURLOPT_ENCODING => '',
              CURLOPT_MAXREDIRS => 10,
@@ -4208,9 +4270,9 @@ if(array_key_exists($good,$sale_item_array)){
              CURLOPT_CUSTOMREQUEST => 'GET',
              //CURLOPT_POSTFIELDS =>json_encode($eway_bill_request),
              CURLOPT_HTTPHEADER => array(
-                'ip_address: 162.241.85.89',
-                'client_id: 627652fe-675c-484e-8768-20a874d6c864',
-                'client_secret: 2d73d024-4b08-4627-a219-99f027bcf77f',            
+                'ip_address: '.$ip_address,
+                'client_id: '.$client_id,
+                'client_secret: '.$client_secret,
                 'gstin: '.trim($einvoice_gst),
                 'Content-Type: application/json'
              ),
@@ -4218,7 +4280,7 @@ if(array_key_exists($good,$sale_item_array)){
           $response = curl_exec($curl);
           curl_close($curl);
           if($response){
-             $result = json_decode($response);         
+             $result = json_decode($response);
              if(isset($result->status_cd) && $result->status_cd=='1'){
                 //echo json_encode(array("status"=>1,"message"=>"Token Generate Successfully"));
              }else{
@@ -4469,31 +4531,11 @@ if(array_key_exists($good,$sale_item_array)){
                "vehicleType"=>"R",
                "itemList"=>$ItemList
             );
-         }
-        //  echo "<pre>";
-        //  print_r(json_encode($eway_bill_request));
-        //  die;
-        //  $etoken = DB::select(DB::raw("SELECT token FROM einvoice_tokens WHERE merchant_id='".$einvoice_company."' and STR_TO_DATE(token_expiry, '%Y-%m-%d %H:%i:%s')>=STR_TO_DATE('".date('Y-m-d H:i:s')."', '%Y-%m-%d %H:%i:%s')"));
-        //  if($etoken){
-        //     $token = $etoken[0]->token;
-        //  }else{
-        //      echo "Token.....1";
-        //     $token = $this->generateEinvoiceToken($einvoice_username,$einvoice_password,$einvoice_gst,$einvoice_company);
-        //     echo "Token.....3";
-        //     if($token=='0'){
-        //         echo "Token.....2";
-        //       $response = [
-        //                       'success' => false,
-        //                       'data'    => "",
-        //                       'message' => "Token Not Generating ",
-        //                   ];
-        //       return response()->json($response, 200);
-        //     }
-        //  }
+         }       
          
          $curl = curl_init();
          curl_setopt_array($curl, array(
-            CURLOPT_URL => 'https://api.mastergst.com/ewaybillapi/v1.03/ewayapi/genewaybill?email=pram92500@gmail.com',
+            CURLOPT_URL => $base_url.'/ewaybillapi/v1.03/ewayapi/genewaybill?email='.$email_id,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_ENCODING => '',
             CURLOPT_MAXREDIRS => 10,
@@ -4503,9 +4545,9 @@ if(array_key_exists($good,$sale_item_array)){
             CURLOPT_CUSTOMREQUEST => 'POST',
             CURLOPT_POSTFIELDS =>json_encode($eway_bill_request),
             CURLOPT_HTTPHEADER => array(
-               'ip_address: 162.241.85.89',
-               'client_id: 627652fe-675c-484e-8768-20a874d6c864',
-               'client_secret: 2d73d024-4b08-4627-a219-99f027bcf77f',
+               'ip_address: '.$ip_address,
+               'client_id: '.$client_id,
+               'client_secret: '.$client_secret,
                'gstin:'.$einvoice_gst,
                'Content-Type: application/json'
             ),
@@ -4557,13 +4599,24 @@ if(array_key_exists($good,$sale_item_array)){
             }
          }
       }
-      die;
-      
    }
    public function generateEinvoiceToken($username,$password,$gstin,$einvoice_company){
+      //Get Api Credentails
+      $credentials = json_decode(CommonHelper::gstApiCredentials('EINVOICE'));
+      if(!$credentials){
+         return 0;
+      }
+      if($credentials->status != 1){
+         return 0;
+      }
+      $base_url = $credentials->base_url;
+      $email_id = $credentials->email_id;
+      $client_id = $credentials->client_id;
+      $client_secret = $credentials->client_secret;
+      $ip_address = $credentials->ip_address;
       $curl = curl_init();
       curl_setopt_array($curl, array(
-         CURLOPT_URL => 'https://api.mastergst.com/einvoice/authenticate?email=pram92500@gmail.com',
+         CURLOPT_URL => $base_url.'/einvoice/authenticate?email='.$email_id,
          CURLOPT_RETURNTRANSFER => true,
          CURLOPT_ENCODING => '',
          CURLOPT_MAXREDIRS => 10,
@@ -4574,9 +4627,9 @@ if(array_key_exists($good,$sale_item_array)){
          CURLOPT_HTTPHEADER => array(
             'username:'.$username,
             'password:'.decrypt($password),
-            'ip_address: 162.241.85.89',
-            'client_id: 964759f3-5071-4e4f-a03c-88c56aa8bd6f',
-            'client_secret: 35565aa5-3d2c-4507-b81f-3c3effd00238',
+            'ip_address: '.$ip_address,
+            'client_id: '.$client_id,
+            'client_secret: '.$client_secret,
             'gstin:'.$gstin
          ),
       ));
@@ -4774,10 +4827,32 @@ if(array_key_exists($good,$sale_item_array)){
          );
          return json_encode($res);
       }
-      
+      //Get Api Credentails
+      $credentials = json_decode(CommonHelper::gstApiCredentials('EWAYBILL'));
+      if(!$credentials){
+          $response = [
+                        'success' => false,
+                        'data'    => "",
+                        'message' => "Api Credentails Not Found ",
+                     ];
+         return response()->json($response, 200);
+      }
+      if($credentials->status != 1){
+          $response = [
+                        'success' => false,
+                        'data'    => "",
+                        'message' => "Api Credentails Not Found ",
+                     ];
+         return response()->json($response, 200);
+      }
+      $base_url = $credentials->base_url;
+      $email_id = $credentials->email_id;
+      $client_id = $credentials->client_id;
+      $client_secret = $credentials->client_secret;
+      $ip_address = $credentials->ip_address;
       $curl = curl_init();
       curl_setopt_array($curl, array(
-         CURLOPT_URL => 'https://api.mastergst.com/ewaybillapi/v1.03/authenticate?email=pram92500@gmail.com&username='.$einvoice_username.'&password='.decrypt($einvoice_password),
+         CURLOPT_URL => $base_url.'/ewaybillapi/v1.03/authenticate?email='.$email_id.'&username='.$einvoice_username.'&password='.decrypt($einvoice_password),
          CURLOPT_RETURNTRANSFER => true,
          CURLOPT_ENCODING => '',
          CURLOPT_MAXREDIRS => 10,
@@ -4786,9 +4861,9 @@ if(array_key_exists($good,$sale_item_array)){
          CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
          CURLOPT_CUSTOMREQUEST => 'GET',
          CURLOPT_HTTPHEADER => array(
-            'ip_address: 162.241.85.89',
-            'client_id: 627652fe-675c-484e-8768-20a874d6c864',
-            'client_secret: 2d73d024-4b08-4627-a219-99f027bcf77f',            
+            'ip_address: '.$ip_address,
+            'client_id: '.$client_id,
+            'client_secret: '.$client_secret,
             'gstin: '.$einvoice_gst,
             'Content-Type: application/json'
          ),
@@ -4805,7 +4880,7 @@ if(array_key_exists($good,$sale_item_array)){
       );
       $curl = curl_init();
       curl_setopt_array($curl, array(
-         CURLOPT_URL => 'https://api.mastergst.com/ewaybillapi/v1.03/ewayapi/canewb?email=pram92500@gmail.com',
+         CURLOPT_URL => $base_url.'/ewaybillapi/v1.03/ewayapi/canewb?email='.$email_id,
          CURLOPT_RETURNTRANSFER => true,
          CURLOPT_ENCODING => '',
          CURLOPT_MAXREDIRS => 10,
@@ -4815,9 +4890,9 @@ if(array_key_exists($good,$sale_item_array)){
          CURLOPT_CUSTOMREQUEST => 'POST',
          CURLOPT_POSTFIELDS =>json_encode($cancel_eway_request),
          CURLOPT_HTTPHEADER => array(
-            'ip_address: 162.241.85.89',
-            'client_id: 627652fe-675c-484e-8768-20a874d6c864',
-            'client_secret:   2d73d024-4b08-4627-a219-99f027bcf77f',
+            'ip_address: '.$ip_address,
+            'client_id: '.$client_id,
+            'client_secret: '.$client_secret,
             'gstin:'.$einvoice_gst,
             'Content-Type: application/json'
          ),
@@ -4936,9 +5011,32 @@ if(array_key_exists($good,$sale_item_array)){
          "CnlRsn"=>"1",
          "CnlRem"=>"Wrong entry"
       );
+      //Get Api Credentails
+      $credentials = json_decode(CommonHelper::gstApiCredentials('EINVOICE'));
+      if(!$credentials){
+          $response = [
+                        'success' => false,
+                        'data'    => "",
+                        'message' => "Api Credentails Not Found ",
+                     ];
+         return response()->json($response, 200);
+      }
+      if($credentials->status != 1){
+          $response = [
+                        'success' => false,
+                        'data'    => "",
+                        'message' => "Api Credentails Not Found ",
+                     ];
+         return response()->json($response, 200);
+      }
+      $base_url = $credentials->base_url;
+      $email_id = $credentials->email_id;
+      $client_id = $credentials->client_id;
+      $client_secret = $credentials->client_secret;
+      $ip_address = $credentials->ip_address;
       $curl = curl_init();
       curl_setopt_array($curl, array(
-         CURLOPT_URL => 'https://api.mastergst.com/einvoice/type/CANCEL/version/V1_03?email=pram92500@gmail.com',
+         CURLOPT_URL => $base_url.'/einvoice/type/CANCEL/version/V1_03?email='.$email_id,
          CURLOPT_RETURNTRANSFER => true,
          CURLOPT_ENCODING => '',
          CURLOPT_MAXREDIRS => 10,
@@ -4948,9 +5046,9 @@ if(array_key_exists($good,$sale_item_array)){
          CURLOPT_CUSTOMREQUEST => 'POST',
          CURLOPT_POSTFIELDS =>json_encode($cancel_einvoice_request),
          CURLOPT_HTTPHEADER => array(
-            'ip_address: 162.241.cancel_einvoice_request85.89',
-            'client_id: 964759f3-5071-4e4f-a03c-88c56aa8bd6f',
-            'client_secret: 35565aa5-3d2c-4507-b81f-3c3effd00238',
+            'ip_address: '.$ip_address,
+            'client_id: '.$client_id,
+            'client_secret: '.$client_secret,
             'username:'.$einvoice_username,
             'auth-token:'.$token,
             'gstin:'.$einvoice_gst,

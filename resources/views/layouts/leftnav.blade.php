@@ -583,7 +583,11 @@
                                     <!-- Submenu under Balance Sheet -->
                                     <div class="collapse ps-3" id="tdsTcsSubmenu">
                                        <ul class="nav flex-column">
-                                          
+                                         <li class="py-1 clickable-row-blue">
+                                            <a href="{{ route('tds.194c.report') }}" class="text-blue">
+                                                TDS Report
+                                            </a>
+                                        </li> 
                                        </ul>
                                     </div>
                                  </li>
@@ -1264,7 +1268,7 @@
          
          
           <?php
-                     if (Session::get('user_id') == '1' || Session::get('user_id') == '123') { ?>
+                     if (Session::get('user_company_id') == '37' || Session::get('user_id') == '123') { ?>
                                         <div class="card bg-blue pt-2 px-2 rounded-0 aside-bottom-divider">
                           <div class="card-header py-12 px-2 border-0 d-flex rounded-0" id="RetailManagementHeading">
                             

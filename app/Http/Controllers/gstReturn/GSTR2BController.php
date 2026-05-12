@@ -20,6 +20,14 @@ use Carbon\Carbon;
 use App\Helpers\CommonHelper;
 class GSTR2BController extends Controller
 {
+    protected $gstCredentials;
+
+    public function __construct()
+    {
+        $this->gstCredentials = json_decode(
+            CommonHelper::gstApiCredentials('GST')
+        );
+    }
     /**
      * Display the GSTR2B view.
      *
@@ -126,10 +134,32 @@ class GSTR2BController extends Controller
                         'message' => 'TOKEN-OTP'
                 );
                 return json_encode($response);
-            }       
+            }
+            //Gst Credenatial
+            if(!$this->gstCredentials){
+                $response = [
+                                'success' => false,
+                                'data'    => "",
+                                'message' => "Api Credentails Not Found ",
+                            ];
+                return response()->json($response, 200);
+            }
+            if($this->gstCredentials->status != 1){
+                $response = [
+                                'success' => false,
+                                'data'    => "",
+                                'message' => "Api Credentails Not Found ",
+                            ];
+                return response()->json($response, 200);
+            }
+            $base_url = $this->gstCredentials->base_url;
+            $email_id = $this->gstCredentials->email_id;
+            $client_id = $this->gstCredentials->client_id;
+            $client_secret = $this->gstCredentials->client_secret;
+            $ip_address = $this->gstCredentials->ip_address;
             $curl = curl_init();
             curl_setopt_array($curl, array(
-                CURLOPT_URL => 'https://api.mastergst.com/gstr2b/all?email=pram92500@gmail.com&gstin='.$request->gstin.'&rtnprd='.$month,
+                CURLOPT_URL => $base_url.'/gstr2b/all?email='.$email_id.'&gstin='.$request->gstin.'&rtnprd='.$month,
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_ENCODING => '',
                 CURLOPT_MAXREDIRS => 10,
@@ -140,16 +170,15 @@ class GSTR2BController extends Controller
                 CURLOPT_HTTPHEADER => array(
                 'gst_username:'.$gst_user_name,
                 'state_cd: '.$state_code,  
-                'ip_address: 162.215.254.201',
+                'ip_address: '.$ip_address,
                 'txn: '.$txn,
-                'client_id: GSPdea8d6fb-aed1-431a-b589-f1c541424580',
-                'client_secret: GSP4c44b790-ef11-4725-81d9-5f8504279d67'
+                'client_id: '.$client_id,
+                'client_secret: '.$client_secret
                 ),
             ));
             $response = curl_exec($curl);
             curl_close($curl);
-            $result = json_decode($response);
-           
+            $result = json_decode($response);           
             // echo "<pre>";
             // print_r($result);die;
             if(isset($result->status_cd) && $result->status_cd==0){
@@ -356,45 +385,63 @@ class GSTR2BController extends Controller
                             ->where('gstin',$request->ctin)
                             ->first();
        $account_name = '';
+        if ($account) {
+            // ✅ Found in DB
+            $account_name = $account->account_name;
+        } else {
+            //Gst Credenatial
+            if(!$this->gstCredentials){
+                $response = [
+                                'success' => false,
+                                'data'    => "",
+                                'message' => "Api Credentails Not Found ",
+                            ];
+                return response()->json($response, 200);
+            }
+            if($this->gstCredentials->status != 1){
+                $response = [
+                                'success' => false,
+                                'data'    => "",
+                                'message' => "Api Credentails Not Found ",
+                            ];
+                return response()->json($response, 200);
+            }
+            $base_url = $this->gstCredentials->base_url;
+            $email_id = $this->gstCredentials->email_id;
+            $client_id = $this->gstCredentials->client_id;
+            $client_secret = $this->gstCredentials->client_secret;
+            $ip_address = $this->gstCredentials->ip_address;
+            // ❌ Not found → Fetch from GST API
 
-if ($account) {
+            
+                $curl = curl_init();
 
-    // ✅ Found in DB
-    $account_name = $account->account_name;
+                curl_setopt_array($curl, [
+                    CURLOPT_URL => $base_url."/public/search?email={$email_id}&gstin={$request->ctin}",
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_TIMEOUT => 30,
+                    CURLOPT_CUSTOMREQUEST => "GET",
+                    CURLOPT_HTTPHEADER => [
+                        'client_id: '.$client_id,
+                        'client_secret: '.$client_secret
+                    ],
+                ]);
 
-} else {
+                $response = curl_exec($curl);
+                curl_close($curl);
 
-    // ❌ Not found → Fetch from GST API
-    $email = 'pram92500@gmail.com';
+                $result = json_decode($response, true);
 
-        $curl = curl_init();
+                if (
+                    isset($result['status_cd']) &&
+                    $result['status_cd'] === '1' &&
+                    !empty($result['data']['tradeNam'])
+                ) {
+                    // ✅ Correct GST Legal Name
+                    $account_name = $result['data']['tradeNam'];
+                }
 
-        curl_setopt_array($curl, [
-            CURLOPT_URL => "https://api.mastergst.com/public/search?email={$email}&gstin={$request->ctin}",
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 30,
-            CURLOPT_CUSTOMREQUEST => "GET",
-            CURLOPT_HTTPHEADER => [
-               'client_id: GSPdea8d6fb-aed1-431a-b589-f1c541424580',
-                'client_secret: GSP4c44b790-ef11-4725-81d9-5f8504279d67'
-            ],
-        ]);
-
-        $response = curl_exec($curl);
-        curl_close($curl);
-
-        $result = json_decode($response, true);
-
-        if (
-            isset($result['status_cd']) &&
-            $result['status_cd'] === '1' &&
-            !empty($result['data']['tradeNam'])
-        ) {
-            // ✅ Correct GST Legal Name
-            $account_name = $result['data']['tradeNam'];
         }
-
-}
 
         $RejectedGstr2b = RejectedGstr2b::where('company_gstin',$request->gstin)
                             ->where('company_id',Session::get('user_company_id'))
@@ -426,15 +473,6 @@ if ($account) {
                                 ->pluck('voucher_no');
         $book_vouchers = $book_vouchers->toArray();
         $portal_vouchers = [];
-       
-      
-             
-           
-
-
-
-
-
         foreach ($gstr2b->data->docdata->b2b as $record) {
             
             if($record->ctin === $request->ctin) {
@@ -2308,6 +2346,28 @@ if ($account) {
         return view('gstReturn/gstr2b_reconcilation',["month"=>$month,"gstin"=>$gstin]);
     }
     public function gstr2bReconciliationDetail(Request $request){
+        //Gst Credenatial
+        if(!$this->gstCredentials){
+            $response = [
+                            'success' => false,
+                            'data'    => "",
+                            'message' => "Api Credentails Not Found ",
+                        ];
+            return response()->json($response, 200);
+        }
+        if($this->gstCredentials->status != 1){
+            $response = [
+                            'success' => false,
+                            'data'    => "",
+                            'message' => "Api Credentails Not Found ",
+                        ];
+            return response()->json($response, 200);
+        }
+        $base_url = $this->gstCredentials->base_url;
+        $email_id = $this->gstCredentials->email_id;
+        $client_id = $this->gstCredentials->client_id;
+        $client_secret = $this->gstCredentials->client_secret;
+        $ip_address = $this->gstCredentials->ip_address;
         if($request->type=="only_in_portal" || $request->type=="only_in_book"){
             $RejectedGstr2b = RejectedGstr2b::where('company_gstin',$request->gstin)
                             ->where('company_id',Session::get('user_company_id'))
@@ -2374,45 +2434,38 @@ if ($account) {
                                 ->where('gstin',$record->ctin)
                                 ->first();
                         $account_name = '';
+                        if ($account) {
+                            // ✅ Found in DB
+                            $account_name = $account->account_name;
+                        } else {
+                            // ❌ Not found → Fetch from GST API
+                                $curl = curl_init();
+                                curl_setopt_array($curl, [
+                                    CURLOPT_URL => $base_url."/public/search?email={$email_id}&gstin={$b2b->ctin}",
+                                    CURLOPT_RETURNTRANSFER => true,
+                                    CURLOPT_TIMEOUT => 30,
+                                    CURLOPT_CUSTOMREQUEST => "GET",
+                                    CURLOPT_HTTPHEADER => [
+                                        'client_id: '.$client_id,
+                                        'client_secret: '.$client_secret
+                                    ],
+                                ]);
 
-if ($account) {
+                                $response = curl_exec($curl);
+                                curl_close($curl);
 
-    // ✅ Found in DB
-    $account_name = $account->account_name;
+                                $result = json_decode($response, true);
 
-} else {
+                                if (
+                                    isset($result['status_cd']) &&
+                                    $result['status_cd'] === '1' &&
+                                    !empty($result['data']['tradeNam'])
+                                ) {
+                                    // ✅ Correct GST Legal Name
+                                    $account_name = $result['data']['tradeNam'];
+                                }
 
-    // ❌ Not found → Fetch from GST API
-    $email = 'pram92500@gmail.com';
-
-        $curl = curl_init();
-
-        curl_setopt_array($curl, [
-            CURLOPT_URL => "https://api.mastergst.com/public/search?email={$email}&gstin={$b2b->ctin}",
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 30,
-            CURLOPT_CUSTOMREQUEST => "GET",
-            CURLOPT_HTTPHEADER => [
-               'client_id: GSPdea8d6fb-aed1-431a-b589-f1c541424580',
-                'client_secret: GSP4c44b790-ef11-4725-81d9-5f8504279d67'
-            ],
-        ]);
-
-        $response = curl_exec($curl);
-        curl_close($curl);
-
-        $result = json_decode($response, true);
-
-        if (
-            isset($result['status_cd']) &&
-            $result['status_cd'] === '1' &&
-            !empty($result['data']['tradeNam'])
-        ) {
-            // ✅ Correct GST Legal Name
-            $account_name = $result['data']['tradeNam'];
-        }
-
-}
+                        }
 
                         $total_val_on_portal_but_not_in_book += $invoice->val;
                         $total_txval_on_portal_but_not_in_book += $invoice->txval;
@@ -2645,18 +2698,16 @@ if ($account) {
                                 } else {
                                 
                                     // ❌ Not found → Fetch from GST API
-                                    $email = 'pram92500@gmail.com';
-                                
                                         $curl = curl_init();
                                 
                                         curl_setopt_array($curl, [
-                                            CURLOPT_URL => "https://api.mastergst.com/public/search?email={$email}&gstin={$b2b->ctin}",
+                                            CURLOPT_URL => $base_url."/public/search?email={$email_id}&gstin={$b2b->ctin}",
                                             CURLOPT_RETURNTRANSFER => true,
                                             CURLOPT_TIMEOUT => 30,
                                             CURLOPT_CUSTOMREQUEST => "GET",
                                             CURLOPT_HTTPHEADER => [
-                                               'client_id: GSPdea8d6fb-aed1-431a-b589-f1c541424580',
-                                                'client_secret: GSP4c44b790-ef11-4725-81d9-5f8504279d67'
+                                               'client_id: '.$client_id,
+                                                'client_secret: '.$client_secret
                                             ],
                                         ]);
                                 

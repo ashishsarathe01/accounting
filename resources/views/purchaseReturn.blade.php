@@ -99,8 +99,8 @@
                                        $tot_amt = $tot_amt + $value->total; ?></td>
                                     <td class="w-min-120  text-center">
                                        <?php 
-                                        if(in_array(date('Y-m',strtotime($value->date)),$month_arr) && $value->approved_status != 1 && $value->status == '1'){?>
-
+                                        if((in_array(date('Y-m',strtotime($value->date)),$month_arr) && $value->status == '1') && ($value->approved_status != 1 || auth()->user()->can('action-module',256))){?>
+                                           
                                             @can('action-module',47)
                                             @if($value->e_invoice_status==0)
                                                 <a href="{{ URL::to('purchase-return-edit/'.$value->purchases_id) }}">
@@ -110,6 +110,7 @@
                                             @endcan
 
                                             @can('action-module',48)
+                                            
                                                 @if(
                                                     ($value->max_voucher_no == $value->purchase_return_no && $value->manual_numbering_status == "NO") 
                                                     || ($value->manual_numbering_status == "YES" || $value->manual_numbering_status == "")

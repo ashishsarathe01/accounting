@@ -158,7 +158,7 @@
                                 <!-- Action (shown once per con_id) -->
                                 <td class="w-min-120 text-center">
                                     <?php 
-                                    if ($value->con_id != $prev_con_id && in_array(date('Y-m',strtotime($value->date)),$month_arr) && $value->approved_status != 1) {
+                                    if (($value->con_id != $prev_con_id && in_array(date('Y-m',strtotime($value->date)),$month_arr)) && ($value->approved_status != 1 || auth()->user()->can('action-module',256))) {
                                     ?>
                                         @can('action-module',45)
                                             <a href="{{ URL::to('contra/' . $value->con_id . '/edit') }}">

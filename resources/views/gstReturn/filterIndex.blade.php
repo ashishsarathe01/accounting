@@ -72,12 +72,15 @@
     @endphp
 
     @foreach($months as $num => $name)
-        @php
-            // Decide year exactly as your JS logic does
-            $year = (intval($num) >= 4) ? $fyStartYear : $fyEndYear;
-        @endphp
+         @php
+        // Decide year exactly as your JS logic does
+        $year = (intval($num) >= 4) ? $fyStartYear : $fyEndYear;
 
-        <option value="{{ $num }}">{{ $name }} {{ $year }}</option>
+        // Create value like 042026 or 032027
+        $monthValue = $num . $year;
+    @endphp
+
+        <option value="{{ $monthValue }}">{{ $name }} {{ $year }}</option>
     @endforeach
 </select>
 
@@ -87,6 +90,30 @@
 <input type="hidden" name="from_date" id="from_date">
 <input type="hidden" name="to_date" id="to_date">
 
+<!-- Data Source -->
+<div class="mb-3 col-md-3">
+    <label for="data_source" class="form-label" style="font-size: 1.05rem">
+        Data Source
+    </label>
+
+    <select 
+        name="data_source" 
+        id="data_source" 
+        class="form-select form-select-lg"
+    >
+        <option value="books" selected>
+            Books Only
+        </option>
+
+        <option value="portal">
+            Books + GST Portal
+        </option>
+    </select>
+
+    <small class="text-muted">
+        Choose whether to load only books data or include GST portal data.
+    </small>
+</div>
 
     <!-- Button -->
    <div class="mb-3 text-start">
@@ -148,9 +175,9 @@ $(document).ready(function () {
     }, 0); // Run after DOM is updated
 
     const focusMap = {
-        '#series': '#from_date',
-        '#from_date': '#to_date',
-        '#to_date': '#submit'
+        '#series': '#month_select',
+    '#month_select': '#data_source',
+    '#data_source': '#submit'
         
     };
 
@@ -208,16 +235,23 @@ document.addEventListener("DOMContentLoaded", function () {
     const fyEndYear = {{ \Carbon\Carbon::parse($fy)->addYear()->format('Y') }};
 
     monthSelect.addEventListener("change", function () {
-        const month = this.value;
+        const value = this.value;
+
+        if (!value) {
+            fromDateInput.value = '';
+            toDateInput.value = '';
+            return;
+        }
+        
+        // Extract month and year
+        const month = value.substring(0, 2);
+        const year = value.substring(2, 6);
 
         if (!month) {
             fromDateInput.value = '';
             toDateInput.value = '';
             return;
         }
-
-        // Determine year for the month
-        const year = parseInt(month) >= 4 ? fyStartYear : fyEndYear;
 
         // Determine last day of month (handle leap year for Feb)
         const lastDay = new Date(year, month, 0).getDate(); // 0th day of next month = last day of selected month
@@ -251,18 +285,28 @@ $(document).ready(function() {
             _token: '{{ csrf_token() }}',
             series: series,
             from_date: from_date,
-            to_date: to_date
+            to_date: to_date,
+            data_source : $('#data_source').val()
         },
         success: function(res) {
-        
-            if (res.status === true && res.message === 'TOKEN-VALID') {
-               $('#real-submit').click();
-            } else if (res.status === true && res.message === 'TOKEN-OTP') {
-                $('#fgstin').val(series);
-                $('#otpModal').modal('show');
-            } else {
-                alert(res.message || 'Token error');
-            }
+           if (res.status === true && res.message === 'TOKEN-VALID') {
+
+                   $('#real-submit').click();
+                
+                } else if (res.status === true && res.message === 'BOOK-DATA') {
+                
+                    $('#real-submit').click();
+                
+                } else if (res.status === true && res.message === 'TOKEN-OTP') {
+                
+                    $('#fgstin').val(series);
+                    $('#otpModal').modal('show');
+                
+                } else {
+                
+                    alert(res.message || 'Token error');
+                
+                }
         },
         error: function() {
             alert("Something went wrong while checking the token");

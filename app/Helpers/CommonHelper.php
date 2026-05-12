@@ -114,7 +114,7 @@ class CommonHelper
          
     }
     public static function RewriteItemAverageByItem($date,$item,$series=null)
-    {      
+    {
         $max_date = ItemAverage::where('item_id',$item)->where('series_no',$series)->max('stock_date');
         $startDate = Carbon::parse($date);
           $endDate = Carbon::today();
@@ -252,9 +252,8 @@ class CommonHelper
       
     
     }
-    
     public static function RewriteItemAverageByItemApi($date,$item,$series=null,$company_id)
-    {     
+    {
         
         $max_date = ItemAverage::where('item_id',$item)->where('series_no',$series)->max('stock_date');
         $startDate = Carbon::parse($date);
@@ -424,29 +423,25 @@ class CommonHelper
         $closing_stock = round($closing_stock,2);  
         
         $baseQuery = DB::table('purchases')
-    ->whereRaw("STR_TO_DATE(date, '%Y-%m-%d') <= ?", [$to_date])
-    ->whereDate('stock_entry_date', '>', $to_date)
-    ->where('company_id',$company_id)
-    ->where('status', '1')
-    ->where('delete', '0');
+                        ->whereRaw("STR_TO_DATE(date, '%Y-%m-%d') <= ?", [$to_date])
+                        ->whereDate('stock_entry_date', '>', $to_date)
+                        ->where('company_id',$company_id)
+                        ->where('status', '1')
+                        ->where('delete', '0');
 
-    $purchase_in_transit_ids = (clone $baseQuery)->pluck('id')->toArray();
-    
-    $stock_in_transit_value = (clone $baseQuery)
-        ->selectRaw("SUM(CAST(taxable_amt AS DECIMAL(15,2))) as total")
-        ->value('total');
-    
-    $stock_in_transit_value = round($stock_in_transit_value ?? 0, 2);
+        $purchase_in_transit_ids = (clone $baseQuery)->pluck('id')->toArray();
+        
+        $stock_in_transit_value = (clone $baseQuery)
+            ->selectRaw("SUM(CAST(taxable_amt AS DECIMAL(15,2))) as total")
+            ->value('total');
+        
+        $stock_in_transit_value = round($stock_in_transit_value ?? 0, 2);
 
-   $stock_in_hand = $closing_stock + $stock_in_transit_value;
-   
-   
-   
+        $stock_in_hand = $closing_stock + $stock_in_transit_value;   
         $previous_date = Carbon::parse($from_date)->subDay();        
         $opening_stock1 = CommonHelper::ClosingStock($previous_date);
         $opening_stock1 = round($opening_stock1,2);
-        //Purchase
-        
+        //Purchase        
         $baseQuery1 = DB::table('purchases')
                         ->whereRaw("STR_TO_DATE(date, '%Y-%m-%d') < ?", [$from_date])
                         ->whereDate('stock_entry_date', '>=', $from_date)
@@ -454,16 +449,13 @@ class CommonHelper
                         ->where('status', '1')
                         ->where('delete', '0');
 
-    $purchase_in_transit_opening_ids = (clone $baseQuery1)->pluck('id')->toArray();
-    $stock_in_transit_opening_value = (clone $baseQuery1)
-        ->selectRaw("SUM(CAST(taxable_amt AS DECIMAL(15,2))) as total")
-        ->value('total');
-    
-    $stock_in_transit_opening_value = round($stock_in_transit_opening_value ?? 0, 2);
-    $opening_stock = $opening_stock1 + $stock_in_transit_opening_value;
-
+        $purchase_in_transit_opening_ids = (clone $baseQuery1)->pluck('id')->toArray();
+        $stock_in_transit_opening_value = (clone $baseQuery1)
+            ->selectRaw("SUM(CAST(taxable_amt AS DECIMAL(15,2))) as total")
+            ->value('total');
         
-        
+        $stock_in_transit_opening_value = round($stock_in_transit_opening_value ?? 0, 2);
+        $opening_stock = $opening_stock1 + $stock_in_transit_opening_value;        
         $tot_purchase_amt = DB::table('purchases')
                             ->join('purchase_descriptions','purchases.id','=','purchase_descriptions.purchase_id')
                             ->where(['purchases.delete' => '0', 'purchases.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year])
@@ -533,20 +525,20 @@ class CommonHelper
                 }
             }
         }
-         //Sale Return With  PURCHASE
+        //Sale Return With  PURCHASE
         $tot_sale_return_amt_purchase = DB::table('sales_returns')
-         ->join('sale_return_descriptions','sales_returns.id','=','sale_return_descriptions.sale_return_id')
-         ->where(['sales_returns.delete' => '0','sale_return_descriptions.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
-         ->whereBetween('date', [$from_date, $to_date])
-         //->get()
-         ->sum("amount");
+                                            ->join('sale_return_descriptions','sales_returns.id','=','sale_return_descriptions.sale_return_id')
+                                            ->where(['sales_returns.delete' => '0','sale_return_descriptions.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'voucher_type'=>'PURCHASE'])
+                                            ->whereBetween('date', [$from_date, $to_date])
+                                            //->get()
+                                            ->sum("amount");
         $sale_return_sundry_purchase = DB::table('sales_returns')
-            ->join('sale_return_sundries','sales_returns.id','=','sale_return_sundries.sale_return_id')
-            ->join('bill_sundrys','sale_return_sundries.bill_sundry','=','bill_sundrys.id')
-            ->where(['sales_returns.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes','voucher_type'=>'PURCHASE'])
-            ->whereBetween('date', [$from_date, $to_date])
-            ->select('bill_sundry_type','amount')
-            ->get();
+                                        ->join('sale_return_sundries','sales_returns.id','=','sale_return_sundries.sale_return_id')
+                                        ->join('bill_sundrys','sale_return_sundries.bill_sundry','=','bill_sundrys.id')
+                                        ->where(['sales_returns.delete' => '0', 'sales_returns.company_id' => Session::get('user_company_id'),'financial_year'=>$financial_year,'adjust_purchase_amt'=>'Yes','voucher_type'=>'PURCHASE'])
+                                        ->whereBetween('date', [$from_date, $to_date])
+                                        ->select('bill_sundry_type','amount')
+                                        ->get();
         if(count($sale_return_sundry_purchase)>0){
             foreach ($sale_return_sundry_purchase as $key => $value) {
                 if($value->bill_sundry_type=="additive"){
@@ -714,9 +706,21 @@ class CommonHelper
         return $profitloss;
     }
     public static function gstTokenOtpRequest($state_code,$gst_username,$gstin){
+        $credentials = json_decode(self::gstApiCredentials('GST'));
+        if(!$credentials){
+            return 0;
+        }
+        if($credentials->status != 1){
+            return 0;
+        }
+        $base_url = $credentials->base_url;
+        $email_id = $credentials->email_id;
+        $client_id = $credentials->client_id;
+        $client_secret = $credentials->client_secret;
+        $ip_address = $credentials->ip_address;
         $curl = curl_init();
         curl_setopt_array($curl, array(
-            CURLOPT_URL => 'https://api.mastergst.com/authentication/otprequest?email=pram92500@gmail.com',
+            CURLOPT_URL => $base_url.'/authentication/otprequest?email='.$email_id,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_ENCODING => '',
             CURLOPT_MAXREDIRS => 10,
@@ -727,9 +731,9 @@ class CommonHelper
             CURLOPT_HTTPHEADER => array(
                 'gst_username:'.$gst_username,
                 'state_cd: '.$state_code,
-                'ip_address: 162.215.254.201',
-                'client_id: GSPdea8d6fb-aed1-431a-b589-f1c541424580',
-                'client_secret: GSP4c44b790-ef11-4725-81d9-5f8504279d67'
+                'ip_address: '.$ip_address,
+                'client_id: '.$client_id,
+                'client_secret: '.$client_secret
             ),
         ));
         $response = curl_exec($curl);
@@ -776,141 +780,140 @@ class CommonHelper
         return $result->toArray();
     }
     public static function getAllChildGroupIds($group_id, $company_id, &$visited = [])
-{
-    // STOP if already visited (prevents infinite loop)
-    if (in_array($group_id, $visited)) {
-        return [];
-    }
+    {
+        // STOP if already visited (prevents infinite loop)
+        if (in_array($group_id, $visited)) {
+            return [];
+        }
 
-    // mark this group as visited
-    $visited[] = $group_id;
+        // mark this group as visited
+        $visited[] = $group_id;
 
-    $child_ids = AccountGroups::where('heading', $group_id)
-        ->where('delete', '0')
-        ->where('heading_type', 'group')
-        ->whereIn('company_id', [$company_id, 0])
-        ->pluck('id')
-        ->toArray();
-
-    $all_ids = [];
-
-    foreach ($child_ids as $child_id) {
-        $all_ids[] = $child_id;
-
-        $all_ids = array_merge(
-            $all_ids,
-            self::getAllChildGroupIds($child_id, $company_id, $visited)
-        );
-    }
-
-    return $all_ids;
-}
-    
-     public static function RewriteAllItemAverage()
-{
-    $companyId = Session::get('user_company_id');
-
-    // 1️⃣ Get company book start date
-    $company = Companies::find($companyId);
-    if (!$company || empty($company->books_start_from)) {
-        return false;
-    }
-
-    $startDate = Carbon::parse($company->books_start_from)->toDateString();
-
-    // 2️⃣ Get all SERIES (same logic as ClosingStock)
-    if ($company->gst_config_type == "single_gst") {
-
-        $series = DB::table('gst_settings')
-            ->where([
-                'company_id' => $companyId,
-                'gst_type' => 'single_gst'
-            ])->pluck('series')->toArray();
-
-        $branchSeries = GstBranch::where([
-                'delete' => '0',
-                'company_id' => $companyId
-            ])
-            ->pluck('branch_series')
+        $child_ids = AccountGroups::where('heading', $group_id)
+            ->where('delete', '0')
+            ->where('heading_type', 'group')
+            ->whereIn('company_id', [$company_id, 0])
+            ->pluck('id')
             ->toArray();
 
-        $series = array_merge($series, $branchSeries);
+        $all_ids = [];
 
-    } else {
+        foreach ($child_ids as $child_id) {
+            $all_ids[] = $child_id;
 
-        $series = DB::table('gst_settings_multiple')
-            ->where([
-                'company_id' => $companyId,
-                'gst_type' => 'multiple_gst'
-            ])
-            ->pluck('series')
-            ->toArray();
-
-        $branchSeries = GstBranch::where([
-                'delete' => '0',
-                'company_id' => $companyId
-            ])
-            ->pluck('branch_series')
-            ->toArray();
-
-        $series = array_merge($series, $branchSeries);
-    }
-
-    $series = array_unique(array_filter($series));
-
-    // 3️⃣ Get all items which have ANY stock movement
-    $items = ItemAverageDetail::where('company_id', $companyId)
-        ->distinct()
-        ->pluck('item_id');
-
-    // 4️⃣ Recalculate item-wise, series-wise
-    foreach ($items as $itemId) {
-        foreach ($series as $seriesNo) {
-
-            self::RewriteItemAverageByItem(
-                $startDate,
-                $itemId,
-                $seriesNo
+            $all_ids = array_merge(
+                $all_ids,
+                self::getAllChildGroupIds($child_id, $company_id, $visited)
             );
-
         }
+
+        return $all_ids;
     }
+    public static function RewriteAllItemAverage()
+    {
+        $companyId = Session::get('user_company_id');
 
-    return true;
-}
-public static function getAllChildGroupIdsOptimizeCode($group_id, $company_id)
-{
-    $rows = AccountGroups::where('delete', '0')
-        ->whereIn('heading_type', ['group', 'head'])
-        ->whereIn('company_id', [$company_id, 0])
-        ->get(['id', 'heading']);
+        // 1️⃣ Get company book start date
+        $company = Companies::find($companyId);
+        if (!$company || empty($company->books_start_from)) {
+            return false;
+        }
 
-    $map = [];
+        $startDate = Carbon::parse($company->books_start_from)->toDateString();
 
-    foreach ($rows as $row) {
-        $map[$row->heading][] = $row->id;
+        // 2️⃣ Get all SERIES (same logic as ClosingStock)
+        if ($company->gst_config_type == "single_gst") {
+
+            $series = DB::table('gst_settings')
+                ->where([
+                    'company_id' => $companyId,
+                    'gst_type' => 'single_gst'
+                ])->pluck('series')->toArray();
+
+            $branchSeries = GstBranch::where([
+                    'delete' => '0',
+                    'company_id' => $companyId
+                ])
+                ->pluck('branch_series')
+                ->toArray();
+
+            $series = array_merge($series, $branchSeries);
+
+        } else {
+
+            $series = DB::table('gst_settings_multiple')
+                ->where([
+                    'company_id' => $companyId,
+                    'gst_type' => 'multiple_gst'
+                ])
+                ->pluck('series')
+                ->toArray();
+
+            $branchSeries = GstBranch::where([
+                    'delete' => '0',
+                    'company_id' => $companyId
+                ])
+                ->pluck('branch_series')
+                ->toArray();
+
+            $series = array_merge($series, $branchSeries);
+        }
+
+        $series = array_unique(array_filter($series));
+
+        // 3️⃣ Get all items which have ANY stock movement
+        $items = ItemAverageDetail::where('company_id', $companyId)
+            ->distinct()
+            ->pluck('item_id');
+
+        // 4️⃣ Recalculate item-wise, series-wise
+        foreach ($items as $itemId) {
+            foreach ($series as $seriesNo) {
+
+                self::RewriteItemAverageByItem(
+                    $startDate,
+                    $itemId,
+                    $seriesNo
+                );
+
+            }
+        }
+
+        return true;
     }
+    public static function getAllChildGroupIdsOptimizeCode($group_id, $company_id)
+    {
+        $rows = AccountGroups::where('delete', '0')
+            ->whereIn('heading_type', ['group', 'head'])
+            ->whereIn('company_id', [$company_id, 0])
+            ->get(['id', 'heading']);
 
-    $result = [];
-    $visited = [];
+        $map = [];
 
-    $walk = function ($parent) use (&$walk, &$map, &$result, &$visited) {
-        if (isset($visited[$parent])) {
-            return;
+        foreach ($rows as $row) {
+            $map[$row->heading][] = $row->id;
         }
 
-        $visited[$parent] = true;
+        $result = [];
+        $visited = [];
 
-        foreach ($map[$parent] ?? [] as $childId) {
-            $result[] = $childId;
-            $walk($childId);
-        }
-    };
+        $walk = function ($parent) use (&$walk, &$map, &$result, &$visited) {
+            if (isset($visited[$parent])) {
+                return;
+            }
 
-    $walk($group_id);
+            $visited[$parent] = true;
 
-    return array_unique($result);
-}
+            foreach ($map[$parent] ?? [] as $childId) {
+                $result[] = $childId;
+                $walk($childId);
+            }
+        };
+
+        $walk($group_id);
+
+        return array_unique($result);
+    }
     public static function getFinancialYear($date)
     {
         $year = date('Y', strtotime($date));

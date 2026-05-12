@@ -25,6 +25,7 @@ use App\Models\ParameterInfo;
 use App\Models\ParameterInfoValue;
 use App\Models\gstToken;
 use App\Models\ItemParameterStock;
+use App\Helpers\CommonHelper;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use DB;
@@ -971,9 +972,32 @@ return response()->json(1);
                            ->first();
          $gst_user_name = $gst->gst_username;
       }
+      //Get Api Credentails
+      $credentials = json_decode(CommonHelper::gstApiCredentials('GST'));
+      if(!$credentials){
+          $response = [
+                        'success' => false,
+                        'data'    => "",
+                        'message' => "Api Credentails Not Found ",
+                     ];
+         return response()->json($response, 200);
+      }
+      if($credentials->status != 1){
+          $response = [
+                        'success' => false,
+                        'data'    => "",
+                        'message' => "Api Credentails Not Found ",
+                     ];
+         return response()->json($response, 200);
+      }
+      $base_url = $credentials->base_url;
+      $email_id = $credentials->email_id;
+      $client_id = $credentials->client_id;
+      $client_secret = $credentials->client_secret;
+      $ip_address = $credentials->ip_address;
       $curl = curl_init();
       curl_setopt_array($curl, array(
-         CURLOPT_URL => 'https://api.mastergst.com/authentication/authtoken?email=pram92500@gmail.com&otp='.$request->otp,
+         CURLOPT_URL => $base_url.'/authentication/authtoken?email='.$email_id.'&otp='.$request->otp,
          CURLOPT_RETURNTRANSFER => true,
          CURLOPT_ENCODING => '',
          CURLOPT_MAXREDIRS => 10,
@@ -985,9 +1009,9 @@ return response()->json(1);
                'gst_username:'.$gst_user_name,
                'state_cd: '.$state_code,
                'txn:'.$txn,
-               'ip_address: 162.215.254.201',
-               'client_id: GSPdea8d6fb-aed1-431a-b589-f1c541424580',
-               'client_secret: GSP4c44b790-ef11-4725-81d9-5f8504279d67'
+               'ip_address: '.$ip_address,
+               'client_id: '.$client_id,
+               'client_secret: '.$client_secret,
          ),
       ));
       $response = curl_exec($curl);

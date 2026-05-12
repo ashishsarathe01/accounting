@@ -707,11 +707,12 @@
                </div>
                <div class=" d-flex">
                   
-                  <div class="ms-auto">
-                      @if($current_financial_year==Session::get('default_fy')) <input type="submit" value="SAVE" class="btn btn-xs-primary" id="saveBtn"> @endif
-                     
-                     <a href="{{ route('sale.index') }}" class="btn  btn-black ">QUIT</a>
-                  </div>
+                    <div class="ms-auto">
+                        @if($current_financial_year==Session::get('default_fy') || Session::get('user_company_id')==38)  
+                            <input type="submit" value="SAVE" class="btn btn-xs-primary" id="saveBtn">
+                        @endif
+                        <a href="{{ route('sale.index') }}" class="btn  btn-black ">QUIT</a>
+                    </div>
                </div>
             </form>
          </div>
@@ -894,14 +895,14 @@
             <div class="col-md-4 mb-3">
               <label>UNDER GROUP</label>
               <select name="under_group" class="form-select" required>
-  <option value="">SELECT GROUP</option>
-  @foreach($allowedAccountGroups as $group)
-    <option value="{{ $group->id }}">{{ $group->name }}</option>
-  @endforeach
-</select>
+                  <option value="">SELECT GROUP</option>
+                  @foreach($allowedAccountGroups as $group)
+                    <option value="{{ $group->id }}">{{ $group->name }}</option>
+                  @endforeach
+                </select>
 
-<input type="hidden" name="under_group_type" id="modal_under_group_type" value="">
-<input type="hidden" name="form_type" value="modal">
+                <input type="hidden" name="under_group_type" id="modal_under_group_type" value="">
+                <input type="hidden" name="form_type" value="modal">
             </div>
 
             <div class="col-md-4 mb-3">

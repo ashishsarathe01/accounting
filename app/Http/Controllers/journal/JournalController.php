@@ -388,7 +388,7 @@ public function index(Request $request)
       $closePurchase  = (int) $request->input('close_purchase') === 1;
       $itemsJson      = $request->input('items');
       $receivedItems = json_decode($itemsJson, true) ?? [];
-      $financial_year = Session::get('default_fy');
+      $financial_year = CommonHelper::getFinancialYear($request->input('date'));
       $series_configuration = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
          ->where('series', $request->input('series_no'))
          ->where('configuration_for', 'JOURNAL')
@@ -601,7 +601,7 @@ public function index(Request $request)
                $ledger->txn_date = $request->input('date');
                $ledger->series_no = $request->input('series_no');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 7;
                $ledger->entry_type_id = $journal->id;
                $ledger->map_account_id = $request->input('vendor');
@@ -653,7 +653,7 @@ public function index(Request $request)
             $ledger->credit = $request->input('total_amount');                       
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 7;
             $ledger->map_account_id = $vendor_mapp_id;
             $ledger->entry_type_id = $journal->id;
@@ -694,7 +694,7 @@ public function index(Request $request)
             $ledger->series_no = $request->input('series_no');            
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 7;
             $ledger->map_account_id = $request->input('vendor');
             $ledger->entry_type_id = $journal->id;
@@ -736,7 +736,7 @@ public function index(Request $request)
                $ledger->txn_date = $request->input('date');
                $ledger->series_no = $request->input('series_no');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 7;
                $ledger->map_account_id = $request->input('vendor');
                $ledger->entry_type_id = $journal->id;
@@ -771,7 +771,7 @@ public function index(Request $request)
                $ledger->debit = $request->input('igst');                       
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 7;
                $ledger->map_account_id = $request->input('vendor');
                $ledger->entry_type_id = $journal->id;
@@ -815,7 +815,7 @@ public function index(Request $request)
                $ledger->debit = $request->input('cgst');                       
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 7;
                $ledger->map_account_id = $request->input('vendor');
                $ledger->entry_type_id = $journal->id;
@@ -838,7 +838,7 @@ public function index(Request $request)
                $ledger->debit = $request->input('sgst');                       
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 7;
                $ledger->map_account_id = $request->input('vendor');
                $ledger->entry_type_id = $journal->id;
@@ -896,7 +896,7 @@ public function index(Request $request)
                $ledger->series_no = $request->input('series_no');
                $ledger->txn_date = $request->input('date');
                $ledger->company_id = Session::get('user_company_id');
-               $ledger->financial_year = Session::get('default_fy');
+               $ledger->financial_year = $financial_year;
                $ledger->entry_type = 7;
                $ledger->entry_type_id = $journal->id;
                $ledger->entry_narration = $narrations[$key];
@@ -1298,6 +1298,7 @@ public function index(Request $request)
       if($validator->fails()){
          return response()->json($validator->errors(), 422);
       }
+      $financial_year = CommonHelper::getFinancialYear($request->input('date'));
       $receipt =  Journal::find($request->journal_id);
       JournalDetails::where('journal_id', $receipt->id)->delete();
       JournalSundry::where('journal_id', $receipt->id)->delete();
@@ -1468,7 +1469,7 @@ public function index(Request $request)
             $ledger->txn_date = $request->input('date');
             $ledger->series_no = $request->input('series_no');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 7;
             $ledger->entry_type_id = $receipt->id;
             $ledger->map_account_id = $request->input('vendor');
@@ -1502,7 +1503,7 @@ public function index(Request $request)
          $ledger->series_no = $request->input('series_no');                     
          $ledger->txn_date = $request->input('date');
          $ledger->company_id = Session::get('user_company_id');
-         $ledger->financial_year = Session::get('default_fy');
+         $ledger->financial_year = $financial_year;
          $ledger->entry_type = 7;
          $ledger->map_account_id = $vendor_mapp_id;
          $ledger->entry_type_id = $request->journal_id;
@@ -1544,7 +1545,7 @@ public function index(Request $request)
          $ledger->series_no = $request->input('series_no');            
          $ledger->txn_date = $request->input('date');
          $ledger->company_id = Session::get('user_company_id');
-         $ledger->financial_year = Session::get('default_fy');
+         $ledger->financial_year = $financial_year;
          $ledger->entry_type = 7;
          $ledger->map_account_id = $request->input('vendor');
          $ledger->entry_type_id = $request->journal_id;
@@ -1571,7 +1572,7 @@ public function index(Request $request)
             $ledger->txn_date = $request->input('date');
             $ledger->series_no = $request->input('series_no');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 7;
             $ledger->map_account_id = $request->input('vendor');
             $ledger->entry_type_id = $request->journal_id;
@@ -1606,7 +1607,7 @@ public function index(Request $request)
             $ledger->debit = $request->input('igst');                       
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 7;
             $ledger->map_account_id = $request->input('vendor');
             $ledger->entry_type_id = $request->journal_id;
@@ -1649,7 +1650,7 @@ public function index(Request $request)
             $ledger->debit = $request->input('cgst');                       
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 7;
             $ledger->map_account_id = $request->input('vendor');
             $ledger->entry_type_id = $request->journal_id;
@@ -1671,7 +1672,7 @@ public function index(Request $request)
             $ledger->debit = $request->input('sgst');                       
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 7;
             $ledger->map_account_id = $request->input('vendor');
             $ledger->entry_type_id = $request->journal_id;
@@ -1728,7 +1729,7 @@ public function index(Request $request)
             $ledger->series_no = $request->input('series_no');
             $ledger->txn_date = $request->input('date');
             $ledger->company_id = Session::get('user_company_id');
-            $ledger->financial_year = Session::get('default_fy');
+            $ledger->financial_year = $financial_year;
             $ledger->entry_type = 7;
             $ledger->entry_type_id = $request->journal_id;
             $ledger->entry_narration = $narrations[$key];            

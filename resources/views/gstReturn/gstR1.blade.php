@@ -155,14 +155,14 @@
                     ['title' => '4A, 4B, 6B, 6C - B2B, SEZ, DE Invoices', 'count' => $saleCountB2B, 'route' => route('gst.b2b.detailed.billwise', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
                     ['title' => '5 - B2C (Large) Invoices','count' => $b2cLargeCount, 'route' => route('gst.b2c.large.detailed', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
                     ['title' => '6A - Exports Invoices', 'route' => '#'],
-                    ['title' => '7 - B2C (Others)', 'count' => $b2cNormalCount, 'route' => route('gst.b2c.normal.statewise', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
+                    ['title' => '7 - B2C (Others)', 'count' => $totalRows_small, 'route' => route('gst.b2c.normal.statewise', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
                     ['title' => '8A, 8B, 8C, 8D - Nil Rated Supplies', 'route' => route('nilratedreginter', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
                     ['title' => '9B - Credit / Debit Notes (Registered)','count' => $totalNotes , 'route' => route('debitNote', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
                     ['title' => '9B - Credit / Debit Notes (Unregistered)', 'route' => route('debitNoteUnreg', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
                     ['title' => '11A(1), 11A(2) - Tax Liability (Advances Received)', 'route' => '#'],
                     ['title' => '11B(1), 11B(2) - Adjustment of Advances', 'route' => '#'],
                     ['title' => '12 - HSN-wise summary of outward supplies','count'=>$hsnWiseSummaryCount,'route' => route('hsnSummary', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
-                    ['title' => '13 - Documents Issued', 'route' => route('docIssued', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
+                    ['title' => '13 - Documents Issued','count' => $docCount, 'route' => route('docIssued', compact('merchant_gst', 'company_id', 'from_date', 'to_date'))],
                     ['title' => '14 - Supplies made through ECO', 'route' => '#'],
                     ['title' => '15 - Supplies U/s 9(5)', 'route' => '#'],
                 ];
@@ -853,7 +853,7 @@ function toggleDebitNoteSummary() {
         e.preventDefault(); // prevent normal form submit
         
         
-        if(turnover_amount==0 || turnover_amount==""){
+        if(turnover_amount==""){
             alert("Please Add Gross Turnover");
             return;
         }
@@ -890,7 +890,7 @@ function toggleDebitNoteSummary() {
     });
     $(".save_turnover").click(function(){
         let amount = $("#turnovers_amount").val();
-        if(amount=="" || amount==0){
+        if(amount==""){
             alert("Please Enter Turnover Amount");
             return;
         }

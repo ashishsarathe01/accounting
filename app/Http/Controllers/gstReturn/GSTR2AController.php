@@ -19,6 +19,14 @@ use Carbon\Carbon;
 use App\Helpers\CommonHelper;
 class GSTR2AController extends Controller
 {
+    protected $gstCredentials;
+
+    public function __construct()
+    {
+        $this->gstCredentials = json_decode(
+            CommonHelper::gstApiCredentials('GST')
+        );
+    }
     /**
      * Display the GSTR2A view.
      *
@@ -88,6 +96,28 @@ class GSTR2AController extends Controller
                     ->where('company_id',Session::get('user_company_id'))
                     ->where('res_month',$request->month)
                     ->first();
+        //Gst Credenatial
+        if(!$this->gstCredentials){
+            $response = [
+                            'success' => false,
+                            'data'    => "",
+                            'message' => "Api Credentails Not Found ",
+                        ];
+            return response()->json($response, 200);
+        }
+        if($this->gstCredentials->status != 1){
+            $response = [
+                            'success' => false,
+                            'data'    => "",
+                            'message' => "Api Credentails Not Found ",
+                        ];
+            return response()->json($response, 200);
+        }
+        $base_url = $this->gstCredentials->base_url;
+        $email_id = $this->gstCredentials->email_id;
+        $client_id = $this->gstCredentials->client_id;
+        $client_secret = $this->gstCredentials->client_secret;
+        $ip_address = $this->gstCredentials->ip_address;
         if(!$GSTR2A){
             //Check and generate token
             $gst_token = gstToken::select('txn','created_at')
@@ -131,10 +161,10 @@ class GSTR2AController extends Controller
                 return json_encode($response);
             }
             //B2B Data
-            
+             
             $curl = curl_init();
             curl_setopt_array($curl, array(
-                CURLOPT_URL => 'https://api.mastergst.com/gstr2a/b2b?email=pram92500@gmail.com&gstin='.$request->gstin.'&retperiod='.$month,
+                CURLOPT_URL => $base_url.'/gstr2a/b2b?email='.$email_id.'&gstin='.$request->gstin.'&retperiod='.$month,
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_ENCODING => '',
                 CURLOPT_MAXREDIRS => 10,
@@ -145,10 +175,10 @@ class GSTR2AController extends Controller
                 CURLOPT_HTTPHEADER => array(
                 'gst_username:'.$gst_user_name,
                 'state_cd: '.$state_code,  
-                'ip_address: 162.215.254.201',
+                'ip_address: '.$ip_address,
                 'txn: '.$txn,
-                'client_id: GSPdea8d6fb-aed1-431a-b589-f1c541424580',
-                'client_secret: GSP4c44b790-ef11-4725-81d9-5f8504279d67'
+                'client_id: '.$client_id,
+                'client_secret: '.$client_secret
                 ),
             ));
             $response = curl_exec($curl);
@@ -177,7 +207,7 @@ class GSTR2AController extends Controller
             //B2BA
             $curl = curl_init();
             curl_setopt_array($curl, array(
-                CURLOPT_URL => 'https://api.mastergst.com/gstr2a/b2ba?email=pram92500@gmail.com&gstin='.$request->gstin.'&retperiod='.$month,
+                CURLOPT_URL => $base_url.'/gstr2a/b2ba?email='.$email_id.'&gstin='.$request->gstin.'&retperiod='.$month,
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_ENCODING => '',
                 CURLOPT_MAXREDIRS => 10,
@@ -188,10 +218,10 @@ class GSTR2AController extends Controller
                 CURLOPT_HTTPHEADER => array(
                 'gst_username:'.$gst_user_name,
                 'state_cd: '.$state_code,  
-                'ip_address: 162.215.254.201',
+                'ip_address: '.$ip_address,
                 'txn: '.$txn,
-                'client_id: GSPdea8d6fb-aed1-431a-b589-f1c541424580',
-                'client_secret: GSP4c44b790-ef11-4725-81d9-5f8504279d67'
+                'client_id: '.$client_id,
+                'client_secret: '.$client_secret
                 ),
             ));
             $response = curl_exec($curl);
@@ -213,7 +243,7 @@ class GSTR2AController extends Controller
             //CDN
             $curl = curl_init();
             curl_setopt_array($curl, array(
-                CURLOPT_URL => 'https://api.mastergst.com/gstr2a/cdn?email=pram92500@gmail.com&gstin='.$request->gstin.'&retperiod='.$month,
+                CURLOPT_URL => $base_url.'/gstr2a/cdn?email='.$email_id.'&gstin='.$request->gstin.'&retperiod='.$month,
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_ENCODING => '',
                 CURLOPT_MAXREDIRS => 10,
@@ -224,10 +254,10 @@ class GSTR2AController extends Controller
                 CURLOPT_HTTPHEADER => array(
                 'gst_username:'.$gst_user_name,
                 'state_cd: '.$state_code,  
-                'ip_address: 162.215.254.201',
+                'ip_address: '.$ip_address,
                 'txn: '.$txn,
-                'client_id: GSPdea8d6fb-aed1-431a-b589-f1c541424580',
-                'client_secret: GSP4c44b790-ef11-4725-81d9-5f8504279d67'
+                'client_id: '.$client_id,
+                'client_secret: '.$client_secret
                 ),
             ));
             $response = curl_exec($curl);
@@ -249,7 +279,7 @@ class GSTR2AController extends Controller
             //CDNA
             $curl = curl_init();
             curl_setopt_array($curl, array(
-                CURLOPT_URL => 'https://api.mastergst.com/gstr2a/cdna?email=pram92500@gmail.com&gstin='.$request->gstin.'&retperiod='.$month,
+                CURLOPT_URL => $base_url.'/gstr2a/cdna?email='.$email_id.'&gstin='.$request->gstin.'&retperiod='.$month,
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_ENCODING => '',
                 CURLOPT_MAXREDIRS => 10,
@@ -260,10 +290,10 @@ class GSTR2AController extends Controller
                 CURLOPT_HTTPHEADER => array(
                 'gst_username:'.$gst_user_name,
                 'state_cd: '.$state_code,  
-                'ip_address: 162.215.254.201',
+                'ip_address: '.$ip_address,
                 'txn: '.$txn,
-                'client_id: GSPdea8d6fb-aed1-431a-b589-f1c541424580',
-                'client_secret: GSP4c44b790-ef11-4725-81d9-5f8504279d67'
+                'client_id: '.$client_id,
+                'client_secret: '.$client_secret
                 ),
             ));
             $response = curl_exec($curl);
@@ -315,18 +345,17 @@ class GSTR2AController extends Controller
                             $account_name = $account->account_name;
                         } else {
                             // ❌ Not found → Fetch from GST API
-                            $email = 'pram92500@gmail.com';
                         
                                 $curl = curl_init();
                         
                                 curl_setopt_array($curl, [
-                                    CURLOPT_URL => "https://api.mastergst.com/public/search?email={$email}&gstin={$b2b->ctin}",
+                                    CURLOPT_URL => $base_url."/public/search?email={$email_id}&gstin={$b2b->ctin}",
                                     CURLOPT_RETURNTRANSFER => true,
                                     CURLOPT_TIMEOUT => 30,
                                     CURLOPT_CUSTOMREQUEST => "GET",
                                     CURLOPT_HTTPHEADER => [
-                                       'client_id: GSPdea8d6fb-aed1-431a-b589-f1c541424580',
-                                        'client_secret: GSP4c44b790-ef11-4725-81d9-5f8504279d67'
+                                       'client_id: '.$client_id,
+                                        'client_secret: '.$client_secret
                                     ],
                                 ]);
                         
@@ -634,22 +663,43 @@ class GSTR2AController extends Controller
                             ->where('company_id',Session::get('user_company_id'))
                             ->where('gstin',$request->ctin)
                             ->first();
+        //Gst Credenatial
+        if(!$this->gstCredentials){
+            $response = [
+                            'success' => false,
+                            'data'    => "",
+                            'message' => "Api Credentails Not Found ",
+                        ];
+            return response()->json($response, 200);
+        }
+        if($this->gstCredentials->status != 1){
+            $response = [
+                            'success' => false,
+                            'data'    => "",
+                            'message' => "Api Credentails Not Found ",
+                        ];
+            return response()->json($response, 200);
+        }
+        $base_url = $this->gstCredentials->base_url;
+        $email_id = $this->gstCredentials->email_id;
+        $client_id = $this->gstCredentials->client_id;
+        $client_secret = $this->gstCredentials->client_secret;
+        $ip_address = $this->gstCredentials->ip_address;
         $account_name = "";
         if ($account) {
             // ✅ Found in DB
             $account_name = $account->account_name;
         } else {
             // ❌ Not found → Fetch from GST API
-            $email = 'pram92500@gmail.com';
                 $curl = curl_init();
                 curl_setopt_array($curl, [
-                    CURLOPT_URL => "https://api.mastergst.com/public/search?email={$email}&gstin={$b2b->ctin}",
+                    CURLOPT_URL => $base_url."/public/search?email={$email_id}&gstin={$b2b->ctin}",
                     CURLOPT_RETURNTRANSFER => true,
                     CURLOPT_TIMEOUT => 30,
                     CURLOPT_CUSTOMREQUEST => "GET",
                     CURLOPT_HTTPHEADER => [
-                       'client_id: GSPdea8d6fb-aed1-431a-b589-f1c541424580',
-                        'client_secret: GSP4c44b790-ef11-4725-81d9-5f8504279d67'
+                        'client_id: '.$client_id,
+                        'client_secret: '.$client_secret
                     ],
                 ]);
                 $response = curl_exec($curl);

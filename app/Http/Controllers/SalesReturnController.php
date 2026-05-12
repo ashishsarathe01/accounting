@@ -2844,11 +2844,15 @@ class SalesReturnController extends Controller
             $unit = $value->unit_name;
             $item_freight = 0;
             $item_discount = 0;
-            $item_total = $value->tprice;            
+            $item_total = $value->tprice;
             $average_freight = $sundry_amount / $total_item_price;
             $item_freight = $average_freight * $value->tprice;
-            $item_total = $item_total + $item_freight;            
-            $unit_price = $item_total / $value->tweight;
+            $item_total = $item_total + $item_freight;
+            if($value->tweight=="" || $value->tweight==0){
+               $unit_price = $item_total;
+            }else{
+               $unit_price = $item_total / $value->tweight;
+            }
             $item_cgst = 0;$item_sgst = 0;$item_igst = 0;
             $gst_rate = ItemGstRate::select('gst_rate')
                                  ->where('item_id', $value->item_id)
@@ -2899,7 +2903,7 @@ class SalesReturnController extends Controller
                "Discount"=> null,
                "PreTaxVal"=> null,
                "AssAmt"=> (float)$item_total,
-               "GstRt"=> 12,
+               "GstRt"=> $itax,
                "SgstAmt"=>(float)round($item_sgst,2),
                "IgstAmt"=>(float)round($item_igst,2),
                "CgstAmt"=>(float)round($item_cgst,2),
@@ -2962,10 +2966,33 @@ class SalesReturnController extends Controller
                         ];
             return response()->json($response, 200);
          }
-      }      
+      }
+      //Get Api Credentails
+      $credentials = json_decode(CommonHelper::gstApiCredentials('EINVOICE'));
+      if(!$credentials){
+         $response = [
+                              'success' => false,
+                              'data'    => "",
+                              'message' => "Api Credentails Not Found ",
+                           ];
+               return response()->json($response, 200);
+      }
+      if($credentials->status != 1){
+         $response = [
+                              'success' => false,
+                              'data'    => "",
+                              'message' => "Api Credentails Not Found ",
+                           ];
+               return response()->json($response, 200);
+      }
+      $base_url = $credentials->base_url;
+      $email_id = $credentials->email_id;
+      $client_id = $credentials->client_id;
+      $client_secret = $credentials->client_secret;
+      $ip_address = $credentials->ip_address;
       $curl = curl_init();
       curl_setopt_array($curl, array(
-         CURLOPT_URL => 'https://api.mastergst.com/einvoice/type/GENERATE/version/V1_03?email=pram92500@gmail.com',
+         CURLOPT_URL => $base_url.'/einvoice/type/GENERATE/version/V1_03?email='.$email_id,
          CURLOPT_RETURNTRANSFER => true,
          CURLOPT_ENCODING => '',
          CURLOPT_MAXREDIRS => 10,
@@ -2975,9 +3002,9 @@ class SalesReturnController extends Controller
          CURLOPT_CUSTOMREQUEST => 'POST',
          CURLOPT_POSTFIELDS =>json_encode($einvoice_requset),
          CURLOPT_HTTPHEADER => array(
-            'ip_address: 162.241.85.89',
-            'client_id: 964759f3-5071-4e4f-a03c-88c56aa8bd6f',
-            'client_secret: 35565aa5-3d2c-4507-b81f-3c3effd00238',
+            'ip_address: '.$ip_address,
+            'client_id: '.$client_id,
+            'client_secret: '.$client_secret,
             'username:'.$einvoice_username,
             'auth-token:'.$token,
             'gstin:'.$einvoice_gst,
@@ -3326,10 +3353,33 @@ class SalesReturnController extends Controller
                         ];
             return response()->json($response, 200);
          }
-      }      
+      }
+      //Get Api Credentails
+      $credentials = json_decode(CommonHelper::gstApiCredentials('EINVOICE'));
+      if(!$credentials){
+         $response = [
+                              'success' => false,
+                              'data'    => "",
+                              'message' => "Api Credentails Not Found ",
+                           ];
+               return response()->json($response, 200);
+      }
+      if($credentials->status != 1){
+         $response = [
+                              'success' => false,
+                              'data'    => "",
+                              'message' => "Api Credentails Not Found ",
+                           ];
+               return response()->json($response, 200);
+      }
+      $base_url = $credentials->base_url;
+      $email_id = $credentials->email_id;
+      $client_id = $credentials->client_id;
+      $client_secret = $credentials->client_secret;
+      $ip_address = $credentials->ip_address;
       $curl = curl_init();
       curl_setopt_array($curl, array(
-         CURLOPT_URL => 'https://api.mastergst.com/einvoice/type/GENERATE/version/V1_03?email=pram92500@gmail.com',
+         CURLOPT_URL => $base_url.'/einvoice/type/GENERATE/version/V1_03?email='.$email_id,
          CURLOPT_RETURNTRANSFER => true,
          CURLOPT_ENCODING => '',
          CURLOPT_MAXREDIRS => 10,
@@ -3339,9 +3389,9 @@ class SalesReturnController extends Controller
          CURLOPT_CUSTOMREQUEST => 'POST',
          CURLOPT_POSTFIELDS =>json_encode($einvoice_requset),
          CURLOPT_HTTPHEADER => array(
-            'ip_address: 162.241.85.89',
-            'client_id: 964759f3-5071-4e4f-a03c-88c56aa8bd6f',
-            'client_secret: 35565aa5-3d2c-4507-b81f-3c3effd00238',
+            'ip_address: '.$ip_address,
+            'client_id: '.$client_id,
+            'client_secret: '.$client_secret,
             'username:'.$einvoice_username,
             'auth-token:'.$token,
             'gstin:'.$einvoice_gst,
@@ -3387,9 +3437,22 @@ class SalesReturnController extends Controller
       }
    }   
    public function generateEinvoiceToken($username,$password,$gstin,$einvoice_company){
+      //Get Api Credentails
+      $credentials = json_decode(CommonHelper::gstApiCredentials('EINVOICE'));
+      if(!$credentials){
+         return 0;
+      }
+      if($credentials->status != 1){
+        return 0;
+      }
+      $base_url = $credentials->base_url;
+      $email_id = $credentials->email_id;
+      $client_id = $credentials->client_id;
+      $client_secret = $credentials->client_secret;
+      $ip_address = $credentials->ip_address;
       $curl = curl_init();
       curl_setopt_array($curl, array(
-         CURLOPT_URL => 'https://api.mastergst.com/einvoice/authenticate?email=pram92500@gmail.com',
+         CURLOPT_URL => $base_url.'/einvoice/authenticate?email='.$email_id,
          CURLOPT_RETURNTRANSFER => true,
          CURLOPT_ENCODING => '',
          CURLOPT_MAXREDIRS => 10,
@@ -3400,9 +3463,9 @@ class SalesReturnController extends Controller
          CURLOPT_HTTPHEADER => array(
             'username:'.$username,
             'password:'.decrypt($password),
-            'ip_address: 162.241.85.89',
-            'client_id: 964759f3-5071-4e4f-a03c-88c56aa8bd6f',
-            'client_secret: 35565aa5-3d2c-4507-b81f-3c3effd00238',
+            'ip_address: '.$ip_address,
+            'client_id: '.$client_id,
+            'client_secret: '.$client_secret,
             'gstin:'.$gstin
          ),
       ));
@@ -3552,9 +3615,32 @@ class SalesReturnController extends Controller
          "VehType"=>"R"
       );
       // print_r($eway_bill_request);die;
+      //Get Api Credentails
+      $credentials = json_decode(CommonHelper::gstApiCredentials('EINVOICE'));
+      if(!$credentials){
+         $response = [
+                              'success' => false,
+                              'data'    => "",
+                              'message' => "Api Credentails Not Found ",
+                           ];
+               return response()->json($response, 200);
+      }
+      if($credentials->status != 1){
+         $response = [
+                              'success' => false,
+                              'data'    => "",
+                              'message' => "Api Credentails Not Found ",
+                           ];
+               return response()->json($response, 200);
+      }
+      $base_url = $credentials->base_url;
+      $email_id = $credentials->email_id;
+      $client_id = $credentials->client_id;
+      $client_secret = $credentials->client_secret;
+      $ip_address = $credentials->ip_address;
       $curl = curl_init();
       curl_setopt_array($curl, array(
-         CURLOPT_URL => 'https://api.mastergst.com/einvoice/type/GENERATE_EWAYBILL/version/V1_03?email=pram92500@gmail.com',
+         CURLOPT_URL => $base_url.'/einvoice/type/GENERATE_EWAYBILL/version/V1_03?email='.$email_id,
          CURLOPT_RETURNTRANSFER => true,
          CURLOPT_ENCODING => '',
          CURLOPT_MAXREDIRS => 10,
@@ -3564,9 +3650,9 @@ class SalesReturnController extends Controller
          CURLOPT_CUSTOMREQUEST => 'POST',
          CURLOPT_POSTFIELDS =>json_encode($eway_bill_request),
          CURLOPT_HTTPHEADER => array(
-            'ip_address: 162.241.85.89',
-            'client_id: 964759f3-5071-4e4f-a03c-88c56aa8bd6f',
-            'client_secret: 35565aa5-3d2c-4507-b81f-3c3effd00238',
+            'ip_address: '.$ip_address,
+            'client_id: '.$client_id,
+            'client_secret: '.$client_secret,
             'username:'.$einvoice_username,
             'auth-token:'.$token,
             'gstin:'.$einvoice_gst,
@@ -3647,7 +3733,7 @@ class SalesReturnController extends Controller
                }
             }
          }
-      }else if($sale->gst_config_type=="single_gst"){         
+      }else if($sale->gst_config_type=="single_gst"){
          $einvoice_company = $gst_info->id;
          $einvoice_username = $gst_info->einvoice_username; 
          $einvoice_password = $gst_info->einvoice_password;
@@ -3661,9 +3747,32 @@ class SalesReturnController extends Controller
          );
          return json_encode($res);
       }
+      //Get Api Credentails
+      $credentials = json_decode(CommonHelper::gstApiCredentials('EWAYBILL'));
+      if(!$credentials){
+         $response = [
+                              'success' => false,
+                              'data'    => "",
+                              'message' => "Api Credentails Not Found ",
+                           ];
+               return response()->json($response, 200);
+      }
+      if($credentials->status != 1){
+         $response = [
+                              'success' => false,
+                              'data'    => "",
+                              'message' => "Api Credentails Not Found ",
+                           ];
+               return response()->json($response, 200);
+      }
+      $base_url = $credentials->base_url;
+      $email_id = $credentials->email_id;
+      $client_id = $credentials->client_id;
+      $client_secret = $credentials->client_secret;
+      $ip_address = $credentials->ip_address;
       $curl = curl_init();
       curl_setopt_array($curl, array(
-         CURLOPT_URL => 'https://api.mastergst.com/ewaybillapi/v1.03/authenticate?email=pram92500@gmail.com&username='.$einvoice_username.'&password='.$einvoice_password,
+         CURLOPT_URL => $base_url.'/ewaybillapi/v1.03/authenticate?email='.$email_id.'&username='.$einvoice_username.'&password='.$einvoice_password,
          CURLOPT_RETURNTRANSFER => true,
          CURLOPT_ENCODING => '',
          CURLOPT_MAXREDIRS => 10,
@@ -3672,9 +3781,9 @@ class SalesReturnController extends Controller
          CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
          CURLOPT_CUSTOMREQUEST => 'GET',
          CURLOPT_HTTPHEADER => array(
-            'ip_address: 162.241.85.89',
-            'client_id: 627652fe-675c-484e-8768-20a874d6c864',
-            'client_secret: 2d73d024-4b08-4627-a219-99f027bcf77f',            
+            'ip_address: '.$ip_address,
+            'client_id: '.$client_id,
+            'client_secret: '.$client_secret,
             'gstin: '.$einvoice_gst,
             'Content-Type: application/json'
          ),
@@ -3690,7 +3799,7 @@ class SalesReturnController extends Controller
       );
       $curl = curl_init();
       curl_setopt_array($curl, array(
-         CURLOPT_URL => 'https://api.mastergst.com/ewaybillapi/v1.03/ewayapi/canewb?email=pram92500@gmail.com',
+         CURLOPT_URL => $base_url.'/ewaybillapi/v1.03/ewayapi/canewb?email='.$email_id,
          CURLOPT_RETURNTRANSFER => true,
          CURLOPT_ENCODING => '',
          CURLOPT_MAXREDIRS => 10,
@@ -3700,9 +3809,9 @@ class SalesReturnController extends Controller
          CURLOPT_CUSTOMREQUEST => 'POST',
          CURLOPT_POSTFIELDS =>json_encode($cancel_eway_request),
          CURLOPT_HTTPHEADER => array(
-            'ip_address: 162.241.85.89',
-            'client_id: 627652fe-675c-484e-8768-20a874d6c864',
-            'client_secret:   2d73d024-4b08-4627-a219-99f027bcf77f',
+            'ip_address: '.$ip_address,
+            'client_id: '.$client_id,
+            'client_secret: '.$client_secret,
             'gstin:'.$einvoice_gst,
             'Content-Type: application/json'
          ),
@@ -3821,9 +3930,32 @@ class SalesReturnController extends Controller
          "CnlRsn"=>"1",
          "CnlRem"=>"Wrong entry"
       );
+      //Get Api Credentails
+      $credentials = json_decode(CommonHelper::gstApiCredentials('EINVOICE'));
+      if(!$credentials){
+         $response = [
+                              'success' => false,
+                              'data'    => "",
+                              'message' => "Api Credentails Not Found ",
+                           ];
+               return response()->json($response, 200);
+      }
+      if($credentials->status != 1){
+         $response = [
+                              'success' => false,
+                              'data'    => "",
+                              'message' => "Api Credentails Not Found ",
+                           ];
+               return response()->json($response, 200);
+      }
+      $base_url = $credentials->base_url;
+      $email_id = $credentials->email_id;
+      $client_id = $credentials->client_id;
+      $client_secret = $credentials->client_secret;
+      $ip_address = $credentials->ip_address;
       $curl = curl_init();
       curl_setopt_array($curl, array(
-         CURLOPT_URL => 'https://api.mastergst.com/einvoice/type/CANCEL/version/V1_03?email=pram92500@gmail.com',
+         CURLOPT_URL => $base_url.'/einvoice/type/CANCEL/version/V1_03?email='.$email_id,
          CURLOPT_RETURNTRANSFER => true,
          CURLOPT_ENCODING => '',
          CURLOPT_MAXREDIRS => 10,
@@ -3833,9 +3965,9 @@ class SalesReturnController extends Controller
          CURLOPT_CUSTOMREQUEST => 'POST',
          CURLOPT_POSTFIELDS =>json_encode($cancel_einvoice_request),
          CURLOPT_HTTPHEADER => array(
-            'ip_address: 162.241.cancel_einvoice_request85.89',
-            'client_id: 964759f3-5071-4e4f-a03c-88c56aa8bd6f',
-            'client_secret: 35565aa5-3d2c-4507-b81f-3c3effd00238',
+            'ip_address: '.$ip_address,
+            'client_id: '.$client_id,
+            'client_secret: '.$client_secret,
             'username:'.$einvoice_username,
             'auth-token:'.$token,
             'gstin:'.$einvoice_gst,
@@ -4480,15 +4612,18 @@ class SalesReturnController extends Controller
    }
 
    public function checkCreditNoteNo(Request $request)
-    {
-        $exists = \DB::table('sales_returns')
+   {
+      $financial_year = Session::get('default_fy');
+      $company_id = Session::get('user_company_id');        
+      $exists = \DB::table('sales_returns')
             ->where('sr_prefix', $request->sr_prefix)
+            ->where('financial_year',$financial_year)
+            ->where('company_id',$company_id)
             ->where('status','1')
             ->where('delete','0')
             ->exists();
-    
-        return response()->json(['exists' => $exists]);
-    }
+      return response()->json(['exists' => $exists]);
+   }
     
     public function exportView()
     {

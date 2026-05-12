@@ -134,11 +134,33 @@ class GstDetailController extends Controller
             );
             return json_encode($response);
         }
-
+        //Get Api Credentails
+        $credentials = json_decode(CommonHelper::gstApiCredentials('GST'));
+        if(!$credentials){
+            $response = [
+                            'success' => false,
+                            'data'    => "",
+                            'message' => "Api Credentails Not Found ",
+                        ];
+            return response()->json($response, 200);
+        }
+        if($credentials->status != 1){
+            $response = [
+                            'success' => false,
+                            'data'    => "",
+                            'message' => "Api Credentails Not Found ",
+                        ];
+            return response()->json($response, 200);
+        }
+        $base_url = $credentials->base_url;
+        $email_id = $credentials->email_id;
+        $client_id = $credentials->client_id;
+        $client_secret = $credentials->client_secret;
+        $ip_address = $credentials->ip_address;
         if($request->type=="GSTR-2A"){
             $curl = curl_init();
             curl_setopt_array($curl, array(
-                CURLOPT_URL => 'https://api.mastergst.com/gstr2a/b2b?email=pram92500@gmail.com&gstin='.$request->gstin.'&retperiod='.$month,
+                CURLOPT_URL => $base_url.'/gstr2a/b2b?email='.$email_id.'&gstin='.$request->gstin.'&retperiod='.$month,
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_ENCODING => '',
                 CURLOPT_MAXREDIRS => 10,
@@ -149,10 +171,10 @@ class GstDetailController extends Controller
                 CURLOPT_HTTPHEADER => array(
                 'gst_username:'.$gst_user_name,
                 'state_cd: '.$state_code,  
-                'ip_address: 162.215.254.201',
                 'txn: '.$txn,
-                'client_id: GSPdea8d6fb-aed1-431a-b589-f1c541424580',
-                'client_secret: GSP4c44b790-ef11-4725-81d9-5f8504279d67'
+                'ip_address: '.$ip_address,
+                'client_id: '.$client_id,
+                'client_secret: '.$client_secret,
                 ),
             ));
             $response = curl_exec($curl);
@@ -199,7 +221,7 @@ class GstDetailController extends Controller
             if(!$GSTR2B){          
                 $curl = curl_init();
                 curl_setopt_array($curl, array(
-                    CURLOPT_URL => 'https://api.mastergst.com/gstr2b/all?email=pram92500@gmail.com&gstin='.$request->gstin.'&rtnprd='.$month,
+                    CURLOPT_URL => $base_url.'/gstr2b/all?email='.$email_id.'&gstin='.$request->gstin.'&rtnprd='.$month,
                     CURLOPT_RETURNTRANSFER => true,
                     CURLOPT_ENCODING => '',
                     CURLOPT_MAXREDIRS => 10,
@@ -210,10 +232,10 @@ class GstDetailController extends Controller
                     CURLOPT_HTTPHEADER => array(
                     'gst_username:'.$gst_user_name,
                     'state_cd: '.$state_code,  
-                    'ip_address: 162.215.254.201',
                     'txn: '.$txn,
-                    'client_id: GSPdea8d6fb-aed1-431a-b589-f1c541424580',
-                    'client_secret: GSP4c44b790-ef11-4725-81d9-5f8504279d67'
+                    'ip_address: '.$ip_address,
+                    'client_id: '.$client_id,
+                    'client_secret: '.$client_secret,
                     ),
                 ));
                 $response = curl_exec($curl);
@@ -361,9 +383,32 @@ class GstDetailController extends Controller
                             ->first();
             $gst_user_name = $gst->gst_username;
         }
+        //Get Api Credentails
+        $credentials = json_decode(CommonHelper::gstApiCredentials('GST'));
+        if(!$credentials){
+            $response = [
+                            'success' => false,
+                            'data'    => "",
+                            'message' => "Api Credentails Not Found ",
+                        ];
+            return response()->json($response, 200);
+        }
+        if($credentials->status != 1){
+            $response = [
+                            'success' => false,
+                            'data'    => "",
+                            'message' => "Api Credentails Not Found ",
+                        ];
+            return response()->json($response, 200);
+        }
+        $base_url = $credentials->base_url;
+        $email_id = $credentials->email_id;
+        $client_id = $credentials->client_id;
+        $client_secret = $credentials->client_secret;
+        $ip_address = $credentials->ip_address;
         $curl = curl_init();
         curl_setopt_array($curl, array(
-            CURLOPT_URL => 'https://api.mastergst.com/authentication/authtoken?email=pram92500@gmail.com&otp='.$request->otp,
+            CURLOPT_URL => $base_url.'/authentication/authtoken?email='.$email_id.'&otp='.$request->otp,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_ENCODING => '',
             CURLOPT_MAXREDIRS => 10,
@@ -375,9 +420,9 @@ class GstDetailController extends Controller
                 'gst_username:'.$gst_user_name,
                 'state_cd: '.$state_code,
                 'txn:'.$txn,
-                'ip_address: 162.215.254.201',
-                'client_id: GSPdea8d6fb-aed1-431a-b589-f1c541424580',
-                'client_secret: GSP4c44b790-ef11-4725-81d9-5f8504279d67'
+                'ip_address: '.$ip_address,
+                'client_id: '.$client_id,
+                'client_secret: '.$client_secret,
             ),
         ));
         $response = curl_exec($curl);

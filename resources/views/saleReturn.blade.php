@@ -96,7 +96,7 @@
                            </td>
                            <td class="w-min-120  text-center">
                               <?php 
-                              if(in_array(date('Y-m',strtotime($value->date)),$month_arr) && $value->approved_status != 1 && $value->status=='1'){?>
+                              if((in_array(date('Y-m',strtotime($value->date)),$month_arr) && $value->status=='1') && ($value->approved_status != 1 || auth()->user()->can('action-module',256))){?>
                                  
                                  @can('action-module',69)
                                     @if($value->e_invoice_status==0)

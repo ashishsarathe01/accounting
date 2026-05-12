@@ -93,10 +93,7 @@
                            <td class="w-min-120 "><?php if($is_first){ echo $value->series_no; } ?></td>
                            <td class="w-min-120  text-center">
                               <?php 
-                              if(
-                                 in_array(date('Y-m',strtotime($value->date)),$month_arr) &&
-                                 $value->approved_status != 1 &&
-                                 !in_array($value->pay_id, $shown_ids)
+                              if((in_array(date('Y-m',strtotime($value->date)),$month_arr) && !in_array($value->pay_id, $shown_ids) && ($value->approved_status != 1 || auth()->user()->can('action-module',256)) )
                               ){?>
                                  <a href="{{ URL::to('payment/' . $value->pay_id . '/edit') }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
                                  <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $value->pay_id ?>">

@@ -290,7 +290,7 @@ class ManageItemsController extends Controller
       $items->g_name = $request->input('g_name');
       $items->u_name = $request->input('u_name');
       $items->hsn_code = $request->input('hsn_code');
-      $items->item_type = $request->input('item_type');
+      $items->item_type = 'taxable';
       $items->status = $request->input('status');
       $items->section = $request->input('section');
       $items->rate_of_tcs = $request->input('rate_of_tcs');
@@ -299,12 +299,13 @@ class ManageItemsController extends Controller
       $items->created_by = Session::get('user_id');
       $items->created_at = Carbon::now();
       if($items->save()) {
+          $gst_rate_effective_date = $request->gst_rate_effective_date ?? "2025-09-22";
          $gst_rate = new ItemGstRate;
          $gst_rate->item_id = $items->id;
          $gst_rate->gst_rate = $request->input('gst_rate');
          $gst_rate->item_type = $request->input('item_type');
          $gst_rate->comp_id = Session::get('user_company_id');
-         $gst_rate->effective_from = $request->input('gst_rate_effective_date');
+         $gst_rate->effective_from = $gst_rate_effective_date;
          $gst_rate->created_by = Session::get('user_id');
          $gst_rate->created_at = Carbon::now();
          $gst_rate->save();
@@ -403,6 +404,7 @@ class ManageItemsController extends Controller
             }
         }
         $manageitems = ManageItems::find($id);
+
          if (!$manageitems) {
             abort(404);
          }

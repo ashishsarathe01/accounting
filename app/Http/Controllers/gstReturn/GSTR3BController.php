@@ -11,46 +11,48 @@ use App\Models\State;
 use App\Models\BillSundrys;
 use App\Models\Companies;
 use App\Models\gstToken;
-
+use App\Helpers\CommonHelper;
 
 class GSTR3BController extends Controller
 {
+    protected $gstCredentials;
 
+    public function __construct()
+    {
+        $this->gstCredentials = json_decode(
+            CommonHelper::gstApiCredentials('GST')
+        );
+    }
 
     public function filterform()
-{
-      $company = Companies::select('gst_config_type')
-                                ->where('id', Session::get('user_company_id'))
-                                ->first();
-        if($company->gst_config_type == "single_gst"){
-            $gst = DB::table('gst_settings')
-                            ->select('gst_no')
-                            ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst",'delete'=>'0','status'=>'1'])
-                            ->get();
-        }else if($company->gst_config_type == "multiple_gst"){
-            
-            $gst = DB::table('gst_settings_multiple')
-                            ->select('gst_no')
-                            ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst",'delete'=>'0','status'=>'1'])
-                            ->get();
-        }
-        return view('gstReturn.filterIndex3b',['gst'=>$gst]);
+    {
+        $company = Companies::select('gst_config_type')
+                                    ->where('id', Session::get('user_company_id'))
+                                    ->first();
+            if($company->gst_config_type == "single_gst"){
+                $gst = DB::table('gst_settings')
+                                ->select('gst_no')
+                                ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst",'delete'=>'0','status'=>'1'])
+                                ->get();
+            }else if($company->gst_config_type == "multiple_gst"){
+                
+                $gst = DB::table('gst_settings_multiple')
+                                ->select('gst_no')
+                                ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst",'delete'=>'0','status'=>'1'])
+                                ->get();
+            }
+            return view('gstReturn.filterIndex3b',['gst'=>$gst]);
 
-}
-
-
-
-
-
+    }
     public function index(Request $request){
-       $merchant_gst = $request->series;
+        $merchant_gst = $request->series;
         $from_date = $request->from_date;
         $to_date = $request->to_date;
-       $from = \DateTime::createFromFormat('Y-m-d', $from_date);
-       $month = $from->format('mY'); // MMYYYY => 042025
+        $from = \DateTime::createFromFormat('Y-m-d', $from_date);
+        $month = $from->format('mY'); // MMYYYY => 042025
 
 
-     $company = Companies::select('gst_config_type')
+        $company = Companies::select('gst_config_type')
                                 ->where('id', Session::get('user_company_id'))
                                 ->first();
         if($company->gst_config_type == "single_gst"){
@@ -79,84 +81,98 @@ class GSTR3BController extends Controller
                 );
             return json_encode($response);
         }
-    $state_code = substr(trim($request->series), 0, 2); // e.g., "07"
+        $state_code = substr(trim($request->series), 0, 2); // e.g., "07"
 
-     $gst_token = gstToken::select('txn','created_at')
+        $gst_token = gstToken::select('txn','created_at')
                                 ->where('company_gstin',$request->series)
                                 ->where('company_id',Session::get('user_company_id'))
                                 ->where('status',1)
                                 ->orderBy('id','desc')
                                 ->first();
-            if($gst_token){
-                $token_expiry = date('d-m-Y H:i:s',strtotime('+6 hour',strtotime($gst_token->created_at)));
-                $current_time = date('d-m-Y H:i:s');
-                if(strtotime($token_expiry)<strtotime($current_time)){
-                    $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
-                    if($token_res==0){
-                        $response = array(
-                            'status' => false,
-                            'message' => 'Something Went Wrong In Token Generation'
-                        );
-                        return json_encode($response);
-                    }
+        if($gst_token){
+            $token_expiry = date('d-m-Y H:i:s',strtotime('+6 hour',strtotime($gst_token->created_at)));
+            $current_time = date('d-m-Y H:i:s');
+            if(strtotime($token_expiry)<strtotime($current_time)){
+                $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
+                if($token_res==0){
                     $response = array(
-                        'status' => true,
-                        'message' => 'TOKEN-OTP'
+                        'status' => false,
+                        'message' => 'Something Went Wrong In Token Generation'
                     );
                     return json_encode($response);
                 }
-                $txn = $gst_token->txn;
-            }else{
-                $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
-                if($token_res==0){
-                        $response = array(
-                            'status' => false,
-                            'message' => 'Something Went Wrong In Token Generation'
-                        );
-                        return json_encode($response);
-                    }
                 $response = array(
-                        'status' => true,
-                        'message' => 'TOKEN-OTP'
+                    'status' => true,
+                    'message' => 'TOKEN-OTP'
                 );
                 return json_encode($response);
-            }      
-  $email = 'pram92500@gmail.com'; // ✅ Registered MasterGST email    
-  $url = "https://api.mastergst.com/gstr3b/retsum";
+            }
+            $txn = $gst_token->txn;
+        }else{
+            $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
+            if($token_res==0){
+                    $response = array(
+                        'status' => false,
+                        'message' => 'Something Went Wrong In Token Generation'
+                    );
+                    return json_encode($response);
+                }
+            $response = array(
+                    'status' => true,
+                    'message' => 'TOKEN-OTP'
+            );
+            return json_encode($response);
+        }
+        //Gst Credenatial
+        if(!$this->gstCredentials){
+            $response = [
+                            'success' => false,
+                            'data'    => "",
+                            'message' => "Api Credentails Not Found ",
+                        ];
+            return response()->json($response, 200);
+        }
+        if($this->gstCredentials->status != 1){
+            $response = [
+                            'success' => false,
+                            'data'    => "",
+                            'message' => "Api Credentails Not Found ",
+                        ];
+            return response()->json($response, 200);
+        }
+        $base_url = $this->gstCredentials->base_url;
+        $email_id = $this->gstCredentials->email_id;
+        $client_id = $this->gstCredentials->client_id;
+        $client_secret = $this->gstCredentials->client_secret;
+        $ip_address = $this->gstCredentials->ip_address;
+         
+        $url = $base_url."/gstr3b/retsum";
     
-    $response = Http::withHeaders([
-        'Accept' => 'application/json',
-        'gst_username' => $gst_user_name,
-        'state_cd' => $state_code,
-        'ip_address' => '152.25.59.138',
-        'txn' => $txn,
-        'client_id' => 'GSPdea8d6fb-aed1-431a-b589-f1c541424580',
-        'client_secret' => 'GSP4c44b790-ef11-4725-81d9-5f8504279d67',
-    ])->get($url, [
-        'gstin' => $merchant_gst,
-        'retperiod' => $month,
-        'email' => $email,
-    ]);
-
-    $data = $response->json();
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+            'gst_username' => $gst_user_name,
+            'state_cd' => $state_code,
+            'ip_address: '.$ip_address,
+            'txn' => $txn,
+            'client_id: '.$client_id,
+            'client_secret: '.$client_secret
+        ])->get($url, [
+            'gstin' => $merchant_gst,
+            'retperiod' => $month,
+            'email' => $email_id,
+        ]);
+        $data = $response->json();
         return view('gstReturn.GSTR3B', ['data' => $data['data'], 'merchant_gst' => $merchant_gst, 'from_date' =>  $from_date , 'to_date' =>  $to_date ]);
     
     
-     }
-
-
-
-
-
-
-  public function OutwardDetails(Request $request){
-   
-    $merchant_gst = $request->series;
+    }
+    public function OutwardDetails(Request $request){   
+        $merchant_gst = $request->series;
         $from_date = $request->from_date;
         $to_date = $request->to_date;
-         $from = \DateTime::createFromFormat('Y-m-d', $from_date);
-       $month = $from->format('mY'); // MMYYYY => 042025
-       $company = Companies::select('gst_config_type')
+        $from = \DateTime::createFromFormat('Y-m-d', $from_date);
+        $month = $from->format('mY'); // MMYYYY => 042025
+        $company = Companies::select('gst_config_type')
                                 ->where('id', Session::get('user_company_id'))
                                 ->first();
         if($company->gst_config_type == "single_gst"){
@@ -184,85 +200,98 @@ class GSTR3BController extends Controller
                     'message' => 'Please Enter GST User Name In GST Configuration.'
                 );
             return json_encode($response);
-        }
-        
-    $state_code = substr(trim($request->series), 0, 2); // e.g., "07"
+        }        
+        $state_code = substr(trim($request->series), 0, 2); // e.g., "07"
 
-     $gst_token = gstToken::select('txn','created_at')
+        $gst_token = gstToken::select('txn','created_at')
                                 ->where('company_gstin',$request->series)
                                 ->where('company_id',Session::get('user_company_id'))
                                 ->where('status',1)
                                 ->orderBy('id','desc')
                                 ->first();
-            if($gst_token){
-                $token_expiry = date('d-m-Y H:i:s',strtotime('+6 hour',strtotime($gst_token->created_at)));
-                $current_time = date('d-m-Y H:i:s');
-                if(strtotime($token_expiry)<strtotime($current_time)){
-                    $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
-                    if($token_res==0){
-                        $response = array(
-                            'status' => false,
-                            'message' => 'Something Went Wrong In Token Generation'
-                        );
-                        return json_encode($response);
-                    }
+        if($gst_token){
+            $token_expiry = date('d-m-Y H:i:s',strtotime('+6 hour',strtotime($gst_token->created_at)));
+            $current_time = date('d-m-Y H:i:s');
+            if(strtotime($token_expiry)<strtotime($current_time)){
+                $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
+                if($token_res==0){
                     $response = array(
-                        'status' => true,
-                        'message' => 'TOKEN-OTP'
+                        'status' => false,
+                        'message' => 'Something Went Wrong In Token Generation'
                     );
                     return json_encode($response);
                 }
-                $txn = $gst_token->txn;
-            }else{
-                $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
-                if($token_res==0){
-                        $response = array(
-                            'status' => false,
-                            'message' => 'Something Went Wrong In Token Generation'
-                        );
-                        return json_encode($response);
-                    }
                 $response = array(
-                        'status' => true,
-                        'message' => 'TOKEN-OTP'
+                    'status' => true,
+                    'message' => 'TOKEN-OTP'
                 );
                 return json_encode($response);
-            }      
-  $email = 'pram92500@gmail.com';
-
-     $url = "https://api.mastergst.com/gstr3b/retsum";
-    
-    $response = Http::withHeaders([
-        'Accept' => 'application/json',
-        'gst_username' => $gst_user_name,
-        'state_cd' => $state_code,
-        'ip_address' => '152.25.59.138',
-        'txn' => $txn,
-        'client_id' => 'GSPdea8d6fb-aed1-431a-b589-f1c541424580',
-        'client_secret' => 'GSP4c44b790-ef11-4725-81d9-5f8504279d67',
-    ])->get($url, [
-        'gstin' => $merchant_gst,
-        'retperiod' => $month,
-        'email' => $email,
-    ]);
-
-    $data = $response->json();
-
-
-
-
-     $response1 = Http::withHeaders([
+            }
+            $txn = $gst_token->txn;
+        }else{
+            $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
+            if($token_res==0){
+                    $response = array(
+                        'status' => false,
+                        'message' => 'Something Went Wrong In Token Generation'
+                    );
+                    return json_encode($response);
+                }
+            $response = array(
+                    'status' => true,
+                    'message' => 'TOKEN-OTP'
+            );
+            return json_encode($response);
+        }
+        //Gst Credenatial
+        if(!$this->gstCredentials){
+            $response = [
+                            'success' => false,
+                            'data'    => "",
+                            'message' => "Api Credentails Not Found ",
+                        ];
+            return response()->json($response, 200);
+        }
+        if($this->gstCredentials->status != 1){
+            $response = [
+                            'success' => false,
+                            'data'    => "",
+                            'message' => "Api Credentails Not Found ",
+                        ];
+            return response()->json($response, 200);
+        }
+        $base_url = $this->gstCredentials->base_url;
+        $email_id = $this->gstCredentials->email_id;
+        $client_id = $this->gstCredentials->client_id;
+        $client_secret = $this->gstCredentials->client_secret;
+        $ip_address = $this->gstCredentials->ip_address;
+        $url = $base_url."/gstr3b/retsum";
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+            'gst_username' => $gst_user_name,
+            'state_cd' => $state_code,
+            'ip_address: '.$ip_address,
+            'txn' => $txn,
+            'client_id: '.$client_id,
+            'client_secret: '.$client_secret
+        ])->get($url, [
+            'gstin' => $merchant_gst,
+            'retperiod' => $month,
+            'email' => $email_id,
+        ]);
+        $data = $response->json();
+        $response1 = Http::withHeaders([
             'Accept'        => 'application/json',
             'gst_username'  => $gst_user_name,
             'state_cd'      => $state_code,
-            'ip_address'    => '152.25.59.138',
+            'ip_address: '.$ip_address,
             'txn'           => $txn,
-            'client_id'     => 'GSPdea8d6fb-aed1-431a-b589-f1c541424580',
-            'client_secret' => 'GSP4c44b790-ef11-4725-81d9-5f8504279d67',
-        ])->get('https://api.mastergst.com/gstr3b/autoliab', [
+            'client_id: '.$client_id,
+            'client_secret: '.$client_secret
+        ])->get($base_url.'/gstr3b/autoliab', [
             'gstin'     => $merchant_gst,
             'retperiod' => $month,
-            'email'     => $email,
+            'email'     => $email_id,
         ]);
 
         if ($response1->failed()) {
@@ -273,12 +302,9 @@ class GSTR3BController extends Controller
 
         $data1 = $json['data']['r3bautopop']['liabitc'] ?? [];
 
-    
+        $company_id = Session::get('user_company_id');
 
-       $company_id = Session::get('user_company_id');
-       
-
-         $sundries = BillSundrys::where('company_id', $company_id)->get()->keyBy('id');
+        $sundries = BillSundrys::where('company_id', $company_id)->get()->keyBy('id');
 
         $saleIds = DB::table('sales')
             ->where('merchant_gst', $merchant_gst)
@@ -760,19 +786,40 @@ class GSTR3BController extends Controller
 
 
   public function itcDetails(Request $request){
-
-$response = Http::withHeaders([
+    //Gst Credenatial
+    if(!$this->gstCredentials){
+        $response = [
+                        'success' => false,
+                        'data'    => "",
+                        'message' => "Api Credentails Not Found ",
+                    ];
+        return response()->json($response, 200);
+    }
+    if($this->gstCredentials->status != 1){
+        $response = [
+                        'success' => false,
+                        'data'    => "",
+                        'message' => "Api Credentails Not Found ",
+                    ];
+        return response()->json($response, 200);
+    }
+    $base_url = $this->gstCredentials->base_url;
+    $email_id = $this->gstCredentials->email_id;
+    $client_id = $this->gstCredentials->client_id;
+    $client_secret = $this->gstCredentials->client_secret;
+    $ip_address = $this->gstCredentials->ip_address;
+    $response = Http::withHeaders([
             'Accept'        => 'application/json',
             'gst_username'  => 'KRAFTPAPER1991',
             'state_cd'      => '07',
-            'ip_address'    => '152.25.59.138',
+            'ip_address: '.$ip_address,
             'txn'           => '3396251fbb8446ac9ba89cca8a1ac862',
-            'client_id'     => 'GSPdea8d6fb-aed1-431a-b589-f1c541424580',
-            'client_secret' => 'GSP4c44b790-ef11-4725-81d9-5f8504279d67',
-        ])->get('https://api.mastergst.com/gstr3b/autoliab', [
+            'client_id: '.$client_id,
+            'client_secret: '.$client_secret
+        ])->get($base_url.'/gstr3b/autoliab', [
             'gstin'     => '07AAJCK4433F1ZM',
             'retperiod' => '042025',
-            'email'     => 'pram92500@gmail.com',
+            'email'     => $email_id,
         ]);
 
         if ($response->failed()) {

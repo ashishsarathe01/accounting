@@ -25,140 +25,154 @@ use Illuminate\Support\Str;
 class gstR1Controller extends Controller
 {
 
+    protected $gstCredentials;
 
-public function filterform()
-{
-    $companyId = Session::get('user_company_id');
-    $companyData = Companies::where('id', $companyId)->first();
-    $fy = Session::get('default_fy');
-    $seriesList = [];
+    public function __construct()
+    {
+        $this->gstCredentials = json_decode(
+            CommonHelper::gstApiCredentials('GST')
+        );
+    }
+    public function filterform()
+    {
+        $companyId = Session::get('user_company_id');
+        $companyData = Companies::where('id', $companyId)->first();
+        $fy = Session::get('default_fy');
+        $seriesList = [];
 
-    if ($companyData->gst_config_type == "single_gst") {
-        // Fetch single GST setting
-        $setting = DB::table('gst_settings')
-            ->where(['company_id' => $companyId, 'gst_type' => "single_gst"])
+        if ($companyData->gst_config_type == "single_gst") {
+            // Fetch single GST setting
+            $setting = DB::table('gst_settings')
+                ->where(['company_id' => $companyId, 'gst_type' => "single_gst"])
+                ->first();
+
+            if ($setting) {
+                // Add gst_settings main record to seriesList
+                $seriesList[] = [
+                    'series_name' => $setting->series ?? 'Default Series',
+                    'gst_no' => $setting->gst_no ?? ''
+                ];
+
+                // Fetch all branches under the same setting
+                $branches = GstBranch::select('branch_series as series_name', 'gst_number as gst_no')
+                    ->where([
+                        'delete' => '0',
+                        'company_id' => $companyId,
+                        'gst_setting_id' => $setting->id
+                    ])->get();
+
+                $seriesList = array_merge($seriesList, $branches->toArray());
+            }
+
+        } elseif ($companyData->gst_config_type == "multiple_gst") {
+            // Fetch all multiple GST settings
+            $settings = DB::table('gst_settings_multiple')
+                ->select('id', 'series', 'gst_no')
+                ->where(['company_id' => $companyId, 'gst_type' => "multiple_gst"])
+                ->get();
+
+            foreach ($settings as $setting) {
+                // Add gst_settings_multiple main record to seriesList
+                $seriesList[] = [
+                    'series_name' => $setting->series ?? 'Default Series',
+                    'gst_no' => $setting->gst_no ?? ''
+                ];
+
+                // Fetch all branches under this multiple setting
+                $branches = GstBranch::select('branch_series as series_name', 'gst_number as gst_no')
+                    ->where([
+                        'delete' => '0',
+                        'company_id' => $companyId,
+                        'gst_setting_multiple_id' => $setting->id
+                    ])->get();
+
+                $seriesList = array_merge($seriesList, $branches->toArray());
+            }
+        }
+
+        return view('gstReturn.filterIndex', compact('seriesList','fy'));
+    }
+    public function gstr1Detail(Request $request)
+    {
+        
+        $data_source = $request->data_source ?? 'books';
+
+            if($data_source == "books"){
+                return response()->json([
+                    'status' => true,
+                    'message' => 'BOOK-DATA'
+                ]);
+            }
+            
+        $from_date = $request->from_date;
+        $to_date = $request->to_date;
+        $month = Carbon::parse($from_date)->format('mY');
+        
+    
+
+        $company = Companies::select('gst_config_type')
+                                    ->where('id', Session::get('user_company_id'))
+                                    ->first();
+            if($company->gst_config_type == "single_gst"){
+                $gst = DB::table('gst_settings')
+                                ->select('gst_username')
+                                ->where([
+                                    'company_id' => Session::get('user_company_id'),
+                                    'gst_no' => $request->series
+                                ])
+                                ->first();
+                $gst_username = $gst->gst_username;
+            }else if($company->gst_config_type == "multiple_gst"){            
+                $gst = DB::table('gst_settings_multiple')
+                                ->select('gst_username')
+                                ->where([
+                                    'company_id' => Session::get('user_company_id'),
+                                    'gst_no' => $request->series
+                                ])
+                                ->first();
+                $gst_username = $gst->gst_username;
+            }
+            if($gst_username==""){
+                $response = array(
+                        'status' => false,
+                        'message' => 'Please Enter GST User Name In GST Configuration.'
+                    );
+                return json_encode($response);
+            }
+
+    
+        $state_code = substr(trim($request->series), 0, 2);
+
+        $gst_token = gstToken::select('txn','created_at')
+            ->where('company_gstin',$request->series)
+            ->where('company_id',Session::get('user_company_id'))
+            ->where('status',1)
+            ->orderBy('id','desc')
             ->first();
 
-        if ($setting) {
-            // Add gst_settings main record to seriesList
-            $seriesList[] = [
-                'series_name' => $setting->series ?? 'Default Series',
-                'gst_no' => $setting->gst_no ?? ''
-            ];
+        if ($gst_token) {
+            $token_expiry = Carbon::parse($gst_token->created_at)->addHours(6);
+            $current_time = Carbon::now();
 
-            // Fetch all branches under the same setting
-            $branches = GstBranch::select('branch_series as series_name', 'gst_number as gst_no')
-                ->where([
-                    'delete' => '0',
-                    'company_id' => $companyId,
-                    'gst_setting_id' => $setting->id
-                ])->get();
-
-            $seriesList = array_merge($seriesList, $branches->toArray());
-        }
-
-    } elseif ($companyData->gst_config_type == "multiple_gst") {
-        // Fetch all multiple GST settings
-        $settings = DB::table('gst_settings_multiple')
-            ->select('id', 'series', 'gst_no')
-            ->where(['company_id' => $companyId, 'gst_type' => "multiple_gst"])
-            ->get();
-
-        foreach ($settings as $setting) {
-            // Add gst_settings_multiple main record to seriesList
-            $seriesList[] = [
-                'series_name' => $setting->series ?? 'Default Series',
-                'gst_no' => $setting->gst_no ?? ''
-            ];
-
-            // Fetch all branches under this multiple setting
-            $branches = GstBranch::select('branch_series as series_name', 'gst_number as gst_no')
-                ->where([
-                    'delete' => '0',
-                    'company_id' => $companyId,
-                    'gst_setting_multiple_id' => $setting->id
-                ])->get();
-
-            $seriesList = array_merge($seriesList, $branches->toArray());
-        }
-    }
-
-    return view('gstReturn.filterIndex', compact('seriesList','fy'));
-}
-
-
-public function gstr1Detail(Request $request)
-{
-    $from_date = $request->from_date;
-    $to_date = $request->to_date;
-    $month = Carbon::parse($from_date)->format('mY');
-
-    $company = Companies::select('gst_config_type')
-                                ->where('id', Session::get('user_company_id'))
-                                ->first();
-        if($company->gst_config_type == "single_gst"){
-            $gst = DB::table('gst_settings')
-                            ->select('gst_username')
-                            ->where([
-                                'company_id' => Session::get('user_company_id'),
-                                'gst_no' => $request->series
-                            ])
-                            ->first();
-            $gst_username = $gst->gst_username;
-        }else if($company->gst_config_type == "multiple_gst"){            
-            $gst = DB::table('gst_settings_multiple')
-                            ->select('gst_username')
-                            ->where([
-                                'company_id' => Session::get('user_company_id'),
-                                'gst_no' => $request->series
-                            ])
-                            ->first();
-            $gst_username = $gst->gst_username;
-        }
-        if($gst_username==""){
-            $response = array(
-                    'status' => false,
-                    'message' => 'Please Enter GST User Name In GST Configuration.'
-                );
-            return json_encode($response);
-        }
-
-   
-    $state_code = substr(trim($request->series), 0, 2);
-
-    $gst_token = gstToken::select('txn','created_at')
-        ->where('company_gstin',$request->series)
-        ->where('company_id',Session::get('user_company_id'))
-        ->where('status',1)
-        ->orderBy('id','desc')
-        ->first();
-
-    if ($gst_token) {
-        $token_expiry = Carbon::parse($gst_token->created_at)->addHours(6);
-        $current_time = Carbon::now();
-
-        if ($token_expiry < $current_time) {
+            if ($token_expiry < $current_time) {
+                $token_res = CommonHelper::gstTokenOtpRequest($state_code, $gst_username, $request->series);
+                if ($token_res == 0) {
+                    return response()->json(['status' => false, 'message' => 'Something Went Wrong In Token Generation']);
+                }
+                return response()->json(['status' => true, 'message' => 'TOKEN-OTP']);
+            }
+        } else {
             $token_res = CommonHelper::gstTokenOtpRequest($state_code, $gst_username, $request->series);
             if ($token_res == 0) {
                 return response()->json(['status' => false, 'message' => 'Something Went Wrong In Token Generation']);
             }
             return response()->json(['status' => true, 'message' => 'TOKEN-OTP']);
         }
-    } else {
-        $token_res = CommonHelper::gstTokenOtpRequest($state_code, $gst_username, $request->series);
-        if ($token_res == 0) {
-            return response()->json(['status' => false, 'message' => 'Something Went Wrong In Token Generation']);
-        }
-        return response()->json(['status' => true, 'message' => 'TOKEN-OTP']);
+
+        return response()->json(['status' => true, 'message' => 'TOKEN-VALID']);
     }
-
-    return response()->json(['status' => true, 'message' => 'TOKEN-VALID']);
-}
-
-
-
     public function gstmain(Request $request){
-        
+        $data_source = $request->data_source ?? 'books';        
         $input = $request->all();
         $merchant_gst = $request->series;
         $from_date = $request->from_date;
@@ -240,6 +254,7 @@ public function gstr1Detail(Request $request)
         // Summarize B2C Large Sales
         $summaryB2CLarge = DB::table('sales')
             ->whereIn('id', $b2cLargeIds)
+            ->where('delete', '0')
             ->selectRaw('SUM(taxable_amt) as total_taxable_amt, SUM(total) as total_sale_amt')
             ->first();
         // Tax totals for B2C Large
@@ -254,6 +269,7 @@ public function gstr1Detail(Request $request)
             ->first();
         // Summarize B2C Normal Sales
         $summaryB2CNormal = DB::table('sales')
+             ->where('delete', '0')
             ->whereIn('id', $b2cNormalIds)
             ->selectRaw('SUM(taxable_amt) as total_taxable_amt, SUM(total) as total_sale_amt')
             ->first();
@@ -294,6 +310,8 @@ public function gstr1Detail(Request $request)
                 ->join('accounts', 'sales.party', '=', 'accounts.id')
                 ->join('states', 'accounts.state', '=', 'states.id')
                 ->join('manage_items', 'sale_descriptions.goods_discription', '=', 'manage_items.id')
+                ->where('sale_descriptions.status','1')
+                ->where('sale_descriptions.delete','0')
                 ->whereIn('sale_id', $b2cNormalStateSaleIds)
                 ->select(
                     'sale_descriptions.id as sale_desc_id',
@@ -356,7 +374,7 @@ public function gstr1Detail(Request $request)
                 }    
                 $taxable_value = $item_amount + $adjusted_value;
                 $b2cTaxableTotal += $taxable_value;    
-                // âœ… Updated Tax Calculation
+                // Ã¢Å“â€¦ Updated Tax Calculation
                 $merchant_state_code = substr($merchant_gst, 0, 2); 
                 $customer_state_code = State::where('name', $item->state_name)->value('state_code');    
                 if ($merchant_state_code == $customer_state_code) {
@@ -367,6 +385,16 @@ public function gstr1Detail(Request $request)
                 }
             }
         }
+        
+        $invoiceSummaries = [];
+        $creditNoteSummaries = [];
+        $debitNoteSummaries = [];
+        
+        $totalCreditNotes = 0;
+        $totalDebitNotes = 0;
+        $totalNotes = 0;
+
+        if($data_source == "portal"){
         $from = \DateTime::createFromFormat('Y-m-d', $from_date);
         $month = $from->format('mY'); // MMYYYY => 042025
         $company = Companies::select('gst_config_type')
@@ -439,11 +467,33 @@ public function gstr1Detail(Request $request)
             );
             return json_encode($response);
         } 
-        $email = 'pram92500@gmail.com'; // ✅ Registered MasterGST email
+        //Gst Credenatial
+        if(!$this->gstCredentials){
+            $response = [
+                            'success' => false,
+                            'data'    => "",
+                            'message' => "Api Credentails Not Found ",
+                        ];
+            return response()->json($response, 200);
+        }
+        if($this->gstCredentials->status != 1){
+            $response = [
+                            'success' => false,
+                            'data'    => "",
+                            'message' => "Api Credentails Not Found ",
+                        ];
+            return response()->json($response, 200);
+        }
+        $base_url = $this->gstCredentials->base_url;
+        $email_id = $this->gstCredentials->email_id;
+        $client_id = $this->gstCredentials->client_id;
+        $client_secret = $this->gstCredentials->client_secret;
+        $ip_address = $this->gstCredentials->ip_address;
+       
         $curl = curl_init();
         curl_setopt_array($curl, [
-            CURLOPT_URL => 'https://api.mastergst.com/gstr1/b2b?' . http_build_query([
-                'email'     => $email,
+            CURLOPT_URL => $base_url.'/gstr1/b2b?' . http_build_query([
+                'email'     => $email_id,
                 'gstin'     => $request->series,
                 'retperiod' => $month,
                 // 'smrytyp' => 'L' // Optional for long summary
@@ -459,10 +509,10 @@ public function gstr1Detail(Request $request)
                 'Accept: application/json',
                 'gst_username: ' . $gst_user_name,
                 'state_cd: ' . $state_code,
-                'ip_address: 152.59.25.138', // Use your public server IP
+                'ip_address: '.$ip_address, // Use your public server IP
                 'txn: ' . $txn,
-                'client_id: GSPdea8d6fb-aed1-431a-b589-f1c541424580',
-                'client_secret: GSP4c44b790-ef11-4725-81d9-5f8504279d67'
+                'client_id: '.$client_id,
+                'client_secret: '.$client_secret
             ],
         ]);
         $response = curl_exec($curl);
@@ -481,6 +531,7 @@ public function gstr1Detail(Request $request)
             ->whereNotNull('sales.billing_gst')
             ->Where('billing_gst','!=','')
             ->where('status','1')
+            ->where('delete', '0')
             ->select('sales.billing_gst', 'sales.total')
             ->get();
         $saleTotals = $sale->groupBy('billing_gst')->map(function ($group) {
@@ -503,6 +554,7 @@ public function gstr1Detail(Request $request)
                 $dbInvoices = Sales::where('billing_gst', $ctin)
                     ->where('company_id', Session::get('user_company_id'))
                     ->where('status','1')
+                    ->where('delete', '0')
                     ->whereBetween('date', [$from_date, $to_date])
                     ->get(['id', 'voucher_no_prefix', 'date', 'total']);
 
@@ -571,6 +623,7 @@ public function gstr1Detail(Request $request)
                     ->where('company_id', Session::get('user_company_id'))
                     ->whereBetween('date', [$from_date, $to_date])
                     ->where('status','1')
+                    ->where('delete', '0')
                     ->get(['voucher_no_prefix', 'total']);     
 
                 $matched = [];          // No matched invoices since this CTIN is not in API
@@ -597,10 +650,33 @@ public function gstr1Detail(Request $request)
             }
         }
         // === 1. CURL to fetch CDNR from API ===
+        //Gst Credenatial
+        if(!$this->gstCredentials){
+            $response = [
+                            'success' => false,
+                            'data'    => "",
+                            'message' => "Api Credentails Not Found ",
+                        ];
+            return response()->json($response, 200);
+        }
+        if($this->gstCredentials->status != 1){
+            $response = [
+                            'success' => false,
+                            'data'    => "",
+                            'message' => "Api Credentails Not Found ",
+                        ];
+            return response()->json($response, 200);
+        }
+        $base_url = $this->gstCredentials->base_url;
+        $email_id = $this->gstCredentials->email_id;
+        $client_id = $this->gstCredentials->client_id;
+        $client_secret = $this->gstCredentials->client_secret;
+        $ip_address = $this->gstCredentials->ip_address;
+
         $curl = curl_init();
         curl_setopt_array($curl, [
-            CURLOPT_URL => 'https://api.mastergst.com/gstr1/cdnr?' . http_build_query([
-                'email'     => $email,
+            CURLOPT_URL => $base_url.'/gstr1/cdnr?' . http_build_query([
+                'email'     => $email_id,
                 'gstin'     => $request->series,
                 'retperiod' => $month
             ]),
@@ -615,10 +691,10 @@ public function gstr1Detail(Request $request)
                 'Accept: application/json',
                 'gst_username: ' . $gst_user_name,
                 'state_cd: ' . $state_code,
-                'ip_address: 152.59.25.138',
+                'ip_address: '.$ip_address,
                 'txn: ' . $txn,
-                'client_id: GSPdea8d6fb-aed1-431a-b589-f1c541424580',
-                'client_secret: GSP4c44b790-ef11-4725-81d9-5f8504279d67'
+                'client_id: '.$client_id,
+                'client_secret: '.$client_secret
             ],
         ]);
         $response = curl_exec($curl);
@@ -776,7 +852,7 @@ public function gstr1Detail(Request $request)
                 // Ensure notes exist and are an array
                 if (!isset($party['nt']) || !is_array($party['nt'])) continue;
 
-                // ✅ Filter only debit notes from API
+                // âœ… Filter only debit notes from API
                 $debitNotes = array_filter($party['nt'], function ($note) {
                     return isset($note['ntty']) && $note['ntty'] === 'D';
                 });
@@ -878,6 +954,8 @@ public function gstr1Detail(Request $request)
         $totalCreditNotes = $returns->count();
         $totalDebitNotes = $debitReturns->count();
         $totalNotes = $totalCreditNotes + $totalDebitNotes;
+        
+        }
         // Return data to Blade or frontend    
         // Return result
         //hsnWiseSummaryCount
@@ -1394,6 +1472,47 @@ public function gstr1Detail(Request $request)
         if($turnover){
             $turnover_amount = $turnover->amount;
         }
+        $salesCount = DB::table('sales')
+                        ->where('company_id', $company_id)
+                        ->where('merchant_gst', $merchant_gst)
+                        ->whereBetween('date', [$from_date, $to_date])
+                        ->where('delete', '0')
+                        ->whereNotNull('voucher_no_prefix')
+                        ->exists();
+                    
+                    $creditNoteCount = DB::table('sales_returns')
+                        ->where('company_id', $company_id)
+                        ->where('merchant_gst', $merchant_gst)
+                        ->whereBetween('date', [$from_date, $to_date])
+                        ->where('delete', '0')
+                        ->whereNotNull('sr_prefix')
+                        ->where('voucher_type', 'SALE')
+                        ->where('sr_nature', 'WITH GST')
+                        ->exists();
+                    
+                    $debitNoteCount = DB::table('purchase_returns')
+                        ->where('company_id', $company_id)
+                        ->where('merchant_gst', $merchant_gst)
+                        ->whereBetween('date', [$from_date, $to_date])
+                        ->where('delete', '0')
+                        ->whereNotNull('sr_prefix')
+                        ->where('voucher_type', 'SALE')
+                        ->where('sr_nature', 'WITH GST')
+                        ->exists();
+                    
+                    $docCount = 0;
+                    
+                    if ($salesCount) {
+                        $docCount++;
+                    }
+                    
+                    if ($creditNoteCount) {
+                        $docCount++;
+                    }
+                    
+                    if ($debitNoteCount) {
+                        $docCount++;
+                    }
         
         return view('gstReturn.gstR1', [
             // B2B
@@ -1435,10 +1554,12 @@ public function gstr1Detail(Request $request)
             'b2cLargeCount' => $b2cLargeCount,
             'b2cNormalCount' => $b2cLargeCount,
             'totalCreditNotes' => $totalCreditNotes,
-            'totalDebitNotes' => $totalCreditNotes,
+            'totalDebitNotes' => $totalDebitNotes,
             'totalNotes' => $totalNotes, // likely 0 unless interstate
             'hsnWiseSummaryCount' => $hsnWiseSummaryCount,
-            'turnover_amount'=>$turnover_amount
+            'docCount'=> $docCount,
+            'turnover_amount'=>$turnover_amount,
+            'data_source' => $data_source,
     ]);
         
         
@@ -1708,6 +1829,8 @@ public function B2Bdetailed(Request $request)
         ->join('accounts', 'sales.party', '=', 'accounts.id')
         ->join('states', 'accounts.state', '=', 'states.id')
         ->join('manage_items', 'sale_descriptions.goods_discription', '=', 'manage_items.id')
+        ->where('sale_descriptions.status','1')
+        ->where('sale_descriptions.delete','0')
         ->whereIn('sale_id', $sales->pluck('id'))
         ->select(
             'sale_descriptions.id as sale_desc_id',
@@ -1922,6 +2045,8 @@ public function sendGstr1ToGSTMaster(Request $request){
         ->join('accounts', 'sales.party', '=', 'accounts.id')
         ->join('states', 'accounts.state', '=', 'states.id')
         ->join('manage_items', 'sale_descriptions.goods_discription', '=', 'manage_items.id')
+        ->where('sale_descriptions.status','1')
+        ->where('sale_descriptions.delete','0')
         ->whereIn('sale_id', $sales->pluck('id'))
         ->select(
             'sale_descriptions.id as sale_desc_id',
@@ -2036,7 +2161,7 @@ public function sendGstr1ToGSTMaster(Request $request){
                     "idt" =>\Carbon\Carbon::parse($sale->date)->format('d-m-Y'),
                     "val" =>(float)$sale->total,
                     "pos" =>State::where('name', $sale->POS)->value('state_code'),
-                    "rchrg" =>$sale->reverse_charge ? 'Y' : 'N',
+                    "rchrg" =>"N",
                     //"etin" =>$ctin,
                     "inv_typ" =>'R',
                     //"diff_percent"=>0.65, // if applicable,
@@ -2515,7 +2640,7 @@ public function sendGstr1ToGSTMaster(Request $request){
             }
         }
     };
-    // 📌 Process credit notes (sales_returns)
+    // ðŸ“Œ Process credit notes (sales_returns)
     foreach ($creditItems as $item) {
         $return_id = $item->sale_return_id;
         $item_amount = $item->amount;
@@ -2582,7 +2707,7 @@ public function sendGstr1ToGSTMaster(Request $request){
 
         $addToCdnr($entry, 'C'); // Add as credit note
     }
-    // 📌 Process debit notes (purchase_returns)
+    // ðŸ“Œ Process debit notes (purchase_returns)
     foreach ($debitItems as $item) {
         $return_id = $item->purchase_return_id;
         $item_amount = $item->amount;
@@ -2757,9 +2882,9 @@ public function sendGstr1ToGSTMaster(Request $request){
         ->whereBetween('date', [$from_date, $to_date])
         ->where('delete', '0') // Exclude soft-deleted records
         ->whereNotNull('voucher_no_prefix') // Ensure voucher_no_prefix is present
-        ->select('voucher_no_prefix', 'series_no', 'status')
+        ->select('voucher_no_prefix', 'series_no', 'status','voucher_no')
         ->orderBy('series_no')
-        ->orderBy('voucher_no_prefix')
+        ->orderBy('voucher_no')
         ->get()
         ->groupBy('series_no');
 
@@ -3003,9 +3128,31 @@ public function sendGstr1ToGSTMaster(Request $request){
         return json_encode($response);
     }
     
+    //Gst Credenatial
+    if(!$this->gstCredentials){
+        $response = [
+                        'success' => false,
+                        'data'    => "",
+                        'message' => "Api Credentails Not Found ",
+                    ];
+        return response()->json($response, 200);
+    }
+    if($this->gstCredentials->status != 1){
+        $response = [
+                        'success' => false,
+                        'data'    => "",
+                        'message' => "Api Credentails Not Found ",
+                    ];
+        return response()->json($response, 200);
+    }
+    $base_url = $this->gstCredentials->base_url;
+    $email_id = $this->gstCredentials->email_id;
+    $client_id = $this->gstCredentials->client_id;
+    $client_secret = $this->gstCredentials->client_secret;
+    $ip_address = $this->gstCredentials->ip_address;
     $curl = curl_init();
     curl_setopt_array($curl, array(
-        CURLOPT_URL => 'https://api.mastergst.com/gstr1/retsave?email=pram92500@gmail.com',
+        CURLOPT_URL => $base_url.'/gstr1/retsave?email='.$email_id,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_ENCODING => '',
         CURLOPT_MAXREDIRS => 10,
@@ -3019,10 +3166,10 @@ public function sendGstr1ToGSTMaster(Request $request){
             'ret_period:'.$ret_period,
             'gst_username:'.$gst_user_name,
             'state_cd:'.$state_code,
-            'ip_address: 162.241.85.89',
+            'ip_address: '.$ip_address,
             'txn:'.$txn,
-            'client_id: GSPdea8d6fb-aed1-431a-b589-f1c541424580',
-            'client_secret: GSP4c44b790-ef11-4725-81d9-5f8504279d67',        
+            'client_id: '.$client_id,
+            'client_secret: '.$client_secret,
             'Content-Type: application/json'
         ),
     ));
@@ -3036,7 +3183,7 @@ public function sendGstr1ToGSTMaster(Request $request){
         if(isset($result->status_cd) && $result->status_cd==1 ){
             $curl = curl_init();
             curl_setopt_array($curl, array(
-               CURLOPT_URL => 'https://api.mastergst.com/gstr/retstatus?email=pram92500@gmail.com&gstin='.$merchant_gst.'&returnperiod='.$ret_period.'&refid='.$result->data->reference_id,
+               CURLOPT_URL => $base_url.'/gstr/retstatus?email='.$email_id.'&gstin='.$merchant_gst.'&returnperiod='.$ret_period.'&refid='.$result->data->reference_id,
                CURLOPT_RETURNTRANSFER => true,
                CURLOPT_ENCODING => '',
                CURLOPT_MAXREDIRS => 10,
@@ -3048,10 +3195,10 @@ public function sendGstr1ToGSTMaster(Request $request){
                CURLOPT_HTTPHEADER => array(
                   'gst_username:'.$gst_user_name,
                   'state_cd:'.$state_code,
-                  'ip_address: 162.241.85.89',
+                  'ip_address:' .$ip_address,
                   'txn:'.$txn,
-                  'client_id: GSPdea8d6fb-aed1-431a-b589-f1c541424580',
-                  'client_secret: GSP4c44b790-ef11-4725-81d9-5f8504279d67',         
+                  'client_id: '.$client_id,
+                  'client_secret: '.$client_secret,
                   'Content-Type: application/json'
                ),
             ));
@@ -3060,8 +3207,8 @@ public function sendGstr1ToGSTMaster(Request $request){
             curl_close($curl);
             if($res){
                $rult = json_decode($res);
-               // echo "<pre>";
-               // print_r($rult);die;
+               //echo "<pre>";
+               //print_r($rult);die;
                if(isset($rult->status_cd) && $rult->status_cd==1){
                   if($rult->data->status_cd=="P"){                     
                      echo json_encode(array("status"=>true,"message"=>"Data Saved Successfully."));
@@ -3149,6 +3296,8 @@ public function b2cLargedetailed(Request $request){
     ->join('states as billing_state', 'sales.billing_state', '=', 'billing_state.id') // alias 2
     ->join('manage_items', 'sale_descriptions.goods_discription', '=', 'manage_items.id')
     ->whereIn('sale_descriptions.sale_id', $b2cSaleIds)
+    ->where('sale_descriptions.status','1')
+    ->where('sale_descriptions.delete','0')
     ->select(
         'sale_descriptions.id as sale_desc_id',
         'sale_descriptions.sale_id',
@@ -3328,11 +3477,11 @@ $b2cSaleIds = $b2cSales->filter(function($sale) use ($merchant_state_code) {
     $customer_state_code = State::where('id', $sale->billing_state)->value('state_code');
 
     if ($merchant_state_code == $customer_state_code) {
-        // Intra — include always
+        // Intra â€” include always
         return true;
     }
 
-    // Inter — include only <= 250000
+    // Inter â€” include only <= 250000
     return $sale->total <= 250000;
 
 })->pluck('id');
@@ -3349,6 +3498,8 @@ $b2cSaleIds = $b2cSales->filter(function($sale) use ($merchant_state_code) {
         ->join('states', 'accounts.state', '=', 'states.id')
         ->join('manage_items', 'sale_descriptions.goods_discription', '=', 'manage_items.id')
         ->where('manage_items.item_type', 'taxable')
+        ->where('sale_descriptions.status','1')
+        ->where('sale_descriptions.delete','0')
         ->whereIn('sale_id', $b2cSaleIds)
         ->select(
             'sale_descriptions.sale_id',
@@ -4721,7 +4872,7 @@ $sortedGrouped = collect($grouped)->sortBy(function ($item) {
 
 
 public function hsnSummary(Request $request){
-    $type = $request->input('type');
+    $type = $request->input('type') ?? 'B2B';
     $merchant_gst = $request->merchant_gst;
     $company_id = $request->company_id;
     $from_date = $request->from_date;
@@ -4817,6 +4968,7 @@ public function hsnSummary(Request $request){
         ->where('sales_returns.delete', '0')
         ->where('sales_returns.status', '1')
         ->pluck('sales_returns.id');
+        
     $creditSales1 = DB::table('sales_returns')
         ->where('sales_returns.merchant_gst', $merchant_gst)
         ->where('sales_returns.company_id', $company_id)
@@ -4836,7 +4988,9 @@ public function hsnSummary(Request $request){
         })
         ->where('sales_returns.delete', '0')
         ->where('sales_returns.status', '1')
-        ->pluck('sales_returns.id');       
+        ->pluck('sales_returns.id');  
+        
+        
     $creditItems = DB::table('sale_return_descriptions')
         ->join('sales_returns', 'sale_return_descriptions.sale_return_id', '=', 'sales_returns.id')
         ->join('states', 'sales_returns.billing_state', '=', 'states.id')
@@ -4856,6 +5010,7 @@ public function hsnSummary(Request $request){
              
         )
         ->get();
+        
     $creditItems1 = DB::table('sale_return_descriptions')
                     ->join('sales_returns', 'sale_return_descriptions.sale_return_id', '=', 'sales_returns.id')
                     ->join('states', 'sales_returns.billing_state', '=', 'states.id')
@@ -4901,8 +5056,9 @@ public function hsnSummary(Request $request){
                     )
                     ->get();
     $creditItems =  $creditItems->merge($creditItems1)->merge($creditWithoutGstItems);
+    
     $creditSundryDetails = DB::table('sale_return_sundries')
-        ->whereIn('sale_return_id', $creditSales)
+        ->whereIn('sale_return_id', $creditSales->merge($creditSales1))
         ->select('sale_return_id', 'bill_sundry', 'amount')
         ->get()
         ->groupBy('sale_return_id');
@@ -5288,16 +5444,21 @@ public function documentIssuedSummary(REQUEST $request){
     $to_date = $request->to_date;
 
     $salesGrouped = DB::table('sales')
-        ->where('company_id', $company_id)
-        ->where('merchant_gst',$merchant_gst)
-        ->whereBetween('date', [$from_date, $to_date])
-        ->where('delete', '0') // Exclude soft-deleted records
-        ->whereNotNull('voucher_no_prefix') // Ensure voucher_no_prefix is present
-        ->select('voucher_no_prefix', 'series_no', 'status')
-        ->orderBy('series_no')
-        ->orderBy('voucher_no_prefix')
-        ->get()
-        ->groupBy('series_no');
+    ->where('company_id', $company_id)
+    ->where('merchant_gst', $merchant_gst)
+    ->whereBetween('date', [$from_date, $to_date])
+    ->where('delete', '0')
+    ->whereNotNull('voucher_no_prefix')
+    ->select(
+        'voucher_no_prefix',
+        'series_no',
+        'status',
+        'voucher_no'
+    )
+    ->orderBy('series_no', 'ASC')
+    ->orderByRaw('CAST(voucher_no AS UNSIGNED) ASC')
+    ->get()
+    ->groupBy('series_no');
     // echo "<pre>";
     // print_r($salesGrouped->toArray());
     // die;
@@ -5312,7 +5473,7 @@ public function documentIssuedSummary(REQUEST $request){
         // Extract numeric part from voucher_no_prefix
         // Map voucher_no_prefix with extracted number
         $voucherMap = $records->map(function ($item) {
-            preg_match('/(\d+)$/', $item->voucher_no_prefix, $matches);
+            preg_match('/(\d+)$/', $item->voucher_no, $matches);
             return [
                 'original' => $item->voucher_no_prefix,
                 'number'   => isset($matches[1]) ? (int)$matches[1] : null
@@ -5442,21 +5603,21 @@ $payments = DB::table('payments')
 
       $paymentsDocumentSummary = [];
 
-    foreach ($payments as $series => $records) {
-        $total = $records->count();
-        $cancelled = $records->where('status', 2)->count();
-        $from = $records->first()->voucher_no ?? '-';
-        $to = $records->last()->voucher_no ?? '-';
+    // foreach ($payments as $series => $records) {
+    //     $total = $records->count();
+    //     $cancelled = $records->where('status', 2)->count();
+    //     $from = $records->first()->voucher_no ?? '-';
+    //     $to = $records->last()->voucher_no ?? '-';
 
-        $paymentsDocumentSummary[] = [
-            'series_no' => $series ?? '-',
-            'from' => $from,
-            'to' => $to,
-            'total' => $total,
-            'cancelled' => $cancelled,
-            'net_issued' => $total - $cancelled,
-        ];
-    }
+    //     $paymentsDocumentSummary[] = [
+    //         'series_no' => $series ?? '-',
+    //         'from' => $from,
+    //         'to' => $to,
+    //         'total' => $total,
+    //         'cancelled' => $cancelled,
+    //         'net_issued' => $total - $cancelled,
+    //     ];
+    // }
 
     $receipts = DB::table('receipts')
     ->where('company_id', $company_id)
@@ -5471,21 +5632,21 @@ $payments = DB::table('payments')
 
       $receiptsDocumentSummary = [];
 
-    foreach ($receipts as $series => $records) {
-        $total = $records->count();
-        $cancelled = $records->where('status', 2)->count();
-        $from = $records->first()->voucher_no ?? '-';
-        $to = $records->last()->voucher_no ?? '-';
+    // foreach ($receipts as $series => $records) {
+    //     $total = $records->count();
+    //     $cancelled = $records->where('status', 2)->count();
+    //     $from = $records->first()->voucher_no ?? '-';
+    //     $to = $records->last()->voucher_no ?? '-';
 
-        $receiptsDocumentSummary[] = [
-            'series_no' => $series ?? '-',
-            'from' => $from,
-            'to' => $to,
-            'total' => $total,
-            'cancelled' => $cancelled,
-            'net_issued' => $total - $cancelled,
-        ];
-    }
+    //     $receiptsDocumentSummary[] = [
+    //         'series_no' => $series ?? '-',
+    //         'from' => $from,
+    //         'to' => $to,
+    //         'total' => $total,
+    //         'cancelled' => $cancelled,
+    //         'net_issued' => $total - $cancelled,
+    //     ];
+    // }
 
     return view('gstReturn.documentIssuedSummary', compact('SalesdocumentSummary','DebitNotedocumentSummary','CreditNotedocumentSummary','paymentsDocumentSummary','receiptsDocumentSummary', 'from_date', 'to_date','merchant_gst'));
 
@@ -5687,7 +5848,7 @@ $payments = DB::table('payments')
         $creditItems = $creditItems->merge($creditItems1)->merge($creditWithoutGstItems);
 
         $creditSundryDetails = DB::table('sale_return_sundries')
-            ->whereIn('sale_return_id', $creditSales)
+            ->whereIn('sale_return_id', $creditSales->merge($creditSales1))
             ->select('sale_return_id', 'bill_sundry', 'amount')
             ->get()
             ->groupBy('sale_return_id');
@@ -6082,6 +6243,241 @@ $payments = DB::table('payments')
             ];
         }
     }
+    
+     private function processHsnDetail(
+    $merchant_gst,
+    $company_id,
+    $from_date,
+    $to_date,
+    $user_company_id,
+    $sundries,
+    $isB2B,
+    $hsnFilter,
+    $unitFilter,
+    $rateFilter
+) {
+    $typeCondition = function ($q) use ($isB2B) {
+        if ($isB2B) {
+            $q->whereNotNull('billing_gst')->where('billing_gst', '!=', '');
+        } else {
+            $q->whereNull('billing_gst')->orWhere('billing_gst', '');
+        }
+    };
+
+    // ================= SALES =================
+    $sales = DB::table('sale_descriptions')
+        ->join('sales', 'sale_descriptions.sale_id', '=', 'sales.id')
+        ->join('manage_items', 'sale_descriptions.goods_discription', '=', 'manage_items.id')
+        ->join('units', 'manage_items.u_name', '=', 'units.id')
+        ->where('manage_items.hsn_code', $hsnFilter)
+        ->where('manage_items.gst_rate', $rateFilter)
+        ->where('units.unit_code', $unitFilter)
+        ->where('sales.merchant_gst', $merchant_gst)
+        ->where('sales.company_id', $company_id)
+        ->whereBetween('sales.date', [$from_date, $to_date])
+        ->where('sales.status', '1')
+        ->where('sales.delete', '0')
+        ->where($typeCondition)
+        ->select(
+            'sale_descriptions.sale_id',
+            'sales.voucher_no_prefix as voucher_no',
+            'sales.date',
+            'sale_descriptions.qty',
+            'sale_descriptions.amount',
+            DB::raw("'SALE' as type")
+        )
+        ->get();
+
+    $saleIds = $sales->pluck('sale_id');
+
+    // preload items + sundries
+    $saleItems = DB::table('sale_descriptions')
+        ->whereIn('sale_id', $saleIds)
+        ->get()
+        ->groupBy('sale_id');
+
+    $saleSundries = DB::table('sale_sundries')
+        ->whereIn('sale_id', $saleIds)
+        ->get()
+        ->groupBy('sale_id');
+
+    // ================= SALES RETURN =================
+    $salesReturn = DB::table('sale_return_descriptions')
+        ->join('sales_returns', 'sale_return_descriptions.sale_return_id', '=', 'sales_returns.id')
+        ->join('manage_items', 'sale_return_descriptions.goods_discription', '=', 'manage_items.id')
+        ->join('units', 'manage_items.u_name', '=', 'units.id')
+        ->where('manage_items.hsn_code', $hsnFilter)
+        ->where('manage_items.gst_rate', $rateFilter)
+         ->where('voucher_type', 'SALE')
+        ->where('units.unit_code', $unitFilter)
+        ->where('sales_returns.merchant_gst', $merchant_gst)
+        ->where('sales_returns.company_id', $company_id)
+        ->whereBetween('sales_returns.date', [$from_date, $to_date])
+        ->where('sales_returns.status', '1')
+        ->where('sales_returns.delete', '0')
+        ->where($typeCondition)
+        ->select(
+            'sale_return_descriptions.sale_return_id',
+            'sales_returns.sr_prefix as voucher_no',
+            'sales_returns.date',
+            'sale_return_descriptions.qty',
+            'sale_return_descriptions.amount',
+            DB::raw("'SALE RETURN' as type")
+        )
+        ->get();
+
+    $srIds = $salesReturn->pluck('sale_return_id');
+
+    $srItems = DB::table('sale_return_descriptions')
+        ->whereIn('sale_return_id', $srIds)
+        ->get()
+        ->groupBy('sale_return_id');
+
+    $srSundries = DB::table('sale_return_sundries')
+        ->whereIn('sale_return_id', $srIds)
+        ->get()
+        ->groupBy('sale_return_id');
+
+    // ================= PURCHASE RETURN =================
+    $purchaseReturn = DB::table('purchase_return_descriptions')
+        ->join('purchase_returns', 'purchase_return_descriptions.purchase_return_id', '=', 'purchase_returns.id')
+        ->join('manage_items', 'purchase_return_descriptions.goods_discription', '=', 'manage_items.id')
+        ->join('units', 'manage_items.u_name', '=', 'units.id')
+        ->where('manage_items.hsn_code', $hsnFilter)
+        ->where('manage_items.gst_rate', $rateFilter)
+         ->where('voucher_type', 'SALE')
+        ->where('units.unit_code', $unitFilter)
+        ->where('purchase_returns.merchant_gst', $merchant_gst)
+        ->where('purchase_returns.company_id', $company_id)
+        ->whereBetween('purchase_returns.date', [$from_date, $to_date])
+        ->where('purchase_returns.status', '1')
+        ->where('purchase_returns.delete', '0')
+        ->where($typeCondition)
+        ->select(
+            'purchase_return_descriptions.purchase_return_id',
+            'purchase_returns.sr_prefix as voucher_no',
+            'purchase_returns.date',
+            'purchase_return_descriptions.qty',
+            'purchase_return_descriptions.amount',
+            DB::raw("'PURCHASE RETURN' as type")
+        )
+        ->get();
+
+    $prIds = $purchaseReturn->pluck('purchase_return_id');
+
+    $prItems = DB::table('purchase_return_descriptions')
+        ->whereIn('purchase_return_id', $prIds)
+        ->get()
+        ->groupBy('purchase_return_id');
+
+    $prSundries = DB::table('purchase_return_sundries')
+        ->whereIn('purchase_return_id', $prIds)
+        ->get()
+        ->groupBy('purchase_return_id');
+
+    // ================= FINAL PROCESS =================
+    $all = $sales->merge($salesReturn)->merge($purchaseReturn);
+
+    $transactions = $all->map(function ($row) use (
+        $saleItems, $saleSundries,
+        $srItems, $srSundries,
+        $prItems, $prSundries,
+        $sundries
+    ) {
+
+        $row->taxable = $row->amount;
+
+        if ($row->type === 'SALE') {
+            $items = $saleItems[$row->sale_id] ?? collect();
+            $sundry = $saleSundries[$row->sale_id] ?? collect();
+        } elseif ($row->type === 'SALE RETURN') {
+            $items = $srItems[$row->sale_return_id] ?? collect();
+            $sundry = $srSundries[$row->sale_return_id] ?? collect();
+        } else {
+            $items = $prItems[$row->purchase_return_id] ?? collect();
+            $sundry = $prSundries[$row->purchase_return_id] ?? collect();
+        }
+
+        $total = $items->sum('amount');
+        if ($total == 0) return $row;
+
+        $adjusted = 0;
+
+        foreach ($sundry as $s) {
+            $bs = $sundries[$s->bill_sundry] ?? null;
+            if (!$bs || $bs->nature_of_sundry != 'OTHER') continue;
+
+            $share = ($row->amount / $total) * $s->amount;
+            $adjusted += ($bs->bill_sundry_type == 'subtractive') ? -$share : $share;
+        }
+
+        $row->taxable = $row->amount + $adjusted;
+
+        return $row;
+    });
+
+    return $transactions->sortBy('date')->values();
+}
+    
+    
+  public function hsnDetail(Request $request)
+{
+    $hsn  = $request->hsn;
+    $unit = $request->unit_code;
+    $rate = $request->rate;
+
+    $merchant_gst = $request->merchant_gst;
+    $company_id   = $request->company_id;
+    $from_date    = $request->from_date;
+    $to_date      = $request->to_date;
+    $type         = $request->type;
+
+    $user_company_id = Session::get('user_company_id');
+
+    $sundries = \App\Models\BillSundrys::where('company_id', $user_company_id)
+        ->get()
+        ->keyBy('id');
+
+    // ✅ STEP 1: Get summary (unchanged - source of truth)
+    $finalData = [];
+    $this->processHsnSummary(
+        $merchant_gst,
+        $company_id,
+        $from_date,
+        $to_date,
+        $user_company_id,
+        $sundries,
+        $type === 'B2B',
+        $finalData
+    );
+
+    $summary = collect($finalData)->first(function ($row) use ($hsn, $unit, $rate) {
+        return $row['hsn'] == $hsn &&
+               $row['unit_code'] == $unit &&
+               $row['rate'] == $rate;
+    });
+
+    // ✅ STEP 2: FAST DETAIL (NO LOOP QUERIES)
+    $transactions = $this->processHsnDetail(
+        $merchant_gst,
+        $company_id,
+        $from_date,
+        $to_date,
+        $user_company_id,
+        $sundries,
+        $type === 'B2B',
+        $hsn,
+        $unit,
+        $rate
+    );
+
+    return view('gstReturn.hsnDetail', [
+        'transactions' => $transactions,
+        'hsn' => $hsn,
+        'summary' => $summary
+    ]);
+}
+
 
     public function storeTurnOver(Request $request){
         DB::table('company_turnovers')->updateOrInsert(
