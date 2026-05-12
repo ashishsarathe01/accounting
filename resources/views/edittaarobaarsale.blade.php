@@ -236,7 +236,7 @@
 @if($item_list->id==$sale_order_item->goods_discription) selected @endif
 data-unit_id="{{$item_list->unit}}"
 data-unit_name="{{$item_list->u_name}}"
-data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id="{{$item_list->id}}" data-itemid="{{$item_list->id}}" data-parameterized_stock_status="{{$item_list->parameterized_stock_status}}" data-config_status="{{$item_list->config_status}}" data-group_id="{{$item_list->group_id}}" data-dual_unit="{{$item_list->dual_unit ?? 0}}">{{$item_list->name}}</option>
+data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id="{{$item_list->id}}" data-itemid="{{$item_list->id}}" data-parameterized_stock_status="{{$item_list->parameterized_stock_status}}" data-config_status="{{$item_list->config_status}}" data-group_id="{{$item_list->group_id}}"  data-dual_unit="{{$item_list->dual_unit ?? 0}}" data-fixed_weight="{{$item_list->fixed_weight ?? 0}}" data-fixed_weight_value="{{$item_list->fixed_weight_value ?? ''}}">{{$item_list->name}}</option>
                                        @endforeach
                                     </select>
                                     @if($config && $config->show_description == 1)
@@ -261,23 +261,59 @@ data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id=
 
                                  <td class="col-weight-cell">
    <div id="weight_boxes_{{$add_more_count}}" class="weight-boxes-container" style="display:flex;flex-direction:column;gap:2px;">
-      @php $is_dual = 0; @endphp
+      @php
+         $is_dual = 0;
+
+         $fixed_weight_hidden = 0;
+
+         $fixed_weight_value_hidden = 0;
+      @endphp
       @foreach($item as $item_list)
          @if($item_list->id == $sale_order_item->goods_discription)
-            @php $is_dual = $item_list->dual_unit ?? 0; @endphp
-         @endif
+
+   @php
+
+      $is_dual = $item_list->dual_unit ?? 0;
+
+      $fixed_weight_hidden = $item_list->fixed_weight ?? 0;
+
+      $fixed_weight_value_hidden = $item_list->fixed_weight_value ?? 0;
+
+   @endphp
+
+@endif
       @endforeach
-      @if($is_dual == 1 && !empty($piece_weights) && collect($piece_weights)->count() > 0)
+@php
+   $selected_item = collect($item)->firstWhere('id', $sale_order_item->goods_discription);
+
+   $fixed_weight = $selected_item->fixed_weight ?? 0;
+
+   $fixed_weight_value = $selected_item->fixed_weight_value ?? 0;
+@endphp
+
+@if($is_dual == 1 && $fixed_weight == 1)
+
+   <input type="number"
+      class="form-control mb-1"
+      readonly
+      value="{{ rtrim(rtrim(number_format((float)$fixed_weight_value, 2, '.', ''), '0'), '.') }}"
+      style="width:90px;text-align:right;background:#f5f5f5;">
+
+@elseif($is_dual == 1 && !empty($piece_weights) && collect($piece_weights)->count() > 0)
+
    @foreach(collect($piece_weights) as $pw)
+
       <input type="number"
-             class="form-control piece_weight mb-1"
-             data-row="{{$add_more_count}}"
-             name="piece_weight_{{$add_more_count}}[]"
-             placeholder="Wt {{$pw->piece_no}}"
-             step="0.001"
-             style="width:90px;text-align:right;"
-             value="{{ rtrim(rtrim(number_format((float)$pw->weight, 2, '.', ''), '0'), '.') }}">
+            class="form-control piece_weight mb-1"
+            data-row="{{$add_more_count}}"
+            name="piece_weight_{{$add_more_count}}[]"
+            placeholder="Wt {{$pw->piece_no}}"
+            step="0.001"
+            style="width:90px;text-align:right;"
+            value="{{ rtrim(rtrim(number_format((float)$pw->weight, 2, '.', ''), '0'), '.') }}">
+
    @endforeach
+
 @endif
    </div>
 </td>
@@ -349,6 +385,8 @@ data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id=
                                  <input type="hidden" name="item_parameters[]" id="item_parameters_{{$add_more_count}}">
                                  <input type="hidden" name="config_status[]" id="config_status_{{$add_more_count}}">
                                  <input type="hidden" name="dual_unit[]" id="dual_unit_{{$add_more_count}}" value="{{$is_dual}}">
+                                 <input type="hidden" name="fixed_weight[]" id="fixed_weight_{{$add_more_count}}" value="{{$fixed_weight_hidden}}">
+                                 <input type="hidden" name="fixed_weight_value[]" id="fixed_weight_value_{{$add_more_count}}" value="{{$fixed_weight_value_hidden}}">
                               </tr>
                               @php $add_more_count++; @endphp
                            @endforeach
@@ -370,8 +408,10 @@ data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id=
                                                    data-itemid="{{$item_list->id}}"
                                                    data-parameterized_stock_status="{{$item_list->parameterized_stock_status}}"
                                                    data-config_status="{{$item_list->config_status}}"
-                                                   data-group_id="{{$item_list->group_id}}"
-                                                   data-dual_unit="{{$item_list->dual_unit ?? 0}}">
+                                                   data-group_id="{{$item_list->group_id}}" 
+                                                   data-dual_unit="{{$item_list->dual_unit ?? 0}}"
+                                                   data-fixed_weight="{{$item_list->fixed_weight ?? 0}}"
+                                                   data-fixed_weight_value="{{$item_list->fixed_weight_value ?? ''}}">
                                                 {{$item_list->name}}
                                           </option>
                                        @endforeach
@@ -400,11 +440,11 @@ data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id=
                                  <input type="number" class="quantity w-100 form-control" id="quantity_tr_1" name="qty[]" placeholder="Quantity" style="text-align:right;" data-id="1"/>
                               </td>
                               <td class="col-weight-cell">
-   <div id="weight_boxes_1" class="weight-boxes-container" style="display:flex;flex-direction:column;gap:2px;"></div>
-</td>
-<td class="col-total-weight-cell">
-   <input type="number" class="total_weight form-control" id="total_weight_tr_1" name="total_weight[]" placeholder="Total Wt." style="text-align:right;" data-id="1" readonly/>
-</td>
+                                 <div id="weight_boxes_1" class="weight-boxes-container" style="display:flex;flex-direction:column;gap:2px;"></div>
+                              </td>
+                              <td class="col-total-weight-cell">
+                                 <input type="number" class="total_weight form-control" id="total_weight_tr_1" name="total_weight[]" placeholder="Total Wt." style="text-align:right;" data-id="1" readonly/>
+                              </td>
                               <td class="w-min-50">
                                  <input type="text" class="w-100 form-control unit" id="unit_tr_1" readonly style="text-align:center;" data-id="1"/>
                                  <input type="hidden" class="units w-100" name="units[]" id="units_tr_1" />
@@ -414,37 +454,39 @@ data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id=
                               </td>
                               <td class=""><input type="number" id="amount_tr_1" class="amount w-100 form-control" name="amount[]" placeholder="Amount"  style="text-align:right;" data-id="1"/></td>
                               <td class="">
-   <svg xmlns="http://www.w3.org/2000/svg" data-id="1"class="bg-primary rounded-circle add_more_wrapper" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;" tabindex="0" role="button"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg>
-</td>
+                                 <svg xmlns="http://www.w3.org/2000/svg" data-id="1"class="bg-primary rounded-circle add_more_wrapper" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;" tabindex="0" role="button"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg>
+                              </td>
                               <input type="hidden" name="item_parameters[]" id="item_parameters_1">
                               <input type="hidden" name="config_status[]" id="config_status_1">
                               <input type="hidden" name="dual_unit[]" id="dual_unit_1" value="0">
+                              <input type="hidden" name="fixed_weight[]" id="fixed_weight_1" value="0">
+                              <input type="hidden" name="fixed_weight_value[]" id="fixed_weight_value_1" value="0">
                            </tr>
                         @endif
 
 
                      </tbody>
                      <tr class="font-14 font-heading bg-white total">
-   <td class="w-min-50 fw-bold"></td>
-   <td class="w-min-50 fw-bold"></td>
-   <td class="w-min-50 fw-bold"></td>
-   <td class="w-min-50 fw-bold"></td>
-   <td class="w-min-50 fw-bold"></td>
-   <td class="w-min-50 fw-bold"></td>
+                        <td class="w-min-50 fw-bold"></td>
+                        <td class="w-min-50 fw-bold"></td>
+                        <td class="w-min-50 fw-bold"></td>
+                        <td class="w-min-50 fw-bold"></td>
+                        <td class="w-min-50 fw-bold"></td>
+                        <td class="w-min-50 fw-bold"></td>
 
-   <td class="w-min-50 fw-bold">Total</td>
+                        <td class="w-min-50 fw-bold">Total</td>
 
-   <td class="w-min-50 fw-bold">
-      <span id="totalSum" style="float:right;">0.00</span>
+                        <td class="w-min-50 fw-bold">
+                           <span id="totalSum" style="float:right;">0.00</span>
 
-      <input type="hidden"
-             name="taxable_amt"
-             id="total_taxable_amounts"
-             value="0">
-   </td>
+                           <input type="hidden"
+                                 name="taxable_amt"
+                                 id="total_taxable_amounts"
+                                 value="0">
+                        </td>
 
-   <td></td>
-</tr>
+                        <td></td>
+                     </tr>
                   </table>
                </div>
                <div class="row">
@@ -569,42 +611,42 @@ data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id=
                                  <td class="w-min-50">
                                     <select id="bill_sundry_cgst" class="w-95-parsent  bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="cgst">
                                         <?php
-   $cgst_found = false;
+                                          $cgst_found = false;
 
-   foreach ($billsundry as $value) { 
-      if ($value->nature_of_sundry == 'CGST') {
-         $cgst_found = true;
-         ?>
-         <option value="<?php echo $value->id;?>" 
-        data-type="<?php echo $value->bill_sundry_type;?>"
-        data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>"
-        data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>"
-        data-sequence="<?php echo $value->sequence;?>"
-        class="sundry_option_cgst" 
-        id="sundry_option_cgst"
-        data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"
-        <?php if(isset($return['CGST']) && $return['CGST'][0]['bill_sundry'] == $value->id){ echo "selected"; } ?>>
+                                          foreach ($billsundry as $value) { 
+                                             if ($value->nature_of_sundry == 'CGST') {
+                                                $cgst_found = true;
+                                                ?>
+                                                <option value="<?php echo $value->id;?>" 
+                                                      data-type="<?php echo $value->bill_sundry_type;?>"
+                                                      data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>"
+                                                      data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>"
+                                                      data-sequence="<?php echo $value->sequence;?>"
+                                                      class="sundry_option_cgst" 
+                                                      id="sundry_option_cgst"
+                                                      data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"
+                                                      <?php if(isset($return['CGST']) && $return['CGST'][0]['bill_sundry'] == $value->id){ echo "selected"; } ?>>
 
-   <?php echo $value->name; ?>
+                                                   <?php echo $value->name; ?>
 
-</option>
-         <?php
-         break;
-      }
-   }
+                                                </option>
+                                                <?php
+                                                break;
+                                             }
+                                          }
 
-   if (!$cgst_found) {
-      ?>
-      <option value="" 
-              data-type="" 
-              data-adjust_sale_amt="" 
-              data-effect_gst_calculation="" 
-              data-sequence="" 
-              class="sundry_option_cgst" 
-              id="sundry_option_cgst" 
-              data-nature_of_sundry="">
-      </option>
-   <?php } ?>
+                                          if (!$cgst_found) {
+                                             ?>
+                                             <option value="" 
+                                                   data-type="" 
+                                                   data-adjust_sale_amt="" 
+                                                   data-effect_gst_calculation="" 
+                                                   data-sequence="" 
+                                                   class="sundry_option_cgst" 
+                                                   id="sundry_option_cgst" 
+                                                   data-nature_of_sundry="">
+                                             </option>
+                                          <?php } ?>
                                     </select>
                                  </td>
                                  <td class="w-min-50 ">
@@ -618,42 +660,42 @@ data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id=
                                  <td class="w-min-50">
                                     <select id="bill_sundry_sgst" class="w-95-parsent  bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="sgst">
                                       <?php
-   $sgst_found = false; // Flag to track SGST
+                                          $sgst_found = false; // Flag to track SGST
 
-   foreach($billsundry as $value){ 
-      if($value->nature_of_sundry == 'SGST'){
-         $sgst_found = true;
-         ?>
-         <option value="<?php echo $value->id;?>" 
-        data-type="<?php echo $value->bill_sundry_type;?>"
-        data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>"
-        data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>"
-        data-sequence="<?php echo $value->sequence;?>"
-        class="sundry_option_sgst" 
-        id="sundry_option_sgst"
-        data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"
-        <?php if(isset($return['SGST']) && $return['SGST'][0]['bill_sundry'] == $value->id){ echo "selected"; } ?>>
+                                          foreach($billsundry as $value){ 
+                                             if($value->nature_of_sundry == 'SGST'){
+                                                $sgst_found = true;
+                                                ?>
+                                                <option value="<?php echo $value->id;?>" 
+                                                      data-type="<?php echo $value->bill_sundry_type;?>"
+                                                      data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>"
+                                                      data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>"
+                                                      data-sequence="<?php echo $value->sequence;?>"
+                                                      class="sundry_option_sgst" 
+                                                      id="sundry_option_sgst"
+                                                      data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"
+                                                      <?php if(isset($return['SGST']) && $return['SGST'][0]['bill_sundry'] == $value->id){ echo "selected"; } ?>>
 
-   <?php echo $value->name; ?>
+                                                   <?php echo $value->name; ?>
 
-</option>
-         <?php 
-         break; // SGST mila to loop yahin break
-      }
-   }
+                                                </option>
+                                                <?php 
+                                                break; // SGST mila to loop yahin break
+                                             }
+                                          }
 
-   // SGST nahi mila to default empty option
-   if (!$sgst_found) { ?>
-      <option value="" 
-              data-type="" 
-              data-adjust_sale_amt="" 
-              data-effect_gst_calculation="" 
-              data-sequence="" 
-              class="sundry_option_sgst" 
-              id="sundry_option_sgst" 
-              data-nature_of_sundry="">
-      </option>
-   <?php } ?>
+                                          // SGST nahi mila to default empty option
+                                          if (!$sgst_found) { ?>
+                                             <option value="" 
+                                                   data-type="" 
+                                                   data-adjust_sale_amt="" 
+                                                   data-effect_gst_calculation="" 
+                                                   data-sequence="" 
+                                                   class="sundry_option_sgst" 
+                                                   id="sundry_option_sgst" 
+                                                   data-nature_of_sundry="">
+                                             </option>
+                                          <?php } ?>
                                     </select>
                                  </td>
                                  <td class="w-min-50 ">
@@ -669,43 +711,43 @@ data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id=
                                  <td class="w-min-50">
                                     <select id="bill_sundry_igst" class="w-95-parsent  bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="igst">
                                         <?php
-   $igst_found = false; // Track whether IGST found or not
+                                          $igst_found = false; // Track whether IGST found or not
 
-   foreach ($billsundry as $value) { 
-      if ($value->nature_of_sundry == 'IGST') {
-         $igst_found = true;
-         ?>
-         <option value="<?php echo $value->id;?>" 
-        data-type="<?php echo $value->bill_sundry_type;?>"
-        data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>"
-        data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>"
-        data-sequence="<?php echo $value->sequence;?>"
-        class="sundry_option_igst" 
-        id="sundry_option_igst"
-        data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"
-        <?php if(isset($return['IGST']) && $return['IGST'][0]['bill_sundry'] == $value->id){ echo "selected"; } ?>>
+                                          foreach ($billsundry as $value) { 
+                                             if ($value->nature_of_sundry == 'IGST') {
+                                                $igst_found = true;
+                                                ?>
+                                                <option value="<?php echo $value->id;?>" 
+                                                      data-type="<?php echo $value->bill_sundry_type;?>"
+                                                      data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>"
+                                                      data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>"
+                                                      data-sequence="<?php echo $value->sequence;?>"
+                                                      class="sundry_option_igst" 
+                                                      id="sundry_option_igst"
+                                                      data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"
+                                                      <?php if(isset($return['IGST']) && $return['IGST'][0]['bill_sundry'] == $value->id){ echo "selected"; } ?>>
 
-   <?php echo $value->name; ?>
+                                                   <?php echo $value->name; ?>
 
-</option>
-         <?php
-         break; // Stop loop after first IGST found
-      }
-   }
+                                                </option>
+                                                <?php
+                                                break; // Stop loop after first IGST found
+                                             }
+                                          }
 
-   // If no IGST was found, print default option (like your else)
-   if (!$igst_found) {
-      ?>
-      <option value="" 
-              data-type="" 
-              data-adjust_sale_amt="" 
-              data-effect_gst_calculation="" 
-              data-sequence="" 
-              class="sundry_option_igst" 
-              id="sundry_option_igst" 
-              data-nature_of_sundry="">
-      </option>
-   <?php } ?>
+                                          // If no IGST was found, print default option (like your else)
+                                          if (!$igst_found) {
+                                             ?>
+                                             <option value="" 
+                                                   data-type="" 
+                                                   data-adjust_sale_amt="" 
+                                                   data-effect_gst_calculation="" 
+                                                   data-sequence="" 
+                                                   class="sundry_option_igst" 
+                                                   id="sundry_option_igst" 
+                                                   data-nature_of_sundry="">
+                                             </option>
+                                          <?php } ?>
                                     </select>
                                  </td>
                                  <td class="w-min-50 ">
@@ -1437,7 +1479,9 @@ data-val="'.$item_data->unit.'"
 data-parameterized_stock_status="'.$item_data->parameterized_stock_status.'"
 data-config_status="'.$item_data->config_status.'"
 data-group_id="'.$item_data->group_id.'"
-data-dual_unit="'.($item_data->dual_unit ?? 0).'">
+data-dual_unit="'.($item_data->dual_unit ?? 0).'"
+data-fixed_weight="'.($item_data->fixed_weight ?? 0).'"
+data-fixed_weight_value="'.($item_data->fixed_weight_value ?? 0).'">
 '.$item_data->name.'
 </option>';
 
@@ -1510,20 +1554,23 @@ function formatDecimal(value) {
 
          '<td class="w-min-50"><input type="number" class="quantity w-100 form-control" name="qty[]" id="quantity_tr_' + add_more_count + '" required placeholder="Quantity" style="text-align:right" data-id="' + add_more_count + '" /></td>' +
          '<td class="col-weight-cell">' +
-   '<div id="weight_boxes_' + add_more_count + '" class="weight-boxes-container" style="display:flex;flex-direction:column;gap:2px;"></div>' +
-'</td>' +
-'<td class="col-total-weight-cell">' +
-   '<input type="number" class="total_weight w-100 form-control" name="total_weight[]" id="total_weight_tr_' + add_more_count + '" placeholder="Total Wt." style="text-align:right" data-id="' + add_more_count + '" readonly/>' +
-'</td>' +
+            '<div id="weight_boxes_' + add_more_count + '" class="weight-boxes-container" style="display:flex;flex-direction:column;gap:2px;"></div>' +
+         '</td>' +
+         '<td class="col-total-weight-cell">' +
+            '<input type="number" class="total_weight w-100 form-control" name="total_weight[]" id="total_weight_tr_' + add_more_count + '" placeholder="Total Wt." style="text-align:right" data-id="' + add_more_count + '" readonly/>' +
+         '</td>' +
          '<td class="w-min-50"><input type="text" class="w-100 form-control unit" id="unit_tr_' + add_more_count + '" readonly style="text-align:center;" data-id="' + add_more_count + '"/><input type="hidden" class="units w-100" name="units[]" id="units_tr_' + add_more_count + '"/></td>' +
          '<td class="w-min-50"><input type="number" class="price w-100 form-control" name="price[]" id="price_tr_' + add_more_count + '" required placeholder="Price" style="text-align:right" data-id="' + add_more_count + '"/></td>' +
          '<td class="w-min-50"><input type="number" class="amount w-100 form-control" name="amount[]" id="amount_tr_' + add_more_count + '" required placeholder="Amount" style="text-align:right" data-id="' + add_more_count + '"/></td>' +
          '<input type="hidden" name="item_parameters[]" id="item_parameters_' + add_more_count + '">' +
          '<input type="hidden" name="config_status[]" id="config_status_' + add_more_count + '">' +
          '<input type="hidden" name="dual_unit[]" id="dual_unit_' + add_more_count + '" value="0">' +
+         '<input type="hidden" name="fixed_weight[]" id="fixed_weight_' + add_more_count + '" value="0">' +
+         '<input type="hidden" name="fixed_weight_value[]" id="fixed_weight_value_' + add_more_count + '" value="0">' +
          '<td class="w-min-50 action-cell" style="display: flex;"></td>' +
          '</tr>';
       $("#example11").append(newRow);
+      $('#quantity_tr_' + add_more_count).trigger('input');
       $("#max_sale_descrption").val(add_more_count);
       let k = 1;
       $('.item_id').each(function () {
@@ -3573,7 +3620,13 @@ $(document).on('change', '.item_id', function () {
     let dual_unit = parseInt($(this).find(':selected').data('dual_unit')) || 0;
 
     $('#dual_unit_' + row_id).val(dual_unit);
+let fixed_weight = parseInt($(this).find(':selected').data('fixed_weight')) || 0;
 
+let fixed_weight_value = parseFloat($(this).find(':selected').data('fixed_weight_value')) || 0;
+
+$('#fixed_weight_' + row_id).val(fixed_weight);
+
+$('#fixed_weight_value_' + row_id).val(fixed_weight_value);
     if (dual_unit != 1) {
     $('#weight_boxes_' + row_id).html('');
     $('#total_weight_tr_' + row_id).val('');
@@ -3586,42 +3639,72 @@ $(document).on('input', '.quantity', function () {
     let row_id = $(this).data('id');
     let dual_unit = parseInt($('#dual_unit_' + row_id).val()) || 0;
 
-    if (dual_unit != 1) return;
+    let fixed_weight = parseInt($('#fixed_weight_' + row_id).val()) || 0;
+   let fixed_weight_value = parseFloat($('#fixed_weight_value_' + row_id).val()) || 0;
 
     let qty = parseInt($(this).val()) || 0;
     let $container = $('#weight_boxes_' + row_id);
     let currentCount = $container.find('.piece_weight').length;
 
-    if (qty <= 0) {
-        $container.html('');
-        $('#total_weight_tr_' + row_id).val('');
-        calculateAmount();
-        return;
-    }
+   if (dual_unit == 0) {
 
-    if (qty > currentCount) {
+      $container.html('');
 
-    for (let i = currentCount + 1; i <= qty; i++) {
+      $('#total_weight_tr_' + row_id).val(formatDecimal(qty));
 
-        $container.append(
+      calculateRowAmount(row_id);
 
-            '<input type="number" ' +
+      return;
+   }
 
-            'class="form-control piece_weight mb-1" ' +
+   if (dual_unit == 1 && fixed_weight == 1) {
 
-            'data-row="' + row_id + '" ' +
+      $container.html(
 
-            'name="piece_weight_' + row_id + '[]" ' +
+         '<input type="number" ' +
 
-            'placeholder="Wt ' + i + '" ' +
+         'class="form-control mb-1" ' +
 
-            'step="0.001" ' +
+         'value="' + fixed_weight_value + '" ' +
 
-            'style="width:90px;text-align:right;">'
+         'readonly ' +
 
-        );
-    }
-}
+         'style="width:90px;text-align:right;background:#f5f5f5;">'
+
+      );
+
+      let total_weight = qty * fixed_weight_value;
+
+      $('#total_weight_tr_' + row_id).val(formatDecimal(total_weight));
+
+      calculateRowAmount(row_id);
+
+      return;
+   }
+
+   if (qty > currentCount) {
+
+      for (let i = currentCount + 1; i <= qty; i++) {
+
+         $container.append(
+
+               '<input type="number" ' +
+
+               'class="form-control piece_weight mb-1" ' +
+
+               'data-row="' + row_id + '" ' +
+
+               'name="piece_weight_' + row_id + '[]" ' +
+
+               'placeholder="Wt ' + i + '" ' +
+
+               'step="0.001" ' +
+
+               'style="width:90px;text-align:right;">'
+
+         );
+      }
+   }
 
     if (qty < currentCount) {
         $container.find('.piece_weight').slice(qty).remove();
@@ -3633,7 +3716,11 @@ $(document).on('input', '.quantity', function () {
 
     calculateRowAmount(row_id);
 });
+$(document).ready(function () {
 
+    $('.quantity').trigger('input');
+
+});
 // DUAL UNIT: weight input -> sum -> recalculate
 $(document).on('input', '.piece_weight', function () {
 
@@ -3683,64 +3770,6 @@ function calculateRowAmount(row_id) {
 }
 
 
-
-$(document).on('change', '.item_id', function () {
-
-    let row_id = $(this).data('id');
-
-    let dual_unit = $(this).find(':selected').data('dual_unit');
-
-    $('#dual_unit_' + row_id).val(dual_unit);
-if (dual_unit != 1) {
-    $('#weight_boxes_' + row_id).html('');
-    $('#total_weight_tr_' + row_id).val('');
-}
-
-});
-$(document).on('keyup change', '.quantity', function () {
-
-    let row_id = $(this).data('id');
-
-    let qty = parseInt($(this).val()) || 0;
-
-    let dual_unit = $('#dual_unit_' + row_id).val();
-
-    if (dual_unit == 1) {
-
-        let html = '';
-
-        for (let i = 1; i <= qty; i++) {
-
-            html += `
-                <input type="number"
-           class="form-control piece_weight mb-1"
-           data-row="${row_id}"
-           name="piece_weight_${row_id}[]"
-           placeholder="Weight ${i}"
-           step="0.001"
-                       style="width:90px;">
-            `;
-        }
-
-        $('#weight_boxes_' + row_id).html(html);
-    }
-
-});
-$(document).on('keyup change', '.piece_weight', function () {
-
-    let row_id = $(this).data('row');
-
-    let total = 0;
-
-    $('#weight_boxes_' + row_id + ' .piece_weight').each(function () {
-
-        total += parseFloat($(this).val()) || 0;
-
-    });
-
-    $('#total_weight_tr_' + row_id).val(formatDecimal(total));
-
-});
 $(document).on('change', '.quantity, .price, .total_weight, .piece_weight', function () {
 
     $(this).val(formatDecimal($(this).val()));

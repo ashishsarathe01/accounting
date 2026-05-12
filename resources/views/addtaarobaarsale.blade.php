@@ -215,7 +215,7 @@
                                     <select class="form-control item_id select2-single" name="goods_discription[]" id="item_id_{{$add_more_count}}" data-id="{{$add_more_count}}" data-modal="itemModal">
                                        <option value="">Select Item</option>
                                        @foreach($item as $item_list)
-                                          <option value="{{$item_list->id}}" @if($item_list->id==$sale_order_item['item_id']) selected @endif data-unit_id="{{$item_list->u_name}}" data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id="{{$item_list->id}}" data-itemid="{{$item_list->id}}" data-available_item="{{$item_list->available_item}}" data-parameterized_stock_status="{{$item_list->parameterized_stock_status}}" data-config_status="{{$item_list->config_status}}" data-group_id="{{$item_list->group_id}}" data-dual_unit="{{$item_list->dual_unit ?? 0}}">{{$item_list->name}}</option>
+                                          <option value="{{$item_list->id}}" @if($item_list->id==$sale_order_item['item_id']) selected @endif data-unit_id="{{$item_list->u_name}}" data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id="{{$item_list->id}}" data-itemid="{{$item_list->id}}" data-available_item="{{$item_list->available_item}}" data-parameterized_stock_status="{{$item_list->parameterized_stock_status}}" data-config_status="{{$item_list->config_status}}" data-group_id="{{$item_list->group_id}}" data-dual_unit="{{$item_list->dual_unit ?? 0}}"  data-fixed_weight="{{$item_list->fixed_weight ?? 0}}"  data-fixed_weight_value="{{$item_list->fixed_weight_value ?? ''}}">{{$item_list->name}}</option>
                                        @endforeach
                                     </select>
                                     @if($config && $config->show_description == 1) 
@@ -255,6 +255,8 @@
                                  <input type="hidden" name="item_parameters[]" id="item_parameters_{{$add_more_count}}">
                                  <input type="hidden" name="config_status[]" id="config_status_{{$add_more_count}}">
                                  <input type="hidden" name="dual_unit[]" id="dual_unit_{{$add_more_count}}" value="0">
+                                 <input type="hidden" name="fixed_weight[]" id="fixed_weight_{{$add_more_count}}" value="0">
+                                 <input type="hidden" name="fixed_weight_value[]" id="fixed_weight_value_{{$add_more_count}}" value="">
                               </tr>
                               @php $add_more_count++; @endphp
                            @endforeach
@@ -278,7 +280,7 @@
                                                    data-parameterized_stock_status="{{$item_list->parameterized_stock_status}}" 
                                                    data-config_status="{{$item_list->config_status}}" 
                                                    data-group_id="{{$item_list->group_id}}"
-                                                   data-dual_unit="{{$item_list->dual_unit ?? 0}}">
+                                                   data-dual_unit="{{$item_list->dual_unit ?? 0}}"  data-fixed_weight="{{$item_list->fixed_weight ?? 0}}"  data-fixed_weight_value="{{$item_list->fixed_weight_value ?? ''}}">
                                                 {{$item_list->name}}
                                           </option>
                                        @endforeach
@@ -327,6 +329,8 @@
                               <input type="hidden" name="item_parameters[]" id="item_parameters_1">
                               <input type="hidden" name="config_status[]" id="config_status_1">
                               <input type="hidden" name="dual_unit[]" id="dual_unit_1" value="0">
+                              <input type="hidden" name="fixed_weight[]" id="fixed_weight_1" value="0">
+<input type="hidden" name="fixed_weight_value[]" id="fixed_weight_value_1" value="">
                            </tr>
                         @endif
                         
@@ -1266,7 +1270,9 @@
                            'data-parameterized_stock_status="{{ $item_list->parameterized_stock_status }}" ' +
                            'data-config_status="{{ $item_list->config_status }}" ' +
                            'data-group_id="{{ $item_list->group_id }}" ' +
-                           'data-dual_unit="{{ $item_list->dual_unit ?? 0 }}">' +
+'data-dual_unit="{{ $item_list->dual_unit ?? 0 }}" ' +
+'data-fixed_weight="{{ $item_list->fixed_weight ?? 0 }}" ' +
+'data-fixed_weight_value="{{ $item_list->fixed_weight_value ?? '' }}">' +
                               '{{ $item_list->name }}' +
                         '</option>' +
                      '@endforeach' +
@@ -1308,6 +1314,8 @@
          '<input type="hidden" name="item_parameters[]" id="item_parameters_' + add_more_count + '">' +
          '<input type="hidden" name="config_status[]" id="config_status_' + add_more_count + '">' +
          '<input type="hidden" name="dual_unit[]" id="dual_unit_' + add_more_count + '" value="0">' +
+         '<input type="hidden" name="fixed_weight[]" id="fixed_weight_' + add_more_count + '" value="0">' +
+         '<input type="hidden" name="fixed_weight_value[]" id="fixed_weight_value_' + add_more_count + '" value="">' +
          '<td class="w-min-50 action-cell" style="display: flex;"></td>' +
          '</tr>';
       $("#example11").append(newRow);
@@ -3428,7 +3436,15 @@ $('#saveItemBtn').on('click', function () {
       let row_id = $(this).data('id');
       let dual_unit = parseInt($(this).find(':selected').data('dual_unit')) || 0;
 
-      $('#dual_unit_' + row_id).val(dual_unit);
+let fixed_weight = parseInt($(this).find(':selected').data('fixed_weight')) || 0;
+
+let fixed_weight_value = parseFloat($(this).find(':selected').data('fixed_weight_value')) || 0;
+
+$('#dual_unit_' + row_id).val(dual_unit);
+
+$('#fixed_weight_' + row_id).val(fixed_weight);
+
+$('#fixed_weight_value_' + row_id).val(fixed_weight_value);
 
       if (dual_unit != 1) {
       $('#weight_boxes_' + row_id).html('');
@@ -3437,61 +3453,99 @@ $('#saveItemBtn').on('click', function () {
    });
 
    // ── DUAL UNIT: qty change → generate/remove weight input boxes ──────────
-   $(document).on('input', '.quantity', function () {
+$(document).on('input', '.quantity', function () {
 
-      let row_id = $(this).data('id');
-      let dual_unit = parseInt($('#dual_unit_' + row_id).val()) || 0;
+    let row_id = $(this).data('id');
 
-      if (dual_unit != 1) return;
+    let dual_unit = parseInt($('#dual_unit_' + row_id).val()) || 0;
 
-      let qty = parseInt($(this).val()) || 0;
-      let $container = $('#weight_boxes_' + row_id);
-      let currentCount = $container.find('.piece_weight').length;
+    let fixed_weight = parseInt($('#fixed_weight_' + row_id).val()) || 0;
 
-      if (qty <= 0) {
-         $container.html('');
-         $('#total_weight_tr_' + row_id).val('');
-         calculateAmount();
-         return;
-      }
+    let fixed_weight_value = parseFloat($('#fixed_weight_value_' + row_id).val()) || 0;
 
-      // Add boxes
-      if (qty > currentCount) {
+    let qty = parseInt($(this).val()) || 0;
 
-      for (let i = currentCount + 1; i <= qty; i++) {
+    let $container = $('#weight_boxes_' + row_id);
 
-         $container.append(
+    // ===============================
+    // DUAL UNIT = NO
+    // ===============================
 
-               '<input type="number" ' +
+    if (dual_unit == 0) {
 
-               'class="form-control piece_weight mb-1" ' +
+        $container.html('');
 
-               'data-row="' + row_id + '" ' +
+        $('#total_weight_tr_' + row_id).val(formatDecimal(qty));
 
-               'name="piece_weight_' + row_id + '[]" ' +
+        calculateRowAmount(row_id);
 
-               'placeholder="Wt ' + i + '" ' +
+        return;
+    }
 
-               'step="0.001" ' +
+    // ===============================
+    // DUAL UNIT YES + FIXED WEIGHT YES
+    // ===============================
 
-               'style="width:80px;text-align:right;">'
+    if (dual_unit == 1 && fixed_weight == 1) {
 
-         );
-      }
-   }
+        if (qty <= 0) {
 
-      // Remove excess boxes
-      if (qty < currentCount) {
-         $container.find('.piece_weight').slice(qty).remove();
-      }
+            $container.html('');
 
-      // Re-label placeholders
-      $container.find('.piece_weight').each(function (idx) {
-         $(this).attr('placeholder', 'Wt ' + (idx + 1));
-      });
+            $('#total_weight_tr_' + row_id).val('');
 
-      calculateRowAmount(row_id);
-   });
+            calculateRowAmount(row_id);
+
+            return;
+        }
+
+        $container.html(
+
+            '<input type="number" ' +
+
+            'class="form-control mb-1" ' +
+
+            'value="' + fixed_weight_value + '" ' +
+
+            'readonly ' +
+
+            'style="width:80px;text-align:right;background:#f5f5f5;">'
+
+        );
+
+        let total_weight = qty * fixed_weight_value;
+
+        $('#total_weight_tr_' + row_id).val(formatDecimal(total_weight));
+
+        calculateRowAmount(row_id);
+
+        return;
+    }
+
+    // ===============================
+    // DUAL UNIT YES + FIXED WEIGHT NO
+    // ===============================
+
+    let html = '';
+
+    for (let i = 1; i <= qty; i++) {
+
+        html += `
+            <input type="number"
+                class="form-control piece_weight mb-1"
+                data-row="${row_id}"
+                name="piece_weight_${row_id}[]"
+                placeholder="Wt ${i}"
+                step="0.001"
+                style="width:90px;text-align:right;">
+        `;
+    }
+
+    $container.html(html);
+
+    calculateRowAmount(row_id);
+
+});
 
    // ── DUAL UNIT: weight input → sum → recalculate ─────────────────────────
    $(document).on('input', '.piece_weight', function () {
@@ -3542,63 +3596,7 @@ $('#saveItemBtn').on('click', function () {
       // Trigger the existing GST/total recalculation used throughout this file
       calculateAmount();
    }
-   $(document).on('change', '.item_id', function () {
 
-      let row_id = $(this).data('id');
-
-      let dual_unit = $(this).find(':selected').data('dual_unit');
-
-      $('#dual_unit_' + row_id).val(dual_unit);
-   if (dual_unit != 1) {
-      $('#weight_boxes_' + row_id).html('');
-      $('#total_weight_tr_' + row_id).val('');
-   }
-
-   });
-   $(document).on('keyup change', '.quantity', function () {
-
-      let row_id = $(this).data('id');
-
-      let qty = parseInt($(this).val()) || 0;
-
-      let dual_unit = $('#dual_unit_' + row_id).val();
-
-      if (dual_unit == 1) {
-
-         let html = '';
-
-         for (let i = 1; i <= qty; i++) {
-
-               html += `
-                  <input type="number"
-            class="form-control piece_weight mb-1"
-            data-row="${row_id}"
-            name="piece_weight_${row_id}[]"
-            placeholder="Weight ${i}"
-            step="0.001"
-                        style="width:90px;">
-               `;
-         }
-
-         $('#weight_boxes_' + row_id).html(html);
-      }
-
-   });
-   $(document).on('keyup change', '.piece_weight', function () {
-
-      let row_id = $(this).data('row');
-
-      let total = 0;
-
-      $('#weight_boxes_' + row_id + ' .piece_weight').each(function () {
-
-         total += parseFloat($(this).val()) || 0;
-
-      });
-
-      $('#total_weight_tr_' + row_id).val(formatDecimal(total));
-
-   });
    $(document).on('change', '.quantity, .price, .total_weight', function () {
 
       let value = $(this).val();

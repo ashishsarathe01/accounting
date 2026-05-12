@@ -295,6 +295,16 @@ class ManageItemsController extends Controller
       $items->section = $request->input('section');
       $items->rate_of_tcs = $request->input('rate_of_tcs');
       $items->dual_unit = $request->input('dual_unit');
+      $items->fixed_weight = $request->input('dual_unit') == 1
+         ? $request->input('fixed_weight')
+         : 0;
+
+      $items->fixed_weight_value = (
+         $request->input('dual_unit') == 1 &&
+         $request->input('fixed_weight') == 1
+      )
+         ? $request->input('fixed_weight_value')
+         : null;
       $items->gst_rate = $request->input('gst_rate');
       $items->created_by = Session::get('user_id');
       $items->created_at = Carbon::now();
@@ -480,6 +490,16 @@ class ManageItemsController extends Controller
       $items->hsn_code = $request->input('hsn_code');
       $items->status = $request->input('status');
       $items->dual_unit = $request->input('dual_unit');
+      $items->fixed_weight = $request->input('dual_unit') == 1
+         ? $request->input('fixed_weight')
+         : 0;
+
+      $items->fixed_weight_value = (
+         $request->input('dual_unit') == 1 &&
+         $request->input('fixed_weight') == 1
+      )
+         ? $request->input('fixed_weight_value')
+         : null;
       $items->gst_rate = $request->input('gst_rate');
       $items->updated_at = Carbon::now();
       $items->updated_by = Session::get('user_id');

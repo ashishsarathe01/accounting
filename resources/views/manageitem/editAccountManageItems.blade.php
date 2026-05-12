@@ -207,6 +207,48 @@
 
                                     </select>
                                 </div>
+                                <div class="mb-6 col-md-6 partb_div fixed_weight_div"
+                                    style="@if($manageitems->dual_unit == 1) display:block; @else display:none; @endif margin-bottom:15px;">
+
+                                    <label class="form-label font-14 font-heading">
+                                        FIXED WEIGHT
+                                    </label>
+
+                                    <select class="form-select form-select-lg select2-single"
+                                            name="fixed_weight"
+                                            id="fixed_weight">
+
+                                        <option value="0"
+                                            @if($manageitems->fixed_weight == 0)
+                                                selected
+                                            @endif>
+                                            NO
+                                        </option>
+
+                                        <option value="1"
+                                            @if($manageitems->fixed_weight == 1)
+                                                selected
+                                            @endif>
+                                            YES
+                                        </option>
+
+                                    </select>
+                                </div>
+
+                                <div class="mb-6 col-md-6 partb_div fixed_weight_value_div"
+                                    style="@if($manageitems->dual_unit == 1 && $manageitems->fixed_weight == 1) display:block; @else display:none; @endif margin-bottom:15px;">
+
+                                    <label class="form-label font-14 font-heading">
+                                        FIXED WEIGHT VALUE
+                                    </label>
+
+                                    <input type="text"
+                                        class="form-control"
+                                        name="fixed_weight_value"
+                                        id="fixed_weight_value"
+                                        value="{{ $manageitems->fixed_weight_value }}"
+                                        placeholder="ENTER FIXED WEIGHT VALUE">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -232,12 +274,16 @@
         });
         $("#partb").click(function(){
             $(".partb_div").hide();
+            $(".fixed_weight_div").hide();
+            $(".fixed_weight_value_div").hide();
             $("#section").val('');
             $("#rate_of_tcs").val('');
             $("#tcs_applicable").prop('checked',false);
             if($(this).prop('checked')==true){
-                $(".partb_div").show();
+                $(".partb_div").not('.fixed_weight_div').not('.fixed_weight_value_div').show();
                 $(".tcs_applicable_div").hide();
+                toggleFixedWeight();
+                toggleFixedWeightValue();
             }
         });
         $("#tcs_applicable").click(function(){
@@ -247,6 +293,50 @@
             if($(this).prop('checked')==true){
                 $(".tcs_applicable_div").show();
             }
+        });
+        function toggleFixedWeight()
+        {
+            if($('#dual_unit').val() == '1')
+            {
+                $('.fixed_weight_div').show();
+            }
+            else
+            {
+                $('.fixed_weight_div').hide();
+                $('.fixed_weight_value_div').hide();
+
+                $('#fixed_weight').val('0').trigger('change');
+                $('#fixed_weight_value').val('');
+            }
+        }
+
+        function toggleFixedWeightValue()
+        {
+            if($('#fixed_weight').val() == '1')
+            {
+                $('.fixed_weight_value_div').show();
+            }
+            else
+            {
+                $('.fixed_weight_value_div').hide();
+                $('#fixed_weight_value').val('');
+            }
+        }
+
+        toggleFixedWeight();
+        toggleFixedWeightValue();
+
+        $('#dual_unit').change(function () {
+
+            toggleFixedWeight();
+            toggleFixedWeightValue();
+
+        });
+
+        $('#fixed_weight').change(function () {
+
+            toggleFixedWeightValue();
+
         });
     });
     function typevalidation(key){

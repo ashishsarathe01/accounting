@@ -402,7 +402,7 @@ class SalesController extends Controller
             ->where('manage_items.status', '=', '1')
             ->where('manage_items.company_id',Session::get('user_company_id'))
             ->orderBy('manage_items.name')
-            ->select(['units.s_name as unit', 'manage_items.id','manage_items.u_name','manage_items.dual_unit','manage_items.gst_rate','manage_items.name','parameterized_stock_status','config_status','item_groups.id as group_id'])
+            ->select(['units.s_name as unit', 'manage_items.id','manage_items.u_name','manage_items.dual_unit','manage_items.fixed_weight','manage_items.fixed_weight_value','manage_items.gst_rate','manage_items.name','parameterized_stock_status','config_status','item_groups.id as group_id'])
             ->get(); 
 
       $credit_days = DB::table('manage_credit_days')
@@ -1417,6 +1417,8 @@ if(array_key_exists($good,$sale_item_array)){
             'manage_items.dual_unit',
             'manage_items.gst_rate',
             'manage_items.name',
+            'manage_items.fixed_weight',
+            'manage_items.fixed_weight_value',
             'item_groups.parameterized_stock_status',
             'item_groups.config_status',
             'item_groups.id as group_id'
