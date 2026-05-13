@@ -290,7 +290,7 @@ class ManageItemsController extends Controller
       $items->g_name = $request->input('g_name');
       $items->u_name = $request->input('u_name');
       $items->hsn_code = $request->input('hsn_code');
-      $items->item_type = 'taxable';
+      $items->item_type = $request->input('item_type');
       $items->status = $request->input('status');
       $items->section = $request->input('section');
       $items->rate_of_tcs = $request->input('rate_of_tcs');

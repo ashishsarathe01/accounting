@@ -107,7 +107,10 @@ use App\Http\Controllers\AdminModuleController\GSTComplianceController;
 use App\Http\Controllers\DutiesCompliance\DutiesComplianceController;
 use App\Http\Controllers\AdminModuleController\DefaultPrivilegesController;
 use App\Http\Controllers\ReceiptRegister\ReceiptRegisterController;
-use App\Http\Controllers\PaymentRegister\PaymentRegisterReportController;/*
+use App\Http\Controllers\PaymentRegister\PaymentRegisterReportController;
+use App\Http\Controllers\tdsReport\TdsReportController;
+use App\Http\Controllers\BoxController;
+/*
 |--------------------------------------------------------------------------
 | Web Routes
 |--------------------------------------------------------------------------
@@ -353,7 +356,7 @@ Route::group(['middleware' => ['merchantloginstatus']], function () {
    Route::post('cancel-ewaybill-sale-return', [SalesReturnController::class, 'cancelEwaybillSaleReturn'])->name('cancel-ewaybill-sale-return');
    Route::get('/purchase-return/export',[PurchaseReturnController::class, 'exportView'])->name('purchase-return-export-view');
 
-    Route::post('/purchase-return/export',[PurchaseReturnController::class, 'export'])->name('purchase-return-export');
+Route::post('/purchase-return/export',[PurchaseReturnController::class, 'export'])->name('purchase-return-export');
    Route::Resource('purchase-return', PurchaseReturnController::class);
    Route::post('purchase-return-update', [PurchaseReturnController::class, 'update'])->name('purchase-return-update');
    Route::post('purchase-return-delete', [PurchaseReturnController::class, 'delete'])->name('purchase-return.delete');
@@ -1285,27 +1288,28 @@ Route::get('/journal/print/{id}', [JournalController::class, 'print'])->name('jo
         ->name('jobwork.vehicle.index');
     Route::get('/duties-compliance', [DutiesComplianceController::class, 'index'])
         ->name('duties-compliance.index');
-Route::post(
-    'job-work-json',
-    [JobWorkController::class, 'getJobWorkJson']
-);
-Route::get('/yield-report-production-details/{item}',[YieldReportController::class, 'productionDetails'])->name('yield-report.production-details');
-Route::get('/yield-report-consumption-details/{item}',[YieldReportController::class, 'consumptionDetails'])->name('yield-report.consumption-details');
-Route::get('/yield-report-waste-details/{item}',[YieldReportController::class, 'wasteDetailsModal'])->name('yield-report.waste-details');
-
-Route::get('gst-rate-update-manage-item', [ManageItemsController::class, 'gstRateUpdate'])
+    Route::post(
+        'job-work-json',
+        [JobWorkController::class, 'getJobWorkJson']
+    );
+    Route::get('/yield-report-production-details/{item}',[YieldReportController::class, 'productionDetails'])->name('yield-report.production-details');
+    Route::get('/yield-report-consumption-details/{item}',[YieldReportController::class, 'consumptionDetails'])->name('yield-report.consumption-details');
+    Route::get('/yield-report-waste-details/{item}',[YieldReportController::class, 'wasteDetailsModal'])->name('yield-report.waste-details');
+    Route::get('gst-rate-update-manage-item', [ManageItemsController::class, 'gstRateUpdate'])
     ->name('gst-rate-update-manage-item');
-
-Route::post('gst-rate-update-manage-item-store', [ManageItemsController::class, 'gstRateUpdateStore'])
+    Route::post('gst-rate-update-manage-item-store', [ManageItemsController::class, 'gstRateUpdateStore'])
     ->name('gst-rate-update-manage-item-store');
     Route::post('check-gstin', [AjaxController::class, 'checkGstin']);
-    Route::get('/report/hsn/detail', [gstR1Controller::class, 'hsnDetail']);
-    
-    
+    Route::get('/report/hsn/detail', [gstR1Controller::class, 'hsnDetail']);  
     
     //TDS Report working
+
      Route::get('/tds-194c-report', [TdsReportController::class, 'tds194c'])->name('tds.194c.report');
      Route::get('/tds-194c-report/view', [TdsReportController::class, 'tds194cView'])->name('tds.194c.report.view');
 Route::get('/receipt-register', [ReceiptRegisterController::class, 'index'])->name('receipt_register');
 Route::get('/payment-register',[PaymentRegisterReportController::class, 'index'])->name('payment_register');
+Route::get('/box-calculator', [BoxController::class, 'index']);
+    Route::get('/box-calculator/advance', [BoxController::class, 'advanceindex'])
+    ->name('box-calculator.advance');
+
 });

@@ -2955,7 +2955,7 @@ if(array_key_exists($good,$sale_item_array)){
       }
       
    }
-   public function saleImportView(Request $request){      
+   public function saleImportView(Request $request){     
       return view('sale_import')->with('upload_log',0)->with('total_count',5)->with('success_count',3)->with('failed_count',2)->with('error_message',array(0 => array(0=>'Voucher A41 already exists - Invoice No. A41'),1 => array(0=>'Voucher A42 already exists - Invoice No. A42')));
       
    }
@@ -2967,6 +2967,38 @@ if(array_key_exists($good,$sale_item_array)){
       ]); 
       if ($validator->fails()) {
          return redirect()->back()->withErrors($validator)->withInput();
+      }
+      $file = $request->file('csv_file');
+      $filePath = $file->getRealPath();
+      $missing_series = [];
+      if (($handle = fopen($filePath, 'r')) !== false) {
+         $header = fgetcsv($handle, 10000, ",");
+         while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+            $data = array_map('trim', $data);
+            if (!empty($data[0])) {
+                  $series_no = $data[0];
+                  $series_configuration = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
+                                          ->where('series', $series_no)
+                                          ->where('configuration_for', 'SALE')
+                                          ->where('status', '1')
+                                          ->exists();
+
+                  if (!$series_configuration) {
+                     if (!in_array($series_no, $missing_series)) {
+                        $missing_series[] = $series_no;
+                     }
+                  }
+            }
+         }
+         fclose($handle);
+      }
+      if (count($missing_series) > 0) {
+         $res = [
+            'status' => false,
+            'data' => $missing_series,
+            'message' => 'Please configure all series before importing CSV. Missing Series: '.implode(', ', $missing_series)
+         ];
+         return json_encode($res);
       }
       $duplicate_voucher_status = $request->duplicate_voucher_status;
       $financial_year = Session::get('default_fy');  
@@ -2992,7 +3024,9 @@ if(array_key_exists($good,$sale_item_array)){
                $data = array_map('trim', $data);
                if($data[0]!="" && $data[2]!=""){
                   $series_no = $data[0];
-                  $voucher_no = $data[2];                             
+                  $voucher_no = $this->getInvoiceVoucherNo($data[2],$series_no);
+                  $voucher_no_prefix = $data[2];
+                 
                   $check_invoice = Sales::select('id')
                                  ->where('company_id',Session::get('user_company_id'))
                                  ->where('voucher_no',$voucher_no)
@@ -3001,12 +3035,13 @@ if(array_key_exists($good,$sale_item_array)){
                                  ->where('delete','0')
                                  ->first();
                   if($check_invoice){
-                     array_push($already_exists_error_arr, 'Voucher '.$voucher_no.' already exists - Invoice No. '.$voucher_no);
+                     array_push($already_exists_error_arr, 'Voucher '.$voucher_no_prefix.' already exists - Invoice No. '.$voucher_no_prefix);
+                     
                   }
-                  if(in_array($series_no."_".$voucher_no, $already_exists_voucher_arr)){
-                     array_push($already_exists_error_arr, 'Voucher '.$voucher_no.' already exists - Invoice No. '.$voucher_no);
+                  if(in_array($series_no."_".$voucher_no_prefix, $already_exists_voucher_arr)){
+                     array_push($already_exists_error_arr, 'Voucher '.$voucher_no_prefix.' already exists - Invoice No. '.$voucher_no_prefix);
                   }
-                  array_push($already_exists_voucher_arr,$series_no."_".$voucher_no);
+                  array_push($already_exists_voucher_arr,$series_no."_".$voucher_no_prefix);
                }
             }
          }
@@ -3065,14 +3100,15 @@ if(array_key_exists($good,$sale_item_array)){
                if($series_no!=""){
                   $akey = array_search($series_no, $series_arr);
                   $merchant_gst = $gst_no_arr[$akey];
-                  array_push($data_arr,array("series_no"=>$series_no,"date"=>$date,"voucher_no"=>$voucher_no,"party"=>$party,"material_center"=>$material_center,"grand_total"=>$grand_total,"self_vehicle"=>$self_vehicle,"vehicle_no"=>$vehicle_no,"transport_name"=>$transport_name,"reverse_charge"=>$reverse_charge,"gr_pr_no"=>$gr_pr_no,"station"=>$station,"ewaybill_no"=>$ewaybill_no,"shipping_name"=>$shipping_name,"merchant_gst"=>$merchant_gst,"item_arr"=>$item_arr,"slicedData"=>$slicedData,"error_arr"=>$error_arr));
+                  array_push($data_arr,array("series_no"=>$series_no,"date"=>$date,"voucher_no"=>$voucher_no,"voucher_no_prefix"=>$voucher_no_prefix,"party"=>$party,"material_center"=>$material_center,"grand_total"=>$grand_total,"self_vehicle"=>$self_vehicle,"vehicle_no"=>$vehicle_no,"transport_name"=>$transport_name,"reverse_charge"=>$reverse_charge,"gr_pr_no"=>$gr_pr_no,"station"=>$station,"ewaybill_no"=>$ewaybill_no,"shipping_name"=>$shipping_name,"merchant_gst"=>$merchant_gst,"item_arr"=>$item_arr,"slicedData"=>$slicedData,"error_arr"=>$error_arr));
                }               
                $item_arr = [];
                $error_arr = [];
                $slicedData = [];
                $series_no = $data[0];
-               $date = $data[1];
-               $voucher_no = $data[2];
+               $date = $data[1];               
+               $voucher_no = $this->getInvoiceVoucherNo($data[2],$series_no);
+               $voucher_no_prefix = $data[2];
                $party = $data[3];
                $material_center = $data[4];
                $grand_total = $data[5];
@@ -3086,26 +3122,26 @@ if(array_key_exists($good,$sale_item_array)){
                $ewaybill_no = $data[12];            
                $shipping_name = $data[13];
                if(strtotime($from_date)>strtotime(date('Y-m-d',strtotime($date))) || strtotime($to_date)<strtotime(date('Y-m-d',strtotime($date)))){                  
-                  array_push($error_arr, 'Date '.$date.' not in Financial Year - Invoice No. '.$voucher_no);                  
+                  array_push($error_arr, 'Date '.$date.' not in Financial Year - Invoice No. '.$voucher_no_prefix);                  
                }
                if(!in_array($series_no, $series_arr)){
-                  array_push($error_arr, 'Series No. '.$series_no.' not found in GST Configuration - Invoice No. '.$voucher_no); 
+                  array_push($error_arr, 'Series No. '.$series_no.' not found in GST Configuration - Invoice No. '.$voucher_no_prefix); 
                }
                if(!in_array($material_center, $material_center_arr)){
-                  array_push($error_arr, 'Material Center '.$material_center.' not found in GST Configuration - Invoice No. '.$voucher_no);
+                  array_push($error_arr, 'Material Center '.$material_center.' not found in GST Configuration - Invoice No. '.$voucher_no_prefix);
                }
                $account = Accounts::where('account_name',trim($party))
                         ->where('company_id',trim(Session::get('user_company_id')))
                         ->first();
                if(!$account){
-                  array_push($error_arr, 'Party Name '.$party.' not found - Invoice No. '.$voucher_no);
+                  array_push($error_arr, 'Party Name '.$party.' not found - Invoice No. '.$voucher_no_prefix);
                } 
                if($shipping_name!=""){
                   $shipp = Accounts::where('account_name',trim($shipping_name))
                            ->where('company_id',trim(Session::get('user_company_id')))
                            ->first();      
                   if(!$shipp){
-                     array_push($error_arr, 'Shipping Name '.$shipping_name.' not found - Invoice No. '.$voucher_no);
+                     array_push($error_arr, 'Shipping Name '.$shipping_name.' not found - Invoice No. '.$voucher_no_prefix);
                   } 
                }
                $slicedData = array_slice($data,21,100);
@@ -3120,7 +3156,7 @@ if(array_key_exists($good,$sale_item_array)){
                                     ->where('name',$value)
                                     ->first();
                            if(!$bill_sundrys){
-                              array_push($error_arr, 'Bill Sundry '.$value.' not found - Invoice No. '.$voucher_no);
+                              array_push($error_arr, 'Bill Sundry '.$value.' not found - Invoice No. '.$voucher_no_prefix);
                            }
                         }
                         
@@ -3136,12 +3172,12 @@ if(array_key_exists($good,$sale_item_array)){
                               ->where('delete','0')
                               ->first();
                   if($check_invoice){
-                     array_push($error_arr, 'Voucher '.$voucher_no.' already exists - Invoice No. '.$voucher_no);
+                     array_push($error_arr, 'Voucher '.$voucher_no_prefix.' already exists - Invoice No. '.$voucher_no_prefix);
                   }
-                  if(in_array($series_no."_".$voucher_no, $voucher_arr)){
-                     array_push($error_arr, 'Voucher '.$voucher_no.' already exists - Invoice No. '.$voucher_no);
+                  if(in_array($series_no."_".$voucher_no_prefix, $voucher_arr)){
+                     array_push($error_arr, 'Voucher '.$voucher_no_prefix.' already exists - Invoice No. '.$voucher_no_prefix);
                   }
-                  array_push($voucher_arr,$series_no."_".$voucher_no);
+                  array_push($voucher_arr,$series_no."_".$voucher_no_prefix);
                }
             }
             $item_name = $data[14]; 
@@ -3150,7 +3186,7 @@ if(array_key_exists($good,$sale_item_array)){
                         ->where('company_id',trim(Session::get('user_company_id')))
                         ->first();
             if(!$item){
-               array_push($error_arr, 'Item Name '.$item_name.' not found - Invoice No. '.$voucher_no);
+               array_push($error_arr, 'Item Name '.$item_name.' not found - Invoice No. '.$voucher_no_prefix);
             }
             $item_weight = $data[15];
             $item_weight = str_replace(",","",$item_weight);
@@ -3168,7 +3204,7 @@ if(array_key_exists($good,$sale_item_array)){
             if($index==$total_row){
                $akey = array_search($series_no, $series_arr);
                $merchant_gst = $gst_no_arr[$akey];
-               array_push($data_arr,array("series_no"=>$series_no,"date"=>$date,"voucher_no"=>$voucher_no,"party"=>$party,"material_center"=>$material_center,"grand_total"=>$grand_total,"self_vehicle"=>$self_vehicle,"vehicle_no"=>$vehicle_no,"transport_name"=>$transport_name,"reverse_charge"=>$reverse_charge,"gr_pr_no"=>$gr_pr_no,"station"=>$station,"ewaybill_no"=>$ewaybill_no,"shipping_name"=>$shipping_name,"merchant_gst"=>$merchant_gst,"item_arr"=>$item_arr,"slicedData"=>$slicedData,"error_arr"=>$error_arr));
+               array_push($data_arr,array("series_no"=>$series_no,"date"=>$date,"voucher_no"=>$voucher_no,"voucher_no_prefix"=>$voucher_no_prefix,"party"=>$party,"material_center"=>$material_center,"grand_total"=>$grand_total,"self_vehicle"=>$self_vehicle,"vehicle_no"=>$vehicle_no,"transport_name"=>$transport_name,"reverse_charge"=>$reverse_charge,"gr_pr_no"=>$gr_pr_no,"station"=>$station,"ewaybill_no"=>$ewaybill_no,"shipping_name"=>$shipping_name,"merchant_gst"=>$merchant_gst,"item_arr"=>$item_arr,"slicedData"=>$slicedData,"error_arr"=>$error_arr));
             }
             $index++;
 
@@ -3196,6 +3232,7 @@ if(array_key_exists($good,$sale_item_array)){
                $series_no = $value['series_no'];
                
                $voucher_no = $value['voucher_no'];
+               $voucher_no_prefix = $value['voucher_no_prefix'];
                $party = $value['party'];
                $material_center = $value['material_center'];
                $grand_total = $value['grand_total'];
@@ -3261,7 +3298,7 @@ if(array_key_exists($good,$sale_item_array)){
                $sale->company_id = Session::get('user_company_id');
                $sale->date = $date;
                $sale->voucher_no = $voucher_no;
-               $sale->voucher_no_prefix = $voucher_no;
+               $sale->voucher_no_prefix = $voucher_no_prefix;
                $sale->party = $account->id;
                $sale->material_center = $material_center;
                $sale->merchant_gst = $merchant_gst; 
@@ -5323,7 +5360,6 @@ public function exportSales(Request $request)
                     ->leftJoin('accounts', 'sales.party', '=', 'accounts.id')
                     ->leftJoin('states', 'accounts.state', '=', 'states.id')
                     ->where('sales.company_id', $company_id)
-                    ->where('sales.sale_type', $saleType) // ✅ you missed this earlier
                     ->where(function ($q) {
                         $q->where('sales.delete', '0')
                           ->orWhereNull('sales.delete');
@@ -6018,63 +6054,63 @@ public function exportSaleBill(Request $request)
 
       return response()->stream($callback, 200, $headers);
    }
-    public function downloadEwayBill($id)
-    {
-        $sale = Sales::leftjoin('states','sales.billing_state','=','states.id')
+   public function downloadEwayBill($id){
+      $sale = Sales::leftjoin('states','sales.billing_state','=','states.id')
                            ->leftjoin('accounts','sales.shipping_name','=','accounts.id')
                            ->select(['sales.*','states.name as sname','accounts.print_name as shipp_name'])
                            ->find($id);
-        if (!$sale || $sale->e_waybill_status != 1) {
-            return redirect()->back()->withErrors('Eway Bill not available for this sale.');
-        }
-        $company_data = Companies::join('states','companies.state','=','states.id')
+      if (!$sale || $sale->e_waybill_status != 1) {
+         return redirect()->back()->withErrors('Eway Bill not available for this sale.');
+      }
+      $company_data = Companies::join('states','companies.state','=','states.id')
                         ->where('companies.id', Session::get('user_company_id'))
                         ->select(['companies.*','states.name as sname'])
                         ->first();
-        if($company_data->gst_config_type == "single_gst") {
-            $GstSettings = DB::table('gst_settings')
+      if($company_data->gst_config_type == "single_gst") {
+         $GstSettings = DB::table('gst_settings')
                             ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])
                             ->first();
-            $seller_info = DB::table('gst_settings')
+         $seller_info = DB::table('gst_settings')
                                ->join('states','gst_settings.state','=','states.id')
                                ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst",'gst_no' => $sale->merchant_gst,'series'=>$sale->series_no])
                                ->select(['gst_no','address','pincode','states.name as sname'])
                                ->first();
-            if(!$seller_info){
-                $seller_info = GstBranch::select('gst_number as gst_no','branch_address as address','branch_pincode as pincode')
-                               ->where(['delete' => '0', 'company_id' => $sale->company_id,'gst_number'=>$sale->merchant_gst,'branch_series'=>$sale->series_no])
-                               ->first();
-                $state_info = DB::table('states')
-                               ->where('id',$GstSettings->state)
-                               ->first();
-                $seller_info->sname = $state_info->name;
-            }
-        }else if($company_data->gst_config_type == "multiple_gst") {         
-             $GstSettings = DB::table('gst_settings_multiple')->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst",'gst_no' => $sale->merchant_gst])->first();
-             //Seller Info
-             $seller_info = DB::table('gst_settings_multiple')
+         if(!$seller_info){
+            $seller_info = GstBranch::select('gst_number as gst_no','branch_address as address','branch_pincode as pincode')
+                     ->where(['delete' => '0', 'company_id' => $sale->company_id,'gst_number'=>$sale->merchant_gst,'branch_series'=>$sale->series_no])
+                     ->first();
+            $state_info = DB::table('states')
+                              ->where('id',$GstSettings->state)
+                              ->first();
+            $seller_info->sname = $state_info->name;
+         }
+      }else if($company_data->gst_config_type == "multiple_gst") {         
+         $GstSettings = DB::table('gst_settings_multiple')->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst",'gst_no' => $sale->merchant_gst])->first();
+         //Seller Info
+         $seller_info = DB::table('gst_settings_multiple')
                                ->join('states','gst_settings_multiple.state','=','states.id')
                                ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst",'gst_no' => $sale->merchant_gst,'series'=>$sale->series_no])
                                ->select(['gst_no','address','pincode','states.name as sname'])
                                ->first();
-            if(!$seller_info){
-                $seller_info = GstBranch::select('gst_number as gst_no','branch_address as address','branch_pincode as pincode')
-                               ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_number'=>$sale->merchant_gst,'branch_series'=>$sale->series_no])
-                               ->first();
-                $state_info = DB::table('states')
-                                     ->where('id',$GstSettings->state)
-                                     ->first();
-                $seller_info->sname = $state_info->name;
-            }         
-        }
-        $items_detail = DB::table('sale_descriptions')->where('sale_id', $id)
-                ->select('units.s_name as unit', 'units.id as unit_id', 'sale_descriptions.qty', 'sale_descriptions.price', 'sale_descriptions.amount', 'manage_items.p_name as items_name', 'manage_items.id as item_id', 'sales.*', 'accounts.*','manage_items.hsn_code','manage_items.gst_rate')
-                ->join('units', 'sale_descriptions.unit', '=', 'units.id')
-                ->join('sales', 'sales.id', '=', 'sale_descriptions.sale_id')
-                ->join('manage_items', 'sale_descriptions.goods_discription', '=', 'manage_items.id')
-                ->join('accounts', 'accounts.id', '=', 'sales.party')
-                ->get();
-        $sale_sundry = DB::table('sale_sundries')
+         if(!$seller_info){
+               $seller_info = GstBranch::select('gst_number as gst_no','branch_address as address','branch_pincode as pincode')
+                              ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_number'=>$sale->merchant_gst,'branch_series'=>$sale->series_no])
+                              ->first();
+               $state_info = DB::table('states')
+                                    ->where('id',$GstSettings->state)
+                                    ->first();
+               $seller_info->sname = $state_info->name;
+         }         
+      }
+      $items_detail = DB::table('sale_descriptions')
+                     ->where('sale_id', $id)
+                     ->select('units.s_name as unit', 'units.id as unit_id', 'sale_descriptions.qty', 'sale_descriptions.price', 'sale_descriptions.amount', 'manage_items.p_name as items_name', 'manage_items.id as item_id', 'sales.*', 'accounts.*','manage_items.hsn_code','manage_items.gst_rate')
+                     ->join('units', 'sale_descriptions.unit', '=', 'units.id')
+                     ->join('sales', 'sales.id', '=', 'sale_descriptions.sale_id')
+                     ->join('manage_items', 'sale_descriptions.goods_discription', '=', 'manage_items.id')
+                     ->join('accounts', 'accounts.id', '=', 'sales.party')
+                     ->get();
+      $sale_sundry = DB::table('sale_sundries')
                         ->join('bill_sundrys','sale_sundries.bill_sundry','=','bill_sundrys.id')
                         ->where('sale_id', $id)
                         ->select('sale_sundries.bill_sundry','sale_sundries.rate','sale_sundries.amount','bill_sundrys.name','nature_of_sundry','bill_sundry_type')
@@ -6082,41 +6118,38 @@ public function exportSaleBill(Request $request)
                         ->get();
         
       return view('sale_ewaybill', compact('sale','items_detail','sale_sundry','company_data','seller_info'));
+   }   
+   public function emailInvoice($id)
+   {
+      $sale_detail = Sales::findOrFail($id);
+
+      $party_detail = Accounts::find($sale_detail->party);
+
+      if (!$party_detail || empty($party_detail->email)) {
+         return back()->with('error', 'Party email not found!');
+      }
+
+      // 🔥 Get company of this sale
+      $companyId = Session::get('user_company_id');
+      $company = Companies::findOrFail($companyId);
+
+      // 🔥 Apply company SMTP dynamically
+      MailHelper::setCompanyMailConfig($company);
+
+      // Get raw PDF content
+      $pdfContent = $this->saleInvoicePdf($id);
+
+      Mail::to($party_detail->email)
+         ->send(new SaleInvoiceMail($pdfContent, $sale_detail));
+
+      return back()->with('success', 'Invoice emailed successfully!');
    }
-   
-   
-public function emailInvoice($id)
-{
-    $sale_detail = Sales::findOrFail($id);
-
-    $party_detail = Accounts::find($sale_detail->party);
-
-    if (!$party_detail || empty($party_detail->email)) {
-        return back()->with('error', 'Party email not found!');
-    }
-
-    // 🔥 Get company of this sale
-$companyId = Session::get('user_company_id');
-$company = Companies::findOrFail($companyId);
-
-    // 🔥 Apply company SMTP dynamically
-    MailHelper::setCompanyMailConfig($company);
-
-    // Get raw PDF content
-    $pdfContent = $this->saleInvoicePdf($id);
-
-    Mail::to($party_detail->email)
-        ->send(new SaleInvoiceMail($pdfContent, $sale_detail));
-
-    return back()->with('success', 'Invoice emailed successfully!');
-}
-
-    public function saleInvoicePreview(){
-        $company_data = Companies::join('states','companies.state','=','states.id')
+   public function saleInvoicePreview(){
+      $company_data = Companies::join('states','companies.state','=','states.id')
                         ->where('companies.id', Session::get('user_company_id'))
                         ->select(['companies.*','states.name as sname'])
                         ->first();
-        if($company_data->gst_config_type == "single_gst") {
+      if($company_data->gst_config_type == "single_gst") {
          $GstSettings = DB::table('gst_settings')->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])->first();
          //Seller Info
          // echo "<pre>";
@@ -6143,7 +6176,7 @@ $company = Companies::findOrFail($companyId);
                            ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst"])
                            ->select(['gst_no','address','pincode','states.name as sname'])
                            ->first();
-                          
+                        
          if(!$seller_info){
             $seller_info = GstBranch::select('gst_number as gst_no','branch_address as address','branch_pincode as pincode')
                            ->where(['delete' => '0', 'company_id' => Session::get('user_company_id')])
@@ -6152,35 +6185,93 @@ $company = Companies::findOrFail($companyId);
                                  ->where('id',$GstSettings->state)
                                  ->first();
             $seller_info->sname = $state_info->name;
-                          
+                        
          }         
       }
-        $bank_detail = DB::table('banks')->where('company_id', Session::get('user_company_id'))
-            ->select('banks.*')
-            ->first();
-        $configuration = SaleInvoiceConfiguration::with(['terms','banks'])
-                                    ->where('company_id',Session::get('user_company_id'))
-                                    ->first();
-      
-        return view('Sale/sale_invoice_preview')->with([ 'company_data' => $company_data, 'bank_detail' => $bank_detail,'configuration'=>$configuration,'seller_info'=>$seller_info]);
-    }
-    
-    public function getLatestCost(Request $request)
-{
-    $itemId = $request->item_id;
-    $date = $request->date;
-    $series = $request->series;
+      $bank_detail = DB::table('banks')->where('company_id', Session::get('user_company_id'))
+         ->select('banks.*')
+         ->first();
+      $configuration = SaleInvoiceConfiguration::with(['terms','banks'])
+                                 ->where('company_id',Session::get('user_company_id'))
+                                 ->first();
+   
+      return view('Sale/sale_invoice_preview')->with([ 'company_data' => $company_data, 'bank_detail' => $bank_detail,'configuration'=>$configuration,'seller_info'=>$seller_info]);
+   }    
+   public function getLatestCost(Request $request)
+   {
+      $itemId = $request->item_id;
+      $date = $request->date;
+      $series = $request->series;
 
-    $cost = DB::table('item_averages')
-        ->where('item_id', $itemId)
-        ->where('series_no', $series) // 🔥 important
-        ->whereDate('stock_date', '<=', $date)
-        ->orderBy('stock_date', 'desc') // latest
-        ->value('price'); // 🔥 use price column
+      $cost = DB::table('item_averages')
+         ->where('item_id', $itemId)
+         ->where('series_no', $series) // 🔥 important
+         ->whereDate('stock_date', '<=', $date)
+         ->orderBy('stock_date', 'desc') // latest
+         ->value('price'); // 🔥 use price column
 
-    return response()->json([
-        'cost' => $cost ?? 0
-    ]);
-}
-
+      return response()->json([
+         'cost' => $cost ?? 0
+      ]);
+   }
+   public function getInvoiceVoucherNo($voucher_no,$series){
+      $series_configuration = VoucherSeriesConfiguration::where('company_id',Session::get('user_company_id'))
+               ->where('series',$series)
+               ->where('configuration_for','SALE')
+               ->where('status','1')
+               ->first();
+      if($series_configuration){
+         if($series_configuration && $series_configuration->manual_numbering=="NO" && $series_configuration->invoice_start!=""){
+            $prefix = "";
+            if ($series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
+               $prefix .= $series_configuration->prefix_value;
+            }
+            if ($series_configuration->prefix == "ENABLE" && $series_configuration->separator_1 != "") {
+               $prefix .= $series_configuration->separator_1;
+            }
+            if ($series_configuration->year == "PREFIX TO NUMBER") {
+               if ($series_configuration->year_format == "YY-YY") {
+                  $prefix .= Session::get('default_fy');
+               } else {
+                  $fy = explode('-', Session::get('default_fy'));
+                  $prefix .= '20' . $fy[0] . '-' . $fy[1];
+               }
+               if ($series_configuration->separator_2 != "") {
+                  $prefix .= $series_configuration->separator_2;
+               }               
+            }
+            $suffix = "";
+            if ($series_configuration->year == "SUFFIX TO NUMBER") { 
+               if ($series_configuration->separator_2 != "") {
+                  $suffix .= $series_configuration->separator_2;
+               }
+               if ($series_configuration->year_format == "YY-YY") {
+                  $suffix .= Session::get('default_fy');
+               } else {
+                  $fy = explode('-', Session::get('default_fy'));
+                  $suffix .= '20' . $fy[0] . '-' . $fy[1];
+               }
+            }
+            if ($series_configuration->suffix == "ENABLE" && $series_configuration->separator_3 != "") {
+               $suffix .= $series_configuration->separator_3;
+            }
+            if ($series_configuration->suffix == "ENABLE" && $series_configuration->suffix_value != "") {                  
+               $suffix .= $series_configuration->suffix_value;
+            }            
+            if($prefix!=""){
+               $prefix_arr = explode($prefix,$voucher_no);
+               $voucher_no = $prefix_arr[1];
+            }
+            if($suffix!=""){
+               $suffix_arr = explode($suffix,$voucher_no);               
+               $voucher_no = $suffix_arr[0];
+            }
+            return $voucher_no;
+         }else{
+            return $voucher_no;
+         }
+      }else{
+         return $voucher_no;
+      }
+   }
 }

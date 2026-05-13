@@ -142,9 +142,9 @@
                                                     </a>
 
                                                     <!-- Start -->
-                                                    <a title="Start Spare Part" href="{{ route('spare-part.start.new', $spare->id) }}">
-                                                        <img src="{{ asset('public/assets/imgs/start.svg') }}" class="px-1 start" alt="Start" style="width:30px;cursor:pointer;">
-                                                    </a>
+                                                    <!--<a title="Start Spare Part" href="{{ route('spare-part.start.new', $spare->id) }}">-->
+                                                    <!--    <img src="{{ asset('public/assets/imgs/start.svg') }}" class="px-1 start" alt="Start" style="width:30px;cursor:pointer;">-->
+                                                    <!--</a>-->
                                                 </td>
 
                                             @endif

@@ -207,7 +207,7 @@
                            </th>
                            <th class="w-min-50 border-none bg-light-pink text-body " style="text-align: right;padding-right: 24px;">Qty</th>
                            <th class="col-weight border-none bg-light-pink text-body" style="text-align:right;padding-right:24px;min-width:90px;">Weight</th>
-<th class="col-total-weight border-none bg-light-pink text-body" style="text-align:right;padding-right:24px;min-width:80px;">Total Wt.</th>
+                            <th class="col-total-weight border-none bg-light-pink text-body" style="text-align:right;padding-right:24px;min-width:80px;">Total Wt.</th>
                            <th class="w-min-50 border-none bg-light-pink text-body " style="text-align: center;">Unit</th>
                            <th class="w-min-50 border-none bg-light-pink text-body " style="text-align: right;padding-right: 24px;">Price</th>
                            <th class="w-min-50 border-none bg-light-pink text-body " style="text-align: right;padding-right: 24px;">Amount</th>
@@ -233,10 +233,9 @@
                                        <option value="">Select Item</option>
                                        @foreach($item as $item_list)
                                           <option value="{{$item_list->id}}"
-@if($item_list->id==$sale_order_item->goods_discription) selected @endif
-data-unit_id="{{$item_list->unit}}"
-data-unit_name="{{$item_list->u_name}}"
-data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id="{{$item_list->id}}" data-itemid="{{$item_list->id}}" data-parameterized_stock_status="{{$item_list->parameterized_stock_status}}" data-config_status="{{$item_list->config_status}}" data-group_id="{{$item_list->group_id}}"  data-dual_unit="{{$item_list->dual_unit ?? 0}}" data-fixed_weight="{{$item_list->fixed_weight ?? 0}}" data-fixed_weight_value="{{$item_list->fixed_weight_value ?? ''}}">{{$item_list->name}}</option>
+                                                @if($item_list->id==$sale_order_item->goods_discription) selected @endif
+                                                data-unit_id="{{$item_list->unit}}"
+                                                data-unit_name="{{$item_list->u_name}}" data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id="{{$item_list->id}}" data-itemid="{{$item_list->id}}" data-parameterized_stock_status="{{$item_list->parameterized_stock_status}}" data-config_status="{{$item_list->config_status}}" data-group_id="{{$item_list->group_id}}"  data-dual_unit="{{$item_list->dual_unit ?? 0}}" data-fixed_weight="{{$item_list->fixed_weight ?? 0}}" data-fixed_weight_value="{{$item_list->fixed_weight_value ?? ''}}">{{$item_list->name}}</option>
                                        @endforeach
                                     </select>
                                     @if($config && $config->show_description == 1)
@@ -254,69 +253,69 @@ data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id=
                                  </td>
                                  <td class="w-min-50">
                                     <input type="number" class="quantity w-100 form-control" id="quantity_tr_{{$add_more_count}}" name="qty[]" placeholder="Quantity" style="text-align:right;" data-id="{{$add_more_count}}" value="{{ ($sale_order_item->dual_unit == 1) 
-    ? rtrim(rtrim(number_format((float)$sale_order_item->taarobaar_qty, 2, '.', ''), '0'), '.')
-    : rtrim(rtrim(number_format((float)$sale_order_item->qty, 2, '.', ''), '0'), '.')
-}}"/>
+                                        ? rtrim(rtrim(number_format((float)$sale_order_item->taarobaar_qty, 2, '.', ''), '0'), '.')
+                                        : rtrim(rtrim(number_format((float)$sale_order_item->qty, 2, '.', ''), '0'), '.')
+                                    }}"/>
                                  </td>
 
                                  <td class="col-weight-cell">
-   <div id="weight_boxes_{{$add_more_count}}" class="weight-boxes-container" style="display:flex;flex-direction:column;gap:2px;">
-      @php
-         $is_dual = 0;
+                                   <div id="weight_boxes_{{$add_more_count}}" class="weight-boxes-container" style="display:flex;flex-direction:column;gap:2px;">
+                                      @php
+                                         $is_dual = 0;
+                                
+                                         $fixed_weight_hidden = 0;
+                                
+                                         $fixed_weight_value_hidden = 0;
+                                      @endphp
+                                      @foreach($item as $item_list)
+                                         @if($item_list->id == $sale_order_item->goods_discription)
+                                
+                                   @php
+                                
+                                      $is_dual = $item_list->dual_unit ?? 0;
+                                
+                                      $fixed_weight_hidden = $item_list->fixed_weight ?? 0;
+                                
+                                      $fixed_weight_value_hidden = $item_list->fixed_weight_value ?? 0;
+                                
+                                   @endphp
 
-         $fixed_weight_hidden = 0;
-
-         $fixed_weight_value_hidden = 0;
-      @endphp
-      @foreach($item as $item_list)
-         @if($item_list->id == $sale_order_item->goods_discription)
-
-   @php
-
-      $is_dual = $item_list->dual_unit ?? 0;
-
-      $fixed_weight_hidden = $item_list->fixed_weight ?? 0;
-
-      $fixed_weight_value_hidden = $item_list->fixed_weight_value ?? 0;
-
-   @endphp
-
-@endif
-      @endforeach
-@php
-   $selected_item = collect($item)->firstWhere('id', $sale_order_item->goods_discription);
-
-   $fixed_weight = $selected_item->fixed_weight ?? 0;
-
-   $fixed_weight_value = $selected_item->fixed_weight_value ?? 0;
-@endphp
-
-@if($is_dual == 1 && $fixed_weight == 1)
-
-   <input type="number"
-      class="form-control mb-1"
-      readonly
-      value="{{ rtrim(rtrim(number_format((float)$fixed_weight_value, 2, '.', ''), '0'), '.') }}"
-      style="width:90px;text-align:right;background:#f5f5f5;">
-
-@elseif($is_dual == 1 && !empty($piece_weights) && collect($piece_weights)->count() > 0)
-
-   @foreach(collect($piece_weights) as $pw)
-
-      <input type="number"
-            class="form-control piece_weight mb-1"
-            data-row="{{$add_more_count}}"
-            name="piece_weight_{{$add_more_count}}[]"
-            placeholder="Wt {{$pw->piece_no}}"
-            step="0.001"
-            style="width:90px;text-align:right;"
-            value="{{ rtrim(rtrim(number_format((float)$pw->weight, 2, '.', ''), '0'), '.') }}">
-
-   @endforeach
-
-@endif
-   </div>
-</td>
+                                    @endif
+                                          @endforeach
+                                    @php
+                                       $selected_item = collect($item)->firstWhere('id', $sale_order_item->goods_discription);
+                                    
+                                       $fixed_weight = $selected_item->fixed_weight ?? 0;
+                                    
+                                       $fixed_weight_value = $selected_item->fixed_weight_value ?? 0;
+                                    @endphp
+                                    
+                                    @if($is_dual == 1 && $fixed_weight == 1)
+                                    
+                                       <input type="number"
+                                          class="form-control mb-1"
+                                          readonly
+                                          value="{{ rtrim(rtrim(number_format((float)$fixed_weight_value, 2, '.', ''), '0'), '.') }}"
+                                          style="width:90px;text-align:right;background:#f5f5f5;">
+                                    
+                                    @elseif($is_dual == 1 && !empty($piece_weights) && collect($piece_weights)->count() > 0)
+                                    
+                                       @foreach(collect($piece_weights) as $pw)
+                                    
+                                          <input type="number"
+                                                class="form-control piece_weight mb-1"
+                                                data-row="{{$add_more_count}}"
+                                                name="piece_weight_{{$add_more_count}}[]"
+                                                placeholder="Wt {{$pw->piece_no}}"
+                                                step="0.001"
+                                                style="width:90px;text-align:right;"
+                                                value="{{ rtrim(rtrim(number_format((float)$pw->weight, 2, '.', ''), '0'), '.') }}">
+                                    
+                                       @endforeach
+                                    
+                                    @endif
+                                       </div>
+                        </td>
    <td class="col-total-weight-cell">
    <input type="number"
       class="total_weight form-control"
@@ -1690,7 +1689,7 @@ function removeItem() {
 function updateUnit(rowId, selectedOption) {
 
     let unitName = selectedOption.data('val');
-    let unitId   = selectedOption.data('unit_id');
+    let unitId   = selectedOption.data('unit_name');
 
     $('#unit_tr_' + rowId).val(unitName);
     $('#units_tr_' + rowId).val(unitId);
