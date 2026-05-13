@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\ReceiptRegister;
+namespace App\Http\Controllers\PaymentRegister;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -9,12 +9,11 @@ use App\Models\AccountGroups;
 use App\Helpers\CommonHelper;
 use Session;
 use DB;
-class ReceiptRegisterController extends Controller
+class PaymentRegisterReportController extends Controller
 {
-
-    public function index(Request $request)
+        public function index(Request $request)
     {
-        $top_groups = [11];
+        $top_groups = [3];
 
         $all_groups = [];
 
@@ -70,39 +69,39 @@ class ReceiptRegisterController extends Controller
                 ->orderBy('name')
                 ->get();
 
-        $query = DB::table('receipt_details')
+        $query = DB::table('payment_details')
 
                     ->join(
-                        'receipts',
-                        'receipts.id',
+                        'payments',
+                        'payments.id',
                         '=',
-                        'receipt_details.receipt_id'
+                        'payment_details.payment_id'
                     )
 
                     ->join(
                         'accounts',
                         'accounts.id',
                         '=',
-                        'receipt_details.account_name'
+                        'payment_details.account_name'
                     )
 
                     ->where(
-                        'receipt_details.type',
-                        'Credit'
+                        'payment_details.type',
+                        'Debit'
                     )
 
                     ->where(
-                        'receipt_details.company_id',
+                        'payment_details.company_id',
                         Session::get('user_company_id')
                     )
 
                     ->where(
-                        'receipt_details.delete',
+                        'payment_details.delete',
                         '0'
                     )
 
                     ->whereBetween(
-                        'receipts.date',
+                        'payments.date',
                         [
                             $request->from_date ?? date('Y-m-01'),
                             $request->to_date ?? date('Y-m-d')
@@ -153,7 +152,7 @@ class ReceiptRegisterController extends Controller
         $data = $query->select(
                         'accounts.id',
                         'accounts.account_name',
-                        DB::raw('SUM(receipt_details.credit) as amount')
+                        DB::raw('SUM(payment_details.debit) as amount')
                     )
 
                     ->groupBy(
@@ -204,56 +203,56 @@ class ReceiptRegisterController extends Controller
                     foreach ($accounts as $acc)
                     {
 
-                        $receiptAmount = DB::table('receipt_details')
+                        $paymentAmount = DB::table('payment_details')
 
                                         ->join(
-                                            'receipts',
-                                            'receipts.id',
+                                            'payments',
+                                            'payments.id',
                                             '=',
-                                            'receipt_details.receipt_id'
+                                            'payment_details.payment_id'
                                         )
 
                                         ->where(
-                                            'receipt_details.type',
-                                            'Credit'
+                                            'payment_details.type',
+                                            'Debit'
                                         )
 
                                         ->where(
-                                            'receipt_details.company_id',
+                                            'payment_details.company_id',
                                             Session::get('user_company_id')
                                         )
 
                                         ->where(
-                                            'receipt_details.account_name',
+                                            'payment_details.account_name',
                                             $acc->id
                                         )
 
                                         ->where(
-                                            'receipt_details.delete',
+                                            'payment_details.delete',
                                             '0'
                                         )
 
                                         ->whereBetween(
-                                            'receipts.date',
+                                            'payments.date',
                                             [
                                                 $request->from_date ?? date('Y-m-01'),
                                                 $request->to_date ?? date('Y-m-d')
                                             ]
                                         )
 
-                                        ->sum('receipt_details.credit');
+                                        ->sum('payment_details.debit');
 
-                        if($receiptAmount == 0)
+                        if($paymentAmount == 0)
                         {
                             continue;
                         }
 
-                        $groupTotal += $receiptAmount;
+                        $groupTotal += $paymentAmount;
 
                         $accountData[] = [
                             'id' => $acc->id,
                             'party_name' => $acc->account_name,
-                            'amount' => $receiptAmount
+                            'amount' => $paymentAmount
                         ];
                     }
 
@@ -287,10 +286,10 @@ class ReceiptRegisterController extends Controller
                 return $tree;
             };
 
-            $groupWiseData = $buildGroupTree([11]);
+            $groupWiseData = $buildGroupTree([3]);
         }
         return view(
-            'ReceiptRegister.index',
+            'PaymentRegister.index',
             compact(
                 'allParties',
                 'allGroups',
