@@ -729,6 +729,13 @@
                                        <a href="{{ route('payable.index') }}" class="text-blue">Payable Report</a>
                                     </li>
                                     @endcan
+                                     <li class="py-1 clickable-row-blue">
+                                       <a href="{{ route('receipt_register') }}" class="text-blue">Receipt Register</a>
+                                    </li>
+                                     <li class="py-1 clickable-row-blue">
+                                       <a href="{{ route('payment_register') }}" class="text-blue">Payment Register</a>
+                                    </li>
+                                    
                                      @can('view-module', 157)
                                     <li class="py-1 clickable-row-blue">
                                        <a href="{{ route('AgingReport') }}" class="text-blue">Aging Report</a>

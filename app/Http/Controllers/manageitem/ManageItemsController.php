@@ -290,7 +290,7 @@ class ManageItemsController extends Controller
       $items->g_name = $request->input('g_name');
       $items->u_name = $request->input('u_name');
       $items->hsn_code = $request->input('hsn_code');
-      $items->item_type = $request->input('item_type');
+      $items->item_type = 'taxable';
       $items->status = $request->input('status');
       $items->section = $request->input('section');
       $items->rate_of_tcs = $request->input('rate_of_tcs');
@@ -1323,7 +1323,7 @@ class ManageItemsController extends Controller
 
       $generated_reels = ItemSizeStock::where('company_id',Session::get('user_company_id'))
                                        ->where('sj_generated_id',$id)
-                                       ->whereNotNull('sj_generated_detail_id')
+                                       //->whereNotNull('sj_generated_detail_id')
                                        ->select('item_id','size','weight','reel_no','id','unit','sj_generated_detail_id','status')
                                        ->get();
 
