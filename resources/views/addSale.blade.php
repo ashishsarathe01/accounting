@@ -1142,12 +1142,10 @@
       </select>
     </div>
 
-    <div class="mb-3 col-md-12"></div>
-
-    <div class="mb-3 col-md-3">
+   <div class="mb-3 col-md-12"></div>
+   <div class="mb-3 col-md-3">
       <label class="form-label font-14 font-heading">GST RATE</label>
-      <select class="form-select select2-single"
-              name="gst_rate" id="modal_gst_rate" required>
+      <select class="form-select select2-single" name="gst_rate" id="modal_gst_rate" required>
         <option value="">SELECT GST RATE</option>
         <option value="0" data-type="nil_rated">0% (Nil Rated Goods)</option>
         <option value="0" data-type="exempted">(Exempted Goods)</option>
@@ -1159,8 +1157,11 @@
         <option value="28" data-type="taxable">28%</option>
       </select>
       <input type="hidden" name="item_type" id="modal_item_type">
-    </div>
-
+   </div>
+    <div class="mb-3 col-md-4">
+      <label for="name" class="form-label font-14 font-heading">GST RATE EFFECTIVE DATE</label>
+      <input type="date" class="form-control" id="gst_rate_effective_date" name="gst_rate_effective_date" required />
+   </div>
     <div class="mb-3 col-md-3">
       <label class="form-label font-14 font-heading">HSN CODE</label>
       <input type="text" class="form-control"
@@ -1184,34 +1185,57 @@
 
 <!-- ================= PART B ================= -->
 <div class="col-md-4">
-  <h5>
-    <input type="checkbox" id="modal_partb"> PART B
-  </h5>
-  <hr>
-
-  <div class="row">
-    <div class="col-md-6 modal_partb_div" style="display:none">
-      <label>
-        <input type="checkbox" id="modal_tcs_applicable">
-        TCS APPLICABLE
-      </label>
-    </div>
-
-    <div class="col-md-12"></div>
-
-    <div class="col-md-6 modal_tcs_div" style="display:none">
-      <label>SECTION</label>
-      <select class="form-select">
-        <option value="">SELECT SECTION</option>
-        <option value="206CE-Scarp" data-rate="1">206CE-Scarp</option>
-      </select>
-    </div>
-
-    <div class="col-md-6 modal_tcs_div" style="display:none">
-      <label>RATE OF TCS</label>
-      <input type="text" class="form-control" readonly>
-    </div>
-  </div>
+   <h5>
+      <input type="checkbox" id="modal_partb"> PART B
+   </h5>
+   <hr>
+   <div class="row">
+      <div class="mb-6 col-md-6 modal_partb_div" style="display:none; margin-bottom:15px;">
+         <label class="form-label font-14 font-heading">DUAL UNIT</label>
+         <select class="form-select form-select-lg select2-single" name="dual_unit" id="dual_unit">
+            <option value="0">NO</option>
+            <option value="1">YES</option>
+         </select>
+      </div>
+      <div class="mb-6 col-md-6 modal_partb_div fixed_weight_div" style="display:none; margin-bottom:15px;">
+         <label class="form-label font-14 font-heading">
+               FIXED WEIGHT
+         </label>
+         <select class="form-select form-select-lg select2-single" name="fixed_weight" id="fixed_weight">
+            <option value="0">NO</option>
+            <option value="1">YES</option>
+         </select>
+      </div>
+      <div class="mb-6 col-md-6 modal_partb_div fixed_weight_value_div" style="display:none; margin-bottom:15px;">
+         <label class="form-label font-14 font-heading">
+               FIXED WEIGHT VALUE
+         </label>
+         <input type="text"
+               class="form-control"
+               name="fixed_weight_value"
+               id="fixed_weight_value"
+               placeholder="ENTER FIXED WEIGHT VALUE">
+      </div>
+      <div class="clearfix"></div>
+      <div class="col-md-6 modal_partb_div" style="display:none">
+         <label>
+            <input type="checkbox" id="modal_tcs_applicable" name="tcs_applicable">
+            TCS APPLICABLE
+         </label>
+      </div>
+      <div class="col-md-12"></div>
+      <div class="col-md-6 modal_tcs_div" style="display:none">
+         <label>SECTION</label>
+         <select class="form-select" name="section" id="section">
+            <option value="">SELECT SECTION</option>
+            <option value="206CE-Scarp" data-rate="1">206CE-Scarp</option>
+         </select>
+      </div>
+      <div class="col-md-6 modal_tcs_div" style="display:none">
+         <label>RATE OF TCS</label>
+         <input type="text" name="rate_of_tcs" id="rate_of_tcs" class="form-control" readonly>
+      </div>
+   </div>
 </div>
 
 </div>
@@ -3747,7 +3771,10 @@ $('#modal_partb').on('change', function () {
    $('.modal_partb_div, .modal_tcs_div').hide();
    $('#modal_tcs_applicable').prop('checked', false);
    if (this.checked) {
-      $('.modal_partb_div').show();
+      $('.modal_partb_div').not('.fixed_weight_div').not('.fixed_weight_value_div').show();
+        $(".tcs_applicable_div").hide();
+                toggleFixedWeight();
+                toggleFixedWeightValue();
    }
 });
 
@@ -4021,5 +4048,48 @@ $(document).ready(function () {
     }, 500);
 
 });
+      function toggleFixedWeight()
+        {
+            if($('#dual_unit').val() == '1')
+            {
+                $('.fixed_weight_div').show();
+            }
+            else
+            {
+                $('.fixed_weight_div').hide();
+                $('.fixed_weight_value_div').hide();
+
+                $('#fixed_weight').val('0').trigger('change');
+                $('#fixed_weight_value').val('');
+            }
+        }
+
+        function toggleFixedWeightValue()
+        {
+            if($('#fixed_weight').val() == '1')
+            {
+                $('.fixed_weight_value_div').show();
+            }
+            else
+            {
+                $('.fixed_weight_value_div').hide();
+                $('#fixed_weight_value').val('');
+            }
+        }
+        toggleFixedWeight();
+        toggleFixedWeightValue();
+
+        $('#dual_unit').change(function () {
+
+            toggleFixedWeight();
+            toggleFixedWeightValue();
+
+        });
+
+        $('#fixed_weight').change(function () {
+
+            toggleFixedWeightValue();
+
+        }); 
 </script>
 @endsection

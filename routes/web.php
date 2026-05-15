@@ -144,8 +144,8 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
       Route::Resource('/merchant-privilege',MerchantPrivilegesController::class)->name('*','merchant-privilege');
       Route::get('/merchant-module-permission/{merchant_id?}/{company_id?}',[MerchantModulePermissionController::class, 'index'])->name('merchant-module-permission');
       Route::post('/store-merchant-module',[MerchantModulePermissionController::class, 'storeMerchantModule'])->name('store-merchant-module');
-      Route::resource('manageUser', ManageUserController::class);
-      Route::get('manage-users', [ManageUserController::class,'index'])->name('manageUser.index');
+      //Route::resource('manageUser', ManageUserController::class);
+    Route::get('manage-users', [ManageUserController::class,'index'])->name('manageUser.index');
       Route::get('manage-users/create', [ManageUserController::class,'create'])->name('manageUser.create');
       Route::post('manage-users/store', [ManageUserController::class,'store'])->name('manageUser.store');
       Route::get('manage-users/{id}/edit', [ManageUserController::class,'edit'])->name('manageUser.edit');
@@ -262,7 +262,7 @@ Route::group(['middleware' => ['merchantloginstatus']], function () {
    Route::get('company-edit', [CompanyController::class, 'companyEdit'])->name('company.company-edit');
    Route::get('owner-edit/{id}', [OwnerController::class, 'ownerEdit'])->name('owner.owner-edit');
    Route::get('shareholder-edit/{id}', [ShareholderController::class, 'shareholderEdit'])->name('shareholder.shareholder-edit');
-   Route::get('bank-edit/{id}', [BankController::class, 'bankEdit'])->name('shareholder.shareholder-edit');
+   Route::get('bank-edit/{id}', [BankController::class, 'bankEdit'])->name('shareholder.bank-edit');
    Route::get('view-owner/{id}', [OwnerController::class, 'viewOwner'])->name('view-owner');
    Route::get('view-shareholder/{id}', [ShareholderController::class, 'viewShareholder'])->name('view-shareholder');
    Route::get('view-bank/{id}', [BankController::class, 'viewBank'])->name('view-bank');
@@ -1306,9 +1306,9 @@ Route::get('/journal/print/{id}', [JournalController::class, 'print'])->name('jo
 
      Route::get('/tds-194c-report', [TdsReportController::class, 'tds194c'])->name('tds.194c.report');
      Route::get('/tds-194c-report/view', [TdsReportController::class, 'tds194cView'])->name('tds.194c.report.view');
-Route::get('/receipt-register', [ReceiptRegisterController::class, 'index'])->name('receipt_register');
-Route::get('/payment-register',[PaymentRegisterReportController::class, 'index'])->name('payment_register');
-Route::get('/box-calculator', [BoxController::class, 'index']);
+    Route::get('/receipt-register', [ReceiptRegisterController::class, 'index'])->name('receipt_register');
+    Route::get('/payment-register',[PaymentRegisterReportController::class, 'index'])->name('payment_register');
+    Route::get('/box-calculator', [BoxController::class, 'index']);
     Route::get('/box-calculator/advance', [BoxController::class, 'advanceindex'])
     ->name('box-calculator.advance');
 

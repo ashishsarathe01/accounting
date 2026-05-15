@@ -631,6 +631,7 @@ class ReceiptController extends Controller
       $receipt =  Receipt::find($request->receipt_id);
       $receipt->date = $request->input('date');
       $receipt->voucher_no_prefix = $request->input('voucher_prefix');
+      
       $series_changed = ($receipt->series_no != $request->input('series_no'));
       $series_configuration = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
          ->where('series', $request->input('series_no'))
@@ -640,7 +641,7 @@ class ReceiptController extends Controller
       $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
       $voucher_no = $receipt->voucher_no;
       if ($series_configuration && $series_configuration->manual_numbering == "YES") {
-         $voucher_no = $request->input('voucher_no') ?: $request->input('voucher_prefix');
+         $voucher_no = $request->input('voucher_prefix');
       } elseif ($series_changed) {
          $last_voucher_no = DB::table('receipts')
             ->where('company_id', Session::get('user_company_id'))
@@ -809,6 +810,8 @@ class ReceiptController extends Controller
                   $bill_no = $data[2];
                   $receipt = Receipt::select('id')
                                        ->where('voucher_no',$bill_no)
+                                       ->where('status','0')
+                                       ->where('delete','0')
                                        ->where('series_no',trim($series))
                                        ->where('financial_year',$financial_year)
                                        ->where('company_id',trim(Session::get('user_company_id')))

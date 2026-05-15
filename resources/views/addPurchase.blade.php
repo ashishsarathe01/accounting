@@ -756,208 +756,193 @@
     </div>
   </div>
 </div>
-
 <div class="modal fade" id="itemModal" tabindex="-1">
-  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-    <div class="modal-content">
-
-      <div class="modal-header">
-        <h5 class="modal-title">Add Item</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+   <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+         <div class="modal-header">
+            <h5 class="modal-title">Add Item</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+         </div>
+         <div class="modal-body">
+            <form id="modalItemForm">
+               @csrf
+               <div class="row">
+                  <!-- ================= PART A ================= -->
+                  <div class="col-md-8">
+                  <h5>PART A</h5>
+                  <hr>
+                  <div class="row">
+                     <div class="mb-3 col-md-5">
+                        <label class="form-label font-14 font-heading">ITEM NAME</label>
+                        <input type="text" class="form-control" name="name" id="modal_name" placeholder="ENTER ITEM NAME" required>
+                     </div>
+                     <div class="mb-3 col-md-12"></div>
+                     <div class="mb-3 col-md-5">
+                        <label class="form-label font-14 font-heading">PRINT NAME</label>
+                        <input type="text" class="form-control"
+                              name="p_name" id="modal_p_name"
+                              placeholder="ENTER PRINT NAME">
+                     </div>
+                     <div class="mb-3 col-md-12"></div>
+                     <div class="mb-3 col-md-5">
+                        <label class="form-label font-14 font-heading">UNDER GROUP</label>
+                        <select class="form-select select2-single"
+                              name="g_name" id="modal_g_name" required>
+                        <option value="">SELECT GROUP</option>
+                        @foreach($itemGroups as $value)
+                           <option value="{{ $value->id }}">{{ $value->group_name }}</option>
+                        @endforeach
+                        </select>
+                     </div>
+                     <div class="mb-3 col-md-12"></div>
+                     @foreach($series as $key => $value)
+                        <div class="col-md-3 mb-3">
+                           <label class="form-label font-14 font-heading">BRANCH</label>
+                           <input type="text" class="form-control" name="series[]" value="{{ $value->series }}" readonly>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                           <label class="form-label font-14 font-heading">
+                              OPENING BAL. (Rs.)
+                           </label>
+                           <input type="text"
+                              class="form-control"
+                              name="opening_amount[]"
+                              id="modal_opening_amount_{{ $key }}"
+                              placeholder="OPENING BALANCE"
+                              onkeyup="typevalidation({{ $key }})">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                           <label class="form-label font-14 font-heading">
+                              OPENING BAL. (Qty.)
+                           </label>
+                           <input type="text"
+                                 class="form-control"
+                                 name="opening_qty[]"
+                                 placeholder="OPENING BALANCE">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                           <label class="form-label font-14 font-heading">
+                              BALANCE TYPE
+                              <span id="balance_type_required_{{ $key }}"
+                                    style="color:red; display:none;">*</span>
+                           </label>
+                           <select class="form-select"
+                                    name="opening_balance_type[]"
+                                    id="opening_balance_type_{{ $key }}">
+                              <option value="">BALANCE TYPE</option>
+                              <option value="Debit">Debit</option>
+                              <option value="Credit">Credit</option>
+                           </select>
+                        </div>
+                     @endforeach
+                     <div class="mb-3 col-md-12"></div>
+                        <div class="mb-3 col-md-3">
+                           <label class="form-label font-14 font-heading">UNIT NAME</label>
+                           <select class="form-select select2-single"
+                                 name="u_name" id="modal_u_name" required>
+                           <option value="">SELECT UNIT</option>
+                           @foreach($accountunit as $value)
+                              <option value="{{ $value->id }}">{{ $value->name }}</option>
+                           @endforeach
+                           </select>
+                        </div>
+                        <div class="mb-3 col-md-12"></div>
+                        <div class="mb-3 col-md-3">
+                           <label class="form-label font-14 font-heading">GST RATE</label>
+                           <select class="form-select select2-single" name="gst_rate" id="modal_gst_rate" required>
+                              <option value="">SELECT GST RATE</option>
+                              <option value="0" data-type="nil_rated">0% (Nil Rated Goods)</option>
+                              <option value="0" data-type="exempted">(Exempted Goods)</option>
+                              <option value="0.25" data-type="taxable">0.25% (Precious stones, etc.)</option>
+                              <option value="3" data-type="taxable">3% (Gold, jewelry)</option>
+                              <option value="5" data-type="taxable">5%</option>
+                              <option value="12" data-type="taxable">12%</option>
+                              <option value="18" data-type="taxable">18%</option>
+                              <option value="28" data-type="taxable">28%</option>
+                           </select>
+                           <input type="hidden" name="item_type" id="modal_item_type">
+                        </div>
+                        <div class="mb-3 col-md-4">
+                           <label for="name" class="form-label font-14 font-heading">GST RATE EFFECTIVE DATE</label>
+                           <input type="date" class="form-control" id="gst_rate_effective_date" name="gst_rate_effective_date" required />
+                        </div>
+                        <div class="mb-3 col-md-3">
+                           <label class="form-label font-14 font-heading">HSN CODE</label>
+                           <input type="text" class="form-control" name="hsn_code" placeholder="ENTER HSN CODE" required>
+                        </div>
+                        <div class="mb-3 col-md-12"></div>
+                        <div class="mb-3 col-md-3">
+                           <label class="form-label font-14 font-heading">STATUS</label>
+                           <select class="form-select select2-single" name="status" required>
+                              <option value="">SELECT STATUS</option>
+                              <option value="1">Enable</option>
+                              <option value="0">Disable</option>
+                           </select>
+                        </div>
+                     </div>
+                  </div>
+                  <!-- ================= PART B ================= -->
+                  <div class="col-md-4">
+                     <h5><input type="checkbox" id="modal_partb"> PART B</h5>
+                     <hr>
+                     <div class="row">
+                        <div class="mb-6 col-md-6 modal_partb_div" style="display:none; margin-bottom:15px;">
+                        <label class="form-label font-14 font-heading">DUAL UNIT</label>
+                        <select class="form-select form-select-lg select2-single" name="dual_unit" id="dual_unit">
+                           <option value="0">NO</option>
+                           <option value="1">YES</option>
+                        </select>
+                     </div>
+                     <div class="mb-6 col-md-6 modal_partb_div fixed_weight_div" style="display:none; margin-bottom:15px;">
+                        <label class="form-label font-14 font-heading">
+                              FIXED WEIGHT
+                        </label>
+                        <select class="form-select form-select-lg select2-single" name="fixed_weight" id="fixed_weight">
+                           <option value="0">NO</option>
+                           <option value="1">YES</option>
+                        </select>
+                     </div>
+                     <div class="mb-6 col-md-6 modal_partb_div fixed_weight_value_div" style="display:none; margin-bottom:15px;">
+                        <label class="form-label font-14 font-heading">
+                              FIXED WEIGHT VALUE
+                        </label>
+                        <input type="text"
+                              class="form-control"
+                              name="fixed_weight_value"
+                              id="fixed_weight_value"
+                              placeholder="ENTER FIXED WEIGHT VALUE">
+                     </div>
+                     <div class="clearfix"></div>
+                     <div class="col-md-6 modal_partb_div" style="display:none">
+                        <label>
+                           <input type="checkbox" id="modal_tcs_applicable">
+                           TCS APPLICABLE
+                        </label>
+                     </div>
+                     <div class="col-md-12"></div>
+                        <div class="col-md-6 modal_tcs_div" style="display:none">
+                           <label>SECTION</label>
+                           <select class="form-select">
+                           <option value="">SELECT SECTION</option>
+                           <option value="206CE-Scarp" data-rate="1">206CE-Scarp</option>
+                           </select>
+                        </div>
+                        <div class="col-md-6 modal_tcs_div" style="display:none">
+                           <label>RATE OF TCS</label>
+                           <input type="text" class="form-control" readonly>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            </form>
+         </div>
+         <div class="modal-footer">
+         <button type="button" id="saveItemBtn" class="btn btn-primary">
+            Save Item
+         </button>
+         </div>
       </div>
-
-      <div class="modal-body">
-
-<form id="modalItemForm">
-@csrf
-
-<div class="row">
-
-<!-- ================= PART A ================= -->
-<div class="col-md-8">
-  <h5>PART A</h5>
-  <hr>
-
-  <div class="row">
-
-    <div class="mb-3 col-md-5">
-      <label class="form-label font-14 font-heading">ITEM NAME</label>
-      <input type="text" class="form-control"
-             name="name" id="modal_name"
-             placeholder="ENTER ITEM NAME" required>
-    </div>
-
-    <div class="mb-3 col-md-12"></div>
-
-    <div class="mb-3 col-md-5">
-      <label class="form-label font-14 font-heading">PRINT NAME</label>
-      <input type="text" class="form-control"
-             name="p_name" id="modal_p_name"
-             placeholder="ENTER PRINT NAME">
-    </div>
-
-    <div class="mb-3 col-md-12"></div>
-
-    <div class="mb-3 col-md-5">
-      <label class="form-label font-14 font-heading">UNDER GROUP</label>
-      <select class="form-select select2-single"
-              name="g_name" id="modal_g_name" required>
-        <option value="">SELECT GROUP</option>
-        @foreach($itemGroups as $value)
-          <option value="{{ $value->id }}">{{ $value->group_name }}</option>
-        @endforeach
-      </select>
-    </div>
-
-    <div class="mb-3 col-md-12"></div>
-
-    @foreach($series as $key => $value)
-  <div class="col-md-3 mb-3">
-    <label class="form-label font-14 font-heading">BRANCH</label>
-    <input type="text"
-           class="form-control"
-           name="series[]"
-           value="{{ $value->series }}"
-           readonly>
-  </div>
-
-  <div class="col-md-3 mb-3">
-    <label class="form-label font-14 font-heading">
-      OPENING BAL. (Rs.)
-    </label>
-    <input type="text"
-           class="form-control"
-           name="opening_amount[]"
-           id="modal_opening_amount_{{ $key }}"
-           placeholder="OPENING BALANCE"
-           onkeyup="typevalidation({{ $key }})">
-  </div>
-
-  <div class="col-md-3 mb-3">
-    <label class="form-label font-14 font-heading">
-      OPENING BAL. (Qty.)
-    </label>
-    <input type="text"
-           class="form-control"
-           name="opening_qty[]"
-           placeholder="OPENING BALANCE">
-  </div>
-
-  <div class="col-md-3 mb-3">
-    <label class="form-label font-14 font-heading">
-      BALANCE TYPE
-      <span id="balance_type_required_{{ $key }}"
-            style="color:red; display:none;">*</span>
-    </label>
-    <select class="form-select"
-            name="opening_balance_type[]"
-            id="opening_balance_type_{{ $key }}">
-      <option value="">BALANCE TYPE</option>
-      <option value="Debit">Debit</option>
-      <option value="Credit">Credit</option>
-    </select>
-  </div>
-@endforeach
-
-    <div class="mb-3 col-md-12"></div>
-
-    <div class="mb-3 col-md-3">
-      <label class="form-label font-14 font-heading">UNIT NAME</label>
-      <select class="form-select select2-single"
-              name="u_name" id="modal_u_name" required>
-        <option value="">SELECT UNIT</option>
-        @foreach($accountunit as $value)
-          <option value="{{ $value->id }}">{{ $value->name }}</option>
-        @endforeach
-      </select>
-    </div>
-
-    <div class="mb-3 col-md-12"></div>
-
-    <div class="mb-3 col-md-3">
-      <label class="form-label font-14 font-heading">GST RATE</label>
-      <select class="form-select select2-single"
-              name="gst_rate" id="modal_gst_rate" required>
-        <option value="">SELECT GST RATE</option>
-        <option value="0" data-type="nil_rated">0% (Nil Rated Goods)</option>
-        <option value="0" data-type="exempted">(Exempted Goods)</option>
-        <option value="0.25" data-type="taxable">0.25% (Precious stones, etc.)</option>
-        <option value="3" data-type="taxable">3% (Gold, jewelry)</option>
-        <option value="5" data-type="taxable">5%</option>
-        <option value="12" data-type="taxable">12%</option>
-        <option value="18" data-type="taxable">18%</option>
-        <option value="28" data-type="taxable">28%</option>
-      </select>
-      <input type="hidden" name="item_type" id="modal_item_type">
-    </div>
-
-    <div class="mb-3 col-md-3">
-      <label class="form-label font-14 font-heading">HSN CODE</label>
-      <input type="text" class="form-control"
-             name="hsn_code" placeholder="ENTER HSN CODE" required>
-    </div>
-
-    <div class="mb-3 col-md-12"></div>
-
-    <div class="mb-3 col-md-3">
-      <label class="form-label font-14 font-heading">STATUS</label>
-      <select class="form-select select2-single"
-              name="status" required>
-        <option value="">SELECT STATUS</option>
-        <option value="1">Enable</option>
-        <option value="0">Disable</option>
-      </select>
-    </div>
-
-  </div>
-</div>
-
-<!-- ================= PART B ================= -->
-<div class="col-md-4">
-  <h5>
-    <input type="checkbox" id="modal_partb"> PART B
-  </h5>
-  <hr>
-
-  <div class="row">
-    <div class="col-md-6 modal_partb_div" style="display:none">
-      <label>
-        <input type="checkbox" id="modal_tcs_applicable">
-        TCS APPLICABLE
-      </label>
-    </div>
-
-    <div class="col-md-12"></div>
-
-    <div class="col-md-6 modal_tcs_div" style="display:none">
-      <label>SECTION</label>
-      <select class="form-select">
-        <option value="">SELECT SECTION</option>
-        <option value="206CE-Scarp" data-rate="1">206CE-Scarp</option>
-      </select>
-    </div>
-
-    <div class="col-md-6 modal_tcs_div" style="display:none">
-      <label>RATE OF TCS</label>
-      <input type="text" class="form-control" readonly>
-    </div>
-  </div>
-</div>
-
-</div>
-</form>
-
-</div>
-
-
-      <div class="modal-footer">
-        <button type="button" id="saveItemBtn" class="btn btn-primary">
-          Save Item
-        </button>
-      </div>
-
-    </div>
-  </div>
+   </div>
 </div>
 <div class="modal fade" id="gstAccountModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
@@ -3060,7 +3045,10 @@ $('#modal_partb').on('change', function () {
     $('#modal_tcs_applicable').prop('checked', false);
 
     if (this.checked) {
-        $('.modal_partb_div').show();
+        $('.modal_partb_div').not('.fixed_weight_div').not('.fixed_weight_value_div').show();
+        $(".tcs_applicable_div").hide();
+                toggleFixedWeight();
+                toggleFixedWeightValue();
     }
 });
 
@@ -3279,5 +3267,48 @@ $("#date").on("change", function(){
       }
    });   
 });
+      function toggleFixedWeight()
+        {
+            if($('#dual_unit').val() == '1')
+            {
+                $('.fixed_weight_div').show();
+            }
+            else
+            {
+                $('.fixed_weight_div').hide();
+                $('.fixed_weight_value_div').hide();
+
+                $('#fixed_weight').val('0').trigger('change');
+                $('#fixed_weight_value').val('');
+            }
+        }
+
+        function toggleFixedWeightValue()
+        {
+            if($('#fixed_weight').val() == '1')
+            {
+                $('.fixed_weight_value_div').show();
+            }
+            else
+            {
+                $('.fixed_weight_value_div').hide();
+                $('#fixed_weight_value').val('');
+            }
+        }
+        toggleFixedWeight();
+        toggleFixedWeightValue();
+
+        $('#dual_unit').change(function () {
+
+            toggleFixedWeight();
+            toggleFixedWeightValue();
+
+        });
+
+        $('#fixed_weight').change(function () {
+
+            toggleFixedWeightValue();
+
+        }); 
 </script>
 @endsection

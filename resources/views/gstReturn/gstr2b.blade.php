@@ -88,9 +88,16 @@
                <table class="table table-ordered bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm gst_table">
                   <thead>
                      <tr>
-                        <th>Account Name</th>
-                        <th style='text-align:right'>Amount</th>
-                        <th style='text-align:right'>Book Amount</th>
+                        <th rowspan="2">Account Name</th>
+                        <th colspan="2" style="text-align:center">B2B-INVOICE</th>
+                        <th colspan="2" style="text-align:center">B2B-CDNR</th>
+                        <th rowspan="2" style="text-align:right">Difference</th>
+                     </tr>
+                     <tr>
+                        <th style="text-align:right">Portal</th>
+                        <th style="text-align:right">Books</th>
+                        <th style="text-align:right">Portal</th>
+                        <th style="text-align:right">Books</th>
                      </tr>
                   </thead>
                   <tbody style="font-size: 15px;">
@@ -316,32 +323,123 @@
                   }else if(obj.message=="GSTR2B"){
                      $(".gst_head").html('GSTR2B');
                      let html = "";let total_amount = 0;let total_book_amount = 0;
+                     let total_b2b_portal = 0;
+                     let total_b2b_books = 0;
+
+                     let total_cdnr_portal = 0;
+                     let total_cdnr_books = 0;
+                     let total_diff = 0;
                      obj.data.forEach(element => {
                         let baseUrl = "{{ url('/gstr2b-all-info') }}";
                         let fullUrl = `${baseUrl}/${month}/${gstin}/${element.ctin}`;
                         let color = '';
-                        if(element.amount!=element.book_value){
+                        if(element.diff_amt!=0){
                            color = 'style="color:red;"';
                         }
-
-                        html+="<tr style='cursor:pointer;'><td><a "+color+" href='"+fullUrl+"'>"+element.trdnm+" ("+element.ctin+")</a></td><td style='text-align:right'><a "+color+" href='"+fullUrl+"'>"+Number(element.amount).toLocaleString('en-IN', {
+                        html+="<tr style='cursor:pointer;'><td><a href='"+fullUrl+"'>"+element.trdnm+" ("+element.ctin+")</a></td><td style='text-align:right'><a  href='"+fullUrl+"'>"+Number(element.b2b_portal).toLocaleString('en-IN', {
                                        minimumFractionDigits: 2,
                                        maximumFractionDigits: 2
-                                       })+"</a></td><td style='text-align:right'><a "+color+" href='"+fullUrl+"'>"+Number(element.book_value).toLocaleString('en-IN', {
+                                       })+"</a></td><td style='text-align:right'><a  href='"+fullUrl+"'>"+Number(element.b2b_books).toLocaleString('en-IN', {
+                                       minimumFractionDigits: 2,
+                                       maximumFractionDigits: 2
+                                       })+"</a></td><td style='text-align:right'><a  href='"+fullUrl+"'>"+Number(element.cdnr_portal).toLocaleString('en-IN', {
+                                       minimumFractionDigits: 2,
+                                       maximumFractionDigits: 2
+                                       })+"</a></td><td style='text-align:right'><a  href='"+fullUrl+"'>"+Number(element.cdnr_books).toLocaleString('en-IN', {
+                                       minimumFractionDigits: 2,
+                                       maximumFractionDigits: 2
+                                       })+"</a></td><td style='text-align:right'><a "+color+" href='"+fullUrl+"'>"+Number(element.diff_amt).toLocaleString('en-IN', {
                                        minimumFractionDigits: 2,
                                        maximumFractionDigits: 2
                                        })+"</a></td></tr>";
-                        total_amount += parseFloat(element.amount);
-                        total_book_amount += parseFloat(element.book_value);
+                           total_b2b_portal += parseFloat(element.b2b_portal);
+                           total_b2b_books  += parseFloat(element.b2b_books);
+
+                           total_cdnr_portal += parseFloat(element.cdnr_portal);
+                           total_cdnr_books  += parseFloat(element.cdnr_books);
+                           total_amount += parseFloat(element.amount);
+                           total_book_amount += parseFloat(element.book_value);
+                           total_diff += parseFloat(element.diff_amt);
                      });
-                     html+="<tr><th>Total</th><th style='text-align:right'>"+Number(total_amount).toLocaleString('en-IN', {
-                           minimumFractionDigits: 2,
-                           maximumFractionDigits: 2
-                           })+"</th><th style='text-align:right'>"+Number(total_book_amount).toLocaleString('en-IN', {
-                           minimumFractionDigits: 2,
-                           maximumFractionDigits: 2
-                           })+"</th><th></th></tr>";
-                     $(".gst_table tbody").html(html);
+                     html+=`<tr>
+                        <th>Total</th>
+                        <th style='text-align:right'>${Number(total_b2b_portal).toLocaleString('en-IN',{minimumFractionDigits:2})}</th>
+                        <th style='text-align:right'>${Number(total_b2b_books).toLocaleString('en-IN',{minimumFractionDigits:2})}</th>
+                        <th style='text-align:right'>${Number(total_cdnr_portal).toLocaleString('en-IN',{minimumFractionDigits:2})}</th>
+                        <th style='text-align:right'>${Number(total_cdnr_books).toLocaleString('en-IN',{minimumFractionDigits:2})}</th>
+                        <th style='text-align:right'>${Number(total_diff).toLocaleString('en-IN',{minimumFractionDigits:2})}</th>
+                        </tr>`;
+                     let finalHtml = html;
+                     if(obj.pending_notes && obj.pending_notes.length){
+                        finalHtml += `
+                        <tr>
+                           <td colspan="6">
+                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;">
+
+                                    <h6 style="margin:0;">
+                                       Pending Credit / Debit Notes (Unlinked)
+                                    </h6>
+
+                                    <div style="display:flex; align-items:center; gap:12px; font-size:20px;">
+
+                                       <span class="pending_print_btn"
+                                          title="Print"
+                                          style="cursor:pointer;">
+                                          🖨️
+                                       </span>
+
+                                       <span class="pending_excel_btn"
+                                          title="Export Excel"
+                                          style="cursor:pointer;">
+                                          📥
+                                       </span>
+
+                                    </div>
+
+                                 </div>
+                                 <table class="table table-bordered pending_notes_table">
+                                    <thead>
+                                       <tr>
+                                             <th>Sr No</th>
+                                             <th>Party</th>
+                                             <th>Type</th>
+                                             <th>Invoice No</th>
+                                             <th>Date</th>
+                                             <th>Book Value</th>
+                                             <th>Taxable</th>
+                                             <th>IGST</th>
+                                             <th>CGST</th>
+                                             <th>SGST</th>
+                                             <th>Cess</th>
+                                       </tr>
+                                    </thead>
+                                    <tbody>
+                        `;
+
+                        obj.pending_notes.forEach(r => {
+                           finalHtml += `
+                           <tr>
+                                 <td>${r.sr_no}</td>
+                                 <td>${r.party}</td>
+                                 <td>${r.type}</td>
+                                 <td>${r.invoice_no}</td>
+                                 <td>${r.date}</td>
+                                 <td style="text-align:right">${Number(r.book_value).toLocaleString('en-IN')}</td>
+                                 <td style="text-align:right">${Number(r.taxable).toLocaleString('en-IN')}</td>
+                                 <td style="text-align:right">${Number(r.igst).toLocaleString('en-IN')}</td>
+                                 <td style="text-align:right">${Number(r.cgst).toLocaleString('en-IN')}</td>
+                                 <td style="text-align:right">${Number(r.sgst).toLocaleString('en-IN')}</td>
+                                 <td style="text-align:right">${Number(r.cess).toLocaleString('en-IN')}</td>
+                           </tr>`;
+                        });
+
+                        finalHtml += `
+                                    </tbody>
+                                 </table>
+                           </td>
+                        </tr>`;
+                     }
+                     $(".gst_table tbody").html(finalHtml);
                      $("#gst_div").show();
                   }
                }else{

@@ -20,7 +20,7 @@
                 <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">
                     edit Account Heading
                 </h5>
-                <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="post" action="{{ route('account-heading.update') }}">
+                <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="post" action="{{ route('account-heading-custom') }}">
                     @csrf
                     <input type="hidden" value="{{ $editheading->id }}" id="heading_id" name="heading_id" />
                     <div class="row">
