@@ -208,17 +208,16 @@ class GSTR2BController extends Controller
                                 ->first(); 
             
             $gstr2b = json_decode($gstr2b->res_data);
-            $uniqueSuppliers = [];$supplier_amount = [];
+            $uniqueSuppliers = [];$supplier_amount = [];$supplier_crdr_amount = [];
             $sections = ['b2b', 'cdnr', 'b2ba', 'cdnra'];
             foreach ($sections as $section) {
                 if (!empty($gstr2b->data->docdata->$section)) {
                     foreach ($gstr2b->data->docdata->$section as $record) {
-                      
                         if (!isset($uniqueSuppliers[$record->ctin])) {
                             $uniqueSuppliers[$record->ctin] = $record->trdnm;
                         }
                         if($section=="b2b" || $section=="cdnr" || $section=="b2ba" || $section=="cdnra"){
-                            $invoice_amount = 0;
+                            $invoice_amount = 0;$invoice_crdr_amount = 0;
                             if($section=="b2b"){
                                 foreach ($record->inv as $invoice) {
                                     $invoice_amount += $invoice->val;
@@ -272,9 +271,11 @@ class GSTR2BController extends Controller
                             }else if($section=="cdnr"){
                                 foreach ($record->nt as $invoice) {
                                     if($invoice->typ == "C"){
-                                        $invoice_amount -= $invoice->val;
+                                        //$invoice_amount -= $invoice->val;
+                                        $invoice_crdr_amount -= $invoice->val;
                                     }else if($invoice->typ == "D"){
-                                        $invoice_amount += $invoice->val;
+                                        //$invoice_amount += $invoice->val;
+                                        $invoice_crdr_amount += $invoice->val;
                                     }
                                 }
                             }else if($section=="b2ba"){
@@ -284,16 +285,21 @@ class GSTR2BController extends Controller
                             }else if($section=="cdnra"){
                                 foreach ($record->nt as $invoice) {
                                     if($invoice->typ == "C"){
-                                        $invoice_amount -= $invoice->val;
+                                        //$invoice_amount -= $invoice->val;
+                                        $invoice_crdr_amount -= $invoice->val;
                                     }else if($invoice->typ == "D"){
-                                        $invoice_amount += $invoice->val;
+                                        //$invoice_amount += $invoice->val;
+                                        $invoice_crdr_amount += $invoice->val;
                                     }
                                 }
                             }
                             if (!isset($supplier_amount[$record->ctin])) {
                                 $supplier_amount[$record->ctin] = $invoice_amount;
+                                $supplier_crdr_amount[$record->ctin] = $invoice_crdr_amount;
+                                
                             }else{
                                 $supplier_amount[$record->ctin] += $invoice_amount;
+                                $supplier_crdr_amount[$record->ctin] += $invoice_crdr_amount;
                             }
                         }
                         
@@ -310,15 +316,19 @@ class GSTR2BController extends Controller
                             ->where('gstr2b_month',$request->month)
                             ->sum('total_amount');
                 $rejected_credit_note = RejectedGstr2b::where('company_gstin',$request->gstin)
-                ->where('company_id',Session::get('user_company_id'))
-                ->where('ctin',$ctin)
-                ->whereIn('type',['b2b_credit_note','b2ba_credit_note'])
-                ->where('gstr2b_month',$request->month)
-                ->sum('total_amount');
+                                        ->where('company_id',Session::get('user_company_id'))
+                                        ->where('ctin',$ctin)
+                                        ->whereIn('type',['b2b_credit_note','b2ba_credit_note'])
+                                        ->where('gstr2b_month',$request->month)
+                                        ->sum('total_amount');
                 if(!isset($supplier_amount[$ctin])){
                     $supplier_amount[$ctin] = 0;
                 }
-                $supplier_amount[$ctin] = $supplier_amount[$ctin]- $rejected_invoice_debit_note + $rejected_credit_note;
+                $supplier_amount[$ctin] = $supplier_amount[$ctin];
+                if(!isset($supplier_crdr_amount[$ctin])){
+                    $supplier_crdr_amount[$ctin] = 0;
+                }
+                $supplier_crdr_amount[$ctin] = $supplier_crdr_amount[$ctin]- $rejected_invoice_debit_note + $rejected_credit_note;
                 //Book Value Calculation
                 //Linked Invoice Data
                 $purchase_book_data = Purchase::select('total')
@@ -364,16 +374,145 @@ class GSTR2BController extends Controller
                     'ctin' => $ctin,
                     'trdnm' => $trdnm,
                     'amount' => isset($supplier_amount[$ctin]) ? $supplier_amount[$ctin] : 0,
-                    'book_value' => $book_value
+                    'book_value' => $book_value,
+                    'b2b_books'=>$purchase_book_data + $journal_book_data,
+                    'b2b_portal'=>isset($supplier_amount[$ctin]) ? $supplier_amount[$ctin] : 0,
+                    'cdnr_books'=>$sale_return_book_data - $purchase_return_data,
+                    'cdnr_portal'=>isset($supplier_crdr_amount[$ctin]) ? $supplier_crdr_amount[$ctin] : 0,
                 ];
             }
             // Sort by trdnm (case-insensitive)
             usort($suppliers, function ($a, $b) {
                 return strcasecmp($a->trdnm, $b->trdnm);
             });
+            foreach ($suppliers as $ctin => $row) {
+
+                $total_portal = $row->b2b_portal + $row->cdnr_portal;
+                $total_books  = $row->b2b_books  + $row->cdnr_books;
+
+                $suppliers[$ctin]->diff_amt = round(
+                    $total_portal - $total_books,
+                    2
+                );
+            }
+            //Pending Notes
+            $pending_notes = [];
+            $bill_sundry_igst = BillSundrys::where('company_id', Session::get('user_company_id'))
+                                        ->where('nature_of_sundry', 'IGST')
+                                        ->where('delete','0')
+                                        ->value('id');
+ 
+            $bill_sundry_cgst = BillSundrys::where('company_id', Session::get('user_company_id'))
+                                        ->where('nature_of_sundry', 'CGST')
+                                        ->where('delete','0')
+                                        ->value('id');
+ 
+            $bill_sundry_sgst = BillSundrys::where('company_id', Session::get('user_company_id'))
+                                        ->where('nature_of_sundry', 'SGST')
+                                        ->where('delete','0')
+                                        ->value('id');
+            $sr = 1;
+            $financial_year = Session::get('default_fy');
+            $y = explode("-", $financial_year);
+            $from = \DateTime::createFromFormat('y', $y[0])->format('Y');
+            $to   = \DateTime::createFromFormat('y', $y[1])->format('Y');
+            $fy_start = $from . '-04-01';
+            $month_end = date('Y-m-t', strtotime($request->month));
+            $debit = PurchaseReturn::whereNull('purchase_returns.gstr2b_invoice_id')
+                                    ->leftJoin('accounts', 'accounts.id', '=', 'purchase_returns.party')
+                                    ->leftJoin('purchase_return_sundries as igst', function ($join) use ($bill_sundry_igst) {
+                                        $join->on('purchase_returns.id', '=', 'igst.purchase_return_id')
+                                            ->where('igst.bill_sundry', $bill_sundry_igst);
+                                    })
+
+                                    ->leftJoin('purchase_return_sundries as cgst', function ($join) use ($bill_sundry_cgst) {
+                                        $join->on('purchase_returns.id', '=', 'cgst.purchase_return_id')
+                                            ->where('cgst.bill_sundry', $bill_sundry_cgst);
+                                    })
+
+                                    ->leftJoin('purchase_return_sundries as sgst', function ($join) use ($bill_sundry_sgst) {
+                                        $join->on('purchase_returns.id', '=', 'sgst.purchase_return_id')
+                                            ->where('sgst.bill_sundry', $bill_sundry_sgst);
+                                    })
+                                    ->where('purchase_returns.company_id', Session::get('user_company_id'))
+                                    ->where('purchase_returns.merchant_gst', $request->gstin)
+                                    ->whereBetween('purchase_returns.date', [$fy_start, $month_end])
+                                    ->where('purchase_returns.voucher_type', 'PURCHASE')
+                                    ->where('purchase_returns.sr_nature', 'WITH GST')
+                                    ->where('purchase_returns.delete','0')
+                                    ->where('purchase_returns.status','1')
+                                    ->select(
+                                        'purchase_returns.*',
+                                        'accounts.account_name as party_name',
+                                        DB::raw('IFNULL(igst.amount,0) as igst_amount'),
+                                        DB::raw('IFNULL(cgst.amount,0) as cgst_amount'),
+                                        DB::raw('IFNULL(sgst.amount,0) as sgst_amount')
+                                    )
+                                    ->get();
+            foreach($debit as $d){
+                $pending_notes[] = [
+                    'sr_no' => $sr++,
+                    'party' => $d->party_name ?? '',
+                    'type' => 'DR',
+                    'invoice_no' => $d->sr_prefix ?? $d->voucher_no ?? '-',
+                    'date' => date('d-m-Y', strtotime($d->date)),
+                    'book_value' => $d->total,
+                    'taxable' => $d->taxable_amt,
+                    'igst' => $d->igst_amount,
+                    'cgst' => $d->cgst_amount,
+                    'sgst' => $d->sgst_amount,
+                    'cess' => 0
+                ];
+            }
+            $credit = SalesReturn::whereNull('sales_returns.gstr2b_invoice_id')
+                                ->leftJoin('accounts', 'accounts.id', '=', 'sales_returns.party')
+                                ->leftJoin('sale_return_sundries as igst', function ($join) use ($bill_sundry_igst) {
+                                    $join->on('sales_returns.id', '=', 'igst.sale_return_id')
+                                        ->where('igst.bill_sundry', $bill_sundry_igst);
+                                })
+                                ->leftJoin('sale_return_sundries as cgst', function ($join) use ($bill_sundry_cgst) {
+                                    $join->on('sales_returns.id', '=', 'cgst.sale_return_id')
+                                        ->where('cgst.bill_sundry', $bill_sundry_cgst);
+                                })
+
+                                ->leftJoin('sale_return_sundries as sgst', function ($join) use ($bill_sundry_sgst) {
+                                    $join->on('sales_returns.id', '=', 'sgst.sale_return_id')
+                                        ->where('sgst.bill_sundry', $bill_sundry_sgst);
+                                })
+                                ->where('sales_returns.company_id', Session::get('user_company_id'))
+                                ->where('sales_returns.merchant_gst', $request->gstin)
+                                ->whereBetween('sales_returns.date', [$fy_start, $month_end])
+                                ->where('sales_returns.voucher_type', 'PURCHASE')
+                                ->where('sales_returns.sr_nature', 'WITH GST')
+                                ->where('sales_returns.delete','0')
+                                ->where('sales_returns.status','1')
+                                ->select(
+                                    'sales_returns.*',
+                                    'accounts.account_name as party_name',
+                                    DB::raw('IFNULL(igst.amount,0) as igst_amount'),
+                                    DB::raw('IFNULL(cgst.amount,0) as cgst_amount'),
+                                    DB::raw('IFNULL(sgst.amount,0) as sgst_amount')
+                                )
+                                ->get();
+            foreach($credit as $c){
+                $pending_notes[] = [
+                    'sr_no' => $sr++,
+                    'party' => $c->party_name ?? '',
+                    'type' => 'CR',
+                    'invoice_no' => $c->sr_prefix ?? $c->voucher_no ?? '-',
+                    'date' => date('d-m-Y', strtotime($c->date)),
+                    'book_value' => $c->total,
+                    'taxable' => $c->taxable_amt,
+                    'igst' => $c->igst_amount,
+                    'cgst' => $c->cgst_amount,
+                    'sgst' => $c->sgst_amount,
+                    'cess' => 0
+                ];
+            }
             $response = array(
                 'status' => true,
                 'message' => 'GSTR2B',
+                'pending_notes' => $pending_notes ?? [],
                 'data' => $suppliers
             );
             return json_encode($response);
