@@ -160,7 +160,7 @@ body {
             <table style="font-family: 'Source Sans Pro', sans-serif; letter-spacing: 0.05em; color: #404040; font-size: 12px; font-weight: 500; padding: 10px;">
                <tbody>
                   <tr>
-                     <th colspan="8" style="padding: 0;">
+                     <th colspan="{{ $type == 'raw' ? 9 : 8 }}" style="padding: 0;">
                         <div style="min-height: 130px; position: relative;">
 
                            {{-- Top row: GST | Header Text | PAN --}}
@@ -237,14 +237,14 @@ body {
                   </tr>
 
                   <tr>
-                     <td colspan="4">
+                     <td colspan="{{ $type == 'raw' ? 5 : 4 }}">
                         <p><span class="width25">Delivery No. </span>: <span class="lft_mar15" style="font-weight:800">{{ $jobwork->voucher_no_prefix ?? $jobwork->voucher_no ?? '' }}</span></p>
                         <p><span class="width25">Date of Invoice </span>: <span class="lft_mar15">{{ date('d-m-Y', strtotime($jobwork->date)) }}</span></p>
                         <p><span class="width25">Place of Supply </span>: <span class="lft_mar15">{{ $jobwork->party->state_code ?? '' }}</span></p>
                         <p><span class="width25">Reverse Charge </span>: <span class="lft_mar15">{{ $jobwork->reverse_charge ?? 'No' }}</span></p>
                         <p><span class="width25">GR/RR No. </span>: <span class="lft_mar15">{{ $jobwork->gr_rr_no ?? '' }}</span></p>
                      </td>
-                     <td colspan="4">
+                     <td colspan="{{ $type == 'raw' ? 5 : 4 }}">
                         <p><span class="width25">Transport </span>: <span class="lft_mar15 wrap-text">{{ $jobwork->transport_name ?? '' }}</span></p>
                         <p><span class="width25">Vehicle No. </span>: <span class="lft_mar15">{{ $jobwork->vehicle_no ?? '' }}</span></p>
                         <p><span class="width25">Station </span>: <span class="lft_mar15">{{ $jobwork->station ?? '' }}</span></p>
@@ -267,7 +267,7 @@ body {
                   </tr>
 
                   <tr>
-                     <td colspan="4" style="position: relative; vertical-align: top; padding: 0; height:120px;">
+                     <td colspan="{{ $type == 'raw' ? 5 : 4 }}" style="position: relative; vertical-align: top; padding: 0; height:120px;">
                         <p style="margin:0; position:absolute; top:0; left:5px; font-style:italic;"><strong>Billed to :</strong></p>
                         <div style="padding-top:16px; margin-left:10px; margin-right:5px; padding-bottom:30px; max-height:80px; overflow:hidden;">
                            <p style="margin:2px 0 0 0; line-height:13px; font-weight:800;">
@@ -332,13 +332,30 @@ body {
                   </tr>
 
                   <tr>
-                     <th style="width:2%; padding:0px 3px;">S. No.</th>
-                     <th colspan="2" style="text-align:left; width:30%;">Description of Goods</th>
-                     <th style="text-align:center; width:3%;">HSN/SAC Code</th>
-                     <th style="text-align:right; width:11%;">Qty.</th>
-                     <th style="text-align:center; width:2%;">Unit</th>
-                     <th style="text-align:right; width:12%;">Price</th>
-                     <th style="text-align:right; width:15%;">Amount (₹)</th>
+                     <th style="width:3%; padding:0px 3px;">S. No.</th>
+                     <th colspan="2" style="text-align:left; width:34%;">
+                        Description of Goods
+                     </th>
+                     <th style="text-align:center; width:8%;">
+                        HSN/SAC Code
+                     </th>
+                     <th style="text-align:right; width:8%;">
+                        Qty.
+                     </th>
+                     @if($type == 'raw')
+                     <th style="text-align:right; width:8%;">
+                        Weight
+                     </th>
+                     @endif
+                     <th style="text-align:center; width:5%;">
+                        Unit
+                     </th>
+                     <th style="text-align:right; width:12%;">
+                        Price
+                     </th>
+                     <th style="text-align:right; width:14%;">
+                        Amount (₹)
+                     </th>
                   </tr>
 
                   @php $i = 1; $item_total = 0; $qty_total = 0; @endphp
@@ -372,6 +389,11 @@ body {
 
                      <td style="text-align:center;">{{ $desc->item->hsn_code ?? $desc->hsn_code }}</td>
                      <td style="text-align:right;">{{ $desc->qty ?? 0 }}</td>
+                     @if($type == 'raw')
+                     <td style="text-align:right;">
+                        {{ $desc->weight ?? 0 }}
+                     </td>
+                     @endif
                      <td style="text-align:center;">{{ $desc->unit }}</td>
                      <td style="text-align:right;">{{ number_format($desc->price ?? 0, 2) }}</td>
                      <td style="text-align:right;">{{ number_format($desc->amount ?? 0, 2) }}</td>
@@ -379,24 +401,54 @@ body {
 
                   @php $i++; @endphp
                   @empty
-                  <tr><td colspan="8" style="text-align:center; padding:20px;">No items found</td></tr>
+                  <tr><td colspan="{{ $type == 'raw' ? 9 : 8 }}" style="text-align:center; padding:20px;">No items found</td></tr>
                   @endforelse
 
                   @php $tRows = max(0, 10 - ($i - 1)); @endphp
                   @while($tRows >= 0)
-                     <tr style="height: 21px;"><td></td><td colspan="2"></td><td></td><td></td><td></td><td></td><td></td></tr>
-                     @php $tRows--; @endphp
+                  @if($type == 'raw')
+                  <tr style="height: 21px;">
+                     <td></td>
+                     <td colspan="2"></td>
+                     <td></td>
+                     <td></td>
+                     <td></td>
+                     <td></td>
+                     <td></td>
+                     <td></td>
+                  </tr>
+                  @else
+                  <tr style="height: 21px;">
+                     <td></td>
+                     <td colspan="2"></td>
+                     <td></td>
+                     <td></td>
+                     <td></td>
+                     <td></td>
+                     <td></td>
+                  </tr>
+                  @endif                     
+                  @php $tRows--; @endphp
                   @endwhile
                   <tr>
                      <td colspan="4" style="border-bottom:0; border-right:0"></td>
-                     <td style="border-bottom:0; border-left:0; border-right:0; text-align:right;"><strong>{{ $qty_total }}</strong></td>
+                     <td style="border-bottom:0; border-left:0; border-right:0; text-align:right;">
+                        <strong>{{ $qty_total }}</strong>
+                     </td>
+                     @if($type == 'raw')
+                     <td style="border-bottom:0; border-left:0; border-right:0;"></td>
+                     @endif
                      <td style="border-bottom:0; border-left:0; border-right:0"></td>
-                     <td style="border-bottom:0; border-left:0"><strong>Total</strong></td>
-                     <td style="text-align:right; border-bottom:0;">{{ number_format($item_total, 2) }}</td>
+                     <td style="border-bottom:0; border-left:0">
+                        <strong>Total</strong>
+                     </td>
+                     <td style="text-align:right; border-bottom:0;">
+                        {{ number_format($item_total, 2) }}
+                     </td>
                   </tr>
 
                   <tr>
-                     <td colspan="7" style="text-align:right; border-right:0; border-bottom:0;">
+                     <td colspan="{{ $type == 'raw' ? 8 : 7 }}" style="text-align:right; border-right:0; border-bottom:0;">
                         <p><strong>Grand Total ₹</strong></p>
                      </td>
                      <td style="text-align:right;">
@@ -405,7 +457,7 @@ body {
                   </tr>
 
                   <tr>
-                     <td colspan="8" style="border-top:0;">
+                     <td colspan="{{ $type == 'raw' ? 9 : 8 }}" style="border-top:0;">
                         <strong>
                            <?php
                            $number = $item_total;
@@ -446,7 +498,7 @@ body {
                   </tr>
                   @if($configuration && $configuration->bank_detail_status == 1 && $configuration->bank)
                   <tr>
-                     <td colspan="8">
+                     <td colspan="{{ $type == 'raw' ? 9 : 8 }}">
                         <p>
                            <strong>Bank Details :</strong>
                            <strong>ACCOUNT NAME-</strong>{{ $configuration->bank->name }}<br>
@@ -471,7 +523,7 @@ body {
                            @endforeach
                         @endif
                      </td>
-                     <td colspan="4">
+                     <td colspan="{{ $type == 'raw' ? 5 : 4 }}">
                         <p style="height:40px; margin:0; padding:0;"><small>Receiver's Signature :</small></p>
                         <p style="text-align:right; padding:0; margin:0;"><strong>for {{ $company_data->company_name }}</strong></p>
                         @if($configuration && $configuration->signature_status == 1 && !empty($configuration->signature))

@@ -349,8 +349,14 @@ td, th {
 
                         <td style="text-align:right;">
 
-                            {{ formatIndianNumber($row->amount,2) }}
-
+                            <a href="javascript:void(0)"
+                                class="receipt-register-details"
+                                data-account="{{ $row->id }}"
+                                data-from="{{ request('from_date') }}"
+                                data-to="{{ request('to_date') }}"
+                                style="text-decoration:none;font-weight:600;">
+                                    {{ formatIndianNumber($row->amount,2) }}
+                            </a>
                         </td>
 
                     </tr>
@@ -400,7 +406,68 @@ td, th {
 </div>
 </section>
 </div>
+<div class="modal fade"
+     id="receiptRegisterModal"
+     tabindex="-1">
 
+    <div class="modal-dialog modal-lg">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+
+                <h5 class="modal-title">
+                    Receipt Register Details
+                </h5>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal">
+                </button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <div class="table-responsive">
+
+                    <table class="table table-bordered">
+
+                        <thead>
+
+                            <tr>
+
+                                <th>Date</th>
+
+                                <th>Voucher No</th>
+
+                                <th>Mode</th>
+
+                                <th>Party</th>
+
+                                <th style="text-align:right;">
+                                    Amount
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+                        <tbody id="receiptRegisterModalBody">
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
 @include('layouts.footer')
 <script>
 
@@ -476,5 +543,104 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
 });
+$(document).on(
+    'click',
+    '.receipt-register-details',
+    function () {
+
+        let account_id = $(this).data('account');
+
+        let group_id = $(this).data('group');
+
+        let from_date = $(this).data('from');
+
+        let to_date = $(this).data('to');
+
+        $.ajax({
+
+            url: "{{ route('receipt.register.modal.details') }}",
+
+            type: "GET",
+
+            data: {
+                account_id : account_id,
+                group_id   : group_id,
+                from_date  : from_date,
+                to_date    : to_date
+            },
+
+            success: function (response) {
+
+                let html = '';
+
+                if(response.length > 0)
+                {
+
+                    response.forEach(function(row){
+
+                        html += `
+                            <tr>
+
+                                <td>
+                                    ${row.date}
+                                </td>
+
+                                <td>
+
+                                    <a href="{{ url('receipt') }}/${row.receipt_id}/edit"
+                                       target="_blank"
+                                       style="text-decoration:none;font-weight:600;">
+
+                                        ${row.voucher_no ?? ''}
+
+                                    </a>
+
+                                </td>
+
+                                <td>
+                                    ${row.mode ?? ''}
+                                </td>
+
+                                <td>
+                                    ${row.account_name ?? ''}
+                                </td>
+
+                                <td style="text-align:right;">
+
+                                    ${parseFloat(row.amount).toFixed(2)}
+
+                                </td>
+
+                            </tr>
+                        `;
+                    });
+
+                }
+                else
+                {
+
+                    html += `
+                        <tr>
+
+                            <td colspan="5" class="text-center">
+
+                                No Data Found
+
+                            </td>
+
+                        </tr>
+                    `;
+                }
+
+                $('#receiptRegisterModalBody').html(html);
+
+                $('#receiptRegisterModal').modal('show');
+
+            }
+
+        });
+
+    }
+);
 </script>
 @endsection

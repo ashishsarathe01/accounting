@@ -355,6 +355,7 @@ class JobWorkController extends Controller
 
             'goods_discription' => 'required|array|min:1',
             'qty' => 'required|array|min:1',
+            'weight' => 'nullable|array',
             'units' => 'required|array|min:1',
             'price' => 'required|array|min:1',
 
@@ -505,6 +506,9 @@ class JobWorkController extends Controller
                 'goods_discription'    => $itemId,      // item_id
                 'jw_in_description_id' => $inDescId,    // IN desc id
                 'qty'                  => $qty,
+                'weight'               => $request->page_type !== 'finished'
+                                            ? ($request->weight[$key] ?? null)
+                                            : null,
                 'unit'                 => $request->units[$key],
                 'price'                => $price,
                 'amount'               => $amount,
@@ -634,6 +638,7 @@ class JobWorkController extends Controller
                 'jw_in_description_id',  
                 'item_description',
                 'qty',
+                'weight',
                 'unit',
                 'price',
                 'amount'
@@ -905,6 +910,7 @@ class JobWorkController extends Controller
             'total' => 'required',
             'goods_discription' => 'required|array|min:1',
             'qty' => 'required|array|min:1',
+            'weight' => 'nullable|array',
             'units' => 'required|array|min:1',
             'price' => 'required|array|min:1',
             'vehicle_no'      => 'nullable|string|max:50',
@@ -1089,6 +1095,9 @@ class JobWorkController extends Controller
                     'goods_discription'    => $itemId,
                     'jw_in_description_id' => $inDescId,
                     'qty'                  => $qty,
+                    'weight'               => $request->page_type == 'raw'
+                                                ? ($request->weight[$key] ?? null)
+                                                : null,
                     'unit'                 => $request->units[$key],
                     'price'                => $price,
                     'amount'               => $amount,

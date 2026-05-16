@@ -108,8 +108,13 @@ use App\Http\Controllers\DutiesCompliance\DutiesComplianceController;
 use App\Http\Controllers\AdminModuleController\DefaultPrivilegesController;
 use App\Http\Controllers\ReceiptRegister\ReceiptRegisterController;
 use App\Http\Controllers\PaymentRegister\PaymentRegisterReportController;
+<<<<<<< Updated upstream
 use App\Http\Controllers\tdsReport\TdsReportController;
 use App\Http\Controllers\BoxController;
+=======
+use App\Http\Controllers\production\OpeningStockReelWiseController;
+use App\Http\Controllers\MerchantCredentials\MerchantCredentialsController;
+>>>>>>> Stashed changes
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -344,6 +349,9 @@ Route::group(['middleware' => ['merchantloginstatus']], function () {
     Route::post('/sale-return/export', [SalesReturnController::class, 'export'])->name('sale-return-export');
    Route::Resource('sale-return', SalesReturnController::class);
    Route::get('sale-return-invoice/{id:?}', [SalesReturnController::class, 'saleReturnInvoice'])->name('sale-return-invoice');
+   Route::get('sale-return-invoice-pdf/{id?}',[SalesReturnController::class, 'saleReturnInvoicePdf'])->name('sale-return-invoice-pdf');
+   Route::get('sale-return-without-item-invoice-pdf/{id?}',[SalesReturnController::class, 'saleReturnWithoutItemInvoicePdf'])->name('sale-return-without-item-invoice-pdf');
+    Route::get('sale-return-without-gst-invoice-pdf/{id?}',[SalesReturnController::class, 'saleReturnWithoutGstInvoicePdf'])->name('sale-return-without-gst-invoice-pdf');
    Route::get('sale-return-without-item-invoice/{id}', [SalesReturnController::class, 'saleReturnWithoutItemInvoice']);
    Route::get('sale-return-without-gst-invoice/{id}', [SalesReturnController::class, 'saleReturnWithoutGstInvoice']);
    Route::get('sale-return-edit/{id}', [SalesReturnController::class, 'edit']);
@@ -363,6 +371,9 @@ Route::post('/purchase-return/export',[PurchaseReturnController::class, 'export'
    Route::get('purchase-return-invoice/{id:?}', [PurchaseReturnController::class, 'purchaseReturnInvoice'])->name('purchase-return-invoice');
    Route::get('purchase-return-without-item-invoice/{id}', [PurchaseReturnController::class, 'purchaseReturnWithoutItemInvoice']);
    Route::get('purchase-return-without-gst-invoice/{id}', [PurchaseReturnController::class, 'purchaseReturnWithoutGstInvoice']);
+   Route::get('purchase-return-invoice-pdf/{id?}',[PurchaseReturnController::class, 'purchaseReturnInvoicePdf'])->name('purchase-return-invoice-pdf');
+    Route::get('purchase-return-without-item-invoice-pdf/{id?}',[PurchaseReturnController::class, 'purchaseReturnWithoutItemInvoicePdf'])->name('purchase-return-without-item-invoice-pdf');
+    Route::get('purchase-return-without-gst-invoice-pdf/{id?}',[PurchaseReturnController::class, 'purchaseReturnWithoutGstInvoicePdf'])->name('purchase-return-without-gst-invoice-pdf');
    Route::get('purchase-return-vehicle-entry-detail/{id}', [PurchaseReturnController::class, 'purchaseReturnVehicleEntryDetail']);
    Route::get('purchase-return-edit/{id}', [PurchaseReturnController::class, 'edit']);
    Route::post('generate-debit-note-einvoice', [PurchaseReturnController::class, 'generateEinvoice'])->name('generate-debit-note-einvoice');
@@ -818,7 +829,7 @@ Route::post('/payroll/register/store',[PayrollRegisterController::class, 'store'
     Route::get('boilerfuel-purchase-report/{id?}/{from_date?}/{to_date?}', [SupplierPurchaseController::class, 'boilerFuelPurchaseReport'])->name('boilerfuel-purchase-report');
     Route::get('wastekraft-view-detail/{id}/{from}/{to}/{group_id}', [SupplierPurchaseController::class, 'viewApprovedPurchaseDetail'])->name('wastekraft-view-detail');
     Route::get('boilerfuel-view-detail/{id}/{from}/{to}/{group_id}', [SupplierPurchaseController::class, 'viewApprovedPurchaseDetail'])->name('boilerfuel-view-detail');
-    
+    Route::get('/opening-stock-reel-wise/filter', [OpeningStockReelWiseController::class, 'filter'])->name('openingstockreelwise.filter');
        Route::get('/opening-stock/filter', [ReelLedgerController::class, 'filter'])
         ->name('openingstock.filter');
         Route::get('/closing-stock/reels', [ReelLedgerController::class, 'ManageStock'])
@@ -1304,6 +1315,7 @@ Route::get('/journal/print/{id}', [JournalController::class, 'print'])->name('jo
     Route::get('/report/hsn/detail', [gstR1Controller::class, 'hsnDetail']);  
     
     //TDS Report working
+<<<<<<< Updated upstream
 
     Route::get('/tds-194c-report', [TdsReportController::class, 'tds194c'])->name('tds.194c.report');
     Route::get('/tds-194c-report/view', [TdsReportController::class, 'tds194cView'])->name('tds.194c.report.view');
@@ -1314,4 +1326,15 @@ Route::get('/journal/print/{id}', [JournalController::class, 'print'])->name('jo
     ->name('box-calculator.advance');
     Route::get('/gstr1/summary', [gstR1Controller::class, 'getReturnSummary'])
     ->name('gstr1.summary');
+=======
+     Route::get('/tds-194c-report', [TdsReportController::class, 'tds194c'])->name('tds.194c.report');
+     Route::get('/tds-194c-report/view', [TdsReportController::class, 'tds194cView'])->name('tds.194c.report.view');
+Route::get('/receipt-register', [ReceiptRegisterController::class, 'index'])->name('receipt_register');
+Route::get('/payment-register',[PaymentRegisterReportController::class, 'index'])->name('payment_register');
+Route::get('payment-register-modal-details',[PaymentRegisterReportController::class, 'paymentRegisterModalDetails'])->name('payment.register.modal.details');
+Route::get('receipt-register-modal-details',[ReceiptRegisterController::class, 'receiptRegisterModalDetails'])->name('receipt.register.modal.details');
+Route::get('/reel-ledger/modal-detail', [OpeningStockReelWiseController::class, 'modalDetail'])->name('reel.ledger.modal.detail');
+Route::get('merchant-credentials',[MerchantCredentialsController::class, 'index'])->name('merchant_credentials.index');
+Route::post('merchant-credentials/store',[MerchantCredentialsController::class, 'store'])->name('merchant_credentials.store');
+>>>>>>> Stashed changes
 });

@@ -80,6 +80,11 @@ $return_url = request()->get('return_url');
                         <div class="calender-administrator my-2 my-md-0  w-min-230 noprint">
                             <a href="{{ route('sale-return.index') }}"><button type="button" class="btn btn-danger">QUIT</button></a>
                             <button class="btn btn-info" onclick="printpage();">Print</button>
+                            <a href="{{ route('sale-return-without-gst-invoice-pdf', $sale_return->id) }}"
+                                 target="_blank"
+                                 class="btn btn-danger">
+                                 PDF
+                              </a>
                             @if($source == 'approve' && $sale_return->approved_status != 1)
                                 <button class="btn btn-success" id="approveSaleReturn">
                                    Approve

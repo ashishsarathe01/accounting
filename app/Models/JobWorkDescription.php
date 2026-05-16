@@ -16,6 +16,7 @@ class JobWorkDescription extends Model
         'goods_discription',
         'item_description',
         'qty',
+        'weight',
         'unit',
         'price',
         'amount',

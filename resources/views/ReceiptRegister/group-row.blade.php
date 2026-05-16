@@ -37,7 +37,14 @@
 
     <td style="text-align:right;">
 
-        {{ formatIndianNumber($acc['amount'],2) }}
+        <a href="javascript:void(0)"
+            class="receipt-register-details"
+            data-account="{{ $acc['id'] }}"
+            data-from="{{ request('from_date') }}"
+            data-to="{{ request('to_date') }}"
+            style="text-decoration:none;">
+            {{ formatIndianNumber($acc['amount'],2) }}
+        </a>
 
     </td>
 

@@ -298,4 +298,116 @@ class PaymentRegisterReportController extends Controller
             )
         );
     }
+
+    public function paymentRegisterModalDetails(Request $request)
+    {
+        $query = DB::table('payment_details')
+
+                    ->join(
+                        'payments',
+                        'payments.id',
+                        '=',
+                        'payment_details.payment_id'
+                    )
+
+                    ->join(
+                        'accounts',
+                        'accounts.id',
+                        '=',
+                        'payment_details.account_name'
+                    )
+
+                    ->where(
+                        'payment_details.type',
+                        'Debit'
+                    )
+
+                    ->where(
+                        'payment_details.company_id',
+                        Session::get('user_company_id')
+                    )
+
+                    ->where(
+                        'payment_details.delete',
+                        '0'
+                    )
+
+                    ->whereBetween(
+                        'payments.date',
+                        [
+                            $request->from_date,
+                            $request->to_date
+                        ]
+                    );
+
+        if (!empty($request->account_id))
+        {
+            $query->where(
+                'accounts.id',
+                $request->account_id
+            );
+        }
+
+        if (!empty($request->group_id))
+        {
+
+            $selected_groups = [];
+
+            $selected_groups[] = $request->group_id;
+
+            $selected_groups = array_merge(
+                $selected_groups,
+                CommonHelper::getAllChildGroupIds(
+                    $request->group_id,
+                    Session::get('user_company_id')
+                )
+            );
+
+            $selected_groups = array_unique($selected_groups);
+
+            $query->whereIn(
+                'accounts.under_group',
+                $selected_groups
+            );
+        }
+
+        $data = $query
+
+                ->select(
+
+                    'payments.id as payment_id',
+
+                    'payments.date',
+
+                    'payments.voucher_no',
+
+                    DB::raw("
+                        CASE
+
+                            WHEN payments.mode = '0'
+                            THEN 'IMPS/NEFT/RTGS'
+
+                            WHEN payments.mode = '1'
+                            THEN 'CASH'
+
+                            WHEN payments.mode = '2'
+                            THEN 'CHEQUE'
+
+                            ELSE payments.mode
+
+                        END as mode
+                    "),
+
+                    'accounts.account_name',
+
+                    'payment_details.debit as amount'
+
+                )
+
+                ->orderBy('payments.date')
+
+                ->get();
+
+        return response()->json($data);
+    }
 }

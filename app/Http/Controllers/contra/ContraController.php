@@ -698,7 +698,7 @@ class ContraController extends Controller
             $fp = file($filePath, FILE_SKIP_EMPTY_LINES);
             $index = 1;
             $series_no = "";
-            while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+            while (($data = fgetcsv($handle, 10000, ',')) !== false) {
                $data = array_map('trim', $data);
                if($data[0]!="" && $data[1]!="" && $data[2]!=""){                  
                   $series = $data[1];
@@ -755,6 +755,25 @@ class ContraController extends Controller
          $material_center_arr[] = $value->mat_center;
          $gst_no_arr[] = $value->gst_no;
       }
+      // ===== CONTRA ALLOWED GROUP IDS =====
+      $contra_root_groups = [7,8];
+
+      $contra_group_ids = [];
+
+      foreach ($contra_root_groups as $gid) {
+
+         $contra_group_ids[] = $gid;
+
+         $contra_group_ids = array_merge(
+            $contra_group_ids,
+            CommonHelper::getAllChildGroupIds(
+               $gid,
+               Session::get('user_company_id')
+            )
+         );
+      }
+
+      $contra_group_ids = array_unique($contra_group_ids);
       $bill_date = "";
       $file = $request->file('csv_file');  
       $filePath = $file->getRealPath();      
@@ -766,17 +785,49 @@ class ContraController extends Controller
          $total_row = $total_row - 1;
          $success_row = 0;
          $index = 1;
-         while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+         while (($data = fgetcsv($handle, 10000, ',')) !== false) {
             $data = array_map('trim', $data);
-            if($data[0]=="" && $data[1]=="" && $data[2]=="" && $data[3]=="" && $data[4]=="" && $data[5]=="" && $data[6]==""){
+            if(
+               !isset($data[0]) &&
+               !isset($data[1]) &&
+               !isset($data[2]) &&
+               !isset($data[3]) &&
+               !isset($data[4]) &&
+               !isset($data[5]) &&
+               !isset($data[6])
+            ){
                $index++;
                continue;                  
             }
             if($data[0]!="" && $data[1]!=""){
+               if(empty(trim($data[2]))){
+                  array_push($error_arr, 'Voucher No / Bill No Cannot Be Empty - Row '.$index);
+               }
                if($bill_date!=""){
-                  array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"bill_no"=>$bill_no,"mode"=>$mode,"remark"=>$remark,"txn_arr"=>$txn_arr,"error_arr"=>$error_arr));
+
+                  if(round($total_debit,2) != round($total_credit,2)){
+                     array_push(
+                        $error_arr,
+                        'Debit Total ('.$total_debit.') and Credit Total ('.$total_credit.') mismatch for Voucher '.$bill_no
+                     );
+                  }
+
+                  array_push($data_arr,array(
+                     "bill_date"=>$bill_date,
+                     "series"=>$series,
+                     "bill_no"=>$bill_no,
+                     "mode"=>$mode,
+                     "remark"=>$remark,
+                     "txn_arr"=>$txn_arr,
+                     "error_arr"=>$error_arr
+                  ));
                }
                $credit_count = 0;$debit_count = 0;
+               $total_debit = 0;
+               $total_credit = 0;
+
+               $debit_account_id = '';
+               $credit_account_id = '';
                $txn_arr = [];
                $error_arr = [];
                $bill_date = $data[0];
@@ -809,25 +860,71 @@ class ContraController extends Controller
                   }
                }
             }
-            $account = $data[5];
+            $account = isset($data[5]) ? trim($data[5]) : '';
+
+            $debit = isset($data[6]) 
+               ? preg_replace('/[^0-9.\-]/', '', $data[6]) 
+               : '';
+
+            $credit = isset($data[7]) 
+               ? preg_replace('/[^0-9.\-]/', '', $data[7]) 
+               : '';
+
+            // skip empty row
+            if($account == '' && $debit == '' && $credit == ''){
+               $index++;
+               continue;
+            }
+
             $check_account = Accounts::where('account_name',trim($account))
                         ->where('company_id',trim(Session::get('user_company_id')))
+                        ->where('delete','0')
+                        ->select('id','account_name','under_group')
                         ->first();
+
             if(!$check_account){
                array_push($error_arr, 'Account Name '.$account.' Not Found - Row '.$index);
             }
-            $debit = $data[6];
-            $debit = str_replace(",","",$debit);
-            $credit = $data[7];
-            $credit = str_replace(",","",$credit);
-            if($debit=="" && $credit==""){
-               array_push($error_arr, 'Debit/Credit Cannot - Row '.$index);
+
+            // only contra group accounts allowed
+            if(
+               $check_account &&
+               !in_array($check_account->under_group, $contra_group_ids)
+            ){
+               array_push(
+                  $error_arr,
+                  'Only Contra Group Accounts Allowed - Row '.$index
+               );
+            }            if($debit=="" && $credit==""){
+               array_push($error_arr, 'Both Debit and Credit Cannot Be Empty - Row '.$index);
             }
-            if($debit!="" && $credit!=0){
+            if($debit!="" && $debit!=0){
                $debit_count++;
             }
             if($credit!="" && $credit!=0){
                $credit_count++;
+            }
+            $total_debit += (float)$debit;
+            $total_credit += (float)$credit;
+
+            // store debit/credit accounts
+            if($debit != '' && $debit != 0){
+               $debit_account_id = $check_account ? $check_account->id : '';
+            }
+
+            if($credit != '' && $credit != 0){
+               $credit_account_id = $check_account ? $check_account->id : '';
+            }
+            // debit and credit account cannot be same
+            if(
+               $debit_account_id != '' &&
+               $credit_account_id != '' &&
+               $debit_account_id == $credit_account_id
+            ){
+               array_push(
+                  $error_arr,
+                  'Debit And Credit Account Cannot Be Same - Row '.$index
+               );
             }
             if($debit_count>1 || $credit_count>1){
                array_push($error_arr, 'Debit/Credit Only 1 entry Allowed - Row '.$index);
@@ -839,8 +936,24 @@ class ContraController extends Controller
             }
             
             if($index==$total_row){
-               array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"bill_no"=>$bill_no,"mode"=>$mode,"remark"=>$remark,"txn_arr"=>$txn_arr,"error_arr"=>$error_arr));
-            }   
+
+               if(round($total_debit,2) != round($total_credit,2)){
+                  array_push(
+                     $error_arr,
+                     'Debit Total ('.$total_debit.') and Credit Total ('.$total_credit.') mismatch for Voucher '.$bill_no
+                  );
+               }
+
+               array_push($data_arr,array(
+                  "bill_date"=>$bill_date,
+                  "series"=>$series,
+                  "bill_no"=>$bill_no,
+                  "mode"=>$mode,
+                  "remark"=>$remark,
+                  "txn_arr"=>$txn_arr,
+                  "error_arr"=>$error_arr
+               ));
+            }
             $index++;
          } 
          fclose($handle);

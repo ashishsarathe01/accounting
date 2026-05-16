@@ -1059,7 +1059,28 @@ class AccountSummaryController extends Controller
             ->groupBy('month')
             ->orderBy('month')
             ->get();
+        $period = \Carbon\CarbonPeriod::create(
+            \Carbon\Carbon::parse($from)->startOfMonth(),
+            '1 month',
+            \Carbon\Carbon::parse($to)->startOfMonth()
+        );
 
+        $allMonths = [];
+
+        foreach ($period as $date) {
+
+            $monthKey = $date->format('Y-m');
+
+            $existingMonth = $months->firstWhere('month', $monthKey);
+
+            $allMonths[] = (object)[
+                'month'  => $monthKey,
+                'debit'  => $existingMonth->debit ?? 0,
+                'credit' => $existingMonth->credit ?? 0,
+            ];
+        }
+
+        $months = collect($allMonths);
         return view('AccountSummary.month', compact(
             'account',
             'months',
@@ -1617,12 +1638,31 @@ class AccountSummaryController extends Controller
             ->groupBy('month')
             ->orderBy('month')
             ->get();
-    
+    $period = \Carbon\CarbonPeriod::create(
+        \Carbon\Carbon::parse($from)->startOfMonth(),
+        '1 month',
+        \Carbon\Carbon::parse($to)->startOfMonth()
+    );
+
+    $allMonths = [];
+
+    foreach ($period as $date) {
+
+        $monthKey = $date->format('Y-m');
+
+        $existingMonth = $months->firstWhere('month', $monthKey);
+
+        $allMonths[] = (object)[
+            'month'  => $monthKey,
+            'debit'  => $existingMonth->debit ?? 0,
+            'credit' => $existingMonth->credit ?? 0,
+        ];
+    }
+
+    $months = collect($allMonths);    
         $rows = [];
         $totalDebit = 0;
         $totalCredit = 0;
-        $totalOpening = 0;
-        $totalClosing = 0;
         $runningBalance = $opening;
     
         foreach ($months as $m) {
@@ -1644,15 +1684,13 @@ class AccountSummaryController extends Controller
                 formatIndianNumber($monthCredit, 2),
                 formatIndianNumber(abs($closingBalance), 2) . ' ' . ($closingBalance < 0 ? 'Cr' : 'Dr'),
             ];
-            $totalOpening +=abs($openingBalance);
-            $totalClosing +=abs($closingBalance);
             $totalDebit  += $monthDebit;
             $totalCredit += $monthCredit;
         }
     
         $fileName = 'account_month_summary_' . now()->format('Ymd_His') . '.csv';
     
-        return response()->stream(function () use ($company, $account, $rows, $totalDebit, $totalCredit, $from, $to,$totalOpening,$totalClosing) {
+        return response()->stream(function () use ($company, $account, $rows, $totalDebit, $totalCredit, $from, $to) {
     
             $file = fopen('php://output', 'w');
     
@@ -1672,10 +1710,10 @@ class AccountSummaryController extends Controller
     
             fputcsv($file, [
                 'TOTAL',
-                formatIndianNumber($totalOpening, 2),
+                '',
                 formatIndianNumber($totalDebit, 2),
                 formatIndianNumber($totalCredit, 2),
-                formatIndianNumber($totalClosing, 2),
+                '',
             ]);
     
             fclose($file);
@@ -1832,12 +1870,31 @@ class AccountSummaryController extends Controller
             ->groupBy('month')
             ->orderBy('month')
             ->get();
-    
+    $period = \Carbon\CarbonPeriod::create(
+        \Carbon\Carbon::parse($from)->startOfMonth(),
+        '1 month',
+        \Carbon\Carbon::parse($to)->startOfMonth()
+    );
+
+    $allMonths = [];
+
+    foreach ($period as $date) {
+
+        $monthKey = $date->format('Y-m');
+
+        $existingMonth = $months->firstWhere('month', $monthKey);
+
+        $allMonths[] = (object)[
+            'month'  => $monthKey,
+            'debit'  => $existingMonth->debit ?? 0,
+            'credit' => $existingMonth->credit ?? 0,
+        ];
+    }
+
+    $months = collect($allMonths);    
         $rows = [];
         $totalDebit = 0;
         $totalCredit = 0;
-        $totalOpening = 0;
-        $totalClosing = 0;
         $runningBalance = $opening;
         foreach ($months as $m) {
             $monthDebit  = (float)$m->debit;
@@ -1855,8 +1912,6 @@ class AccountSummaryController extends Controller
                 formatIndianNumber($monthCredit, 2),
                 formatIndianNumber(abs($closingBalance), 2) . ' ' . ($closingBalance < 0 ? 'Cr' : 'Dr'),
             ];
-            $totalOpening += $openingBalance;
-            $totalClosing += $closingBalance;
             $totalDebit  += $monthDebit;
             $totalCredit += $monthCredit;
         }
@@ -1869,9 +1924,7 @@ class AccountSummaryController extends Controller
             'totalDebit',
             'totalCredit',
             'from',
-            'to',
-            'totalOpening',
-            'totalClosing'
+            'to'
         ))->setPaper('A4', 'portrait');
     
         return $pdf->download('account_month_summary.pdf');

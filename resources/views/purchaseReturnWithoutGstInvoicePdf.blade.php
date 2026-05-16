@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Credit Note</title>
+    <title>Debit Note</title>
     <style>
         body {
             margin: 0;
@@ -130,7 +130,7 @@
                                     @endif
                                 </td>
                                 <td width="60%" style="border:none; text-align:center;">
-                                    <p style="margin:0;"><u>CREDIT NOTE</u></p>
+                                    <p style="margin:0;"><u>DEBIT NOTE</u></p>
                                     <p style="margin:0; font-size:{{ $fontSize }}; font-weight:bold; color:{{ $configuration->company_name_color ?? 'black' }};">
                                         {{ $companyName }}
                                     </p>
@@ -160,12 +160,12 @@
             </tr>
 
             {{-- ================= INVOICE INFO SECTION ================= --}}
-            {{-- LEFT = Party Details | RIGHT = Credit Note details (no e-invoice for without-gst) --}}
+            {{-- LEFT = Party Details | RIGHT = Dr. Note details --}}
             <tr>
                 <td colspan="8" style="padding:0;">
                     <table style="width:100%; border-collapse:collapse; table-layout:fixed; border:none;">
                         <tr>
-                            {{-- LEFT: Party Details — from sale return without gst blade --}}
+                            {{-- LEFT: Party Details — from purchase return without gst blade ($sale_return->*) --}}
                             <td style="width:50%; vertical-align:top; padding:10px; border-right:1px solid #000; height:150px;">
                                 <p style="margin:0;">
                                     <strong>Party Details :</strong>
@@ -182,18 +182,18 @@
                                 </p>
                             </td>
 
-                            {{-- RIGHT: Cr. Note No + Date — from sale return without gst blade --}}
+                            {{-- RIGHT: Dr. Note Details — from purchase return without gst blade ($sale_return->*) --}}
                             <td style="width:50%; vertical-align:top; padding:10px; height:150px;">
                                 <table style="width:100%; border:none; border-collapse:collapse;">
                                     <tr>
-                                        <td style="border:none; width:40%;">Cr. Note No</td>
+                                        <td style="border:none; width:40%;">Dr. Note No</td>
                                         <td style="border:none; width:5%;">:</td>
                                         <td style="border:none;">
                                             <strong>{{ $sale_return->sr_prefix }}</strong>
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td style="border:none;">Cr. Note Date</td>
+                                        <td style="border:none;">Dr. Note Date</td>
                                         <td style="border:none;">:</td>
                                         <td style="border:none;">
                                             {{ date('d-m-Y', strtotime($sale_return->date)) }}
@@ -206,11 +206,11 @@
                 </td>
             </tr>
 
-            {{-- ================= ITEMS (without gst — uses $items, account-based, no tax cols) ================= --}}
+            {{-- ================= ITEMS (without gst — uses $items, credit-based, no tax cols) ================= --}}
             <tr>
                 <th style="width:5%; padding:0px 3px;">S.N.</th>
-                <th colspan="4" style="text-align:left; width:85%;">Account</th>
-                <th colspan="3" style="text-align:right; width:10%;">Amount (&#x20B9;)</th>
+                <th colspan="3" style="text-align:left;">Account</th>
+                <th colspan="3" style="text-align:right; width:15%;">Amount (&#x20B9;)</th>
             </tr>
 
             @php $i = 1; $item_total = 0; $percentage = 0; @endphp
@@ -218,11 +218,11 @@
                 <tr>
                     <td style="text-align:left;">{{ $i }}</td>
                     <td colspan="4" style="text-align:left;">{{ $item->account_name }}</td>
-                    <td colspan="3" style="text-align:right;">{{ formatIndianNumber($item->debit) }}</td>
+                    <td colspan="3" style="text-align:right;">{{ formatIndianNumber($item->credit) }}</td>
                 </tr>
                 @php
                     $i++;
-                    $item_total += $item->debit;
+                    $item_total += $item->credit;
                     $percentage += $item->percentage;
                 @endphp
             @endforeach
@@ -244,7 +244,14 @@
                 </td>
             </tr>
 
-            {{-- ================= AMOUNT IN WORDS (Sale Return Without GST logic) ================= --}}
+            {{-- ================= NARRATION (purchase return without gst blade) ================= --}}
+            <tr>
+                <td colspan="8" style="border-top:1px solid #dadada;">
+                    <strong>Narration : </strong>{{ $sale_return->remark }}
+                </td>
+            </tr>
+
+            {{-- ================= AMOUNT IN WORDS (purchase return without gst logic) ================= --}}
             <tr>
                 <td colspan="8" style="border-top:0;">
                     <strong>
@@ -317,7 +324,7 @@
                             <img src="{{ $signBase64 }}" style="width:145px; height:70px;">
                         </p>
                     @else
-                        <p style="width:145px; height:70px;"></p>
+                        <p style="text-align:right; margin:0; padding:0; width:145px; height:70px;"></p>
                     @endif
                     <p style="text-align:right; margin:0; padding:0;">
                         <strong>Authorised Signatory</strong>

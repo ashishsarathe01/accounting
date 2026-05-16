@@ -299,4 +299,118 @@ class ReceiptRegisterController extends Controller
             )
         );
     }
+
+    public function receiptRegisterModalDetails(Request $request)
+{
+    $query = DB::table('receipt_details')
+
+                ->join(
+                    'receipts',
+                    'receipts.id',
+                    '=',
+                    'receipt_details.receipt_id'
+                )
+
+                ->join(
+                    'accounts',
+                    'accounts.id',
+                    '=',
+                    'receipt_details.account_name'
+                )
+
+                ->where(
+                    'receipt_details.type',
+                    'Credit'
+                )
+
+                ->where(
+                    'receipt_details.company_id',
+                    Session::get('user_company_id')
+                )
+
+                ->where(
+                    'receipt_details.delete',
+                    '0'
+                )
+
+                ->whereBetween(
+                    'receipts.date',
+                    [
+                        $request->from_date,
+                        $request->to_date
+                    ]
+                );
+
+    // ACCOUNT FILTER
+    if (!empty($request->account_id))
+    {
+        $query->where(
+            'accounts.id',
+            $request->account_id
+        );
+    }
+
+    // GROUP FILTER
+    if (!empty($request->group_id))
+    {
+
+        $selected_groups = [];
+
+        $selected_groups[] = $request->group_id;
+
+        $selected_groups = array_merge(
+            $selected_groups,
+            CommonHelper::getAllChildGroupIds(
+                $request->group_id,
+                Session::get('user_company_id')
+            )
+        );
+
+        $selected_groups = array_unique($selected_groups);
+
+        $query->whereIn(
+            'accounts.under_group',
+            $selected_groups
+        );
+    }
+
+    $data = $query
+
+            ->select(
+
+                'receipts.id as receipt_id',
+
+                'receipts.date',
+
+                'receipts.voucher_no',
+
+                DB::raw("
+                    CASE
+
+                        WHEN receipts.mode = '0'
+                        THEN 'IMPS/NEFT/RTGS'
+
+                        WHEN receipts.mode = '1'
+                        THEN 'CASH'
+
+                        WHEN receipts.mode = '2'
+                        THEN 'CHEQUE'
+
+                        ELSE receipts.mode
+
+                    END as mode
+                "),
+
+                'accounts.account_name',
+
+                'receipt_details.credit as amount'
+
+            )
+
+            ->orderBy('receipts.date')
+
+            ->get();
+
+    return response()->json($data);
+}
 }

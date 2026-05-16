@@ -194,6 +194,9 @@ Edit Job Work Out – Finished Goods
          <th class="w-min-50 border-none bg-light-pink text-body" style="width: 1%;">S.No</th>
          <th class="w-min-50 border-none bg-light-pink text-body" style="width: 22%;">Item</th>
          <th class="w-min-50 border-none bg-light-pink text-body text-right pr-3 py-2" style="width: 8%;">Qty</th>
+         @if($type == 'raw')
+        <th class="w-min-50 border-none bg-light-pink text-body text-right pr-3 py-2" style="width: 8%;">Weight</th>
+        @endif
          <th class="w-min-50 border-none bg-light-pink text-body text-center py-2" style="width: 8%;">Unit</th>
          <th class="w-min-50 border-none bg-light-pink text-body text-right pr-3 py-2" style="width: 10%;">Rate</th>
          <th class="w-min-50 border-none bg-light-pink text-body text-right pr-3 py-2" style="width: 10%;">Amount</th>
@@ -284,7 +287,18 @@ Edit Job Work Out – Finished Goods
                       data-id="{{ $add_more_count }}" 
                       value="{{ $row->qty }}" />
             </td>
-            
+            @if($type == 'raw')
+            <!-- Weight -->
+            <td class="text-right pr-3 py-2">
+            <input type="number"
+                    class="form-control form-control-sm"
+                    name="weight[]"
+                    placeholder="0.00"
+                    style="text-align:right; height:34px;"
+                    value="{{ $row->weight }}" />
+            </td>
+            @endif
+
             <!-- Unit -->
             <td class="text-center py-2">
                <input type="text" class="unit form-control form-control-sm" 
@@ -373,6 +387,16 @@ Edit Job Work Out – Finished Goods
                <input type="number" class="quantity form-control form-control-sm" id="quantity_tr_1" 
                       name="qty[]" placeholder="0.00" style="text-align:right; height: 34px;" data-id="1"/>
             </td>
+            @if($type == 'raw')
+            <td class="text-right pr-3 py-2">
+            <input type="number"
+                    class="form-control form-control-sm"
+                    name="weight[]"
+                    placeholder="0.00"
+                    style="text-align:right; height:34px;">
+            </td>
+            @endif
+
             <td class="text-center py-2">
                <input type="text" class="unit form-control form-control-sm" id="unit_tr_1" 
                       readonly style="text-align:center; height: 34px;" data-id="1"/>
@@ -395,6 +419,9 @@ Edit Job Work Out – Finished Goods
          <td></td>
          <td></td>
          <td></td>
+         @if($type == 'raw')
+        <td></td>
+        @endif
          <td></td>
          <td class="fw-bold">Total</td>
          <td class="fw-bold">
@@ -859,7 +886,16 @@ let newRow = `
             placeholder="0.00"
             style="text-align:right;height:34px;">
     </td>
-
+    @if($type == 'raw')
+    <!-- WEIGHT -->
+    <td class="text-right pr-3 py-2">
+        <input type="number"
+            class="form-control form-control-sm"
+            name="weight[]"
+            placeholder="0.00"
+            style="text-align:right;height:34px;">
+    </td>
+    @endif
     <!-- UNIT -->
     <td class="text-center py-2">
         <input type="text"

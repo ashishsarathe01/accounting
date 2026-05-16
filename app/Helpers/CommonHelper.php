@@ -965,11 +965,24 @@ class CommonHelper
         $out_reels = 0,
         $out_weight = 0
     ) {
+
+        $isParameterized = DB::table('manage_items')
+            ->join('item_groups', 'manage_items.g_name', '=', 'item_groups.id')
+            ->where('manage_items.id', $item_id)
+            ->where('manage_items.company_id', $company_id)
+            ->where('item_groups.parameterized_stock_status', 1)
+            ->exists();
+
+        if (!$isParameterized) {
+            return;
+        }
+
         $row = DB::table('item_daily_reel_stock')
             ->where('company_id', $company_id)
             ->where('item_id', $item_id)
             ->where('stock_date', $date)
             ->first();
+
         if ($row) {
             $new_in_reels   = $row->in_reels + $in_reels;
             $new_in_weight  = $row->in_weight + $in_weight;
@@ -1000,19 +1013,27 @@ class CommonHelper
                     ]);
             }
         } else {
-            if($in_reels >= 0 && $in_weight >= 0 && $out_reels >= 0 && $out_weight >= 0){
+            if (
+                $in_reels != 0 ||
+                $in_weight != 0 ||
+                $out_reels != 0 ||
+                $out_weight != 0
+            ) {
                 DB::table('item_daily_reel_stock')
-                ->insert([
-                    'company_id' => $company_id,
-                    'item_id' => $item_id,
-                    'stock_date' => $date,
-                    'in_reels' => max(0, $in_reels),
-                    'in_weight' => max(0, $in_weight),
-                    'out_reels' => max(0, $out_reels),
-                    'out_weight' => max(0, $out_weight),
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+                    ->insert([
+                        'company_id' => $company_id,
+                        'item_id' => $item_id,
+                        'stock_date' => $date,
+
+                        'in_reels'   => max(0, $in_reels),
+                        'in_weight'  => max(0, $in_weight),
+
+                        'out_reels'  => max(0, $out_reels),
+                        'out_weight' => max(0, $out_weight),
+
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
             }
         }
     }

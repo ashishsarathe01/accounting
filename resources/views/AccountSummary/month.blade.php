@@ -67,7 +67,7 @@
                                 }
                             @endphp
 
-                            @forelse($months as $m)
+                            @foreach($months as $m)
                                 @php
                                     $totalDebit  += $m->debit;
                                     $totalCredit += $m->credit;
@@ -121,13 +121,7 @@
                                         {{ $closingBalance < 0 ? 'Cr' : 'Dr' }}
                                     </td>
                                 </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="3" class="text-center text-muted py-3">
-                                        No transactions found for this account
-                                    </td>
-                                </tr>
-                            @endforelse
+                            @endforeach
                         </tbody>
 
                         {{-- TOTAL --}}

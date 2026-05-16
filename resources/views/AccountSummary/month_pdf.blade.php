@@ -72,10 +72,10 @@
         <tfoot>
             <tr>
                 <th class="text-end">TOTAL</th>
-                <th class="text-end">{{ number_format($totalOpening,2) }}</th>
+                <th></th>
                 <th class="text-end">{{ number_format($totalDebit,2) }}</th>
                 <th class="text-end">{{ number_format($totalCredit,2) }}</th>
-                <th class="text-end">{{ number_format($totalClosing,2) }}</th>
+                <th></th>
             </tr>
         </tfoot>
     </table>

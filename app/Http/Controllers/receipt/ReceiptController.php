@@ -803,7 +803,7 @@ class ReceiptController extends Controller
             $fp = file($filePath, FILE_SKIP_EMPTY_LINES);
             $index = 1;
             $series_no = "";
-            while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+            while (($data = fgetcsv($handle, 10000, ',')) !== false) {
                $data = array_map('trim', $data);
                if($data[0]!="" && $data[1]!="" && $data[2]!=""){                  
                   $series = $data[1];
@@ -860,6 +860,22 @@ class ReceiptController extends Controller
          $material_center_arr[] = $value->mat_center;
          $gst_no_arr[] = $value->gst_no;
       }
+      // ===== BANK GROUP IDS =====
+      $bank_root_group = 7;
+
+      $bank_group_ids = [];
+      $bank_group_ids[] = $bank_root_group;
+
+      // get all child groups
+      $bank_group_ids = array_merge(
+         $bank_group_ids,
+         CommonHelper::getAllChildGroupIds(
+            $bank_root_group,
+            Session::get('user_company_id')
+         )
+      );
+
+      $bank_group_ids = array_unique($bank_group_ids);
       $bill_date = "";
       $file = $request->file('csv_file');  
       $filePath = $file->getRealPath();      
@@ -871,17 +887,46 @@ class ReceiptController extends Controller
          $total_row = $total_row - 1;
          $success_row = 0;
          $index = 1;
-         while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+         while (($data = fgetcsv($handle, 10000, ',')) !== false) {
             $data = array_map('trim', $data);
-            if($data[0]=="" && $data[1]=="" && $data[2]=="" && $data[3]=="" && $data[4]=="" && $data[5]=="" && $data[6]==""){
+            if(
+               !isset($data[0]) &&
+               !isset($data[1]) &&
+               !isset($data[2]) &&
+               !isset($data[3]) &&
+               !isset($data[4]) &&
+               !isset($data[5]) &&
+               !isset($data[6])
+            ){
                $index++;
                continue;                  
             }
             if($data[0]!="" && $data[1]!=""){
+               if(empty(trim($data[2]))){
+                  array_push($error_arr, 'Voucher No / Bill No Cannot Be Empty - Row '.$index);
+               }
                if($bill_date!=""){
-                  array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"bill_no"=>$bill_no,"mode"=>$mode,"remark"=>$remark,"txn_arr"=>$txn_arr,"error_arr"=>$error_arr));
+
+                  if(round($total_debit,2) != round($total_credit,2)){
+                     array_push(
+                        $error_arr,
+                        'Debit Total ('.$total_debit.') and Credit Total ('.$total_credit.') mismatch for Voucher '.$bill_no
+                     );
+                  }
+
+                  array_push($data_arr,array(
+                     "bill_date"=>$bill_date,
+                     "series"=>$series,
+                     "bill_no"=>$bill_no,
+                     "mode"=>$mode,
+                     "remark"=>$remark,
+                     "txn_arr"=>$txn_arr,
+                     "error_arr"=>$error_arr
+                  ));
                }
                $debit_count = 0;
+               $total_debit = 0;
+               $total_credit = 0;
                $txn_arr = [];
                $error_arr = [];
                $bill_date = $data[0];
@@ -912,23 +957,52 @@ class ReceiptController extends Controller
                   }
                }
             }
-            $account = $data[5];
+            $account = isset($data[5]) ? trim($data[5]) : '';
+
+            $debit = isset($data[6]) 
+               ? preg_replace('/[^0-9.\-]/', '', $data[6]) 
+               : '';
+
+            $credit = isset($data[7]) 
+               ? preg_replace('/[^0-9.\-]/', '', $data[7]) 
+               : '';
+
+            // skip empty txn row
+            if($account == '' && $debit == '' && $credit == ''){
+               $index++;
+               continue;
+            }
+
             $check_account = Accounts::where('account_name',trim($account))
                         ->where('company_id',trim(Session::get('user_company_id')))
+                        ->where('delete','0')
+                        ->select('id','account_name','under_group')
                         ->first();
+
             if(!$check_account){
                array_push($error_arr, 'Account Name '.$account.' Not Found - Row '.$index);
             }
-            $debit = $data[6];
-            $debit = trim(str_replace(",","",$debit));
-            $credit = $data[7];
-            $credit = trim(str_replace(",","",$credit));
+
+            // ===== BANK ACCOUNT SHOULD NOT BE IN CREDIT =====
+            if(
+               $check_account &&
+               in_array($check_account->under_group, $bank_group_ids) &&
+               $credit != '' &&
+               $credit != 0
+            ){
+               array_push(
+                  $error_arr,
+                  'Bank Account '.$account.' Cannot Be In Credit - Row '.$index
+               );
+            }  
             if($debit=="" && $credit==""){
-               array_push($error_arr, 'Debit/Credit Cannot - Row '.$index);
+               array_push($error_arr, 'Both Debit and Credit Cannot Be Empty - Row '.$index);
             }
              if($debit!="" && $debit!=0){
                $debit_count++;
             }
+            $total_debit += (float)$debit;
+            $total_credit += (float)$credit;
             if($debit_count>1){
                array_push($error_arr, 'More than one debit entry found - Row '.$index);
             }
@@ -939,8 +1013,24 @@ class ReceiptController extends Controller
             }
             
             if($index==$total_row){
-               array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"bill_no"=>$bill_no,"mode"=>$mode,"remark"=>$remark,"txn_arr"=>$txn_arr,"error_arr"=>$error_arr));
-            }   
+
+               if(round($total_debit,2) != round($total_credit,2)){
+                  array_push(
+                     $error_arr,
+                     'Debit Total ('.$total_debit.') and Credit Total ('.$total_credit.') mismatch for Voucher '.$bill_no
+                  );
+               }
+
+               array_push($data_arr,array(
+                  "bill_date"=>$bill_date,
+                  "series"=>$series,
+                  "bill_no"=>$bill_no,
+                  "mode"=>$mode,
+                  "remark"=>$remark,
+                  "txn_arr"=>$txn_arr,
+                  "error_arr"=>$error_arr
+               ));
+            }
             $index++;
          } 
          fclose($handle);
