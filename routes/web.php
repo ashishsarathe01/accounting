@@ -107,7 +107,12 @@ use App\Http\Controllers\AdminModuleController\GSTComplianceController;
 use App\Http\Controllers\DutiesCompliance\DutiesComplianceController;
 use App\Http\Controllers\AdminModuleController\DefaultPrivilegesController;
 use App\Http\Controllers\ReceiptRegister\ReceiptRegisterController;
-use App\Http\Controllers\PaymentRegister\PaymentRegisterReportController;/*
+use App\Http\Controllers\PaymentRegister\PaymentRegisterReportController;
+use App\Http\Controllers\tdsReport\TdsReportController;
+use App\Http\Controllers\BoxController;
+use App\Http\Controllers\production\OpeningStockReelWiseController;
+use App\Http\Controllers\MerchantCredentials\MerchantCredentialsController;
+/*
 |--------------------------------------------------------------------------
 | Web Routes
 |--------------------------------------------------------------------------
@@ -1307,8 +1312,24 @@ Route::get('/journal/print/{id}', [JournalController::class, 'print'])->name('jo
     Route::get('/report/hsn/detail', [gstR1Controller::class, 'hsnDetail']);  
     
     //TDS Report working
+
+    Route::get('/tds-194c-report', [TdsReportController::class, 'tds194c'])->name('tds.194c.report');
+    Route::get('/tds-194c-report/view', [TdsReportController::class, 'tds194cView'])->name('tds.194c.report.view');
+    Route::get('/receipt-register', [ReceiptRegisterController::class, 'index'])->name('receipt_register');
+    Route::get('/payment-register',[PaymentRegisterReportController::class, 'index'])->name('payment_register');
+    Route::get('/box-calculator', [BoxController::class, 'index']);
+    Route::get('/box-calculator/advance', [BoxController::class, 'advanceindex'])
+    ->name('box-calculator.advance');
+    Route::get('/gstr1/summary', [gstR1Controller::class, 'getReturnSummary'])
+    ->name('gstr1.summary');
+
      Route::get('/tds-194c-report', [TdsReportController::class, 'tds194c'])->name('tds.194c.report');
      Route::get('/tds-194c-report/view', [TdsReportController::class, 'tds194cView'])->name('tds.194c.report.view');
 Route::get('/receipt-register', [ReceiptRegisterController::class, 'index'])->name('receipt_register');
 Route::get('/payment-register',[PaymentRegisterReportController::class, 'index'])->name('payment_register');
+Route::get('payment-register-modal-details',[PaymentRegisterReportController::class, 'paymentRegisterModalDetails'])->name('payment.register.modal.details');
+Route::get('receipt-register-modal-details',[ReceiptRegisterController::class, 'receiptRegisterModalDetails'])->name('receipt.register.modal.details');
+Route::get('/reel-ledger/modal-detail', [OpeningStockReelWiseController::class, 'modalDetail'])->name('reel.ledger.modal.detail');
+Route::get('merchant-credentials',[MerchantCredentialsController::class, 'index'])->name('merchant_credentials.index');
+Route::post('merchant-credentials/store',[MerchantCredentialsController::class, 'store'])->name('merchant_credentials.store');
 });
