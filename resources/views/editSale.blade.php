@@ -863,8 +863,8 @@ foreach($manageitems as $value) {
                                              <label for="name" class="form-label font-14 font-heading">Reverse Charge</label>
                                              <select class="w-95-parsent form-select" id="reverse_charge" id="reverse_charge" name="reverse_charge">
                                                 <option value="">Select</option>
-                                                <option value="Yes" <?php if($sale->reverse_charge=="Yes"){ echo "selected";}?>>Yes</option>
-                                                <option value="No" <?php if($sale->reverse_charge=="No"){ echo "selected";}?>>No</option>
+                                                <option value="Y" <?php if($sale->reverse_charge=="Y"){ echo "selected";}?>>Yes</option>
+                                                <option value="N" <?php if($sale->reverse_charge=="N"){ echo "selected";}?>>No</option>
                                              </select>
                                           </div>
                                           <div class="mb-6 col-md-6">

@@ -649,8 +649,8 @@
                                              <label for="name" class="form-label font-14 font-heading">Reverse Charge</label>
                                              <select class="w-95-parsent form-select" id="reverse_charge" id="reverse_charge" name="reverse_charge">
                                                 <option value="">Select</option>
-                                                <option value="Yes">Yes</option>
-                                                <option value="No">No</option>
+                                                <option value="Y">Y</option>
+                                                <option value="N">N</option>
                                              </select>
                                           </div>
                                           <div class="mb-6 col-md-6">
@@ -3430,7 +3430,7 @@ function calculateProfit(rowId) {
     let gstDiff = gstSale - gstCost;
 
     // Step 6: final profit
-    let finalProfit = profitBeforeGst - gstDiff;
+    let finalProfit = profitBeforeGst ;
 
     $("#price_tr_" + rowId).val(withoutGst.toFixed(2));
     $("#profit_tr_" + rowId).val(finalProfit.toFixed(2));

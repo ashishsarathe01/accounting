@@ -129,7 +129,7 @@ $(document).ready(function() {
     let series = $('#series').val();
     let from_date = $('#from_date').val();
     let to_date = $('#to_date').val();
-
+    let type = "3b";
     if (!series || !from_date || !to_date) {
         alert("Please fill all fields");
         return;
@@ -142,7 +142,8 @@ $(document).ready(function() {
             _token: '{{ csrf_token() }}',
             series: series,
             from_date: from_date,
-            to_date: to_date
+            to_date: to_date,
+            type : type
         },
         success: function(res) {
         

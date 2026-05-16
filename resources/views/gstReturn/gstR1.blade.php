@@ -145,6 +145,52 @@
         border-bottom: none !important;
     }
     
+    .summary-box{
+                border:1px solid #c7c7c7;
+                margin-bottom:20px;
+                background:#fff;
+             }
+        
+        .summary-header{
+            background:#1fb5ad;
+            color:#fff;
+            font-weight:bold;
+            padding:8px 12px;
+            font-size:15px;
+        }
+        
+        .summary-table{
+            width:100%;
+            border-collapse:collapse;
+        }
+        
+        .summary-table th{
+            background:#f2f2f2;
+            border:1px solid #d5d5d5;
+            padding:8px;
+            font-size:13px;
+            text-align:center;
+        }
+        
+        .summary-table td{
+            border:1px solid #d5d5d5;
+            padding:8px;
+            font-size:13px;
+        }
+        
+        .summary-total{
+            background:#f9f9f9;
+            font-weight:bold;
+        }
+        
+        .summary-sub-row{
+            background:#fcfcfc;
+        }
+        
+        .summary-sub-row td:first-child{
+            padding-left:30px;
+        }
+            
 </style>
 <div class="list-of-view-company">
     <section class="list-of-view-company-section container-fluid">
@@ -658,7 +704,7 @@
                                 <div id="view2" class="view-content" style="height:100vh;">
                                     <!-- Section Header -->
                                     <div class="bg-primary text-white px-3 py-2 fw-bold rounded-top">
-                                        GSTR-1 Filing
+                                        GSTR-1 Summary 
                                     </div>
 
                                     <!-- Summary content will go here -->
@@ -920,6 +966,151 @@ function toggleDebitNoteSummary() {
         
     });
     
+    
+    $('#generateSummaryBtn').click(function () {
+
+    let merchant_gst = $('input[name="merchant_gst"]').val();
+    let company_id   = $('input[name="company_id"]').val();
+    let from_date    = $('input[name="from_date"]').val();
+    let to_date      = $('input[name="to_date"]').val();
+
+    $('#generateSummaryBtn').html('Loading...');
+
+    $.ajax({
+        url: "{{ route('gstr1.summary') }}",
+        type: "GET",
+        data: {
+            merchant_gst,
+            company_id,
+            from_date,
+            to_date
+        },
+        success: function (response) {
+
+            $('#generateSummaryBtn').html('Generate Summary');
+
+            if (!response.status) {
+                alert(response.message);
+                return;
+            }
+
+            let sections = response.data;
+
+            let html = '';
+
+            let sectionMap = {
+                'B2B_4A' : '4A - Taxable outward supplies made to registered persons (other than reverse charge)',
+                'B2B_4B' : '4B - Supplies attracting reverse charge',
+                'B2CL'   : '5A - B2CL (Large)',
+                'B2CS'   : '7 - B2CS',
+                'EXP'    : '6A - Exports',
+                'CDNR'   : '9B - Credit / Debit Notes (Registered)',
+                'CDNUR'  : '9B - Credit / Debit Notes (Unregistered)',
+                'HSN'    : '12 - HSN Summary',
+                'DOC_ISSUE' : '13 - Documents Issued'
+            };
+
+            sections.forEach(function(item){
+
+                if(!sectionMap[item.sec_nm]){
+                    return;
+                }
+
+                html += `
+                <div class="summary-box">
+
+                    <div class="summary-header">
+                        ${sectionMap[item.sec_nm]}
+                    </div>
+
+                    <table class="summary-table">
+
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>No. of Records</th>
+                                <th>Value (₹)</th>
+                                <th>Taxable Value (₹)</th>
+                                <th>IGST (₹)</th>
+                                <th>CGST (₹)</th>
+                                <th>SGST (₹)</th>
+                                <th>Cess (₹)</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            <tr class="summary-total">
+                                <td>Total</td>
+                                <td>${item.ttl_rec ?? 0}</td>
+                                <td>${formatIndianNumber(item.ttl_val ?? 0)}</td>
+                                <td>${formatIndianNumber(item.ttl_tax ?? 0)}</td>
+                                <td>${formatIndianNumber(item.ttl_igst ?? 0)}</td>
+                                <td>${formatIndianNumber(item.ttl_cgst ?? 0)}</td>
+                                <td>${formatIndianNumber(item.ttl_sgst ?? 0)}</td>
+                                <td>${formatIndianNumber(item.ttl_cess ?? 0)}</td>
+                            </tr>
+                `;
+
+                if(item.sub_sections){
+
+                    item.sub_sections.forEach(function(sub){
+
+                        html += `
+                            <tr class="summary-sub-row">
+                                <td>${sub.sec_nm ?? sub.typ}</td>
+                                <td>${sub.ttl_rec ?? 0}</td>
+                                <td>${formatIndianNumber(sub.ttl_val ?? 0)}</td>
+                                <td>${formatIndianNumber(sub.ttl_tax ?? 0)}</td>
+                                <td>${formatIndianNumber(sub.ttl_igst ?? 0)}</td>
+                                <td>${formatIndianNumber(sub.ttl_cgst ?? 0)}</td>
+                                <td>${formatIndianNumber(sub.ttl_sgst ?? 0)}</td>
+                                <td>${formatIndianNumber(sub.ttl_cess ?? 0)}</td>
+                            </tr>
+                        `;
+                    });
+                }
+
+                html += `
+                        </tbody>
+
+                    </table>
+
+                </div>
+                `;
+            });
+
+            $('#gstr1-summary-container').html(html);
+
+            $('#fill-tab-2').tab('show');
+        },
+        error: function () {
+
+            $('#generateSummaryBtn').html('Generate Summary');
+
+            alert('Unable to fetch summary');
+        }
+    });
+});
+
+
+function formatIndianNumber(x) {
+
+    x = parseFloat(x).toFixed(2);
+
+    let parts = x.split(".");
+
+    let lastThree = parts[0].substring(parts[0].length - 3);
+
+    let otherNumbers = parts[0].substring(0, parts[0].length - 3);
+
+    if (otherNumbers != '')
+        lastThree = ',' + lastThree;
+
+    let res = otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + lastThree;
+
+    return res + "." + parts[1];
+}
     </script>
 
 @endsection

@@ -814,6 +814,7 @@ Route::post('/payroll/register/store',[PayrollRegisterController::class, 'store'
     
    Route::post('/get-item-size-quantity-edit', [SalesController::class, 'getItemSizeQuantityForEdit'])->name('get-item-size-quantity-edit');
    Route::get('wastekraft-purchase-report/{id?}/{from_date?}/{to_date?}', [SupplierPurchaseController::class, 'wasteKraftPurchaseReport'])->name('wastekraft-purchase-report');
+   Route::get('wastekraft-purchase-report1/{id?}/{from_date?}/{to_date?}', [SupplierPurchaseController::class, 'wasteKraftPurchaseReport1'])->name('wastekraft-purchase-report1');
     Route::get('boilerfuel-purchase-report/{id?}/{from_date?}/{to_date?}', [SupplierPurchaseController::class, 'boilerFuelPurchaseReport'])->name('boilerfuel-purchase-report');
     Route::get('wastekraft-view-detail/{id}/{from}/{to}/{group_id}', [SupplierPurchaseController::class, 'viewApprovedPurchaseDetail'])->name('wastekraft-view-detail');
     Route::get('boilerfuel-view-detail/{id}/{from}/{to}/{group_id}', [SupplierPurchaseController::class, 'viewApprovedPurchaseDetail'])->name('boilerfuel-view-detail');
@@ -1304,12 +1305,13 @@ Route::get('/journal/print/{id}', [JournalController::class, 'print'])->name('jo
     
     //TDS Report working
 
-     Route::get('/tds-194c-report', [TdsReportController::class, 'tds194c'])->name('tds.194c.report');
-     Route::get('/tds-194c-report/view', [TdsReportController::class, 'tds194cView'])->name('tds.194c.report.view');
+    Route::get('/tds-194c-report', [TdsReportController::class, 'tds194c'])->name('tds.194c.report');
+    Route::get('/tds-194c-report/view', [TdsReportController::class, 'tds194cView'])->name('tds.194c.report.view');
     Route::get('/receipt-register', [ReceiptRegisterController::class, 'index'])->name('receipt_register');
     Route::get('/payment-register',[PaymentRegisterReportController::class, 'index'])->name('payment_register');
     Route::get('/box-calculator', [BoxController::class, 'index']);
     Route::get('/box-calculator/advance', [BoxController::class, 'advanceindex'])
     ->name('box-calculator.advance');
-
+    Route::get('/gstr1/summary', [gstR1Controller::class, 'getReturnSummary'])
+    ->name('gstr1.summary');
 });

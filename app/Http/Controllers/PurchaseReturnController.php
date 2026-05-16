@@ -1824,6 +1824,8 @@ class PurchaseReturnController extends Controller
       $purchase->financial_year = $financial_year;
       $purchase->updated_by = Session::get('user_id');
       $purchase->purchase_bill_id = $request->input('purchase_bill_id');
+      $purchase->gstr2b_invoice_id = $request->input('gstr2b_invoice_id');
+      $purchase->linked_month = $request->input('linked_month');
       $purchase->save();
       if($purchase->id){
          $desc_item_arr = PurchaseReturnDescription::where('purchase_return_id',$purchase->id)

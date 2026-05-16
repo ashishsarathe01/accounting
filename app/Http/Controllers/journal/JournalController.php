@@ -1770,7 +1770,7 @@ public function index(Request $request)
                $data = array_map('trim', $data);
                if(trim($data[0])!="" && trim($data[1])!="" && $data[2]!=""){                  
                   $series = trim($data[1]);
-                  $bill_no = trim($data[2]);
+                  $bill_no = trim($data[4]);
                   $receipt = Journal::select('id')
                                        ->where('voucher_no',$bill_no)
                                        ->where('series_no',trim($series))

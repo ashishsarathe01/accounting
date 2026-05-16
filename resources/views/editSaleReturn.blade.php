@@ -215,6 +215,16 @@
                      <input type="text" class="form-control" id="voucher_prefix" name="voucher_prefix" placeholder="" value="{{$sale_return->sr_prefix}}"  readonly style="text-align: right;">
                      <input type="hidden" id="sale_return_no" class="form-control" name="sale_return_no" value="{{$sale_return->sale_return_no}}">
                   </div>
+                  <div class="clearfix"></div>
+                  <div class="mb-4 col-md-4">
+                     <label for="gstr2b_invoice_id" class="form-label font-14 font-heading">Link Debit Note No.</label>
+                     <input type="text" class="form-control" id="gstr2b_invoice_id" name="gstr2b_invoice_id" placeholder="Link Debit Note No." value="{{$sale_return->gstr2b_invoice_id}}" >
+                  </div>
+                  <div class="mb-4 col-md-4">
+                     <label for="linked_month" class="form-label font-14 font-heading">Link Debit Note Month</label>
+                     <input type="month" class="form-control" id="linked_month" name="linked_month" value="{{$sale_return->linked_month}}" >
+                    
+                  </div>
                </div>
                <!-- With Gst With Item Section Start -->
                <div class=" transaction-table transaction-main-table bg-white table-view shadow-sm border-radius-8 mb-4 with_gst_with_item_section" style="display:none">

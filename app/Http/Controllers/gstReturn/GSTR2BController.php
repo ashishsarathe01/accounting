@@ -385,16 +385,63 @@ class GSTR2BController extends Controller
             usort($suppliers, function ($a, $b) {
                 return strcasecmp($a->trdnm, $b->trdnm);
             });
-            foreach ($suppliers as $ctin => $row) {
+          foreach ($suppliers as $ctin => $row) {
 
                 $total_portal = $row->b2b_portal + $row->cdnr_portal;
                 $total_books  = $row->b2b_books  + $row->cdnr_books;
-
+            
                 $suppliers[$ctin]->diff_amt = round(
                     $total_portal - $total_books,
                     2
                 );
             }
+            
+            
+            /*
+            |--------------------------------------------------------------------------
+            | ADD BOOK ONLY PARTIES HERE
+            |--------------------------------------------------------------------------
+            */
+            
+            $existingCtins = collect($suppliers)->pluck('ctin')->map(function($v){
+                return strtoupper(trim($v));
+            })->toArray();
+            
+            $bookParties = Purchase::select(
+                    'billing_gst as ctin',
+                    DB::raw('SUM(total) as b2b_books')
+                )
+                ->where('company_id', Session::get('user_company_id'))
+                ->where('merchant_gst', $request->gstin)
+                ->where('status', '1')
+                ->where('delete', '0')
+                ->where('date', 'like', $request->month.'%')
+                ->groupBy('billing_gst')
+                ->get();
+            
+            foreach($bookParties as $party){
+            
+                if(!in_array(strtoupper(trim($party->ctin)), $existingCtins)){
+            
+                    $account = Accounts::where('gstin', $party->ctin)
+                                ->where('company_id', Session::get('user_company_id'))
+                                ->first();
+            
+                    $suppliers[] = (object)[
+                        'ctin'         => $party->ctin,
+                        'trdnm'        => $account ? $account->account_name : $party->ctin,
+                        'amount'       => 0,
+                        'book_value'   => (float)$party->b2b_books,
+                        'b2b_books'    => (float)$party->b2b_books,
+                        'b2b_portal'   => 0,
+                        'cdnr_books'   => 0,
+                        'cdnr_portal'  => 0,
+                        'diff_amt'     => -(float)$party->b2b_books,
+                    ];
+                }
+            }
+            
+            
             //Pending Notes
             $pending_notes = [];
             $bill_sundry_igst = BillSundrys::where('company_id', Session::get('user_company_id'))
@@ -598,19 +645,42 @@ class GSTR2BController extends Controller
         $b2b_invoices_on_portal_but_not_in_book = "";$total_val_on_portal_but_not_in_book = 0; $total_txval_on_portal_but_not_in_book = 0; $total_igst_on_portal_but_not_in_book = 0; $total_cgst_on_portal_but_not_in_book = 0; $total_sgst_on_portal_but_not_in_book = 0; $total_cess_on_portal_but_not_in_book = 0; $total_book_value_on_portal_but_not_in_book = 0;
 
         //Only in books but not portal code
-        $book_vouchers = Purchase::select('voucher_no')
-                                ->where('billing_gst',$request->ctin)
-                                ->where('company_id',Session::get('user_company_id'))
-                                ->where('merchant_gst',$request->gstin)
-                                ->where('status','1')
-                                ->where('date', 'like', $request->month.'%')
-                                ->where('delete','0')
-                                ->where(function($q) use ($request) {
-                                    $q->where('gstr2b_invoice_id',null);
-                                    $q->orWhere('gstr2b_invoice_id','');
-                                })                                
-                                ->pluck('voucher_no');
-        $book_vouchers = $book_vouchers->toArray();
+$book_vouchers = Purchase::select('voucher_no')
+    ->where('billing_gst', $request->ctin)
+    ->where('company_id', Session::get('user_company_id'))
+    ->where('merchant_gst', $request->gstin)
+    ->where('status', '1')
+    ->where('date', 'like', $request->month.'%')
+    ->where('delete', '0')
+    ->where(function($q) {
+        $q->whereNull('gstr2b_invoice_id')
+          ->orWhere('gstr2b_invoice_id', '');
+    })
+    ->pluck('voucher_no')
+    ->toArray();
+
+
+
+$journal_vouchers = Journal::select('voucher_no')
+    ->where('vendor_gstin', $request->ctin)
+    ->where('company_id', Session::get('user_company_id'))
+    ->where('merchant_gst', $request->gstin)
+    ->where('claim_gst_status', 'YES')
+    ->where('status', '1')
+    ->where('delete', '0')
+    ->where('date', 'like', $request->month.'%')
+    ->where(function($q) {
+        $q->whereNull('gstr2b_invoice_id')
+          ->orWhere('gstr2b_invoice_id', '');
+    })
+    ->pluck('voucher_no')
+    ->toArray();
+
+
+
+$book_vouchers = array_unique(
+    array_merge($book_vouchers, $journal_vouchers)
+);
         $portal_vouchers = [];
         foreach ($gstr2b->data->docdata->b2b as $record) {
             
@@ -657,7 +727,7 @@ class GSTR2BController extends Controller
                         }
                     }
                     $style = "";
-                    if($book_value!=$invoice->val){
+                    if(abs($book_value - $invoice->val) >= 1){
                         $style = "color: red;";
                         $total_val_on_portal_but_not_in_book += $invoice->val;
                         $total_txval_on_portal_but_not_in_book += $invoice->txval;
@@ -678,7 +748,7 @@ class GSTR2BController extends Controller
                     if(!isset($invoice->irn)){
                         $invoice->irn = "";
                     }                    
-                    if($book_value!=$invoice->val){
+                   if(abs($book_value - $invoice->val) >= 1){
                         $b2b_invoices_on_portal_but_not_in_book.="<tr>
                             <td><input type='checkbox' checked class='check_action' data-key='".$key."' data-type='b2b_invoices_rej_btn_'></td>
                             <td>".$invoice->inum."</td>
@@ -714,7 +784,7 @@ class GSTR2BController extends Controller
                     }                    
                 }
                 
-                if($book_value!=$invoice->val){
+                if(abs($book_value - $invoice->val) >= 1){
                     $b2b_invoices_on_portal_but_not_in_book .= "<tr>
                         <td></td>
                         <th colspan='2' style='text-align: right'><strong>Total</strong></th>
@@ -789,68 +859,155 @@ class GSTR2BController extends Controller
         $only_in_book_voucher = array_filter($book_vouchers, function($val) use ($portal_upper) {
                                     return !in_array(strtoupper($val), $portal_upper);
                                 });
+                                
         $total_book_value_only_in_book = 0; $total_val_only_in_book = 0; $total_txval_only_in_book = 0; $total_igst_only_in_book = 0; $total_cgst_only_in_book = 0; $total_sgst_only_in_book = 0; $total_cess_only_in_book = 0;
         $b2b_invoices_only_in_book = "";
-        foreach ($only_in_book_voucher as $key => $invoice_no) {
-            $book_data = Purchase::with(['purchaseSundry'])->where('voucher_no',$invoice_no)
-                                    ->where('billing_gst',$request->ctin)
-                                    ->where('company_id',Session::get('user_company_id'))
-                                    ->where('merchant_gst',$request->gstin)
-                                    ->where('status','1')
-                                    ->where('delete','0')
-                                    ->first();
-            // echo "<pre>";
-            // print_r($book_data->toArray());die;
-            $book_value = 0;$igst_amount=0;$cgst_amount=0;$sgst_amount=0;
-            if($book_data){
-                $book_value = $book_data->total;
-                $total_book_value_only_in_book += $book_value;
-                $total_val_only_in_book += $book_data->total;
-                $total_txval_only_in_book += $book_data->taxable_amt;
-                if($book_data->purchaseSundry && count($book_data->purchaseSundry)>0){
-                    foreach($book_data->purchaseSundry as $sundry){
-                        if($sundry->nature_of_sundry == "CGST"){
-                            $total_cgst_only_in_book += $sundry->amount;
-                            $cgst_amount = $sundry->amount;
-                        }else if($sundry->nature_of_sundry == "SGST"){
-                            $total_sgst_only_in_book += $sundry->amount;
-                            $sgst_amount = $sundry->amount;
-                        }else if($sundry->nature_of_sundry == "IGST"){
-                            $total_igst_only_in_book += $sundry->amount;
-                            $igst_amount = $sundry->amount;
-                        }
-                    }
+
+foreach ($only_in_book_voucher as $key => $invoice_no) {
+
+    $book_data = Purchase::with(['purchaseSundry'])
+        ->where('voucher_no', $invoice_no)
+        ->where('billing_gst', $request->ctin)
+        ->where('company_id', Session::get('user_company_id'))
+        ->where('merchant_gst', $request->gstin)
+        ->where('status', '1')
+        ->where('delete', '0')
+        ->first();
+
+    $is_journal = false;
+
+    // IF NOT FOUND IN PURCHASE THEN SEARCH IN JOURNAL
+    if (!$book_data) {
+
+        
+             $book_data = Journal::where('vendor_gstin', $request->ctin)
+            ->where('company_id', Session::get('user_company_id'))
+            ->where('merchant_gst', $request->gstin)
+            ->where('claim_gst_status', 'YES')
+            ->where('status', '1')
+            ->where('delete', '0')
+            ->first();   
+            
+
+        $is_journal = true;
+    }
+
+    // SKIP IF STILL NOT FOUND
+    if (!$book_data) {
+        continue;
+    }
+
+    $book_value  = 0;
+    $igst_amount = 0;
+    $cgst_amount = 0;
+    $sgst_amount = 0;
+    $taxable_amt = 0;
+
+    if ($is_journal) {
+
+        $book_value  = (float)$book_data->total_amount;
+        $taxable_amt = (float)$book_data->net_total;
+
+        $total_book_value_only_in_book += $book_value;
+        $total_val_only_in_book += $book_value;
+        $total_txval_only_in_book += $taxable_amt;
+
+        $igst_amount = (float)$book_data->igst;
+        $cgst_amount = (float)$book_data->cgst;
+        $sgst_amount = (float)$book_data->sgst;
+
+        $total_igst_only_in_book += $igst_amount;
+        $total_cgst_only_in_book += $cgst_amount;
+        $total_sgst_only_in_book += $sgst_amount;
+
+    } else {
+
+        $book_value = (float)$book_data->total;
+        $taxable_amt = (float)$book_data->taxable_amt;
+
+        $total_book_value_only_in_book += $book_value;
+        $total_val_only_in_book += $book_value;
+        $total_txval_only_in_book += $taxable_amt;
+
+        if ($book_data->purchaseSundry && count($book_data->purchaseSundry) > 0) {
+
+            foreach ($book_data->purchaseSundry as $sundry) {
+
+                if ($sundry->nature_of_sundry == "CGST") {
+
+                    $cgst_amount = (float)$sundry->amount;
+                    $total_cgst_only_in_book += $cgst_amount;
+
+                } else if ($sundry->nature_of_sundry == "SGST") {
+
+                    $sgst_amount = (float)$sundry->amount;
+                    $total_sgst_only_in_book += $sgst_amount;
+
+                } else if ($sundry->nature_of_sundry == "IGST") {
+
+                    $igst_amount = (float)$sundry->amount;
+                    $total_igst_only_in_book += $igst_amount;
                 }
-            }            
-            $b2b_invoices_only_in_book.="<tr>
-                <td></td>
-                <td>".$invoice_no."</td>
-                <td>".date('d-m-Y',strtotime($book_data->date))."</td>
-                <td style='text-align: right;".$style."'>".formatIndianNumber($book_data->total)."</td>
-                <td style='text-align: right;".$style."'>".formatIndianNumber($book_value)."</td>
-                <td style='text-align: right'>".formatIndianNumber($book_data->taxable_amt)."</td>
-                <td style='text-align: right'>".formatIndianNumber($igst_amount)."</td>
-                <td style='text-align: right'>".formatIndianNumber($cgst_amount)."</td>
-                <td style='text-align: right'>".formatIndianNumber($sgst_amount)."</td>
-                <td style='text-align: right'>0.00</td>
-                <td></td>
-            </tr>";
+            }
         }
-        if($total_book_value_only_in_book>0){
-            $b2b_invoices_only_in_book.="<tr >
-                <td></td>
-                <td></td>
-                <th style='text-align: right'>Total</th>
-                <th style='text-align: right'>".formatIndianNumber($total_val_only_in_book)."</th>
-                <th style='text-align: right'>".formatIndianNumber($total_book_value_only_in_book)."</th>
-                <th style='text-align: right'>".formatIndianNumber($total_txval_only_in_book)."</th>
-                <th style='text-align: right'>".formatIndianNumber($total_igst_only_in_book)."</th>
-                <th style='text-align: right'>".formatIndianNumber($total_cgst_only_in_book)."</th>
-                <th style='text-align: right'>".formatIndianNumber($total_sgst_only_in_book)."</th>
-                <th style='text-align: right'>".formatIndianNumber($total_cess_only_in_book)."</th>
-                <td></td>
-            </tr>";
-        }
+    }
+
+    $b2b_invoices_only_in_book .= "
+    <tr>
+        <td></td>
+        <td>".$invoice_no."</td>
+        <td>".(!empty($book_data->date) ? date('d-m-Y', strtotime($book_data->date)) : '')."</td>
+        <td style='text-align: right;".$style."'>0</td>
+        <td style='text-align: right;".$style."'>".formatIndianNumber($book_value)."</td>
+        <td style='text-align: right'>".formatIndianNumber($taxable_amt)."</td>
+        <td style='text-align: right'>".formatIndianNumber($igst_amount)."</td>
+        <td style='text-align: right'>".formatIndianNumber($cgst_amount)."</td>
+        <td style='text-align: right'>".formatIndianNumber($sgst_amount)."</td>
+        <td style='text-align: right'>0.00</td>
+        <td>".($is_journal ? 'Journal' : 'Purchase')."</td>
+    </tr>";
+}
+
+if($total_book_value_only_in_book > 0){
+
+    $b2b_invoices_only_in_book .= "
+    <tr>
+        <td></td>
+        <td></td>
+        <th style='text-align: right'>Total</th>
+
+        <th style='text-align: right'>
+           0 
+        </th>
+
+        <th style='text-align: right'>
+           ".formatIndianNumber($total_val_only_in_book)."
+        </th>
+
+        <th style='text-align: right'>
+            ".formatIndianNumber($total_txval_only_in_book)."
+        </th>
+
+        <th style='text-align: right'>
+            ".formatIndianNumber($total_igst_only_in_book)."
+        </th>
+
+        <th style='text-align: right'>
+            ".formatIndianNumber($total_cgst_only_in_book)."
+        </th>
+
+        <th style='text-align: right'>
+            ".formatIndianNumber($total_sgst_only_in_book)."
+        </th>
+
+        <th style='text-align: right'>
+            ".formatIndianNumber($total_cess_only_in_book)."
+        </th>
+
+        <td></td>
+    </tr>";
+}
+
         $b2b_debit_note = "";$b2b_credit_note = "";
         $total_val = 0; $total_txval = 0; $total_igst = 0; $total_cgst = 0; $total_sgst = 0; $total_cess = 0;$total_book_value = 0;
         $debit_total_val = 0; $debit_total_txval = 0; $debit_total_igst = 0; $debit_total_cgst = 0; $debit_total_sgst = 0; $debit_total_cess = 0; $total_debit_book_value = 0;
@@ -1604,37 +1761,54 @@ class GSTR2BController extends Controller
     }
     
     public function linkCdnr(Request $request){
-        if($request->type == "credit_note"){
-            SalesReturn::where('gstr2b_invoice_id', $request->invoice_no)
-                            ->update(['gstr2b_invoice_id' =>null,
-                                      'linked_month'     => null
-                                      ]);
-            SalesReturn::whereIn('id', $request->ids)
-                            ->update([
-                                'gstr2b_invoice_id' => $request->invoice_no,
-                                'linked_month'     => $request->month
-                            ]);
 
-        }else if($request->type == "debit_note"){
-            PurchaseReturn::where('gstr2b_invoice_id', $request->invoice_no)
-                ->update(['gstr2b_invoice_id' => null,
-                'linked_month'     => null
-                ]);
-            PurchaseReturn::whereIn('id', $request->ids)
-                ->update(['gstr2b_invoice_id' => $request->invoice_no,
-                'linked_month'     => $request->month]);
-        }else{
-            return response()->json([
-                'status' => false,
-                'message' => 'Invalid type'
+    if($request->type == "credit_note"){
+
+        // First unlink old linked entries
+        SalesReturn::where('gstr2b_invoice_id', $request->invoice_no)
+            ->update([
+                'gstr2b_invoice_id' => null,
+                'linked_month'      => null
             ]);
+
+        // Link new selected entries only if selected
+        if(!empty($request->ids)){
+            SalesReturn::whereIn('id', $request->ids)
+                ->update([
+                    'gstr2b_invoice_id' => $request->invoice_no,
+                    'linked_month'      => $request->month
+                ]);
         }
-        $response = array(
-            'status' => true,
-            'message' => 'Linked Successfully',
-        );
-        return json_encode($response);
+
+    }else if($request->type == "debit_note"){
+
+        PurchaseReturn::where('gstr2b_invoice_id', $request->invoice_no)
+            ->update([
+                'gstr2b_invoice_id' => null,
+                'linked_month'      => null
+            ]);
+
+        if(!empty($request->ids)){
+            PurchaseReturn::whereIn('id', $request->ids)
+                ->update([
+                    'gstr2b_invoice_id' => $request->invoice_no,
+                    'linked_month'      => $request->month
+                ]);
+        }
+
+    }else{
+
+        return response()->json([
+            'status' => false,
+            'message' => 'Invalid type'
+        ]);
     }
+
+    return response()->json([
+        'status' => true,
+        'message' => 'Updated Successfully',
+    ]);
+}
     
     
     public function acceptGstr2bEntry(Request $request){        
@@ -1862,6 +2036,7 @@ class GSTR2BController extends Controller
                 
             }
         }
+        if(isset($gstr2b->data->docdata->cdnr)){
         foreach($gstr2b->data->docdata->cdnr as $record){
             foreach ($record->nt as $invoice) {
                 if($invoice->typ == "C"){
@@ -1942,7 +2117,8 @@ class GSTR2BController extends Controller
                     }
                 }
             }
-        }     
+        }  
+        }
         //Only On Book Purchase
         $purchase_only_on_book = Purchase::where('company_id', Session::get('user_company_id'))
                                 ->where('merchant_gst', $request->gstin)

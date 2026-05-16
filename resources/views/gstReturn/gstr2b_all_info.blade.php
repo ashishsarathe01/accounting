@@ -617,39 +617,54 @@
          }
       });
    });
-   link_btn_action = function() {
-      let type = $('.link_btn_action').data('type');
-      let invoice_no = $('.link_btn_action').data('invoice_no');
-      let selected_ids = [];
-      $('.link_check:checked').each(function() {
-         selected_ids.push($(this).data('id'));
-      });
-      if(selected_ids.length==0) {
-         alert('Please select at least one entry to link.');
-         return;
+  link_btn_action = function() {
+
+   let type = $('.link_btn_action').data('type');
+   let invoice_no = $('.link_btn_action').data('invoice_no');
+
+   let selected_ids = [];
+
+   $('.link_check:checked').each(function() {
+      selected_ids.push($(this).data('id'));
+   });
+
+   // allow submit even when nothing selected
+   $.ajax({
+      url: "{{ route('link-cdnr') }}",
+      method: 'POST',
+      data: {
+         'type': type,
+         'ids': selected_ids,
+         'gstin': '{{ $gstin }}',
+         'ctin': '{{ $ctin }}',
+         'month': '{{ $month }}',
+         'invoice_no': invoice_no
+      },
+      headers: {
+         'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+      },
+     success: function (res) {
+
+   if(res.status == true) {
+
+      if(selected_ids.length == 0){
+         alert('Link removed successfully.');
+      }else{
+         alert('Linked successfully.');
       }
-         $.ajax({
-            url: "{{ route('link-cdnr') }}", // Replace with your actual route
-            method: 'POST',
-            data: {'type': type, 'ids': selected_ids, 'gstin': '{{ $gstin }}', 'ctin': '{{ $ctin }}', 'month': '{{ $month }}', 'invoice_no': invoice_no },
-            headers: {
-               'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') // Add this if CSRF token is needed
-            },
-            success: function (response) {
-               let res = JSON.parse(response);
-               if(res.status==true) {
-                  alert('linked successfully.');
-                  $('#linkCDNRModal').modal('hide'); 
-                  location.reload(); // Reload the page to reflect changes
-               } else {
-                  alert('Failed to link CDNR');
-               }
-            },
-            error: function (xhr) {
-               alert('An error occurred while linking the CDNR.');
-            }
-         });
-   };
+
+      $('#linkCDNRModal').modal('hide');
+      location.reload();
+
+   } else {
+      alert('Failed to update link.');
+   }
+},
+      error: function (xhr) {
+         alert('An error occurred while updating the CDNR.');
+      }
+   });
+};
    $(document).on('click','.link_btn_action',function(){
       link_btn_action();
    });

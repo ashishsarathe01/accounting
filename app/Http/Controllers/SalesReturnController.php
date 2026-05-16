@@ -1978,6 +1978,8 @@ class SalesReturnController extends Controller
       $sale->billing_state = $account->state;
       $sale->financial_year = $financial_year;
       $sale->updated_by = Session::get('user_id');
+      $sale->gstr2b_invoice_id = $request->input('gstr2b_invoice_id');
+      $sale->linked_month = $request->input('linked_month');
       // $sale->other_invoice_no = $request->input('other_invoice_no');
       // $sale->other_invoice_date = $request->input('other_invoice_date');
       // $sale->other_invoice_against = $request->input('other_invoice_against');

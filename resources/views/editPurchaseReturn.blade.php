@@ -208,6 +208,16 @@
                      <input type="{{ $manual_voucher_no == 0 ? 'text' : 'number' }}" class="form-control" id="voucher_prefix" name="voucher_prefix" placeholder="" value="{{ $manual_voucher_no == 0 ? $purchase_return->sr_prefix : $purchase_return->purchase_return_no }}" readonly style="text-align: right;">
                      <input type="hidden" id="purchase_return_no" class="form-control" name="purchase_return_no" value="{{ $manual_voucher_no == 0 ? $purchase_return->purchase_return_no : $purchase_return->sr_prefix }}" readonly>
                   </div>
+                  <div class="clearfix"></div>
+                  <div class="mb-4 col-md-4">
+                     <label for="gstr2b_invoice_id" class="form-label font-14 font-heading">Link Credit Note No.</label>
+                     <input type="text" class="form-control" id="gstr2b_invoice_id" name="gstr2b_invoice_id" placeholder="Link Credit Note No." value="{{$purchase_return->gstr2b_invoice_id}}" >
+                  </div>
+                  <div class="mb-4 col-md-4">
+                     <label for="linked_month" class="form-label font-14 font-heading">Link Credit Note Month</label>
+                     <input type="month" class="form-control" id="linked_month" name="linked_month" value="{{$purchase_return->linked_month}}" >
+                    
+                  </div>
                </div>
                <div class=" transaction-table transaction-main-table bg-white table-view shadow-sm border-radius-8 mb-4 with_gst_with_item_section" style="display:none">
                   <table id="example11" class="table-striped table m-0 shadow-sm table-bordered">
