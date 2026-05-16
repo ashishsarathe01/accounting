@@ -4344,7 +4344,8 @@ if(array_key_exists($good,$sale_item_array)){
              if(isset($result->status_cd) && $result->status_cd=='1'){
                 //echo json_encode(array("status"=>1,"message"=>"Token Generate Successfully"));
              }else{
-                 echo "<pre>";print_r($result);die;
+                
+                 //echo "<pre>";print_r($result);die;
                 $response = [
                      'success' => false,
                      'data'    => "",
@@ -4353,6 +4354,7 @@ if(array_key_exists($good,$sale_item_array)){
                   return response()->json($response, 200);
              }
           }
+         
          $CGST = null;$SGST = null;$IGST = null;$TCS = 0;
          $sundry = SaleSundry::join('bill_sundrys','sale_sundries.bill_sundry','=','bill_sundrys.id')
                      ->select(['sale_sundries.rate','sale_sundries.amount','bill_sundry_type','adjust_sale_amt','nature_of_sundry','effect_gst_calculation'])
@@ -4624,9 +4626,9 @@ if(array_key_exists($good,$sale_item_array)){
             $result = json_decode($response);
             if(isset($result->status_cd) && $result->status_cd=='1'){
                $data_array = [];
-               $data_array['ewayBillNo'] = $result->data->EwbNo;
-               $data_array['ewayBillDate'] = $result->data->EwbDt;
-               $data_array['validUpto'] = $result->data->EwbValidTill;
+               $data_array['ewayBillNo'] = $result->data->ewayBillNo;
+               $data_array['ewayBillDate'] = date('d-m-Y H:i:s', strtotime($result->data->ewayBillDate));
+               $data_array['validUpto'] = date('d-m-Y H:i:s', strtotime($result->data->validUpto));
                $invoice_update = Sales::find($request->id);
                $invoice_update->eway_bill_response = json_encode($data_array);
                $invoice_update->e_waybill_status = 1;

@@ -219,8 +219,7 @@ select.no-arrow {
                         @endphp
                         <tr style="background:#e8f7ff;">
                         <td>
-                            <input type="checkbox" class="check_row payment_check"
-                                data-amount="{{ $value->payment_amount }}">
+                            
                         </td>
                             @if(in_array('date',$selectedDetailColumns))
                                 <td>{{ date('d-m-Y', strtotime($value->date)) }}</td>

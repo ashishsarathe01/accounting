@@ -58,6 +58,11 @@
                                         $AckDt = date('d-m-Y H:i:s',strtotime($AckDt));
                                     @endphp
                                 @endif
+                                @if($sale->e_waybill_status==1 && !empty($sale->eway_bill_response))
+                                    @php 
+                                        $qrContent = $sale->eway_bill_response;
+                                    @endphp
+                                @endif
                                 <div><span class="label">IRN : </span> {{$Irn}}</div>
                                 <div><span class="label">Ack No : </span> {{$AckNo}}</div>
                                 <div><span class="label">Ack Date : </span> {{$AckDt}}</div>
@@ -215,7 +220,7 @@
                         <div class="fw-bold mb-1">5. Vehicle Details</div>
                         <div class="row">
                             <div class="col-md-4"><span class="label">Vehicle No : </span> {{$sale->vehicle_no}}</div>
-                            <div class="col-md-4"><span class="label">From : UNA BATHRI</span></div>
+                            <div class="col-md-4"><span class="label">From : @if($sale->company_id==18) UNA BATHRI @endif</span></div>
                             <div class="col-md-4"><span class="label">CEWB No : </span></div>
                         </div>
                     </div>

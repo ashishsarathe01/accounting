@@ -1991,7 +1991,9 @@ class SupplierPurchaseController extends Controller
             ->first();
 
         $group_id = $group_list->item_id;
-
+        if($id=="" || $id==null){
+            die();
+        }
         $purchases = SupplierPurchaseVehicleDetail::with([
                 'purchaseReport',
                 'locationInfo:id,name',
@@ -2278,7 +2280,20 @@ class SupplierPurchaseController extends Controller
         //View By Party Report
         $purchases = "";
         if($view_by=='party'){
+            $reportSubQuery = DB::table('supplier_purchase_reports')
+                        ->select(
+                            'purchase_id',
+                            DB::raw('SUM(head_qty * head_contract_rate) as report_amount')
+                        )
+                        ->groupBy('purchase_id');
             $purchases = SupplierPurchaseVehicleDetail::query()
+                    ->leftJoinSub($reportSubQuery, 'report_data', function ($join) {
+                            $join->on(
+                                'supplier_purchase_vehicle_details.id',
+                                '=',
+                                'report_data.purchase_id'
+                            );
+                        })
                     ->leftJoin('purchases', 'supplier_purchase_vehicle_details.map_purchase_id', '=', 'purchases.id')
                     ->where('supplier_purchase_vehicle_details.company_id', Session::get('user_company_id'))
                     ->when($view_by === 'party', function ($q) {
@@ -2294,7 +2309,8 @@ class SupplierPurchaseController extends Controller
                         DB::raw('SUM(difference_total_amount) AS difference_sum'),
                         DB::raw('SUM(purchases.total) AS total_sum'),
                         DB::raw('SUM(purchases.taxable_amt) AS taxable_amt'),
-                        DB::raw('GROUP_CONCAT(DISTINCT map_purchase_id) as purchase_ids')
+                        DB::raw('GROUP_CONCAT(DISTINCT map_purchase_id) as purchase_ids'),
+                        DB::raw('SUM(report_data.report_amount) as actual_amount')
                     )
                     ->groupBy('supplier_purchase_vehicle_details.account_id')
                     ->get();
@@ -2369,7 +2385,7 @@ class SupplierPurchaseController extends Controller
                                             ->where('company_id', Session::get('user_company_id'))
                                             ->value('item_id');
             //Purchase Details By Date
-            $purchases_details_by_date = [];
+            $purchases_details_by_date = []; $paymentsByDate = [];
             if($view_by=='date'){
                 $priceSummary = DB::table('purchase_descriptions')
                     ->select(
@@ -2463,7 +2479,7 @@ class SupplierPurchaseController extends Controller
                         'supplier_purchase_vehicle_details.difference_total_amount',
                         'supplier_purchase_vehicle_details.gross_weight',
                         'supplier_purchase_vehicle_details.tare_weight',
-
+                        'supplier_purchase_vehicle_details.account_id',
                         'purchases.voucher_no as purchase_voucher_no',
                         'purchases.taxable_amt as purchase_taxable_amt',
                         'purchases.total as purchase_total_amt',
@@ -2513,10 +2529,58 @@ class SupplierPurchaseController extends Controller
                         'supplier_purchase_vehicle_details.entry_date'
                     )
                     ->orderBy(
+                        'voucher_no'
+                    )
+                    ->orderBy(
                         'account_name'
                     )
                     ->get();
+                $purchases_details_by_date = $purchases_details_by_date->groupBy(fn($r) => $r->entry_date);
+                $paymentsByDate = DB::table('payments as p')
+                        ->join('payment_details as pd', 'pd.payment_id', '=', 'p.id')
+                        ->where('p.delete', '0')
+                        ->where('pd.delete', '0')
+                        ->where('p.company_id', Session::get('user_company_id'))
+                        ->where('pd.type', 'Debit')
+                        ->whereBetween('p.date', [$from_date, $to_date])
+                        ->select(
+                            DB::raw('DATE(p.date) as pay_date'),
+                            'pd.account_name as account_id',
+                            DB::raw('SUM(pd.debit) as amount')
+                        )
+                        ->groupBy('pay_date','pd.account_name')
+                        ->get()
+                        ->mapWithKeys(function ($item) {
+                            return [
+                                $item->pay_date.'_'.$item->account_id => $item
+                            ];
+                        });
+                foreach ($purchases_details_by_date as $date => $records) {
+
+                        $groupedRecords = $records->groupBy('account_id');
+
+                        foreach ($groupedRecords as $accountId => $accountRows) {
+
+                            $lastIndex = $accountRows->keys()->last();
+
+                            foreach ($accountRows as $index => $record) {
+
+                                $paymentKey = $date . '_' . $accountId;
+
+                                if ($index == $lastIndex) {
+
+                                    $record->payment_amount =
+                                        $paymentsByDate[$paymentKey]->amount ?? 0;
+
+                                } else {
+
+                                    $record->payment_amount = 0;
+                                }
+                            }
+                        }
+                    }
             }
+            
             // echo "<pre>";
             // print_r($purchases_details_by_date->toArray());die;
         return view('supplier.supplier_purchase_report1', [
@@ -2527,7 +2591,9 @@ class SupplierPurchaseController extends Controller
             'boiler_group_id' => $boiler_group_id,
             'purchases' => $purchases,
             'purchases_details' => $purchases_details,
-            'purchases_details_by_date' => $purchases_details_by_date
+            'purchases_details_by_date' => $purchases_details_by_date,
+            'from_date' => $from_date,
+            'to_date' => $to_date,
            
         ]);
     }

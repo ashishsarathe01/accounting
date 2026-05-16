@@ -271,7 +271,14 @@
                     <td style="text-align:right;">{{ $item->price }}</td>
                     <td style="text-align:right;">{{ formatIndianNumber($item->amount) }}</td>
                 </tr>
-                @php $i++; $item_total += $item->amount; $qty_total += $item->qty; @endphp
+                @php 
+                    $i++; 
+                    $item_total += $item->amount; 
+                    if($item->qty!==""){
+                    $qty_total += $item->qty;
+                    }
+                     
+                @endphp
             @endforeach
 
 

@@ -217,7 +217,7 @@ class AccountProductionController extends Controller
                      ->get();
             // echo "<pre>";
             // print_r($item_stock_size->toArray());die;
-            // ✅ Group by item_id and sum weights
+            // âœ… Group by item_id and sum weights
             $groupedItems = [];
             foreach ($item_stock_size as $deckle) {
                foreach ($deckle->quality as $q) {
@@ -567,6 +567,7 @@ class AccountProductionController extends Controller
          // ================= Consume Items =================
          $consume_item_array = [];
          foreach ($request->consume_item as $key => $itemId) {
+          
                if (!$itemId) continue;
                if(array_key_exists($itemId,$consume_item_array)){
                   $consume_item_array[$itemId] = $consume_item_array[$itemId] + $request->consume_weight[$key];
@@ -621,18 +622,25 @@ class AccountProductionController extends Controller
                CommonHelper::RewriteItemAverageByItem($date,$value,$request->input('series_no'));
             }
          }
+         
          // ================= Generated Items =================
          foreach ($request->generated_item_id as $key => $itemId) {
-
+               $totalGeneratedWeight = DeckleProcess::whereDate('end_time_stamp', $date)
+                                             ->join('item_size_stocks', 'deckle_processes.id', '=', 'item_size_stocks.deckle_id')
+                                             ->where('deckle_processes.status', 4)
+                                             ->where('item_size_stocks.item_id', $itemId)
+                                             ->sum('item_size_stocks.weight');
+               $totalGeneratedWeight = $totalGeneratedWeight > 0 ? $totalGeneratedWeight : $request->generated_weight[$key];
                AccountProductionDetail::create([
                   'production_date' => $date,
                   'parent_id' => $id,
                   'new_item' => $itemId,
                   'new_item_unit' => $request->generated_units[$key],
                   'new_item_unit_name' => $request->generated_unit_name[$key],
-                  'new_weight' => $request->generated_weight[$key],
+                  //'new_weight' => $request->generated_weight[$key],
+                  'new_weight' => $totalGeneratedWeight,
                   'new_price' => $request->generated_price[$key],
-                  'new_amount' => $request->generated_amount[$key],
+                  'new_amount' => round($totalGeneratedWeight*$request->generated_price[$key],2),
                   'company_id' => Session::get('user_company_id'),
                   'created_by' => Session::get('user_id'),
                   'created_at' => now(),
@@ -1005,7 +1013,7 @@ public function exportCsv(Request $request)
 
     $fileName = "production_export_" . date('YmdHis') . ".csv";
 
-    // 🔥 VERY IMPORTANT
+    // ðŸ”¥ VERY IMPORTANT
     if (ob_get_level()) {
         ob_end_clean();
     }

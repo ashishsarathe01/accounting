@@ -128,7 +128,12 @@ select.no-arrow {
                             <input type="date" id="to_date" class="form-control calender-bg-icon calender-placeholder" placeholder="To date" required name="to_date" value="{{ !empty($to_date) ? date('Y-m-d', strtotime($to_date)) : date('Y-m-t')}}">
                         </div>
                         <div class="ms-md-4" style="min-width:240px">
-                            
+                            <select class="form-select form-select-sm filter-control select2-single" id="supplier">
+                            <option value="all">All Supplier</option>
+                            @foreach($accounts as $loc)
+                                <option value="{{ $loc->id }}">{{ $loc->account_name }}</option>
+                            @endforeach
+                        </select>
                         </div>
                         <select id="view_by" class="form-select form-select-sm ms-md-4 filter-control filter-viewby">
                             <option value="party" {{ request()->view_by == 'party' ? 'selected' : '' }}>View by Party</option>
@@ -163,12 +168,10 @@ select.no-arrow {
                                         $total_gst = 0;
                                         $total_taxable_amt = 0;
                                         $total_payment = 0;
-                                        echo "<pre>";
-                                        
                                     @endphp
                                     @foreach($purchases as $key => $value)
                                         @php
-                                            $actual_sum = 0;
+                                            $actual_sum = $value->actual_amount;
                                             $invoice_total     += $value->total_sum;
                                             $actual_total      += $actual_sum;
                                             $difference_total  += $value->difference_sum;
@@ -366,101 +369,354 @@ select.no-arrow {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach($purchases_details_by_date as $key => $row)
-                                            @php 
-                                                $headMap = []; $actual_amount = 0; $contract_rate = "";
-                                                foreach ($row->purchaseReport as $rp) {
-                                                    $headMap[$rp->head_id] = $rp;
-                                                    if (is_numeric($rp->head_id) && $rp->total_head_qty > 0) {
-                                                        $actual_amount += ($rp->total_head_qty * $rp->head_contract_rate);
-                                                    }
-                                                    if(!empty($rp->total_head_qty) && $rp->total_head_qty!=0 && $rp->head_contract_rate!=0){
-                                                        $contract_rate.=$rp->head_contract_rate." , ";
-                                                    }
-                                                }
-                                                $cut = $headMap['cut']->total_head_qty ?? 0;
-                                                $actual_weight = $row->gross_weight - $row->tare_weight - $cut;
+                                        @php
+                                            $grand_net_weight = 0;
+                                            $grand_cut_weight = 0;
+                                            $grand_actual_weight = 0;
+                                            $grand_invoice_amount = 0;
+                                            $grand_gst_amount = 0;
+                                            $grand_taxable_amount = 0;
+                                            $grand_actual_amount = 0;
+                                            $grand_actual_gst_amount = 0;
+                                            $grand_payment_amount = 0;
+                                            $grand_difference_amount = 0;
+                                            $grand_head_totals = [];
+                                        @endphp
+                                        @foreach($purchases_details_by_date as $key => $rows)
+                                            @php
+                                                $date_net_weight = 0;
+                                                $date_cut_weight = 0;
+                                                $date_actual_weight = 0;
+                                                $date_invoice_amount = 0;
+                                                $date_gst_amount = 0;
+                                                $date_taxable_amount = 0;
+                                                $date_actual_amount = 0;
+                                                $date_actual_gst_amount = 0;
+                                                $date_payment_amount = 0;
+                                                $date_difference_amount = 0;
+                                                $date_head_totals = [];
                                             @endphp
-                                            <tr>
+                                            @foreach($rows as $k => $row)
+                                                @php 
+                                                    $headMap = []; $actual_amount = 0; $contract_rate = "";
+                                                    foreach ($row->purchaseReport as $rp) {
+                                                        $headMap[$rp->head_id] = $rp;
+                                                        if (is_numeric($rp->head_id) && $rp->total_head_qty > 0) {
+                                                            $actual_amount += ($rp->total_head_qty * $rp->head_contract_rate);
+                                                        }
+                                                        if(!empty($rp->total_head_qty) && $rp->total_head_qty!=0 && $rp->head_contract_rate!=0){
+                                                            $contract_rate.=$rp->head_contract_rate." , ";
+                                                        }
+                                                    }
+                                                    $cut = $headMap['cut']->total_head_qty ?? 0;
+                                                    $actual_weight = $row->gross_weight - $row->tare_weight - $cut;
+                                                    //Date Wise Total
+                                                    $date_net_weight += $row->gross_weight - $row->tare_weight;
+                                                    $date_cut_weight += $headMap['cut']->total_head_qty ?? 0;
+                                                    $date_actual_weight += $actual_weight;
+                                                    $date_invoice_amount += $row->purchase_total_amt;
+                                                    $date_gst_amount += $row->purchase_gst;
+                                                    $date_taxable_amount += $row->purchase_taxable_amt;
+                                                    $date_actual_amount += $actual_amount;
+                                                    $date_actual_gst_amount += $actual_amount + $row->purchase_gst;
+                                                    $date_payment_amount += $row->payment_amount;
+                                                    $date_difference_amount += $row->difference_total_amount;
+
+                                                    //Grand Wise Total
+                                                    $grand_net_weight += $row->gross_weight - $row->tare_weight;
+                                                    $grand_cut_weight += $headMap['cut']->total_head_qty ?? 0;
+                                                    $grand_actual_weight += $actual_weight;
+                                                    $grand_invoice_amount += $row->purchase_total_amt;
+                                                    $grand_gst_amount += $row->purchase_gst;
+                                                    $grand_taxable_amount += $row->purchase_taxable_amt;
+                                                    $grand_actual_amount += $actual_amount;
+                                                    $grand_actual_gst_amount += $actual_amount + $row->purchase_gst;
+                                                    $grand_payment_amount += $row->payment_amount;
+                                                    $grand_difference_amount += $row->difference_total_amount;
+                                                @endphp
+                                                <tr>
+                                                    @if(in_array('date',$selectedDateColumns))
+                                                    <td>{{ date('d-m-Y', strtotime($row->entry_date)) }}</td>
+                                                    @endif
+
+                                                    @if(in_array('account',$selectedDateColumns))
+                                                    <td>{{ $row->account_name ?? '-' }}</td>
+                                                    @endif
+
+                                                    @if(in_array('invoice',$selectedDateColumns))
+                                                    <td style="text-align:right;@if($row->purchase_voucher_no=="")background:red;@endif">
+                                                        {{ $row->purchase_voucher_no }} / {{ $row->voucher_no }}
+                                                    </td>
+                                                    @endif
+                                                    @if(in_array('area',$selectedDateColumns))
+                                                    <td>{{ $row->locationInfo->name ?? '-' }}</td>
+                                                    @endif
+
+                                                    @if(in_array('net_weight',$selectedDateColumns))
+                                                    <td style="text-align:right;">{{ $row->gross_weight - $row->tare_weight }}</td>
+                                                    @endif
+
+                                                    @if(in_array('cut_weight',$selectedDateColumns))
+                                                    <td style="text-align:right;">{{ $headMap['cut']->total_head_qty ?? 0 }}</td>
+                                                    @endif
+
+                                                    @if(in_array('actual_weight',$selectedDateColumns))
+                                                    <td style="text-align:right;">{{ $actual_weight }}</td>
+                                                    @endif
+
+                                                    @foreach($sub_heads as $head)
+                                                        @php 
+                                                            $qty = $headMap[$head->id]->total_head_qty ?? 0;
+                                                            if(!isset($date_head_totals[$head->id])){
+                                                                $date_head_totals[$head->id] = 0;
+                                                            }
+                                                            $date_head_totals[$head->id] += $qty;
+                                                            if(!isset($grand_head_totals[$head->id])){
+                                                                $grand_head_totals[$head->id] = 0;
+                                                            }
+                                                            $grand_head_totals[$head->id] += $qty;
+                                                        @endphp
+                                                        @if(in_array('sub_head_'.$head->id, $selectedDateColumns))
+                                                            <td style="text-align:right;">
+                                                                {{ $headMap[$head->id]->total_head_qty ?? '-' }}
+                                                            </td>
+                                                        @endif
+                                                    @endforeach
+
+                                                    @if(in_array('invoice_amount',$selectedDateColumns))
+                                                    <td style="text-align:right;">{{$row->purchase_total_amt}}</td>
+                                                    @endif
+
+                                                    @if(in_array('gst_amount',$selectedDateColumns))
+                                                    <td style="text-align:right;">{{$row->purchase_gst}}</td>
+                                                    @endif
+
+                                                    @if(in_array('taxable_amount',$selectedDateColumns))
+                                                    <td style="text-align:right;">{{$row->purchase_taxable_amt}}</td>
+                                                    @endif
+
+                                                    @if(in_array('actual_amount',$selectedDateColumns))
+                                                    <td style="text-align:right;">{{$actual_amount}}</td>
+                                                    @endif
+
+                                                    @if(in_array('actual_with_gst',$selectedDateColumns))
+                                                        <td style="text-align:right;">{{$actual_amount + $row->purchase_gst}}</td>
+                                                    @endif
+                                                    @if(in_array('payment',$selectedDateColumns))
+                                                        <td style="text-align:right;">
+                                                            {{ formatIndianNumber($row->payment_amount,2) }}
+                                                        </td>
+                                                    @endif
+                                                    @if(in_array('billing_rate',$selectedDateColumns))
+                                                    <td style="text-align:right;">{{$row->prices}}</td>
+                                                    @endif
+
+                                                    @if(in_array('contract_rate',$selectedDateColumns))
+                                                    <td style="text-align:right;">{{ rtrim($contract_rate,' ,') }}</td>
+                                                    @endif
+
+                                                    @if(in_array('difference',$selectedDateColumns))
+                                                    <td style="text-align:right;">{{ formatIndianNumber($row->difference_total_amount,2) }}</td>
+                                                    @endif
+                                                    <td class="header-section">
+                                                    
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                            <tr class="bg-light fw-bold">
                                                 @if(in_array('date',$selectedDateColumns))
-                                                <td>{{ date('d-m-Y', strtotime($row->entry_date)) }}</td>
+                                                <td colspan="1">Total ({{ date('d-m-Y', strtotime($key)) }})</td>
                                                 @endif
 
                                                 @if(in_array('account',$selectedDateColumns))
-                                                <td>{{ $row->account_name ?? '-' }}</td>
+                                                <td>-</td>
                                                 @endif
 
                                                 @if(in_array('invoice',$selectedDateColumns))
-                                                <td style="text-align:right;@if($row->purchase_voucher_no=="")background:red;@endif">
-                                                    {{ $row->purchase_voucher_no }} / {{ $row->voucher_no }}
-                                                </td>
+                                                <td>-</td>
                                                 @endif
 
                                                 @if(in_array('area',$selectedDateColumns))
-                                                <td>{{ $row->locationInfo->name ?? '-' }}</td>
+                                                <td>-</td>
                                                 @endif
 
                                                 @if(in_array('net_weight',$selectedDateColumns))
-                                                <td style="text-align:right;">{{ $row->gross_weight - $row->tare_weight }}</td>
+                                                <td style="text-align:right;">{{ formatIndianNumber($date_net_weight,2) }}</td>
                                                 @endif
 
                                                 @if(in_array('cut_weight',$selectedDateColumns))
-                                                <td style="text-align:right;">{{ $headMap['cut']->total_head_qty ?? 0 }}</td>
+                                                <td style="text-align:right;">{{ formatIndianNumber($date_cut_weight,2) }}</td>
                                                 @endif
 
                                                 @if(in_array('actual_weight',$selectedDateColumns))
-                                                <td style="text-align:right;">{{ $actual_weight }}</td>
+                                                <td style="text-align:right;">{{ formatIndianNumber($date_actual_weight,2) }}</td>
                                                 @endif
 
                                                 @foreach($sub_heads as $head)
-                                                @if(in_array('sub_head_'.$head->id, $selectedDateColumns))
-                                                    <td style="text-align:right;">
-                                                        {{ $headMap[$head->id]->total_head_qty ?? '-' }}
-                                                    </td>
-                                                @endif
+                                                    @if(in_array('sub_head_'.$head->id, $selectedDateColumns))
+                                                        <td>{{formatIndianNumber($date_head_totals[$head->id] ?? 0,2)}}</td>
+                                                    @endif
                                                 @endforeach
 
                                                 @if(in_array('invoice_amount',$selectedDateColumns))
-                                                <td style="text-align:right;">{{$row->purchase_total_amt}}</td>
+                                                <td style="text-align:right;">{{ formatIndianNumber($date_invoice_amount,2) }}</td>
                                                 @endif
 
                                                 @if(in_array('gst_amount',$selectedDateColumns))
-                                                <td style="text-align:right;">{{$row->purchase_gst}}</td>
+                                                <td style="text-align:right;">{{ formatIndianNumber($date_gst_amount,2) }}</td>
                                                 @endif
 
                                                 @if(in_array('taxable_amount',$selectedDateColumns))
-                                                <td style="text-align:right;">{{$row->purchase_taxable_amt}}</td>
+                                                <td style="text-align:right;">{{ formatIndianNumber($date_taxable_amount,2) }}</td>
                                                 @endif
 
                                                 @if(in_array('actual_amount',$selectedDateColumns))
-                                                <td style="text-align:right;">{{$actual_amount}}</td>
+                                                <td style="text-align:right;">{{ formatIndianNumber($date_actual_amount,2) }}</td>
                                                 @endif
 
                                                 @if(in_array('actual_with_gst',$selectedDateColumns))
-                                                    <td style="text-align:right;">{{$actual_amount + $row->purchase_gst}}</td>
+                                                    <td style="text-align:right;">{{ formatIndianNumber($date_actual_gst_amount,2) }}</td>
                                                 @endif
                                                 @if(in_array('payment',$selectedDateColumns))
                                                     <td style="text-align:right;">
-                                                        
+                                                        {{ formatIndianNumber($date_payment_amount ?? 0,2) }}
                                                     </td>
                                                 @endif
                                                 @if(in_array('billing_rate',$selectedDateColumns))
-                                                <td style="text-align:right;">{{$row->prices}}</td>
+                                                <td>-</td>
                                                 @endif
 
                                                 @if(in_array('contract_rate',$selectedDateColumns))
-                                                <td style="text-align:right;">{{ rtrim($contract_rate,' ,') }}</td>
+                                                <td>-</td>
                                                 @endif
 
                                                 @if(in_array('difference',$selectedDateColumns))
-                                                <td style="text-align:right;">{{ formatIndianNumber($row->difference_total_amount,2) }}</td>
+                                                <td style="text-align:right;">{{ formatIndianNumber($date_difference_amount,2) }}</td>
                                                 @endif
-                                                <td class="header-section">
-                                                
+                                                <td class="header-section"></td>
+                                            </tr>
+                                            <tr class="bg-light fw-bold">
+                                                <td colspan="{{ 10 + $sub_heads->count() + 1 }}" colspan="{{ 10 + $sub_heads->count() + 1 }}">
+                                                    <div style="
+                                                        display:flex;
+                                                        justify-content: space-between;
+                                                        width:100%;
+                                                        font-weight:bold;">
+                                                        <span>Daily Summary ({{ date('d-m-Y', strtotime($key)) }})</span>
+                                                        <span>Total Report Amount: {{ formatIndianNumber($date_actual_amount, 2) }}</span>
+                                                        <span>Total Net Weight: {{ number_format($date_net_weight, 2) }}</span>
+                                                        <span>Total Average Rate: 
+                                                            @php
+                                                                $date_avg_purchase_rate = ($date_net_weight > 0)
+                                                                    ? ($date_actual_amount / $date_net_weight)
+                                                                    : 0;
+                                                            @endphp
+                                                            {{ number_format($date_avg_purchase_rate, 2) }}</span>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         @endforeach
-                                        
+                                        <tr class="bg-light fw-bold">
+                                            <td colspan="{{ 10 + $sub_heads->count() + 1 }}">
+                                                <div style="
+                                                    display:flex;
+                                                    justify-content: space-between;
+                                                    width:100%;
+                                                    font-weight:bold;
+                                                ">
+                                                    <span>
+                                                        Overall Summary ({{ date('d-m-Y', strtotime($from_date)) }}
+                                                        to
+                                                        {{ date('d-m-Y', strtotime($to_date)) }})
+                                                    </span>
+
+                                                    <span>Total Report Amount: {{ formatIndianNumber($grand_actual_amount,2) }}</span>
+
+                                                    <span>Total Net Weight: {{ number_format($grand_net_weight,2) }}</span>
+
+                                                    <span>Total Average Rate: 
+                                                        @php
+                                                            $overall_avg_rate = ($grand_net_weight > 0)
+                                                                ? ($grand_actual_amount / $grand_net_weight)
+                                                                : 0;
+                                                        @endphp
+                                                        {{ number_format($overall_avg_rate,2) }}</span>
+
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr class="bg-light fw-bold">
+                                            @if(in_array('date',$selectedDateColumns))
+                                            <td colspan="1">Total ({{ date('d-m-Y', strtotime($key)) }})</td>
+                                            @endif
+
+                                            @if(in_array('account',$selectedDateColumns))
+                                            <td>-</td>
+                                            @endif
+
+                                            @if(in_array('invoice',$selectedDateColumns))
+                                            <td>-</td>
+                                            @endif
+
+                                            @if(in_array('area',$selectedDateColumns))
+                                            <td>-</td>
+                                            @endif
+
+                                            @if(in_array('net_weight',$selectedDateColumns))
+                                            <td style="text-align:right;">{{ formatIndianNumber($grand_net_weight,2) }}</td>
+                                            @endif
+
+                                            @if(in_array('cut_weight',$selectedDateColumns))
+                                            <td style="text-align:right;">{{ formatIndianNumber($grand_cut_weight,2) }}</td>
+                                            @endif
+
+                                            @if(in_array('actual_weight',$selectedDateColumns))
+                                            <td style="text-align:right;">{{ formatIndianNumber($grand_actual_weight,2) }}</td>
+                                            @endif
+
+                                            @foreach($sub_heads as $head)
+                                                @if(in_array('sub_head_'.$head->id, $selectedDateColumns))
+                                                    <td>{{formatIndianNumber($grand_head_totals[$head->id] ?? 0,2)}}</td>
+                                                @endif
+                                            @endforeach
+
+                                            @if(in_array('invoice_amount',$selectedDateColumns))
+                                            <td style="text-align:right;">{{ formatIndianNumber($grand_invoice_amount,2) }}</td>
+                                            @endif
+
+                                            @if(in_array('gst_amount',$selectedDateColumns))
+                                            <td style="text-align:right;">{{ formatIndianNumber($grand_gst_amount,2) }}</td>
+                                            @endif
+
+                                            @if(in_array('taxable_amount',$selectedDateColumns))
+                                            <td style="text-align:right;">{{ formatIndianNumber($grand_taxable_amount,2) }}</td>
+                                            @endif
+
+                                            @if(in_array('actual_amount',$selectedDateColumns))
+                                            <td style="text-align:right;">{{ formatIndianNumber($grand_actual_amount,2) }}</td>
+                                            @endif
+
+                                            @if(in_array('actual_with_gst',$selectedDateColumns))
+                                                <td style="text-align:right;">{{ formatIndianNumber($grand_actual_gst_amount,2) }}</td>
+                                            @endif
+                                            @if(in_array('payment',$selectedDateColumns))
+                                                <td style="text-align:right;">
+                                                    {{ formatIndianNumber($grand_payment_amount ?? 0,2) }}
+                                                </td>
+                                            @endif
+                                            @if(in_array('billing_rate',$selectedDateColumns))
+                                            <td>-</td>
+                                            @endif
+
+                                            @if(in_array('contract_rate',$selectedDateColumns))
+                                            <td>-</td>
+                                            @endif
+
+                                            @if(in_array('difference',$selectedDateColumns))
+                                            <td style="text-align:right;">{{ formatIndianNumber($grand_difference_amount,2) }}</td>
+                                            @endif
+                                            <td class="header-section"></td>
+                                        </tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -516,6 +772,163 @@ select.no-arrow {
 
 @include('layouts.footer')
 <script>
-    
+    function normalizeHead(val) {
+        return (val ?? '')
+            .toString()
+            .toLowerCase()
+            .replace(/\s+/g, '_'); 
+    }
+    $( ".select2-single" ).select2({
+        //width: '100%',
+        matcher: function(params, data) {
+            if ($.trim(params.term) === '') {
+                return data;
+            }
+            // Normalize: remove dots + spaces, lowercase everything
+            function normalize(str) {
+                return (str || '')
+                    .toLowerCase()
+                    .replace(/[.\s]/g, ''); // remove '.' and spaces
+            }
+            var term = normalize(params.term);
+            var text = normalize(data.text);
+            if (text.indexOf(term) > -1) {
+                return data;
+            }
+            return null;
+        }
+    });
+    $(".search_btn").click(function(){
+        let supplier = $("#supplier").val();
+        let from_date = $("#from_date").val();
+        let to_date = $("#to_date").val();
+        let view_by = $("#view_by").val();
+        let url = window.location.href;
+        if(url.includes("wastekraft-purchase-report1")){
+            window.location = "{{ url('wastekraft-purchase-report1') }}/" + supplier + "/" + from_date + "/" + to_date + "?view_by=" + view_by;
+        }else if(url.includes("boilerfuel-purchase-report")){
+            window.location = "{{ url('boilerfuel-purchase-report1') }}/" + supplier + "/" + from_date + "/" + to_date + "?view_by=" + view_by;
+        }else{
+            window.location = "{{ url('manage-supplier-purchase-report1') }}/" + supplier + "/" + from_date + "/" + to_date + "?view_by=" + view_by;
+        }
+    });
+    function printpage() {
+        let printArea = document.getElementById('print-area').cloneNode(true);
+
+        printArea.querySelectorAll('.header-section, .btn, button, .noprint').forEach(el => el.remove());
+
+        printArea.querySelectorAll('*').forEach(el => {
+            el.style.overflow = 'visible';
+            el.style.maxHeight = 'none';
+            el.style.height = 'auto';
+        });
+
+        let heading = document.createElement('div');
+        heading.innerHTML = `
+            <div style="margin-bottom:20px;">
+                <div style="text-align:center; font-size:22px; font-weight:700;">
+                    Purchase Report
+                </div>
+            </div>
+        `;
+
+        let win = window.open('', '', 'width=1200,height=800');
+
+        win.document.write(`
+            <html>
+            <head>
+                <title>Purchase Report</title>
+
+                <!-- Bootstrap -->
+                <link rel="stylesheet" href="{{ asset('assets/css/bootstrap.min.css') }}">
+
+                <!-- Your actual UI CSS -->
+                <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}">
+                <link rel="stylesheet" href="{{ asset('assets/css/custom.css') }}">
+
+                <style>
+                    body {
+                        background: #fff;
+                        margin: 10mm;
+                        font-family: Arial, sans-serif;
+                    }
+
+                    /* TABLE STRUCTURE */
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-bottom: 18px;
+                    }
+
+                    thead th {
+                        background: #f0f0f0;
+                        border: 1px solid #888;
+                        font-weight: 600;
+                        text-align: center;
+                    }
+
+                    tbody td,
+                    tbody th {
+                        border: 1px solid #bbb;
+                    }
+
+                    th, td {
+                        padding: 7px 9px;
+                        font-size: 12px;
+                        vertical-align: middle;
+                    }
+
+                    /* TOTAL ROW */
+                    tr.bg-light,
+                    tr.fw-bold {
+                        background: #eaeaea !important;
+                        font-weight: 700;
+                    }
+
+                    /* SECTION TITLE BAR */
+                    .table-title-bottom-line {
+                        background: #e6e6e6 !important;
+                        border: 1px solid #999;
+                        margin: 20px 0 10px;
+                        padding: 6px 10px;
+                        font-weight: 700;
+                    }
+
+                    /* allow scroll tables to expand */
+                    .table-scroll-wrapper {
+                        overflow: visible !important;
+                    }
+
+                    thead {
+                        display: table-header-group;
+                    }
+
+                    tr {
+                        page-break-inside: avoid;
+                    }
+
+                    @page {
+                        
+                        margin: 10mm;
+                    }
+                </style>
+
+
+            </head>
+            <body></body>
+            </html>
+        `);
+
+        win.document.body.appendChild(heading);
+        win.document.body.appendChild(printArea);
+
+        win.document.close();
+
+        win.onload = function () {
+            win.focus();
+            win.print();
+            win.close();
+        };
+    }
 </script>
 @endsection

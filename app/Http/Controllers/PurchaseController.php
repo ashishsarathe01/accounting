@@ -397,7 +397,7 @@ if ($companyData->gst_config_type == "single_gst") {
         }
     }
 }
-   if(Session::get('user_company_id')==12 || Session::get('user_company_id')==1){
+   if($companyData->company_sale_type=="TAAROBAAR"){
 
       return view('addtaarobaarpurchase')
          ->with('fy_start_date', $fy_start_date)
@@ -1600,7 +1600,7 @@ if ($companyData->gst_config_type == "single_gst") {
             }
          }
       }
-      if(Session::get('user_company_id')==12 || Session::get('user_company_id')==1){
+      if($companyData->company_sale_type=="TAAROBAAR"){
          return view('edittaarobaarpurchase')
                ->with('fy_start_date', $fy_start_date)
                ->with('fy_end_date', $fy_end_date)
