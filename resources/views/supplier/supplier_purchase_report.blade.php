@@ -129,11 +129,12 @@ select.no-arrow {
                      </div>
                      <div class="ms-md-4" style="min-width:240px">
                         <select class="form-select form-select-sm filter-control select2-single" id="supplier">
-                            <option value="">Select Supplier</option>
                             <option value="all">All Supplier</option>
-                            <option value="all">Select Supplier</option>
                             @foreach($accounts as $loc)
-                                <option value="{{ $loc->id }}">{{ $loc->account_name }}</option>
+                                <option value="{{ $loc->id }}"
+                                    {{ $id == $loc->id ? 'selected' : '' }}>
+                                    {{ $loc->account_name }}
+                                </option>
                             @endforeach
                         </select>
                     </div>
@@ -1588,10 +1589,7 @@ select.no-arrow {
          let from_date = $("#from_date").val();
          let to_date = $("#to_date").val();
          let view_by = $("#view_by").val();
-        if(supplier==""){
-            alert("Select Supplier");
-            return;
-        }
+
          let url = window.location.href;
 
          if(url.includes("wastekraft-purchase-report")){

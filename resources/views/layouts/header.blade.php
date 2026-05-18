@@ -254,6 +254,8 @@
                         <li><a class="dropdown-item" href="{{ route('configuration.settings') }}">Dashboard Configuration Settings</a></li>
                         <li><a class="dropdown-item" href="{{ route('payroll.configuration.index') }}">Payroll Configuration Settings</a></li>
                         <li><a class="dropdown-item" href="{{ route('job-work-invoice-configuration') }}">Job Work Configuration</a></li>
+                        <li><a class="dropdown-item" href="{{ route('credit.note.configuration') }}">Credit Note Configuration</a></li>
+                        <li><a class="dropdown-item" href="{{ route('debit.note.configuration') }}">Debit Note Configuration</a></li>
                         <li><a class="dropdown-item" href="#">TDS Configuration</a></li>
                         <li><a class="dropdown-item" href="#">ESI</a></li>
                         <li><a class="dropdown-item" href="#">PF</a></li>

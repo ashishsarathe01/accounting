@@ -1982,7 +1982,37 @@ class SupplierPurchaseController extends Controller
         }
 
         $view_by = request()->view_by ?? 'party';
-
+        if(empty($id))
+        {
+            $supplier = Supplier::select('account_id')
+                    ->where('company_id', Session::get('user_company_id'))
+                    ->pluck('account_id');
+            $accounts = Accounts::select('account_name','id')
+                ->where('delete', '0')
+                ->where('status', '1')
+                ->whereIn('id', $supplier)
+                ->whereIn('company_id', [Session::get('user_company_id'), 0])
+                ->orderBy('account_name')
+                ->get();
+            return view('supplier.supplier_purchase_report', [
+                'purchases' => collect(),
+                'accounts' => $accounts,
+                'items' => collect(),
+                'id' => $id,
+                'waste_group_id' => null,
+                'boiler_group_id' => null,
+                'current_group_type' => 'WASTE KRAFT',
+                'from_date' => $from_date,
+                'to_date' => $to_date,
+                'purchases_details' => collect(),
+                'group_id' => null,
+                'view_by' => $view_by,
+                'locations' => collect(),
+                'heads' => collect(),
+                'item_groups' => collect(),
+                'purchase_prices' => "[]"
+            ]);
+        }
         $group_list = SaleOrderSetting::where('sale-order-settings.company_id', Session::get('user_company_id'))
             ->where('setting_type', 'PURCHASE GROUP')
             ->where('setting_for', 'PURCHASE ORDER')
@@ -2608,7 +2638,35 @@ class SupplierPurchaseController extends Controller
         }
 
         $view_by = request()->view_by ?? 'party';
-
+        if(empty($id))
+        {
+            $supplier = FuelSupplier::select('account_id')
+                    ->where('company_id', Session::get('user_company_id'))
+                    ->pluck('account_id');
+            $accounts = Accounts::where('delete', '0')
+                ->where('status', '1')
+                ->whereIn('id', $supplier)
+                ->whereIn('company_id', [Session::get('user_company_id'), 0])
+                ->orderBy('account_name')
+                ->get();
+            return view('supplier.supplier_purchase_report', [
+                'purchases' => collect(),
+                'accounts' => $accounts,
+                'items' => collect(),
+                'waste_group_id' => null,
+                'boiler_group_id' => null,
+                'current_group_type' => 'BOILER FUEL',
+                'id' => $id,
+                'from_date' => $from_date,
+                'to_date' => $to_date,
+                'purchases_details' => collect(),
+                'group_id' => null,
+                'view_by' => $view_by,
+                'locations' => collect(),
+                'heads' => collect(),
+                'item_groups' => collect()
+            ]);
+        }
         $group_list = SaleOrderSetting::where('company_id', Session::get('user_company_id'))
             ->where('setting_type', 'PURCHASE GROUP')
             ->where('setting_for', 'PURCHASE ORDER')

@@ -129,7 +129,7 @@
 
                 <div class="mb-3">
                     <label>Joint Allowance (mm)</label>
-                    <input type="number" step="0.01" id="joint_allowance" class="form-control" value="35">
+                    <input type="number" step="0.01" id="joint_allowance" class="form-control" value="0">
                 </div>
 
                 <div class="mb-3">
@@ -281,26 +281,7 @@
 </div>
 
 
-                <div class="card-box mt-4">
-
-                    <h4>Formula Used</h4>
-
-                    <p>
-                        <strong>Cutting Length:</strong><br>
-                        2 × (Length + Width) + Joint Allowance + Cutting Margin
-                    </p>
-
-                    <p>
-                        <strong>Deckle Width:</strong><br>
-                        Height + Width + Deckle Margin
-                    </p>
-
-                    <p>
-                        <strong>Weight Formula:</strong><br>
-                        (CL mm × Deckle mm × Effective GSM) / 1550000000
-                    </p>
-
-                </div>
+                
 
             </div>
 

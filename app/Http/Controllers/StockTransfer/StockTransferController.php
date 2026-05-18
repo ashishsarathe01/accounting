@@ -1115,10 +1115,21 @@ class StockTransferController extends Controller
         }
         $duplicate_voucher_status = $request->duplicate_voucher_status;
         $financial_year = Session::get('default_fy');
-        $fy = explode('-',$financial_year);
-        $from_date = $fy[0]."-04-01";
+        $fy = explode('-', trim($financial_year));
+        if(count($fy) < 2){
+        return json_encode([
+            'status' => false,
+            'message' => 'Invalid Financial Year Configuration.'
+        ]);
+        }
+        $from_year = trim($fy[0]);
+        $to_year = trim($fy[1]);
+        if(strlen($to_year) == 2){
+        $to_year = substr($from_year,0,2).$to_year;
+        }
+        $from_date = $from_year."-04-01";
         $from_date = date('Y-m-d',strtotime($from_date));
-        $to_date = $fy[1]."-03-31";
+        $to_date = $to_year."-03-31";
         $to_date = date('Y-m-d',strtotime($to_date));
         $company_data = Companies::where('id', Session::get('user_company_id'))->first(); 
         $already_exists_error_arr = [];
@@ -1136,7 +1147,14 @@ class StockTransferController extends Controller
                 $fp = file($filePath, FILE_SKIP_EMPTY_LINES);
                 $index = 1;
                 $series_no = "";
+                $bill_date = '';
+                $series = '';
+                $voucher_no = '';
+                $from_series = '';
+                $to_series = '';
+
                 while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+                    $data = array_pad($data, 200, '');
                     $data = array_map('trim', $data);
                     if(trim($data[0])!="" && trim($data[1])!="" && $data[2]!=""){
                         $series = trim($data[0]);
@@ -1187,6 +1205,9 @@ class StockTransferController extends Controller
                 }
             }         
         }
+        $series_arr = [];
+        $material_center_arr = [];
+        $gst_no_arr = [];
         foreach ($gst_data as $key => $value) {
             $series_arr[] = $value->series;
             $material_center_arr[] = $value->mat_center;
@@ -1206,16 +1227,38 @@ class StockTransferController extends Controller
             $total_row = $total_row - 1;
             $success_row = 0;
             $index = 1;
-        while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+            $bill_date = '';
+            $series = '';
+            $voucher_no = '';
+            $from_series = '';
+            $to_series = '';
+            $item_arr = [];
+            $txn_arr = [];
+            $error_arr = [];
+            $slicedData = [];
+            while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+            $data = array_pad($data, 200, '');
             $data = array_map('trim', $data);
             if(trim($data[0])=="" && trim($data[1])=="" && $data[2]=="" && $data[3]=="" && $data[4]=="" && $data[5]==""){
                $index++;
                continue;
             }
-            if($data[0]!="" && $data[1]!=""){
-                if($bill_date!=""){
-                    $akey = array_search($series, $series_arr);
-                    $merchant_gst = $gst_no_arr[$akey];
+            if(
+            trim($data[0]) != "" ||
+            trim($data[1]) != "" ||
+            trim($data[2]) != ""
+            ){
+                            if(
+            !empty($bill_date) ||
+            !empty($series) ||
+            !empty($voucher_no)
+            ){
+            $akey = array_search($series, $series_arr);
+            $merchant_gst = '';
+
+            if($akey !== false && isset($gst_no_arr[$akey])){
+            $merchant_gst = $gst_no_arr[$akey];
+            }
                     $key1 = array_search($from_series, $series_arr);
                     if($key1 !== false){
                         $material_center_from = $material_center_arr[$key1];
@@ -1230,21 +1273,74 @@ class StockTransferController extends Controller
                 $item_arr = [];
                 $txn_arr = [];
                 $error_arr = [];
+                $slicedData = [];
                 $series = $data[0];
                 $bill_date = $data[1];
                 $voucher_no = $data[2];
                 $from_series = $data[3];
                 $to_series = $data[4];
-                if(strtotime($from_date)>strtotime(date('Y-m-d',strtotime($bill_date))) || strtotime($to_date)<strtotime(date('Y-m-d',strtotime($bill_date)))){                  
+                $current_voucher = isset($voucher_no) ? trim($voucher_no) : '';
+                if(empty(trim($series))){
+                array_push(
+                    $error_arr,
+                    'Series Cannot Be Empty - Invoice No. '.$current_voucher
+                );
+                }
+                if(empty(trim($bill_date))){
+                array_push(
+                    $error_arr,
+                    'Date Cannot Be Empty - Invoice No. '.$current_voucher
+                );
+                }
+                if(empty(trim($voucher_no))){
+                array_push(
+                    $error_arr,
+                    'Voucher No Cannot Be Empty - Invoice No. '.$current_voucher
+                );
+                }
+                if(empty(trim($from_series))){
+                array_push(
+                    $error_arr,
+                    'From MC Name Cannot Be Empty - Invoice No. '.$current_voucher
+                );
+                }
+                if(empty(trim($to_series))){
+                array_push(
+                    $error_arr,
+                    'To MC Name Cannot Be Empty - Invoice No. '.$current_voucher
+                );
+                }
+                if(
+                !empty(trim($bill_date)) &&
+                (
+                    strtotime($from_date) > strtotime(date('Y-m-d',strtotime($bill_date))) ||
+                    strtotime($to_date) < strtotime(date('Y-m-d',strtotime($bill_date)))
+                )
+                ){                  
                     array_push($error_arr, 'Date '.$bill_date.' Not In Financial Year - Row '.$index);                  
                 }
-                if(!in_array($series, $series_arr)){
+                $series_check = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
+                  ->where('series', $series)
+                  ->where('status', '1')
+                  ->first();
+
+                if(!$series_check){
                     array_push($error_arr, 'Series No. '.$series.' Not Found - Row '.$index); 
                 }
-                if(!in_array($from_series, $series_arr)){
+                $from_series_check = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
+                  ->where('series', $from_series)
+                  ->where('status', '1')
+                  ->first();
+
+                if(!$from_series_check){
                     array_push($error_arr, 'From Series No. '.$from_series.' Not Found - Row '.$index); 
                 }
-                if(!in_array($to_series, $series_arr)){
+                $to_series_check = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
+                  ->where('series', $to_series)
+                  ->where('status', '1')
+                  ->first();
+
+                if(!$to_series_check){
                     array_push($error_arr, 'To Series No. '.$to_series.' Not Found - Row '.$index); 
                 }
                 $merchant_gst = "";
@@ -1254,6 +1350,26 @@ class StockTransferController extends Controller
                 }
                 $material_center_from = "";
                 $key1 = array_search($from_series, $series_arr);
+                if(
+                !empty($series) &&
+                !empty($from_series) &&
+                trim($series) != trim($from_series)
+                ){
+                array_push(
+                    $error_arr,
+                    'Series And From MC Name Must Be Same - Invoice No. '.$voucher_no
+                );
+                }
+                if(
+                !empty($from_series) &&
+                !empty($to_series) &&
+                trim($from_series) == trim($to_series)
+                ){
+                array_push(
+                    $error_arr,
+                    'From MC Name And To MC Name Cannot Be Same - Invoice No. '.$voucher_no
+                );
+                }
                 if($key1 !== false){
                     $material_center_from = $material_center_arr[$key1];
                 }
@@ -1297,6 +1413,7 @@ class StockTransferController extends Controller
             $item = ManageItems::select('id','hsn_code')
                         ->where('name',trim($item_name))
                         ->where('company_id',trim(Session::get('user_company_id')))
+                        ->where('delete','0')
                         ->first();
             if(!$item){
                array_push($error_arr, 'Item Name '.$item_name.' not found - Invoice No. '.$voucher_no);
@@ -1307,6 +1424,33 @@ class StockTransferController extends Controller
             $price = trim(str_replace(",","",$price));
             $amount = $data[8];
             $amount = trim(str_replace(",","",$amount));
+            if(empty(trim($item_name))){
+            array_push(
+                $error_arr,
+                'Item Name Cannot Be Empty - Invoice No. '.$voucher_no
+            );
+            }
+
+            if(empty(trim($item_qty))){
+            array_push(
+                $error_arr,
+                'Qty Cannot Be Empty - Invoice No. '.$voucher_no
+            );
+            }
+
+            if(empty(trim($price))){
+            array_push(
+                $error_arr,
+                'Price Cannot Be Empty - Invoice No. '.$voucher_no
+            );
+            }
+
+            if(empty(trim($amount))){
+            array_push(
+                $error_arr,
+                'Amount Cannot Be Empty - Invoice No. '.$voucher_no
+            );
+            }
             //echo $item_name.'--'.$item_qty."--".$price."--".$amount;
             array_push($item_arr,array("item_name"=>$item_name,"item_qty"=>$item_qty,"price"=>$price,"amount"=>$amount));
             //echo $index."**".$total_row;
@@ -1485,7 +1629,10 @@ class StockTransferController extends Controller
                                         ->where('status', '=', '1')
                                         ->where('name', '=', $v2)
                                         ->whereIn('company_id',[Session::get('user_company_id'),0])
-                                        ->first();  
+                                        ->first(); 
+                            if(!$bill_sundrys){
+                                continue;
+                            } 
                             $sundry_id = $bill_sundrys->id;
                             $adjust_sale_amt = $bill_sundrys->adjust_sale_amt;
                             $nature_of_sundry = $bill_sundrys->nature_of_sundry;

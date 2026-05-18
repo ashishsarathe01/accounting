@@ -2283,10 +2283,21 @@ foreach ($bill_sundrys as $key => $bill) {
       }
       $duplicate_voucher_status = $request->duplicate_voucher_status;
       $financial_year = Session::get('default_fy');
-      $fy = explode('-',$financial_year);
-      $from_date = $fy[0]."-04-01";
+      $fy = explode('-', trim($financial_year));
+      if(count($fy) < 2){
+         return json_encode([
+            'status' => false,
+            'message' => 'Invalid Financial Year Configuration.'
+         ]);
+      }
+      $from_year = trim($fy[0]);
+      $to_year = trim($fy[1]);
+      if(strlen($to_year) == 2){
+         $to_year = substr($from_year,0,2).$to_year;
+      }
+      $from_date = $from_year."-04-01";
       $from_date = date('Y-m-d',strtotime($from_date));
-      $to_date = $fy[1]."-03-31";
+      $to_date = $to_year."-03-31";
       $to_date = date('Y-m-d',strtotime($to_date));
       $company_data = Companies::where('id', Session::get('user_company_id'))->first(); 
       $series_arr = [];$material_center_arr = [];$gst_no_arr = [];$all_error_arr = [];$error_arr = [];$item_arr = [];$data_arr = [];$voucher_arr = [];
@@ -2300,9 +2311,18 @@ foreach ($bill_sundrys as $key => $bill) {
             $fp = file($filePath, FILE_SKIP_EMPTY_LINES);
             $index = 1;
             $series_no = "";
+            $date = '';
+            $voucher_no = '';
+            $series_no = '';
+
             while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+               $data = array_pad($data, 200, '');
                $data = array_map('trim', $data);
-               if($data[0]!="" && $data[2]!=""){
+               if(
+                  trim($data[0]) != "" ||
+                  trim($data[1]) != "" ||
+                  trim($data[2]) != ""
+               ){
                   $series_no = $data[0];
                   $voucher_no = $data[2]; 
                   $party = $data[3];
@@ -2377,15 +2397,31 @@ foreach ($bill_sundrys as $key => $bill) {
          $total_row = $total_row - 1;
          $success_row = 0;
          $index = 1;
+         $date = '';
+         $voucher_no = '';
+         $series_no = '';
+
          while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+            $data = array_pad($data, 200, '');
             $data = array_map('trim', $data);
             // if($data[2]==""){
             //    array_push($error_arr, 'Invoice No. cannot be empty - Row No. '.$index); 
             // }            
-            if($data[0]!="" && $data[2]!=""){
-               if($series_no!=""){
+            if(
+               trim($data[0]) != "" ||
+               trim($data[1]) != "" ||
+               trim($data[2]) != ""
+            ){
+               if(
+                  !empty($series_no) ||
+                  !empty($voucher_no) ||
+                  !empty($date)
+               ){
                   $akey = array_search($series_no, $series_arr);
-                  $merchant_gst = $gst_no_arr[$akey];
+                  $merchant_gst = '';
+                  if($akey !== false && isset($gst_no_arr[$akey])){
+                     $merchant_gst = $gst_no_arr[$akey];
+                  }
                   array_push($data_arr,array("series_no"=>$series_no,"date"=>$date,"voucher_no"=>$voucher_no,"party"=>$party,"material_center"=>$material_center,"grand_total"=>$grand_total,"self_vehicle"=>$self_vehicle,"vehicle_no"=>$vehicle_no,"transport_name"=>$transport_name,"reverse_charge"=>$reverse_charge,"gr_pr_no"=>$gr_pr_no,"station"=>$station,"ewaybill_no"=>$ewaybill_no,"shipping_name"=>$shipping_name,"item_arr"=>$item_arr,"slicedData"=>$slicedData,"merchant_gst"=>$merchant_gst,"error_arr"=>$error_arr));
                }
                $item_arr = [];
@@ -2408,7 +2444,44 @@ foreach ($bill_sundrys as $key => $bill) {
                $shipping_name = $data[13];
                $date = str_replace("/","-",$date);
                $date = date('Y-m-d',strtotime($date));
-               if(strtotime($from_date)>strtotime(date('Y-m-d',strtotime($date))) || strtotime($to_date)<strtotime(date('Y-m-d',strtotime($date)))){                  
+               $current_voucher = isset($voucher_no) ? trim($voucher_no) : '';
+               if(empty(trim($series_no))){
+                  array_push($error_arr,
+                     'Series Cannot Be Empty - Invoice No. '.$current_voucher
+                  );
+               }
+               if(empty(trim($date))){
+                  array_push($error_arr,
+                     'Date Cannot Be Empty - Invoice No. '.$current_voucher
+                  );
+               }
+               if(empty(trim($voucher_no))){
+                  array_push($error_arr,
+                     'Voucher No Cannot Be Empty - Invoice No. '.$current_voucher
+                  );
+               }
+               if(empty(trim($party))){
+                  array_push($error_arr,
+                     'Party Cannot Be Empty - Invoice No. '.$current_voucher
+                  );
+               }
+               if(empty(trim($material_center))){
+                  array_push($error_arr,
+                     'Material Center Cannot Be Empty - Invoice No. '.$current_voucher
+                  );
+               }
+               if(empty(trim($grand_total))){
+                  array_push($error_arr,
+                     'Grand Total Cannot Be Empty - Invoice No. '.$current_voucher
+                  );
+               }
+               if(
+                  !empty(trim($date)) &&
+                  (
+                     strtotime($from_date) > strtotime(date('Y-m-d',strtotime($date))) ||
+                     strtotime($to_date) < strtotime(date('Y-m-d',strtotime($date)))
+                  )
+               ){                  
                   array_push($error_arr, 'Date '.$date.' not in Financial Year - Invoice No. '.$voucher_no);                  
                }              
                if(!in_array(trim($series_no), $series_arr)){
@@ -2419,6 +2492,7 @@ foreach ($bill_sundrys as $key => $bill) {
                }
                $account = Accounts::where('account_name',trim($party))
                                  ->where('company_id',trim(Session::get('user_company_id')))
+                                 ->where('delete','0')
                                  ->first();
                if(!$account){
                   array_push($error_arr, 'Party Name '.$party.' not found - Invoice No. '.$voucher_no);
@@ -2426,6 +2500,7 @@ foreach ($bill_sundrys as $key => $bill) {
                if($shipping_name!=""){
                   $shipp = Accounts::where('account_name',trim($shipping_name))
                            ->where('company_id',trim(Session::get('user_company_id')))
+                           ->where('delete','0')
                            ->first();      
                   if(!$shipp){
                      array_push($error_arr, 'Shipping Name '.$shipping_name.' not found - Invoice No. '.$voucher_no);
@@ -2461,16 +2536,17 @@ foreach ($bill_sundrys as $key => $bill) {
                   if($check_invoice){
                      array_push($error_arr, 'Voucher '.$voucher_no.' already exists - Invoice No. '.$voucher_no);
                   }
-                  if(in_array($series_no."_".$voucher_no, $voucher_arr)){
+                  if(in_array($account->id."_".$series_no."_".$voucher_no, $voucher_arr)){
                      array_push($error_arr, 'Voucher '.$voucher_no.' already exists - Invoice No. '.$voucher_no);
                   }
-                  array_push($voucher_arr,$series_no."_".$voucher_no);
+                  array_push($voucher_arr,$account->id."_".$series_no."_".$voucher_no);
                }
             }
             $item_name = $data[14]; 
             $itemc = ManageItems::select('id','hsn_code')
                         ->where('name',trim($item_name))
                         ->where('company_id',trim(Session::get('user_company_id')))
+                        ->where('delete','0')
                         ->first();
                         // echo "<pre>";
                         // print_r($itemc);
@@ -2489,11 +2565,37 @@ foreach ($bill_sundrys as $key => $bill) {
             $sgst = $data[19];
             $sgst = trim(str_replace(",","",$sgst));
             $igst = $data[20];
-            $igst = trim(str_replace(",","",$igst));         
+            $igst = trim(str_replace(",","",$igst));
+            if(empty(trim($item_name))){
+               array_push($error_arr,
+                  'Item Name Cannot Be Empty - Invoice No. '.$voucher_no
+               );
+            }
+
+            if(empty(trim($item_weight))){
+               array_push($error_arr,
+                  'Item Weight Cannot Be Empty - Invoice No. '.$voucher_no
+               );
+            }
+
+            if(empty(trim($price))){
+               array_push($error_arr,
+                  'Item Price Cannot Be Empty - Invoice No. '.$voucher_no
+               );
+            }
+
+            if(empty(trim($amount))){
+               array_push($error_arr,
+                  'Item Amount Cannot Be Empty - Invoice No. '.$voucher_no
+               );
+            }         
             array_push($item_arr,array("item_name"=>$item_name,"item_weight"=>$item_weight,"price"=>$price,"amount"=>$amount,"cgst"=>$cgst,"sgst"=>$sgst,"igst"=>$igst));
             if($index==$total_row){
                $akey = array_search($series_no, $series_arr);
-               $merchant_gst = $gst_no_arr[$akey];
+               $merchant_gst = '';
+               if($akey !== false && isset($gst_no_arr[$akey])){
+                  $merchant_gst = $gst_no_arr[$akey];
+               }
                array_push($data_arr,array("series_no"=>$series_no,"date"=>$date,"voucher_no"=>$voucher_no,"party"=>$party,"material_center"=>$material_center,"grand_total"=>$grand_total,"self_vehicle"=>$self_vehicle,"vehicle_no"=>$vehicle_no,"transport_name"=>$transport_name,"reverse_charge"=>$reverse_charge,"gr_pr_no"=>$gr_pr_no,"station"=>$station,"ewaybill_no"=>$ewaybill_no,"shipping_name"=>$shipping_name,"item_arr"=>$item_arr,"slicedData"=>$slicedData,"merchant_gst"=>$merchant_gst,"error_arr"=>$error_arr));
             }
             $index++;
@@ -2536,6 +2638,7 @@ foreach ($bill_sundrys as $key => $bill) {
                $merchant_gst = $value['merchant_gst'];
                $account = Accounts::where('account_name',trim($party))
                         ->where('company_id',trim(Session::get('user_company_id')))
+                        ->where('delete','0')
                         ->first();
                $slicedData = $value['slicedData'];
                if($duplicate_voucher_status==2){
@@ -2579,9 +2682,11 @@ foreach ($bill_sundrys as $key => $bill) {
                //Insert Data In Sale Table
                $account = Accounts::where('account_name',trim($party))
                         ->where('company_id',trim(Session::get('user_company_id')))
+                        ->where('delete','0')
                         ->first();
                $shipp = Accounts::where('account_name',trim($shipping_name))
                         ->where('company_id',trim(Session::get('user_company_id')))
+                        ->where('delete','0')
                         ->first();
                $purchase = new Purchase;
                $purchase->series_no = $series_no;
@@ -2657,6 +2762,9 @@ foreach ($bill_sundrys as $key => $bill) {
                                           ->first(); 
                         $sundry = new PurchaseSundry;
                         $sundry->purchase_id = $purchase->id;
+                        if(!$bill_sundrys){
+   continue;
+}
                         $sundry->bill_sundry = $bill_sundrys->id;
                         $sundry->rate = $tx_rate/2;
                         $sundry->amount = str_replace(",","",$cgst_rate);
@@ -2686,6 +2794,9 @@ foreach ($bill_sundrys as $key => $bill) {
                                           ->first(); 
                         $sundry = new PurchaseSundry;
                         $sundry->purchase_id = $purchase->id;
+                        if(!$bill_sundrys){
+   continue;
+}
                         $sundry->bill_sundry = $bill_sundrys->id;
                         $sundry->rate = $tx_rate/2;
                         $sundry->amount = str_replace(",","",$sgst_rate);
@@ -2716,6 +2827,9 @@ foreach ($bill_sundrys as $key => $bill) {
                                           ->first(); 
                         $sundry = new PurchaseSundry;
                         $sundry->purchase_id = $purchase->id;
+                        if(!$bill_sundrys){
+   continue;
+}
                         $sundry->bill_sundry = $bill_sundrys->id;
                         $sundry->rate = $tx_rate;
                         $sundry->amount = str_replace(",","",$igst_rate);
@@ -2753,6 +2867,9 @@ foreach ($bill_sundrys as $key => $bill) {
                                              ->first();
                  
                         // Save item in purchase description
+                        if(!$item){
+   continue;
+}
                         $desc = new PurchaseDescription;
                         $desc->purchase_id = $purchase->id;
                         $desc->company_id = Session::get('user_company_id');
@@ -2895,6 +3012,9 @@ foreach ($bill_sundrys as $key => $bill) {
                                        ->where('name', '=', $v2)
                                        ->whereIn('company_id',[Session::get('user_company_id'),0])
                                        ->first();  
+                           if(!$bill_sundrys){
+   continue;
+}
                            $sundry_id = $bill_sundrys->id;
                            $adjust_purchase_amt = $bill_sundrys->adjust_purchase_amt;
                            $nature_of_sundry = $bill_sundrys->nature_of_sundry;

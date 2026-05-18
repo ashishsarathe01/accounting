@@ -1745,10 +1745,21 @@ public function index(Request $request)
       }
       $duplicate_voucher_status = $request->duplicate_voucher_status;
       $financial_year = Session::get('default_fy');
-      $fy = explode('-',$financial_year);
-      $from_date = $fy[0]."-04-01";
+      $fy = explode('-', trim($financial_year));
+      if(count($fy) < 2){
+         return json_encode([
+            'status' => false,
+            'message' => 'Invalid Financial Year Configuration.'
+         ]);
+      }
+      $from_year = trim($fy[0]);
+      $to_year = trim($fy[1]);
+      if(strlen($to_year) == 2){
+         $to_year = substr($from_year,0,2).$to_year;
+      }
+      $from_date = $from_year."-04-01";
       $from_date = date('Y-m-d',strtotime($from_date));
-      $to_date = $fy[1]."-03-31";
+      $to_date = $to_year."-03-31";
       $to_date = date('Y-m-d',strtotime($to_date));
       $company_data = Companies::where('id', Session::get('user_company_id'))->first(); 
       $already_exists_error_arr = [];
@@ -1766,9 +1777,21 @@ public function index(Request $request)
             $fp = file($filePath, FILE_SKIP_EMPTY_LINES);
             $index = 1;
             $series_no = "";
+            $bill_date = '';
+            $bill_no = '';
+            $claim_gst = '';
+            $invoice_no = '';
+            $remark = '';
+            $txn_arr = [];
+            $error_arr = [];
             while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+               $data = array_pad($data, 50, '');
                $data = array_map('trim', $data);
-               if(trim($data[0])!="" && trim($data[1])!="" && $data[2]!=""){                  
+               if(
+                  trim($data[0]) != "" ||
+                  trim($data[1]) != "" ||
+                  trim($data[4]) != ""
+               ){               
                   $series = trim($data[1]);
                   $bill_no = trim($data[4]);
                   $receipt = Journal::select('id')
@@ -1779,7 +1802,15 @@ public function index(Request $request)
                                        ->where('company_id',trim(Session::get('user_company_id')))
                                        ->first();
                   if($receipt){
-                     array_push($already_exists_error_arr, 'Journal on journal no. - '.$bill_no.' already exists');
+                     if(!in_array(
+                        'Journal on journal no. - '.$bill_no.' already exists',
+                        $already_exists_error_arr
+                     )){
+                        array_push(
+                           $already_exists_error_arr,
+                           'Journal on journal no. - '.$bill_no.' already exists'
+                        );
+                     }
                   }
                }
             }
@@ -1794,6 +1825,9 @@ public function index(Request $request)
          }
       }
       if($company_data->gst_config_type == "single_gst"){
+         $series_arr = [];
+         $material_center_arr = [];
+         $gst_no_arr = [];
          $gst_data = DB::table('gst_settings')
                            ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])
                            ->get();
@@ -1808,6 +1842,9 @@ public function index(Request $request)
                            ->select('id','gst_no','mat_center','series','invoice_start_from')
                            ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst"])
                            ->get();
+         $series_arr = [];
+         $material_center_arr = [];
+         $gst_no_arr = [];                  
          foreach ($gst_data as $key => $value) {
             $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series','branch_invoice_start_from as invoice_start_from')
                         ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_multiple_id'=>$value->id])
@@ -1833,16 +1870,53 @@ public function index(Request $request)
          $total_row = $total_row - 1;
          $success_row = 0;
          $index = 1;
+         $bill_date = '';
+         $series = '';
+         $bill_no = '';
+         $claim_gst = '';
+         $invoice_no = '';
+         $remark = '';
+         $txn_arr = [];
+         $error_arr = [];
          while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+            $data = array_pad($data, 50, '');
             $data = array_map('trim', $data);
             if(trim($data[0])=="" && trim($data[1])=="" && $data[2]=="" && $data[3]=="" && $data[4]=="" && $data[5]=="" && $data[6]=="" && $data[7]=="" && $data[8]==""){
                $index++;
                continue;                  
             }
-            if(trim($data[0])!="" && trim($data[1])!=""){
-               if($bill_date!=""){
+            if(
+               trim($data[0]) != "" ||
+               trim($data[1]) != "" ||
+               trim($data[4]) != ""
+            ){
+               $total_debit = 0;
+               $total_credit = 0;
+
+               foreach($txn_arr as $txn){
+
+                  $total_debit += floatval($txn['debit']);
+                  $total_credit += floatval($txn['credit']);
+               }
+
+               if(round($total_debit,2) != round($total_credit,2)){
+
+                  array_push(
+                     $error_arr,
+                     'Total Debit And Credit Must Be Equal - Bill No. '.$bill_no
+                  );
+               }
+               if(
+                  !empty($bill_date) ||
+                  !empty($series) ||
+                  !empty($bill_no)
+               ){
                   $akey = array_search($series, $series_arr);
-                  $merchant_gst = $gst_no_arr[$akey];
+                  $merchant_gst = '';
+
+                  if($akey !== false && isset($gst_no_arr[$akey])){
+                     $merchant_gst = $gst_no_arr[$akey];
+                  }
                   array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"bill_no"=>$bill_no,"claim_gst"=>$claim_gst,"invoice_no"=>$invoice_no,'remark'=>$remark,"merchant_gst"=>$merchant_gst,"txn_arr"=>$txn_arr,"error_arr"=>$error_arr));
                }
                $debit_count = 0;$credit_count = 0;
@@ -1850,15 +1924,88 @@ public function index(Request $request)
                $error_arr = [];
                $bill_date = trim($data[0]);
                $series = trim($data[1]);
-               $claim_gst = $data[2];
+               $claim_gst = strtoupper(trim($data[2]));
                $invoice_no = $data[3];
                $bill_no = $data[4];
-               $remark = $data[5];
+               $remark = isset($data[5]) ? trim($data[5]) : '';
                $gst_rate = $data[7];
-               if(strtotime($from_date)>strtotime(date('Y-m-d',strtotime($bill_date))) || strtotime($to_date)<strtotime(date('Y-m-d',strtotime($bill_date)))){                  
+               if(
+                  $claim_gst == "YES" &&
+                  trim($gst_rate) !== '' &&
+                  !is_numeric($gst_rate)
+               ){
+                  array_push(
+                     $error_arr,
+                     'Invalid GST Rate - Row '.$index
+                  );
+               }
+               $current_voucher = isset($bill_no) ? trim($bill_no) : '';
+               if(empty(trim($bill_date))){
+                  array_push($error_arr,
+                     'Bill Date Cannot Be Empty - Bill No. '.$current_voucher
+                  );
+               }
+               if(empty(trim($series))){
+                  array_push($error_arr,
+                     'Series Cannot Be Empty - Bill No. '.$current_voucher
+                  );
+               }
+               if(empty(trim($claim_gst))){
+                  array_push($error_arr,
+                     'Claim GST Cannot Be Empty - Bill No. '.$current_voucher
+                  );
+               }
+               if(empty(trim($bill_no))){
+                  array_push($error_arr,
+                     'Bill No Cannot Be Empty - Bill No. '.$current_voucher
+                  );
+               }
+               if($claim_gst != "YES" && $claim_gst != "NO"){
+                  array_push(
+                     $error_arr,
+                     'Claim GST Must Be YES or NO - Bill No. '.$current_voucher
+                  );
+               }
+               if($claim_gst == "NO"){
+                  if(!empty(trim($invoice_no))){
+                     array_push(
+                        $error_arr,
+                        'Invoice No Must Be Empty When Claim GST Is NO - Bill No. '.$current_voucher
+                     );
+                  }
+                  if(!empty(trim($gst_rate))){
+                     array_push(
+                        $error_arr,
+                        'GST Rate Must Be Empty When Claim GST Is NO - Bill No. '.$current_voucher
+                     );
+                  }
+               }
+               if($claim_gst == "YES"){
+                  if(
+                  trim($gst_rate) === '' ||
+                  !is_numeric($gst_rate)
+               ){
+                     array_push(
+                        $error_arr,
+                        'GST Rate Required When Claim GST Is YES - Bill No. '.$current_voucher
+                     );
+                  }
+               }
+               if(
+                  !empty(trim($bill_date)) &&
+                  (
+                     strtotime($from_date) > strtotime(date('Y-m-d',strtotime($bill_date))) ||
+                     strtotime($to_date) < strtotime(date('Y-m-d',strtotime($bill_date)))
+                  )
+               ){                  
                   array_push($error_arr, 'Date '.$bill_date.' Not In Financial Year - Row '.$index);                  
                }
-               if(!in_array($series, $series_arr)){
+               $series_check = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
+                  ->where('series', $series)
+                  ->where('status', '1')
+                  ->first();
+
+               if(!$series_check){
                   array_push($error_arr, 'Series No. '.$series.' Not Found - Row '.$index); 
                }
                $merchant_gst = "";
@@ -1880,16 +2027,48 @@ public function index(Request $request)
                }
             }
             $account = $data[6];
+            if(empty(trim($account))){
+               array_push(
+                  $error_arr,
+                  'Account Name Cannot Be Empty - Row '.$index
+               );
+            }
             $check_account = Accounts::where('account_name',trim($account))
                         ->whereIn('company_id',[trim(Session::get('user_company_id')),0])
+                        ->where('delete','0')
                         ->first();
             if(!$check_account){
                array_push($error_arr, 'Account Name '.$account.' Not Found - Row '.$index);
             }
-            $debit = $data[8];
-            $debit = str_replace(",","",$debit);
-            $credit = $data[9];
-            $credit = str_replace(",","",$credit);
+            $debit = isset($data[8]) ? trim($data[8]) : '';
+            $debit = preg_replace('/[^0-9.\-]/', '', $debit);
+            if($debit === ''){
+               $debit = 0;
+            }
+            $credit = isset($data[9]) ? trim($data[9]) : '';
+            $credit = preg_replace('/[^0-9.\-]/', '', $credit);
+            if($credit === ''){
+               $credit = 0;
+            }
+            $gst_rate = isset($data[7]) ? trim($data[7]) : '';
+            $gst_rate = preg_replace('/[^0-9.\-]/', '', $gst_rate);
+            if($gst_rate === ''){
+               $gst_rate = 0;
+            }
+            $debit = floatval($debit);
+            $credit = floatval($credit);
+            $gst_rate = floatval($gst_rate);
+            if(
+               !empty($debit) &&
+               $debit != 0 &&
+               !empty($credit) &&
+               $credit != 0
+            ){
+               array_push(
+                  $error_arr,
+                  'Debit And Credit Both Cannot Have Value In Same Row - Row '.$index
+               );
+            }
             if($claim_gst=="NO"){
                if($debit!="" && $debit!=0){
                   $debit_count++;
@@ -1903,14 +2082,29 @@ public function index(Request $request)
                // }
             }
             if($debit=="" && $credit==""){
-               array_push($error_arr, 'Debit/Credit Cannot - Row '.$index);
+               array_push(
+                  $error_arr,
+                  'Either Debit Or Credit Required - Row '.$index
+               );
             }
             
             if($check_account){
-               array_push($txn_arr,array("account"=>$check_account->id,"account_state_code"=>$check_account->state,"debit"=>$debit,"credit"=>$credit,"gst_rate"=>$data[7]));
+               array_push($txn_arr,array(
+                  "account"=>$check_account->id,
+                  "account_state_code"=>$check_account->state,
+                  "debit"=>$debit,
+                  "credit"=>$credit,
+                  "gst_rate"=>$gst_rate
+               ));
             }else{
-               array_push($txn_arr,array("account"=>$account,"account_state_code"=>"","debit"=>$debit,"credit"=>$credit,"gst_rate"=>$data[7]));
-            }            
+               array_push($txn_arr,array(
+                  "account"=>$account,
+                  "account_state_code"=>"",
+                  "debit"=>$debit,
+                  "credit"=>$credit,
+                  "gst_rate"=>$gst_rate
+               ));
+            } 
             if($index==$total_row){
                array_push($data_arr,array("bill_date"=>$bill_date,"series"=>$series,"bill_no"=>$bill_no,"claim_gst"=>$claim_gst,"invoice_no"=>$invoice_no,"merchant_gst"=>$merchant_gst,'remark'=>$remark,"txn_arr"=>$txn_arr,"error_arr"=>$error_arr));
             }   

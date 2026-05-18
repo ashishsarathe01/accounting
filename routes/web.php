@@ -112,6 +112,7 @@ use App\Http\Controllers\tdsReport\TdsReportController;
 use App\Http\Controllers\BoxController;
 use App\Http\Controllers\production\OpeningStockReelWiseController;
 use App\Http\Controllers\MerchantCredentials\MerchantCredentialsController;
+use App\Http\Controllers\TransactionConfiguration\TransactionConfigurationController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -1332,4 +1333,8 @@ Route::get('receipt-register-modal-details',[ReceiptRegisterController::class, '
 Route::get('/reel-ledger/modal-detail', [OpeningStockReelWiseController::class, 'modalDetail'])->name('reel.ledger.modal.detail');
 Route::get('merchant-credentials',[MerchantCredentialsController::class, 'index'])->name('merchant_credentials.index');
 Route::post('merchant-credentials/store',[MerchantCredentialsController::class, 'store'])->name('merchant_credentials.store');
+Route::get('credit-note-configuration',[TransactionConfigurationController::class,'creditNoteConfiguration'])->name('credit.note.configuration');
+Route::post('save-credit-note-configuration',[TransactionConfigurationController::class,'saveCreditNoteConfiguration'])->name('save.credit.note.configuration');
+Route::get('debit-note-configuration',[TransactionConfigurationController::class,'debitNoteConfiguration'])->name('debit.note.configuration');
+Route::post('save-debit-note-configuration',[TransactionConfigurationController::class,'saveDebitNoteConfiguration'])->name('save.debit.note.configuration');
 });
