@@ -127,9 +127,13 @@ select.no-arrow {
                      <div class="calender-administrator ms-md-4">
                         <input type="date" id="to_date" class="form-control calender-bg-icon calender-placeholder" placeholder="To date" required name="to_date" value="{{ !empty($to_date) ? date('Y-m-d', strtotime($to_date)) : date('Y-m-t')}}">
                      </div>
-                     <div class="ms-md-4" style="min-width:240px">
+                    <div class="ms-md-4" style="min-width:240px">
                         <select class="form-select form-select-sm filter-control select2-single" id="supplier">
-                            <option value="all">All Supplier</option>
+                            <option value="">Select Supplier</option>
+                            <option value="all"
+                                {{ $id == 'all' ? 'selected' : '' }}>
+                                All Supplier
+                            </option>
                             @foreach($accounts as $loc)
                                 <option value="{{ $loc->id }}"
                                     {{ $id == $loc->id ? 'selected' : '' }}>
@@ -1589,7 +1593,11 @@ select.no-arrow {
          let from_date = $("#from_date").val();
          let to_date = $("#to_date").val();
          let view_by = $("#view_by").val();
-
+if(supplier == "")
+        {
+            alert("Please select supplier");
+            return false;
+        } 
          let url = window.location.href;
 
          if(url.includes("wastekraft-purchase-report")){
