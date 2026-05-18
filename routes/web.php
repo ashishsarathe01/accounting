@@ -1321,6 +1321,52 @@ Route::get('/journal/print/{id}', [JournalController::class, 'print'])->name('jo
     Route::get('/box-calculator', [BoxController::class, 'index']);
     Route::get('/box-calculator/advance', [BoxController::class, 'advanceindex'])
     ->name('box-calculator.advance');
+    Route::post('/box-calculator/advance/save',
+    [BoxController::class, 'saveAdvanceCalculation'])
+    ->name('box-calculator.advance.save');
+    Route::get('/box-calculator/list',
+    [BoxController::class, 'list'])
+    ->name('box-calculator.list');
+
+Route::get('/box-calculator/edit/{id}',
+    [BoxController::class, 'edit'])
+    ->name('box-calculator.edit');
+
+Route::post('/box-calculator/update/{id}',
+    [BoxController::class, 'update'])
+    ->name('box-calculator.update');
+
+Route::delete('/box-calculator/delete/{id}',
+    [BoxController::class, 'delete'])
+    ->name('box-calculator.delete');
+Route::get('/box-calculator/configuration',
+    [BoxController::class, 'configuration'])
+    ->name('box-calculator.configuration');
+
+Route::post('/box-calculator/configuration/save',
+    [BoxController::class, 'saveConfiguration'])
+    ->name('box-calculator.configuration.save');
+Route::get('/box-calculator-quotation/list',
+    [BoxController::class, 'quotationList'])
+    ->name('box-calculator-quotation.list');
+
+Route::get('/box-calculator-quotation/create',
+    [BoxController::class, 'quotationCreate'])
+    ->name('box-calculator-quotation.create');
+
+Route::post('/box-calculator-quotation/save',
+    [BoxController::class, 'quotationSave'])
+    ->name('box-calculator-quotation.save');
+Route::get('/box-calculator/get-box-details/{id}',
+    [BoxController::class, 'getBoxDetails'])
+    ->name('box-calculator.get-box-details');
+Route::get('/box-calculator-quotation/view/{id}',
+    [BoxController::class, 'quotationView'])
+    ->name('box-calculator-quotation.view');
+
+Route::delete('/box-calculator-quotation/delete/{id}',
+    [BoxController::class, 'quotationDelete'])
+    ->name('box-calculator-quotation.delete');
     Route::get('/gstr1/summary', [gstR1Controller::class, 'getReturnSummary'])
     ->name('gstr1.summary');
 
