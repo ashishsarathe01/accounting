@@ -1593,11 +1593,19 @@ select.no-arrow {
          let from_date = $("#from_date").val();
          let to_date = $("#to_date").val();
          let view_by = $("#view_by").val();
+<<<<<<< Updated upstream
 if(supplier == "")
         {
             alert("Please select supplier");
             return false;
         } 
+=======
+            if(supplier == "")
+            {
+                alert("Please select supplier");
+                return false;
+            }
+>>>>>>> Stashed changes
          let url = window.location.href;
 
          if(url.includes("wastekraft-purchase-report")){
