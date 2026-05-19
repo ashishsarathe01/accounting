@@ -294,6 +294,18 @@
                      <input type="text" class="form-control common_val" id="bank_name" name="bank_name" placeholder="ENTER BANK NAME" value="@if(isset($id)){{$account->bank_name}}@endif"/>
                   </div>
                   <div class="mb-4 col-md-4 bank_name_div common_div" style="display: none;">
+                     <label for="invoice_name" class="form-label font-14 font-heading">
+                        NAME TO SHOW IN INVOICE
+                     </label>
+
+                     <input type="text"
+                           class="form-control common_val"
+                           id="invoice_name"
+                           name="invoice_name"
+                           placeholder="ENTER NAME TO SHOW IN INVOICE"
+                           value="@if(isset($id) && isset($bank) && $bank->name != $account->account_name){{$bank->name}}@endif"/>
+                  </div>
+                  <div class="mb-4 col-md-4 bank_name_div common_div" style="display: none;">
                      <label for="branch" class="form-label font-14 font-heading">BRANCH</label>
                      <input type="text" class="form-control common_val" id="branch" name="branch" placeholder="ENTER BRANCH" value="@if(isset($id)){{$account->branch}}@endif"/>
                   </div>

@@ -410,7 +410,9 @@ public function datatable(Request $request)
             $bank = new Bank;
             $bank->user_id = Session::get('user_id');
             $bank->company_id =  $formCompanyId;
-            $bank->name = $request->input('account_name');
+            $bank->name = !empty($request->input('invoice_name'))
+                     ? $request->input('invoice_name')
+                     : $request->input('account_name');
             $bank->bank_name = $request->input('bank_name');
             $bank->account_no = $request->input('account_no');
             $bank->ifsc = $request->input('ifsc_code');
@@ -478,6 +480,11 @@ public function datatable(Request $request)
    public function edit($id){
       Gate::authorize('view-module', 41);
       $account = Accounts::find($id);
+      $bank = null;
+
+      if(!empty($account->bank_map_id)){
+         $bank = Bank::find($account->bank_map_id);
+      }
       $formCompanyId   = $account->company_id;
       $formCompanyName = \App\Models\Companies::where('id', $formCompanyId)->value('company_name');
 
@@ -515,7 +522,7 @@ public function datatable(Request $request)
          ->where('company_id',$formCompanyId)
          ->get();    
       $tds_sections = DB::table('tds_sections')->orderBy('section')->get();
-      return view('account/add_account')->with('state_list', $state_list)->with('tds_sections', $tds_sections)->with('credit_days', $credit_days)->with('formCompanyId', $formCompanyId)->with('formCompanyName', $formCompanyName)->with('accountheading', $accountheading)->with('accountgroup', $accountgroup)->with('account', $account)->with('id', $id)->with('other_address', $other_address);
+      return view('account/add_account')->with('state_list', $state_list)->with('tds_sections', $tds_sections)->with('credit_days', $credit_days)->with('formCompanyId', $formCompanyId)->with('formCompanyName', $formCompanyName)->with('accountheading', $accountheading)->with('accountgroup', $accountgroup)->with('account', $account)->with('id', $id)->with('other_address', $other_address)->with('bank', $bank);
    }
    /**
      * Update the specified resource in storage.
@@ -642,7 +649,9 @@ public function datatable(Request $request)
          }         
          $bank->user_id = Session::get('user_id');
          $bank->company_id =  $formCompanyId;
-         $bank->name = $request->input('account_name');
+         $bank->name = !empty($request->input('invoice_name'))
+                  ? $request->input('invoice_name')
+                  : $request->input('account_name');
          $bank->bank_name = $request->input('bank_name');
          $bank->account_no = $request->input('account_no');
          $bank->ifsc = $request->input('ifsc_code');
