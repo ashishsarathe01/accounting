@@ -38,7 +38,18 @@
     <div class="alert alert-warning">No RCM entries found for selected month.</div>
 @else
 
-<form method="POST"  action="{{ $exist ? route('rcm.update', $exist->journal_id) : route('rcm.store') }}">
+@if($exist)
+
+<form method="POST" action="{{ route('rcm.update', $exist->journal_id) }}">
+    @csrf
+    @method('PUT')
+
+@else
+
+<form method="POST" action="{{ route('rcmStore') }}">
+    @csrf
+
+@endif
 @csrf
 
 <div class="table-responsive">
@@ -51,6 +62,7 @@
     </th>
     <th>Date</th>
     <th>Account</th>
+    <th>Mapped Account</th>
     <th class="text-end">Amount</th>
     <th class="text-end">CGST</th>
     <th class="text-end">SGST</th>
@@ -59,24 +71,128 @@
 </thead>
 
 <tbody>
-@foreach($rcmData as $row)
+
+@foreach($rcmData as $seriesName => $rows)
+
+<tr class="table-primary">
+
+    <td colspan="7">
+
+        <strong>
+            Series : {{ $seriesName }}
+        </strong>
+
+    </td>
+
+</tr>
+
+@php
+
+    $series_total_amt = 0;
+    $series_total_cgst = 0;
+    $series_total_sgst = 0;
+    $series_total_igst = 0;
+
+@endphp
+
+@foreach($rows as $row)
+
+@php
+
+    $series_total_amt += $row['amount'];
+    $series_total_cgst += $row['cgst'];
+    $series_total_sgst += $row['sgst'];
+    $series_total_igst += $row['igst'];
+
+@endphp
+
 <tr>
+
     <td>
+
         <input type="checkbox"
             class="row-check"
+
+            data-series="{{ $seriesName }}"
+
             data-amount="{{ $row['amount'] }}"
+
             data-cgst="{{ $row['cgst'] }}"
+
             data-sgst="{{ $row['sgst'] }}"
+
             data-igst="{{ $row['igst'] }}">
+
     </td>
-    <td>{{ \Carbon\Carbon::parse($row['date'])->format('d-m-Y') }}</td>
-    <td>{{ $row['account'] }}</td>
-    <td class="text-end">{{ number_format($row['amount'],2) }}</td>
-    <td class="text-end">{{ number_format($row['cgst'],2) }}</td>
-    <td class="text-end">{{ number_format($row['sgst'],2) }}</td>
-    <td class="text-end">{{ number_format($row['igst'],2) }}</td>
+
+    <td>
+        {{ \Carbon\Carbon::parse($row['date'])->format('d-m-Y') }}
+    </td>
+
+    <td>
+        {{ $row['account'] }}
+    </td>
+    
+    <td>
+    {{ $row['against_account'] ?? '-' }}
+</td>
+
+    <td class="text-end">
+        {{ number_format($row['amount'],2) }}
+    </td>
+
+    <td class="text-end">
+        {{ number_format($row['cgst'],2) }}
+    </td>
+
+    <td class="text-end">
+        {{ number_format($row['sgst'],2) }}
+    </td>
+
+    <td class="text-end">
+        {{ number_format($row['igst'],2) }}
+    </td>
+
 </tr>
+
 @endforeach
+
+<tr class="table-warning fw-bold">
+
+    <td colspan="3" class="text-end">
+
+        Series Total
+
+    </td>
+
+    <td class="text-end">
+
+        {{ number_format($series_total_amt,2) }}
+
+    </td>
+
+    <td class="text-end">
+
+        {{ number_format($series_total_cgst,2) }}
+
+    </td>
+
+    <td class="text-end">
+
+        {{ number_format($series_total_sgst,2) }}
+
+    </td>
+
+    <td class="text-end">
+
+        {{ number_format($series_total_igst,2) }}
+
+    </td>
+
+</tr>
+
+@endforeach
+
 </tbody>
 
 <tfoot class="fw-bold table-secondary">
@@ -100,14 +216,13 @@
 <input type="hidden" name="igst" id="igst">
 <input type="hidden" name="gstNo" value="{{ $gstNo }}">
 @if($exist)
-    @method('PUT')
     <input type="hidden" name="journal_id" value="{{ $exist->journal_id }}">
 @endif
 
 <div class="text-end mt-3">
- <button type="submit"
-            class="btn btn-success"
-            onclick="return document.getElementById('total_amt').value > 0;">
+<button type="submit"
+        class="btn btn-success"
+        onclick="return validateRCM();">
         <i class="fa fa-save"></i>
         {{ $exist ? 'Update RCM report and Journal for RCM' : 'Save & pass Journal for RCM' }}
     </button>
@@ -171,6 +286,19 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 });
+
+
+function validateRCM() {
+
+    let total = parseFloat(document.getElementById('total_amt').value || 0);
+
+    if(total <= 0){
+        alert('Please select at least one row.');
+        return false;
+    }
+
+    return true;
+}
 </script>
 
 @endsection

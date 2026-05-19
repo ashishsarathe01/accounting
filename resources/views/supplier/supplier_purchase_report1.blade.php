@@ -715,7 +715,27 @@ select.no-arrow {
                                             @if(in_array('difference',$selectedDateColumns))
                                             <td style="text-align:right;">{{ formatIndianNumber($grand_difference_amount,2) }}</td>
                                             @endif
-                                            <td class="header-section"></td>
+                                            <td class="header-section">
+                                                <button
+                                                    class="btn btn-info start {{ $row->group_id == $waste_group_id ? 'wastekraft' : 'boilerfuel' }}"
+                                                    data-id="{{ $row->id }}"
+                                                    data-group_id="{{ $row->group_id }}"
+                                                    data-account_id="{{ $row->account_id }}"
+                                                    data-gross_weight="{{ $row->gross_weight }}"
+                                                    data-purchase_voucher_no="{{ $row->purchase_voucher_no }}"
+                                                    data-purchase_date="{{ $row->purchase_date }}"
+                                                    data-purchase_amount="{{ $row->purchase_total_amt }}"
+                                                    data-purchase_qty="{{ $row->purchase_qty }}"
+                                                    data-purchase_taxable_amount="{{ $row->purchase_taxable_amt }}"
+                                                    @if($row->group_id == $waste_group_id)
+                                                        data-purchase_price='{{ $row->prices }}'
+                                                    @endif
+                                                    data-status="3"
+                                                    data-vehicle_no="{{ $row->vehicle_no }}"
+                                                    data-entry_date="{{ $row->entry_date }}">
+                                                    View
+                                                </button>
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>

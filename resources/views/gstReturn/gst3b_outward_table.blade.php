@@ -97,7 +97,15 @@
                                             <td> ₹0.00</td>
                                             <td> ₹{{  formatIndianNumber($data1['sup_details']['osup_3_1a']['det']['tbl9b']['csamt'] ?? 0, 2) }}</td>
                                         </tr>
+@php
+$net_taxable = ($taxable_value_sale ?? 0) + ($net_note_taxable ?? 0);
 
+$net_igst = ($igst_sale ?? 0) + ($net_note_igst ?? 0);
+
+$net_cgst = ($cgst_sale ?? 0) + ($net_note_cgst ?? 0);
+
+$net_sgst = ($sgst_sale ?? 0) + ($net_note_sgst ?? 0);
+@endphp
 
                                          <tr>
                                             <td rowspan="5" class="align-middle"><strong>(a)</strong> Net Outward taxable supplies (other than zero rated, nil rated and exempted)</td>
@@ -180,32 +188,49 @@
                                                                     <td colspan="3" style="border-left: none; border-right: none; border-top:none; border-bottom:none;"></td>
                                                                 </tr>
                                         {{-- Row (d) --}}
-                                        <tr>
-                                            <td rowspan="5" class="align-middle bg-light"><strong>(d)</strong> Inward supplies (liable to reverse charge)</td>
-                                               <td> Total Taxable Value</td>
-                                            <td class="bg-light"> ₹0.00</td>
-                                            <td class="bg-light"> ₹0.00</td>
-                                        </tr>
-                                        <tr>
-                                               <td> Integrated Tax</td>
-                                            <td class="bg-light"> ₹0.00</td>
-                                            <td class="bg-light"> ₹0.00</td>
-                                        </tr>
-                                        <tr>
-                                               <td> Central Tax</td>
-                                            <td class="bg-light"> ₹0.00</td>
-                                            <td class="bg-light"> ₹0.00</td>
-                                        </tr>
-                                        <tr>
-                                               <td> State/UT Tax</td>
-                                            <td class="bg-light"> ₹0.00</td>
-                                            <td class="bg-light"> ₹0.00</td>
-                                        </tr>
-                                        <tr>
-                                               <td> Cess</td>
-                                            <td class="bg-light" >₹0.00</td>
-                                            <td class="bg-light">₹0.00</td>
-                                        </tr> 
+                                        {{-- Row (d) --}}
+<tr>
+    <td rowspan="5" class="align-middle bg-light">
+        <strong>(d)</strong> Inward supplies (liable to reverse charge)
+    </td>
+    <td>Total Taxable Value</td>
+    <td class="bg-light">₹0.00</td>
+    <td class="bg-light">
+        ₹{{ formatIndianNumber($data['sup_details']['isup_rev']['txval'] ?? 0, 2) }}
+    </td>
+</tr>
+
+<tr>
+    <td>Integrated Tax</td>
+    <td class="bg-light">₹0.00</td>
+    <td class="bg-light">
+        ₹{{ formatIndianNumber($data['sup_details']['isup_rev']['iamt'] ?? 0, 2) }}
+    </td>
+</tr>
+
+<tr>
+    <td>Central Tax</td>
+    <td class="bg-light">₹0.00</td>
+    <td class="bg-light">
+        ₹{{ formatIndianNumber($data['sup_details']['isup_rev']['camt'] ?? 0, 2) }}
+    </td>
+</tr>
+
+<tr>
+    <td>State/UT Tax</td>
+    <td class="bg-light">₹0.00</td>
+    <td class="bg-light">
+        ₹{{ formatIndianNumber($data['sup_details']['isup_rev']['samt'] ?? 0, 2) }}
+    </td>
+</tr>
+
+<tr>
+    <td>Cess</td>
+    <td class="bg-light">₹0.00</td>
+    <td class="bg-light">
+        ₹{{ formatIndianNumber($data['sup_details']['isup_rev']['csamt'] ?? 0, 2) }}
+    </td>
+</tr>
 
 
                                                                       <tr >

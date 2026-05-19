@@ -72,6 +72,15 @@
                                                             <td >3.1 Tax on outward and reverse charge inward supplies </td>
                                                              <td>Books</td>
                                                              @php
+                                                             
+                                                              $supDetails = $data['sup_details'] ?? [];
+                                                            
+                                                                $totalTxval = collect($supDetails)->sum('txval');
+                                                                $totalIamt  = collect($supDetails)->sum('iamt');
+                                                                $totalCamt  = collect($supDetails)->sum('camt');
+                                                                $totalSamt  = collect($supDetails)->sum('samt');
+                                                                $totalCsamt = collect($supDetails)->sum('csamt');
+
                                                                     $url = route('OutwardDetails.view', [
                                                                         'series' => $merchant_gst, 
                                                                         'from_date' => $from_date, 
@@ -85,31 +94,35 @@
                                                                 </a>
                                                             </td>
                                                         </tr>
-                                                        <tr>
-                                                            <td>Taxable</td>
-                                                            <td>₹00.00</td>
-                                                            <td>₹{{ formatIndianNumber($data['sup_details']['osup_det']['txval'] ?? 0, 2) }}</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td>Integrated Tax</td>
-                                                            <td>₹17,280.00</td>
-                                                            <td>₹{{ formatIndianNumber($data['sup_details']['osup_det']['iamt'] ?? 0, 2) }}</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td>Central Tax</td>
-                                                            <td>₹0.00</td>
-                                                            <td>₹{{ formatIndianNumber($data['sup_details']['osup_det']['camt'] ?? 0, 2) }}</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td>State/UT Tax</td>
-                                                            <td>₹0.00</td>
-                                                            <td>₹{{ formatIndianNumber($data['sup_details']['osup_det']['samt'] ?? 0, 2) }}</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td>CESS</td>
-                                                            <td>₹0.00</td>
-                                                            <td>₹{{ formatIndianNumber($data['sup_details']['osup_det']['csamt'] ?? 0, 2) }}</td>
-                                                        </tr>
+                                                       <tr>
+                                                                <td>Taxable</td>
+                                                                <td>₹00.00</td>
+                                                                <td>₹{{ formatIndianNumber($totalTxval, 2) }}</td>
+                                                            </tr>
+                                                            
+                                                            <tr>
+                                                                <td>Integrated Tax</td>
+                                                                <td>₹0.00</td>
+                                                                <td>₹{{ formatIndianNumber($totalIamt, 2) }}</td>
+                                                            </tr>
+                                                            
+                                                            <tr>
+                                                                <td>Central Tax</td>
+                                                                <td>₹0.00</td>
+                                                                <td>₹{{ formatIndianNumber($totalCamt, 2) }}</td>
+                                                            </tr>
+                                                            
+                                                            <tr>
+                                                                <td>State/UT Tax</td>
+                                                                <td>₹0.00</td>
+                                                                <td>₹{{ formatIndianNumber($totalSamt, 2) }}</td>
+                                                            </tr>
+                                                            
+                                                            <tr>
+                                                                <td>CESS</td>
+                                                                <td>₹0.00</td>
+                                                                <td>₹{{ formatIndianNumber($totalCsamt, 2) }}</td>
+                                                            </tr>
 
                                                                 <tr>
                                                                     <td colspan="3" style="border-left: none; border-right: none;  border-top:none; border-bottom:none;"></td>
@@ -190,29 +203,30 @@
                                                                     $url_itc = route('itcDetails.view', [
                                                                         'series' => $merchant_gst, 
                                                                         'from_date' => $from_date, 
-                                                                        'to_date' => $to_date
+                                                                        'to_date' => $to_date,
+                                                                         'data'       => json_encode($data)
                                                                     ]);
                                                                 @endphp
                                                             <td class="d-flex justify-content-between align-items-center">
                                                                 <span>Portal</span>
-                                                                <a class=" btn-primary" href="{{ $url_itc }}">
+                                                                <a class="btn btn-primary" href="{{ $url_itc }}">
                                                                     <img src="{{ asset('public/assets/imgs/eye-icon.svg') }}" class="px-1" alt="">
                                                                 </a>
                                                             </td>
                                                         </tr>
                                                         <tr>
                                                             <td>Integrated Tax</td>
-                                                            <td>₹2,345.34</td>
+                                                            <td>₹{{formatIndianNumber($books_igst_amount,2)}}</td>
                                                             <td>₹{{ formatIndianNumber($data['itc_elg']['itc_net']['iamt'] ?? 0, 2) }}</td>
                                                         </tr>
                                                         <tr>
                                                             <td>Central Tax</td>
-                                                            <td>₹-3.89</td>
+                                                            <td>₹{{formatIndianNumber($books_cgst_amount,2)}}</td>
                                                             <td>₹{{ formatIndianNumber($data['itc_elg']['itc_net']['camt'] ?? 0, 2) }}</td>
                                                         </tr>
                                                         <tr>
                                                             <td>State/UT Tax</td>
-                                                            <td>₹-3.89</td>
+                                                            <td>₹{{formatIndianNumber($books_sgst_amount,2)}}</td>
                                                             <td>₹{{ formatIndianNumber($data['itc_elg']['itc_net']['samt'] ?? 0, 2) }}</td>
                                                         </tr>
                                                         <tr>
@@ -306,12 +320,12 @@
                                                         </tr>
                                                         <tr>
                                                             <td>Paid through Cash</td>
-                                                            <td>₹14,943.00</td>
+                                                            <td>₹0.00</td>
                                                             <td>₹{{ formatIndianNumber($data['tax_pay']['cash_paid'] ?? 0, 2) }}</td>
                                                         </tr>
                                                         <tr>
                                                             <td>Paid through Credit</td>
-                                                            <td>₹2,345.00</td>
+                                                            <td>₹0.00</td>
                                                             <td>₹{{ formatIndianNumber($data['tax_pay']['itc_availed'] ?? 0, 2) }}</td>
                                                         </tr>
                                                     </tbody>
@@ -335,15 +349,44 @@
                                             <h1 class="text-primary mb-2">GSTR-3B Summary</h1>
                                             <div class="row g-4">
                                                 <!-- 3.1 Tax on outward and reverse charge inward supplies -->
-                                                <div class="col-md-4">
-                                                    <div class="bg-primary text-white p-2 fw-bold rounded-top fs-6 fs-6">3.1 Tax on outward and reverse charge inward supplies</div>
-                                                    <div class="bg-white border p-3 rounded-bottom">
-                                                        <p>Integrated Tax: ₹17,280.00</p>
-                                                        <p>Central Tax: ₹0.00</p>
-                                                        <p>State/UT Tax: ₹0.00</p>
-                                                        <p>CESS (₹): ₹0.00</p>
+                                                                                            @php
+                                                $url = route('OutwardDetails.view', [
+                                                    'series' => $merchant_gst,
+                                                    'from_date' => $from_date,
+                                                    'to_date' => $to_date
+                                                ]);
+                                            @endphp
+                                            
+                                            <div class="col-md-4">
+                                                <a href="{{ $url }}" style="text-decoration: none; color: inherit;">
+                                                    
+                                                    <div class="bg-primary text-white p-2 fw-bold rounded-top fs-6">
+                                                        3.1 Tax on outward and reverse charge inward supplies
                                                     </div>
-                                                </div>
+                                            
+                                                    <div class="bg-white border p-3 rounded-bottom">
+                                                        <p>
+                                                            Integrated Tax: 
+                                                            ₹{{ formatIndianNumber($data['sup_details']['osup_det']['iamt'] ?? 0, 2) }}
+                                                        </p>
+                                            
+                                                        <p>
+                                                            Central Tax: 
+                                                            ₹{{ formatIndianNumber($data['sup_details']['osup_det']['camt'] ?? 0, 2) }}
+                                                        </p>
+                                            
+                                                        <p>
+                                                            State/UT Tax: 
+                                                            ₹{{ formatIndianNumber($data['sup_details']['osup_det']['samt'] ?? 0, 2) }}
+                                                        </p>
+                                            
+                                                        <p>
+                                                            CESS (₹): ₹0.00
+                                                        </p>
+                                                    </div>
+                                            
+                                                </a>
+                                            </div>
 
                                                 <!-- 3.1.1 Supplies under sec 9(5) -->
                                                 <div class="col-md-4">
@@ -366,15 +409,33 @@
                                                 </div>
 
                                                 <!-- 4. Eligible ITC -->
-                                                <div class="col-md-4">
-                                                    <div class="bg-primary text-white p-2 fw-bold rounded-top fs-6">4. Eligible ITC</div>
-                                                    <div class="bg-white border p-3 rounded-bottom">
-                                                        <p>Integrated Tax: ₹2,345.34</p>
-                                                        <p>Central Tax: ₹-3.89</p>
-                                                        <p>State/UT Tax: ₹-3.89</p>
-                                                        <p>CESS (₹): ₹0.00</p>
-                                                    </div>
-                                                </div>
+                                              <div class="col-md-4">
+                                                            @php
+                                                                $url_itc = route('itcDetails.view', [
+                                                                    'series'    => $merchant_gst,
+                                                                    'from_date' => $from_date,
+                                                                    'to_date'   => $to_date,
+                                                                    'data'      => json_encode($data)
+                                                                ]);
+                                                            @endphp
+                                                        
+                                                            <a href="{{ $url_itc }}" style="text-decoration: none;">
+                                                                <div class="bg-primary text-white p-2 fw-bold rounded-top fs-6 d-flex justify-content-between align-items-center">
+                                                                    <span>4. Eligible ITC</span>
+                                                        
+                                                                </div>
+                                                        
+                                                                <div class="bg-white border p-3 rounded-bottom text-dark">
+                                                                    <p>Integrated Tax: ₹{{ formatIndianNumber($data['itc_elg']['itc_net']['iamt'] ?? 0, 2) }}</p>
+                                                        
+                                                                    <p>Central Tax: ₹{{ formatIndianNumber($data['itc_elg']['itc_net']['camt'] ?? 0, 2) }}</p>
+                                                        
+                                                                    <p>State/UT Tax: ₹{{ formatIndianNumber($data['itc_elg']['itc_net']['samt'] ?? 0, 2) }}</p>
+                                                        
+                                                                    <p>CESS: ₹{{ formatIndianNumber($data['itc_elg']['itc_net']['csamt'] ?? 0, 2) }}</p>
+                                                                </div>
+                                                            </a>
+                                                        </div>
 
                                                 <!-- 5. Exempt, nil and non-GST -->
                                                 <div class="col-md-4">
@@ -401,8 +462,8 @@
                                                     <div class="bg-primary text-white p-2 fw-bold rounded-top fs-6 " >6.1 Payment of tax</div>
                                                     <div class="bg-white border p-3 rounded-bottom">
                                                         <p>Balance Liability: ₹0.00</p>
-                                                        <p>Paid through Cash: ₹14,943.00</p>
-                                                        <p>Paid through Credit: ₹2,345.00</p>
+                                                        <p>Paid through Cash: ₹0.00</p>
+                                                        <p>Paid through Credit: ₹0.00</p>
                                                     </div>
                                                 </div>
                                             </div> <!-- row -->

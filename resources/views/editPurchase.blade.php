@@ -1541,13 +1541,13 @@ foreach ($manageitems as $value) {
                   if(index==1){
                      if(enter_gst_status==0 && item_taxable_amount!=0 && auto_gst_calculation==1){
                         let sundry_amount = (taxable_amount_per_item*e.percent/2)/100; //New Changes By Ashish
-                        sundry_amount = sundry_amount.toFixed(2);
+                      sundry_amount = (Math.round((sundry_amount + Number.EPSILON) * 100) / 100).toFixed(2);
                         taxSundryArray['cgst'] = sundry_amount;
                         taxSundryArray['sgst'] = sundry_amount;
                         enter_gst_status = 1;                        
                      }else{
                         let sundry_amount = (taxable_amount_per_item*e.percent/2)/100; //New Changes By Ashish
-                        sundry_amount = sundry_amount.toFixed(2);
+                      sundry_amount = (Math.round((sundry_amount + Number.EPSILON) * 100) / 100).toFixed(2);
                         taxSundryArray['cgst'] = sundry_amount;
                         taxSundryArray['sgst'] = sundry_amount;
                      }
@@ -1579,13 +1579,13 @@ foreach ($manageitems as $value) {
                   }else{
                      if(enter_gst_status==0 && item_taxable_amount!=0){
                         let sundry_amount = (taxable_amount_per_item*e.percent/2)/100;//New Changes By Ashish
-                        sundry_amount = sundry_amount.toFixed(2);
+                      sundry_amount = (Math.round((sundry_amount + Number.EPSILON) * 100) / 100).toFixed(2);
                         enter_gst_status = 1;
                         taxSundryArray['cgst'] = sundry_amount;
                         taxSundryArray['sgst'] = sundry_amount;
                      }else{
                         let sundry_amount = (taxable_amount_per_item*e.percent/2)/100;//New Changes By Ashish
-                        sundry_amount = sundry_amount.toFixed(2);
+                      sundry_amount = (Math.round((sundry_amount + Number.EPSILON) * 100) / 100).toFixed(2);
                         taxSundryArray['cgst'] = sundry_amount;
                         taxSundryArray['sgst'] = sundry_amount;
                      }
@@ -1688,12 +1688,12 @@ foreach ($manageitems as $value) {
                      if(enter_gst_status==0 && item_taxable_amount!=0){
                         let sundry_amount = (taxable_amount_per_item*e.percent)/100; //New Changes By Ashish
                         
-                        sundry_amount = sundry_amount.toFixed(2);
+                      sundry_amount = (Math.round((sundry_amount + Number.EPSILON) * 100) / 100).toFixed(2);
                         taxSundryArray['igst'] = sundry_amount;
                         enter_gst_status = 1;                        
                      }else{
                         let sundry_amount = (taxable_amount_per_item*e.percent)/100; //New Changes By Ashish
-                        sundry_amount = sundry_amount.toFixed(2);
+                      sundry_amount = (Math.round((sundry_amount + Number.EPSILON) * 100) / 100).toFixed(2);
                         taxSundryArray['igst'] = sundry_amount;
                      }
                      
@@ -1714,12 +1714,12 @@ foreach ($manageitems as $value) {
                   }else{
                      if(enter_gst_status==0 && item_taxable_amount!=0){
                         let sundry_amount = (taxable_amount_per_item*e.percent)/100;//New Changes By Ashish
-                        sundry_amount = sundry_amount.toFixed(2);
+                      sundry_amount = (Math.round((sundry_amount + Number.EPSILON) * 100) / 100).toFixed(2);
                         taxSundryArray['igst'] = sundry_amount;
                         enter_gst_status = 1;                        
                      }else{
                         let sundry_amount = (taxable_amount_per_item*e.percent)/100;//New Changes By Ashish
-                        sundry_amount = sundry_amount.toFixed(2);
+                      sundry_amount = (Math.round((sundry_amount + Number.EPSILON) * 100) / 100).toFixed(2);
                         taxSundryArray['igst'] = sundry_amount;
                      }
                      

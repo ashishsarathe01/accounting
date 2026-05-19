@@ -2031,8 +2031,8 @@ class SupplierPurchaseController extends Controller
             ])
             ->leftjoin('purchases', 'supplier_purchase_vehicle_details.map_purchase_id', '=', 'purchases.id')
             ->where('supplier_purchase_vehicle_details.company_id', Session::get('user_company_id'))
-            ->when($view_by === 'party',function($q){                
-                $q->where('supplier_purchase_vehicle_details.status', '3');                
+            ->when($view_by === 'party',function($q){
+                $q->where('supplier_purchase_vehicle_details.status', '3');
             })
             
             ->when($id && $id != 'all', function ($q) use ($id) {
@@ -2511,9 +2511,10 @@ class SupplierPurchaseController extends Controller
                         'supplier_purchase_vehicle_details.tare_weight',
                         'supplier_purchase_vehicle_details.account_id',
                         'purchases.voucher_no as purchase_voucher_no',
+                        'purchases.date as purchase_date',
                         'purchases.taxable_amt as purchase_taxable_amt',
                         'purchases.total as purchase_total_amt',
-
+                        'group_id',
                         'pd.prices',
                         'accounts.account_name',
 
