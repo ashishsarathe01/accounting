@@ -3148,18 +3148,7 @@ if(array_key_exists($good,$sale_item_array)){
                trim($data[1]) != "" ||
                trim($data[2]) != ""
             ){
-               if(
-                  !empty($series_no) ||
-                  !empty(isset($voucher_no_prefix) ? $voucher_no_prefix : '') ||
-                  !empty(isset($date) ? $date : '')
-               ){
-                                 $merchant_gst = '';
-               $akey = array_search($series_no, $series_arr);
-               if($akey !== false && isset($gst_no_arr[$akey])){
-                  $merchant_gst = $gst_no_arr[$akey];
-               }
-                  array_push($data_arr,array("series_no"=>$series_no,"date"=>$date,"voucher_no"=>$voucher_no,"voucher_no_prefix"=>$voucher_no_prefix,"party"=>$party,"material_center"=>$material_center,"grand_total"=>$grand_total,"self_vehicle"=>$self_vehicle,"vehicle_no"=>$vehicle_no,"transport_name"=>$transport_name,"reverse_charge"=>$reverse_charge,"gr_pr_no"=>$gr_pr_no,"station"=>$station,"ewaybill_no"=>$ewaybill_no,"shipping_name"=>$shipping_name,"merchant_gst"=>$merchant_gst,"item_arr"=>$item_arr,"slicedData"=>$slicedData,"error_arr"=>$error_arr));
-               }               
+                             
                $item_arr = [];
                $error_arr = [];
                $slicedData = [];
@@ -3180,7 +3169,18 @@ if(array_key_exists($good,$sale_item_array)){
                $ewaybill_no = $data[12];            
                $shipping_name = $data[13];
                $current_voucher = isset($data[2]) ? trim($data[2]) : '';
-
+                if(
+                  !empty($series_no) ||
+                  !empty(isset($voucher_no_prefix) ? $voucher_no_prefix : '') ||
+                  !empty(isset($date) ? $date : '')
+               ){
+                                 $merchant_gst = '';
+               $akey = array_search($series_no, $series_arr);
+               if($akey !== false && isset($gst_no_arr[$akey])){
+                  $merchant_gst = $gst_no_arr[$akey];
+               }
+                  array_push($data_arr,array("series_no"=>$series_no,"date"=>$date,"voucher_no"=>$voucher_no,"voucher_no_prefix"=>$voucher_no_prefix,"party"=>$party,"material_center"=>$material_center,"grand_total"=>$grand_total,"self_vehicle"=>$self_vehicle,"vehicle_no"=>$vehicle_no,"transport_name"=>$transport_name,"reverse_charge"=>$reverse_charge,"gr_pr_no"=>$gr_pr_no,"station"=>$station,"ewaybill_no"=>$ewaybill_no,"shipping_name"=>$shipping_name,"merchant_gst"=>$merchant_gst,"item_arr"=>$item_arr,"slicedData"=>$slicedData,"error_arr"=>$error_arr));
+               } 
                if(empty(trim($series_no))){
                   array_push(
                      $error_arr,

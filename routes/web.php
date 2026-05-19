@@ -554,7 +554,7 @@ Route::post('/purchase-return/export',[PurchaseReturnController::class, 'export'
         Route::Resource('supplier', SupplierController::class);
         Route::post('get-supplier-location', [SupplierController::class, 'getSupplierLocation'])->name('get-supplier-location');
         Route::post('store-supplier-location', [SupplierController::class, 'storeSupplierLocation'])->name('store-supplier-location');
-        //Route::get('manage-supplier-rate/{date?}', [SupplierRateLocationWiseController::class, 'manageSupplierRate'])->name('manage-supplier-rate');
+        Route::get('manage-supplier-rate/{date?}', [SupplierRateLocationWiseController::class, 'manageSupplierRate'])->name('manage-supplier-rate');
         Route::POST('store-supplier-rate', [SupplierRateLocationWiseController::class, 'storeSupplierRate'])->name('store-supplier-rate');
         Route::get('manage-supplier-purchase', [SupplierPurchaseController::class, 'manageSupplierPurchase'])->name('manage-supplier-purchase');
         Route::post('get-supplier-rate-by-location', [SupplierPurchaseController::class, 'getSupplierRateByLocation'])->name('get-supplier-rate-by-location');
