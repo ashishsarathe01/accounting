@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\DB;
 use Session;
 use App\Helpers\CommonHelper;
 use App\Models\Accounts;
+use App\Models\Units;
+use App\Models\ItemGroups;
+use App\Models\ManageItems;
 class BoxController extends Controller
 {
  public function index()
@@ -52,9 +55,25 @@ class BoxController extends Controller
 
     ->first();
 
+    $itemGroups = ItemGroups::where(
+                        'delete',
+                        '=',
+                        '0'
+                    )
+
+                    ->where(
+                        'company_id',
+                        $companyId
+                    )
+
+                    ->get();
+
     return view(
         'box_calculator.advanceindex',
-        compact('config')
+        compact(
+            'config',
+            'itemGroups'
+        )
     );
 }
 
@@ -66,11 +85,12 @@ class BoxController extends Controller
         try {
                 $companyId =
                     Session::get('user_company_id');
+                    $manageItemId = null;
                             $id = DB::table('box_calculations')
                             ->insertGetId([
                 'company_id' => $companyId,
                 'box_name' => $request->box_name,
-
+                'manage_item_id' => null,
                 'input_unit' => $request->input_unit,
                 'result_unit' => $request->result_unit,
 
@@ -121,7 +141,76 @@ class BoxController extends Controller
                 'updated_at' => now(),
             ]);
 
+            if($request->create_item == 1)
+            {
+                $alreadyExists = DB::table('manage_items')
 
+                ->where(
+                    'company_id',
+                    $companyId
+                )
+
+                ->where(
+                    'name',
+                    $request->box_name
+                )
+
+                ->first();
+
+                if(!$alreadyExists)
+                {
+                    $config = DB::table(
+                        'box_calculator_configurations'
+                    )
+
+                    ->where(
+                        'company_id',
+                        $companyId
+                    )
+
+                    ->first();
+
+                    $manageItemId = DB::table('manage_items')
+
+                    ->insertGetId([
+
+                        'company_id' => $companyId,
+
+                        'name' => $request->box_name,
+
+                        'p_name' => $request->box_name,
+
+                        'u_name' => $config->unit_id ?? null,
+
+                        'hsn_code' => $config->hsn_code ?? null,
+
+                        'gst_rate' => $request->gst_percent,
+
+                        'item_type' => $config->item_type ?? 'taxable',
+
+                        'g_name' => $request->g_name,
+
+                        'status' => '1',
+
+                        'delete' => '0',
+
+                        'created_by' => Session::get('user_id'),
+
+                        'created_at' => now(),
+
+                        'updated_at' => now()
+                    ]);
+
+                    DB::table('box_calculations')
+
+                    ->where('id',$id)
+
+                    ->update([
+
+                        'manage_item_id' => $manageItemId
+                    ]);
+                }
+            }
             if(!empty($request->layers))
             {
                 foreach($request->layers as $layer)
@@ -168,25 +257,25 @@ class BoxController extends Controller
     }
 
     public function delete($id)
-{
-    $companyId =
-    Session::get('user_company_id');
+    {
+        $companyId =
+        Session::get('user_company_id');
 
-    DB::table('box_calculations')
+        DB::table('box_calculations')
 
-    ->where('id',$id)
+        ->where('id',$id)
 
-    ->where(
-        'company_id',
-        $companyId
-    )
+        ->where(
+            'company_id',
+            $companyId
+        )
 
-    ->delete();
+        ->delete();
 
-    return redirect()
-    ->back()
-    ->with('success','Deleted Successfully');
-}
+        return redirect()
+        ->back()
+        ->with('success','Deleted Successfully');
+    }
 public function edit($id)
 {
     $companyId =
@@ -206,10 +295,61 @@ public function edit($id)
     $layers = DB::table('box_calculation_layers')
     ->where('box_calculation_id',$id)
     ->get();
+    $selectedGroup = null;
+
+    if(
+        isset($box->manage_item_id)
+        && !empty($box->manage_item_id)
+    )
+    {
+        $manageItem = DB::table('manage_items')
+
+        ->where(
+            'id',
+            $box->manage_item_id
+        )
+
+        ->first();
+
+        if($manageItem)
+        {
+            $selectedGroup =
+                $manageItem->g_name;
+        }
+    }
+        $config = DB::table(
+        'box_calculator_configurations'
+    )
+
+    ->where(
+        'company_id',
+        $companyId
+    )
+
+    ->first();
+
+    $itemGroups = ItemGroups::where(
+                        'delete',
+                        '=',
+                        '0'
+                    )
+
+                    ->where(
+                        'company_id',
+                        $companyId
+                    )
+
+                    ->get();
 
     return view(
         'box_calculator.advanceindex',
-        compact('box','layers')
+        compact(
+            'box',
+            'layers',
+            'config',
+            'itemGroups',
+            'selectedGroup'
+        )
     );
 }
 public function update(Request $request,$id)
@@ -219,6 +359,13 @@ public function update(Request $request,$id)
     try {
             $companyId =
                 Session::get('user_company_id');
+                $boxData = DB::table('box_calculations')
+                    ->where('id',$id)
+                    ->where(
+                        'company_id',
+                        $companyId
+                    )
+                    ->first();
                     DB::table('box_calculations')
 
             ->where('id',$id)
@@ -291,7 +438,79 @@ public function update(Request $request,$id)
             'updated_at' => now()
         ]);
 
+        if(
+            $request->create_item == 1
+            && empty($boxData->manage_item_id)
+        )
+        {
+            $alreadyExists = DB::table('manage_items')
 
+            ->where(
+                'company_id',
+                $companyId
+            )
+
+            ->where(
+                'name',
+                $request->box_name
+            )
+
+            ->first();
+
+            if(!$alreadyExists)
+            {
+                $config = DB::table(
+                    'box_calculator_configurations'
+                )
+
+                ->where(
+                    'company_id',
+                    $companyId
+                )
+
+                ->first();
+
+                $manageItemId = DB::table('manage_items')
+
+                ->insertGetId([
+
+                    'company_id' => $companyId,
+
+                    'name' => $request->box_name,
+
+                    'p_name' => $request->box_name,
+
+                    'u_name' => $config->unit_id ?? null,
+
+                    'hsn_code' => $config->hsn_code ?? null,
+
+                    'gst_rate' => $request->gst_percent,
+
+                    'item_type' => $config->item_type ?? 'taxable',
+
+                    'g_name' => $request->g_name,
+
+                    'status' => '1',
+
+                    'delete' => '0',
+
+                    'created_by' => Session::get('user_id'),
+
+                    'created_at' => now(),
+
+                    'updated_at' => now()
+                ]);
+
+                DB::table('box_calculations')
+
+                ->where('id',$id)
+
+                ->update([
+
+                    'manage_item_id' => $manageItemId
+                ]);
+            }
+        }
         DB::table('box_calculation_layers')
         ->where('box_calculation_id',$id)
         ->delete();
@@ -358,9 +577,22 @@ public function configuration()
 
     ->first();
 
+    $accountunit = Units::where(
+                        'delete',
+                        '=',
+                        '0'
+                    )
+                    ->where(
+                        'company_id',
+                        $companyId
+                    )
+                    ->get();
     return view(
         'box_calculator.configuration',
-        compact('config')
+        compact(
+            'config',
+            'accountunit'
+        )
     );
 }
 public function saveConfiguration(Request $request)
@@ -397,6 +629,14 @@ public function saveConfiguration(Request $request)
         'gst_percent' =>
             $request->gst_percent,
 
+        'item_type' =>
+            $request->item_type,
+
+        'unit_id' =>
+            $request->unit_id,
+
+        'hsn_code' =>
+            $request->hsn_code,
         'joint_allowance' =>
             $request->joint_allowance,
 

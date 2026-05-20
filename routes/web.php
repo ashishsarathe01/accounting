@@ -113,6 +113,7 @@ use App\Http\Controllers\BoxController;
 use App\Http\Controllers\production\OpeningStockReelWiseController;
 use App\Http\Controllers\MerchantCredentials\MerchantCredentialsController;
 use App\Http\Controllers\TransactionConfiguration\TransactionConfigurationController;
+use App\Http\Controllers\BoxSaleOrderController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -1384,4 +1385,56 @@ Route::get('credit-note-configuration',[TransactionConfigurationController::clas
 Route::post('save-credit-note-configuration',[TransactionConfigurationController::class,'saveCreditNoteConfiguration'])->name('save.credit.note.configuration');
 Route::get('debit-note-configuration',[TransactionConfigurationController::class,'debitNoteConfiguration'])->name('debit.note.configuration');
 Route::post('save-debit-note-configuration',[TransactionConfigurationController::class,'saveDebitNoteConfiguration'])->name('save.debit.note.configuration');
+
+Route::get(
+    '/box-sale-order',
+    [BoxSaleOrderController::class, 'index']
+)->name('box.sale.order.index');
+
+
+Route::get(
+    '/box-sale-order-create',
+    [BoxSaleOrderController::class, 'create']
+)->name('box.sale.order.create');
+
+
+Route::post(
+    '/box-sale-order-store',
+    [BoxSaleOrderController::class, 'store']
+)->name('box.sale.order.store');
+
+
+Route::get(
+    '/box-sale-order-edit/{id}',
+    [BoxSaleOrderController::class, 'edit']
+)->name('box.sale.order.edit');
+
+
+Route::post(
+    '/box-sale-order-update/{id}',
+    [BoxSaleOrderController::class, 'update']
+)->name('box.sale.order.update');
+
+
+Route::get(
+    '/box-sale-order-delete/{id}',
+    [BoxSaleOrderController::class, 'delete']
+)->name('box.sale.order.delete');
+
+
+Route::get(
+    '/box-sale-order-item-details/{id}',
+    [BoxSaleOrderController::class, 'getItemDetails']
+)->name('box.sale.order.item.details');
+
+Route::get(
+    'get-box-sale-orders/{partyId}',
+    [SalesController::class, 'getBoxSaleOrders']
+)->name('get.box.sale.orders');
+
+Route::get(
+    'get-box-sale-order-items/{id}',
+    [SalesController::class, 'getBoxSaleOrderItems']
+)->name('get.box.sale.order.items');
+
 });

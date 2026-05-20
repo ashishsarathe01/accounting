@@ -120,24 +120,124 @@
 </div>
 
 
-
 <div class="col-md-4 mb-3">
 
-    <label>
-        GST %
+    <label class="form-label font-14 font-heading">
+        GST RATE
     </label>
 
-    <input type="number"
-           step="0.01"
-           name="gst_percent"
-           class="form-control"
+    <select class="form-select select2-single"
+            id="gst_percent"
+            name="gst_percent"
+            required>
 
-           value="{{
-           $config->gst_percent ?? 0
-           }}">
+        <option value="">
+            SELECT GST RATE
+        </option>
+
+        <option value="0"
+            data-type="nil_rated"
+            {{ isset($config) && $config->gst_percent == '0' ? 'selected' : '' }}>
+            0% (Nil Rated Goods)
+        </option>
+
+        <option value="0"
+            data-type="exempted">
+            0% (Exempted Goods)
+        </option>
+
+        <option value="0.25"
+            data-type="taxable"
+            {{ isset($config) && $config->gst_percent == '0.25' ? 'selected' : '' }}>
+            0.25% (Precious stones, etc.)
+        </option>
+
+        <option value="3"
+            data-type="taxable"
+            {{ isset($config) && $config->gst_percent == '3' ? 'selected' : '' }}>
+            3% (Gold, jewelry)
+        </option>
+
+        <option value="5"
+            data-type="taxable"
+            {{ isset($config) && $config->gst_percent == '5' ? 'selected' : '' }}>
+            5%
+        </option>
+
+        <option value="12"
+            data-type="taxable"
+            {{ isset($config) && $config->gst_percent == '12' ? 'selected' : '' }}>
+            12%
+        </option>
+
+        <option value="18"
+            data-type="taxable"
+            {{ isset($config) && $config->gst_percent == '18' ? 'selected' : '' }}>
+            18%
+        </option>
+
+        <option value="28"
+            data-type="taxable"
+            {{ isset($config) && $config->gst_percent == '28' ? 'selected' : '' }}>
+            28%
+        </option>
+
+    </select>
+
+    <input type="hidden"
+           name="item_type"
+           id="item_type"
+           value="{{ $config->item_type ?? '' }}">
 
 </div>
 
+<div class="col-md-4 mb-3">
+
+    <label class="form-label font-14 font-heading">
+        UNIT NAME
+    </label>
+
+    <select class="form-select select2-single"
+            name="unit_id"
+            id="unit_id"
+            required>
+
+        <option value="">
+            SELECT UNIT
+        </option>
+
+        <?php foreach ($accountunit as $value) { ?>
+
+            <option value="<?php echo $value->id; ?>"
+                {{ isset($config) && $config->unit_id == $value->id ? 'selected' : '' }}>
+
+                <?php echo $value->name; ?>
+
+            </option>
+
+        <?php } ?>
+
+    </select>
+
+</div>
+
+
+<div class="col-md-4 mb-3">
+
+    <label class="form-label font-14 font-heading">
+        HSN CODE
+    </label>
+
+    <input type="text"
+           name="hsn_code"
+           id="hsn_code"
+           class="form-control"
+
+           value="{{
+           $config->hsn_code ?? ''
+           }}">
+
+</div>
 
 
 <div class="col-md-4 mb-3">
@@ -206,5 +306,19 @@
 </div>
 
 @include('layouts.footer')
+<script>
 
+$(document).ready(function () {
+
+    $('#gst_percent').on('change', function () {
+
+        let itemType = $(this).find(':selected').data('type');
+
+        $('#item_type').val(itemType);
+
+    });
+
+});
+
+</script>
 @endsection

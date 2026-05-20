@@ -188,6 +188,30 @@ class SalesController extends Controller
       $freight   = $request->query('freight');   // 1
       $sale_order_id = $request->query('sale_order_id');
       $new_order = $request->query('new_order');
+      // ===== BOX SALE ORDER =====
+
+      $box_sale_order_id =
+         $request->query('box_sale_order_id');
+
+
+      $boxSaleOrders = DB::table('box_sale_orders')
+
+         ->where(
+            'company_id',
+            Session::get('user_company_id')
+         )
+
+         ->where(
+            'delete',
+            '0'
+         )
+
+         ->orderBy(
+            'id',
+            'DESC'
+         )
+
+         ->get();
       $sale_order_items = [];
       if($request->query('item_arr')){
          $sale_order_items = json_decode($request->query('item_arr'),true);
@@ -519,7 +543,7 @@ class SalesController extends Controller
       if($comp->company_sale_type=="RETAIL"){
          return view('addsaleretail')
          ->with('current_financial_year',$current_financial_year)
-         ->with('fy_start_date', $fy_start_date)->with('config', $config)->with('itemGroups', $itemGroups)->with('accountunit', $accountunit)->with('series', $series)->with('state_list', $state_list)->with('allowedAccountGroups', $allowedAccountGroups)->with('credit_days', $credit_days)->with('fy_end_date', $fy_end_date)->with('party_list', $party_list)->with('billsundry', $billsundry)->with('bill_date', $bill_date)->with('GstSettings', $GstSettings)->with('item', $item)->with('bill_to_id', $bill_to_id)->with('shipp_to_id', $shipp_to_id)->with('freight', $freight)->with('sale_order_id', $sale_order_id)->with('sale_order_items',$sale_order_items)->with('sale_enter_data',$sale_enter_data)->with('new_order',$new_order)->with('production_module_status',$production_module_status)->with('bill_to_address_id',$bill_to_address_id)->with('shipp_to_address_id',$shipp_to_address_id)->with('shipp_to_other_address',$shipp_to_other_address)->with('shipp_to_other_pincode',$shipp_to_other_pincode)->with('cash_group_ids',$cash_group_ids);
+         ->with('fy_start_date', $fy_start_date)->with('config', $config)->with('boxSaleOrders',$boxSaleOrders)->with('box_sale_order_id',$box_sale_order_id)->with('itemGroups', $itemGroups)->with('accountunit', $accountunit)->with('series', $series)->with('state_list', $state_list)->with('allowedAccountGroups', $allowedAccountGroups)->with('credit_days', $credit_days)->with('fy_end_date', $fy_end_date)->with('party_list', $party_list)->with('billsundry', $billsundry)->with('bill_date', $bill_date)->with('GstSettings', $GstSettings)->with('item', $item)->with('bill_to_id', $bill_to_id)->with('shipp_to_id', $shipp_to_id)->with('freight', $freight)->with('sale_order_id', $sale_order_id)->with('sale_order_items',$sale_order_items)->with('sale_enter_data',$sale_enter_data)->with('new_order',$new_order)->with('production_module_status',$production_module_status)->with('bill_to_address_id',$bill_to_address_id)->with('shipp_to_address_id',$shipp_to_address_id)->with('shipp_to_other_address',$shipp_to_other_address)->with('shipp_to_other_pincode',$shipp_to_other_pincode)->with('cash_group_ids',$cash_group_ids);
       }else if($comp->company_sale_type=="TAAROBAAR"){
          return view('addtaarobaarsale')
                ->with('current_financial_year',$current_financial_year)
@@ -527,6 +551,8 @@ class SalesController extends Controller
                ->with('config', $config)
                ->with('itemGroups', $itemGroups)
                ->with('accountunit', $accountunit)
+               ->with('boxSaleOrders',$boxSaleOrders)
+               ->with('box_sale_order_id',$box_sale_order_id)
                ->with('series', $series)
                ->with('state_list', $state_list)
                ->with('allowedAccountGroups', $allowedAccountGroups)
@@ -554,7 +580,7 @@ class SalesController extends Controller
       }else{
          return view('addSale')
          ->with('current_financial_year',$current_financial_year)
-         ->with('fy_start_date', $fy_start_date)->with('config', $config)->with('itemGroups', $itemGroups)->with('accountunit', $accountunit)->with('series', $series)->with('state_list', $state_list)->with('allowedAccountGroups', $allowedAccountGroups)->with('credit_days', $credit_days)->with('fy_end_date', $fy_end_date)->with('party_list', $party_list)->with('billsundry', $billsundry)->with('bill_date', $bill_date)->with('GstSettings', $GstSettings)->with('item', $item)->with('bill_to_id', $bill_to_id)->with('shipp_to_id', $shipp_to_id)->with('freight', $freight)->with('sale_order_id', $sale_order_id)->with('sale_order_items',$sale_order_items)->with('sale_enter_data',$sale_enter_data)->with('new_order',$new_order)->with('production_module_status',$production_module_status)->with('bill_to_address_id',$bill_to_address_id)->with('shipp_to_address_id',$shipp_to_address_id)->with('shipp_to_other_address',$shipp_to_other_address)->with('shipp_to_other_pincode',$shipp_to_other_pincode)->with('cash_group_ids',$cash_group_ids);
+         ->with('fy_start_date', $fy_start_date)->with('config', $config)->with('itemGroups', $itemGroups)->with('boxSaleOrders',$boxSaleOrders)->with('box_sale_order_id',$box_sale_order_id)->with('accountunit', $accountunit)->with('series', $series)->with('state_list', $state_list)->with('allowedAccountGroups', $allowedAccountGroups)->with('credit_days', $credit_days)->with('fy_end_date', $fy_end_date)->with('party_list', $party_list)->with('billsundry', $billsundry)->with('bill_date', $bill_date)->with('GstSettings', $GstSettings)->with('item', $item)->with('bill_to_id', $bill_to_id)->with('shipp_to_id', $shipp_to_id)->with('freight', $freight)->with('sale_order_id', $sale_order_id)->with('sale_order_items',$sale_order_items)->with('sale_enter_data',$sale_enter_data)->with('new_order',$new_order)->with('production_module_status',$production_module_status)->with('bill_to_address_id',$bill_to_address_id)->with('shipp_to_address_id',$shipp_to_address_id)->with('shipp_to_other_address',$shipp_to_other_address)->with('shipp_to_other_pincode',$shipp_to_other_pincode)->with('cash_group_ids',$cash_group_ids);
       }
    }
    
@@ -662,6 +688,8 @@ class SalesController extends Controller
       $sale->voucher_no = $voucher_no;
       $sale->party = $request->input('party_id');
       $sale->material_center = $request->input('material_center');
+      $sale->box_sale_order_id =
+    $request->input('box_sale_order_id');
       $sale->address_id = $request->input('address');
       $sale->taxable_amt = $request->input('taxable_amt');
       $sale->total = $request->input('total');
@@ -710,9 +738,92 @@ class SalesController extends Controller
                continue;
             }
             $item_quantity_total = $item_quantity_total + $qtys[$key];
+            $boxSaleOrderItemId =
+
+    $request->box_sale_order_item_id[$key]
+    ?? null;
+
+
+if($boxSaleOrderItemId)
+{
+
+    $soItem = DB::table('box_sale_order_items')
+
+        ->where(
+            'id',
+            $boxSaleOrderItemId
+        )
+
+        ->where(
+            'company_id',
+            Session::get('user_company_id')
+        )
+
+        ->where(
+            'delete',
+            '0'
+        )
+
+        ->first();
+
+
+    if($soItem)
+    {
+
+        $alreadySoldQty = DB::table('sale_descriptions')
+
+            ->where(
+                'box_sale_order_item_id',
+                $boxSaleOrderItemId
+            )
+
+            ->where(
+                'company_id',
+                Session::get('user_company_id')
+            )
+
+            ->where(
+                'delete',
+                '0'
+            )
+
+            ->sum('qty');
+
+
+        $currentQty =
+
+            (float)$qtys[$key];
+
+
+        $totalQty =
+
+            (float)$alreadySoldQty
+
+            +
+
+            (float)$currentQty;
+
+
+        if($totalQty > $soItem->qty)
+        {
+
+            return back()->with(
+
+                'error',
+
+                'Qty exceeded pending qty for selected Box Sale Order Item'
+
+            );
+        }
+    }
+}
             $desc = new SaleDescription;
             $itemData = ManageItems::find($good);
             $desc->sale_id = $sale->id;
+            $desc->box_sale_order_item_id =
+
+    $request->box_sale_order_item_id[$key]
+    ?? null;
             $desc->goods_discription = $good;
             $desc->item_description = $item_descriptions[$key] ?? null;
             if($itemData && $itemData->dual_unit == 1){
@@ -6426,4 +6537,159 @@ public function exportSaleBill(Request $request)
          return $voucher_no;
       }
    }
+
+   public function getBoxSaleOrders($partyId)
+{
+
+    $companyId =
+        Session::get('user_company_id');
+
+
+    $saleOrders = DB::table('box_sale_orders')
+
+        ->where(
+            'company_id',
+            $companyId
+        )
+
+        ->where(
+            'party_id',
+            $partyId
+        )
+
+        ->where(
+            'delete',
+            '0'
+        )
+
+        ->orderBy(
+            'id',
+            'DESC'
+        )
+
+        ->get();
+
+
+    return response()->json($saleOrders);
+}
+public function getBoxSaleOrderItems($id)
+{
+
+    $companyId =
+        Session::get('user_company_id');
+
+
+    $items = DB::table('box_sale_order_items')
+
+        ->leftJoin(
+            'manage_items',
+            'manage_items.id',
+            '=',
+            'box_sale_order_items.item_id'
+        )
+
+        ->leftJoin(
+            'units',
+            'units.id',
+            '=',
+            'manage_items.u_name'
+        )
+
+        ->where(
+            'box_sale_order_items.box_sale_order_id',
+            $id
+        )
+
+        ->where(
+            'box_sale_order_items.company_id',
+            $companyId
+        )
+
+        ->where(
+            'box_sale_order_items.delete',
+            '0'
+        )
+
+        ->select(
+
+            'box_sale_order_items.id as so_item_id',
+
+            'box_sale_order_items.item_id',
+
+            'box_sale_order_items.qty',
+
+            'box_sale_order_items.price',
+
+            'manage_items.name',
+
+            'units.id as unit_id',
+
+            'units.s_name as unit_name'
+
+        )
+
+        ->get();
+
+
+    $finalItems = [];
+
+
+    foreach($items as $row)
+    {
+
+        $soldQty = DB::table('sale_descriptions')
+
+            ->where(
+                'box_sale_order_item_id',
+                $row->so_item_id
+            )
+
+            ->where(
+                'company_id',
+                $companyId
+            )
+
+            ->where(
+                'delete',
+                '0'
+            )
+
+            ->sum('qty');
+
+
+        $pendingQty =
+
+            (float)$row->qty
+
+            -
+
+            (float)$soldQty;
+
+
+        if($pendingQty > 0)
+        {
+
+            $finalItems[] = [
+
+                'so_item_id' => $row->so_item_id,
+
+                'item_id' => $row->item_id,
+
+                'item_name' => $row->name,
+
+                'pending_qty' => round($pendingQty,2),
+
+                'price' => $row->price,
+
+                'unit' => $row->unit_id,
+
+                'unit_name' => $row->unit_name
+
+            ];
+        }
+    }
+
+
+    return response()->json($finalItems);
+}
 }

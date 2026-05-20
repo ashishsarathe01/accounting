@@ -72,8 +72,36 @@ $isEdit =
 
             <div class="card-box">
 
-                <div class="section-title">
-                    Box Inputs
+                <div class="d-flex justify-content-between align-items-center mb-3">
+
+                    <div class="section-title mb-0">
+                        Box Inputs
+                    </div>
+
+                    <div class="form-check">
+
+                        <input class="form-check-input"
+                    type="checkbox"
+                    id="create_item"
+
+                    {{
+                    isset($box)
+                    && !empty($box->manage_item_id)
+
+                    ? 'checked disabled'
+
+                    : ''
+                    }}>
+
+                        <label class="form-check-label"
+                            for="create_item">
+
+                            Create Item Of This
+
+                        </label>
+
+                    </div>
+
                 </div>
                 <div class="mb-3">
                     <label>Box Name</label>
@@ -83,7 +111,72 @@ $isEdit =
                     placeholder="Enter Box Name"
                     value="{{ $box->box_name ?? '' }}">
                 </div>
+                <div id="group_section"
 
+                    style="
+                    {{
+                    isset($box)
+                    && !empty($box->manage_item_id)
+
+                    ? 'display:block;'
+
+                    : 'display:none;'
+                    }}
+                    ">
+
+                    <div class="mb-3">
+
+                        <label for="g_name"
+                            class="form-label font-14 font-heading">
+
+                            UNDER GROUP
+
+                        </label>
+
+                        <select class="form-select select2-single w-100"
+                        name="g_name"
+                        id="g_name"
+
+                        {{
+                        isset($box)
+                        && !empty($box->manage_item_id)
+
+                        ? 'disabled'
+
+                        : ''
+                        }}>
+
+                            <option value="">
+                                SELECT GROUP
+                            </option>
+
+                            <?php
+                            foreach ($itemGroups as $value) { ?>
+
+                                <option value="<?php echo $value->id; ?>"
+
+                                    {{
+
+                                    isset($box->manage_item_id)
+                                    && !empty($box->manage_item_id)
+
+                                    ? 'selected'
+
+                                    : ''
+
+                                    }}>
+
+                                    <?php echo $value->group_name; ?>
+
+                                </option>
+
+                            <?php } ?>
+
+                        </select>
+
+                    </div>
+
+                </div>
                 <div class="row">
 
                     <div class="col-md-6">
@@ -256,14 +349,10 @@ $isEdit =
 
                 <div class="mb-3">
                     <label>Joint Allowance (mm)</label>
-<<<<<<< Updated upstream
                     <input type="number" step="0.01" id="joint_allowance" class="form-control" value="{{
                             $box->joint_allowance
                             ?? ($config->joint_allowance ?? 0)
                             }}">
-=======
-                    <input type="number" step="0.01" id="joint_allowance" class="form-control" value="0">
->>>>>>> Stashed changes
                 </div>
 
                 <div class="mb-3">
@@ -326,7 +415,6 @@ $isEdit =
                         </div>
                     </div>
 
-<<<<<<< Updated upstream
                     <div class="col-md-4">
                         <div class="result-box">
                             <div class="result-title">Boxes Per Sheet</div>
@@ -423,113 +511,6 @@ $isEdit =
                     </div>
 
                 </div>
-=======
-    <div class="col-md-4">
-        <div class="result-box">
-            <div class="result-title">Deckle Width</div>
-            <div class="result-value" id="deckle_result">0</div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="result-box">
-            <div class="result-title">Boxes Per Sheet</div>
-            <div class="result-value" id="boxes_per_sheet">0</div>
-        </div>
-    </div>
-
-</div>
-
-
-<div class="row">
-
-    <div class="col-md-4">
-        <div class="result-box">
-            <div class="result-title">Sheet Weight</div>
-            <div class="result-value" id="sheet_weight">0</div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="result-box">
-            <div class="result-title">Weight Per Box</div>
-            <div class="result-value" id="weight_per_box">0</div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="result-box">
-            <div class="result-title">Paper Cost Per Box</div>
-            <div class="result-value" id="paper_cost_per_box">0</div>
-        </div>
-    </div>
-
-</div>
-
-
-<div class="row">
-
-    <div class="col-md-4">
-        <div class="result-box">
-            <div class="result-title">Conversion Cost Per Box</div>
-            <div class="result-value" id="conversion_cost_result">0</div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="result-box">
-            <div class="result-title">Total Cost Per Box</div>
-            <div class="result-value" id="total_cost_per_box">0</div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="result-box">
-            <div class="result-title">Sale Price Without GST</div>
-            <div class="result-value" id="sale_without_gst">0</div>
-        </div>
-    </div>
-
-</div>
-
-
-<div class="row">
-
-    <div class="col-md-4">
-        <div class="result-box">
-            <div class="result-title">Sale Price With GST</div>
-            <div class="result-value" id="sale_with_gst">0</div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="result-box">
-            <div class="result-title">Total Sheet Required</div>
-            <div class="result-value" id="total_sheet_required">0</div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="result-box">
-            <div class="result-title">Total Paper Required</div>
-            <div class="result-value" id="total_paper_required">0</div>
-        </div>
-    </div>
-
-</div>
-
-
-<div class="row">
-
-    <div class="col-md-4">
-        <div class="result-box">
-            <div class="result-title">Total Paper Cost</div>
-            <div class="result-value" id="total_paper_cost">0</div>
-        </div>
-    </div>
-
-</div>
->>>>>>> Stashed changes
 
 
                 
@@ -542,7 +523,11 @@ $isEdit =
 
 </div>
 
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 let existingLayers =
 @json($layers ?? []);
@@ -923,7 +908,29 @@ let existingLayers =
             document.getElementById('sale_with_gst').innerHTML =
                 '₹ ' + saleWithGST.toFixed(2);
     }
-
+    $(document).ready(function () {
+        $('#g_name').select2({
+            width: '100%'
+        });
+    });
+    let createItemCheckbox =
+    document.getElementById('create_item');
+    if(createItemCheckbox)
+    {
+        createItemCheckbox
+        .addEventListener('change', function(){
+            if(this.checked)
+            {
+                document.getElementById('group_section')
+                .style.display = 'block';
+            }
+            else
+            {
+                document.getElementById('group_section')
+                .style.display = 'none';
+            }
+        });
+    }
     createLayerInputs();
     updateDimensionLabels();
     document.getElementById('ply')
@@ -1106,6 +1113,12 @@ let existingLayers =
                     document.getElementById('total_paper_cost')
                     .innerText.replace('₹','')
                 ) || 0,
+
+            create_item :
+                document.getElementById('create_item').checked ? 1 : 0,
+
+            g_name :
+                document.getElementById('g_name').value,
 
             layers : layers
         };
