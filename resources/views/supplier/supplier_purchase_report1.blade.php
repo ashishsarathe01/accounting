@@ -520,23 +520,29 @@ select.no-arrow {
                                                     @endif
                                                     <td class="header-section">
                                                         <button
-                                                                class="btn btn-info start {{ $row->group_id == $waste_group_id ? 'wastekraft' : 'boilerfuel' }}"
-                                                                data-id="{{ $row->id }}"
+                                                                class="btn btn-info start wastekraft"
+                                                                data-id="{{ $row->id }}" data-type=" {{ $row->group_id == $waste_group_id ? 'wastekraft' : 'boilerfuel' }}"
                                                                 data-group_id="{{ $row->group_id }}"
                                                                 data-account_id="{{ $row->account_id }}"
                                                                 data-gross_weight="{{ $row->gross_weight }}"
                                                                 data-purchase_voucher_no="{{ $row->purchase_voucher_no }}"
-                                                                data-purchase_date="{{ $row->purchase_date }}"
+                                                                data-purchase_date="{{ date('d-m-Y',strtotime($row->purchase_date)) }}"
                                                                 data-purchase_amount="{{ $row->purchase_total_amt }}"
-                                                                data-purchase_qty="{{ $row->purchase_qty }}"
+                                                                data-purchase_qty="{{ $row->purchase_quantity }}"
                                                                 data-purchase_taxable_amount="{{ $row->purchase_taxable_amt }}"
                                                                 @if($row->group_id == $waste_group_id)
                                                                     data-purchase_price='{{ $row->prices }}'
                                                                 @endif
                                                                 data-status="3"
                                                                 data-vehicle_no="{{ $row->vehicle_no }}"
-                                                                data-entry_date="{{ $row->entry_date }}"
-                                                                data-entry_date="{{ $row->purchaseReport }}">
+                                                                data-entry_date="{{ date('d-m-Y',strtotime($row->entry_date)) }}"
+                                                                 data-account_name="{{ $row->account_name }}"
+                                                                data-location_name="{{ $row->locationInfo->name ?? '-' }}"
+                                                                data-tare_weight="{{ $row->tare_weight }}"
+                                                                data-voucher_no="{{ $row->voucher_no }}"
+                                                                data-item_name="{{ $row->item_name }}"
+                                                                data-purchaseReport="{{ $row->purchaseReport }}"
+                                                                >
                                                                 View
                                                             </button>
                                                     </td>
@@ -788,7 +794,94 @@ select.no-arrow {
         </div>
     </section>
 </div>
-
+<div class="modal fade" id="wastekraft_report_modal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content p-4 border-divider border-radius-8">
+            <div class="modal-header border-0 p-0">
+                <button type="button" class="btn-close report_modal_close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 modal-scroll-body" tabindex="0">
+                <div class="row">
+                    <div class="col-md-7 left-section">
+                        <!-- FORM FIELDS START -->
+                        <div class="row">
+                            <div class="mb-3 col-md-3">
+                                <label for="account_id" class="form-label font-14 font-heading">Account Name</label>
+                                <input type="text" id="account_id" class="form-control" readonly>
+                            </div>
+                            <div class="mb-3 col-md-3">
+                                <label for="entry_date" class="form-label font-14 font-heading">Date</label>
+                                <input type="text" id="entry_date" class="form-control" readonly/>
+                            </div>
+                            <div class="mb-3 col-md-3">
+                                <label for="group_id" class="form-label font-14 font-heading">Item Group</label>
+                                <input type="text" id="group_id" class="form-control" readonly>
+                            </div>
+                            <div class="mb-3 col-md-3">
+                                <label for="vehicle_no" class="form-label font-14 font-heading">Vehicle No.</label>
+                                <input type="text" id="vehicle_no" class="form-control"/>
+                            </div>
+                            <div class="mb-3 col-md-3 short_weight_div">
+                                <label for="tare_weight" class="form-label font-14 font-heading">Gross Weight</label>
+                                <input type="text" id="gross_weight" class="form-control"/>
+                            </div>
+                            <div class="mb-3 col-md-3">
+                                <label for="tare_weight" class="form-label font-14 font-heading">Tare Weight</label>
+                                <input type="number" step="any" min="1" id="tare_weight" class="form-control" placeholder="Tare Weight"/>
+                            </div>
+                            <div class="mb-3 col-md-3">
+                                <label for="voucher_no" class="form-label font-14 font-heading">Slip Number</label>
+                                <input type="text" id="voucher_no" class="form-control" placeholder="Slip Number"/>
+                            </div>
+                            <div class="mb-3 col-md-3 area_div">
+                                <label for="location" class="form-label font-14 font-heading location_area_head">Area</label>
+                                <input type="text" id="location" class="form-control" />
+                                
+                            </div>
+                            <div class="mb-12 col-md-12"></div>
+                            <div class="mb-3 col-md-3 purchase_div">
+                                <label for="purchase_invoice_no" class="form-label font-14 font-heading">Purchase Invoice No.</label>
+                                <input type="text" id="purchase_invoice_no" class="form-control" readonly/>
+                            </div>
+                            <div class="mb-3 col-md-3 purchase_div">
+                                <label for="purchase_invoice_date" class="form-label font-14 font-heading">Purchase Invoice Date</label>
+                                <input type="text" id="purchase_invoice_date" class="form-control" readonly/>
+                            </div>
+                            <div class="mb-3 col-md-3 purchase_div">
+                                <label for="purchase_invoice_qty" class="form-label font-14 font-heading">Purchase Invoice Qty</label>
+                                <input type="text" id="purchase_invoice_qty" class="form-control" readonly/>
+                            </div>
+                            <div class="mb-3 col-md-3 purchase_div">
+                                <label for="purchase_invoice_amount" class="form-label font-14 font-heading">Purchase Invoice Amount</label>
+                                <input type="text" id="purchase_invoice_amount" class="form-control" readonly/>
+                            </div>
+                        </div>
+                        <div class="mb-12 col-md-12">
+                            <table class="table table-bordered waste_kraft_table">
+                                <thead>
+                                    <tr>
+                                        <th>Head</th>
+                                        <th id="net_weight_view" style="text-align: right;width: 12%;">Net Weight</th>
+                                        <th style="text-align: right;width: 14%;">Bill Rate</th>
+                                        <th style="text-align: right;width: 15%;">Contract Rate</th>
+                                        <th style="text-align: right">Report Amount</th>
+                                        <th style="width: 19%;">Difference Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                            <div class="text-start">
+                                <input type="hidden" id="row_id">
+                                @can('view-module', 199)
+                                    <button class="btn btn-warning revert_in_process" padding: 2px 6px;font-size: 15px;line-height: 1.2;">Revert In Process</button>@endcan
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 </body>
 
 @include('layouts.footer')
@@ -798,7 +891,7 @@ select.no-arrow {
             .toString()
             .toLowerCase()
             .replace(/\s+/g, '_'); 
-    }
+    }    
     $( ".select2-single" ).select2({
         //width: '100%',
         matcher: function(params, data) {
@@ -819,6 +912,7 @@ select.no-arrow {
             return null;
         }
     });
+    //Supplier Dropdown
     $(".search_btn").click(function(){
         let supplier = $("#supplier").val();
         let from_date = $("#from_date").val();
@@ -833,6 +927,7 @@ select.no-arrow {
             window.location = "{{ url('manage-supplier-purchase-report1') }}/" + supplier + "/" + from_date + "/" + to_date + "?view_by=" + view_by;
         }
     });
+    //Print Page
     function printpage() {
         let printArea = document.getElementById('print-area').cloneNode(true);
 
@@ -951,5 +1046,242 @@ select.no-arrow {
             win.close();
         };
     }
+    //Waste Kraft Report Info
+    $(document).on("click", ".start.wastekraft", function () {
+        let type = $(this).attr('data-type');
+        $("#cover-spin").show();
+        $("#account_id").val($(this).attr('data-account_name'));
+        $("#entry_date").val($(this).attr('data-entry_date'));
+        $("#group_id").val();
+        $("#vehicle_no").val($(this).attr('data-vehicle_no'));
+        $("#gross_weight").val($(this).attr('data-gross_weight'));
+        $("#tare_weight").val($(this).attr('data-tare_weight'));
+        $("#voucher_no").val($(this).attr('data-voucher_no'));
+        if(type=="wastekraft"){
+            $(".location_area_head").html('Area');
+            $("#location").val($(this).attr('data-location_name'));
+        }else{
+            $(".location_area_head").html('Item');
+            $("#location").val($(this).attr('data-item_name'));
+        }
+        
+        $("#purchase_invoice_no").val($(this).attr('data-purchase_voucher_no'));
+        $("#purchase_invoice_date").val($(this).attr('data-purchase_date'));
+        $("#purchase_invoice_qty").val($(this).attr('data-purchase_qty'));
+        $("#purchase_invoice_amount").val($(this).attr('data-purchase_amount'));
+        $("#row_id").val($(this).attr('data-id'));
+        let item_html = "";
+        let item_detail = $(this).attr('data-purchasereport');
+        item_detail = JSON.parse($(this).attr('data-purchasereport'));
+        let total_report_amount = 0; total_difference_amount = 0;
+        let purchase_taxable_amt = $(this).attr('data-purchase_taxable_amount');
+        if(item_detail.length>0){
+            item_detail.forEach(function(e){
+                let report_amount = e.total_head_qty*e.head_contract_rate;
+                report_amount = report_amount.toFixed(2);
+                let balance_price = e.head_bill_rate - e.head_contract_rate;
+                let difference_amount = e.total_head_qty*balance_price;
+                difference_amount = difference_amount.toFixed(2);
+                if(e.head_name==null){
+                    e.head_name = e.head_id;
+                }
+                total_report_amount+=parseFloat(report_amount);
+                total_difference_amount+=parseFloat(difference_amount);
+                item_html+=`<tr class="head waste_head">
+                                <td><input type="text" class="form-control" value="${e.head_name}" readonly></td>
+                                <td><input type="text" class="form-control calculate qty" value="${e.total_head_qty}" style="text-align: right"></td>
+                                <td><input type="text" class="form-control calculate qty" value="${e.head_bill_rate}" style="text-align: right">
+                                </td>
+                                <td><input type="text" class="form-control contract_rate calculate" style="text-align: right" readonly  value="${e.head_contract_rate}"></td>
+                                <td><input type="text" class="form-control report_amount" value="${report_amount}" style="text-align: right" readonly></td>
+                                <td><input type="text" class="form-control difference_amount" value="${difference_amount}" style="text-align: right" readonly></td>
+                            </tr>`;
+            });
+            item_html+=`<tr>
+                        <td colspan="4" colspan="4"></td>
+                        <td><input class="form-control" style="text-align: right" readonly value="${total_report_amount.toFixed(2)}"></td>
+                        <td><input class="form-control" style="text-align: right" readonly value="${total_difference_amount.toFixed(2)}"></td>
+                    </tr>`;
+            item_html+=`<tr>
+                            <th colspan="6" style="text-align: right" colspan="6">
+                                <span>Purchase Taxable Amount : ${purchase_taxable_amt}</span> | 
+                                <span>Total Report Amount : ${total_report_amount.toFixed(2)}</span>
+                            </th>
+                        </tr>`;
+                    }
+        $(".waste_kraft_table tbody").html(item_html);
+        $("#wastekraft_report_modal").modal('toggle');
+        $("#cover-spin").hide();
+    });
+    // Download CSV
+    $('.print_selected').on('click', function () {
+        let view_by = $("#view_by").val();
+        let table_id = "purchase_table";
+        if(view_by=='party'){
+            table_id = "payment_table";
+        }
+        let csv = [];
+        let colCount = 0;
+
+        // ===============================
+        // HEADER ROW (VISIBLE COLUMNS)
+        // ===============================
+        let headerRow = [];
+        $('#'+table_id+' thead th').each(function () {
+            if (!$(this).hasClass('header-section')) {
+                let text = $(this).text().trim();
+                // remove comma from header
+                text = text.replace(/,/g, '');
+    
+                headerRow.push('"' + text + '"');
+                colCount++;
+            }
+        });
+        csv.push(headerRow.join(','));
+
+        $('#'+table_id+' tbody tr').each(function () {
+
+            let $tr = $(this);
+
+            if ($tr.text().includes('Daily Summary')) {
+                return;
+            }
+
+            let row = [];
+            let filled = 0;
+
+            $tr.children('td').each(function () {
+
+                if ($(this).hasClass('header-section')) return;
+
+                let colspan = parseInt($(this).attr('colspan')) || 1;
+                let text = $(this).text().trim().replace(/\s+/g, ' ');
+                text = text.replace(/,/g, '');
+                //text = text.replace(/"/g, '""');
+
+                for (let i = 0; i < colspan; i++) {
+                    row.push('"' + text + '"');
+                    filled++;
+                }
+            });
+
+            while (filled < colCount) {
+                row.push('""');
+                filled++;
+            }
+
+            csv.push(row.join(','));
+            
+            if ($tr.text().trim().match(/^Total\s*\(/)) {
+                let blank = Array(colCount).fill('""').join(',');
+                csv.push(blank);
+            }
+        });
+
+
+        downloadCSV(csv.join('\n'), 'purchase_report.csv');
+    });
+    function downloadCSV(csv, filename) {
+        let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    
+        let link = document.createElement('a');
+        let url = URL.createObjectURL(blob);
+    
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+    
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+    const sensitiveColumns = [
+        'net_weight',
+        'cut_weight',
+        'actual_weight',
+        'invoice_amount',
+        'gst_amount',
+        'taxable_amount',
+        'actual_amount',
+        'actual_with_gst',
+        'billing_rate',
+        'contract_rate',
+        'difference'
+    ];
+    $(document).on('change', 'input[name="columns[]"]', function () {
+        let column = $(this).val();
+        let isChecked = $(this).prop('checked');
+        if (!isChecked && (
+            sensitiveColumns.includes(column) ||
+            column.startsWith('sub_head_')
+        )) {
+            let colIndex = -1;
+            $('#purchase_table thead th').each(function (index) {
+                if ($(this).data('column') === column) {
+                    colIndex = index;
+                }
+            });
+            if (colIndex === -1) return;
+            let hasValue = false;
+            $("#purchase_table tbody tr").each(function () {
+                let cell = $(this).find("td").eq(colIndex);
+                let text = cell.text().trim();
+                text = text.replace(/[\[\]]/g, '');
+                let values = text.split(',');
+                let hasNonZero = false;
+                values.forEach(v => {
+                    let num = parseFloat(v.trim());
+                    if (!isNaN(num) && num !== 0) {
+                        hasNonZero = true;
+                    }
+                });
+                if (hasNonZero) {
+                    hasValue = true;
+                    return false;
+                }
+            });
+            if (hasValue) {
+                let labelText = $('input[name="columns[]"][value="' + column + '"]')
+                    .closest('.form-check')
+                    .find('label')
+                    .text()
+                    .trim();
+                let confirmAction = confirm(labelText + " has values. Do you want to hide it?");
+                if (!confirmAction) {
+                    $(this).prop('checked', true);
+                }
+            }
+        }
+    });
+    //Revert In Pending
+    $(document).on("click", ".revert_in_process", function () {
+        if(confirm("Are you sure to revert purchase to In Process ?")){
+            $("#cover-spin").show();
+            let id = $("#row_id").val();
+            $.ajax({
+                url: "{{url('revert-in-process-purchase-report')}}",
+                type: "POST",
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    row_id: id
+                },
+                success: function(res){
+                    $("#cover-spin").hide();
+                    if(res){
+                        let obj = JSON.parse(res);
+                        if(obj.status == 1){
+                            alert(obj.message);
+                            location.reload();
+                        }else{
+                            alert(obj.message);
+                        }
+                    }else{
+                        alert("Something went wrong");
+                    }
+                }
+            });
+        }
+
+    });
 </script>
 @endsection

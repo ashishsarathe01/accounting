@@ -825,6 +825,7 @@ Route::post('/payroll/register/store',[PayrollRegisterController::class, 'store'
    Route::get('wastekraft-purchase-report/{id?}/{from_date?}/{to_date?}', [SupplierPurchaseController::class, 'wasteKraftPurchaseReport'])->name('wastekraft-purchase-report');
    Route::get('wastekraft-purchase-report1/{id?}/{from_date?}/{to_date?}', [SupplierPurchaseController::class, 'wasteKraftPurchaseReport1'])->name('wastekraft-purchase-report1');
     Route::get('boilerfuel-purchase-report/{id?}/{from_date?}/{to_date?}', [SupplierPurchaseController::class, 'boilerFuelPurchaseReport'])->name('boilerfuel-purchase-report');
+    Route::get('boilerfuel-purchase-report1/{id?}/{from_date?}/{to_date?}', [SupplierPurchaseController::class, 'boilerFuelPurchaseReport1'])->name('boilerfuel-purchase-report1');
     Route::get('wastekraft-view-detail/{id}/{from}/{to}/{group_id}', [SupplierPurchaseController::class, 'viewApprovedPurchaseDetail'])->name('wastekraft-view-detail');
     Route::get('boilerfuel-view-detail/{id}/{from}/{to}/{group_id}', [SupplierPurchaseController::class, 'viewApprovedPurchaseDetail'])->name('boilerfuel-view-detail');
     Route::get('/opening-stock-reel-wise/filter', [OpeningStockReelWiseController::class, 'filter'])->name('openingstockreelwise.filter');

@@ -2420,44 +2420,47 @@ class SupplierPurchaseController extends Controller
                 $priceSummary = DB::table('purchase_descriptions')
                     ->select(
                         'purchase_id',
-                        DB::raw('CONCAT("[", GROUP_CONCAT(CAST(price AS DECIMAL(10,2)) SEPARATOR ","), "]") as prices')
+                        DB::raw('CONCAT("[", GROUP_CONCAT(CAST(price AS DECIMAL(10,2)) SEPARATOR ","), "]") as prices'),
+                        DB::raw('sum(qty) as purchase_quantity')
                     )
                     ->groupBy('purchase_id');
 
                 $purchases_details_by_date = SupplierPurchaseVehicleDetail::with([
-
                         'purchaseReport' => function ($q) {
-
                             $q->leftJoin(
                                     'supplier_sub_heads',
                                     'supplier_purchase_reports.head_id',
                                     '=',
                                     'supplier_sub_heads.id'
                                 )
-
                                 ->select(
                                     'supplier_purchase_reports.purchase_id',
                                     'supplier_purchase_reports.head_id',
                                     'supplier_purchase_reports.head_contract_rate',
-
+                                    'supplier_purchase_reports.head_bill_rate',
                                     'supplier_sub_heads.name as head_name',
-
                                     DB::raw('SUM(supplier_purchase_reports.head_qty) as total_head_qty'),
-
                                     DB::raw('SUM(supplier_purchase_reports.head_difference_amount) as total_head_difference_amount')
                                 )
-
                                 ->groupBy(
                                     'supplier_purchase_reports.purchase_id',
                                     'supplier_purchase_reports.head_id',
                                     'supplier_purchase_reports.head_contract_rate',
                                     'supplier_sub_heads.name'
-                                );
+                                )
+                                ->orderByRaw("
+                                    CASE 
+                                        WHEN supplier_sub_heads.name IS NULL 
+                                            OR supplier_sub_heads.name = '' 
+                                        THEN 1 
+                                        ELSE 0 
+                                    END
+                                ")
+                                ->orderBy('supplier_sub_heads.sequence');
                         },
-
                         'locationInfo:id,name'
-
                     ])
+                    ->leftjoin('manage_items','supplier_purchase_vehicle_details.item_id','=','manage_items.id')
                     ->leftJoin(
                         'accounts',
                         'supplier_purchase_vehicle_details.account_id',
@@ -2470,38 +2473,30 @@ class SupplierPurchaseController extends Controller
                         '=',
                         'purchases.id'
                     )
-
                     ->leftJoin(
                         'purchase_sundries',
                         'purchases.id',
                         '=',
                         'purchase_sundries.purchase_id'
                     )
-
                     ->leftJoin(
                         'bill_sundrys',
                         function ($join) {
-
                             $join->on(
                                     'purchase_sundries.bill_sundry',
                                     '=',
                                     'bill_sundrys.id'
                                 )
-
                                 ->whereIn(
                                     'bill_sundrys.nature_of_sundry',
                                     ['CGST', 'SGST', 'IGST']
                                 );
                         }
                     )
-
                     ->leftJoinSub($priceSummary, 'pd', function ($join) {
-
                         $join->on('pd.purchase_id', '=', 'purchases.id');
                     })
-
                     ->select(
-
                         'supplier_purchase_vehicle_details.id',
                         'supplier_purchase_vehicle_details.entry_date',
                         'supplier_purchase_vehicle_details.location',
@@ -2511,13 +2506,362 @@ class SupplierPurchaseController extends Controller
                         'supplier_purchase_vehicle_details.tare_weight',
                         'supplier_purchase_vehicle_details.account_id',
                         'purchases.voucher_no as purchase_voucher_no',
+                        'supplier_purchase_vehicle_details.vehicle_no as vehicle_no',
                         'purchases.date as purchase_date',
                         'purchases.taxable_amt as purchase_taxable_amt',
                         'purchases.total as purchase_total_amt',
                         'group_id',
                         'pd.prices',
+                        'pd.purchase_quantity',
                         'accounts.account_name',
+                        'manage_items.name as item_name',
+                        DB::raw('COALESCE(SUM(purchase_sundries.amount),0) as purchase_gst')
+                    )
 
+                    ->where(
+                        'supplier_purchase_vehicle_details.company_id',
+                        Session::get('user_company_id')
+                    )
+
+                    ->where(
+                        'supplier_purchase_vehicle_details.group_id',
+                        $group_id
+                    )
+
+                    ->when($view_by === 'party', function ($q) {
+
+                        $q->where(
+                            'supplier_purchase_vehicle_details.status',
+                            '3'
+                        );
+                    })
+
+                    ->when($id && $id != 'all', function ($q) use ($id) {
+
+                        $q->where(
+                            'supplier_purchase_vehicle_details.account_id',
+                            $id
+                        );
+                    })
+
+                    ->whereBetween(
+                        'supplier_purchase_vehicle_details.entry_date',
+                        [$from_date, $to_date]
+                    )
+
+                    ->groupBy(
+                        'supplier_purchase_vehicle_details.id'
+                    )
+
+                    ->orderBy(
+                        'supplier_purchase_vehicle_details.entry_date'
+                    )
+                    ->orderBy(
+                        'voucher_no'
+                    )
+                    ->orderBy(
+                        'account_name'
+                    )
+                    ->get();
+                $purchases_details_by_date = $purchases_details_by_date->groupBy(fn($r) => $r->entry_date);
+                $paymentsByDate = DB::table('payments as p')
+                        ->join('payment_details as pd', 'pd.payment_id', '=', 'p.id')
+                        ->where('p.delete', '0')
+                        ->where('pd.delete', '0')
+                        ->where('p.company_id', Session::get('user_company_id'))
+                        ->where('pd.type', 'Debit')
+                        ->whereBetween('p.date', [$from_date, $to_date])
+                        ->select(
+                            DB::raw('DATE(p.date) as pay_date'),
+                            'pd.account_name as account_id',
+                            DB::raw('SUM(pd.debit) as amount')
+                        )
+                        ->groupBy('pay_date','pd.account_name')
+                        ->get()
+                        ->mapWithKeys(function ($item) {
+                            return [
+                                $item->pay_date.'_'.$item->account_id => $item
+                            ];
+                        });
+                foreach ($purchases_details_by_date as $date => $records) {
+
+                        $groupedRecords = $records->groupBy('account_id');
+
+                        foreach ($groupedRecords as $accountId => $accountRows) {
+
+                            $lastIndex = $accountRows->keys()->last();
+
+                            foreach ($accountRows as $index => $record) {
+
+                                $paymentKey = $date . '_' . $accountId;
+
+                                if ($index == $lastIndex) {
+
+                                    $record->payment_amount =
+                                        $paymentsByDate[$paymentKey]->amount ?? 0;
+
+                                } else {
+
+                                    $record->payment_amount = 0;
+                                }
+                            }
+                        }
+                    }
+            }
+            
+            // echo "<pre>";
+            // print_r($purchases_details_by_date->toArray());die;
+        return view('supplier.supplier_purchase_report1', [
+            'accounts' => $accounts,
+            'view_by' => $view_by,
+            'group_id' => $group_id,
+            'waste_group_id'  => $waste_group_id,
+            'boiler_group_id' => $boiler_group_id,
+            'purchases' => $purchases,
+            'purchases_details' => $purchases_details,
+            'purchases_details_by_date' => $purchases_details_by_date,
+            'from_date' => $from_date,
+            'to_date' => $to_date,
+           
+        ]);
+    }
+    public function boilerFuelPurchaseReport1($id = null, $from_date = null, $to_date = null)
+    {
+        $from_date = request()->from_date ?? $from_date;
+        $to_date   = request()->to_date ?? $to_date;
+        if (empty($from_date) || empty($to_date)) {
+            $from_date = date('Y-m-01');
+            $to_date   = date('Y-m-t');
+        }
+        $view_by = request()->view_by ?? 'party';
+        //Account List
+        $accounts = Accounts::select(
+                'accounts.account_name',
+                'accounts.id'
+            )
+            ->join('suppliers', 'suppliers.account_id', '=', 'accounts.id')
+            ->where('suppliers.company_id', Session::get('user_company_id'))
+            ->where('accounts.delete', '0')
+            ->where('accounts.status', '1')
+            ->whereIn('accounts.company_id', [Session::get('user_company_id'), 0])
+            ->orderBy('accounts.account_name')
+            ->distinct()
+            ->get();
+        $group_list = SaleOrderSetting::where('sale-order-settings.company_id', Session::get('user_company_id'))
+            ->where('setting_type', 'PURCHASE GROUP')
+            ->where('setting_for', 'PURCHASE ORDER')
+            ->where('group_type', 'BOILER FUEL')
+            ->select('item_id')
+            ->first();
+        $group_id = $group_list->item_id;
+        //View By Party Report
+        $purchases = "";
+        if($view_by=='party'){
+            $reportSubQuery = DB::table('supplier_purchase_reports')
+                        ->select(
+                            'purchase_id',
+                            DB::raw('SUM(head_qty * head_contract_rate) as report_amount')
+                        )
+                        ->groupBy('purchase_id');
+            $purchases = SupplierPurchaseVehicleDetail::query()
+                    ->leftJoinSub($reportSubQuery, 'report_data', function ($join) {
+                            $join->on(
+                                'supplier_purchase_vehicle_details.id',
+                                '=',
+                                'report_data.purchase_id'
+                            );
+                        })
+                    ->leftJoin('purchases', 'supplier_purchase_vehicle_details.map_purchase_id', '=', 'purchases.id')
+                    ->where('supplier_purchase_vehicle_details.company_id', Session::get('user_company_id'))
+                    ->when($view_by === 'party', function ($q) {
+                        $q->where('supplier_purchase_vehicle_details.status', '3');
+                    })
+                    ->when($id && $id != 'all', function ($q) use ($id) {
+                        $q->where('supplier_purchase_vehicle_details.account_id', $id);
+                    })
+                    ->where('supplier_purchase_vehicle_details.group_id', $group_id)
+                    ->whereBetween('supplier_purchase_vehicle_details.entry_date', [$from_date, $to_date])
+                    ->select(
+                        'supplier_purchase_vehicle_details.account_id',
+                        DB::raw('SUM(difference_total_amount) AS difference_sum'),
+                        DB::raw('SUM(purchases.total) AS total_sum'),
+                        DB::raw('SUM(purchases.taxable_amt) AS taxable_amt'),
+                        DB::raw('GROUP_CONCAT(DISTINCT map_purchase_id) as purchase_ids'),
+                        DB::raw('SUM(report_data.report_amount) as actual_amount')
+                    )
+                    ->groupBy('supplier_purchase_vehicle_details.account_id')
+                    ->get();
+            $gstAmounts = DB::table('supplier_purchase_vehicle_details')
+                                    ->join('purchase_sundries', 'supplier_purchase_vehicle_details.map_purchase_id', '=', 'purchase_sundries.purchase_id')
+                                    ->join('bill_sundrys', 'purchase_sundries.bill_sundry', '=', 'bill_sundrys.id')
+                                    ->join('purchases', 'purchase_sundries.purchase_id', '=', 'purchases.id')
+                                    ->where('supplier_purchase_vehicle_details.company_id', Session::get('user_company_id'))
+                                    ->where('supplier_purchase_vehicle_details.group_id', $group_id)
+                                    ->when($view_by === 'party', function ($q) {
+                                        $q->where('supplier_purchase_vehicle_details.status', '3');
+                                    })
+                                    ->whereIn('bill_sundrys.nature_of_sundry', ['CGST', 'SGST', 'IGST'])
+                                    ->whereBetween('purchases.date', [$from_date, $to_date])
+                                    ->select(
+                                        'supplier_purchase_vehicle_details.account_id',
+                                        DB::raw('SUM(purchase_sundries.amount) as gst_amt')
+                                    )
+                                    ->groupBy('supplier_purchase_vehicle_details.account_id')
+                                    ->pluck('gst_amt', 'account_id');
+            $payments = DB::table('payments as p')
+                            ->join('payment_details as pd', 'pd.payment_id', '=', 'p.id')
+                            ->select('account_name', DB::raw('SUM(debit) as total_debit'))
+                            ->whereBetween('date', [$from_date, $to_date])
+                            ->where('p.delete', '0')
+                            ->where('pd.delete', '0')
+                            ->where('pd.type', 'Debit')
+                            ->where('p.company_id', Session::get('user_company_id'))
+                            ->groupBy('account_name')
+                            ->pluck('total_debit', 'account_name')
+                            ->toArray();
+            foreach ($purchases as $purchase) {
+                $purchase->payment = $payments[$purchase->account_id] ?? 0;
+                $purchase->gst_amt = $gstAmounts[$purchase->account_id] ?? 0;
+            }
+        }
+        //Purchase Details By Head
+        $purchases_details = SupplierPurchaseVehicleDetail::join(
+                                'supplier_purchase_reports', 
+                                'supplier_purchase_vehicle_details.id', 
+                                '=', 
+                                'supplier_purchase_reports.purchase_id'
+                            )
+                            ->leftjoin(
+                                'supplier_sub_heads', 
+                                'supplier_purchase_reports.head_id', 
+                                '=', 
+                                'supplier_sub_heads.id'
+                            )
+                            ->where('supplier_purchase_vehicle_details.company_id', Session::get('user_company_id'))
+                            ->where('supplier_purchase_vehicle_details.group_id', $group_id)
+                            ->when($view_by === 'party', function ($q) {
+                                $q->where('supplier_purchase_vehicle_details.status', '3');
+                            })
+                            ->when($id && $id != 'all', function ($q) use ($id) {
+                                $q->where('supplier_purchase_vehicle_details.account_id', $id);
+                            })
+                            ->whereBetween('supplier_purchase_vehicle_details.entry_date', [$from_date, $to_date])
+                            ->select(
+                                'head_id',
+                                'supplier_sub_heads.name as head_name',
+                                DB::raw('SUM(supplier_purchase_reports.head_qty) as total_qty'),
+                                DB::raw('SUM(supplier_purchase_reports.head_difference_amount) as total_amount')
+                            )
+                            ->groupBy('supplier_purchase_reports.head_id')
+                            ->get();
+            $waste_group_id = SaleOrderSetting::where('group_type','WASTE KRAFT')
+                                            ->where('company_id', Session::get('user_company_id'))
+                                            ->value('item_id');
+
+            $boiler_group_id = SaleOrderSetting::where('group_type','BOILER FUEL')
+                                            ->where('company_id', Session::get('user_company_id'))
+                                            ->value('item_id');
+            //Purchase Details By Date
+            $purchases_details_by_date = []; $paymentsByDate = [];
+            if($view_by=='date'){
+                $priceSummary = DB::table('purchase_descriptions')
+                    ->select(
+                        'purchase_id',
+                        DB::raw('CONCAT("[", GROUP_CONCAT(CAST(price AS DECIMAL(10,2)) SEPARATOR ","), "]") as prices'),
+                        DB::raw('sum(qty) as purchase_quantity')
+                    )
+                    ->groupBy('purchase_id');
+
+                $purchases_details_by_date = SupplierPurchaseVehicleDetail::with([
+                        'purchaseReport' => function ($q) {
+                            $q->leftJoin(
+                                    'supplier_sub_heads',
+                                    'supplier_purchase_reports.head_id',
+                                    '=',
+                                    'supplier_sub_heads.id'
+                                )
+                                ->select(
+                                    'supplier_purchase_reports.purchase_id',
+                                    'supplier_purchase_reports.head_id',
+                                    'supplier_purchase_reports.head_contract_rate',
+                                    'supplier_purchase_reports.head_bill_rate',
+                                    'supplier_sub_heads.name as head_name',
+                                    DB::raw('SUM(supplier_purchase_reports.head_qty) as total_head_qty'),
+                                    DB::raw('SUM(supplier_purchase_reports.head_difference_amount) as total_head_difference_amount')
+                                )
+                                ->groupBy(
+                                    'supplier_purchase_reports.purchase_id',
+                                    'supplier_purchase_reports.head_id',
+                                    'supplier_purchase_reports.head_contract_rate',
+                                    'supplier_sub_heads.name'
+                                )
+                                ->orderByRaw("
+                                    CASE 
+                                        WHEN supplier_sub_heads.name IS NULL 
+                                            OR supplier_sub_heads.name = '' 
+                                        THEN 1 
+                                        ELSE 0 
+                                    END
+                                ")
+                                ->orderBy('supplier_sub_heads.sequence');
+                        },
+                        'locationInfo:id,name'
+                    ])
+                    ->leftjoin('manage_items','supplier_purchase_vehicle_details.item_id','=','manage_items.id')
+                    ->leftJoin(
+                        'accounts',
+                        'supplier_purchase_vehicle_details.account_id',
+                        '=',
+                        'accounts.id'
+                    )
+                    ->leftJoin(
+                        'purchases',
+                        'supplier_purchase_vehicle_details.map_purchase_id',
+                        '=',
+                        'purchases.id'
+                    )
+                    ->leftJoin(
+                        'purchase_sundries',
+                        'purchases.id',
+                        '=',
+                        'purchase_sundries.purchase_id'
+                    )
+                    ->leftJoin(
+                        'bill_sundrys',
+                        function ($join) {
+                            $join->on(
+                                    'purchase_sundries.bill_sundry',
+                                    '=',
+                                    'bill_sundrys.id'
+                                )
+                                ->whereIn(
+                                    'bill_sundrys.nature_of_sundry',
+                                    ['CGST', 'SGST', 'IGST']
+                                );
+                        }
+                    )
+                    ->leftJoinSub($priceSummary, 'pd', function ($join) {
+                        $join->on('pd.purchase_id', '=', 'purchases.id');
+                    })
+                    ->select(
+                        'supplier_purchase_vehicle_details.id',
+                        'supplier_purchase_vehicle_details.entry_date',
+                        'supplier_purchase_vehicle_details.location',
+                        'supplier_purchase_vehicle_details.voucher_no',
+                        'supplier_purchase_vehicle_details.difference_total_amount',
+                        'supplier_purchase_vehicle_details.gross_weight',
+                        'supplier_purchase_vehicle_details.tare_weight',
+                        'supplier_purchase_vehicle_details.account_id',
+                        'purchases.voucher_no as purchase_voucher_no',
+                        'supplier_purchase_vehicle_details.vehicle_no as vehicle_no',
+                        'purchases.date as purchase_date',
+                        'purchases.taxable_amt as purchase_taxable_amt',
+                        'purchases.total as purchase_total_amt',
+                        'group_id',
+                        'pd.prices',
+                        'pd.purchase_quantity',
+                        'accounts.account_name',
+                        'manage_items.name as item_name',
                         DB::raw('COALESCE(SUM(purchase_sundries.amount),0) as purchase_gst')
                     )
 
