@@ -1164,10 +1164,10 @@ if (!is_array($deletedReels)) {
             $startDate = ($year - 1) . '-04-01';
             $endDate   = $year . '-03-31';
         }
-        $from_date = Carbon::parse($startDate)->startOfDay();
-        $to_date   = Carbon::parse($endDate)->endOfDay();
+        $from_date1 = Carbon::parse($startDate)->startOfDay();
+        $to_date1   = Carbon::parse($endDate)->endOfDay();
         $deckle_arr = DeckleProcess::where('company_id',Session::get('user_company_id'))
-                                    ->whereBetween('start_time_stamp', [$from_date, $to_date])
+                                    ->whereBetween('start_time_stamp', [$from_date1, $to_date1])
                                     ->pluck('id');
         $reel_no = ItemSizeStock::where('company_id', Session::get('user_company_id'))
                                 ->where('deckle_id', '!=', 0)
@@ -2731,8 +2731,8 @@ if (!is_array($deletedReels)) {
 
     public function machineTimeLoss(Request $request){
         $companyId = Session::get('user_company_id');
-        $from_date = $request->from_date ?? Carbon::today()->format('Y-m-d');
-        $to_date   = $request->to_date   ?? Carbon::today()->format('Y-m-d');
+        $from_date = $request->from_date ?? Carbon::today()->format('Y-m-').'01';
+        $to_date   = $request->to_date   ?? Carbon::today()->format('Y-m-t');
         $fromDateTime = Carbon::parse($from_date)->setTime(8, 0);
         $toDateTime   = Carbon::parse($to_date)->addDay()->setTime(8, 0);
         $logs = DB::table('deckle_machine_stop_logs')

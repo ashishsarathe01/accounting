@@ -8,6 +8,31 @@ use Session;
 class AccountGroups extends Model
 {
    use HasFactory;
+   protected $table = 'account_groups';
+   
+   protected $fillable = [
+    'company_id',
+    'name',
+    'primary',
+    'heading',
+    'heading_type',
+    'bs_profile',
+    'name_as_sch',
+    'primary_as_sch',
+    'heading_as_sch',
+    'heading_as_sch_type',
+    'bs_profile_as_sch',
+    'stock_in_hand',
+    'status',
+    'delete',
+    'created_by',
+    'updated_by',
+    'deleted_by',
+    'created_at',
+    'updated_at',
+    'deleted_at',
+];
+
    public function account(){
       return $this->hasMany(Accounts::class,'under_group','id')
                   ->where('delete','=', '0')

@@ -42,13 +42,13 @@
     <div class="col-md-3">
         <label>From Date</label>
         <input type="date" name="from_date"
-               value="{{ $from_date ?? now()->format('Y-m-d') }}"
+               value="{{ $from_date ?? now()->format('Y-m-').'01' }}"
                class="form-control">
     </div>
     <div class="col-md-3">
         <label>To Date</label>
         <input type="date" name="to_date"
-               value="{{ $to_date ?? now()->format('Y-m-d') }}"
+               value="{{ $to_date ?? now()->format('Y-m-t') }}"
                class="form-control">
     </div>
     <div class="col-md-2 d-flex align-items-end">

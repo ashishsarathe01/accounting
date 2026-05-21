@@ -47,6 +47,7 @@ use App\Http\Controllers\VoucherSeriesConfigurationController;
 use App\Http\Controllers\StockTransfer\StockTransferController;
 use App\Http\Controllers\gstReturn\gstR1Controller;
 use App\Http\Controllers\gstReturn\GstDetailController;
+use App\Http\Controllers\gstReturn\ITCLedgerController;
 use App\Http\Controllers\gstReturn\GSTR2BController;
 use App\Http\Controllers\gstReturn\GSTR2AController;
 use App\Http\Controllers\gstReturn\GSTR3BController;
@@ -113,7 +114,6 @@ use App\Http\Controllers\BoxController;
 use App\Http\Controllers\production\OpeningStockReelWiseController;
 use App\Http\Controllers\MerchantCredentials\MerchantCredentialsController;
 use App\Http\Controllers\TransactionConfiguration\TransactionConfigurationController;
-use App\Http\Controllers\BoxSaleOrderController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -452,6 +452,7 @@ Route::post('/purchase-return/export',[PurchaseReturnController::class, 'export'
    Route::Resource('displaycgst', DisplayCgstController::class);
    Route::post('displaycgst-update', [DisplayCgstController::class, 'update'])->name('displaycgst.update');
    Route::post('displaycgst-delete', [DisplayCgstController::class, 'delete'])->name('displaycgst.delete');
+   Route::get('/itc-ledger',[ITCLedgerController::class, 'itcLedger'])->name('itc.ledger');
    //User Management
    Route::Resource('manage-merchant-employee', MerchantEmployeeController::class);
    Route::get('merchant-employee-privileges/{id}',[MerchantEmployeeController::class,'employeePrivileges']);
@@ -826,7 +827,6 @@ Route::post('/payroll/register/store',[PayrollRegisterController::class, 'store'
    Route::get('wastekraft-purchase-report/{id?}/{from_date?}/{to_date?}', [SupplierPurchaseController::class, 'wasteKraftPurchaseReport'])->name('wastekraft-purchase-report');
    Route::get('wastekraft-purchase-report1/{id?}/{from_date?}/{to_date?}', [SupplierPurchaseController::class, 'wasteKraftPurchaseReport1'])->name('wastekraft-purchase-report1');
     Route::get('boilerfuel-purchase-report/{id?}/{from_date?}/{to_date?}', [SupplierPurchaseController::class, 'boilerFuelPurchaseReport'])->name('boilerfuel-purchase-report');
-    Route::get('boilerfuel-purchase-report1/{id?}/{from_date?}/{to_date?}', [SupplierPurchaseController::class, 'boilerFuelPurchaseReport1'])->name('boilerfuel-purchase-report1');
     Route::get('wastekraft-view-detail/{id}/{from}/{to}/{group_id}', [SupplierPurchaseController::class, 'viewApprovedPurchaseDetail'])->name('wastekraft-view-detail');
     Route::get('boilerfuel-view-detail/{id}/{from}/{to}/{group_id}', [SupplierPurchaseController::class, 'viewApprovedPurchaseDetail'])->name('boilerfuel-view-detail');
     Route::get('/opening-stock-reel-wise/filter', [OpeningStockReelWiseController::class, 'filter'])->name('openingstockreelwise.filter');
@@ -1385,56 +1385,4 @@ Route::get('credit-note-configuration',[TransactionConfigurationController::clas
 Route::post('save-credit-note-configuration',[TransactionConfigurationController::class,'saveCreditNoteConfiguration'])->name('save.credit.note.configuration');
 Route::get('debit-note-configuration',[TransactionConfigurationController::class,'debitNoteConfiguration'])->name('debit.note.configuration');
 Route::post('save-debit-note-configuration',[TransactionConfigurationController::class,'saveDebitNoteConfiguration'])->name('save.debit.note.configuration');
-
-Route::get(
-    '/box-sale-order',
-    [BoxSaleOrderController::class, 'index']
-)->name('box.sale.order.index');
-
-
-Route::get(
-    '/box-sale-order-create',
-    [BoxSaleOrderController::class, 'create']
-)->name('box.sale.order.create');
-
-
-Route::post(
-    '/box-sale-order-store',
-    [BoxSaleOrderController::class, 'store']
-)->name('box.sale.order.store');
-
-
-Route::get(
-    '/box-sale-order-edit/{id}',
-    [BoxSaleOrderController::class, 'edit']
-)->name('box.sale.order.edit');
-
-
-Route::post(
-    '/box-sale-order-update/{id}',
-    [BoxSaleOrderController::class, 'update']
-)->name('box.sale.order.update');
-
-
-Route::get(
-    '/box-sale-order-delete/{id}',
-    [BoxSaleOrderController::class, 'delete']
-)->name('box.sale.order.delete');
-
-
-Route::get(
-    '/box-sale-order-item-details/{id}',
-    [BoxSaleOrderController::class, 'getItemDetails']
-)->name('box.sale.order.item.details');
-
-Route::get(
-    'get-box-sale-orders/{partyId}',
-    [SalesController::class, 'getBoxSaleOrders']
-)->name('get.box.sale.orders');
-
-Route::get(
-    'get-box-sale-order-items/{id}',
-    [SalesController::class, 'getBoxSaleOrderItems']
-)->name('get.box.sale.order.items');
-
 });
