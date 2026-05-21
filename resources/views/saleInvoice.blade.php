@@ -140,6 +140,41 @@ body {
     white-space: normal;
     vertical-align: top;
 }
+@media print {
+   tr, td, th {
+        page-break-inside: avoid;
+    }
+
+    table {
+        page-break-after: auto;
+    }
+    .print-wrapper {
+        /* width: 210mm; */
+        min-height: 300mm;
+        display: block;
+        page-break-after: always;
+        break-after: page;
+    }
+
+    .print-wrapper:last-child {
+        page-break-after: auto;
+        break-after: auto;
+    }
+
+    .invoice-copy {
+        width: 100%;
+    }
+}
+@page {
+    size: A4;
+    margin: 5mm;
+}
+.no-border td {
+     border-top: none;
+    border-bottom: none;
+    border-left: 1px solid #000;
+    border-right: 1px solid #000;
+}
 
 </style>
 
@@ -185,7 +220,7 @@ body {
             </div>  
             <br>          
             
-            <table style="font-family: 'Source Sans Pro', sans-serif;letter-spacing: 0.05em;color: #404040;font-size: 12px;font-weight: 500;padding: 10px;">
+            <table style="font-family: 'Source Sans Pro', sans-serif;letter-spacing: 0.05em;color: #404040;font-size: 12px;font-weight: 500;padding: 10px;" class="invoice-copy">
                <tbody>
                   <tr>
                     <th colspan="8" style="padding: 0;">
@@ -396,7 +431,7 @@ body {
                      </tr>
                      @php $i=1;$item_total = 0;$qty_total = 0; @endphp
                      @foreach($items_detail as $item)
-                        <tr>
+                        <tr class="{{ ($configuration && $configuration->lines_in_item_status == 0) ? 'no-border' : '' }}">
                            <td style="text-align:center;">{{$i}}</td>
                            <td colspan="2" style="text-align:left;">
                                 <strong>{{ $item->p_name }}</strong>
@@ -430,13 +465,13 @@ body {
                             }
                          }
                         if($sale_detail->e_invoice_status==0){
-                           $tRows = 10 - $i; 
+                           $tRows = 7 - $i; 
                         }else{
                            $tRows = 7 - $i; 
-                        }                         
+                        }
                         while($tRows>=0){
                             @endphp  
-                                <tr style="height: 21px;"><td></td><td colspan="2"></td><td></td><td></td><td></td><td></td><td></td></tr>
+                                <tr style="height: 21px;" class="{{ ($configuration && $configuration->lines_in_item_status == 0) ? 'no-border' : '' }}"><td></td><td colspan="2"></td><td></td><td></td><td></td><td></td><td></td></tr>
                             @php 
                             $tRows--; 
                         }
@@ -600,38 +635,39 @@ body {
                      </tr>
                   @endif
                   <tr>
-                  <td colspan="4" style="vertical-align: top; padding: 5px; ">
-    @if($configuration && $configuration->term_status==1 && $configuration->terms && count($configuration->terms)>0)
-        <p style="margin: 0;"><small><b>Terms &amp; Conditions</b></small></p>
-        <p style="margin: 0;"><small>E.&amp; O.E.</small></p>
-        @php $i = 1; @endphp
-        @foreach($configuration->terms as $k => $t)
-            <p style="margin: 0; line-height: 1;"><small>{{$i}}. {{$t->term}}</small></p>
-            @php $i++; @endphp
-        @endforeach
-    @endif
-</td>
+                     <td colspan="4" style="vertical-align: top; padding: 5px; ">
+                        @if($configuration && $configuration->term_status==1 && $configuration->terms && count($configuration->terms)>0)
+                           <p style="margin: 0;"><small><b>Terms &amp; Conditions</b></small></p>
+                           <p style="margin: 0;"><small>E.&amp; O.E.</small></p>
+                           @php $i = 1; @endphp
+                           @foreach($configuration->terms as $k => $t)
+                                 <p style="margin: 0; line-height: 1;"><small>{{$i}}. {{$t->term}}</small></p>
+                                 @php $i++; @endphp
+                           @endforeach
+                        @endif
+                     </td>
 
-<td colspan="4">
-   <p style="height:40px; margin:0; padding:0;"><small>Receiver's Signature :</small></p>
-   <p style="text-align:right; padding:0; margin:0;"><strong>for {{$company_data->company_name}}</strong></p>
+                     <td colspan="4">
+                        <p style="height:40px; margin:0; padding:0;"><small>Receiver's Signature :</small></p>
+                        <p style="text-align:right; padding:0; margin:0;"><strong>for {{$company_data->company_name}}</strong></p>
 
-   @if($configuration && !empty($configuration->signature))
-      <p style="text-align:right; margin:0; padding:0;">
-         <img src="{{ URL::asset('public/images')}}/{{$configuration->signature}}" style="max-width:145px; max-height:120px; object-fit:contain;">
-      </p>
-      @else
-      <p style="text-align:right; margin:0; padding:0;width: 145px; height:70px;">
-          </p>
-   @endif
+                        @if($configuration && !empty($configuration->signature))
+                           <p style="text-align:right; margin:0; padding:0;">
+                              <img src="{{ URL::asset('public/images')}}/{{$configuration->signature}}" style="max-width:145px; max-height:120px; object-fit:contain;">
+                           </p>
+                           @else
+                           <p style="text-align:right; margin:0; padding:0;width: 145px; height:70px;">
+                              </p>
+                        @endif
 
-   <p style="text-align:right; margin:0; padding:0;"><strong>Authorised Signatory</strong></p>
-</td>
+                        <p style="text-align:right; margin:0; padding:0;"><strong>Authorised Signatory</strong></p>
+                     </td>
 
                   </tr>
                </tbody>
             </table>
-            <br>
+            <span class="append_invoice"></span>
+            
            
             @if(request('source') == 'sale')
             <div style="text-align: center;" class="noprint">
@@ -1167,7 +1203,10 @@ body {
 <script> 
 
 const companyName = @json($company_data->company_name ?? '');
-console.log(companyName);
+let configuration = @json($configuration->no_of_bill_copy);
+if(configuration==null || configuration==undefined || configuration==""){
+   configuration = 0;
+}
     function redirectBack() {
     const previousUrl = document.referrer;
     const sessionPreviousUrl = "{{ session('previous_url') }}";
@@ -1305,11 +1344,33 @@ console.log(companyName);
          }
       });
    });
-   function printpage(){
-       //$('.sidebar').addClass('importantRule'); // only sidebar hide
-       window.print();
-       //$('.sidebar').removeClass('importantRule');
+  function printpage() {
+
+    let invoiceHtml = $('.invoice-copy').first().prop('outerHTML');
+
+    
+
+    $('.append_invoice').html('');
+
+    for (let i = 1; i < configuration; i++) {
+
+        $('.append_invoice').append(`
+            <div class="print-wrapper">
+                ${invoiceHtml}
+            </div>
+        `);
     }
+
+    setTimeout(() => {
+
+        window.print();
+
+        setTimeout(() => {
+            $('.append_invoice').html('');
+        }, 1000);
+
+    }, 400);
+}
 
    $(document).on('click', '#printChallanBtn', function () {
       let companyId = "{{ Session::get('user_company_id') }}";

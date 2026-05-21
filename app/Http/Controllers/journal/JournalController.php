@@ -1342,7 +1342,6 @@ public function index(Request $request)
       $total = $final_net + $cgst + $sgst + $igst;
       $rounded_total = round($total);
       $round_off = round($rounded_total - $total, 2);
-      $receipt->invoice_no = "";
       $receipt->net_total = $final_net;
       $receipt->cgst = $cgst;
       $receipt->sgst = $sgst;

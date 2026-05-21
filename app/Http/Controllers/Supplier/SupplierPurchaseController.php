@@ -1970,7 +1970,7 @@ class SupplierPurchaseController extends Controller
         return view('supplier.boiler_fuel',["pending_report"=>$pending_report_grouped,"in_process_report"=>$in_process_report_grouped,"pending_for_approval_report"=>$pending_for_approval_report_grouped,"approved_report"=>$approved_report_grouped,"locations"=>$location,"heads"=>$heads,"accounts"=>$accounts,"item_groups"=>$item_groups,"approve_from_date"=>$approve_from_date,"approve_to_date"=>$approve_to_date,"items"=>$items,"group_list"=>$group_list,"count"=>$count,"missing"=>$missing]);
     }
     
-    public function wasteKraftPurchaseReport($id = null, $from_date = null, $to_date = null)
+    public function wasteKraftPurchaseReport1($id = null, $from_date = null, $to_date = null)
     {
             //updated by khushi
         $from_date = request()->from_date ?? $from_date;
@@ -1994,7 +1994,7 @@ class SupplierPurchaseController extends Controller
                 ->whereIn('company_id', [Session::get('user_company_id'), 0])
                 ->orderBy('account_name')
                 ->get();
-            return view('supplier.supplier_purchase_report', [
+            return view('supplier.supplier_purchase_report1', [
                 'purchases' => collect(),
                 'accounts' => $accounts,
                 'items' => collect(),
@@ -2258,7 +2258,7 @@ class SupplierPurchaseController extends Controller
        
         // echo "<pre>";
         // print_r(collect($finalRows)->toArray());"</pre>";
-        return view('supplier.supplier_purchase_report', [
+        return view('supplier.supplier_purchase_report1', [
             'purchases'         => $purchases,
             'accounts'          => $accounts,
             'items'             => $items,
@@ -2278,8 +2278,9 @@ class SupplierPurchaseController extends Controller
             'purchase_prices'=> $purchase_prices
         ]);
     }
-    public function wasteKraftPurchaseReport1($id = null, $from_date = null, $to_date = null)
+    public function wasteKraftPurchaseReport($id = null, $from_date = null, $to_date = null)
     {
+        
         $from_date = request()->from_date ?? $from_date;
         $to_date   = request()->to_date ?? $to_date;
         if (empty($from_date) || empty($to_date)) {
@@ -2287,7 +2288,41 @@ class SupplierPurchaseController extends Controller
             $to_date   = date('Y-m-t');
         }
         $view_by = request()->view_by ?? 'party';
+        if(empty($id))
+        {
+            $supplier = Supplier::select('account_id')
+                    ->where('company_id', Session::get('user_company_id'))
+                    ->pluck('account_id');
+            $accounts = Accounts::select('account_name','id')
+                ->where('delete', '0')
+                ->where('status', '1')
+                ->whereIn('id', $supplier)
+                ->whereIn('company_id', [Session::get('user_company_id'), 0])
+                ->orderBy('account_name')
+                ->get();
+            return view('supplier.supplier_purchase_report', [
+                'purchases' => collect(),
+                'accounts' => $accounts,
+                'items' => collect(),
+                'id' => $id,
+                'waste_group_id' => null,
+                'boiler_group_id' => null,
+                'current_group_type' => 'WASTE KRAFT',
+                'from_date' => $from_date,
+                'to_date' => $to_date,
+                'purchases_details' => collect(),
+                'group_id' => null,
+                'view_by' => $view_by,
+                'locations' => collect(),
+                'heads' => collect(),
+                'item_groups' => collect(),
+                'purchase_prices' => "[]"
+            ]);
+        }
         //Account List
+        $supplier = Supplier::select('account_id')
+                    ->where('company_id', Session::get('user_company_id'))
+                    ->pluck('account_id');
         $accounts = Accounts::select(
                 'accounts.account_name',
                 'accounts.id'
@@ -2611,7 +2646,7 @@ class SupplierPurchaseController extends Controller
             
             // echo "<pre>";
             // print_r($purchases_details_by_date->toArray());die;
-        return view('supplier.supplier_purchase_report1', [
+        return view('supplier.supplier_purchase_report', [
             'accounts' => $accounts,
             'view_by' => $view_by,
             'group_id' => $group_id,
@@ -2622,10 +2657,11 @@ class SupplierPurchaseController extends Controller
             'purchases_details_by_date' => $purchases_details_by_date,
             'from_date' => $from_date,
             'to_date' => $to_date,
+            'id' =>$id
            
         ]);
     }
-    public function boilerFuelPurchaseReport1($id = null, $from_date = null, $to_date = null)
+    public function boilerFuelPurchaseReport($id = null, $from_date = null, $to_date = null)
     {
         $from_date = request()->from_date ?? $from_date;
         $to_date   = request()->to_date ?? $to_date;
@@ -2634,6 +2670,37 @@ class SupplierPurchaseController extends Controller
             $to_date   = date('Y-m-t');
         }
         $view_by = request()->view_by ?? 'party';
+        if(empty($id))
+        {
+            $supplier = Supplier::select('account_id')
+                    ->where('company_id', Session::get('user_company_id'))
+                    ->pluck('account_id');
+            $accounts = Accounts::select('account_name','id')
+                ->where('delete', '0')
+                ->where('status', '1')
+                ->whereIn('id', $supplier)
+                ->whereIn('company_id', [Session::get('user_company_id'), 0])
+                ->orderBy('account_name')
+                ->get();
+            return view('supplier.supplier_purchase_report', [
+                'purchases' => collect(),
+                'accounts' => $accounts,
+                'items' => collect(),
+                'id' => $id,
+                'waste_group_id' => null,
+                'boiler_group_id' => null,
+                'current_group_type' => 'WASTE KRAFT',
+                'from_date' => $from_date,
+                'to_date' => $to_date,
+                'purchases_details' => collect(),
+                'group_id' => null,
+                'view_by' => $view_by,
+                'locations' => collect(),
+                'heads' => collect(),
+                'item_groups' => collect(),
+                'purchase_prices' => "[]"
+            ]);
+        }
         //Account List
         $accounts = Accounts::select(
                 'accounts.account_name',
@@ -2958,7 +3025,7 @@ class SupplierPurchaseController extends Controller
             
             // echo "<pre>";
             // print_r($purchases_details_by_date->toArray());die;
-        return view('supplier.supplier_purchase_report1', [
+        return view('supplier.supplier_purchase_report', [
             'accounts' => $accounts,
             'view_by' => $view_by,
             'group_id' => $group_id,
@@ -2969,10 +3036,11 @@ class SupplierPurchaseController extends Controller
             'purchases_details_by_date' => $purchases_details_by_date,
             'from_date' => $from_date,
             'to_date' => $to_date,
+            'id' =>$id
            
         ]);
     }
-    public function boilerFuelPurchaseReport($id = null, $from_date = null, $to_date = null)
+    public function boilerFuelPurchaseReport1($id = null, $from_date = null, $to_date = null)
     {        //updated by khushi
         $from_date = request()->from_date ?? $from_date;
         $to_date   = request()->to_date ?? $to_date;
@@ -2994,7 +3062,7 @@ class SupplierPurchaseController extends Controller
                 ->whereIn('company_id', [Session::get('user_company_id'), 0])
                 ->orderBy('account_name')
                 ->get();
-            return view('supplier.supplier_purchase_report', [
+            return view('supplier.supplier_purchase_report1', [
                 'purchases' => collect(),
                 'accounts' => $accounts,
                 'items' => collect(),
@@ -3210,7 +3278,7 @@ class SupplierPurchaseController extends Controller
             ->orderBy('group_name')
             ->get();
 
-        return view('supplier.supplier_purchase_report', [
+        return view('supplier.supplier_purchase_report1', [
             'purchases'         => $purchases,
             'accounts'          => $accounts,
             'items'             => $items,

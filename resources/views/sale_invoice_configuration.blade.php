@@ -180,6 +180,35 @@
                                     <img src="{{ URL::asset('public/images')}}/{{$configuration->signature}}" style="width: 50px;">
                                 @endif
                             </div>
+                            <div class="mb-3 col-md-3">
+                                <label class="form-label font-14 font-heading">TRANSPORT INFO REQUIRED</label>
+                                <select class="form-select" name="transport_info_status" id="transport_info_status" required>
+                                    <option value="">Select Status</option>
+                                    <option value="1" @if($configuration && $configuration->transport_info_status==1) selected @endif>Yes</option>
+                                    <option value="0" @if($configuration && $configuration->transport_info_status==0) selected @endif>No</option>
+                                </select>
+                            </div>
+                            <div class="mb-3 col-md-3">
+                                <label class="form-label font-14 font-heading">LINES IN ITEM NAME</label>
+                                <select class="form-select" name="lines_in_item_status" id="lines_in_item_status" required>
+                                    <option value="">Select Status</option>
+                                    
+                                    <option value="0" @if($configuration && $configuration->lines_in_item_status==0) selected @endif>No</option>
+                                    <option value="1" @if($configuration && $configuration->lines_in_item_status==1) selected @endif>Yes</option>
+                                </select>
+                            </div>
+                            <div class="mb-3 col-md-3">
+                                <label class="form-label font-14 font-heading">TRANSPORT ID IN EWAY BILL </label>
+                                <select class="form-select" name="transport_id_in_ewaybill" id="transport_id_in_ewaybill" required>
+                                    <option value="">Select Status</option>
+                                    <option value="1" @if($configuration && $configuration->transport_id_in_ewaybill==1) selected @endif>Yes</option>
+                                    <option value="0" @if($configuration && $configuration->transport_id_in_ewaybill==0) selected @endif>No</option>
+                                </select>
+                            </div>
+                            <div class="mb-3 col-md-3">
+                                <label class="form-label font-14 font-heading">NO. OF BILL COPY</label>
+                                <input type="text" class="form-control" placeholder="1" name="no_of_bill_copy" value="{{ $configuration->no_of_bill_copy ?? '' }}">
+                            </div>
                         </div>
                         <div class="text-start">
                             <button type="submit" class="btn btn-xs-primary save_btn">SUBMIT</button>

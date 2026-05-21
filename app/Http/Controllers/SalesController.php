@@ -1514,27 +1514,27 @@ if(array_key_exists($good,$sale_item_array)){
                               ->orderBy('account_name')
                               ->get();
       $manageitems = DB::table('manage_items')
-         ->join('units', 'manage_items.u_name', '=', 'units.id')
-         ->leftJoin('item_gst_rate', 'item_gst_rate.id', '=', 'manage_items.gst_rate')
-         ->join('item_groups', 'item_groups.id', '=', 'manage_items.g_name')
-         ->where('manage_items.delete', '0')
-         ->where('manage_items.status', '1')
-         ->where('manage_items.company_id', Session::get('user_company_id'))
-         ->orderBy('manage_items.name')
-         ->select([
-            'units.s_name as unit',
-            'manage_items.id',
-            'manage_items.u_name',
-            'manage_items.dual_unit',
-            'manage_items.gst_rate',
-            'manage_items.name',
-            'manage_items.fixed_weight',
-            'manage_items.fixed_weight_value',
-            'item_groups.parameterized_stock_status',
-            'item_groups.config_status',
-            'item_groups.id as group_id'
-         ])
-         ->get();
+                           ->join('units', 'manage_items.u_name', '=', 'units.id')
+                           ->leftJoin('item_gst_rate', 'item_gst_rate.id', '=', 'manage_items.gst_rate')
+                           ->join('item_groups', 'item_groups.id', '=', 'manage_items.g_name')
+                           ->where('manage_items.delete', '0')
+                           ->where('manage_items.status', '1')
+                           ->where('manage_items.company_id', Session::get('user_company_id'))
+                           ->orderBy('manage_items.name')
+                           ->select([
+                              'units.s_name as unit',
+                              'manage_items.id',
+                              'manage_items.u_name',
+                              'manage_items.dual_unit',
+                              'manage_items.gst_rate',
+                              'manage_items.name',
+                              'manage_items.fixed_weight',
+                              'manage_items.fixed_weight_value',
+                              'item_groups.parameterized_stock_status',
+                              'item_groups.config_status',
+                              'item_groups.id as group_id'
+                           ])
+                           ->get();
 
 
       // Add available stock same as create
@@ -4666,20 +4666,20 @@ if(array_key_exists($good,$sale_item_array)){
             $shipp_pincode = $sale->shipping_pincode;              
          }else{
             $transactionType = 1;
-            $shipp_name = $sale->account_name;
-            $shipp_address = $sale->address.','.$sale->name.','.$sale->pin_code;
+            $shipp_name = $sale->billing_name;
+            $shipp_address = $sale->billing_address;
             $shipp_name_new = ""; 
-            $shipp_name1 = $sale->account_name;
-            $shipp_address1 = $sale->address.','.$sale->name.','.$sale->pin_code;
+            $shipp_name1 = $sale->billing_name;
+            $shipp_address1 = $sale->billing_address;
             $shipp_name_ne1w = ""; 
             $shipp_gst_state = $sale->billing_gst;
-            $shipp_gst_state_billtoshippto = "";         
+            $shipp_gst_state_billtoshippto = "";
             $shipp_state = $sale->name;
             $shipp_state1 = $sale->name;
-            $shipp_city = $sale->address;
-            $shipp_city1 = $sale->address;
-            $shipp_pincode = $sale->pin_code;
-            $shipp_pincode1 = $sale->pin_code;
+            $shipp_city = $sale->billing_address;
+            $shipp_city1 = $sale->billing_address;
+            $shipp_pincode = $sale->billing_pincode;
+            $shipp_pincode1 = $sale->billing_pincode;
          }
          $ItemList = [];
          $total_item_price = SaleDescription::where('sale_id',$request->id)->sum('amount'); 
@@ -4783,7 +4783,7 @@ if(array_key_exists($good,$sale_item_array)){
                "fromPincode"=>(int)$fromPincode,
                "fromStateCode"=>(int)$fromStateCode,
                "toGstin"=>$shipp_gst,
-               "toTrdName"=>$sale->account_name,
+               "toTrdName"=>$sale->billing_name,
                "toAddr2"=>$shipp_city.','.$shipp_state.','.$shipp_pincode,
                "toPlace"=>$shipp_state,
                "toPincode"=>(int)$shipp_pincode,
@@ -4883,9 +4883,11 @@ if(array_key_exists($good,$sale_item_array)){
             $result = json_decode($response);
             if(isset($result->status_cd) && $result->status_cd=='1'){
                $data_array = [];
+               $ewayBillDate = $result->data->ewayBillDate;
+               $validUpto = $result->data->validUpto;
                $data_array['ewayBillNo'] = $result->data->ewayBillNo;
-               $data_array['ewayBillDate'] = date('d-m-Y H:i:s', strtotime($result->data->ewayBillDate));
-               $data_array['validUpto'] = date('d-m-Y H:i:s', strtotime($result->data->validUpto));
+               $data_array['ewayBillDate'] = $ewayBillDate;
+               $data_array['validUpto'] = $validUpto;
                $invoice_update = Sales::find($request->id);
                $invoice_update->eway_bill_response = json_encode($data_array);
                $invoice_update->e_waybill_status = 1;
@@ -5020,6 +5022,10 @@ if(array_key_exists($good,$sale_item_array)){
          $conf->company_name_font_size = $request->company_name_font_size;
          $conf->address_color = $request->address_color;
          $conf->signature_status = $request->signature_status;
+         $conf->transport_info_status = $request->transport_info_status;
+         $conf->lines_in_item_status = $request->lines_in_item_status;
+         $conf->transport_id_in_ewaybill = $request->transport_id_in_ewaybill;
+         $conf->no_of_bill_copy = $request->no_of_bill_copy;
          $conf->signature = $signature;
          $conf->company_id = Session::get('user_company_id');
          $conf->created_at = Carbon::now();
@@ -5079,6 +5085,10 @@ if(array_key_exists($good,$sale_item_array)){
          $conf->company_name_color = $request->company_name_color;
          $conf->address_color = $request->address_color;
          $conf->signature_status = $request->signature_status;
+         $conf->transport_info_status = $request->transport_info_status;
+         $conf->lines_in_item_status = $request->lines_in_item_status;
+         $conf->transport_id_in_ewaybill = $request->transport_id_in_ewaybill;
+         $conf->no_of_bill_copy = $request->no_of_bill_copy;
          $conf->signature = $signature;
          $conf->updated_at = Carbon::now();
          if($conf->save()){

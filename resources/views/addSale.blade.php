@@ -645,7 +645,7 @@ data-unit_name="{{$item_list->unit}}"
                                        <div class="row">
                                           <div class="mb-6 col-md-6">
                                              <label for="name" class="form-label font-14 font-heading">Vehicle No.</label>
-                                             <input type="text" name="vehicle_no" class="form-control" placeholder="Vehicle No." />
+                                             <input type="text" name="vehicle_no" id="vehicle_no" class="form-control" placeholder="Vehicle No." />
                                           </div>
                                           <div class="mb-6 col-md-6">
                                              <label for="name" class="form-label font-14 font-heading">Transport Name</label>
@@ -2006,8 +2006,12 @@ function removeItem() {
          }
          calculateAmount($("#bill_sundry_"+$(this).attr('data-id')).val());
       });
+      let configuration = @json($config->transport_info_status);      
+      if(configuration==null || configuration==undefined || configuration==""){
+         configuration = 0;
+      }
       $("#saveBtn").click(function(){
-         if(confirm("Are you sure to submit?")==true){            
+         if(confirm("Are you sure to submit?")==true){
             $("#saleForm").validate({
                ignore: [], 
                rules: {
@@ -2043,7 +2047,13 @@ function removeItem() {
                alert("Please Enter Item Required Fields.");
                return false;
             }
-            
+            if(configuration==1){
+               if($("#vehicle_no").val()=="" || $("#transport_name").val()==""){
+                  if(confirm("Are You Save Without Transport Detail")==false){
+                     return false;
+                  }
+               }
+            }
          }else{
             return false;
          }         
