@@ -485,6 +485,27 @@ class SalesReturnController extends Controller
          'series_no' => 'required',
          'material_center' => 'required',
       ]);
+      $financial_year_session = Session::get('default_fy');
+
+      [$startYY, $endYY] = explode('-', $financial_year_session);
+
+      $fy_start_date = '20' . $startYY . '-04-01';
+
+      $fy_end_date   = '20' . $endYY   . '-03-31';
+
+      if(
+         $request->date < $fy_start_date
+         ||
+         $request->date > $fy_end_date
+      ){
+         return redirect()
+            ->back()
+            ->withInput()
+            ->withErrors([
+               'date' =>
+               'Selected date is outside the current financial year.'
+            ]);
+      }
       //Check Item Empty or not
       if($request->input('nature')=="WITH GST" && ($request->input('type')=="WITH ITEM" || $request->input('type')=="RATE DIFFERENCE")){
          if($request->input('goods_discription')[0]=="" || $request->input('amount')[0]==""){
@@ -1886,6 +1907,27 @@ class SalesReturnController extends Controller
          'series_no' => 'required',
          'material_center' => 'required',
       ]);
+      $financial_year_session = Session::get('default_fy');
+
+      [$startYY, $endYY] = explode('-', $financial_year_session);
+
+      $fy_start_date = '20' . $startYY . '-04-01';
+
+      $fy_end_date   = '20' . $endYY   . '-03-31';
+
+      if(
+         $request->date < $fy_start_date
+         ||
+         $request->date > $fy_end_date
+      ){
+         return redirect()
+            ->back()
+            ->withInput()
+            ->withErrors([
+               'date' =>
+               'Selected date is outside the current financial year.'
+            ]);
+      }
       //Check Item Empty or not      
       if($request->input('nature')=="WITH GST" && ($request->input('type')=="WITH ITEM" || $request->input('type')=="RATE DIFFERENCE")){
          if($request->input('goods_discription')[0]=="" || $request->input('amount')[0]==""){

@@ -219,7 +219,7 @@ select.no-arrow {
                         @endphp
                         <tr style="background:#e8f7ff;">
                         <td>
-                            
+                           <input type="checkbox" class="payment_print_row"> 
                         </td>
                             @if(in_array('date',$selectedDetailColumns))
                                 <td>{{ date('d-m-Y', strtotime($value->date)) }}</td>
@@ -1210,11 +1210,13 @@ select.no-arrow {
 @include('layouts.footer')
 <script>
    $(".all_check").click(function(){
-      $(".check_row").prop('checked',false);
-      if($(this).prop('checked')==true){
-         $(".check_row").prop('checked',true);
-      }
-   });
+        $(".check_row").prop('checked', false);
+        $(".payment_print_row").prop('checked', false);
+        if($(this).prop('checked') == true){
+            $(".check_row").prop('checked', true);
+            $(".payment_print_row").prop('checked', true);
+        }
+    });
    $(".action").click(function(){
       let row_arr = [];
       $(".check_row").each(function(){
@@ -1284,7 +1286,7 @@ select.no-arrow {
         });
 
     // Get selected rows
-    $(".check_row:checked").each(function () {
+    $(".check_row:checked, .payment_print_row:checked").each(function () {
 
         let row = $(this).closest("tr");
         let rowData = [];

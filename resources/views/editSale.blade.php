@@ -2538,6 +2538,25 @@ $(".goods_items").each(function (index) {
          calculateAmount($("#bill_sundry_"+$(this).attr('data-id')).val());
       });       
       $("#saveBtn").click(function(){
+         let from_date = "{{ Session::get('from_date') }}";
+
+            let to_date = "{{ Session::get('to_date') }}";
+
+         let selected_date = $("#date").val();
+
+         if(
+            selected_date < from_date
+            ||
+            selected_date > to_date
+         ){
+            alert(
+               "Selected date is outside the current financial year."
+            );
+
+            $("#date").focus();
+
+            return false;
+         }
          if(confirm("Are you sure to submit?")==true){            
             $("#saleForm").validate({
                ignore: [], 

@@ -1881,6 +1881,25 @@ foreach ($manageitems as $value) {
             calculateAmount($("#bill_sundry_"+$(this).attr('data-id')).val());
          });       
          $("#purchaseBtn").click(function(){
+            let from_date = "{{ Session::get('from_date') }}";
+
+            let to_date = "{{ Session::get('to_date') }}";
+
+            let selected_date = $("#date").val();
+
+            if(
+               selected_date < from_date
+               ||
+               selected_date > to_date
+            ){
+               alert(
+                  "Selected date is outside the current financial year."
+               );
+
+               $("#date").focus();
+
+               return false;
+            }
             if(confirm("Are you sure to submit?")==true){            
                $("#purchaseForm").validate({
                   ignore: [], 

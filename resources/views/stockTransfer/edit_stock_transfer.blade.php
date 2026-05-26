@@ -77,7 +77,7 @@
                         </div>
                         <div class="mb-3 col-md-3">
                             <label for="name" class="form-label font-14 font-heading">Date</label>
-                            <input type="date" id="date" class="form-control calender-bg-icon calender-placeholder" name="date" placeholder="Select date"  required value="{{$stock_transfer->transfer_date}}">
+                            <input type="date" id="date" class="form-control calender-bg-icon calender-placeholder" name="date" placeholder="Select date"  required value="{{$stock_transfer->transfer_date}}" min="{{ $fy_start_date }}" max="{{ $fy_end_date }}">
                             <ul style="color: red;">
                             @error('date'){{$message}}@enderror                        
                             </ul>
@@ -482,6 +482,25 @@
     $(document).ready(function() {
         $( ".select2-single, .select2-multiple" ).select2(); 
         $("#saveBtn").click(function(){
+            let from_date = "{{ $fy_start_date }}";
+
+            let to_date = "{{ $fy_end_date }}";
+
+            let selected_date = $("#date").val();
+
+            if(
+            selected_date < from_date
+            ||
+            selected_date > to_date
+            ){
+            alert(
+                "Selected date is outside the current financial year."
+            );
+
+            $("#date").focus();
+
+            return false;
+            }
             if(confirm("Are you sure to submit?")==true){            
                 $("#saleForm").validate({
                     ignore: [], 

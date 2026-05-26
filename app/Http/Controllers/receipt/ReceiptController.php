@@ -310,6 +310,27 @@ class ReceiptController extends Controller
      */
    public function store(Request $request){  
       Gate::authorize('action-module',84);
+      $financial_year_session = Session::get('default_fy');
+
+      [$startYY, $endYY] = explode('-', $financial_year_session);
+
+      $fy_start_date = '20' . $startYY . '-04-01';
+
+      $fy_end_date   = '20' . $endYY   . '-03-31';
+
+      if(
+         $request->input('date') < $fy_start_date
+         ||
+         $request->input('date') > $fy_end_date
+      ){
+         return redirect()
+            ->back()
+            ->withInput()
+            ->withErrors([
+               'date' =>
+               'Selected date is outside the current financial year.'
+            ]);
+      }
       $financial_year = CommonHelper::getFinancialYear($request->input('date'));    
       $series_configuration = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
          ->where('series', $request->input('series_no'))
@@ -626,6 +647,27 @@ class ReceiptController extends Controller
       ]);
       if($validator->fails()) {
          return response()->json($validator->errors(), 422);
+      }
+      $financial_year_session = Session::get('default_fy');
+
+      [$startYY, $endYY] = explode('-', $financial_year_session);
+
+      $fy_start_date = '20' . $startYY . '-04-01';
+
+      $fy_end_date   = '20' . $endYY   . '-03-31';
+
+      if(
+         $request->input('date') < $fy_start_date
+         ||
+         $request->input('date') > $fy_end_date
+      ){
+         return redirect()
+            ->back()
+            ->withInput()
+            ->withErrors([
+               'date' =>
+               'Selected date is outside the current financial year.'
+            ]);
       }
       $financial_year = CommonHelper::getFinancialYear($request->input('date'));
       $receipt =  Receipt::find($request->receipt_id);

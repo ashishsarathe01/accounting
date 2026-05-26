@@ -575,6 +575,25 @@
    });
    $(".savebtn").click(function(){
       let date = $("#date").val();
+      let from_date = "{{ $fy_start_date }}";
+
+      let to_date = "{{ $fy_end_date }}";
+
+      let selected_date = $("#date").val();
+
+      if(
+         selected_date < from_date
+         ||
+         selected_date > to_date
+      ){
+         alert(
+            "Selected date is outside the current financial year."
+         );
+
+         $("#date").focus();
+
+         return false;
+      }
       let item_count = 0;
       $(".consume_item").each(function(){
          let id = $(this).attr('data-id');

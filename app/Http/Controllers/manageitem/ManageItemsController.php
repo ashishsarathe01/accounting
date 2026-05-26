@@ -872,6 +872,27 @@ class ManageItemsController extends Controller
       // echo "<pre>";
       // print_r($request->all());
        //die;     
+      $financial_year_session = Session::get('default_fy');
+
+      [$startYY, $endYY] = explode('-', $financial_year_session);
+
+      $fy_start_date = '20' . $startYY . '-04-01';
+
+      $fy_end_date   = '20' . $endYY   . '-03-31';
+
+      if(
+         $request->input('date') < $fy_start_date
+         ||
+         $request->input('date') > $fy_end_date
+      ){
+         return redirect()
+            ->back()
+            ->withInput()
+            ->withErrors([
+               'date' =>
+               'Selected date is outside the current financial year.'
+            ]);
+      }
       $financial_year = CommonHelper::getFinancialYear($request->input('date'));
       $date = $request->input('date');
       $part_life_entry_id = $request->input('part_life_entry_id');
@@ -1349,6 +1370,27 @@ class ManageItemsController extends Controller
       // die;
       Gate::authorize('view-module', 63);
       $date = $request->input('date');
+      $financial_year_session = Session::get('default_fy');
+
+      [$startYY, $endYY] = explode('-', $financial_year_session);
+
+      $fy_start_date = '20' . $startYY . '-04-01';
+
+      $fy_end_date   = '20' . $endYY   . '-03-31';
+
+      if(
+         $date < $fy_start_date
+         ||
+         $date > $fy_end_date
+      ){
+         return redirect()
+            ->back()
+            ->withInput()
+            ->withErrors([
+               'date' =>
+               'Selected date is outside the current financial year.'
+            ]);
+      }
       $request->validate([
          'consume_item.*' => 'nullable|integer',
          'consume_weight.*' => 'nullable|numeric',

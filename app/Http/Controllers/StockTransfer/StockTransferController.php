@@ -270,6 +270,27 @@ class StockTransferController extends Controller
             'price' => 'required',
             'amount' => 'required',
         ]);
+        $financial_year_session = Session::get('default_fy');
+
+        [$startYY, $endYY] = explode('-', $financial_year_session);
+
+        $fy_start_date = '20' . $startYY . '-04-01';
+
+        $fy_end_date   = '20' . $endYY   . '-03-31';
+
+        if(
+        $request->input('date') < $fy_start_date
+        ||
+        $request->input('date') > $fy_end_date
+        ){
+        return redirect()
+            ->back()
+            ->withInput()
+            ->withErrors([
+                'date' =>
+                'Selected date is outside the current financial year.'
+            ]);
+        }
         //Check Dulicate Invoice Number
         $check_invoice = StockTransfer::where('company_id',Session::get('user_company_id'))
                                 ->where('voucher_no',$request->input('voucher_no'))
@@ -795,6 +816,27 @@ class StockTransferController extends Controller
             'price' => 'required',
             'amount' => 'required',
         ]);
+        $financial_year_session = Session::get('default_fy');
+
+        [$startYY, $endYY] = explode('-', $financial_year_session);
+
+        $fy_start_date = '20' . $startYY . '-04-01';
+
+        $fy_end_date   = '20' . $endYY   . '-03-31';
+
+        if(
+        $request->input('date') < $fy_start_date
+        ||
+        $request->input('date') > $fy_end_date
+        ){
+        return redirect()
+            ->back()
+            ->withInput()
+            ->withErrors([
+                'date' =>
+                'Selected date is outside the current financial year.'
+            ]);
+        }
         $stock_transfer = StockTransfer::find($id);
         $oldSnapshot = [
             'stock_transfer' => $stock_transfer->toArray(),

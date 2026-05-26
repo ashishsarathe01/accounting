@@ -910,6 +910,22 @@ input[type=number] {
         .html('<button type="button" class="icon-btn add-btn add_more">+</button>');
        $(".add_btn_cell").last().html('<button type="button" class="icon-btn add-btn add_more_tr">+</button>');
        $(".submit_data").click(function() {
+        let date = $("#date").val();
+
+        let from_date = "{{ $fy_start_date }}";
+
+        let to_date = "{{ $fy_end_date }}";
+
+        if(date < from_date || date > to_date){
+
+        alert(
+            "Selected date is outside the current financial year."
+        );
+
+        $("#date").focus();
+
+        return false;
+        }
           var form_data = [];
           let dr = 0;
           let cr = 0;

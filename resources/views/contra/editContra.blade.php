@@ -55,7 +55,7 @@
                   <input type="hidden" value="{{ $contra->id }}" id="contra_id" name="contra_id" />
                   <div class="mb-2 col-md-2">
                      <label for="name" class="form-label font-14 font-heading">Date</label>
-                     <input type="date" id="date" value="<?php echo $contra->date; ?>" class="form-control calender-bg-icon calender-placeholder" name="date" placeholder="Select date" required>
+                     <input type="date" id="date" value="<?php echo $contra->date; ?>" class="form-control calender-bg-icon calender-placeholder" name="date" placeholder="Select date" required min="{{ $fy_start_date }}" max="{{ $fy_end_date }}">
                   </div>
                   <div class="mb-2 col-md-2">
                      <label for="series_no" class="form-label font-14 font-heading">Series No.</label>
@@ -286,6 +286,25 @@
       debitTotal();
       creditTotal();
       $(".submit_data").click(function() {
+         let from_date = "{{ $fy_start_date }}";
+
+         let to_date = "{{ $fy_end_date }}";
+
+         let selected_date = $("#date").val();
+
+         if(
+            selected_date < from_date
+            ||
+            selected_date > to_date
+         ){
+            alert(
+               "Selected date is outside the current financial year."
+            );
+
+            $("#date").focus();
+
+            return false;
+         }
          var form_data = [];
          let dr = 0;
          let cr = 0;

@@ -272,6 +272,27 @@ class ContraController extends Controller
      */
    public function store(Request $request){
       Gate::authorize('action-module',75);
+      $financial_year_session = Session::get('default_fy');
+
+      [$startYY, $endYY] = explode('-', $financial_year_session);
+
+      $fy_start_date = '20' . $startYY . '-04-01';
+
+      $fy_end_date   = '20' . $endYY   . '-03-31';
+
+      if(
+         $request->input('date') < $fy_start_date
+         ||
+         $request->input('date') > $fy_end_date
+      ){
+         return redirect()
+            ->back()
+            ->withInput()
+            ->withErrors([
+               'date' =>
+               'Selected date is outside the current financial year.'
+            ]);
+      }
       $financial_year = CommonHelper::getFinancialYear($request->input('date'));
       $series_configuration = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
          ->where('series', $request->input('series_no'))
@@ -367,6 +388,11 @@ class ContraController extends Controller
       Gate::authorize('action-module',45);
       $com_id = Session::get('user_company_id');
       $financial_year = Session::get('default_fy');
+      [$startYY, $endYY] = explode('-', $financial_year);
+
+      $fy_start_date = '20' . $startYY . '-04-01';
+
+      $fy_end_date   = '20' . $endYY   . '-03-31';
       $contra = Contra::find($id);
       $contra_detail = ContraDetails::where('contra_id', '=', $id)->where('delete', '=', '0')->get();
       $party_list = Accounts::whereIn('company_id', [Session::get('user_company_id'),0])                   ->where('delete', '=', '0')
@@ -502,7 +528,7 @@ class ContraController extends Controller
          $mat_series[$key]->invoice_prefix = $invoice_prefix;
          $mat_series[$key]->manual_enter_invoice_no = $manual_enter_invoice_no;
       }
-      return view('contra/editContra')->with('contra', $contra)->with('party_list', $party_list)->with('contra_detail', $contra_detail)->with('mat_series', $mat_series);
+      return view('contra/editContra')->with('contra', $contra)->with('party_list', $party_list)->with('contra_detail', $contra_detail)->with('mat_series', $mat_series)->with('fy_start_date', $fy_start_date)->with('fy_end_date', $fy_end_date);
    }
    public function delete(Request $request){
       Gate::authorize('action-module',46);
@@ -547,6 +573,27 @@ class ContraController extends Controller
       ]);
       if ($validator->fails()) {
          return response()->json($validator->errors(), 422);
+      }
+      $financial_year_session = Session::get('default_fy');
+
+      [$startYY, $endYY] = explode('-', $financial_year_session);
+
+      $fy_start_date = '20' . $startYY . '-04-01';
+
+      $fy_end_date   = '20' . $endYY   . '-03-31';
+
+      if(
+         $request->input('date') < $fy_start_date
+         ||
+         $request->input('date') > $fy_end_date
+      ){
+         return redirect()
+            ->back()
+            ->withInput()
+            ->withErrors([
+               'date' =>
+               'Selected date is outside the current financial year.'
+            ]);
       }
       $financial_year = CommonHelper::getFinancialYear($request->input('date'));
       $contra =  Contra::find($request->contra_id);

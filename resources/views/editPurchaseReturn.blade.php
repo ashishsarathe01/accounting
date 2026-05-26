@@ -1694,7 +1694,25 @@
            calculateAmount($("#bill_sundry_tr_"+$(this).attr('data-id')).val());
         });
       $("#purchaseReturnBtn").click(function(){
-         
+         let from_date = "{{ Session::get('from_date') }}";
+
+         let to_date = "{{ Session::get('to_date') }}";
+
+         let selected_date = $("#date").val();
+
+         if(
+            selected_date < from_date
+            ||
+            selected_date > to_date
+         ){
+            alert(
+               "Selected date is outside the current financial year."
+            );
+
+            $("#date").focus();
+
+            return false;
+         }
             
             let nature = $("#nature").val();
             let type = $("#type").val();

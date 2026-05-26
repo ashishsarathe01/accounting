@@ -105,7 +105,6 @@ select.no-arrow {
 </style>
 <!-- list-view-company-section -->
 <div class="list-of-view-company ">
-<<<<<<< Updated upstream
     <section class="list-of-view-company-section container-fluid">
         <div class="row vh-100">
             @include('layouts.leftnav')
@@ -134,51 +133,6 @@ select.no-arrow {
                             <option value="all" {{ $id == 'all' ? 'selected' : '' }}>All Supplier</option>
                             @foreach($accounts as $loc)
                                 <option value="{{ $loc->id }}" {{ $id == $loc->id ? 'selected' : '' }}>{{ $loc->account_name }}</option>
-=======
-   <section class="list-of-view-company-section container-fluid">
-      <div class="row vh-100">
-         @include('layouts.leftnav')
-         <!-- view-table-Content -->
-         <div class="col-md-12 ml-sm-auto  col-lg-10 px-md-4 bg-mint">
-            @if (session('error'))
-               <div class="alert alert-danger" role="alert"> {{session('error')}}</div>
-            @endif
-            @if (session('success'))
-               <div class="alert alert-success" role="alert">
-                  {{ session('success') }}
-               </div>
-            @endif
-            <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
-               <h5 class="transaction-table-title m-0 py-2">Purchase Report</h5>
-               <div class="d-md-flex d-block header-section"> 
-                    <div class="calender-administrator my-2 my-md-0">
-                        <input type="date" id="from_date" class="form-control calender-bg-icon calender-placeholder" placeholder="From date" required name="from_date" value="{{ !empty($from_date) ? date('Y-m-d', strtotime($from_date)) : date('Y-m-01') }}">
-                     </div>
-                     <div class="calender-administrator ms-md-4">
-                        <input type="date" id="to_date" class="form-control calender-bg-icon calender-placeholder" placeholder="To date" required name="to_date" value="{{ !empty($to_date) ? date('Y-m-d', strtotime($to_date)) : date('Y-m-t')}}">
-                     </div>
-                    <div class="ms-md-4" style="min-width:240px">
-                        <select class="form-select form-select-sm filter-control select2-single" id="supplier">
-                            <option value="">Select Supplier</option>
-                            <option value="all"
-                                {{ $id == 'all' ? 'selected' : '' }}>
-                                All Supplier
-                            </option>
-                            <option value="">Select Supplier</option>
-                            <option value="all"
-                                {{ $id == 'all' ? 'selected' : '' }}>
-                                All Supplier
-                            </option>
-                            @foreach($accounts as $loc)
-                                <option value="{{ $loc->id }}"
-                                    {{ $id == $loc->id ? 'selected' : '' }}>
-                                    {{ $loc->account_name }}
-                                </option>
-                                <option value="{{ $loc->id }}"
-                                    {{ $id == $loc->id ? 'selected' : '' }}>
-                                    {{ $loc->account_name }}
-                                </option>
->>>>>>> Stashed changes
                             @endforeach
                         </select>
                         </div>

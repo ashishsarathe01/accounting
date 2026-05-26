@@ -628,6 +628,28 @@ class SalesController extends Controller
       if($request->input('goods_discription')[0]=="" || $request->input('qty')[0]=="" || $request->input('price')[0]=="" || $request->input('amount')[0]==""){
          return $this->failedMessage('Plases Select Item','sale/create');
       }
+      $default_fy = Session::get('default_fy');
+
+      [$startYY, $endYY] = explode('-', $default_fy);
+
+      $fy_start_date = '20'.$startYY.'-04-01';
+
+      $fy_end_date = '20'.$endYY.'-03-31';
+
+      if(
+         $request->input('date') < $fy_start_date
+         ||
+         $request->input('date') > $fy_end_date
+      ){
+         return back()
+
+            ->withInput()
+
+            ->withErrors([
+               'date' =>
+               'Selected date is outside current financial year.'
+            ]);
+      }
       $financial_year = CommonHelper::getFinancialYear($request->input('date'));
       //Check Dulicate Invoice Number
       $check_invoice = Sales::where('company_id',Session::get('user_company_id'))
@@ -2443,6 +2465,28 @@ class SalesController extends Controller
       //Check Item Empty or not
       if($request->input('goods_discription')[0]==""){
          return $this->failedMessage('Plases Select Item','sale/create');
+      }
+      $default_fy = Session::get('default_fy');
+
+      [$startYY, $endYY] = explode('-', $default_fy);
+
+      $fy_start_date = '20'.$startYY.'-04-01';
+
+      $fy_end_date = '20'.$endYY.'-03-31';
+
+      if(
+         $request->input('date') < $fy_start_date
+         ||
+         $request->input('date') > $fy_end_date
+      ){
+         return back()
+
+            ->withInput()
+
+            ->withErrors([
+               'date' =>
+               'Selected date is outside current financial year.'
+            ]);
       }
       $financial_year = CommonHelper::getFinancialYear($request->input('date'));
 

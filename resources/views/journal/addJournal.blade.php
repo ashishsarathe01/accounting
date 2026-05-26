@@ -674,6 +674,19 @@ border-radius:12px;
       }
             $(".submit_data").click(function() {            
          let date = $("#date").val();
+         let from_date = "{{ Session::get('from_date') }}";
+         let to_date   = "{{ Session::get('to_date') }}";
+
+         if(date < from_date || date > to_date){
+
+            alert(
+               "Selected date is outside the current financial year."
+            );
+
+            $("#date").focus();
+
+            return false;
+         }
          let series_no = $("#series_no").val(); // Added series_no validation
          // Field-wise alerts
          if (date === "") {

@@ -2003,6 +2003,23 @@
          calculateAmount($("#bill_sundry_tr_"+$(this).attr('data-id')).val());
       });   
       $("#saleReturnBtn").click(function(){
+         let from_date = "{{ $fy_start_date }}";
+
+let to_date = "{{ $fy_end_date }}";
+
+let selected_date = $("#date").val();
+
+if(
+   selected_date < from_date
+   ||
+   selected_date > to_date
+){
+   alert(
+      "Selected date is outside the current financial year."
+   );
+
+   return false;
+}
          if(confirm("Are you sure to submit?")==true){
             $("#saleReturnForm").validate({
                ignore: [], 

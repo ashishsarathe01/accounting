@@ -480,6 +480,27 @@ if ($companyData->gst_config_type == "single_gst") {
          'total' => 'required',
          'goods_discription' => 'required|array|min:1',
       ]);
+      $financial_year_session = Session::get('default_fy');
+
+      [$startYY, $endYY] = explode('-', $financial_year_session);
+
+      $fy_start_date = '20' . $startYY . '-04-01';
+
+      $fy_end_date   = '20' . $endYY   . '-03-31';
+
+      if(
+         $request->date < $fy_start_date
+         ||
+         $request->date > $fy_end_date
+      ){
+         return redirect()
+            ->back()
+            ->withInput()
+            ->withErrors([
+               'date' =>
+               'Selected date is outside the current financial year.'
+            ]);
+      }
       //dd($request->all());
       // echo "<pre>";
       // print_r($request->all());
@@ -1668,6 +1689,27 @@ if ($companyData->gst_config_type == "single_gst") {
          'total' => 'required',
          'goods_discription' => 'required|array|min:1',
       ]);
+      $financial_year_session = Session::get('default_fy');
+
+      [$startYY, $endYY] = explode('-', $financial_year_session);
+
+      $fy_start_date = '20' . $startYY . '-04-01';
+
+      $fy_end_date   = '20' . $endYY   . '-03-31';
+
+      if(
+         $request->date < $fy_start_date
+         ||
+         $request->date > $fy_end_date
+      ){
+         return redirect()
+            ->back()
+            ->withInput()
+            ->withErrors([
+               'date' =>
+               'Selected date is outside the current financial year.'
+            ]);
+      }
       //Check Item Empty or not
       
       if($request->input('goods_discription')[0]=="" || $request->input('qty')[0]=="" || $request->input('price')[0]=="" || $request->input('amount')[0]==""){
