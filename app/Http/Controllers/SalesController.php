@@ -116,6 +116,8 @@ class SalesController extends Controller
             'approved_by',
             'approved_at',
             'created_by',
+            'sales.eway_bill_response',
+            'sales.eway_delivery_status',
             DB::raw('(select account_name from accounts where accounts.id = sales.party limit 1) as account_name'),
             DB::raw('(select manual_numbering from voucher_series_configurations 
                       where voucher_series_configurations.company_id = ' . Session::get('user_company_id') . ' 
@@ -7215,5 +7217,60 @@ public function exportSaleBill(Request $request)
 
          ]);
 
+   }
+   public function markReached(Request $request)
+   {
+      $sale = DB::table('sales')
+
+         ->where(
+               'id',
+               $request->sale_id
+         )
+
+         ->where(
+               'company_id',
+               Session::get('user_company_id')
+         )
+
+         ->first();
+
+      if(empty($sale))
+      {
+         return response()->json([
+               'success' => false,
+               'message' => 'Sale not found.'
+         ]);
+      }
+
+      if($sale->eway_delivery_status == 1)
+      {
+         return response()->json([
+               'success' => false,
+               'message' => 'Already marked as reached.'
+         ]);
+      }
+
+      DB::table('sales')
+
+         ->where(
+               'id',
+               $request->sale_id
+         )
+
+         ->update([
+
+               'eway_delivery_status' => 1,
+
+               'updated_at' => now()
+
+         ]);
+
+      return response()->json([
+
+         'success' => true,
+
+         'message' => 'Vehicle marked as reached successfully.'
+
+      ]);
    }
 }

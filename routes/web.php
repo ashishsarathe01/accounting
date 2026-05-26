@@ -114,12 +114,9 @@ use App\Http\Controllers\BoxController;
 use App\Http\Controllers\production\OpeningStockReelWiseController;
 use App\Http\Controllers\MerchantCredentials\MerchantCredentialsController;
 use App\Http\Controllers\TransactionConfiguration\TransactionConfigurationController;
-<<<<<<< Updated upstream
-=======
 use App\Http\Controllers\BoxSaleOrderController;
 use App\Http\Controllers\CompanySaleType\CompanySaleTypeController;
 use App\Http\Controllers\ExportMonthlyReportController;
->>>>>>> Stashed changes
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -1428,8 +1425,10 @@ Route::get('credit-note-configuration',[TransactionConfigurationController::clas
 Route::post('save-credit-note-configuration',[TransactionConfigurationController::class,'saveCreditNoteConfiguration'])->name('save.credit.note.configuration');
 Route::get('debit-note-configuration',[TransactionConfigurationController::class,'debitNoteConfiguration'])->name('debit.note.configuration');
 Route::post('save-debit-note-configuration',[TransactionConfigurationController::class,'saveDebitNoteConfiguration'])->name('save.debit.note.configuration');
-<<<<<<< Updated upstream
-=======
+Route::post(
+   'sale/mark-reached',
+   [SalesController::class, 'markReached']
+)->name('sale.mark.reached');
 
 Route::get(
     '/box-sale-order',
@@ -1502,5 +1501,4 @@ Route::get(
     'download']
 
 )->name('export.monthly.report.download');
->>>>>>> Stashed changes
 });

@@ -139,8 +139,46 @@
                                     }
                               } 
                               if($value->status=='1'){?>
-                                 <a title="View Invoice" href="{{ url('sale-invoice/' . $value->sales_id) }}?source=sale" target="_blank"><img src="{{ asset('public/assets/imgs/eye-icon.svg') }}" class="px-1" alt="View Invoice"></a>
-                                 <?php 
+                                 <a title="View Invoice"
+                                    href="{{ url('sale-invoice/' . $value->sales_id) }}?source=sale"
+                                    target="_blank">
+                                    <img src="{{ asset('public/assets/imgs/eye-icon.svg') }}"
+                                       class="px-1"
+                                       alt="View Invoice">
+                                 </a>
+                                 <?php
+                                 if(!empty($value->eway_bill_response))
+                                 {
+                                    $ewayData = json_decode($value->eway_bill_response, true);
+                                    $iconStyle = '';
+                                    if(!empty($value->eway_delivery_status)
+                                       && $value->eway_delivery_status == 1)
+                                    {
+                                       $iconStyle =
+                                       'filter:
+                                       brightness(0)
+                                       saturate(100%)
+                                       invert(48%)
+                                       sepia(98%)
+                                       saturate(749%)
+                                       hue-rotate(88deg)
+                                       brightness(119%)
+                                       contrast(119%);';
+                                    }
+                                    ?>
+                                    <img src="{{ asset('public/assets/imgs/start.svg') }}"
+                                       class="px-1 start_status"
+                                       data-id="{{$value->sales_id}}"
+                                       data-ewaybill="{{$ewayData['ewayBillNo'] ?? ''}}"
+                                       data-valid="{{$ewayData['validUpto'] ?? ''}}"
+                                       data-current="{{ now() }}"
+                                       data-status="{{$value->eway_delivery_status ?? 0}}"
+                                       alt=""
+                                       style="width:30px;cursor:pointer;{{$iconStyle}}">
+                                    <?php
+                                 }
+                                 ?>
+                                 <?php
                               }
                               if($value->status=='2'){?>
                                  <h4 style="color:red">CANCELLED</h4>
@@ -326,6 +364,90 @@
     </div>
   </div>
 </div>
+<div class="modal fade"
+     id="eway_status_modal"
+     tabindex="-1"
+     aria-hidden="true">
+
+   <div class="modal-dialog modal-dialog-centered">
+
+      <div class="modal-content border-0">
+
+         <div class="modal-header py-2 px-3">
+
+            <h5 class="modal-title fw-bold">
+               E-Way Bill Status
+            </h5>
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal">
+            </button>
+
+         </div>
+
+         <div class="modal-body px-3 py-3">
+
+            <table class="table table-bordered mb-0">
+
+               <tr>
+                  <th width="40%" class="bg-light">
+                     E-Way Bill No
+                  </th>
+
+                  <td id="eway_bill_no"></td>
+               </tr>
+
+               <tr>
+                  <th class="bg-light">
+                     Valid Upto
+                  </th>
+
+                  <td id="eway_valid_upto"></td>
+               </tr>
+
+               <tr>
+                  <th class="bg-light">
+                     Status
+                  </th>
+
+                  <td id="eway_delivery_text"></td>
+               </tr>
+
+            </table>
+
+            <input type="hidden"
+                   id="eway_sale_id">
+
+         </div>
+
+         <div class="modal-footer py-2 px-3">
+
+            <button type="button"
+                  class="btn btn-primary"
+                  id="extend_eway_btn"
+                  style="display:none;">
+
+               Extend E-Way Bill
+
+            </button>
+
+
+            <button type="button"
+                    class="btn btn-success"
+                    id="mark_as_reached_btn">
+
+               Mark As Reached
+
+            </button>
+
+         </div>
+
+      </div>
+
+   </div>
+
+</div>
 </body>
 @include('layouts.footer')
 <script>
@@ -368,6 +490,155 @@
             }
         });
     });
+    $(document).on('click', '.start_status', function () {
+      let saleId    = $(this).data('id');
+      let ewayBill  = $(this).data('ewaybill');
+      let validUpto = $(this).data('valid');
+      let status    = $(this).data('status');
+
+      $("#eway_sale_id").val(saleId);
+
+      $("#eway_bill_no").html(ewayBill);
+
+      if(validUpto != '')
+      {
+         let dateObj = new Date(validUpto);
+
+         let formatted =
+            ("0" + dateObj.getDate()).slice(-2) + "-" +
+            ("0" + (dateObj.getMonth() + 1)).slice(-2) + "-" +
+            dateObj.getFullYear() + " " +
+            dateObj.toLocaleTimeString([], {
+               hour: '2-digit',
+               minute:'2-digit'
+            });
+
+         $("#eway_valid_upto").html(formatted);
+      }
+      else
+      {
+         $("#eway_valid_upto").html('-');
+      }
+
+      let showExtendBtn = false;
+
+      if(validUpto != '')
+      {
+         validUpto = validUpto.replace(' ', 'T');
+
+         let validDate = new Date(validUpto);
+
+         let before8Hours = new Date(
+            validDate.getTime() - (8 * 60 * 60 * 1000)
+         );
+
+         let after8Hours = new Date(
+            validDate.getTime() + (8 * 60 * 60 * 1000)
+         );
+
+         let currentDate = new Date();
+
+         status = parseInt(status);
+
+         if(
+            currentDate >= before8Hours &&
+            currentDate <= after8Hours &&
+            status === 0
+         )
+         {
+            showExtendBtn = true;
+         }
+      }
+
+      if(status == 1)
+      {
+         $("#eway_delivery_text").html(
+            '<span class="badge bg-success">Reached</span>'
+         );
+
+         $("#mark_as_reached_btn").hide();
+
+         $("#extend_eway_btn").hide();
+      }
+      else
+      {
+         $("#eway_delivery_text").html(
+            '<span class="badge bg-warning text-dark">Not Reached</span>'
+         );
+
+         $("#mark_as_reached_btn").show();
+
+         if(showExtendBtn)
+         {
+            $("#extend_eway_btn").show();
+         }
+         else
+         {
+            $("#extend_eway_btn").hide();
+         }
+      }
+
+      $("#eway_status_modal").modal('show');
+
+   });
+   $(document).on('click', '#mark_as_reached_btn', function () {
+
+      let confirmFirst = confirm(
+         'Are you sure vehicle reached destination?'
+      );
+
+      if(confirmFirst == false)
+      {
+         return false;
+      }
+
+      let confirmSecond = confirm(
+         'Once marked as reached, this cannot be undone. Continue?'
+      );
+
+      if(confirmSecond == false)
+      {
+         return false;
+      }
+
+      let saleId = $("#eway_sale_id").val();
+
+      $.ajax({
+
+         url: "{{ route('sale.mark.reached') }}",
+
+         type: "POST",
+
+         data: {
+
+            _token: "{{ csrf_token() }}",
+
+            sale_id: saleId
+
+         },
+
+         success: function(response)
+         {
+            if(response.success == true)
+            {
+               alert(response.message);
+
+               location.reload();
+            }
+            else
+            {
+               alert(response.message);
+            }
+         },
+
+         error: function()
+         {
+            alert('Something went wrong.');
+         }
+
+      });
+
+   });
       $(".cancel").click(function() {
          $("#delete_sale").modal("hide");
       });
