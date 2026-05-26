@@ -62,7 +62,40 @@
                         <tr class="font-14 font-heading bg-white">
                            <td class=""><?php echo date('d-m-Y',strtotime($value->date)); ?></td>
                            <td style="text-align: center;"><?php echo $value->voucher_no_prefix ?></td>
-                           <td class=""><?php echo $value->account_name ?></td>
+                            <td class="">
+                               <?php echo $value->account_name; ?>
+                            
+                               @if($value->e_invoice_status == 1 && $value->e_waybill_status == 1)
+                            
+                                  {{-- Both Generated --}}
+                                  <span title="E-Invoice Generated"
+                                        style="color:#90EE90; font-size:16px; margin-left:6px; font-weight:bold;">
+                                     ✓✓
+                                  </span>
+                            
+                                  <span title="E-Way Bill Generated"
+                                        style="color:#008000; font-size:16px; margin-left:-3px; font-weight:bold;">
+                                     ✓✓
+                                  </span>
+                            
+                               @elseif($value->e_invoice_status == 1)
+                            
+                                  {{-- Only E-Invoice --}}
+                                  <span title="E-Invoice Generated"
+                                        style="color:#7CFC00; font-size:16px; margin-left:6px; font-weight:bold;">
+                                     ✓✓
+                                  </span>
+                            
+                               @elseif($value->e_waybill_status == 1)
+                            
+                                  {{-- Only E-Way Bill --}}
+                                  <span title="E-Way Bill Generated"
+                                        style="color:#008000; font-size:16px; margin-left:6px; font-weight:bold;">
+                                     ✓✓
+                                  </span>
+                            
+                               @endif
+                            </td>
                            <td style="text-align: right;">
                               <?php 
 
@@ -89,7 +122,7 @@
                                        @endcan
                                        @can('action-module',62)
 
-                                          @if(($value->max_voucher_no==$value->voucher_no && $value->manual_numbering_status=="NO") || ($value->manual_numbering_status=="YES" || $value->manual_numbering_status==""))
+                                          @if(($maxVoucher==$value->voucher_no && $value->manual_numbering_status=="NO") || ($value->manual_numbering_status=="YES" || $value->manual_numbering_status==""))
                                              <button type="button" class="border-0 bg-transparent delete"   data-id="<?php echo $value->sales_id;?>">
                                                 <img src="{{ URL::asset('public/assets/imgs/delete-icon.svg')}}" class="px-1" alt="">
                                              </button>

@@ -340,6 +340,110 @@ if($user_data->type != "OWNER"){
     }
 }
 
+public function edit(Request $request)
+{
+    try {
+
+        $receipt_id = $request->receipt_id;
+        $company_id = $request->company_id;
+
+        if (!$receipt_id || !$company_id) {
+
+            return response()->json([
+                'status' => false,
+                'message' => 'receipt_id and company_id are required'
+            ], 422);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Receipt Master
+        |--------------------------------------------------------------------------
+        */
+
+        $receipt = Receipt::where('id', $receipt_id)
+                    ->where('company_id', $company_id)
+                    ->where('delete', '0')
+                    ->first();
+
+        if (!$receipt) {
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Receipt not found'
+            ], 404);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Receipt Details
+        |--------------------------------------------------------------------------
+        */
+
+        $details = ReceiptDetails::select(
+                        'receipt_details.id',
+                        'receipt_details.type',
+                        'receipt_details.account_name',
+                        'accounts.account_name as account_name_text',
+                        'receipt_details.debit',
+                        'receipt_details.credit',
+                        'receipt_details.narration'
+                    )
+                    ->join('accounts', 'receipt_details.account_name', '=', 'accounts.id')
+                    ->where('receipt_details.receipt_id', $receipt_id)
+                    ->where('receipt_details.company_id', $company_id)
+                    ->get();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Mode Text
+        |--------------------------------------------------------------------------
+        */
+
+        $mode_text = 'IMPS/NEFT/RTGS';
+
+        if ($receipt->mode == '1') {
+            $mode_text = 'Cash';
+        } elseif ($receipt->mode == '2') {
+            $mode_text = 'Cheque';
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Response
+        |--------------------------------------------------------------------------
+        */
+
+        return response()->json([
+            'code' => 200,
+            'message' => 'Receipt edit data fetched successfully',
+
+            'data' => [
+
+                'receipt_id' => $receipt->id,
+                'date' => $receipt->date,
+                'voucher_no' => $receipt->voucher_no,
+                'series_no' => $receipt->series_no,
+                'mode' => $receipt->mode,
+                'mode_text' => $mode_text,
+                'cheque_no' => $receipt->cheque_no,
+                'long_narration' => $receipt->long_narration,
+                'financial_year' => $receipt->financial_year,
+
+                'details' => $details
+            ]
+        ]);
+
+    } catch (\Exception $e) {
+
+        return response()->json([
+            'status' => false,
+            'message' => 'Something went wrong',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
 public function update(Request $request)
 {
     try {

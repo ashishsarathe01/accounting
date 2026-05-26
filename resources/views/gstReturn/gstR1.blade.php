@@ -224,7 +224,7 @@
                             <a class="nav-link" id="fill-tab-1" data-bs-toggle="tab" href="#fill-tabpanel-1" role="tab" aria-controls="fill-tabpanel-1" aria-selected="false">GSTR-1 PORTAL</a>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link" id="fill-tab-2" data-bs-toggle="tab" href="#fill-tabpanel-2" role="tab" aria-controls="fill-tabpanel-2" aria-selected="false">GSTR-1 FILING</a>
+                            <a class="nav-link" id="fill-tab-2" data-bs-toggle="tab" href="#fill-tabpanel-2" role="tab" aria-controls="fill-tabpanel-2" aria-selected="false">GSTR-1 Summary </a>
                         </li>
                         <li class="nav-item" role="presentation">
                             <a class="nav-link" id="fill-tab-3" data-bs-toggle="tab" href="#fill-tabpanel-3" role="tab" aria-controls="fill-tabpanel-2" aria-selected="false">RECONCILIATION</a>
@@ -696,6 +696,9 @@
                                     <input type="hidden" name="from_date" value="{{ $from_date }}">
                                     <input type="hidden" name="to_date" value="{{ $to_date }}">
                                     <button class="btn btn-primary align-left" type="submit">Send to GST Portal</button>
+                                    <button type="button" class="btn btn-success ms-2" id="generateSummaryBtn">
+        Generate Summary
+    </button>
                                 </form>
                                 
                             </div>
@@ -722,7 +725,8 @@
 
                                     <!-- Summary content will go here -->
                                     <div class="row bg-white py-3 px-2 rounded-bottom justify-content-center">
-                                    </div>
+    <div id="gstr1-summary-container"></div>
+</div>
                                 </div>
                             </div>
                         </div>

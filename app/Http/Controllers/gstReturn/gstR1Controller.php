@@ -94,7 +94,7 @@ class gstR1Controller extends Controller
     }
     public function gstr1Detail(Request $request)
     {
-        if ($request->type != '3b') {
+        if ($request->type != '3b' && $request->type != 'itcLedger') {
         $data_source = $request->data_source ?? 'books';
 
             if($data_source == "books"){
@@ -3666,7 +3666,7 @@ if (!$b2cSmallIds->isEmpty()) {
             "gt"=>(float)$turnover->amount,
             "cur_gt"=>0,
             "b2b"=>$new_arr,
-            "b2cs"=>$b2c_small_arr,
+            "b2cs" => !empty($b2c_small_arr) ? $b2c_small_arr : [],
             "cdnr"=>$finalData,
             "doc_issue"=>$docIssue,
             "hsn"=>$formattedHsnData
@@ -7090,6 +7090,224 @@ $payments = DB::table('payments')
 
 
     }
+    
+    public function getReturnSummary(Request $request)
+{
+    
+    
+  
+    
+
+        $from_date = $request->from_date;
+
+        $from = \DateTime::createFromFormat('Y-m-d', $from_date);
+        $month = $from->format('mY'); // Example: 042026
+
+        // =========================
+        // COMPANY GST CONFIG
+        // =========================
+        $company = Companies::select('gst_config_type')
+            ->where('id', Session::get('user_company_id'))
+            ->first();
+
+        $gst_user_name = "";
+
+        if ($company->gst_config_type == "single_gst") {
+
+            $gst = DB::table('gst_settings')
+                ->select('gst_username')
+                ->where([
+                    'company_id' => Session::get('user_company_id'),
+                    'gst_no'     => $request->merchant_gst
+                ])
+                ->first();
+
+            $gst_user_name = $gst->gst_username ?? '';
+
+        } else if ($company->gst_config_type == "multiple_gst") {
+
+            $gst = DB::table('gst_settings_multiple')
+                ->select('gst_username')
+                ->where([
+                    'company_id' => Session::get('user_company_id'),
+                    'gst_no'     => $request->merchant_gst
+                ])
+                ->first();
+
+            $gst_user_name = $gst->gst_username ?? '';
+        }
+
+        if ($gst_user_name == "") {
+
+            return response()->json([
+                'status'  => false,
+                'message' => 'Please Enter GST User Name In GST Configuration.'
+            ]);
+        }
+
+        // =========================
+        // GST TOKEN CHECK
+        // =========================
+        $state_code = substr(trim($request->merchant_gst), 0, 2);
+
+        $gst_token = gstToken::select('txn', 'created_at')
+            ->where('company_gstin', $request->merchant_gst)
+            ->where('company_id', Session::get('user_company_id'))
+            ->where('status', 1)
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if ($gst_token) {
+
+            $token_expiry = date(
+                'd-m-Y H:i:s',
+                strtotime('+6 hour', strtotime($gst_token->created_at))
+            );
+
+            $current_time = date('d-m-Y H:i:s');
+
+            if (strtotime($token_expiry) < strtotime($current_time)) {
+
+                $token_res = CommonHelper::gstTokenOtpRequest(
+                    $state_code,
+                    $gst_user_name,
+                    $request->merchant_gst
+                );
+
+                if ($token_res == 0) {
+
+                    return response()->json([
+                        'status'  => false,
+                        'message' => 'Something Went Wrong In Token Generation'
+                    ]);
+                }
+
+                return response()->json([
+                    'status'  => true,
+                    'message' => 'TOKEN-OTP'
+                ]);
+            }
+
+            $txn = $gst_token->txn;
+
+        } else {
+
+            $token_res = CommonHelper::gstTokenOtpRequest(
+                $state_code,
+                $gst_user_name,
+                $request->merchant_gst
+            );
+
+            if ($token_res == 0) {
+
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Something Went Wrong In Token Generation'
+                ]);
+            }
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'TOKEN-OTP'
+            ]);
+        }
+
+        // =========================
+        // GST API CREDENTIALS
+        // =========================
+        if (!$this->gstCredentials) {
+
+            return response()->json([
+                'status'  => false,
+                'message' => 'Api Credentials Not Found'
+            ]);
+        }
+
+        if ($this->gstCredentials->status != 1) {
+
+            return response()->json([
+                'status'  => false,
+                'message' => 'Api Credentials Disabled'
+            ]);
+        }
+
+        $base_url      = $this->gstCredentials->base_url;
+        $email_id      = $this->gstCredentials->email_id;
+        $client_id     = $this->gstCredentials->client_id;
+        $client_secret = $this->gstCredentials->client_secret;
+        $ip_address    = $this->gstCredentials->ip_address;
+
+        // =========================
+        // API CALL
+        // =========================
+        $curl = curl_init();
+
+        curl_setopt_array($curl, [
+
+            CURLOPT_URL => $base_url . '/gstr1/retsum?' . http_build_query([
+                'email'     => $email_id,
+                'gstin'     => $request->merchant_gst,
+                'retperiod' => $month,
+            ]),
+
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING       => '',
+            CURLOPT_MAXREDIRS      => 10,
+            CURLOPT_TIMEOUT        => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST  => 'GET',
+
+            CURLOPT_HTTPHEADER => [
+                'Accept: application/json',
+                'gst_username: ' . $gst_user_name,
+                'state_cd: ' . $state_code,
+                'ip_address: ' . $ip_address,
+                'txn: ' . $txn,
+                'client_id: ' . $client_id,
+                'client_secret: ' . $client_secret
+            ],
+
+        ]);
+
+        $response = curl_exec($curl);
+
+        if (curl_errno($curl)) {
+
+            return response()->json([
+                'status'  => false,
+                'message' => curl_error($curl)
+            ]);
+        }
+
+        curl_close($curl);
+
+        $result = json_decode($response, true);
+
+        // =========================
+        // RESPONSE
+        // =========================
+        if (
+            isset($result['status_cd']) &&
+            $result['status_cd'] == "1"
+        ) {
+
+            return response()->json([
+                'status' => true,
+                'data'   => $result['data']['sec_sum'] ?? []
+            ]);
+        }
+
+        return response()->json([
+            'status'  => false,
+            'message' => $result['error']['message']
+                ?? $result['message']
+                ?? 'Something went wrong',
+            'response' => $result
+        ]);
+
+   
+}
 }
 
 
