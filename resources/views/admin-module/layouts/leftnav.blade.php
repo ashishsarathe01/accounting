@@ -93,6 +93,14 @@
                      <a class=" text-decoration-none  d-flex   text-white" href="{{ route('admin.tds.index') }}">Tds Section
                      </a>
                   </li>
+                  <li class="font-14  fw-500 m-0 py-12 px-2  ">
+                     <a class=" text-decoration-none  d-flex   text-white" href="{{ route('admin.default-privileges.index') }}">Default New User Privileges
+                     </a>
+                  </li>
+                  <li class="font-14  fw-500 m-0 py-12 px-2  ">
+                     <a class=" text-decoration-none  d-flex   text-white" href="{{ route('admin.company-sale-types.set') }}">Manage Merchant Sale Type
+                     </a>
+                  </li>
                   <!--<li class="font-14  fw-500 m-0 py-12 px-2  ">-->
                   <!--   <a class=" text-decoration-none  d-flex   text-white" href="{{ route('admin.merchant-module-permission') }}">Merchant Modules Permission-->
                   <!--   </a>-->

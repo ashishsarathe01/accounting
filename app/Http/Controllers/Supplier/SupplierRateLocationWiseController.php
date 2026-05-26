@@ -267,6 +267,7 @@ class SupplierRateLocationWiseController extends Controller
     }
     public function wasteKraftRate($date = null)
 {
+    
     // 1. LOCATIONS
     $location = SupplierLocation::where('company_id', Session::get('user_company_id'))
                                 ->where('status', 1)

@@ -183,25 +183,22 @@
                        @error('material_center'){{$message}}@enderror                        
                      </ul>
                   </div>
-                  <div class="mb-4 col-md-4">
-
-    <label class="form-label font-14 font-heading">
-        Box Sale Order
-    </label>
-
-    <select class="form-select select2-single"
-            name="box_sale_order_id"
-            id="box_sale_order_id"
-            disabled>
-
-        <option value="">
-            Select Party First
-        </option>
-
-    </select>
-
-</div>
-               </div>
+                  @if($company_sale_type=="BOX")
+                     <div class="mb-4 col-md-4">
+                        <label class="form-label font-14 font-heading">
+                           Box Sale Order
+                        </label>
+                        <select class="form-select select2-single"
+                                 name="box_sale_order_id"
+                                 id="box_sale_order_id"
+                                 disabled>
+                           <option value="">
+                                 Select Party First
+                           </option>
+                        </select>
+                     </div>
+                  </div>
+               @endif
                <div class="transaction-table transaction-main-table bg-white table-view shadow-sm border-radius-8 mb-4">
                   <table id="example11" class="table-striped table m-0 shadow-sm table-bordered">
                      <thead>
@@ -1383,7 +1380,7 @@ data-unit_name="{{$item_list->unit}}"
 
          '<td class="w-min-50"><input type="number" class="quantity w-100 form-control" name="qty[]" id="quantity_tr_' + add_more_count + '" required placeholder="Quantity" style="text-align:right" data-id="' + add_more_count + '" /></td>' +
          '<td class="w-min-50"><input type="text" class="w-100 form-control unit" id="unit_tr_' + add_more_count + '" readonly style="text-align:center;" data-id="' + add_more_count + '"/><input type="hidden" class="units w-100" name="units[]" id="units_tr_' + add_more_count + '"/></td>' +
-         '<td class="w-min-50"><input type="number" class="price w-100 form-control" name="price[]" id="price_tr_' + add_more_count + '" required placeholder="Price" style="text-align:right" data-id="' + add_more_count + '"/></td>' +
+         '<td class="w-min-50"><input type="number" class="price w-100 form-control" name="price[]" id="price_tr_' + add_more_count + '" required placeholder="Price" style="text-align:right" data-id="' + add_more_count + '" /></td>' +
          '<td class="w-min-50"><input type="number" class="amount w-100 form-control" name="amount[]" id="amount_tr_' + add_more_count + '" required placeholder="Amount" style="text-align:right" data-id="' + add_more_count + '"/></td>' +
          '<input type="hidden" name="item_parameters[]" id="item_parameters_' + add_more_count + '">' +
          '<input type="hidden" ' +

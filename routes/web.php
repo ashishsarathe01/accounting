@@ -114,9 +114,11 @@ use App\Http\Controllers\BoxController;
 use App\Http\Controllers\production\OpeningStockReelWiseController;
 use App\Http\Controllers\MerchantCredentials\MerchantCredentialsController;
 use App\Http\Controllers\TransactionConfiguration\TransactionConfigurationController;
+
 use App\Http\Controllers\BoxSaleOrderController;
 use App\Http\Controllers\CompanySaleType\CompanySaleTypeController;
 use App\Http\Controllers\ExportMonthlyReportController;
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -548,6 +550,7 @@ Route::post('/purchase-return/export',[PurchaseReturnController::class, 'export'
         
         Route::post('get-item-average-details', [ItemLedgerController::class, 'itemAverageDetails']);
         Route::get('/gstr1', [gstR1Controller::class, 'gstmain'])->name('gstr1');
+        Route::post('/gstr1-reset', [gstR1Controller::class, 'resetGstr1'])->name('gstr1.reset');
         Route::get('/gst/b2c-normal-statewise', [gstR1Controller::class, 'B2Cstatewise'])->name('gst.b2c.normal.statewise');
         Route::get('/gst/b2b-detailed-billwise', [gstR1Controller::class, 'B2Bdetailed'])->name('gst.b2b.detailed.billwise');
         Route::get('/gst/b2c-large-detailed', [gstR1Controller::class, 'b2cLargedetailed'])->name('gst.b2c.large.detailed');
@@ -596,7 +599,7 @@ Route::post('/purchase-return/export',[PurchaseReturnController::class, 'export'
         Route::Resource('supplier', SupplierController::class);
         Route::post('get-supplier-location', [SupplierController::class, 'getSupplierLocation'])->name('get-supplier-location');
         Route::post('store-supplier-location', [SupplierController::class, 'storeSupplierLocation'])->name('store-supplier-location');
-        Route::get('manage-supplier-rate/{date?}', [SupplierRateLocationWiseController::class, 'manageSupplierRate'])->name('manage-supplier-rate');
+        //Route::get('manage-supplier-rate/{date?}', [SupplierRateLocationWiseController::class, 'manageSupplierRate'])->name('manage-supplier-rate');
         Route::POST('store-supplier-rate', [SupplierRateLocationWiseController::class, 'storeSupplierRate'])->name('store-supplier-rate');
         Route::get('manage-supplier-purchase', [SupplierPurchaseController::class, 'manageSupplierPurchase'])->name('manage-supplier-purchase');
         Route::post('get-supplier-rate-by-location', [SupplierPurchaseController::class, 'getSupplierRateByLocation'])->name('get-supplier-rate-by-location');
@@ -1425,10 +1428,12 @@ Route::get('credit-note-configuration',[TransactionConfigurationController::clas
 Route::post('save-credit-note-configuration',[TransactionConfigurationController::class,'saveCreditNoteConfiguration'])->name('save.credit.note.configuration');
 Route::get('debit-note-configuration',[TransactionConfigurationController::class,'debitNoteConfiguration'])->name('debit.note.configuration');
 Route::post('save-debit-note-configuration',[TransactionConfigurationController::class,'saveDebitNoteConfiguration'])->name('save.debit.note.configuration');
+
 Route::post(
    'sale/mark-reached',
    [SalesController::class, 'markReached']
 )->name('sale.mark.reached');
+
 
 Route::get(
     '/box-sale-order',
@@ -1501,4 +1506,5 @@ Route::get(
     'download']
 
 )->name('export.monthly.report.download');
+
 });

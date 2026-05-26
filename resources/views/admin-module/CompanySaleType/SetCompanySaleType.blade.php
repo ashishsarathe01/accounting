@@ -40,7 +40,7 @@
                <h5 class="table-title m-0 py-2">
                   Set Company Sale Type
                </h5>
-
+                <a href="{{route('admin.company-sale-types.index')}}"><button class="btn btn-info">Manage Sale Type</button></a>
             </div>
 
             {{-- Table Card --}}

@@ -34,6 +34,15 @@
     cursor: pointer;
 }
 </style>
+@php
+   $company_sale_type = DB::table('companies')
+    
+    ->where('id', Session::get('user_company_id'))
+    ->select(
+        'company_sale_type'
+    )   
+    ->first();
+@endphp
 <aside class="col-lg-2  bg-blue sidebar p-0">
 {{-- <aside class="col-lg-2 d-none d-lg-block bg-blue sidebar p-0"> --}}
    <div class="sidebar-sticky ">
@@ -269,6 +278,8 @@
                            </div>
                         </li>
                          @endcan
+                        
+                        
                         <div class="card bg-blue pt-2 px-2 rounded-0 aside-bottom-divider">
                            <div class="card-header py-12 px-2 border-0 rounded-0 d-flex" id="importDataHeading">
                               <a class="nav-link text-white font-14 fw-500 dropdown-icon-img p-0 collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#importDataCollapse" aria-expanded="true" aria-controls="importDataCollapse">
@@ -529,7 +540,11 @@
                                              </div>
                                           </li>
                                           @endcan
-                                           
+                                           @can('view-module', 181)
+                                          <li class="report-menu-item">
+                                             <a href="{{ route('itc.ledger') }}" class="text-blue">Credit Ledger Balance</a>
+                                          </li>
+                                          @endcan
                                            @can('view-module', 182)
                                           <li class="report-menu-item">
                                              <a href="javascript:void(0)" class="text-blue">Challan</a>
@@ -1269,31 +1284,32 @@
             <?php 
          } ?>
          
-          <?php
-                     if (Session::get('user_id') == '1' || Session::get('user_id') == '3') { ?>
-                <div class="card bg-blue pt-2 px-2 rounded-0 aside-bottom-divider">
+            @if($company_sale_type->company_sale_type == 'BOX')
+               <div class="card bg-blue pt-2 px-2 rounded-0 aside-bottom-divider">
                   <div class="card-header py-12 px-2 border-0 d-flex rounded-0" id="jobWorkHeading">
                      <a class="nav-link text-white font-14 dropdown-icon-img d-flex fw-500  p-0 collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#BoxBusinessManagement" aria-expanded="true" aria-controls="BoxBusinessManagement"><img src="{{ URL::asset('public/assets/imgs/administrator.svg')}}" class="me-2" alt="">Box Business Management</a>
                   </div>
                   <div id="BoxBusinessManagement" class="collapse" aria-labelledby="BoxBusinessHeading" data-bs-parent="#accordion">
-                    <ul class="nav flex-column">
-
-                            <a href="{{ route('party-item-rate.index') }}">
-                               <li class="font-14 fw-500 m-0 py-12 px-2 text-white border-radius-4 clickable-row">
-                                   Manage Rate
-                               </li>
-                            </a>
-                        
-                            <a href="{{ route('box-calculator.advance') }}">
-                               <li class="font-14 fw-500 m-0 py-12 px-2 text-white border-radius-4 clickable-row">
-                                   Box Calculator
-                               </li>
-                            </a>
-                        
-                        </ul>
+                     <ul class="nav flex-column">
+                        <a href="{{ route('party-item-rate.index') }}">
+                           <li class="font-14 fw-500 m-0 py-12 px-2 text-white border-radius-4 clickable-row">
+                              Manage Rate
+                           </li>
+                        </a>
+                        <a href="{{ route('box-calculator.advance') }}">
+                           <li class="font-14 fw-500 m-0 py-12 px-2 text-white border-radius-4 clickable-row">
+                              Box Calculator
+                           </li>
+                        </a> 
+                        <li class="font-14  fw-500 m-0 py-12 px-2 clickable-row ">
+                           <a class=" text-decoration-none  d-flex   text-white" href="{{ route('box.sale.order.index') }}">
+                              Manage Sale Order
+                           </a>
+                        </li>
+                     </ul>
                   </div>
                </div>
-               <?php } ?>
+            @endif
          
           <?php
                      if (Session::get('user_company_id') == '37' || Session::get('user_id') == '123') { ?>
@@ -1326,8 +1342,8 @@
                               </a>
                               
                                 <a href="{{ route('profit.report') }}" class="btn btn-success">
-    <i class="fa fa-chart-line"></i> Profit Report
-</a>
+                                    <i class="fa fa-chart-line"></i> Profit Report
+                                 </a>
                             </ul>
                         
                           </div>
