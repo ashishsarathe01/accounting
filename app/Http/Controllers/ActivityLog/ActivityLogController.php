@@ -12,11 +12,12 @@ use App\Models\BillSundrys;
 use App\Models\ManageItems;
 use App\Models\State;
 use Carbon\Carbon;
-
+use Gate;
 class ActivityLogController extends Controller
 {
     public function index()
     {
+        Gate::authorize('action-module', 250);
         $logs = ActivityLog::where('status', 1)
                             ->where('company_id',Session::get('user_company_id'))
             ->orderBy('action_at', 'desc')

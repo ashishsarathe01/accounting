@@ -58,9 +58,11 @@
                                     <td>{{ $value->bill_no }}</td>
                                     <td>{{ $value->amount }}</td>
                                     <td class="w-min-120 text-center">
+                                        @can('view-module',248)
                                         <a href="{{ url('edit-purchase-info/' . $value->id) }}">
                                             <img src="{{ asset('public/assets/imgs/edit-icon.svg') }}" class="px-1">
                                         </a>
+                                        @endcan
                                         @can('view-module',249)
                                             <button type="button"
                                                 class="border-0 bg-transparent delete"

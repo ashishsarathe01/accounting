@@ -7,13 +7,13 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Session;
 use DB;
-
+use Gate;
 class TransactionReportController extends Controller
 {
 
 public function index(Request $request)
 {
-
+    Gate::authorize('action-module', 252);
     $company_id = Session::get('user_company_id');
 
     $from_date = $request->from_date ?? Carbon::today()->format('Y-m-d');

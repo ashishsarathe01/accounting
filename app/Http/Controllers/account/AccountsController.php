@@ -1344,6 +1344,9 @@ public function bulkUpdateSave(Request $request)
             if (array_key_exists('location', $data))
                 $account->location = $data['location'];
 
+            if (array_key_exists('alias', $data))
+               $account->alias = $data['alias'];
+               
             if (array_key_exists('pan', $data))
                 $account->pan = $data['pan'];
 

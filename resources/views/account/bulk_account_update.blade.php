@@ -86,6 +86,7 @@ Bulk Account Update
         @php
         $fields = [
             'opening_balance' => 'Opening Balance',
+            'alias' => 'Alias',
             'dr_cr' => 'Balance Type',
             'gstin' => 'GST',
             'state' => 'State',
@@ -213,7 +214,11 @@ $(document).ready(function(){
                                 name="accounts[${acc.id}][opening_balance]"
                                 value="${acc.opening_balance ?? ''}">`;
                         }
-
+                        else if(field === 'alias'){
+                            html += `<input type="text" class="form-control"
+                                name="accounts[${acc.id}][alias]"
+                                value="${acc.alias ?? ''}">`;
+                        }
                         else if(field === 'dr_cr'){
                             html += `
                             <select class="form-select"

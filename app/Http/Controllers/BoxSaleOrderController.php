@@ -34,17 +34,137 @@ class BoxSaleOrderController extends Controller
                 DB::raw('
                     (
                         SELECT
-                            SUM(qty)
+                            COALESCE(SUM(qty),0)
+
                         FROM
                             box_sale_order_items
                         WHERE
                             box_sale_order_items.box_sale_order_id
-                            = box_sale_orders.id
+                            =
+                            box_sale_orders.id
+
                         AND
-                            box_sale_order_items.delete = 0
+
+                            box_sale_order_items.delete = "0"
+
                     ) as total_qty
+                '),
+
+                DB::raw('
+                    (
+                        SELECT
+                            COALESCE(SUM(sale_descriptions.qty),0)
+
+                        FROM
+                            sale_descriptions
+
+                        INNER JOIN
+                            box_sale_order_items
+
+                            ON
+                            box_sale_order_items.id
+                            =
+                            sale_descriptions.box_sale_order_item_id
+
+                        WHERE
+
+                            box_sale_order_items.box_sale_order_id
+                            =
+                            box_sale_orders.id
+
+                        AND
+
+                            sale_descriptions.delete = "0"
+
+                    ) as dispatched_qty
+                '),
+
+                DB::raw('
+                    (
+
+                        (
+                            SELECT
+                                COALESCE(SUM(qty),0)
+
+                            FROM
+                                box_sale_order_items
+
+                            WHERE
+
+                                box_sale_order_items.box_sale_order_id
+                                =
+                                box_sale_orders.id
+
+                            AND
+
+                                box_sale_order_items.delete = "0"
+
+                        )
+
+                        -
+
+                        (
+
+                            SELECT
+                                COALESCE(SUM(sale_descriptions.qty),0)
+
+                            FROM
+                                sale_descriptions
+
+                            INNER JOIN
+                                box_sale_order_items
+
+                                ON
+                                box_sale_order_items.id
+                                =
+                                sale_descriptions.box_sale_order_item_id
+
+                            WHERE
+
+                                box_sale_order_items.box_sale_order_id
+                                =
+                                box_sale_orders.id
+
+                            AND
+
+                                sale_descriptions.delete = "0"
+
+                        )
+
+                    ) as pending_qty
+                '),
+
+                DB::raw('
+                    (
+                        SELECT
+                            COUNT(*)
+
+                        FROM
+                            sale_descriptions
+
+                        INNER JOIN
+                            box_sale_order_items
+
+                            ON
+                            box_sale_order_items.id
+                            =
+                            sale_descriptions.box_sale_order_item_id
+
+                        WHERE
+
+                            box_sale_order_items.box_sale_order_id
+                            =
+                            box_sale_orders.id
+
+                        AND
+
+                            sale_descriptions.delete = "0"
+
+                    ) as used_in_sale
                 ')
+
             )
+
             ->orderBy(
                 'box_sale_orders.id',
                 'DESC'
@@ -55,7 +175,6 @@ class BoxSaleOrderController extends Controller
             compact('saleOrders')
         );
     }
-
     public function create()
     {
         $companyId = Session::get('user_company_id');
@@ -232,6 +351,47 @@ class BoxSaleOrderController extends Controller
     {
         $companyId =
             Session::get('user_company_id');
+        $usedInSale = DB::table('sale_descriptions')
+
+            ->whereIn(
+
+                'box_sale_order_item_id',
+
+                DB::table('box_sale_order_items')
+
+                    ->where(
+                        'box_sale_order_id',
+                        $id
+                    )
+
+                    ->pluck('id')
+
+            )
+
+            ->where(
+                'delete',
+                '0'
+            )
+
+            ->exists();
+
+
+        if($usedInSale)
+        {
+
+            return redirect()
+
+                ->route('box.sale.order.index')
+
+                ->with(
+
+                    'error',
+
+                    'Box Sale Order already used in Sale. Cannot edit.'
+
+                );
+
+        }
         $saleOrder = DB::table('box_sale_orders')
             ->where(
                 'company_id',
@@ -399,6 +559,47 @@ class BoxSaleOrderController extends Controller
     {
         $companyId =
             Session::get('user_company_id');
+        $usedInSale = DB::table('sale_descriptions')
+
+            ->whereIn(
+
+                'box_sale_order_item_id',
+
+                DB::table('box_sale_order_items')
+
+                    ->where(
+                        'box_sale_order_id',
+                        $id
+                    )
+
+                    ->pluck('id')
+
+            )
+
+            ->where(
+                'delete',
+                '0'
+            )
+
+            ->exists();
+
+
+        if($usedInSale)
+        {
+
+            return redirect()
+
+                ->route('box.sale.order.index')
+
+                ->with(
+
+                    'error',
+
+                    'Box Sale Order already used in Sale. Cannot delete.'
+
+                );
+
+        }
         DB::beginTransaction();
         try {
             DB::table('box_sale_orders')

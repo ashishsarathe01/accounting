@@ -7,12 +7,13 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Session;
 use DB;
-
+use Gate;
 class TaskManagerController extends Controller
 {
 
     public function index(Request $request)
     {
+        Gate::authorize('action-module', 243);
         $this->generateMonthlyTasks();
 
         $company_id = Session::get('user_company_id');
@@ -314,6 +315,7 @@ if($task->company_id != $company_id){
 
     public function myTasks(Request $request)
     {
+        Gate::authorize('action-module', 244);
         $this->generateMonthlyTasks();
 
         $company_id = Session::get('user_company_id');
@@ -573,6 +575,7 @@ if($task->company_id != $company_id){
 
     public function monthlyIndex()
     {
+        Gate::authorize('action-module', 245);
         $company_id = Session::get('user_company_id');
 
         $templates = DB::table('monthly_task_templates as m')

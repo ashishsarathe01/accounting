@@ -738,92 +738,60 @@ class SalesController extends Controller
                continue;
             }
             $item_quantity_total = $item_quantity_total + $qtys[$key];
-            $boxSaleOrderItemId =
-
-    $request->box_sale_order_item_id[$key]
-    ?? null;
-
-
-if($boxSaleOrderItemId)
-{
-
-    $soItem = DB::table('box_sale_order_items')
-
-        ->where(
-            'id',
-            $boxSaleOrderItemId
-        )
-
-        ->where(
-            'company_id',
-            Session::get('user_company_id')
-        )
-
-        ->where(
-            'delete',
-            '0'
-        )
-
-        ->first();
-
-
-    if($soItem)
-    {
-
-        $alreadySoldQty = DB::table('sale_descriptions')
-
-            ->where(
-                'box_sale_order_item_id',
-                $boxSaleOrderItemId
-            )
-
-            ->where(
-                'company_id',
-                Session::get('user_company_id')
-            )
-
-            ->where(
-                'delete',
-                '0'
-            )
-
-            ->sum('qty');
-
-
-        $currentQty =
-
-            (float)$qtys[$key];
-
-
-        $totalQty =
-
-            (float)$alreadySoldQty
-
-            +
-
-            (float)$currentQty;
-
-
-        if($totalQty > $soItem->qty)
-        {
-
-            return back()->with(
-
-                'error',
-
-                'Qty exceeded pending qty for selected Box Sale Order Item'
-
-            );
-        }
-    }
-}
+            $boxSaleOrderItemId = $request->box_sale_order_item_id[$key]
+                                    ?? null;
+            if($boxSaleOrderItemId)
+            {
+               $soItem = DB::table('box_sale_order_items')
+                  ->where(
+                        'id',
+                        $boxSaleOrderItemId
+                  )
+                  ->where(
+                        'company_id',
+                        Session::get('user_company_id')
+                  )
+                  ->where(
+                        'delete',
+                        '0'
+                  )
+                  ->first();
+               if($soItem)
+               {
+                  $alreadySoldQty = DB::table('sale_descriptions')
+                        ->where(
+                           'box_sale_order_item_id',
+                           $boxSaleOrderItemId
+                        )
+                        ->where(
+                           'company_id',
+                           Session::get('user_company_id')
+                        )
+                        ->where(
+                           'delete',
+                           '0'
+                        )
+                        ->sum('qty');
+                  $currentQty =
+                        (float)$qtys[$key];
+                  $totalQty =
+                        (float)$alreadySoldQty
+                        +
+                        (float)$currentQty;
+                  if($totalQty > $soItem->qty)
+                  {
+                        return back()->with(
+                           'error',
+                           'Qty exceeded pending qty for selected Box Sale Order Item'
+                        );
+                  }
+               }
+            }
             $desc = new SaleDescription;
             $itemData = ManageItems::find($good);
             $desc->sale_id = $sale->id;
-            $desc->box_sale_order_item_id =
-
-    $request->box_sale_order_item_id[$key]
-    ?? null;
+            $desc->box_sale_order_item_id = $request->box_sale_order_item_id[$key]
+                                            ?? null;
             $desc->goods_discription = $good;
             $desc->item_description = $item_descriptions[$key] ?? null;
             if($itemData && $itemData->dual_unit == 1){
@@ -846,6 +814,110 @@ if($boxSaleOrderItemId)
             $desc->company_id = Session::get('user_company_id');
             $desc->status = '1';
             $desc->save();
+
+            if($boxSaleOrderItemId)
+            {
+
+               $dispatchedQty = DB::table('sale_descriptions')
+                  ->where(
+                        'box_sale_order_item_id',
+                        $boxSaleOrderItemId
+                  )
+                  ->where(
+                        'company_id',
+                        Session::get('user_company_id')
+                  )
+                  ->where(
+                        'delete',
+                        '0'
+                  )
+                  ->sum('qty');
+
+               $orderItem = DB::table('box_sale_order_items')
+                  ->where(
+                        'id',
+                        $boxSaleOrderItemId
+                  )
+                  ->first();
+               if($orderItem)
+               {
+
+                  if(
+                        (float)$dispatchedQty
+                        >=
+                        (float)$orderItem->qty
+                  )
+                  {
+                        DB::table('box_sale_order_items')
+                           ->where(
+                              'id',
+                              $boxSaleOrderItemId
+                           )
+                           ->update([
+                              'status' => 2
+                           ]);
+                  }
+                  else
+                  {
+                        DB::table('box_sale_order_items')
+                           ->where(
+                              'id',
+                              $boxSaleOrderItemId
+                           )
+                           ->update([
+                              'status' => 1
+                           ]);
+                  }
+               }
+            }
+            
+            if($request->box_sale_order_id)
+            {
+
+               $pendingItems = DB::table('box_sale_order_items')
+                  ->where(
+                        'box_sale_order_id',
+                        $request->box_sale_order_id
+                  )
+                  ->where(
+                        'company_id',
+                        Session::get('user_company_id')
+                  )
+                  ->where(
+                        'delete',
+                        '0'
+                  )
+                  ->where(
+                        'status',
+                        '!=',
+                        2
+                  )
+                  ->count();
+
+               if($pendingItems == 0)
+               {
+
+                  DB::table('box_sale_orders')
+                        ->where(
+                           'id',
+                           $request->box_sale_order_id
+                        )
+                        ->update([
+                           'status' => 2
+                        ]);
+               }
+               else
+               {
+                  DB::table('box_sale_orders')
+                        ->where(
+                           'id',
+                           $request->box_sale_order_id
+                        )
+                        ->update([
+                           'status' => 1
+                        ]);
+               }
+            }
             $row_no = $key + 1;
             $piece_weights =
                $request->input('piece_weight_'.$row_no);
@@ -1010,22 +1082,22 @@ if($boxSaleOrderItemId)
             }
             $itemData = ManageItems::find($good);
 
-$avg_qty = $qtys[$key];
+            $avg_qty = $qtys[$key];
 
-if($itemData && $itemData->dual_unit == 1){
+            if($itemData && $itemData->dual_unit == 1){
 
-   $avg_qty =
-      $total_weights[$key] ?? 0;
-}
+               $avg_qty =
+                  $total_weights[$key] ?? 0;
+            }
 
-if(array_key_exists($good,$sale_item_array)){
+            if(array_key_exists($good,$sale_item_array)){
 
-   $sale_item_array[$good] += $avg_qty;
+               $sale_item_array[$good] += $avg_qty;
 
-}else{
+            }else{
 
-   $sale_item_array[$good] = $avg_qty;
-}   
+               $sale_item_array[$good] = $avg_qty;
+            }   
          }
          foreach ($sale_item_array as $key => $value) {
             //Add Data In Average Details table
@@ -1469,6 +1541,12 @@ if(array_key_exists($good,$sale_item_array)){
          $sale_enter_data = $request->query('sale_enter_data');
       }
       $sale = Sales::find($id);
+      $boxSaleOrders = DB::table('box_sale_orders')
+                     ->where('company_id', Session::get('user_company_id'))
+                     ->where('party_id', $sale->party)
+                     ->where('delete', '0')
+                     ->orderBy('id', 'DESC')
+                     ->get();
       $SaleDescription = SaleDescription::join('units','sale_descriptions.unit','=','units.id')
                                           ->where('sale_id', $id)
                                           ->select(['sale_descriptions.*','units.s_name'])
@@ -1648,7 +1726,90 @@ if(array_key_exists($good,$sale_item_array)){
 
       $production_module_status = $production_module_status ? 1 : 0;
 
-
+      $boxSaleOrderItems = [];
+      if($sale->box_sale_order_id)
+      {
+         $soItems = DB::table('box_sale_order_items')
+            ->leftJoin(
+                  'manage_items',
+                  'manage_items.id',
+                  '=',
+                  'box_sale_order_items.item_id'
+            )
+            ->leftJoin(
+                  'units',
+                  'units.id',
+                  '=',
+                  'manage_items.u_name'
+            )
+            ->where(
+                  'box_sale_order_items.box_sale_order_id',
+                  $sale->box_sale_order_id
+            )
+            ->where(
+                  'box_sale_order_items.company_id',
+                  Session::get('user_company_id')
+            )
+            ->where(
+                  'box_sale_order_items.delete',
+                  '0'
+            )
+            ->select(
+                  'box_sale_order_items.id as so_item_id',
+                  'box_sale_order_items.item_id',
+                  'box_sale_order_items.qty',
+                  'box_sale_order_items.price',
+                  'manage_items.name',
+                  'units.id as unit_id',
+                  'units.s_name as unit_name'
+            )
+            ->get();
+         foreach($soItems as $row)
+         {
+            $soldQty = DB::table('sale_descriptions')
+                  ->where(
+                     'box_sale_order_item_id',
+                     $row->so_item_id
+                  )
+                  ->where(
+                     'company_id',
+                     Session::get('user_company_id')
+                  )
+                  ->where(
+                     'delete',
+                     '0'
+                  )
+                  ->sum('qty');
+            $currentSaleQty = DB::table('sale_descriptions')
+                  ->where(
+                     'sale_id',
+                     $sale->id
+                  )
+                  ->where(
+                     'box_sale_order_item_id',
+                     $row->so_item_id
+                  )
+                  ->sum('qty');
+            $pendingQty =
+                  (float)$row->qty
+                  -
+                  (float)$soldQty
+                  +
+                  (float)$currentSaleQty;
+            if($pendingQty > 0)
+            {
+                  $boxSaleOrderItems[] = [
+                     'so_item_id' => $row->so_item_id,
+                     'item_id' => $row->item_id,
+                     'item_name' => $row->name,
+                     'pending_qty' => round($pendingQty,2),
+                     'price' => $row->price,
+                     'unit' => $row->unit_id,
+                     'unit_name' => $row->unit_name
+                  ];
+            }
+         }
+      }
       foreach ($SaleDescription as $desc) {
          $desc->selected_sizes = DB::table('item_size_stocks')
             ->where('sale_id', $sale->id)
@@ -1759,6 +1920,8 @@ if(array_key_exists($good,$sale_item_array)){
                         ->with('credit_days', $credit_days)
                         ->with('bill_to_id', $bill_to_id)
                         ->with('shipp_to_id', $shipp_to_id)
+                        ->with('boxSaleOrders', $boxSaleOrders)
+                        ->with('boxSaleOrderItems', $boxSaleOrderItems)
                         ->with('freight', $freight)
                         ->with('sale_order_id', $sale_order_id)
                         ->with('sale_order_items',$sale_order_items)
@@ -1782,6 +1945,8 @@ if(array_key_exists($good,$sale_item_array)){
                ->with('config',$config)
                ->with('itemGroups', $itemGroups)
                ->with('accountunit', $accountunit)
+               ->with('boxSaleOrders', $boxSaleOrders)
+               ->with('boxSaleOrderItems', $boxSaleOrderItems)
                ->with('series', $series)
                ->with('state_list', $state_list)
                ->with('bill_to_address_id',$bill_to_address_id)
@@ -1816,6 +1981,8 @@ if(array_key_exists($good,$sale_item_array)){
                      ->with('config',$config)
                      ->with('itemGroups', $itemGroups)
                      ->with('accountunit', $accountunit)
+                     ->with('boxSaleOrders', $boxSaleOrders)
+                     ->with('boxSaleOrderItems', $boxSaleOrderItems)
                      ->with('series', $series)
                      ->with('state_list', $state_list)
                      ->with('allowedAccountGroups', $allowedAccountGroups)
@@ -2165,6 +2332,31 @@ if(array_key_exists($good,$sale_item_array)){
          }
          SaleDescription::where('sale_id',$request->sale_id)
                         ->update(['delete'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
+         $boxSaleOrderItemIds = SaleDescription::where(
+               'sale_id',
+               $request->sale_id
+            )
+            ->whereNotNull(
+               'box_sale_order_item_id'
+            )
+            ->pluck(
+               'box_sale_order_item_id'
+            );
+         foreach($boxSaleOrderItemIds as $soItemId)
+         {
+            $orderItem = DB::table('box_sale_order_items')
+               ->where(
+                     'id',
+                     $soItemId
+               )
+               ->first();
+            if($orderItem)
+            {
+               $this->updateBoxSaleOrderStatus(
+                     $orderItem->box_sale_order_id
+               );
+            }
+         }
          AccountLedger::where('entry_type',1)
                         ->where('entry_type_id',$request->sale_id)
                         ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
@@ -2310,6 +2502,7 @@ if(array_key_exists($good,$sale_item_array)){
       } 
       $sale->party = $request->input('party');
       $sale->material_center = $request->input('material_center');
+      $sale->box_sale_order_id = $request->input('box_sale_order_id');
       $sale->taxable_amt = $request->input('taxable_amt');
       $sale->total = $request->input('total');
       $sale->self_vehicle = $request->input('self_vehicle');
@@ -2391,6 +2584,44 @@ if(array_key_exists($good,$sale_item_array)){
          $pricewithgst = $request->input('pricewithgst');
          $profit = $request->input('profit');
          foreach ($goods_discriptions as $key => $good) {
+            $boxSaleOrderItemId =
+               $request->box_sale_order_item_id[$key] ?? null;
+            if($boxSaleOrderItemId)
+            {
+               $boxItem =
+                  DB::table('box_sale_order_items')
+                     ->where('id', $boxSaleOrderItemId)
+                     ->first();
+               if($boxItem)
+               {
+                  $oldQty =
+                     DB::table('sale_descriptions')
+                        ->where('sale_id', $sale->id)
+                        ->where(
+                           'box_sale_order_item_id',
+                           $boxSaleOrderItemId
+                        )
+                        ->sum('qty');
+                  $consumedQty =
+                     DB::table('sale_descriptions')
+                        ->where(
+                           'box_sale_order_item_id',
+                           $boxSaleOrderItemId
+                        )
+                        ->where('sale_id', '!=', $sale->id)
+                        ->where('delete', '0')
+                        ->sum('qty');
+                  $allowedQty =
+                     ($boxItem->qty - $consumedQty);
+                  if($qtys[$key] > $allowedQty)
+                  {
+                     return back()->withErrors([
+                        'qty' =>
+                        'Qty cannot exceed pending qty.'
+                     ])->withInput();
+                  }
+               }
+            }
             if ($good=="" || $qtys[$key]=="" || $units[$key]=="" || 
                $prices[$key]=="" || $amounts[$key]=="") {
                continue;
@@ -2399,6 +2630,10 @@ if(array_key_exists($good,$sale_item_array)){
             $desc = new SaleDescription;
             $desc->sale_id = $sale->id;
             $desc->goods_discription = $good;
+            $boxSaleOrderItemIds =
+               $request->input('box_sale_order_item_id');
+            $desc->box_sale_order_item_id =
+               $boxSaleOrderItemIds[$key] ?? null;
             $desc->item_description = $item_descriptions[$key] ?? '';
             $itemData = ManageItems::find($good);
 
@@ -2432,6 +2667,102 @@ if(array_key_exists($good,$sale_item_array)){
             $desc->company_id = Session::get('user_company_id');
             $desc->status = '1';
             $desc->save();
+            if($boxSaleOrderItemId)
+            {
+               $dispatchedQty = DB::table('sale_descriptions')
+                  ->where(
+                        'box_sale_order_item_id',
+                        $boxSaleOrderItemId
+                  )
+                  ->where(
+                        'company_id',
+                        Session::get('user_company_id')
+                  )
+                  ->where(
+                        'delete',
+                        '0'
+                  )
+                  ->sum('qty');
+               $orderItem = DB::table('box_sale_order_items')
+                  ->where(
+                        'id',
+                        $boxSaleOrderItemId
+                  )
+                  ->first();
+               if($orderItem)
+               {
+                  if(
+                        (float)$dispatchedQty
+                        >=
+                        (float)$orderItem->qty
+                  )
+                  {
+                        DB::table('box_sale_order_items')
+                           ->where(
+                              'id',
+                              $boxSaleOrderItemId
+                           )
+                           ->update([
+                              'status' => 2
+                           ]);
+                  }
+                  else
+                  {
+                        DB::table('box_sale_order_items')
+                           ->where(
+                              'id',
+                              $boxSaleOrderItemId
+                           )
+                           ->update([
+                              'status' => 1
+                           ]);
+                  }
+               }
+            }
+            if($request->box_sale_order_id)
+            {
+               $pendingItems = DB::table('box_sale_order_items')
+                  ->where(
+                        'box_sale_order_id',
+                        $request->box_sale_order_id
+                  )
+                  ->where(
+                        'company_id',
+                        Session::get('user_company_id')
+                  )
+                  ->where(
+                        'delete',
+                        '0'
+                  )
+                  ->where(
+                        'status',
+                        '!=',
+                        2
+                  )
+                  ->count();
+               if($pendingItems == 0)
+               {
+                  DB::table('box_sale_orders')
+                        ->where(
+                           'id',
+                           $request->box_sale_order_id
+                        )
+                        ->update([
+                           'status' => 2
+                        ]);
+               }
+               else
+               {
+                  DB::table('box_sale_orders')
+                        ->where(
+                           'id',
+                           $request->box_sale_order_id
+                        )
+                        ->update([
+                           'status' => 1
+                        ]);
+               }
+            }
             array_push($desc_id_arr,$desc->id);
             $row_no = $key + 1;
             $piece_weights =
@@ -5543,6 +5874,33 @@ if(array_key_exists($good,$sale_item_array)){
 
          $desc = SaleDescription::where('sale_id', $sale->id)->get();
          foreach ($desc as $value) {
+
+            if(!empty($value->box_sale_order_item_id))
+            {
+               DB::table('sale_descriptions')
+                  ->where('id', $value->id)
+                  ->update([
+                     'delete' => '1',
+                     'deleted_at' => Carbon::now(),
+                     'deleted_by' => Session::get('user_id')
+                  ]);
+            }
+            
+            if(!empty($value->box_sale_order_item_id))
+            {
+               $orderItem = DB::table('box_sale_order_items')
+                  ->where(
+                        'id',
+                        $value->box_sale_order_item_id
+                  )
+                  ->first();
+               if($orderItem)
+               {
+                  $this->updateBoxSaleOrderStatus(
+                        $orderItem->box_sale_order_id
+                  );
+               }
+            }
                if(method_exists(CommonHelper::class, 'RewriteItemAverageByItem')){
                   CommonHelper::RewriteItemAverageByItem($sale->date, $value->goods_discription ?? '', $sale->series_no);
                }
@@ -6547,159 +6905,315 @@ public function exportSaleBill(Request $request)
          return $voucher_no;
       }
    }
-
    public function getBoxSaleOrders($partyId)
-{
+   {
 
-    $companyId =
-        Session::get('user_company_id');
+      $companyId =
+         Session::get('user_company_id');
+      $saleDate =
+         request()->sale_date;
+      $saleOrders = DB::table('box_sale_orders')
 
+         ->where(
+               'company_id',
+               $companyId
+         )
 
-    $saleOrders = DB::table('box_sale_orders')
+         ->where(
+               'party_id',
+               $partyId
+         )
 
-        ->where(
-            'company_id',
-            $companyId
-        )
+         ->where(
+               'delete',
+               '0'
+         )
 
-        ->where(
-            'party_id',
-            $partyId
-        )
+         ->where(
+               'status',
+               '1'
+         )
 
-        ->where(
-            'delete',
-            '0'
-        )
+         ->when($saleDate != '', function($q) use ($saleDate){
 
-        ->orderBy(
-            'id',
-            'DESC'
-        )
+               $q->whereDate(
+                  'order_date',
+                  '<=',
+                  $saleDate
+               );
 
-        ->get();
+         })
 
+         ->orderBy(
+               'id',
+               'DESC'
+         )
 
-    return response()->json($saleOrders);
-}
-public function getBoxSaleOrderItems($id)
-{
-
-    $companyId =
-        Session::get('user_company_id');
-
-
-    $items = DB::table('box_sale_order_items')
-
-        ->leftJoin(
-            'manage_items',
-            'manage_items.id',
-            '=',
-            'box_sale_order_items.item_id'
-        )
-
-        ->leftJoin(
-            'units',
-            'units.id',
-            '=',
-            'manage_items.u_name'
-        )
-
-        ->where(
-            'box_sale_order_items.box_sale_order_id',
-            $id
-        )
-
-        ->where(
-            'box_sale_order_items.company_id',
-            $companyId
-        )
-
-        ->where(
-            'box_sale_order_items.delete',
-            '0'
-        )
-
-        ->select(
-
-            'box_sale_order_items.id as so_item_id',
-
-            'box_sale_order_items.item_id',
-
-            'box_sale_order_items.qty',
-
-            'box_sale_order_items.price',
-
-            'manage_items.name',
-
-            'units.id as unit_id',
-
-            'units.s_name as unit_name'
-
-        )
-
-        ->get();
+         ->get();
 
 
-    $finalItems = [];
+      return response()->json($saleOrders);
+   }
+   public function getBoxSaleOrderItems($id)
+   {
+
+      $companyId =
+         Session::get('user_company_id');
 
 
-    foreach($items as $row)
-    {
+      $items = DB::table('box_sale_order_items')
 
-        $soldQty = DB::table('sale_descriptions')
+         ->leftJoin(
+               'manage_items',
+               'manage_items.id',
+               '=',
+               'box_sale_order_items.item_id'
+         )
 
-            ->where(
-                'box_sale_order_item_id',
-                $row->so_item_id
-            )
+         ->leftJoin(
+               'units',
+               'units.id',
+               '=',
+               'manage_items.u_name'
+         )
 
-            ->where(
-                'company_id',
-                $companyId
-            )
+         ->where(
+               'box_sale_order_items.box_sale_order_id',
+               $id
+         )
 
-            ->where(
-                'delete',
-                '0'
-            )
+         ->where(
+               'box_sale_order_items.company_id',
+               $companyId
+         )
 
-            ->sum('qty');
+         ->where(
+               'box_sale_order_items.delete',
+               '0'
+         )
 
+         ->select(
 
-        $pendingQty =
+               'box_sale_order_items.id as so_item_id',
 
-            (float)$row->qty
+               'box_sale_order_items.item_id',
 
-            -
+               'box_sale_order_items.qty',
 
-            (float)$soldQty;
+               'box_sale_order_items.price',
 
+               'manage_items.name',
 
-        if($pendingQty > 0)
-        {
+               'units.id as unit_id',
 
-            $finalItems[] = [
+               'units.s_name as unit_name'
 
-                'so_item_id' => $row->so_item_id,
+         )
 
-                'item_id' => $row->item_id,
-
-                'item_name' => $row->name,
-
-                'pending_qty' => round($pendingQty,2),
-
-                'price' => $row->price,
-
-                'unit' => $row->unit_id,
-
-                'unit_name' => $row->unit_name
-
-            ];
-        }
-    }
+         ->get();
 
 
-    return response()->json($finalItems);
-}
+      $finalItems = [];
+
+
+      foreach($items as $row)
+      {
+
+         $soldQty = DB::table('sale_descriptions')
+
+               ->where(
+                  'box_sale_order_item_id',
+                  $row->so_item_id
+               )
+
+               ->where(
+                  'company_id',
+                  $companyId
+               )
+
+               ->where(
+                  'delete',
+                  '0'
+               )
+
+               ->sum('qty');
+
+
+         $pendingQty =
+
+               (float)$row->qty
+
+               -
+
+               (float)$soldQty;
+
+
+         if($pendingQty > 0)
+         {
+
+               $finalItems[] = [
+
+                  'so_item_id' => $row->so_item_id,
+
+                  'item_id' => $row->item_id,
+
+                  'item_name' => $row->name,
+
+                  'pending_qty' => round($pendingQty,2),
+
+                  'price' => $row->price,
+
+                  'unit' => $row->unit_id,
+
+                  'unit_name' => $row->unit_name
+
+               ];
+         }
+      }
+
+
+      return response()->json($finalItems);
+   }
+   public function getPartyBoxSaleOrders($partyId)
+   {
+
+      $companyId =
+         Session::get('user_company_id');
+
+
+      $orders = DB::table('box_sale_orders')
+
+         ->where('party_id', $partyId)
+
+         ->where('company_id', $companyId)
+
+         ->where('delete', '0')
+
+         ->where('status', '1')
+
+         ->select(
+               'id',
+               'sale_order_no'
+         )
+
+         ->orderBy('id', 'desc')
+
+         ->get();
+
+
+      return response()->json($orders);
+
+   }
+   public function updateBoxSaleOrderStatus($boxSaleOrderId)
+   {
+
+      $companyId =
+         Session::get('user_company_id');
+
+      $items = DB::table('box_sale_order_items')
+
+         ->where(
+               'box_sale_order_id',
+               $boxSaleOrderId
+         )
+
+         ->where(
+               'company_id',
+               $companyId
+         )
+
+         ->where(
+               'delete',
+               '0'
+         )
+
+         ->get();
+
+      $allCompleted = true;
+
+
+      foreach($items as $item)
+      {
+
+         $dispatchedQty = DB::table('sale_descriptions')
+
+               ->where(
+                  'box_sale_order_item_id',
+                  $item->id
+               )
+
+               ->where(
+                  'company_id',
+                  $companyId
+               )
+
+               ->where(
+                  'delete',
+                  '0'
+               )
+
+               ->sum('qty');
+
+         if(
+               (float)$dispatchedQty
+               >=
+               (float)$item->qty
+         )
+         {
+
+               DB::table('box_sale_order_items')
+
+                  ->where(
+                     'id',
+                     $item->id
+                  )
+
+                  ->update([
+
+                     'status' => 2
+
+                  ]);
+
+         }
+         else
+         {
+
+               DB::table('box_sale_order_items')
+
+                  ->where(
+                     'id',
+                     $item->id
+                  )
+
+                  ->update([
+
+                     'status' => 1
+
+                  ]);
+
+
+               $allCompleted = false;
+
+         }
+
+      }
+
+      DB::table('box_sale_orders')
+
+         ->where(
+               'id',
+               $boxSaleOrderId
+         )
+
+         ->update([
+
+               'status' =>
+
+                  $allCompleted
+                  ? 2
+                  : 1
+
+         ]);
+
+   }
 }

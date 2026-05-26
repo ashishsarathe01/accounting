@@ -36,11 +36,13 @@
                         <a href="{{ route('spare-part.create') }}">
                             <button class="btn btn-primary btn-sm d-flex align-items-center">CREATE REQUIREMENT</button>
                         </a>
+                        @can('view-module',247)
                         <a href="{{ route('spare-part.vehicle.index') }}">
                             <button class="btn btn-secondary btn-sm d-flex align-items-center">
                                 MANAGE VEHICLE ENTRY
                             </button>
                         </a>
+                        @endcan
                     </div>
 
                     <div class="transaction-table bg-white table-view shadow-sm mt-3">

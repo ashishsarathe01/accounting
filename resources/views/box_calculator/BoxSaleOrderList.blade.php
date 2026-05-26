@@ -137,40 +137,31 @@
                 {{-- DISPATCHED --}}
                 <td style="text-align:right;">
 
-                    -
+                    {{ number_format($row->dispatched_qty ?? 0,2) }}
 
                 </td>
 
                 {{-- PENDING --}}
                 <td style="text-align:right;">
 
-                    -
+                    {{ number_format($row->pending_qty ?? 0,2) }}
 
                 </td>
 
                 {{-- ACTION --}}
                 <td class="text-center">
-
-                    {{-- EDIT --}}
-                    <a href="{{ route('box.sale.order.edit', $row->id) }}">
-
-                        <img src="{{ asset('public/assets/imgs/edit-icon.svg') }}"
-                             class="px-1">
-
-                    </a>
-
-                    {{-- DELETE --}}
-                    <button class="border-0 bg-transparent delete"
-
-                            data-id="{{ $row->id }}">
-
-                        <img src="{{ asset('public/assets/imgs/delete-icon.svg') }}"
-                             class="px-1">
-
-                    </button>
-
+                    @if($row->used_in_sale == 0)
+                        <a href="{{ route('box.sale.order.edit', $row->id) }}">
+                            <img src="{{ asset('public/assets/imgs/edit-icon.svg') }}"
+                                class="px-1">
+                        </a>
+                        <button class="border-0 bg-transparent delete"
+                                data-id="{{ $row->id }}">
+                            <img src="{{ asset('public/assets/imgs/delete-icon.svg') }}"
+                                class="px-1">
+                        </button>
+                    @endif
                 </td>
-
             </tr>
 
         @endforeach

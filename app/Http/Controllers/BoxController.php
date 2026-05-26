@@ -19,63 +19,63 @@ class BoxController extends Controller
 
 
     public function list()
-{
-    $companyId =
-    Session::get('user_company_id');
-
-    $boxes = DB::table('box_calculations')
-
-    ->where(
-        'company_id',
-        $companyId
-    )
-
-    ->orderBy('id','desc')
-
-    ->get();
-
-    return view(
-        'box_calculator.list',
-        compact('boxes')
-    );
-}
-    public function advanceindex()
-{
-    $companyId =
+    {
+        $companyId =
         Session::get('user_company_id');
 
-    $config = DB::table(
-        'box_calculator_configurations'
-    )
+        $boxes = DB::table('box_calculations')
 
-    ->where(
-        'company_id',
-        $companyId
-    )
-
-    ->first();
-
-    $itemGroups = ItemGroups::where(
-                        'delete',
-                        '=',
-                        '0'
-                    )
-
-                    ->where(
-                        'company_id',
-                        $companyId
-                    )
-
-                    ->get();
-
-    return view(
-        'box_calculator.advanceindex',
-        compact(
-            'config',
-            'itemGroups'
+        ->where(
+            'company_id',
+            $companyId
         )
-    );
-}
+
+        ->orderBy('id','desc')
+
+        ->get();
+
+        return view(
+            'box_calculator.list',
+            compact('boxes')
+        );
+    }
+    public function advanceindex()
+    {
+        $companyId =
+            Session::get('user_company_id');
+
+        $config = DB::table(
+            'box_calculator_configurations'
+        )
+
+        ->where(
+            'company_id',
+            $companyId
+        )
+
+        ->first();
+
+        $itemGroups = ItemGroups::where(
+                            'delete',
+                            '=',
+                            '0'
+                        )
+
+                        ->where(
+                            'company_id',
+                            $companyId
+                        )
+
+                        ->get();
+
+        return view(
+            'box_calculator.advanceindex',
+            compact(
+                'config',
+                'itemGroups'
+            )
+        );
+    }
 
 
     public function saveAdvanceCalculation(Request $request)
@@ -171,45 +171,40 @@ class BoxController extends Controller
                     ->first();
 
                     $manageItemId = DB::table('manage_items')
-
-                    ->insertGetId([
-
-                        'company_id' => $companyId,
-
-                        'name' => $request->box_name,
-
-                        'p_name' => $request->box_name,
-
-                        'u_name' => $config->unit_id ?? null,
-
-                        'hsn_code' => $config->hsn_code ?? null,
-
-                        'gst_rate' => $request->gst_percent,
-
-                        'item_type' => $config->item_type ?? 'taxable',
-
-                        'g_name' => $request->g_name,
-
-                        'status' => '1',
-
-                        'delete' => '0',
-
-                        'created_by' => Session::get('user_id'),
-
-                        'created_at' => now(),
-
-                        'updated_at' => now()
-                    ]);
-
-                    DB::table('box_calculations')
-
-                    ->where('id',$id)
-
-                    ->update([
-
-                        'manage_item_id' => $manageItemId
-                    ]);
-                }
+                        ->insertGetId([
+                            'company_id' => $companyId,
+                            'name' => $request->box_name,
+                            'p_name' => $request->box_name,
+                            'u_name' => $config->unit_id ?? null,
+                            'hsn_code' => $config->hsn_code ?? null,
+                            'gst_rate' => $request->gst_percent,
+                            'item_type' => $config->item_type ?? 'taxable',
+                            'g_name' => $request->g_name,
+                            'status' => '1',
+                            'delete' => '0',
+                            'created_by' => Session::get('user_id'),
+                            'created_at' => now(),
+                            'updated_at' => now()
+                        ]);
+                        DB::table('item_gst_rate')
+                        ->insert([
+                            'item_id' => $manageItemId,
+                            'gst_rate' => $request->gst_percent,
+                            'item_type' => $config->item_type ?? 'taxable',
+                            'comp_id' => $companyId,
+                            'effective_from' => '2025-09-22',
+                            'created_by' => Session::get('user_id'),
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                            'updated_by' => Session::get('user_id'),
+                            'updated_by_type' => null
+                        ]);
+                        DB::table('box_calculations')
+                        ->where('id',$id)
+                        ->update([
+                            'manage_item_id' => $manageItemId
+                        ]);
+                    }
             }
             if(!empty($request->layers))
             {

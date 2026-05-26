@@ -29,6 +29,7 @@ class AccountProductionController extends Controller
      */
     public function index(Request $request)
     {
+      Gate::authorize('action-module', 246);
          $input = $request->all();
          $from_date = null;
          $to_date = null;

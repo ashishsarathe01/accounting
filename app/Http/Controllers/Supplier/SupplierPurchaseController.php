@@ -25,6 +25,7 @@ use App\Models\ManageItems;
 use App\Models\SaleOrderSetting;
 use App\Models\FuelSupplierRate;
 use App\Models\SparePartSupplier;
+use Gate;
 class SupplierPurchaseController extends Controller
 {
     public function manageSupplierPurchase()
@@ -3546,6 +3547,7 @@ public function getUserDefaultStatusBoilerFuel()
 
     public function sparePartVehicleEntry()
 {
+    Gate::authorize('action-module', 247);
     $companyId = Session::get('user_company_id');
 
     // Get SPARE PART group IDs

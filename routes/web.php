@@ -114,6 +114,12 @@ use App\Http\Controllers\BoxController;
 use App\Http\Controllers\production\OpeningStockReelWiseController;
 use App\Http\Controllers\MerchantCredentials\MerchantCredentialsController;
 use App\Http\Controllers\TransactionConfiguration\TransactionConfigurationController;
+<<<<<<< Updated upstream
+=======
+use App\Http\Controllers\BoxSaleOrderController;
+use App\Http\Controllers\CompanySaleType\CompanySaleTypeController;
+use App\Http\Controllers\ExportMonthlyReportController;
+>>>>>>> Stashed changes
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -164,7 +170,44 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
       Route::post('manage-users/{id}/admin-privileges/save', [ManageUserController::class, 'saveAdminPrivileges'])->name('manageUser.saveAdminPrivileges');
       Route::get('/database-backup', [DatabaseBackupController::class, 'index'])->name('database.backup.index');
       Route::get('/database-backup/download', [DatabaseBackupController::class, 'download'])->name('database.backup.download');
-      
+      Route::get(
+    '/company-sale-types',
+    [CompanySaleTypeController::class,'index']
+)->name('company-sale-types.index');
+
+Route::get(
+    '/company-sale-types/create',
+    [CompanySaleTypeController::class,'create']
+)->name('company-sale-types.create');
+
+Route::post(
+    '/company-sale-types/store',
+    [CompanySaleTypeController::class,'store']
+)->name('company-sale-types.store');
+
+Route::get(
+    '/company-sale-types/edit/{id}',
+    [CompanySaleTypeController::class,'edit']
+)->name('company-sale-types.edit');
+
+Route::post(
+    '/company-sale-types/update/{id}',
+    [CompanySaleTypeController::class,'update']
+)->name('company-sale-types.update');
+
+Route::post(
+    '/company-sale-types/delete',
+    [CompanySaleTypeController::class,'delete']
+)->name('company-sale-types.delete');
+Route::get(
+    '/set-company-sale-type',
+    [CompanySaleTypeController::class,'setCompanySaleType']
+)->name('company-sale-types.set');
+
+Route::post(
+    '/set-company-sale-type/update',
+    [CompanySaleTypeController::class,'updateCompanySaleType']
+)->name('company-sale-types.set.update');
         Route::get('merchant/backup/create/{company_id}/{status:?}',[MechantDatabaseBackupController::class,'createBackup']);
         Route::get('merchant/backup/list/{user_id}/{company_id:?}',[MechantDatabaseBackupController::class,'backupList']);
         Route::post('merchant/backup/restore/{id}',[MechantDatabaseBackupController::class,'restoreBackup']);
@@ -1385,4 +1428,79 @@ Route::get('credit-note-configuration',[TransactionConfigurationController::clas
 Route::post('save-credit-note-configuration',[TransactionConfigurationController::class,'saveCreditNoteConfiguration'])->name('save.credit.note.configuration');
 Route::get('debit-note-configuration',[TransactionConfigurationController::class,'debitNoteConfiguration'])->name('debit.note.configuration');
 Route::post('save-debit-note-configuration',[TransactionConfigurationController::class,'saveDebitNoteConfiguration'])->name('save.debit.note.configuration');
+<<<<<<< Updated upstream
+=======
+
+Route::get(
+    '/box-sale-order',
+    [BoxSaleOrderController::class, 'index']
+)->name('box.sale.order.index');
+
+
+Route::get(
+    '/box-sale-order-create',
+    [BoxSaleOrderController::class, 'create']
+)->name('box.sale.order.create');
+
+
+Route::post(
+    '/box-sale-order-store',
+    [BoxSaleOrderController::class, 'store']
+)->name('box.sale.order.store');
+
+
+Route::get(
+    '/box-sale-order-edit/{id}',
+    [BoxSaleOrderController::class, 'edit']
+)->name('box.sale.order.edit');
+
+
+Route::post(
+    '/box-sale-order-update/{id}',
+    [BoxSaleOrderController::class, 'update']
+)->name('box.sale.order.update');
+
+
+Route::get(
+    '/box-sale-order-delete/{id}',
+    [BoxSaleOrderController::class, 'delete']
+)->name('box.sale.order.delete');
+
+
+Route::get(
+    '/box-sale-order-item-details/{id}',
+    [BoxSaleOrderController::class, 'getItemDetails']
+)->name('box.sale.order.item.details');
+
+Route::get(
+    'get-box-sale-orders/{partyId}',
+    [SalesController::class, 'getBoxSaleOrders']
+)->name('get.box.sale.orders');
+
+Route::get(
+    'get-box-sale-order-items/{id}',
+    [SalesController::class, 'getBoxSaleOrderItems']
+)->name('get.box.sale.order.items');
+Route::get(
+    'get-party-box-sale-orders/{partyId}',
+    [SalesController::class,
+    'getPartyBoxSaleOrders']
+);
+Route::get(
+    '/export-monthly-report',
+
+    [ExportMonthlyReportController::class,
+    'index']
+
+)->name('export.monthly.report');
+
+
+Route::get(
+    '/export-monthly-report-download',
+
+    [ExportMonthlyReportController::class,
+    'download']
+
+)->name('export.monthly.report.download');
+>>>>>>> Stashed changes
 });

@@ -12,10 +12,12 @@ use App\Models\SupplierLocation;
 use App\Models\SupplierPurchaseVehicleDetail;
 use DB;
 use Session;
+use Gate;
 class BusinessActivityLogController extends Controller
 {
     public function index()
     {
+        Gate::authorize('action-module', 251);
         $companyId = session('user_company_id');
 
         $logs = BusinessActivityLog::where('company_id', $companyId)
