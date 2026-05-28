@@ -780,7 +780,9 @@ class SalesController extends Controller
 
 }
 
-      if(
+if(
+    $request->sale_order_id
+    &&
     $request->filled('goods_discription')
     &&
     is_array($request->goods_discription)
