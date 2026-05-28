@@ -1952,7 +1952,8 @@ class SalesController extends Controller
                         ->with('sale_order_items',$sale_order_items)
                         ->with('sale_enter_data',$sale_enter_data)
                         ->with('new_order',$new_order)
-                        ->with('cash_group_ids',$cash_group_ids);
+                        ->with('cash_group_ids',$cash_group_ids)
+                        ->with('company_sale_type',$comp->company_sale_type);
          }else if($comp->company_sale_type=='TAAROBAAR'){
             return view('edittaarobaarsale')
                ->with('production_module_status', $production_module_status)
@@ -1988,7 +1989,8 @@ class SalesController extends Controller
                ->with('sale_enter_data',$sale_enter_data)
                ->with('new_order',$new_order)
                ->with('item', $manageitems)
-               ->with('cash_group_ids',$cash_group_ids);
+               ->with('cash_group_ids',$cash_group_ids)
+               ->with('company_sale_type',$comp->company_sale_type);
          }else{
             return view('editSale')
                      ->with('production_module_status', $production_module_status)
@@ -2019,7 +2021,8 @@ class SalesController extends Controller
                      ->with('sale_order_items',$sale_order_items)
                      ->with('sale_enter_data',$sale_enter_data)
                      ->with('new_order',$new_order)
-                     ->with('cash_group_ids',$cash_group_ids);
+                     ->with('cash_group_ids',$cash_group_ids)
+                     ->with('company_sale_type',$comp->company_sale_type);
          }
    }
 
@@ -4496,12 +4499,12 @@ class SalesController extends Controller
                                 DB::raw('price'),
                                 DB::raw('u_name'),
                                 DB::raw('gst_rate'),
-                                DB::raw('units.s_name as unit_name')
+                                DB::raw('units.s_name as unit_name','unit_code')
                               ));
       $i = 1;
       if(count($item_data)>0){
          foreach ($item_data as $key => $value) {
-            $unit = $value->unit_name;
+            $unit = substr($value->unit_code, 0, 3);
             $item_freight = 0;
             $item_discount = 0;
             $item_total = $value->tprice;            
@@ -4984,7 +4987,7 @@ class SalesController extends Controller
                 $response = [
                      'success' => false,
                      'data'    => "",
-                     'message' => "Token Issue",
+                     'message' => "Token Issue - ".$result->error->message,
                   ];
                   return response()->json($response, 200);
              }
@@ -5078,7 +5081,7 @@ class SalesController extends Controller
          if(count($item_data)>0){
             foreach ($item_data as $key => $value) {
                $unit = $value->u_name;
-               $qtyUnit = Units::select('s_name')->where('id',$unit)->first();
+               $qtyUnit = substr(Units::where('id', $unit)->value('unit_code'), 0, 3);
                $item_freight = 0;
                $item_discount = 0;
                $item_total = $value->tprice;            
@@ -5128,7 +5131,7 @@ class SalesController extends Controller
                   "productDesc"=>$value->name,
                   "hsnCode"=>(int)$value->hsn_code,
                   "quantity"=>(float)$value->tweight,
-                  "qtyUnit"=>$qtyUnit->s_name,
+                  "qtyUnit"=>$qtyUnit,
                   "taxableAmount"=>(float)$item_total,
                   "sgstRate"=>$cgst_rate,
                   "cgstRate"=>$sgst_rate,
@@ -5228,7 +5231,7 @@ class SalesController extends Controller
                "vehicleType"=>"R",
                "itemList"=>$ItemList
             );
-         }       
+         }
          
          $curl = curl_init();
          curl_setopt_array($curl, array(
@@ -7318,4 +7321,290 @@ public function exportSaleBill(Request $request)
 
       ]);
    }
+   public function bulkDeletePage()
+{
+    Gate::authorize('action-module',62);
+
+    return view('bulk_delete');
+}
+
+public function bulkDeleteSalesByDate(Request $request)
+{
+    Gate::authorize('action-module',62);
+
+    $request->validate([
+        'from_date' => 'required|date',
+        'to_date'   => 'required|date',
+    ]);
+
+    DB::beginTransaction();
+
+    try {
+
+        $sales = Sales::whereBetween('date', [
+                        $request->from_date,
+                        $request->to_date
+                    ])
+                    ->where('delete', '0')
+                    ->orderBy('date', 'ASC')
+                    ->get();
+
+        $deleted = 0;
+        $skipped = 0;
+
+        foreach ($sales as $sale) {
+
+            // CHECK CREDIT NOTE / DEBIT NOTE
+            $check_entry_in_cn_dn = DB::table('sales')
+                ->select(
+                    DB::raw('(select count(*) from sales_returns where sales_returns.sale_bill_id = sales.id and voucher_type="SALE" and status="1" and sales_returns.delete="0")  as sale_return_count'),
+                    DB::raw('(select count(*) from purchase_returns where purchase_returns.purchase_bill_id = sales.id and voucher_type="SALE" and status="1" and purchase_returns.delete="0")  as purchase_return_count')
+                )
+                ->where('id',$sale->id)
+                ->first();
+
+            if (
+                $check_entry_in_cn_dn &&
+                (
+                    $check_entry_in_cn_dn->sale_return_count > 0 ||
+                    $check_entry_in_cn_dn->purchase_return_count > 0
+                )
+            ) {
+                $skipped++;
+                continue;
+            }
+
+            // OLD SNAPSHOT
+            $oldSnapshot = [
+                'sale' => $sale->toArray(),
+
+                'items' => SaleDescription::where('sale_id', $sale->id)
+                            ->get()
+                            ->toArray(),
+
+                'sundries' => SaleSundry::where('sale_id', $sale->id)
+                            ->get()
+                            ->toArray(),
+
+                'item_ledgers' => ItemLedger::where('source', 1)
+                                    ->where('source_id', $sale->id)
+                                    ->get()
+                                    ->toArray(),
+
+                'account_ledgers' => AccountLedger::where('entry_type', 1)
+                                        ->where('entry_type_id', $sale->id)
+                                        ->get()
+                                        ->toArray(),
+
+                'item_average_details' => ItemAverageDetail::where('sale_id', $sale->id)
+                                                ->where('type', 'SALE')
+                                                ->get()
+                                                ->toArray(),
+            ];
+
+            // MAIN SALE DELETE
+            $sale->delete      = '1';
+            $sale->deleted_at  = Carbon::now();
+            $sale->deleted_by  = Session::get('user_id');
+            $sale->update();
+
+            // DELETE ITEM AVERAGE
+            ItemAverageDetail::where('sale_id',$sale->id)
+                ->where('type','SALE')
+                ->delete();
+
+            // SALE DESCRIPTION
+            $desc = SaleDescription::where('sale_id',$sale->id)->get();
+
+            foreach ($desc as $value) {
+
+                $reel_count = ItemSizeStock::where('sale_description_id', $value->id)
+                    ->count();
+
+                CommonHelper::updateDailyReelStock(
+                    Session::get('user_company_id'),
+                    $value->goods_discription,
+                    $sale->date,
+                    0,
+                    0,
+                    -$reel_count,
+                    -$value->qty
+                );
+            }
+
+            foreach ($desc as $value) {
+                CommonHelper::RewriteItemAverageByItem(
+                    $sale->date,
+                    $value->goods_discription,
+                    $sale->series_no
+                );
+            }
+
+            SaleDescription::where('sale_id',$sale->id)
+                ->update([
+                    'delete'=>'1',
+                    'deleted_at'=>Carbon::now(),
+                    'deleted_by'=>Session::get('user_id')
+                ]);
+
+            // ACCOUNT LEDGER
+            AccountLedger::where('entry_type',1)
+                ->where('entry_type_id',$sale->id)
+                ->update([
+                    'delete_status'=>'1',
+                    'deleted_at'=>Carbon::now(),
+                    'deleted_by'=>Session::get('user_id')
+                ]);
+
+            // SUNDRY
+            SaleSundry::where('sale_id',$sale->id)
+                ->update([
+                    'delete'=>'1',
+                    'deleted_at'=>Carbon::now(),
+                    'deleted_by'=>Session::get('user_id')
+                ]);
+
+            // ITEM LEDGER
+            ItemLedger::where('source',1)
+                ->where('source_id',$sale->id)
+                ->update([
+                    'delete_status'=>'1',
+                    'deleted_at'=>Carbon::now(),
+                    'deleted_by'=>Session::get('user_id')
+                ]);
+
+            // ITEM PARAMETER STOCK
+            ItemParameterStock::where('stock_out_id',$sale->id)
+                ->where('stock_out_type','SALE')
+                ->where('status',0)
+                ->update([
+                    'status'=>1,
+                    'stock_out_id'=>null
+                ]);
+
+            // VEHICLE TXN
+            SaleVehicleTxn::where('sale_id',$sale->id)->delete();
+
+            // TRANSPORTER JOURNAL
+            if($sale->transporter_journal_id){
+
+                JournalDetails::where(
+                    'journal_id',
+                    $sale->transporter_journal_id
+                )->delete();
+
+                Journal::where(
+                    'id',
+                    $sale->transporter_journal_id
+                )->delete();
+
+                AccountLedger::where('entry_type',7)
+                    ->where(
+                        'entry_type_id',
+                        $sale->transporter_journal_id
+                    )
+                    ->delete();
+            }
+
+            // SALE ORDER RESET
+            if(!empty($sale->sale_order_id)){
+
+                $saleOrder = SaleOrder::with('items.gsms.details')
+                    ->where('id', $sale->sale_order_id)
+                    ->first();
+
+                if ($saleOrder) {
+
+                    $saleOrder->update([
+                        'status' => 0,
+                        'updated_at'=>Carbon::now(),
+                        'updated_by'=>Session::get('user_id')
+                    ]);
+
+                    foreach ($saleOrder->items as $item) {
+
+                        $item->update(['status' => 0]);
+
+                        foreach ($item->gsms as $gsm) {
+
+                            $gsm->update(['status' => 0]);
+
+                            foreach ($gsm->details as $detail) {
+                                $detail->update(['status' => 0]);
+                            }
+                        }
+                    }
+
+                    $item_stock_id = SaleOrderItemWeight::where(
+                        'sale_order_id',
+                        $sale->sale_order_id
+                    )->pluck('weight_id')->toArray();
+
+                    ItemSizeStock::whereIn('id',$item_stock_id)
+                        ->update([
+                            "status"=>1,
+                            'sale_order_id'=>"",
+                            'sale_id'=>"",
+                            'sale_description_id'=>""
+                        ]);
+
+                    SaleOrderItemGsmSize::where(
+                        "sale_orders_id",
+                        $sale->sale_order_id
+                    )->update([
+                        "sale_order_qty"=>""
+                    ]);
+
+                    SaleOrderItemWeight::where(
+                        'sale_order_id',
+                        $sale->sale_order_id
+                    )->delete();
+
+                    Sales::where('id',$sale->id)
+                        ->update([
+                            "sale_order_id"=>""
+                        ]);
+                }
+            }
+
+            // ITEM SIZE STOCK
+            ItemSizeStock::where('sale_id', $sale->id)
+                ->update([
+                    'status' => 1,
+                    'sale_id' => null,
+                    'sale_description_id' => null
+                ]);
+
+            // ACTIVITY LOG
+            ActivityLog::create([
+                'module_type' => 'sale',
+                'module_id'   => $sale->id,
+                'action'      => 'bulk_delete',
+                'old_data'    => $oldSnapshot,
+                'new_data'    => null,
+                'action_by'   => Session::get('user_id'),
+                'company_id'  => Session::get('user_company_id'),
+                'action_at'   => now(),
+            ]);
+
+            $deleted++;
+        }
+
+        DB::commit();
+
+        return back()->with(
+            'success',
+            "$deleted sales deleted successfully. $skipped skipped due to Debit/Credit Note dependency."
+        );
+
+    } catch (\Exception $e) {
+
+        DB::rollback();
+
+        return back()->with(
+            'error',
+            'Error : '.$e->getMessage()
+        );
+    }
+}
 }

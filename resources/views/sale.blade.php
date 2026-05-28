@@ -422,27 +422,14 @@
          </div>
 
          <div class="modal-footer py-2 px-3">
-
             <button type="button"
                   class="btn btn-primary"
                   id="extend_eway_btn"
                   style="display:none;">
-
                Extend E-Way Bill
-
             </button>
-
-
-            <button type="button"
-                    class="btn btn-success"
-                    id="mark_as_reached_btn">
-
-               Mark As Reached
-
-            </button>
-
+            <button type="button" class="btn btn-success" id="mark_as_reached_btn">Mark As Reached</button>
          </div>
-
       </div>
 
    </div>
@@ -549,7 +536,7 @@
             showExtendBtn = true;
          }
       }
-
+      showExtendBtn = true;
       if(status == 1)
       {
          $("#eway_delivery_text").html(
@@ -862,6 +849,47 @@
       printWindow.document.write(tableHTML);
       printWindow.document.close();
       printWindow.print();
+   });
+
+   $("#extend_eway_btn").click(function () {
+
+      let saleId = $("#eway_sale_id").val();
+
+      $.ajax({
+
+         url: "{{ route('sale.extend.eway') }}",
+
+         type: "POST",
+
+         data: {
+
+            _token: "{{ csrf_token() }}",
+
+            sale_id: saleId
+
+         },
+
+         success: function(response)
+         {
+            if(response.success == true)
+            {
+               alert(response.message);
+
+               location.reload();
+            }
+            else
+            {
+               alert(response.message);
+            }
+         },
+
+         error: function()
+         {
+            alert('Something went wrong.');
+         }
+
+      });
+
    });
 </script>
 @endsection

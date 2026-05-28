@@ -372,6 +372,8 @@ Route::group(['middleware' => ['merchantloginstatus']], function () {
    Route::get('purchase-import-view', [PurchaseController::class, 'purchaseImportView'])->name('purchase-import-view');
    Route::post('purchase-import-process', [PurchaseController::class, 'purchaseImportProcess'])->name('purchase-import-process');
    Route::post('account-manage-item-store', [SalesController::class, 'manageItemStore'])->name('account-manage-item-store');
+   Route::get('sale/bulk-delete',[SalesController::class, 'bulkDeletePage'])->name('sale.bulk.delete.page');
+   Route::post('sale/bulk-delete',[SalesController::class, 'bulkDeleteSalesByDate'])->name('sale.bulk.delete');
    Route::get('/get-item-cost', [SalesController::class, 'getLatestCost']);
    Route::post('account-store', [SalesController::class, 'addAccountStore'])->name('account-store');
    Route::Resource('sale', SalesController::class);
@@ -1429,11 +1431,6 @@ Route::post('save-credit-note-configuration',[TransactionConfigurationController
 Route::get('debit-note-configuration',[TransactionConfigurationController::class,'debitNoteConfiguration'])->name('debit.note.configuration');
 Route::post('save-debit-note-configuration',[TransactionConfigurationController::class,'saveDebitNoteConfiguration'])->name('save.debit.note.configuration');
 
-Route::post(
-   'sale/mark-reached',
-   [SalesController::class, 'markReached']
-)->name('sale.mark.reached');
-
 
 Route::get(
     '/box-sale-order',
@@ -1506,5 +1503,17 @@ Route::get(
     'download']
 
 )->name('export.monthly.report.download');
+Route::get(
+    '/reel-info',
+    [ProductionController::class,
+    'reelInfo']
+
+)->name('reel.info');
+Route::post(
+    '/reel-info',
+    [ProductionController::class,
+    'reelInfo']
+
+)->name('reel.info');
 
 });

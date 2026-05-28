@@ -1159,6 +1159,9 @@
                                            <a href="{{ route('openingstock.filter') }}" class="text-blue">Reel Ledger </a>
                                         </li>
                                         @endcan
+                                        <li class="py-1 clickable-row-blue">
+                                           <a href="{{ route('reel.info') }}" class="text-blue">Track Reel</a>
+                                        </li>
                                      </ul>
                                   </div>
                                </li>
@@ -1284,7 +1287,7 @@
             <?php 
          } ?>
          
-            @if($company_sale_type->company_sale_type == 'BOX')
+            @if($company_sale_type && $company_sale_type->company_sale_type == 'BOX')
                <div class="card bg-blue pt-2 px-2 rounded-0 aside-bottom-divider">
                   <div class="card-header py-12 px-2 border-0 d-flex rounded-0" id="jobWorkHeading">
                      <a class="nav-link text-white font-14 dropdown-icon-img d-flex fw-500  p-0 collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#BoxBusinessManagement" aria-expanded="true" aria-controls="BoxBusinessManagement"><img src="{{ URL::asset('public/assets/imgs/administrator.svg')}}" class="me-2" alt="">Box Business Management</a>
@@ -1296,7 +1299,7 @@
                               Manage Rate
                            </li>
                         </a>
-                        <a href="{{ route('box-calculator.advance') }}">
+                        <a href="{{ route('box-calculator.list') }}">
                            <li class="font-14 fw-500 m-0 py-12 px-2 text-white border-radius-4 clickable-row">
                               Box Calculator
                            </li>

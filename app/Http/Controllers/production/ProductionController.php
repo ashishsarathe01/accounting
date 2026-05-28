@@ -2953,4 +2953,39 @@ public function updateMachineLoss(Request $request)
             'message'=>'Deleted successfully'
         ]);
     }
+    public function reelInfo(Request $request)
+    {
+        if($request->reel_no && !empty($request->reel_no)){
+            $company_id = Session::get('user_company_id');
+            $reels = ItemSizeStock::where('item_size_stocks.company_id', $company_id)
+                ->where('item_size_stocks.reel_no', $request->reel_no)
+                ->join('manage_items', 'item_size_stocks.item_id', '=', 'manage_items.id')
+                ->leftJoin('deckle_processes', 'item_size_stocks.deckle_id', '=', 'deckle_processes.id')
+                ->leftJoin('sales', 'item_size_stocks.sale_id', '=', 'sales.id')
+                ->leftJoin('stock_journal as sj', 'item_size_stocks.sj_generated_id', '=', 'sj.id')
+                ->leftJoin('stock_journal', 'item_size_stocks.sj_consumption_id', '=', 'stock_journal.id')
+                ->select(
+                    'manage_items.name as item_name',
+                    'item_size_stocks.reel_no',
+                    'item_size_stocks.size',
+                    'item_size_stocks.weight',
+                    'item_size_stocks.bf',
+                    'item_size_stocks.gsm',
+                    'item_size_stocks.status',
+                    'item_size_stocks.created_at',
+                    'deckle_processes.deckle_no',
+                    'sales.voucher_no_prefix',
+                    'sales.id as sale_id',
+                    'sj.voucher_no as sj_generated_voucher',
+                    'sj.id as sj_generated_id',
+                    'stock_journal.voucher_no as sj_consumption_voucher',
+                    'stock_journal.id as sj_consumption_id'
+                )
+                ->get();
+
+            return view('production.reel_info', compact('reels'));
+        }else{
+            return view('production.reel_info');
+        }
+    }
 }

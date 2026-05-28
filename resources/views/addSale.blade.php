@@ -1536,12 +1536,14 @@ function removeItem() {
       window.defaultItemsOptions =
          $('#item_id_1').html();
             window.calculateAmount = function(key=null) {
+               
          customer_gstin = $('#party_id option:selected').attr('data-state_code');
          let under_group = $('#party_id option:selected').attr('data-under_group'); 
          
          if(cash_group_ids.includes(Number(under_group))){
             customer_gstin = merchant_gstin.substring(0,2);
          } 
+         console.log("Customer GSTIN:", customer_gstin);
          if(customer_gstin==undefined || customer_gstin==""){
             return;
          }     

@@ -207,6 +207,7 @@ foreach($manageitems as $value) {
                        @error('material_center'){{$message}}@enderror                        
                      </ul>
                   </div>
+                  @if($company_sale_type=="BOX")
                   <div class="mb-4 col-md-4">
 
                      <label class="form-label font-14 font-heading">
@@ -240,6 +241,7 @@ foreach($manageitems as $value) {
                      </select>
 
                   </div>
+                  @endif
                </div>
                <div class=" transaction-table transaction-main-table bg-white table-view shadow-sm border-radius-8 mb-4">
                   <table id="example11" class="table-striped table m-0 shadow-sm table-bordered">
