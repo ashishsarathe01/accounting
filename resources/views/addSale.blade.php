@@ -1383,18 +1383,14 @@ data-unit_name="{{$item_list->unit}}"
          '<td class="w-min-50 action-cell" style="display: flex;"></td>' +
          '</tr>';
       $("#example11").append(newRow);
-      if(selectedSaleOrders.length > 0)
+if(selectedSaleOrders.length > 0)
 {
 
-    $('#item_id_' + add_more_count)
-        .html(
-            $('.item_id:first').html()
-        );
+    let firstRowOptions =
+        $('#item_id_1').html();
 
     $('#item_id_' + add_more_count)
-        .select2({
-            width:'100%'
-        });
+        .html(firstRowOptions);
 
 }
       $("#max_sale_descrption").val(add_more_count);
@@ -1565,12 +1561,12 @@ function reloadAllSaleOrderItems()
 
     if(selectedSaleOrders.length == 0)
     {
+        window.latestSaleOrderItemOptions =
+            itemOptions;
+
         $('.item_id').each(function(){
 
-            $(this)
-                .html(defaultItemsOptions)
-                .val('')
-                .trigger('change');
+            $(this).html(itemOptions);
 
         });
 
@@ -1600,7 +1596,7 @@ function reloadAllSaleOrderItems()
                 itemOptions += `
 
                     <option
-                        value="${row.item_id}"
+                        value="${row.so_item_id}"
 
                         data-price="${row.price}"
 
@@ -1616,7 +1612,7 @@ function reloadAllSaleOrderItems()
 
                         data-val="${row.unit_name}"
 
-                        data-itemid="${row.item_id}"
+                        data-item_id="${row.item_id}"
 
                         data-so_no="${row.sale_order_no}"
 
@@ -1636,28 +1632,29 @@ function reloadAllSaleOrderItems()
 
             });
 
+            window.latestSaleOrderItemOptions =
+                itemOptions;
+
             $('.item_id').each(function(){
 
-    let currentValue =
-        $(this).val();
+                let currentValue =
+                    $(this).val();
 
-    let currentHtml =
-        $(this).html();
+                $(this).html(itemOptions);
 
-    $(this).html(itemOptions);
+                if(
+                    currentValue != ''
+                    &&
+                    currentValue != null
+                )
+                {
 
-    if(currentValue != '')
-    {
-        $(this)
-            .val(currentValue)
-            .trigger('change');
-    }
+                    $(this)
+                        .val(currentValue);
 
-    $(this).select2({
-        width:'100%'
-    });
+                }
 
-});
+            });
 
         }
 
@@ -2912,7 +2909,13 @@ renderSelectedSaleOrders();
       }
       let rowId = $(this).attr("data-id");
       let selectedOption =
-      $(this).find('option:selected');
+    $(this).find('option:selected');
+
+      let soItemId =
+    $(this).val();
+
+let itemId =
+    selectedOption.attr('data-item_id');
 
       let price =
          selectedOption.attr('data-price');
@@ -2924,11 +2927,11 @@ renderSelectedSaleOrders();
     selectedOption.attr(
         'data-sale_order_id'
     );
-      soItemId =
-
-         selectedOption.attr(
-            'data-so_item_id'
-         );
+      $(this)
+    .attr(
+        'data-item-id',
+        itemId
+    );
       let unitName =
          selectedOption.attr(
             'data-unit_name'
@@ -3004,7 +3007,8 @@ $("#tr_" + rowId)
 
          calculateAmount();
       }
-      let newItemId = $(this).val();
+      let newItemId =
+    selectedOption.attr('data-item_id');
 
       let oldItemId = $(this).attr("data-prev-item");
 
@@ -3024,7 +3028,19 @@ $("#tr_" + rowId)
       $('#unit_tr_'+rowId).attr('data-config_status',$('option:selected', this).attr('data-config_status'));
 
       call_fun('tr_'+rowId);
-      getItemGstRate(newItemId,rowId);
+      if(
+    newItemId != ''
+    &&
+    newItemId != undefined
+    &&
+    newItemId != null
+)
+{
+    getItemGstRate(
+        newItemId,
+        rowId
+    );
+}
       if($('option:selected', this).attr('data-parameterized_stock_status') == 1){
          $('#unit_tr_'+rowId).css({ cursor: 'pointer' });
       }
@@ -4879,170 +4895,47 @@ $(document).on(
 
     let saleOrderId =
         $(this).val();
-let saleOrderText =
-    $('#box_sale_order_id option:selected').text();
 
-if(!saleOrderId){
-    return;
-}
+    let saleOrderText =
+        $('#box_sale_order_id option:selected')
+        .text();
 
-let alreadySelected =
-    selectedSaleOrders.find(
-        x => x.id == saleOrderId
-    );
+    if(!saleOrderId){
+        return;
+    }
 
-if(alreadySelected){
+    let alreadySelected =
+        selectedSaleOrders.find(
+            x => x.id == saleOrderId
+        );
 
-    alert('Sale Order already selected');
+    if(alreadySelected){
+
+        alert('Sale Order already selected');
+
+        $('#box_sale_order_id')
+            .val('')
+            .trigger('change');
+
+        return;
+    }
+
+    selectedSaleOrders.push({
+
+        id: saleOrderId,
+
+        text: saleOrderText
+
+    });
+
+    renderSelectedSaleOrders();
+
+    reloadAllSaleOrderItems();
 
     $('#box_sale_order_id')
         .val('')
         .trigger('change');
 
-    return;
-}
-
-selectedSaleOrders.push({
-
-    id: saleOrderId,
-
-    text: saleOrderText
-
-});
-
-renderSelectedSaleOrders();
-
-reloadAllSaleOrderItems();
-
-$('#box_sale_order_id')
-    .val('')
-    .trigger('change');
-$('#example11 tbody tr[id^="tr_"]')
-    .not('#tr_1')
-    .remove();
-
-    $('#item_id_1')
-    .html(defaultItemsOptions)
-    .val('')
-    .trigger('change');
-
-    $('#quantity_tr_1').val('');
-
-    $('#price_tr_1').val('');
-
-    $('#amount_tr_1').val('');
-
-    $('#unit_tr_1').val('');
-
-    $('#units_tr_1').val('');
-
-    $('#box_sale_order_item_id_1').val('');
-
-    $('#pending_qty_1').val('');
-
-    $('#config_status_1').val('');
-
-    $('#item_parameters_1').val('');
-
-    $('#tr_1 td:last').html(`
-
-   <svg xmlns="http://www.w3.org/2000/svg"
-      data-id="1"
-      class="bg-primary rounded-circle add_more_wrapper"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      style="cursor: pointer;"
-      tabindex="0"
-      role="button">
-
-      <path
-         d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z"
-         fill="white"
-      />
-
-   </svg>
-
-   `);
-
-    $('#totalSum').html('');
-
-    $('#total_taxable_amounts').val(0);
-
-    $('#bill_sundry_amt').html('');
-
-    $('#total_amounts').val(0);
-
-    $('.bill_amt').val('');
-
-    $('.tax_amount').html('');
-
-    if(saleOrderId == '')
-    {
-
-        $('.item_id').each(function(){
-
-            $(this).html(defaultItemsOptions);
-
-        });
-
-        return;
-    }
-
-    $.ajax({
-
-        url:
-            "{{ url('get-box-sale-order-items') }}/"
-            + saleOrderId,
-
-        type: "GET",
-
-        success: function(response)
-        {
-
-            let options =
-                '<option value="">Select Item</option>';
-
-
-            $.each(response, function(index, row){
-
-                options += `
-
-            <option value="${row.item_id}"
-
-               data-price="${row.price}"
-
-               data-unit_id="${row.unit}"
-
-               data-unit_name="${row.unit_name}"
-
-               data-pending_qty="${row.pending_qty}"
-
-               data-so_item_id="${row.so_item_id}">
-
-               ${row.item_name}
-
-               (Pending :
-               ${row.pending_qty})
-
-            </option>
-
-            `;
-
-            });
-            boxSaleOrderItemsOptions = options;
-
-            $('#item_id_1')
-                .html(options)
-                .trigger('change');
-
-        }
-
-    });
-$('#box_sale_order_id')
-    .val('')
-    .trigger('change');
 });
 
 </script>

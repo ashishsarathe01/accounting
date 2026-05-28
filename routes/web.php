@@ -1517,4 +1517,24 @@ Route::post(
 
 )->name('reel.info');
 
+Route::get(
+    '/box-sale-order-view/{id}',
+    [BoxSaleOrderController::class,'view']
+)->name('box.sale.order.view');
+
+Route::post(
+    'get-box-sale-order-items-multiple',
+    [SalesController::class,
+    'getBoxSaleOrderItemsMultiple']
+);
+Route::get(
+    '/check-box-sale-order-po',
+    [BoxSaleOrderController::class,'checkPoNumber']
+)->name('check.box.sale.order.po');
+
+
+Route::post(
+   'sale/mark-reached',
+   [SalesController::class, 'markReached']
+)->name('sale.mark.reached');
 });
