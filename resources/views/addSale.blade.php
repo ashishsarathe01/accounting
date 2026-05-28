@@ -49,6 +49,57 @@
        appearance: none;
        margin: 0; 
    }
+   .selected-so-wrapper{
+
+    display:flex;
+
+    flex-wrap:wrap;
+
+    gap:8px;
+
+    min-height:34px;
+
+    align-items:center;
+
+}
+
+.selected-so-badge{
+
+    background:#e7f1ff;
+
+    border:1px solid #0d6efd;
+
+    color:#0d6efd;
+
+    border-radius:20px;
+
+    padding:4px 10px;
+
+    font-size:13px;
+
+    font-weight:600;
+
+    display:flex;
+
+    align-items:center;
+
+    gap:8px;
+
+}
+
+.selected-so-remove{
+
+    cursor:pointer;
+
+    color:red;
+
+    font-weight:bold;
+
+    font-size:14px;
+
+    line-height:1;
+
+}
 </style>
 @php
    $to_pay_freight = "";
@@ -69,7 +120,7 @@
    <section class="list-of-view-company-section container-fluid">
       <div class="row vh-100">
          @include('layouts.leftnav')
-         <div class="col-md-12 ml-sm-auto  col-lg-9 px-md-4 bg-mint">
+         <div class="col-md-12 ml-sm-auto  col-lg-10 px-md-4 bg-mint">
              @if (session('error'))
              <div class="alert alert-danger" role="alert"> {{session('error')}}
              </div>
@@ -82,7 +133,8 @@
             
             <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Add Sales Voucher </h5>
             <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('sale.store') }}" id="saleForm">
-               @csrf
+            <div id="selected_sale_order_inputs"></div>   
+            @csrf
 
                <div class="row">
                   <input type="hidden" name="vehicle_info_type" value="{{request('vehicle_info_type')}}">
@@ -184,21 +236,45 @@
                      </ul>
                   </div>
                   @if($company_sale_type=="BOX")
-                     <div class="mb-4 col-md-4">
-                        <label class="form-label font-14 font-heading">
-                           Box Sale Order
-                        </label>
-                        <select class="form-select select2-single"
-                                 name="box_sale_order_id"
-                                 id="box_sale_order_id"
-                                 disabled>
-                           <option value="">
-                                 Select Party First
-                           </option>
-                        </select>
-                     </div>
-                  </div>
-               @endif
+
+<div class="mb-4 col-md-8">
+
+    <label class="form-label font-14 font-heading">
+
+        Box Sale Order
+
+    </label>
+
+    <div class="d-flex align-items-start gap-3">
+
+        {{-- SALE ORDER DROPDOWN --}}
+        <div style="width:320px;">
+
+            <select class="form-select select2-single"
+                    id="box_sale_order_id"
+                    disabled>
+
+                <option value="">
+
+                    Select Party First
+
+                </option>
+
+            </select>
+
+        </div>
+
+        {{-- SELECTED SALE ORDERS --}}
+        <div id="selected_sale_orders"
+             class="selected-so-wrapper">
+
+        </div>
+
+    </div>
+
+</div>
+
+@endif
                <div class="transaction-table transaction-main-table bg-white table-view shadow-sm border-radius-8 mb-4">
                   <table id="example11" class="table-striped table m-0 shadow-sm table-bordered">
                      <thead>
@@ -748,96 +824,7 @@ data-unit_name="{{$item_list->unit}}"
                </div>
             </form>
          </div>
-         <div class="col-lg-1 d-none d-lg-flex justify-content-center px-1">
-            <div class="shortcut-key w-100">
-               <p class="font-14 fw-500 font-heading m-0">Shortcut Keys</p>
-               <button class="p-2 transaction-shortcut-btn my-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Help">F1
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Help</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Account">
-                  <span class="border-bottom-black">F1</span><span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Account</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Item">
-                  <span class="border-bottom-black">F2</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Item</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Master">F3
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Master</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Voucher">
-                  <span class="border-bottom-black">F3</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Voucher</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Payment">
-                  <span class="border-bottom-black">F5</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Payment</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Receipt">
-                  <span class="border-bottom-black">F6</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Receipt</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Journal">
-                  <span class="border-bottom-black">F7</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Journal</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Sales">
-                  <span class="border-bottom-black">F8</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Sales</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-4 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Purchase">
-                  <span class="border-bottom-black">F9</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Purchase</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Balance Sheet">
-                  <span class="border-bottom-black">B</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Balance Sheet</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Trial Balance">
-                  <span class="border-bottom-black">T</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Trial Balance</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Stock Status">
-                  <span class="border-bottom-black">S</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Stock Status</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Acc. Ledger">
-                  <span class="border-bottom-black">L</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Acc. Ledger</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Item Summary">
-                  <span class="border-bottom-black">I</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Item Summary</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Item Ledger">
-                  <span class="border-bottom-black">D</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Item Ledger</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="GST Summary">
-                  <span class="border-bottom-black">G</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">GST Summary</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Switch User">
-                  <span class="border-bottom-black">U</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Switch User</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Configuration">
-                  <span class="border-bottom-black">F</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Configuration</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Lock Program">
-                  <span class="border-bottom-black">K</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Lock Program</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Training Videos">
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Training Videos</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="GST Portal">
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">GST Portal</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-4 text-ellipsis d-inline-block" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Search Menu">Search Menu
-               </button>
-            </div>
-         </div>
+         
       </div>
    </section>
 </div>
@@ -1396,16 +1383,20 @@ data-unit_name="{{$item_list->unit}}"
          '<td class="w-min-50 action-cell" style="display: flex;"></td>' +
          '</tr>';
       $("#example11").append(newRow);
-      if($('#box_sale_order_id').val() != '')
-      {
+      if(selectedSaleOrders.length > 0)
+{
 
-         $('#item_id_' + add_more_count)
-            .html(
-                  $('#item_id_1').html()
-            );
-      $('#item_id_' + add_more_count)
-         .trigger('change');
-      }
+    $('#item_id_' + add_more_count)
+        .html(
+            $('.item_id:first').html()
+        );
+
+    $('#item_id_' + add_more_count)
+        .select2({
+            width:'100%'
+        });
+
+}
       $("#max_sale_descrption").val(add_more_count);
       // Re-index serial numbers
       let k = 1;
@@ -1528,10 +1519,220 @@ function removeItem() {
   });
 }
 
-   
+        let selectedSaleOrders = [];
 
+function renderSelectedSaleOrders()
+{
+    let html = '';
+
+    $('#selected_sale_order_inputs').html('');
+
+    selectedSaleOrders.forEach(function(so){
+
+        html += `
+            <div class="selected-so-badge"
+                 data-sale-order-id="${so.id}">
+
+                ${so.text}
+
+                <span class="selected-so-remove"
+                      data-sale-order-id="${so.id}">
+
+                    ×
+
+                </span>
+
+            </div>
+        `;
+
+        $('#selected_sale_order_inputs').append(`
+
+            <input type="hidden"
+                   name="box_sale_order_ids[]"
+                   value="${so.id}"
+                   id="selected_so_input_${so.id}">
+
+        `);
+
+    });
+
+    $('#selected_sale_orders').html(html);
+}
+function reloadAllSaleOrderItems()
+{
+    let itemOptions =
+        '<option value="">Select Item</option>';
+
+    if(selectedSaleOrders.length == 0)
+    {
+        $('.item_id').each(function(){
+
+            $(this)
+                .html(defaultItemsOptions)
+                .val('')
+                .trigger('change');
+
+        });
+
+        return;
+    }
+
+    $.ajax({
+
+        url: "{{ url('get-box-sale-order-items-multiple') }}",
+
+        type: "POST",
+
+        data: {
+
+            _token: "{{ csrf_token() }}",
+
+            sale_order_ids:
+                selectedSaleOrders.map(x => x.id)
+
+        },
+
+        success: function(response)
+        {
+
+            response.forEach(function(row){
+
+                itemOptions += `
+
+                    <option
+                        value="${row.item_id}"
+
+                        data-price="${row.price}"
+
+                        data-pending_qty="${row.pending_qty}"
+
+                        data-so_item_id="${row.so_item_id}"
+
+                        data-unit_name="${row.unit_name}"
+
+                        data-unit_id="${row.unit_id}"
+
+                        data-percent="${row.gst_rate}"
+
+                        data-val="${row.unit_name}"
+
+                        data-itemid="${row.item_id}"
+
+                        data-so_no="${row.sale_order_no}"
+
+                        data-sale_order_id="${row.box_sale_order_id}"
+
+                    >
+
+                        ${row.item_name}
+
+                        (${row.pending_qty})
+
+                        (${row.sale_order_no})
+
+                    </option>
+
+                `;
+
+            });
+
+            $('.item_id').each(function(){
+
+    let currentValue =
+        $(this).val();
+
+    let currentHtml =
+        $(this).html();
+
+    $(this).html(itemOptions);
+
+    if(currentValue != '')
+    {
+        $(this)
+            .val(currentValue)
+            .trigger('change');
+    }
+
+    $(this).select2({
+        width:'100%'
+    });
+
+});
+
+        }
+
+    });
+}
    $(document).ready(function(){
-     
+$(document).on(
+    'click',
+    '.selected-so-remove',
+    function(){
+
+        let saleOrderId =
+            $(this).attr(
+                'data-sale-order-id'
+            );
+
+        $('tr[data-sale-order-id="' + saleOrderId + '"]')
+        .each(function(){
+
+            let rowId =
+                $(this)
+                .attr('id')
+                .replace('tr_','');
+
+            $('#item_id_' + rowId)
+                .val('')
+                .trigger('change');
+
+            $('#quantity_tr_' + rowId)
+                .val('');
+
+            $('#price_tr_' + rowId)
+                .val('');
+
+            $('#amount_tr_' + rowId)
+                .val('');
+
+            $('#unit_tr_' + rowId)
+                .val('');
+
+            $('#units_tr_' + rowId)
+                .val('');
+
+            $('#pending_qty_' + rowId)
+                .val('');
+
+            $('#box_sale_order_item_id_' + rowId)
+                .val('');
+
+            $('#config_status_' + rowId)
+                .val('');
+
+            $('#item_parameters_' + rowId)
+                .val('');
+
+            $(this)
+                .removeAttr(
+                    'data-sale-order-id'
+                );
+
+        });
+
+        selectedSaleOrders =
+            selectedSaleOrders.filter(
+                x => x.id != saleOrderId
+            );
+
+        renderSelectedSaleOrders();
+
+        reloadAllSaleOrderItems();
+
+        calculateAmount();
+
+    }
+);
       // Function to calculate amount and update total sum
       window.defaultItemsOptions =
          $('#item_id_1').html();
@@ -2505,7 +2706,10 @@ function removeItem() {
          }
       }
    });   
-   $(document).on('change', '#party_id', function(){      
+   $(document).on('change', '#party_id', function(){   
+   selectedSaleOrders = [];
+
+renderSelectedSaleOrders();   
       if($('option:selected', this).attr('data-state_code')==merchant_gstin.substring(0,2)){  
          $("#sale_type").val('LOCAL');
       }else{
@@ -2716,8 +2920,10 @@ function removeItem() {
       let pendingQty =
          selectedOption.attr('data-pending_qty');
 
-      let soItemId =
-         selectedOption.attr('data-so_item_id');
+      let saleOrderId =
+    selectedOption.attr(
+        'data-sale_order_id'
+    );
       soItemId =
 
          selectedOption.attr(
@@ -2739,7 +2945,11 @@ function removeItem() {
 
       $("#box_sale_order_item_id_" + rowId)
          .val(soItemId);
-
+$("#tr_" + rowId)
+    .attr(
+        'data-sale-order-id',
+        saleOrderId
+    );
       console.log(
          $("#box_sale_order_item_id_" + rowId).val()
       );
@@ -4669,7 +4879,44 @@ $(document).on(
 
     let saleOrderId =
         $(this).val();
+let saleOrderText =
+    $('#box_sale_order_id option:selected').text();
 
+if(!saleOrderId){
+    return;
+}
+
+let alreadySelected =
+    selectedSaleOrders.find(
+        x => x.id == saleOrderId
+    );
+
+if(alreadySelected){
+
+    alert('Sale Order already selected');
+
+    $('#box_sale_order_id')
+        .val('')
+        .trigger('change');
+
+    return;
+}
+
+selectedSaleOrders.push({
+
+    id: saleOrderId,
+
+    text: saleOrderText
+
+});
+
+renderSelectedSaleOrders();
+
+reloadAllSaleOrderItems();
+
+$('#box_sale_order_id')
+    .val('')
+    .trigger('change');
 $('#example11 tbody tr[id^="tr_"]')
     .not('#tr_1')
     .remove();
@@ -4793,7 +5040,9 @@ $('#example11 tbody tr[id^="tr_"]')
         }
 
     });
-
+$('#box_sale_order_id')
+    .val('')
+    .trigger('change');
 });
 
 </script>

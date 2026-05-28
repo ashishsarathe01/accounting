@@ -344,6 +344,7 @@ Route::group(['middleware' => ['merchantloginstatus']], function () {
    Route::Resource('account-manage-item', ManageItemsController::class);
    Route::post('account-manage-item-update', [ManageItemsController::class, 'update'])->name('account-manage-item.update');
    Route::get('stock-journal', [ManageItemsController::class, 'stockJournal'])->name('stock-journal');
+   Route::get('get-consumed-items-by-date', [ManageItemsController::class, 'getConsumedItemsByDate'])->name('get-consumed-items-by-date');
    Route::get('add-stock-journal', [ManageItemsController::class, 'addStockJournal'])->name('add-stock-journal');
    Route::post('save-stock-journal', [ManageItemsController::class, 'saveStockJournal'])->name('save-stock-journal');
    Route::post('delete-stock-journal', [ManageItemsController::class, 'deleteStockJournal'])->name('delete-stock-journal');

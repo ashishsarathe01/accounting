@@ -115,11 +115,24 @@
             </label>
 
             <input type="text"
-                   name="po_number"
-                   class="form-control">
+       name="po_number"
+       class="form-control"
+       required>
 
         </div>
+{{-- PO DATE --}}
+<div class="col-md-3 mb-3">
 
+    <label>
+        PO Date
+    </label>
+
+    <input type="date"
+       name="po_date"
+       class="form-control"
+       required>
+
+</div>
     </div>
 
 </div>
@@ -566,7 +579,88 @@ $(document).ready(function () {
 
         $('#grandTotal').val(total.toFixed(2));
     }
+// CHECK DUPLICATE PO NUMBER
+$(document).on('change', 'input[name="po_number"]', function () {
 
+    let poNumber =
+        $(this).val();
+
+    let partyId =
+        $('select[name="party_id"]').val();
+
+    let currentInput =
+        $(this);
+
+    if(poNumber != '' && partyId != '')
+    {
+
+        $.ajax({
+
+            url: "{{ route('check.box.sale.order.po') }}",
+
+            type: "GET",
+
+            data: {
+
+                po_number: poNumber,
+                party_id: partyId
+
+            },
+
+            success: function(response)
+            {
+
+                if(response.exists)
+                {
+
+                    alert(
+                        'This PO Number already exists for this party.'
+                    );
+
+                    currentInput.val('');
+
+                    currentInput.focus();
+
+                }
+
+            }
+
+        });
+
+    }
+
+});
+// VALIDATE PO DATE
+$(document).on(
+    'change',
+    'input[name="po_date"], input[name="order_date"]',
+    function () {
+
+        let poDate =
+            $('input[name="po_date"]').val();
+
+        let soDate =
+            $('input[name="order_date"]').val();
+
+        if(poDate != '' && soDate != '')
+        {
+
+            if(poDate > soDate)
+            {
+
+                alert(
+                    'PO Date cannot be greater than SO Date.'
+                );
+
+                $('input[name="po_date"]').val('');
+
+                $('input[name="po_date"]').focus();
+
+            }
+
+        }
+
+});
 });
 </script>
 

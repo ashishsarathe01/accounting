@@ -464,10 +464,53 @@
 var production_module_status = "<?php echo $production_module_status; ?>";
 var itemIds = {!! json_encode($itemIds) !!};
 var add_more_count = 1;
+var consumedItemsOptions = '<option value="">Select Item</option>'; // will be populated by AJAX
+
+function loadConsumedItemsByDate(date, callback) {
+    $.ajax({
+        url: "{{ url('/get-consumed-items-by-date') }}",
+        type: "GET",
+        data: { date: date },
+        success: function(items) {
+            var opts = '<option value="">Select Item</option>';
+            $.each(items, function(i, item) {
+                opts += '<option value="' + item.id + '" data-unit_id="' + item.u_name + '" data-unit_name="' + item.unit + '">' + item.name + '</option>';
+            });
+            consumedItemsOptions = opts;
+            // Refresh all existing consumed dropdowns
+            $('.consume_item').each(function() {
+                var currentVal = $(this).val();
+                $(this).html(consumedItemsOptions);
+                // Re-select previously selected value if it still exists in new options
+                if (currentVal && $(this).find('option[value="' + currentVal + '"]').length) {
+                    $(this).val(currentVal);
+                } else {
+                    $(this).val('');
+                }
+                $(this).trigger('change.select2');
+            });
+            if (typeof callback === 'function') callback();
+        }
+    });
+}
 
 $(document).ready(function() {
     // Initialize select2
     $(".select2-single, .select2-multiple").select2();
+
+    // Load consumed items for the initial date
+    var initialDate = $("#date").val();
+    if (initialDate) {
+        loadConsumedItemsByDate(initialDate);
+    }
+
+    // Reload consumed items when date changes
+    $("#date").on('change', function() {
+        var selectedDate = $(this).val();
+        if (selectedDate) {
+            loadConsumedItemsByDate(selectedDate);
+        }
+    });
 
     // Trigger series_no change if needed
     $("#series_no").change();
@@ -519,8 +562,8 @@ $(document).ready(function() {
     let last_srn = $("#consum_total").closest('tr').prev().find("td:first").html();
     let srn = last_srn ? parseInt(last_srn) + 1 : 1;
 
-    // Option elements
-    var optionElements = '<?php echo addslashes($items_list); ?>';
+    // Option elements (consumed items filtered by selected date)
+    var optionElements = consumedItemsOptions;
 
     // Conditionally add ⚙️ button
     var configureButton = '';
@@ -1620,7 +1663,7 @@ $(document).ready(function () {
     // STEP 1: REMOVE DEFAULT FIRST ROW
     $("#tr_1").remove();
 
-    let optionHtml = `<?php echo addslashes($items_list); ?>`;
+    let optionHtml = consumedItemsOptions;
 
     let rowCount = 0;
 

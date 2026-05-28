@@ -504,10 +504,84 @@
     let generatedReels = @json($generated_reels);
     var itemsOptions = {!! json_encode($items->map(function($item) use ($production_items) {
         return ['id' => $item->id,'name' => $item->name,'unit_id' => $item->u_name,'unit_name' => $item->unit,'production_status' => $production_items->contains('item_id', $item->id) ? 1 : 0];})) !!};
+
+   // Consumed items filtered by stock date (populated via AJAX)
+   var consumedItemsData = []; // will hold items with positive stock on selected date
+
+   function buildConsumedOptions(extraItems) {
+      // extraItems: array of {id, name, u_name, unit} already selected in rows (to keep them selectable)
+      var html = '<option value="">Select Item</option>';
+      var ids = consumedItemsData.map(function(i){ return i.id; });
+      // Add positive-stock items
+      consumedItemsData.forEach(function(item) {
+         html += '<option value="' + item.id + '" data-unit_id="' + item.u_name + '" data-unit_name="' + item.unit + '">' + item.name + '</option>';
+      });
+      // Add any currently-selected items not in positive-stock list (preserve existing selection)
+      if (extraItems) {
+         extraItems.forEach(function(item) {
+            if (item.id && ids.indexOf(String(item.id)) === -1 && ids.indexOf(parseInt(item.id)) === -1) {
+               html += '<option value="' + item.id + '" data-unit_id="' + item.u_name + '" data-unit_name="' + item.unit + '">' + item.name + ' [saved]</option>';
+            }
+         });
+      }
+      return html;
+   }
+
+   function loadConsumedItemsByDate(date, callback) {
+      $.ajax({
+         url: "{{ url('/get-consumed-items-by-date') }}",
+         type: "GET",
+         data: { date: date },
+         success: function(items) {
+            consumedItemsData = items;
+            // Collect currently-selected items per row (for preservation)
+            var extraItems = [];
+            $('.consume_item').each(function() {
+               var val = $(this).val();
+               if (val) {
+                  var opt = $(this).find('option:selected');
+                  extraItems.push({ id: val, name: opt.text().replace(' [saved]',''), u_name: opt.data('unit_id'), unit: opt.data('unit_name') });
+               }
+            });
+            // Rebuild each consumed dropdown
+            $('.consume_item').each(function() {
+               var currentVal = $(this).val();
+               var rowExtraItems = [];
+               if (currentVal) {
+                  var opt = $(this).find('option:selected');
+                  rowExtraItems = [{ id: currentVal, name: opt.text().replace(' [saved]',''), u_name: opt.data('unit_id'), unit: opt.data('unit_name') }];
+               }
+               $(this).html(buildConsumedOptions(rowExtraItems));
+               if (currentVal && $(this).find('option[value="' + currentVal + '"]').length) {
+                  $(this).val(currentVal);
+               } else {
+                  $(this).val('');
+               }
+               $(this).trigger('change.select2');
+            });
+            if (typeof callback === 'function') callback();
+         }
+      });
+   }
+
    $(document).ready(function() {
       $( ".select2-single, .select2-multiple" ).select2(); 
       calculateAmount(1);
       calculateAmountNew(1);
+
+      // Load consumed items for the journal date
+      var initialDate = $("#date").val();
+      if (initialDate) {
+         loadConsumedItemsByDate(initialDate);
+      }
+
+      // Reload on date change
+      $("#date").on('change', function() {
+         var selectedDate = $(this).val();
+         if (selectedDate) {
+            loadConsumedItemsByDate(selectedDate);
+         }
+      });
    });   
    var add_more_count = {{$i}} - 1;
    $(".add_more").click(function() {      
@@ -1048,6 +1122,11 @@ $(document).on("click", ".remove-reel", function () {
 
 
 function generateOptions() {
+    // Used ONLY for consumed items (new rows added via add_more)
+    return buildConsumedOptions([]);
+}
+
+function generateOptionsForGenerated() {
     let html = `<option value="">Select Item</option>`;
     itemsOptions.forEach(function(item) {
         html += `<option value="${item.id}" 

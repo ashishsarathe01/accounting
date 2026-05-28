@@ -161,6 +161,15 @@
                                 class="px-1">
                         </button>
                     @endif
+                    <a title="View Sale Order"
+       href="{{ route('box.sale.order.view', $row->id) }}"
+       target="_blank">
+
+        <img src="{{ asset('public/assets/imgs/eye-icon.svg') }}"
+             class="px-1"
+             alt="View">
+
+    </a>
                 </td>
             </tr>
 

@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\DB;
 use Session;
 use App\Models\Accounts;
 use App\Helpers\CommonHelper;
+use App\Models\Companies;
+
 class BoxSaleOrderController extends Controller
 {
 
@@ -284,12 +286,49 @@ class BoxSaleOrderController extends Controller
             Session::get('user_company_id');
         DB::beginTransaction();
         try {
+                $poExists = DB::table('box_sale_orders')
+
+        ->where(
+            'company_id',
+            $companyId
+        )
+
+        ->where(
+            'party_id',
+            $request->party_id
+        )
+
+        ->where(
+            'po_number',
+            $request->po_number
+        )
+
+        ->where(
+            'delete',
+            '0'
+        )
+
+        ->exists();
+
+    if($poExists)
+    {
+
+        return back()->with(
+
+            'error',
+
+            'This PO Number already exists for this party.'
+
+        );
+
+    }
             $saleOrderId = DB::table('box_sale_orders')
                 ->insertGetId([
                     'company_id' => $companyId,
                     'party_id' => $request->party_id,
                     'sale_order_no' => $request->sale_order_no,
                     'po_number' => $request->po_number,
+                    'po_date' => $request->po_date,
                     'order_date' => $request->order_date,
                     'total_amount' => $request->total_amount,
                     'status' => 1,
@@ -482,6 +521,48 @@ class BoxSaleOrderController extends Controller
 
         DB::beginTransaction();
         try {
+                $poExists = DB::table('box_sale_orders')
+
+        ->where(
+            'company_id',
+            $companyId
+        )
+
+        ->where(
+            'party_id',
+            $request->party_id
+        )
+
+        ->where(
+            'po_number',
+            $request->po_number
+        )
+
+        ->where(
+            'id',
+            '!=',
+            $id
+        )
+
+        ->where(
+            'delete',
+            '0'
+        )
+
+        ->exists();
+
+    if($poExists)
+    {
+
+        return back()->with(
+
+            'error',
+
+            'This PO Number already exists for this party.'
+
+        );
+
+    }
             DB::table('box_sale_orders')
                 ->where(
                     'id',
@@ -494,6 +575,7 @@ class BoxSaleOrderController extends Controller
                 ->update([
                     'party_id' => $request->party_id,
                     'po_number' => $request->po_number,
+                    'po_date' => $request->po_date,
                     'order_date' => $request->order_date,
                     'total_amount' => $request->total_amount,
                     'updated_by' =>
@@ -554,7 +636,209 @@ class BoxSaleOrderController extends Controller
                 );
         }
     }
+public function checkPoNumber(Request $request)
+{
+    $companyId =
+        Session::get('user_company_id');
 
+    $query = DB::table('box_sale_orders')
+
+        ->where(
+            'company_id',
+            $companyId
+        )
+
+        ->where(
+            'party_id',
+            $request->party_id
+        )
+
+        ->where(
+            'po_number',
+            $request->po_number
+        )
+
+        ->where(
+            'delete',
+            '0'
+        );
+
+    // FOR EDIT PAGE
+    if($request->id)
+    {
+        $query->where(
+            'id',
+            '!=',
+            $request->id
+        );
+    }
+
+    $exists = $query->exists();
+
+    return response()->json([
+
+        'exists' => $exists
+
+    ]);
+}
+public function view($id)
+{
+    $companyId =
+        Session::get('user_company_id');
+
+    $saleOrder = DB::table('box_sale_orders')
+
+        ->leftJoin(
+            'accounts',
+            'accounts.id',
+            '=',
+            'box_sale_orders.party_id'
+        )
+
+        ->where(
+            'box_sale_orders.company_id',
+            $companyId
+        )
+
+        ->where(
+            'box_sale_orders.id',
+            $id
+        )
+
+        ->select(
+
+            'box_sale_orders.*',
+
+            'accounts.account_name as party_name',
+            'accounts.address',
+            'accounts.address2',
+            'accounts.address3',
+            'accounts.gstin',
+            'accounts.pan'
+
+        )
+
+        ->first();
+
+
+
+    $saleOrderItems = DB::table('box_sale_order_items')
+
+        ->leftJoin(
+            'manage_items',
+            'manage_items.id',
+            '=',
+            'box_sale_order_items.item_id'
+        )
+
+        ->where(
+            'box_sale_order_items.box_sale_order_id',
+            $id
+        )
+
+        ->where(
+            'box_sale_order_items.delete',
+            '0'
+        )
+
+        ->select(
+
+            'box_sale_order_items.*',
+
+            'manage_items.name as item_name'
+
+        )
+
+        ->get();
+
+
+
+    foreach($saleOrderItems as $row)
+    {
+
+        $dispatchedQty = DB::table('sale_descriptions')
+
+            ->where(
+                'box_sale_order_item_id',
+                $row->id
+            )
+
+            ->where(
+                'delete',
+                '0'
+            )
+
+            ->sum('qty');
+
+
+        $row->dispatched_qty =
+            $dispatchedQty;
+
+        $row->pending_qty =
+            $row->qty - $dispatchedQty;
+
+    }
+
+
+
+    $company_data = Companies::join(
+            'states',
+            'companies.state',
+            '=',
+            'states.id'
+        )
+
+        ->where(
+            'companies.id',
+            $companyId
+        )
+
+        ->select([
+            'companies.*',
+            'states.name as sname'
+        ])
+
+        ->first();
+
+
+
+    $seller_info = (object)[
+
+        'gst_no' =>
+            $company_data->gst ?? '',
+
+        'address' =>
+            $company_data->address
+            ??
+            $company_data->billing_address
+            ??
+            '',
+
+        'pincode' =>
+            $company_data->pin_code ?? '',
+
+        'sname' =>
+            $company_data->sname ?? ''
+
+    ];
+
+
+
+    return view(
+
+        'box_calculator.BoxSaleOrderView',
+
+        compact(
+
+            'saleOrder',
+            'saleOrderItems',
+            'company_data',
+            'seller_info'
+
+        )
+
+    );
+}
     public function delete($id)
     {
         $companyId =
