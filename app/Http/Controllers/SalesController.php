@@ -744,84 +744,82 @@ class SalesController extends Controller
       $roundoff = $request->input('total')-$request->input('taxable_amt');
       $sale->save();
       if(
-    $request->filled('box_sale_order_ids')
-    &&
-    is_array($request->box_sale_order_ids)
-)
-{
+         $request->filled('box_sale_order_ids')
+         &&
+         is_array($request->box_sale_order_ids)
+      )
+      {
 
-    foreach(
-        $request->box_sale_order_ids
-        as $boxSaleOrderId
-    )
-    {
+         foreach(
+            $request->box_sale_order_ids
+            as $boxSaleOrderId
+         )
+         {
 
-        DB::table('sale_box_sale_orders')
-            ->insert([
+            DB::table('sale_box_sale_orders')
+                  ->insert([
 
-                'sale_id' =>
-                    $sale->id,
+                     'sale_id' =>
+                        $sale->id,
 
-                'box_sale_order_id' =>
-                    $boxSaleOrderId,
+                     'box_sale_order_id' =>
+                        $boxSaleOrderId,
 
-                'company_id' =>
-                    Session::get('user_company_id'),
+                     'company_id' =>
+                        Session::get('user_company_id'),
 
-                'created_at' =>
-                    now(),
+                     'created_at' =>
+                        now(),
 
-                'updated_at' =>
-                    now()
+                     'updated_at' =>
+                        now()
 
-            ]);
+                  ]);
 
-    }
+         }
 
-}
+      }
 
-if(
-    $request->sale_order_id
-    &&
-    $request->filled('goods_discription')
-    &&
-    is_array($request->goods_discription)
-)
-{
+      if(
+         $request->filled('goods_discription')
+         &&
+         is_array($request->goods_discription)
+      )
+      {
 
-    $actualGoodsDescriptions = [];
+         $actualGoodsDescriptions = [];
 
-    foreach(
-        $request->goods_discription
-        as $soItemId
-    )
-    {
+         foreach(
+            $request->goods_discription
+            as $soItemId
+         )
+         {
 
-        $soItem = DB::table('box_sale_order_items')
+            $soItem = DB::table('box_sale_order_items')
 
-            ->where('id',$soItemId)
+                  ->where('id',$soItemId)
 
-            ->select('item_id')
+                  ->select('item_id')
 
-            ->first();
+                  ->first();
 
-        $actualGoodsDescriptions[] =
-            $soItem
-            ? $soItem->item_id
-            : null;
-    }
+            $actualGoodsDescriptions[] =
+                  $soItem
+                  ? $soItem->item_id
+                  : null;
+         }
 
-    $request->merge([
+         $request->merge([
 
-        'box_sale_order_item_id' =>
-            $request->goods_discription,
+            'box_sale_order_item_id' =>
+                  $request->goods_discription,
 
-        'goods_discription' =>
-            $actualGoodsDescriptions
+            'goods_discription' =>
+                  $actualGoodsDescriptions
 
-    ]);
+         ]);
 
-}
+      }
 
       if($sale->id){
          $goods_discriptions = $request->input('goods_discription');
@@ -975,53 +973,7 @@ if(
                }
             }
             
-            if($request->box_sale_order_id)
-            {
-
-               $pendingItems = DB::table('box_sale_order_items')
-                  ->where(
-                        'box_sale_order_id',
-                        $request->box_sale_order_id
-                  )
-                  ->where(
-                        'company_id',
-                        Session::get('user_company_id')
-                  )
-                  ->where(
-                        'delete',
-                        '0'
-                  )
-                  ->where(
-                        'status',
-                        '!=',
-                        2
-                  )
-                  ->count();
-
-               if($pendingItems == 0)
-               {
-
-                  DB::table('box_sale_orders')
-                        ->where(
-                           'id',
-                           $request->box_sale_order_id
-                        )
-                        ->update([
-                           'status' => 2
-                        ]);
-               }
-               else
-               {
-                  DB::table('box_sale_orders')
-                        ->where(
-                           'id',
-                           $request->box_sale_order_id
-                        )
-                        ->update([
-                           'status' => 1
-                        ]);
-               }
-            }
+            
             $row_no = $key + 1;
             $piece_weights =
                $request->input('piece_weight_'.$row_no);
@@ -1134,6 +1086,22 @@ if(
                   ItemParameterStock::whereIn('id',$parameter)->update(['status'=>0,'stock_out_id'=>$sale->id,'stock_out_type'=>'SALE']);
                   SaleDescription::where('id',$desc->id)->update(['parameter_ids'=>$item_parameters[$key]]);
                }
+            }
+         }
+         if(
+            $request->filled('box_sale_order_ids')
+            &&
+            is_array($request->box_sale_order_ids)
+         )
+         {
+            foreach(
+               $request->box_sale_order_ids
+               as $boxSaleOrderId
+            )
+            {
+               $this->updateBoxSaleOrderStatus(
+                  $boxSaleOrderId
+               );
             }
          }
          $bill_sundrys = $request->input('bill_sundry');
@@ -1831,175 +1799,162 @@ if(
       $production_module_status = $production_module_status ? 1 : 0;
 
       $selectedBoxSaleOrders = DB::table('sale_box_sale_orders')
-
-   ->where(
-      'sale_id',
-      $sale->id
-   )
-
-   ->pluck('box_sale_order_id')
-
-   ->toArray();
-
-$boxSaleOrderItems = [];
-
-if(count($selectedBoxSaleOrders) > 0)
-{
-
-   $soItems = DB::table('box_sale_order_items')
-
-      ->leftJoin(
-         'manage_items',
-         'manage_items.id',
-         '=',
-         'box_sale_order_items.item_id'
-      )
-
-      ->leftJoin(
-         'units',
-         'units.id',
-         '=',
-         'manage_items.u_name'
-      )
-
-      ->leftJoin(
-         'box_sale_orders',
-         'box_sale_orders.id',
-         '=',
-         'box_sale_order_items.box_sale_order_id'
-      )
-
-      ->whereIn(
-         'box_sale_order_items.box_sale_order_id',
-         $selectedBoxSaleOrders
-      )
-
-      ->where(
-         'box_sale_order_items.company_id',
-         Session::get('user_company_id')
-      )
-
-      ->where(
-         'box_sale_order_items.delete',
-         '0'
-      )
-
-      ->select(
-
-         'box_sale_order_items.id as so_item_id',
-
-         'box_sale_order_items.item_id',
-
-         'box_sale_order_items.qty',
-
-         'box_sale_order_items.price',
-
-         'box_sale_order_items.box_sale_order_id',
-
-         'manage_items.name',
-
-         'manage_items.gst_rate',
-
-         'units.id as unit_id',
-
-         'units.s_name as unit_name',
-
-         'box_sale_orders.sale_order_no'
-
-      )
-
-      ->get();
-
-   foreach($soItems as $row)
-   {
-
-      $soldQty = DB::table('sale_descriptions')
-
-         ->where(
-            'box_sale_order_item_id',
-            $row->so_item_id
+         ->join(
+            'box_sale_orders',
+            'box_sale_orders.id',
+            '=',
+            'sale_box_sale_orders.box_sale_order_id'
          )
-
          ->where(
-            'company_id',
-            Session::get('user_company_id')
-         )
-
-         ->where(
-            'delete',
-            '0'
-         )
-
-         ->sum('qty');
-
-      $currentSaleQty = DB::table('sale_descriptions')
-
-         ->where(
-            'sale_id',
+            'sale_box_sale_orders.sale_id',
             $sale->id
          )
-
-         ->where(
-            'box_sale_order_item_id',
-            $row->so_item_id
+         ->select(
+            'box_sale_orders.id as id',
+            'box_sale_orders.sale_order_no as text'
          )
-
-         ->sum('qty');
-
-      $pendingQty =
-
-         (float)$row->qty
-
-         -
-
-         (float)$soldQty
-
-         +
-
-         (float)$currentSaleQty;
-
-      if($pendingQty > 0)
+         ->get();
+      $boxSaleOrderItems = [];
+      $selectedBoxSaleOrderIds = $selectedBoxSaleOrders
+         ->pluck('id')
+         ->toArray();
+      if(count($selectedBoxSaleOrderIds) > 0)
       {
+         $soItems = DB::table('box_sale_order_items')
+            ->leftJoin(
+               'manage_items',
+               'manage_items.id',
+               '=',
+               'box_sale_order_items.item_id'
+            )
+            ->leftJoin(
+               'units',
+               'units.id',
+               '=',
+               'manage_items.u_name'
+            )
+            ->leftJoin(
+               'box_sale_orders',
+               'box_sale_orders.id',
+               '=',
+               'box_sale_order_items.box_sale_order_id'
+            )
+            ->whereIn(
+               'box_sale_order_items.box_sale_order_id',
+               $selectedBoxSaleOrderIds
+            )
+            ->where(
+               'box_sale_order_items.company_id',
+               Session::get('user_company_id')
+            )
+            ->where(
+               'box_sale_order_items.delete',
+               '0'
+            )
+            ->select(
 
-         $boxSaleOrderItems[] = [
+               'box_sale_order_items.id as so_item_id',
 
-            'so_item_id' =>
-               $row->so_item_id,
+               'box_sale_order_items.item_id',
 
-            'item_id' =>
-               $row->item_id,
+               'box_sale_order_items.qty',
 
-            'item_name' =>
-               $row->name,
+               'box_sale_order_items.price',
 
-            'pending_qty' =>
-               round($pendingQty,2),
+               'box_sale_order_items.box_sale_order_id',
 
-            'price' =>
-               $row->price,
+               'manage_items.name',
 
-            'unit' =>
-               $row->unit_id,
+               'manage_items.gst_rate',
 
-            'unit_name' =>
-               $row->unit_name,
+               'units.id as unit_id',
 
-            'gst_rate' =>
-               $row->gst_rate,
+               'units.s_name as unit_name',
 
-            'sale_order_no' =>
-               $row->sale_order_no,
+               'box_sale_orders.sale_order_no'
 
-            'box_sale_order_id' =>
-               $row->box_sale_order_id
+            )
+            ->get();
+         foreach($soItems as $row)
+         {
+            $soldQty = DB::table('sale_descriptions')
+               ->where(
+                  'box_sale_order_item_id',
+                  $row->so_item_id
+               )
+               ->where(
+                  'company_id',
+                  Session::get('user_company_id')
+               )
+               ->where(
+                  'delete',
+                  '0'
+               )
+               ->sum('qty');
+            $currentSaleQty = DB::table('sale_descriptions')
+               ->where(
+                  'sale_id',
+                  $sale->id
+               )
+               ->where(
+                  'box_sale_order_item_id',
+                  $row->so_item_id
+               )
+               ->sum('qty');
+            $pendingQty =
 
-         ];
+               (float)$row->qty
+
+               -
+
+               (float)$soldQty
+
+               +
+
+               (float)$currentSaleQty;
+
+            if($pendingQty > 0)
+            {
+
+               $boxSaleOrderItems[] = [
+
+                  'so_item_id' =>
+                     $row->so_item_id,
+
+                  'item_id' =>
+                     $row->item_id,
+
+                  'item_name' =>
+                     $row->name,
+
+                  'pending_qty' =>
+                     round($pendingQty,2),
+
+                  'price' =>
+                     $row->price,
+
+                  'unit' =>
+                     $row->unit_id,
+
+                  'unit_name' =>
+                     $row->unit_name,
+
+                  'gst_rate' =>
+                     $row->gst_rate,
+
+                  'sale_order_no' =>
+                     $row->sale_order_no,
+
+                  'box_sale_order_id' =>
+                     $row->box_sale_order_id
+
+               ];
+
+            }
+
+         }
 
       }
-
-   }
-
-}
       foreach ($SaleDescription as $desc) {
          $desc->selected_sizes = DB::table('item_size_stocks')
             ->where('sale_id', $sale->id)
@@ -2433,7 +2388,7 @@ if(count($selectedBoxSaleOrders) > 0)
          $eway_bill_distance = $e_waybill_distance->e_waybill_distance;
       }
       //Check Production Module Permission
-      $comp = Companies::select('user_id')
+      $comp = Companies::select('user_id', 'company_sale_type')
                         ->where('id',Session::get('user_company_id'))
                         ->first();
       $production_module_status = MerchantModuleMapping::where('module_id',4)
@@ -2442,6 +2397,45 @@ if(count($selectedBoxSaleOrders) > 0)
                                                       ->get('user_company_id'))
                                                       ->first();
       $production_module_status = $production_module_status ? 1 : 0;
+      $box_po_numbers = '';
+      $box_po_dates = '';
+      if(
+         $comp
+         &&
+         $comp->company_sale_type == 'BOX'
+      )
+      {
+         $boxSaleOrders = DB::table('sale_box_sale_orders')
+            ->join(
+                  'box_sale_orders',
+                  'box_sale_orders.id',
+                  '=',
+                  'sale_box_sale_orders.box_sale_order_id'
+            )
+            ->where(
+                  'sale_box_sale_orders.sale_id',
+                  $id
+            )
+            ->select(
+                  'box_sale_orders.po_number',
+                  'box_sale_orders.po_date'
+            )
+            ->get();
+         $box_po_numbers = $boxSaleOrders
+            ->pluck('po_number')
+            ->filter()
+            ->implode(', ');
+         $box_po_dates = $boxSaleOrders
+            ->pluck('po_date')
+            ->filter()
+            ->map(function($date){
+                  return date(
+                     'd-m-Y',
+                     strtotime($date)
+                  );
+            })
+            ->implode(', ');
+      }
       return view('saleInvoice')
             ->with([
                'production_module_status'=>$production_module_status,
@@ -2452,6 +2446,9 @@ if(count($selectedBoxSaleOrders) > 0)
                'company_data' => $company_data,
                'sale_detail' => $sale_detail,
                'bank_detail' => $bank_detail,
+               'company_sale_type' => $comp->company_sale_type ?? '',
+               'box_po_numbers' => $box_po_numbers,
+               'box_po_dates' => $box_po_dates,
                'gst_detail'=>$gst_detail,
                'einvoice_status'=>$GstSettings->einvoice,
                'ewaybill_status'=>$GstSettings->ewaybill,
@@ -2663,6 +2660,13 @@ if(count($selectedBoxSaleOrders) > 0)
       $financial_year = CommonHelper::getFinancialYear($request->input('date'));
 
          $sale = Sales::find($request->input('sale_edit_id'));
+         $oldBoxSaleOrderIds = DB::table('sale_box_sale_orders')
+
+            ->where('sale_id', $sale->id)
+
+            ->pluck('box_sale_order_id')
+
+            ->toArray();
       //Check Dulicate Invoice Number
      //dd($request->all());
       // echo "<pre>";
@@ -2720,7 +2724,6 @@ if(count($selectedBoxSaleOrders) > 0)
       } 
       $sale->party = $request->input('party');
       $sale->material_center = $request->input('material_center');
-      $sale->box_sale_order_id = $request->input('box_sale_order_id');
       $sale->taxable_amt = $request->input('taxable_amt');
       $sale->total = $request->input('total');
       $sale->self_vehicle = $request->input('self_vehicle');
@@ -2749,6 +2752,89 @@ if(count($selectedBoxSaleOrders) > 0)
       $sale->po_no = $request->input('po_no');
       $sale->po_date = $request->input('po_date');
       $sale->save();
+
+      DB::table('sale_box_sale_orders')
+         ->where('sale_id', $sale->id)
+         ->delete();
+
+      if(
+         $request->filled('box_sale_order_ids')
+         &&
+         is_array($request->box_sale_order_ids)
+      )
+      {
+         foreach(
+            array_unique($request->box_sale_order_ids)
+            as $boxSaleOrderId
+         )
+         {
+            DB::table('sale_box_sale_orders')
+               ->insert([
+
+                  'sale_id' =>
+                     $sale->id,
+
+                  'box_sale_order_id' =>
+                     $boxSaleOrderId,
+
+                  'company_id' =>
+                     Session::get('user_company_id'),
+
+                  'created_at' =>
+                     now(),
+
+                  'updated_at' =>
+                     now()
+
+               ]);
+         }
+      }
+
+      if(
+         $request->filled('goods_discription')
+         &&
+         is_array($request->goods_discription)
+         &&
+         $request->filled('box_sale_order_ids')
+         &&
+         is_array($request->box_sale_order_ids)
+      )
+      {
+
+         $actualGoodsDescriptions = [];
+
+         foreach(
+            $request->goods_discription
+            as $soItemId
+         )
+         {
+
+            $soItem = DB::table('box_sale_order_items')
+
+               ->where('id',$soItemId)
+
+               ->select('item_id')
+
+               ->first();
+
+            $actualGoodsDescriptions[] =
+               $soItem
+               ? $soItem->item_id
+               : null;
+         }
+
+         $request->merge([
+
+            'box_sale_order_item_id' =>
+               $request->goods_discription,
+
+            'goods_discription' =>
+               $actualGoodsDescriptions
+
+         ]);
+
+      }
+
       if ($sale->id) {
          $goods_discriptions = $request->input('goods_discription');
          $item_descriptions = $request->input('item_description');
@@ -2937,50 +3023,6 @@ if(count($selectedBoxSaleOrders) > 0)
                   }
                }
             }
-            if($request->box_sale_order_id)
-            {
-               $pendingItems = DB::table('box_sale_order_items')
-                  ->where(
-                        'box_sale_order_id',
-                        $request->box_sale_order_id
-                  )
-                  ->where(
-                        'company_id',
-                        Session::get('user_company_id')
-                  )
-                  ->where(
-                        'delete',
-                        '0'
-                  )
-                  ->where(
-                        'status',
-                        '!=',
-                        2
-                  )
-                  ->count();
-               if($pendingItems == 0)
-               {
-                  DB::table('box_sale_orders')
-                        ->where(
-                           'id',
-                           $request->box_sale_order_id
-                        )
-                        ->update([
-                           'status' => 2
-                        ]);
-               }
-               else
-               {
-                  DB::table('box_sale_orders')
-                        ->where(
-                           'id',
-                           $request->box_sale_order_id
-                        )
-                        ->update([
-                           'status' => 1
-                        ]);
-               }
-            }
             array_push($desc_id_arr,$desc->id);
             $row_no = $key + 1;
             $piece_weights =
@@ -3088,6 +3130,26 @@ if(count($selectedBoxSaleOrders) > 0)
                )
             );           
          }
+
+         $allBoxSaleOrderIds = array_unique(
+
+            array_merge(
+
+               $oldBoxSaleOrderIds,
+
+               $request->box_sale_order_ids ?? []
+
+            )
+
+         );
+
+         foreach($allBoxSaleOrderIds as $boxSaleOrderId)
+         {
+            $this->updateBoxSaleOrderStatus(
+               $boxSaleOrderId
+            );
+         }
+
          $removed_size_ids = array_diff($old_size_ids, $new_size_ids);
          if (!empty($removed_size_ids)) {
             ItemSizeStock::whereIn('id', $removed_size_ids)->update([
@@ -6691,9 +6753,64 @@ public function saleInvoicePdf($id)
         }
     }
     
-    $comp = Companies::select('user_id')->where('id',Session::get('user_company_id'))->first();
+    $comp = Companies::select('user_id', 'company_sale_type')->where('id',Session::get('user_company_id'))->first();
           $production_module_status = MerchantModuleMapping::where('module_id',4)->where('merchant_id',$comp->user_id)->where('company_id', Session()->get('user_company_id'))->first();
           $production_module_status = $production_module_status ? 1 : 0;
+          $company_sale_type =
+    $comp->company_sale_type ?? '';
+
+      $box_po_numbers = '';
+
+      $box_po_dates = '';
+
+      if($company_sale_type == "BOX")
+      {
+         $boxOrders = DB::table('sale_box_sale_orders')
+
+            ->join(
+                  'box_sale_orders',
+                  'box_sale_orders.id',
+                  '=',
+                  'sale_box_sale_orders.box_sale_order_id'
+            )
+
+            ->where(
+                  'sale_box_sale_orders.sale_id',
+                  $id
+            )
+
+            ->select(
+                  'box_sale_orders.po_number',
+                  'box_sale_orders.po_date'
+            )
+
+            ->get();
+
+         $box_po_numbers = $boxOrders
+
+            ->pluck('po_number')
+
+            ->filter()
+
+            ->implode(', ');
+
+         $box_po_dates = $boxOrders
+
+            ->pluck('po_date')
+
+            ->filter()
+
+            ->map(function($date){
+
+                  return date(
+                     'd-m-Y',
+                     strtotime($date)
+                  );
+
+            })
+
+            ->implode(', ');
+      }
     $pdf = Pdf::loadView('saleInvoicePdf', [
         'items_detail' => $items_detail,
         'sale_sundry' => $sale_sundry,
@@ -6704,6 +6821,9 @@ public function saleInvoicePdf($id)
         'bank_detail' => $bank_detail,
         'gst_detail'=>$gst_detail,
         'einvoice_status'=>$GstSettings->einvoice,
+        'company_sale_type' => $company_sale_type,
+         'box_po_numbers' => $box_po_numbers,
+         'box_po_dates' => $box_po_dates,
         'ewaybill_status'=>$GstSettings->ewaybill,
         'configuration'=>$configuration,
         'seller_info'=>$seller_info,
@@ -7782,7 +7902,8 @@ public function getBoxSaleOrderItemsMultiple(Request $request)
 
     $saleOrderIds =
         $request->sale_order_ids;
-
+      $currentSaleId =
+         $request->sale_id;
     $items = DB::table('box_sale_order_items')
 
         ->leftJoin(
@@ -7852,24 +7973,33 @@ public function getBoxSaleOrderItemsMultiple(Request $request)
     foreach($items as $row)
     {
 
-        $soldQty = DB::table('sale_descriptions')
+      $soldQtyQuery = DB::table('sale_descriptions')
 
-            ->where(
-                'box_sale_order_item_id',
-                $row->so_item_id
-            )
+         ->where(
+            'box_sale_order_item_id',
+            $row->so_item_id
+         )
 
-            ->where(
-                'company_id',
-                $companyId
-            )
+         ->where(
+            'company_id',
+            $companyId
+         )
 
-            ->where(
-                'delete',
-                '0'
-            )
+         ->where(
+            'delete',
+            '0'
+         );
 
-            ->sum('qty');
+      if(!empty($currentSaleId))
+      {
+         $soldQtyQuery->where(
+            'sale_id',
+            '!=',
+            $currentSaleId
+         );
+      }
+
+      $soldQty = $soldQtyQuery->sum('qty');
 
         $pendingQty =
 

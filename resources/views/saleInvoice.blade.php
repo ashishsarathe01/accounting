@@ -355,6 +355,20 @@ body {
                               </span>
                            </p>
                            @endif
+                           @if($company_sale_type=="BOX")
+                              <p>
+                                 <span class="width25">PO No. </span>:
+                                 <span class="lft_mar15">
+                                    {{ $box_po_numbers ?? '' }}
+                                 </span>
+                              </p>
+                              <p>
+                                 <span class="width25">PO Date </span>:
+                                 <span class="lft_mar15">
+                                    {{ $box_po_dates ?? '' }}
+                                 </span>
+                              </p>
+                           @endif
                            <!-- <p>&nbsp;</p> -->
                         </td>
                      </tr>
