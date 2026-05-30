@@ -516,14 +516,7 @@
       consumedItemsData.forEach(function(item) {
          html += '<option value="' + item.id + '" data-unit_id="' + item.u_name + '" data-unit_name="' + item.unit + '">' + item.name + '</option>';
       });
-      // Add any currently-selected items not in positive-stock list (preserve existing selection)
-      if (extraItems) {
-         extraItems.forEach(function(item) {
-            if (item.id && ids.indexOf(String(item.id)) === -1 && ids.indexOf(parseInt(item.id)) === -1) {
-               html += '<option value="' + item.id + '" data-unit_id="' + item.u_name + '" data-unit_name="' + item.unit + '">' + item.name + ' [saved]</option>';
-            }
-         });
-      }
+      
       return html;
    }
 
@@ -546,19 +539,48 @@
             // Rebuild each consumed dropdown
             $('.consume_item').each(function() {
                var currentVal = $(this).val();
+               var rowId = $(this).data('id');
                var rowExtraItems = [];
                if (currentVal) {
                   var opt = $(this).find('option:selected');
-                  rowExtraItems = [{ id: currentVal, name: opt.text().replace(' [saved]',''), u_name: opt.data('unit_id'), unit: opt.data('unit_name') }];
+                  rowExtraItems = [{
+                     id: currentVal,
+                     name: opt.text().replace(' [saved]', ''),
+                     u_name: opt.data('unit_id'),
+                     unit: opt.data('unit_name')
+                  }];
                }
                $(this).html(buildConsumedOptions(rowExtraItems));
-               if (currentVal && $(this).find('option[value="' + currentVal + '"]').length) {
+
+               if (
+                  currentVal &&
+                  $(this).find('option[value="' + currentVal + '"]').length
+               ) {
+
                   $(this).val(currentVal);
                } else {
+                  // clear item
                   $(this).val('');
+                  // clear qty
+                  $("#consume_weight_" + rowId).val('');
+                  // clear unit
+                  $("#consume_unit_tr_" + rowId).val('');
+                  $("#consume_units_tr_" + rowId).val('');
+                  // clear price
+                  $("#consume_price_" + rowId).val('');
+                  // clear amount
+                  $("#consume_amount_" + rowId).val('');
+                  // clear size info
+                  $("#item_size_info_" + rowId).val('');
+                  // hide gear button
+                  $("#tr_" + rowId + " .configure-size-btn").hide();
+                  // reset accepted item
+                  acceptedConsumeItem[rowId] = null;
+                  calculateAmount(rowId);
                }
                $(this).trigger('change.select2');
             });
+            refreshConsumeItemOptionsEdit();
             if (typeof callback === 'function') callback();
          }
       });

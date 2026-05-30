@@ -479,15 +479,31 @@ function loadConsumedItemsByDate(date, callback) {
             consumedItemsOptions = opts;
             // Refresh all existing consumed dropdowns
             $('.consume_item').each(function() {
-                var currentVal = $(this).val();
-                $(this).html(consumedItemsOptions);
-                // Re-select previously selected value if it still exists in new options
-                if (currentVal && $(this).find('option[value="' + currentVal + '"]').length) {
-                    $(this).val(currentVal);
-                } else {
-                    $(this).val('');
-                }
-                $(this).trigger('change.select2');
+               var currentVal = $(this).val();
+               var rowId = $(this).data('id');
+               $(this).html(consumedItemsOptions);
+               if (
+                  currentVal &&
+                  $(this).find('option[value="' + currentVal + '"]').length
+               ) {
+                  $(this).val(currentVal);
+               } else {
+                  // Clear item dropdown
+                  $(this).val('');
+                  // Clear quantity
+                  $("#consume_weight_" + rowId).val('');
+                  // Clear unit
+                  $("#consume_unit_tr_" + rowId).val('');
+                  $("#consume_units_tr_" + rowId).val('');
+                  // Clear price
+                  $("#consume_price_" + rowId).val('');
+                  // Clear amount
+                  $("#consume_amount_" + rowId).val('');
+                  // Clear size info if production item
+                  $("#item_size_info_" + rowId).val('');
+                  calculateAmount(rowId);
+               }
+               $(this).trigger('change.select2');
             });
             if (typeof callback === 'function') callback();
         }
