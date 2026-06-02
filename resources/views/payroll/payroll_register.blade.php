@@ -523,7 +523,14 @@ document.querySelectorAll('.absent-input').forEach(function(input){
                 // ✅ UPDATE HIDDEN
                 cell.querySelector('.head-hidden').value = value.toFixed(2);
 
-                grossTotal += value;
+                let adjustmentType = cell.dataset.adjustmentType;
+
+                if(adjustmentType === 'subtractive'){
+                    grossTotal -= value;
+                }
+                else{
+                    grossTotal += value;
+                }
             }
 
         });
@@ -609,6 +616,13 @@ document.querySelectorAll('.absent-input').forEach(function(input){
         row.querySelector('.net-hidden').value = finalNet.toFixed(2);
 
     });
+
+});
+document.querySelectorAll('.absent-input').forEach(function(input){
+
+    input.dispatchEvent(
+        new Event('input')
+    );
 
 });
 </script>

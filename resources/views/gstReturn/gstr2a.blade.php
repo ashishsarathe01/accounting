@@ -63,7 +63,7 @@
                   {{ session('success') }}
                </div>
             @endif
-            <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">GSTR2B</h5>
+            <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">GSTR2A</h5>
             <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm">
                <div class="row">
                   <div class="mb-3 col-md-3">
@@ -84,25 +84,32 @@
                </div>
             </form>
             <div id="gst_div" style="display: none">
-               <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">GSTR2B <button class="btn btn-info reconciliation">Reconciliation</button></h5> 
+               <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm gst_head">
+                  GSTR2A
+                  <button class="btn btn-info reconciliation" style="float:right;">Reconciliation</button>
+               </h5>
                <table class="table table-ordered bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm gst_table">
                   <thead>
                      <tr>
                         <th rowspan="2">Account Name</th>
+
                         <th colspan="2" style="text-align:center">B2B-INVOICE</th>
+
                         <th colspan="2" style="text-align:center">B2B-CDNR</th>
+
                         <th rowspan="2" style="text-align:right">Difference</th>
                      </tr>
                      <tr>
                         <th style="text-align:right">Portal</th>
                         <th style="text-align:right">Books</th>
+
                         <th style="text-align:right">Portal</th>
                         <th style="text-align:right">Books</th>
                      </tr>
                   </thead>
-                  <tbody style="font-size: 15px;">
+                    <tbody style="font-size: 15px;">
                      
-                  </tbody>
+                    </tbody>
                </table>
             </div>
             
@@ -200,6 +207,8 @@
       </div>
    </section>
 </div>
+
+
 <div class="modal fade" id="otpModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
    <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content p-4 border-divider border-radius-8">
@@ -220,44 +229,16 @@
       </div>
    </div>
 </div>
-<div class="modal fade" id="unlinkInvoiceModal" tabindex="-1">
-   <div class="modal-dialog modal-lg">
-     <div class="modal-content">
-       <div class="modal-header">
-         <h5 class="modal-title">Unlinked  Invoices</h5>
-         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-       </div>
- 
-       <div class="modal-body">
-         <table class="table table-bordered">
-           <thead>
-             <tr>
-               <th>Voucher No</th>
-               <th>Date</th>
-               <th style="text-align: right">Total</th>
-             </tr>
-           </thead>
-           <tbody id="unlinkInvoiceBody"></tbody>
-         </table>
-       </div>
-     </div>
-   </div>
- </div>
- 
 </body>
 @include('layouts.footer')
 <script>
+   var refresh = 0;
    $(document).ready(function(){
-     
+      $(".submit_btn").click(function(){
+         refresh = 0;
          let month = $("#month").val();
          let gstin = $("#gstin").val();
-         //getGSTR2BData(month,gstin);
-      
-      
-       $(".submit_btn").click(function(){
-         let month = $("#month").val();
-         let gstin = $("#gstin").val();
-         getGSTR2BData(month,gstin);
+         getGstData(month,gstin);
       });
       $(".verify_otp").click(function(){
          let otp = $("#otp").val();
@@ -280,7 +261,7 @@
                if(res!=""){
                   let obj = JSON.parse(res);
                   if(obj.status==true){
-                     getGSTR2BData(month,gstin)
+                     getGstData(month,gstin)
                   }else{
                      alert(obj.message);
                   }
@@ -290,24 +271,16 @@
             }
          });
       });
-      $(".reconciliation").click(function(){
-         let month = $("#month").val();
-         let gstin = $("#gstin").val();
-         let url = "{{url('gstr2b-reconciliation-data')}}/month/gstin";
-         url = url.replace('month',month);
-         url = url.replace('gstin',gstin);
-         window.location = url;
-         
-      });
    });
-   function getGSTR2BData(month,gstin){
+   function getGstData(month,gstin){
       $.ajax({
-         url : "{{route('gstr2b-detail')}}",
+         url : "{{route('gstr2a-detail')}}",
          method : 'post',
          data : {
             _token : '{{ csrf_token() }}',
             month : month,
-            gstin : gstin
+            gstin : gstin,
+            refresh : refresh
          },
          success : function(res){
             if(res!=""){
@@ -317,84 +290,81 @@
                      $("#fgstin").val(gstin);
                      $("#otpModal").modal('toggle');
                   }else if(obj.message=="SUCCESS"){
-                     // $("#otpModal").modal('toggle');
-                     alert("OTP Verified Successfully");
-                     getGSTR2BData(month,gstin);
-                  }else if(obj.message=="GSTR2B"){
-                     $(".gst_head").html('GSTR2B');
-                     let html = "";let total_amount = 0;let total_book_amount = 0;
+                     //alert("OTP Verified Successfully");
+                     if(refresh==1){
+                        refresh = 0;
+                     }
+                     getGstData(month,gstin);
+                  }else if(obj.message=="GSTR2A"){
+                     $(".gst_head").html(`
+                        GSTR2A - Last Created Date : ${obj.last_created_date}
+                        <button type="button" class="btn btn-xs-primary new_data_btn">Refresh</button>
+                        <button type="button" class="btn btn-info reconciliation" style="margin-left:10px;">Reconciliation</button>
+                     `);
+                     let html = "";
                      let total_b2b_portal = 0;
                      let total_b2b_books = 0;
 
                      let total_cdnr_portal = 0;
                      let total_cdnr_books = 0;
-                     let total_diff = 0;
-                     obj.data.forEach(element => {
-                        let baseUrl = "{{ url('/gstr2b-all-info') }}";
-                        let fullUrl = `${baseUrl}/${month}/${gstin}/${element.ctin}`;
-                        let diffColor = '';
-                        if(parseFloat(element.diff_amt) != 0){
-                           diffColor = 'style="color:red;"';
-                        }
-                        
-                        let b2bMatchColor = (
-                           parseFloat(element.b2b_portal) === parseFloat(element.b2b_books)
-                        ) ? 'style="color:green;font-weight:bold;"' : '';
-                        
-                        let cdnrMatchColor = (
-                           parseFloat(element.cdnr_portal) === parseFloat(element.cdnr_books)
-                        ) ? 'style="color:green;font-weight:bold;"' : '';
-                        html += "<tr style='cursor:pointer;'>"+
-                                "<td><a href='"+fullUrl+"'>"+element.trdnm+" ("+element.ctin+")</a></td>"+
-                                
-                                "<td style='text-align:right'><a "+b2bMatchColor+" href='"+fullUrl+"'>"+
-                                Number(element.b2b_portal).toLocaleString('en-IN', {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2
-                                })+"</a></td>"+
-                                
-                                "<td style='text-align:right'><a "+b2bMatchColor+" href='"+fullUrl+"'>"+
-                                Number(element.b2b_books).toLocaleString('en-IN', {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2
-                                })+"</a></td>"+
-                                
-                                "<td style='text-align:right'><a "+cdnrMatchColor+" href='"+fullUrl+"'>"+
-                                Number(element.cdnr_portal).toLocaleString('en-IN', {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2
-                                })+"</a></td>"+
-                                
-                                "<td style='text-align:right'><a "+cdnrMatchColor+" href='"+fullUrl+"'>"+
-                                Number(element.cdnr_books).toLocaleString('en-IN', {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2
-                                })+"</a></td>"+
-                                
-                                "<td style='text-align:right'><a "+diffColor+" href='"+fullUrl+"'>"+
-                                Number(element.diff_amt).toLocaleString('en-IN', {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2
-                                })+"</a></td></tr>";
-                           total_b2b_portal += parseFloat(element.b2b_portal);
-                           total_b2b_books  += parseFloat(element.b2b_books);
 
-                           total_cdnr_portal += parseFloat(element.cdnr_portal);
-                           total_cdnr_books  += parseFloat(element.cdnr_books);
-                           total_amount += parseFloat(element.amount);
-                           total_book_amount += parseFloat(element.book_value);
-                           total_diff += parseFloat(element.diff_amt);
-                     });
-                     html+=`<tr>
+                     let total_diff = 0;
+                    for (let key in obj.data) {
+                        let row = obj.data[key];
+                        let baseUrl = "{{ url('/gstr2a-all-info') }}";
+                        let fullUrl = `${baseUrl}/${month}/${gstin}/${key}`;
+                        html += `
+                            <tr>
+                                <td>
+                                    <a href="${fullUrl}">
+                                        ${row.name} (${key})
+                                    </a>
+                                </td>
+                                 <td style="text-align:right; color:${parseFloat(row.b2b_portal) === parseFloat(row.b2b_books) ? 'blue' : ''}">
+                                    ${Number(row.b2b_portal).toLocaleString('en-IN',{minimumFractionDigits:2})}
+                                 </td>
+                                 <td style="text-align:right; color:${parseFloat(row.b2b_portal) === parseFloat(row.b2b_books) ? 'blue' : ''}">
+                                    ${Number(row.b2b_books).toLocaleString('en-IN',{minimumFractionDigits:2})}
+                                 </td>
+
+                                 <td style="text-align:right">
+                                    ${Number(row.cdnr_portal).toLocaleString('en-IN',{minimumFractionDigits:2})}
+                                 </td>
+                                 <td style="text-align:right">
+                                    ${Number(row.cdnr_books).toLocaleString('en-IN',{minimumFractionDigits:2})}
+                                 </td>
+                                <td style="text-align:right; color:${row.diff_amt!=0 ? 'red' : 'green'}">
+                                    ${Number(row.diff_amt).toLocaleString('en-IN',{minimumFractionDigits:2})}
+                                </td>
+                            </tr>
+                        `;
+                    
+                        total_b2b_portal += parseFloat(row.b2b_portal);
+                        total_b2b_books  += parseFloat(row.b2b_books);
+
+                        total_cdnr_portal += parseFloat(row.cdnr_portal);
+                        total_cdnr_books  += parseFloat(row.cdnr_books);
+                        total_diff   += parseFloat(row.diff_amt);
+                    }
+
+                    html += `
+                     <tr>
                         <th>Total</th>
-                        <th style='text-align:right'>${Number(total_b2b_portal).toLocaleString('en-IN',{minimumFractionDigits:2})}</th>
-                        <th style='text-align:right'>${Number(total_b2b_books).toLocaleString('en-IN',{minimumFractionDigits:2})}</th>
-                        <th style='text-align:right'>${Number(total_cdnr_portal).toLocaleString('en-IN',{minimumFractionDigits:2})}</th>
-                        <th style='text-align:right'>${Number(total_cdnr_books).toLocaleString('en-IN',{minimumFractionDigits:2})}</th>
-                        <th style='text-align:right'>${Number(total_diff).toLocaleString('en-IN',{minimumFractionDigits:2})}</th>
-                        </tr>`;
+
+                        <th style="text-align:right">${Number(total_b2b_portal).toLocaleString('en-IN',{minimumFractionDigits:2})}</th>
+                        <th style="text-align:right">${Number(total_b2b_books).toLocaleString('en-IN',{minimumFractionDigits:2})}</th>
+
+                        <th style="text-align:right">${Number(total_cdnr_portal).toLocaleString('en-IN',{minimumFractionDigits:2})}</th>
+                        <th style="text-align:right">${Number(total_cdnr_books).toLocaleString('en-IN',{minimumFractionDigits:2})}</th>
+
+                        <th style="text-align:right">${Number(total_diff).toLocaleString('en-IN',{minimumFractionDigits:2})}</th>
+                     </tr>
+                     `;
+
                      let finalHtml = html;
+
                      if(obj.pending_notes && obj.pending_notes.length){
+
                         finalHtml += `
                         <tr>
                            <td colspan="6">
@@ -463,8 +433,10 @@
                            </td>
                         </tr>`;
                      }
+
                      $(".gst_table tbody").html(finalHtml);
-                     $("#gst_div").show();
+                    $("#gst_div").show();
+
                   }
                }else{
                   alert(obj.message);
@@ -475,9 +447,164 @@
          }
       });
    }
-   
+   $(document).on('click','.new_data_btn',function(){
+      if(confirm("Do you want to refresh data?")==true){
+         let month = $("#month").val();
+         let gstin = $("#gstin").val();
+         refresh = 1;
+         getGstData(month,gstin);
+      }
+   });
+   $(document).on('click', '.reconciliation', function () {
 
+      let month = $("#month").val();
+      let gstin = $("#gstin").val();
 
+      let url = "{{url('gstr2a-reconciliation-data')}}/month/gstin";
+      url = url.replace('month', month);
+      url = url.replace('gstin', gstin);
+
+      window.location = url;
+   });
+
+   $(document).on('click', '.pending_print_btn', function () {
+
+      let month = $("#month").val();
+      let gstin = $("#gstin").val();
+
+      let printWindow = window.open('', '', 'width=1200,height=700');
+
+      let tableHTML = `
+         <html>
+         <head>
+
+               <title>Pending Credit / Debit Notes</title>
+
+               <style>
+
+                  body{
+                     font-family: Arial;
+                     font-size: 12px;
+                     padding:20px;
+                  }
+
+                  h2{
+                     text-align:center;
+                     margin-bottom:10px;
+                  }
+
+                  .info{
+                     text-align:center;
+                     margin-bottom:20px;
+                     font-size:14px;
+                  }
+
+                  table{
+                     width:100%;
+                     border-collapse:collapse;
+                  }
+
+                  table th,
+                  table td{
+                     border:1px solid #000;
+                     padding:6px;
+                     font-size:12px;
+                  }
+
+                  table th{
+                     background:#f2f2f2;
+                  }
+
+               </style>
+
+         </head>
+
+         <body>
+
+               <h2>Pending Credit / Debit Notes (Unlinked)</h2>
+
+               <div class="info">
+
+                  <strong>Month:</strong>
+                  ${month}
+
+                  &nbsp;&nbsp;&nbsp;
+
+                  <strong>GSTIN:</strong>
+                  ${gstin}
+
+               </div>
+
+               ${$('.pending_notes_table').prop('outerHTML')}
+
+         </body>
+
+         </html>
+      `;
+
+      printWindow.document.write(tableHTML);
+
+      printWindow.document.close();
+
+      printWindow.focus();
+
+      printWindow.print();
+
+   });
+
+   $(document).on('click', '.pending_excel_btn', function () {
+
+      let month = $("#month").val();
+      let gstin = $("#gstin").val();
+
+      let table = `
+         <table border="1">
+
+               <tr>
+                  <th colspan="11" style="font-size:18px;">
+                     GSTR2A
+                  </th>
+               </tr>
+
+               <tr>
+                  <td colspan="11">
+                     <strong>Month:</strong> ${month}
+                     &nbsp;&nbsp;&nbsp;
+                     <strong>GSTIN:</strong> ${gstin}
+                  </td>
+               </tr>
+
+               <tr>
+                  <th colspan="11" style="font-size:16px;">
+                     Pending Credit / Debit Notes (Unlinked)
+                  </th>
+               </tr>
+
+               ${$('.pending_notes_table').html()}
+
+         </table>
+      `;
+
+      let blob = new Blob(
+         ['\ufeff' + table],
+         { type: 'application/vnd.ms-excel' }
+      );
+
+      let url = window.URL.createObjectURL(blob);
+
+      let a = document.createElement("a");
+
+      a.href = url;
+
+      a.download = "pending_credit_debit_notes.xls";
+
+      document.body.appendChild(a);
+
+      a.click();
+
+      document.body.removeChild(a);
+
+   });
 
 </script>
 @endsection

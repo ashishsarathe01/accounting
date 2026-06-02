@@ -217,10 +217,13 @@
                                 @foreach($existing_heads as $head)
 
                                     @if(
-                                        $head->type == 'basic' ||
-                                        $head->type == 'da' ||
-                                        $head->type == 'esic' ||
-                                        ($head->type == 'other' && $head->adjustment_type == 'addictive')
+                                        $head->id != $payroll_head->id &&
+                                        (
+                                            $head->type == 'basic' ||
+                                            $head->type == 'da' ||
+                                            $head->type == 'esic' ||
+                                            ($head->type == 'other' && $head->adjustment_type == 'addictive')
+                                        )
                                     )
 
                                         <div class="form-check">

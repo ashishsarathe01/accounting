@@ -88,7 +88,6 @@ $salary_account_list = Accounts::whereIn('company_id', [
     // ===== Payroll Heads =====
 $payroll_heads = DB::table('payroll_heads')
     ->where('company_id', Session::get('user_company_id'))
-    ->whereNotIn('type', ['esic', 'pf', 'tds'])
     ->orderBy('id')
     ->get();
 
@@ -227,13 +226,9 @@ return view('merchant_employee_add')
     $user->save(); 
 
     $user_id = $user->id;
-if ($request->type_of_user == "EMPLOYEE" && $request->has('salary_heads')) {
+    if ($request->type_of_user == "EMPLOYEE" && $request->filled('salary_heads')) {
 
-    foreach ($request->salary_heads as $headId => $amount) {
-
-        $amount = floatval($amount);
-
-        if ($amount != 0) {
+        foreach ($request->salary_heads as $headId => $amount) {
 
             DB::table('user_salary_structures')->updateOrInsert(
                 [
@@ -242,14 +237,13 @@ if ($request->type_of_user == "EMPLOYEE" && $request->has('salary_heads')) {
                     'payroll_head_id' => $headId,
                 ],
                 [
-                    'amount' => $amount,
+                    'amount' => floatval($amount),
                     'updated_at' => now(),
                     'created_at' => now(),
                 ]
             );
         }
     }
-}
     // Save family members if any
     $family_names = $request->input('family_name', []);
     $family_relations = $request->input('family_relation', []);
@@ -439,6 +433,7 @@ if ($request->type_of_user == "EMPLOYEE" && $request->has('salary_heads')) {
 if ($request->type_of_user == "EMPLOYEE") {
 
     $existingHeads = DB::table('user_salary_structures')
+        ->where('company_id', Session::get('user_company_id'))
         ->where('user_id', $user->id)
         ->pluck('payroll_head_id')
         ->toArray();
@@ -450,6 +445,7 @@ if ($request->type_of_user == "EMPLOYEE") {
 
     if (!empty($headsToDelete)) {
         DB::table('user_salary_structures')
+            ->where('company_id', Session::get('user_company_id'))
             ->where('user_id', $user->id)
             ->whereIn('payroll_head_id', $headsToDelete)
             ->delete();
@@ -460,23 +456,18 @@ if ($request->type_of_user == "EMPLOYEE") {
 
         foreach ($request->salary_heads as $headId => $amount) {
 
-            $amount = floatval($amount);
-
-            if ($amount != 0) {
-
-                DB::table('user_salary_structures')->updateOrInsert(
-                    [
-                        'company_id' => Session::get('user_company_id'),
-                        'user_id' => $user->id,
-                        'payroll_head_id' => $headId,
-                    ],
-                    [
-                        'amount' => $amount,
-                        'updated_at' => now(),
-                        'created_at' => now(),
-                    ]
-                );
-            }
+            DB::table('user_salary_structures')->updateOrInsert(
+                [
+                    'company_id' => Session::get('user_company_id'),
+                    'user_id' => $user->id,
+                    'payroll_head_id' => $headId,
+                ],
+                [
+                    'amount' => floatval($amount),
+                    'updated_at' => now(),
+                    'created_at' => now(),
+                ]
+            );
         }
     }
 }
@@ -630,7 +621,6 @@ if ($request->type_of_user == "EMPLOYEE") {
     // ===== Payroll Heads =====
 $payroll_heads = DB::table('payroll_heads')
     ->where('company_id', Session::get('user_company_id'))
-    ->whereNotIn('type', ['esic', 'pf', 'tds'])
     ->orderBy('id')
     ->get();
 // ===== Existing Salary Structure =====

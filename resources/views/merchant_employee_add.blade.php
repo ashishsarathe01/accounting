@@ -545,13 +545,14 @@ h6.fw-bold {
                                         <tbody>
                                             @foreach($payroll_heads as $head)
                                             <tr 
-                                data-id="{{ $head->id }}"
-                                data-name="{{ strtolower($head->name) }}"
-                                data-type="{{ $head->adjustment_type }}"
-                                data-calculation="{{ $head->calculation_type }}"
-                                data-percentage="{{ $head->percentage }}"
-                                data-formula='{{ $head->formula_heads }}'
-                            >
+                                                data-id="{{ $head->id }}"
+                                                data-name="{{ strtolower($head->name) }}"
+                                                data-headtype="{{ $head->type }}"
+                                                data-type="{{ $head->adjustment_type }}"
+                                                data-calculation="{{ $head->calculation_type }}"
+                                                data-percentage="{{ $head->percentage }}"
+                                                data-formula='{{ $head->formula_heads }}'
+                                            >
                                                 <td class="text-center">
                                                         <input type="checkbox" class="include-head" checked>
                                                     </td>
@@ -583,7 +584,7 @@ h6.fw-bold {
                                 </div>
                             
                                 <div class="text-end mt-3">
-                                    <h5>Total Salary: â‚¹ <span id="salaryTotal">0</span></h5>
+                                    <h5>Total Salary: <span id="salaryTotal">0</span></h5>
                                 </div>
                             
                                 <div class="text-end mt-3">
@@ -600,6 +601,7 @@ h6.fw-bold {
 @include('layouts.footer')
 
 <script>
+   let salaryDefined = false;
 $(document).ready(function(){
 
   
@@ -609,7 +611,10 @@ $(document).ready(function(){
         width: '100%'
     });
 
-
+    $('#pf_applicable, #esi_applicable, select[name="tds_applicable"]')
+        .on('focus', function () {
+            $(this).data('old-value', $(this).val());
+        });
    // Show/hide sections based on Type of User
    $('#type_of_user').change(function() {
       var type = $(this).val();
@@ -627,23 +632,103 @@ $(document).ready(function(){
    });
    // ESI Applicable toggle
    $('#esi_applicable').change(function () {
-      if ($(this).val() === 'Yes') {
-         $('#esic_number_div').show();
-      } else {
-         $('#esic_number_div').hide();
-         $('input[name="esic_number"]').val('');
-      }
-   });
+        let oldValue = $(this).data('old-value');
+
+        if ($(this).val() === 'Yes') {
+
+            $('#esic_number_div').show();
+
+        } else {
+
+            $('#esic_number_div').hide();
+            $('input[name="esic_number"]').val('');
+        }
+
+        if (salaryDefined) {
+
+            let confirmChange = confirm(
+                'Salary structure will be recalculated. Continue?'
+            );
+
+            if (confirmChange) {
+
+                refreshSalaryStructure();
+
+            } else {
+
+                $(this).val(oldValue);
+
+                if (oldValue === 'Yes') {
+                    $('#esic_number_div').show();
+                } else {
+                    $('#esic_number_div').hide();
+                }
+
+                return false;
+            }
+        }
+    });
 
    // PF Applicable toggle
    $('#pf_applicable').change(function () {
-      if ($(this).val() === 'Yes') {
-         $('#uan_number_div').show();
-      } else {
-         $('#uan_number_div').hide();
-         $('input[name="uan_number"]').val('');
-      }
-   });
+        let oldValue = $(this).data('old-value');
+
+        if ($(this).val() === 'Yes') {
+
+            $('#uan_number_div').show();
+
+        } else {
+
+            $('#uan_number_div').hide();
+            $('input[name="uan_number"]').val('');
+        }
+
+        if (salaryDefined) {
+
+            let confirmChange = confirm(
+                'Salary structure will be recalculated. Continue?'
+            );
+
+            if (confirmChange) {
+
+                refreshSalaryStructure();
+
+            } else {
+
+                $(this).val(oldValue);
+
+                if (oldValue === 'Yes') {
+                    $('#uan_number_div').show();
+                } else {
+                    $('#uan_number_div').hide();
+                }
+
+                return false;
+            }
+        }
+    });
+    $('select[name="tds_applicable"]').change(function () {
+
+        let oldValue = $(this).data('old-value');
+
+        if (salaryDefined) {
+
+            let confirmChange = confirm(
+                'Salary structure will be recalculated. Continue?'
+            );
+
+            if (confirmChange) {
+
+                refreshSalaryStructure();
+
+            } else {
+
+                $(this).val(oldValue);
+
+                return false;
+            }
+        }
+    });
    // Disability toggle
    $('#disability').change(function(){
       if($(this).val()=='Yes') $('#disability_type_div').show();
@@ -725,9 +810,24 @@ $("#openAccountModal").on("click", function () {
 });
 // Open Define Salary modal
 $("#openSalaryModal").on("click", function () {
+
+    let tds = $('select[name="tds_applicable"]').val();
+    let esi = $('#esi_applicable').val();
+    let pf  = $('#pf_applicable').val();
+
+    if (!tds || !esi || !pf) {
+
+        alert(
+            'Please select TDS Applicable, ESI Applicable and PF Applicable first.'
+        );
+
+        return false;
+    }
+
+    applySalaryHeadApplicability();
+
     $("#salaryModal").modal("show");
 });
-
 const MAX_SIZE = 500 * 1024; // 500 KB
 
 function compressImage(file, callback) {
@@ -845,87 +945,264 @@ $(document).on('keyup change', '#addAccountModalForm input[name="account_name"]'
 function calculateSalary() {
 
     let values = {};
+
+    $("#salaryTable tbody tr").each(function () {
+
+        let row = $(this);
+
+        if (!row.find(".include-head").is(":checked")) {
+            return;
+        }
+
+        let headId = row.data("id");
+        let calcType = row.data("calculation");
+
+        if (calcType === "user_defined") {
+
+            let amount =
+                parseFloat(row.find(".salary-input").val()) || 0;
+
+            values[headId] = amount;
+        }
+    });
+
+    $("#salaryTable tbody tr").each(function () {
+
+        let row = $(this);
+
+        if (!row.find(".include-head").is(":checked")) {
+            return;
+        }
+
+        let headId = row.data("id");
+        let calcType = row.data("calculation");
+        let percent =
+            parseFloat(row.data("percentage")) || 0;
+
+        if (calcType === "percentage") {
+
+            let basic = 0;
+
+            $("#salaryTable tbody tr").each(function () {
+
+                if ($(this).data("headtype") === "basic") {
+
+                    let basicId = $(this).data("id");
+
+                    basic = values[basicId] || 0;
+
+                    return false;
+                }
+            });
+
+            let amount =
+                (basic * percent) / 100;
+
+            row.find(".salary-input")
+                .val(amount.toFixed(2));
+
+            values[headId] = amount;
+        }
+    });
+
+    $("#salaryTable tbody tr").each(function () {
+
+        let row = $(this);
+
+        if (!row.find(".include-head").is(":checked")) {
+            return;
+        }
+
+        let headId = row.data("id");
+        let calcType = row.data("calculation");
+        let percent =
+            parseFloat(row.data("percentage")) || 0;
+        let formula =
+            row.data("formula");
+
+        if (calcType === "custom_formula") {
+
+            let base = 0;
+            let heads = [];
+
+            if (Array.isArray(formula)) {
+
+                heads = formula;
+
+            } else if (typeof formula === "string") {
+
+                try {
+
+                    heads = JSON.parse(formula);
+
+                } catch (e) {
+
+                    heads = [];
+                }
+            }
+
+            heads.forEach(function (h) {
+
+                base +=
+                    parseFloat(values[h]) || 0;
+            });
+
+            let amount =
+                (base * percent) / 100;
+
+            row.find(".salary-input")
+                .val(amount.toFixed(2));
+
+            values[headId] = amount;
+        }
+    });
+
     let total = 0;
 
     $("#salaryTable tbody tr").each(function () {
 
         let row = $(this);
 
-        // ✅ SKIP EXCLUDED HEADS
         if (!row.find(".include-head").is(":checked")) {
             return;
         }
 
         let headId = row.data("id");
-        let type = row.data("type");
-        let calcType = row.data("calculation");
-        let percent = parseFloat(row.data("percentage")) || 0;
-        let formula = row.data("formula");
+        let adjustmentType = row.data("type");
 
-        let input = row.find(".salary-input");
-        let amount = 0;
+        let amount =
+            parseFloat(values[headId]) || 0;
 
-        // USER DEFINED
-        if (calcType === "user_defined") {
-            amount = parseFloat(input.val()) || 0;
-        }
+        if (adjustmentType === "subtractive") {
 
-        // PERCENTAGE (OF BASIC)
-        else if (calcType === "percentage") {
-
-            let basicRow = $("#salaryTable tbody tr")
-                .filter(function(){
-                    return $(this).data("name") === "basic";
-                });
-
-            let basicId = basicRow.data("id");
-            let basic = values[basicId] || 0;
-
-            amount = (basic * percent) / 100;
-            input.val(amount.toFixed(2));
-        }
-
-        // CUSTOM FORMULA
-        else if (calcType === "custom_formula" && formula) {
-
-            let base = 0;
-            let heads = [];
-
-            if (Array.isArray(formula)) {
-                heads = formula;
-            }
-            else if (typeof formula === "string") {
-                try {
-                    heads = JSON.parse(formula);
-                } catch (e) {
-                    heads = [];
-                }
-            }
-
-            heads.forEach(function (h) {
-                base += values[h] || 0;
-            });
-
-            amount = (base * percent) / 100;
-            input.val(amount.toFixed(2));
-        }
-
-        values[headId] = amount;
-
-        // ADD OR SUBTRACT
-        if (type === "subtractive") {
             total -= amount;
+
         } else {
+
             total += amount;
         }
-
     });
 
-    $("#salaryTotal").text(total.toFixed(2));
+    $("#salaryTotal").text(
+        total.toFixed(2)
+    );
 
     return total;
 }
+function applySalaryHeadApplicability() {
 
+    let tdsApplicable = $('select[name="tds_applicable"]').val();
+    let esiApplicable = $('#esi_applicable').val();
+    let pfApplicable  = $('#pf_applicable').val();
+
+    $("#salaryTable tbody tr").each(function () {
+
+        let row = $(this);
+        let headType = row.data("headtype");
+
+        let checkbox = row.find(".include-head");
+        let input = row.find(".salary-input");
+
+         if (headType === "pf") {
+
+            if (pfApplicable === "No") {
+
+               row.hide();
+
+               checkbox.prop("checked", false);
+               input.val(0);
+
+            } else {
+
+               row.show();
+
+               checkbox.prop("checked", true);
+            }
+         }
+
+        if (headType === "esic") {
+
+            if (esiApplicable === "No") {
+
+                row.hide();
+
+                checkbox.prop("checked", false);
+                input.val(0);
+
+            } else {
+
+                row.show();
+
+                checkbox.prop("checked", true);
+            }
+        }
+
+        if (headType === "tds") {
+
+            if (tdsApplicable === "No") {
+
+                row.hide();
+
+                checkbox.prop("checked", false);
+                input.val(0);
+
+            } else {
+
+                row.show();
+
+                checkbox.prop("checked", true);
+            }
+        }
+    });
+
+    calculateSalary();
+}
+function refreshSalaryStructure() {
+
+    applySalaryHeadApplicability();
+
+    let final = calculateSalary();
+
+    $("#final_salary_display")
+        .val(final.toFixed(2));
+
+    $("#salary_amount")
+        .val(final.toFixed(2));
+
+    $(".salary-hidden-input").remove();
+
+    $("#salaryTable tbody tr").each(function () {
+
+        let row = $(this);
+
+        let isIncluded =
+            row.find(".include-head").is(":checked");
+
+        if (
+            isIncluded &&
+            row.css('display') !== 'none'
+        ) {
+
+            let headId =
+                row.data("id");
+
+            let amount =
+                row.find(".salary-input").val();
+
+
+            $("<input>")
+                .attr("type", "hidden")
+                .attr(
+                    "name",
+                    "salary_heads[" + headId + "]"
+                )
+                .attr("value", amount)
+                .addClass("salary-hidden-input")
+                .appendTo("#employee_form");
+        }
+    });
+
+}
 // Auto recalc on input
 $(document).on("keyup change", ".salary-input", function () {
     calculateSalary();
@@ -939,6 +1216,7 @@ $("#applySalaryBtn").on("click", function () {
 
     $("#final_salary_display").val(final.toFixed(2));
     $("#salary_amount").val(final.toFixed(2));
+    salaryDefined = true;
 
     $(".salary-hidden-input").remove();
 

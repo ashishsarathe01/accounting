@@ -693,7 +693,7 @@ class GSTR2AController extends Controller
             // ❌ Not found → Fetch from GST API
                 $curl = curl_init();
                 curl_setopt_array($curl, [
-                    CURLOPT_URL => $base_url."/public/search?email={$email_id}&gstin={$b2b->ctin}",
+                    CURLOPT_URL => $base_url."/public/search?email={$email_id}&gstin={$request->ctin}",
                     CURLOPT_RETURNTRANSFER => true,
                     CURLOPT_TIMEOUT => 30,
                     CURLOPT_CUSTOMREQUEST => "GET",
@@ -830,6 +830,7 @@ class GSTR2AController extends Controller
                             $total_sgst += $samt;
                             $total_cess += $csamt;
                             $total_book_value += $book_value;
+                            $irn = $inv->irn ?? '';
                             $b2b_invoices .= "<tr>
                                 <td><input type='checkbox' checked class='check_action' data-key='".$inv_key."' data-type='b2b_invoices_rej_btn_'></td>
                                 <td>{$inv->inum}</td>
@@ -841,7 +842,35 @@ class GSTR2AController extends Controller
                                 <td style='text-align: right;'>".formatIndianNumber($camt)."</td>
                                 <td style='text-align: right;'>".formatIndianNumber($samt)."</td>
                                 <td style='text-align: right;'>".formatIndianNumber($csamt)."</td>
-                                <td><button class='btn btn-danger reject_btn' data-type='b2b_invoices' data-invoice='".$inv->inum."' data-date='".$inv->idt."' data-total_amount='".$inv->val."' data-taxable_amount='".$inv->itms[0]->itm_det->txval."' data-igst='".$iamt."' data-cgst='".$camt."' data-sgst='".$samt."' data-cess='' data-irn='".$inv->irn."' id='b2b_invoices_rej_btn_".$inv_key."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;display:none'>Reject</button> <button class='btn btn-success link_invoice_btn b2b_invoices_rej_btn_".$inv_key."' data-type='b2b_invoices' data-invoice='".$inv->inum."' data-date='".$inv->idt."' data-total_amount='".$inv->val."' data-ctin='".$request->ctin."' data-gstin='".$request->gstin."' data-month='".$request->month."'  style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;display:none'>Link</button></td>
+<td>
+    <button class='btn btn-danger reject_btn'
+        data-type='b2b_invoices'
+        data-invoice='".$inv->inum."'
+        data-date='".$inv->idt."'
+        data-total_amount='".$inv->val."'
+        data-taxable_amount='".$inv->itms[0]->itm_det->txval."'
+        data-igst='".$iamt."'
+        data-cgst='".$camt."'
+        data-sgst='".$samt."'
+        data-cess=''
+        data-irn='".$irn."'
+        id='b2b_invoices_rej_btn_".$inv_key."'
+        style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;display:none'>
+        Reject
+    </button>
+
+    <button class='btn btn-success link_invoice_btn b2b_invoices_rej_btn_".$inv_key."'
+        data-type='b2b_invoices'
+        data-invoice='".$inv->inum."'
+        data-date='".$inv->idt."'
+        data-total_amount='".$inv->val."'
+        data-ctin='".$request->ctin."'
+        data-gstin='".$request->gstin."'
+        data-month='".$request->month."'
+        style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;display:none'>
+        Link
+    </button>
+</td>
                             </tr>";
                         }
                         

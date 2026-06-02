@@ -70,7 +70,7 @@ class PayrollHeadController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
-            'type' => 'required|in:basic,da,other,esic',
+            'type' => 'required|in:basic,da,other,esic,pf,tds',
             'income_type' => 'nullable|in:fixed,variable',
             'affect_gross_salary' => 'nullable|in:0,1',
             'affect_net_salary' => 'nullable|in:0,1',
@@ -137,6 +137,7 @@ class PayrollHeadController extends Controller
         }
 
         elseif ($request->type == 'da') {
+            $adjustment_type = 'addictive';
 
             $use_for_gratuity = $request->use_for_gratuity ?? 1;
 
@@ -192,6 +193,72 @@ class PayrollHeadController extends Controller
 
                 if (!$request->formula_heads || count($request->formula_heads) == 0) {
                     return back()->with('error', 'Select at least one head for ESIC formula.');
+                }
+
+                $percentage = $request->percentage;
+                $formula_heads = json_encode($request->formula_heads);
+            }
+        }
+        elseif ($request->type == 'pf') {
+
+            $adjustment_type = 'subtractive';
+            $use_for_gratuity = null;
+
+            if ($calculation_type == 'percentage') {
+
+                if (!$request->percentage) {
+                    return back()->with('error', 'Percentage required for PF.');
+                }
+
+                $basicExists = DB::table('payroll_heads')
+                    ->where('company_id', $company_id)
+                    ->where('type', 'basic')
+                    ->exists();
+
+                if (!$basicExists) {
+                    return back()->with('error', 'Create Basic first before defining PF.');
+                }
+
+                $percentage = $request->percentage;
+            }
+
+            elseif ($calculation_type == 'custom_formula') {
+
+                if (!$request->percentage) {
+                    return back()->with('error', 'Percentage required for PF formula.');
+                }
+
+                if (!$request->formula_heads || count($request->formula_heads) == 0) {
+                    return back()->with('error', 'Select at least one head for PF formula.');
+                }
+
+                $percentage = $request->percentage;
+                $formula_heads = json_encode($request->formula_heads);
+            }
+        }
+
+        elseif ($request->type == 'tds') {
+
+            $adjustment_type = 'subtractive';
+            $use_for_gratuity = null;
+
+            if ($calculation_type == 'percentage') {
+
+                if (!$request->percentage) {
+                    return back()->with('error', 'Percentage required for TDS.');
+                }
+
+                $percentage = $request->percentage;
+            }
+
+            elseif ($calculation_type == 'custom_formula') {
+
+                if (!$request->percentage) {
+                    return back()->with('error', 'Percentage required for TDS formula.');
+                }
+
+                if (!$request->formula_heads || count($request->formula_heads) == 0) {
+                    return back()->with('error', 'Select at least one head for TDS formula.');
                 }
 
                 $percentage = $request->percentage;
@@ -366,6 +433,7 @@ if ($affect_gross_salary == 0) {
         }
 
         elseif ($payroll_head->type == 'da') {
+            $adjustment_type = 'addictive';
 
             $use_for_gratuity = $request->use_for_gratuity ?? 1;
 
@@ -425,6 +493,85 @@ if ($affect_gross_salary == 0) {
 
                 $percentage = $request->percentage;
 
+                $formula_heads = json_encode(array_values($request->formula_heads));
+            }
+
+            else {
+                $percentage = null;
+                $formula_heads = null;
+            }
+        }
+        elseif ($payroll_head->type == 'pf') {
+
+            $adjustment_type = 'subtractive';
+
+            $use_for_gratuity = null;
+
+            if ($calculation_type == 'percentage') {
+
+                if (!$request->percentage) {
+                    return back()->with('error', 'Percentage required for PF.');
+                }
+
+                $basicExists = DB::table('payroll_heads')
+                    ->where('company_id', $company_id)
+                    ->where('type', 'basic')
+                    ->exists();
+
+                if (!$basicExists) {
+                    return back()->with('error', 'Basic must exist for PF.');
+                }
+
+                $percentage = $request->percentage;
+                $formula_heads = null;
+            }
+
+            elseif ($calculation_type == 'custom_formula') {
+
+                if (!$request->percentage) {
+                    return back()->with('error', 'Percentage required for PF formula.');
+                }
+
+                if (!$request->formula_heads || count($request->formula_heads) == 0) {
+                    return back()->with('error', 'Select at least one head for PF formula.');
+                }
+
+                $percentage = $request->percentage;
+                $formula_heads = json_encode(array_values($request->formula_heads));
+            }
+
+            else {
+                $percentage = null;
+                $formula_heads = null;
+            }
+        }
+        elseif ($payroll_head->type == 'tds') {
+
+            $adjustment_type = 'subtractive';
+
+            $use_for_gratuity = null;
+
+            if ($calculation_type == 'percentage') {
+
+                if (!$request->percentage) {
+                    return back()->with('error', 'Percentage required for TDS.');
+                }
+
+                $percentage = $request->percentage;
+                $formula_heads = null;
+            }
+
+            elseif ($calculation_type == 'custom_formula') {
+
+                if (!$request->percentage) {
+                    return back()->with('error', 'Percentage required for TDS formula.');
+                }
+
+                if (!$request->formula_heads || count($request->formula_heads) == 0) {
+                    return back()->with('error', 'Select at least one head for TDS formula.');
+                }
+
+                $percentage = $request->percentage;
                 $formula_heads = json_encode(array_values($request->formula_heads));
             }
 
