@@ -764,7 +764,7 @@ class SupplierPurchaseController extends Controller
             ->where('supplier_purchase_vehicle_details.company_id', Session::get('user_company_id'))
             ->where('supplier_purchase_vehicle_details.account_id', $id)
             ->where('supplier_purchase_vehicle_details.group_id', $group_id)
-            ->where('supplier_purchase_vehicle_details.status', 3)
+            ->whereIn('supplier_purchase_vehicle_details.status', [3,4])
             ->when($from && $to, function ($q) use ($from, $to) {
                 $q->whereBetween('supplier_purchase_vehicle_details.entry_date', [$from, $to]);
             })
@@ -2363,7 +2363,7 @@ class SupplierPurchaseController extends Controller
                     ->leftJoin('purchases', 'supplier_purchase_vehicle_details.map_purchase_id', '=', 'purchases.id')
                     ->where('supplier_purchase_vehicle_details.company_id', Session::get('user_company_id'))
                     ->when($view_by === 'party', function ($q) {
-                        $q->where('supplier_purchase_vehicle_details.status', '3');
+                        $q->whereIn('supplier_purchase_vehicle_details.status', [3,4]);
                     })
                     ->when($id && $id != 'all', function ($q) use ($id) {
                         $q->where('supplier_purchase_vehicle_details.account_id', $id);

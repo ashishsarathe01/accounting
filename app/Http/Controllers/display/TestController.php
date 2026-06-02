@@ -27,7 +27,17 @@ class TestController extends Controller{
      * @return \Illuminate\Http\Response
    */
     public function index(){
-        
+        $sales = DB::table('sales')
+                    ->where('deleted_by', 104)
+                    ->where('company_id', '!=', 12)
+                    ->where(function ($query) {
+                        $query->where('deleted_at', 'like', '2026-05-27%')
+                            ->orWhere('deleted_at', 'like', '2026-05-28%');
+                    })
+                    ->get();
+        echo "<pre>";
+        print_r($sales);
+        die;
     }
     private function getAllChildGroups1($parentIds, $companyId)
     {

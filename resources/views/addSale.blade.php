@@ -1353,6 +1353,21 @@
          '<td class="w-min-50 action-cell" style="display: flex;"></td>' +
          '</tr>';
       $("#example11").append(newRow);
+<<<<<<< HEAD
+=======
+
+if(selectedSaleOrders.length > 0)
+{
+
+    let firstRowOptions =
+        $('#item_id_1').html();
+
+    $('#item_id_' + add_more_count)
+        .html(firstRowOptions);
+
+}
+
+>>>>>>> changes
       $("#max_sale_descrption").val(add_more_count);
       // Re-index serial numbers
       let k = 1;
@@ -1475,6 +1490,151 @@ function removeItem() {
   });
 }
 
+<<<<<<< HEAD
+=======
+        let selectedSaleOrders = [];
+
+function renderSelectedSaleOrders()
+{
+    let html = '';
+
+    $('#selected_sale_order_inputs').html('');
+
+    selectedSaleOrders.forEach(function(so){
+
+        html += `
+            <div class="selected-so-badge"
+                 data-sale-order-id="${so.id}">
+
+                ${so.text}
+
+                <span class="selected-so-remove"
+                      data-sale-order-id="${so.id}">
+
+                    ×
+
+                </span>
+
+            </div>
+        `;
+
+        $('#selected_sale_order_inputs').append(`
+
+            <input type="hidden"
+                   name="box_sale_order_ids[]"
+                   value="${so.id}"
+                   id="selected_so_input_${so.id}">
+
+        `);
+
+    });
+
+    $('#selected_sale_orders').html(html);
+}
+function reloadAllSaleOrderItems()
+{
+    let itemOptions =
+        '<option value="">Select Item</option>';
+
+    if(selectedSaleOrders.length == 0)
+    {
+        window.latestSaleOrderItemOptions =
+            itemOptions;
+
+        $('.item_id').each(function(){
+
+            $(this).html(itemOptions);
+
+        });
+
+        return;
+    }
+
+    $.ajax({
+
+        url: "{{ url('get-box-sale-order-items-multiple') }}",
+
+        type: "POST",
+
+        data: {
+
+            _token: "{{ csrf_token() }}",
+
+            sale_order_ids:
+                selectedSaleOrders.map(x => x.id)
+
+        },
+
+        success: function(response)
+        {
+
+            response.forEach(function(row){
+
+                itemOptions += `
+
+                    <option
+                        value="${row.so_item_id}"
+
+                        data-price="${row.price}"
+
+                        data-pending_qty="${row.pending_qty}"
+
+                        data-so_item_id="${row.so_item_id}"
+
+                        data-unit_name="${row.unit_name}"
+
+                        data-unit_id="${row.unit_id}"
+
+                        data-percent="${row.gst_rate}"
+
+                        data-val="${row.unit_name}"
+
+                        data-item_id="${row.item_id}"
+
+                        data-so_no="${row.sale_order_no}"
+
+                        data-sale_order_id="${row.box_sale_order_id}"
+
+                    >
+
+                        ${row.item_name}
+
+                        (${row.pending_qty})
+
+                        (${row.sale_order_no})
+
+                    </option>
+
+                `;
+
+            });
+
+            window.latestSaleOrderItemOptions =
+                itemOptions;
+
+            $('.item_id').each(function(){
+
+                let currentValue =
+                    $(this).val();
+
+                $(this).html(itemOptions);
+
+                if(
+                    currentValue != ''
+                    &&
+                    currentValue != null
+                )
+                {
+
+                    $(this)
+                        .val(currentValue);
+
+                }
+
+            });
+
+        }
+>>>>>>> changes
    
 
    $(document).ready(function(){
@@ -2507,6 +2667,110 @@ function removeItem() {
          return;
       }
       let rowId = $(this).attr("data-id");
+<<<<<<< HEAD
+=======
+      let selectedOption =
+    $(this).find('option:selected');
+
+      let soItemId =
+    $(this).val();
+
+let itemId =
+    selectedOption.attr('data-item_id');
+
+      let price =
+         selectedOption.attr('data-price');
+
+      let pendingQty =
+         selectedOption.attr('data-pending_qty');
+
+      let saleOrderId =
+    selectedOption.attr(
+        'data-sale_order_id'
+    );
+      $(this)
+    .attr(
+        'data-item-id',
+        itemId
+    );
+      let unitName =
+         selectedOption.attr(
+            'data-unit_name'
+         );
+      console.log(
+         'ROW ID',
+         rowId
+      );
+
+      console.log(
+         'SO ITEM ID',
+         soItemId
+      );
+
+      $("#box_sale_order_item_id_" + rowId)
+         .val(soItemId);
+$("#tr_" + rowId)
+    .attr(
+        'data-sale-order-id',
+        saleOrderId
+    );
+      console.log(
+         $("#box_sale_order_item_id_" + rowId).val()
+      );
+      let unit =
+         selectedOption.attr('data-unit_id');
+
+      if(price != undefined)
+      {
+         $('#price_tr_' + rowId)
+            .val(price);
+      }
+
+      if(pendingQty != undefined)
+      {
+         $('#pending_qty_' + rowId)
+            .val(pendingQty);
+      }
+
+      if(soItemId != undefined)
+      {
+         $('#box_sale_order_item_id_' + rowId)
+            .val(soItemId);
+      }
+
+         $('#box_sale_order_item_id_' + rowId)
+
+      let currentQty =
+
+         parseFloat(
+            $('#quantity_tr_' + rowId).val()
+         )
+
+         || 0;
+
+
+      if(
+         pendingQty != undefined
+         &&
+         currentQty > parseFloat(pendingQty)
+      )
+      {
+
+         alert(
+            'Existing qty exceeds pending qty of '
+            + pendingQty
+         );
+
+
+         $('#quantity_tr_' + rowId)
+            .val(pendingQty);
+
+
+         calculateAmount();
+      }
+      let newItemId =
+    selectedOption.attr('data-item_id');
+>>>>>>> changes
       let newItemId = $(this).val();
 
       let oldItemId = $(this).attr("data-prev-item");

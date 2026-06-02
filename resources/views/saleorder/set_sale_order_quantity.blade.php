@@ -155,7 +155,7 @@
                               </div>
                            </div>
                         @endforeach
-                     </div>                    
+                     </div>
                      <div class="d-flex">
                         <div class="ms-auto">
                             <input type="submit" value="SAVE" class="btn btn-primary">

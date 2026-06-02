@@ -16,7 +16,6 @@ use App\Models\VoucherSeriesConfiguration;
 use App\Models\GstBranch;
 use App\Models\ItemBalanceBySeries;
 use App\Models\ItemAverageDetail;
-use App\Models\ItemAverage;
 use App\Models\SubItem;
 use App\Models\ActivityLog;
 use App\Models\MerchantModuleMapping;
@@ -731,110 +730,6 @@ class ManageItemsController extends Controller
          ->with('hideDeleteFor',$hideDeleteFor->toArray());
    }
 
-   public function getConsumedItemsByDate(Request $request){
-      $date = $request->date ?? date('Y-m-d');
-      $company_id = Session::get('user_company_id');
-
-      // Get all active series for this company (same as Item Ledger)
-      $companyData = Companies::where('id', $company_id)->first();
-      if ($companyData->gst_config_type == "single_gst") {
-         $series_list = DB::table('gst_settings')
-            ->where(['company_id' => $company_id, 'gst_type' => "single_gst"])
-            ->get();
-         $branch = GstBranch::select('id', 'branch_series as series')
-            ->where(['delete' => '0', 'company_id' => $company_id, 'gst_setting_id' => $series_list[0]->id])
-            ->get();
-         if (count($branch) > 0) {
-            $series_list = $series_list->merge($branch);
-         }
-      } else {
-         $series_list = DB::table('gst_settings_multiple')
-            ->select('id', 'series')
-            ->where(['company_id' => $company_id, 'gst_type' => "multiple_gst"])
-            ->get();
-         foreach ($series_list as $value) {
-            $branch = GstBranch::select('id', 'branch_series as series')
-               ->where(['delete' => '0', 'company_id' => $company_id, 'gst_setting_multiple_id' => $value->id])
-               ->get();
-            if (count($branch) > 0) {
-               $series_list = $series_list->merge($branch);
-            }
-         }
-      }
-
-      // Aggregate stock across all series (same logic as Item Ledger "all" view)
-      $allArrays = [];
-      foreach ($series_list as $s) {
-         // Fallback: opening entries from item_ledger (source = -1)
-         $item_ledger = ItemLedger::join('manage_items', 'item_ledger.item_id', '=', 'manage_items.id')
-            ->join('units', 'manage_items.u_name', '=', 'units.id')
-            ->select('item_id', 'in_weight as average_weight', 'total_price as amount', 'manage_items.name as item_name', 'units.s_name as unit_name')
-            ->where('item_ledger.company_id', $company_id)
-            ->where('source', '-1')
-            ->where('series_no', $s->series)
-            ->where('delete_status', '0')
-            ->groupBy('item_id')
-            ->get();
-
-         // Latest item_averages record per item up to the selected date
-         $sub = DB::table('item_averages')
-            ->select(DB::raw('MAX(id) as latest_id'))
-            ->where('stock_date', '<=', $date)
-            ->where('series_no', $s->series)
-            ->where('company_id', $company_id)
-            ->groupBy('item_id');
-
-         $avgItems = ItemAverage::join('manage_items', 'item_averages.item_id', '=', 'manage_items.id')
-            ->join('units', 'manage_items.u_name', '=', 'units.id')
-            ->whereIn('item_averages.id', $sub)
-            ->where('series_no', $s->series)
-            ->select('item_averages.item_id', 'item_averages.average_weight', 'item_averages.amount', 'manage_items.name as item_name', 'units.s_name as unit_name', 'manage_items.u_name as unit_id')
-            ->get();
-
-         // Add opening entries not already present
-         foreach ($item_ledger as $row) {
-            $exists = $avgItems->contains('item_id', $row->item_id);
-            if (!$exists) {
-               $avgItems->push($row);
-            }
-         }
-         $allArrays[] = $avgItems->toArray();
-      }
-
-      // Merge across series
-      $result = [];
-      foreach ($allArrays as $array) {
-         foreach ($array as $item) {
-            $id = $item['item_id'];
-            if (!isset($result[$id])) {
-               $result[$id] = $item;
-            } else {
-               $result[$id]['average_weight'] += $item['average_weight'];
-               $result[$id]['amount'] += $item['amount'];
-            }
-         }
-      }
-
-      // Filter only items with stock > 0
-      $positiveItems = array_filter($result, function($item) {
-         return $item['average_weight'] > 0;
-      });
-
-      // Get full item details (unit info) for positive-stock items
-      $itemIds = array_keys($positiveItems);
-      $items = DB::table('manage_items')
-         ->join('units', 'manage_items.u_name', '=', 'units.id')
-         ->whereIn('manage_items.id', $itemIds)
-         ->where('manage_items.company_id', $company_id)
-         ->where('manage_items.delete', '0')
-         ->where('manage_items.status', '1')
-         ->select('manage_items.id', 'manage_items.name', 'manage_items.u_name', 'units.s_name as unit')
-         ->orderBy('manage_items.name')
-         ->get();
-
-      return response()->json($items);
-   }
-
    public function addStockJournal(){
       Gate::authorize('view-module', 86);
       $financial_year = Session::get('default_fy');
@@ -977,27 +872,6 @@ class ManageItemsController extends Controller
       // echo "<pre>";
       // print_r($request->all());
        //die;     
-      $financial_year_session = Session::get('default_fy');
-
-      [$startYY, $endYY] = explode('-', $financial_year_session);
-
-      $fy_start_date = '20' . $startYY . '-04-01';
-
-      $fy_end_date   = '20' . $endYY   . '-03-31';
-
-      if(
-         $request->input('date') < $fy_start_date
-         ||
-         $request->input('date') > $fy_end_date
-      ){
-         return redirect()
-            ->back()
-            ->withInput()
-            ->withErrors([
-               'date' =>
-               'Selected date is outside the current financial year.'
-            ]);
-      }
       $financial_year = CommonHelper::getFinancialYear($request->input('date'));
       $date = $request->input('date');
       $part_life_entry_id = $request->input('part_life_entry_id');
@@ -1453,13 +1327,13 @@ class ManageItemsController extends Controller
                                        ->select('item_id','size','weight','reel_no','id','unit','sj_generated_detail_id','status')
                                        ->get();
 
-      $available = ItemSizeStock::select('id','item_id', 'size', 'weight', 'reel_no','unit')
-        ->where('company_id', Session::get('user_company_id'))
-        ->where('status', 1)
-        ->where(function($q) use ($id) {
-                                  $q->where('sj_generated_id', '!=', $id)
-                                    ->orWhereNull('sj_generated_id');
-                                       })
+      $available = ItemSizeStock::select('id','item_id', 'size', 'weight', 'reel_no','unit','created_at')
+                                    ->where('company_id', Session::get('user_company_id'))
+                                    ->where('status', 1)
+                                    ->where(function($q) use ($id) {
+                                       $q->where('sj_generated_id', '!=', $id)
+                                       ->orWhereNull('sj_generated_id');
+                                    })
         ->whereNull('sale_id')
         ->get();
         $itemIds = $production_items->pluck('item_id')->toArray();
@@ -1475,27 +1349,6 @@ class ManageItemsController extends Controller
       // die;
       Gate::authorize('view-module', 63);
       $date = $request->input('date');
-      $financial_year_session = Session::get('default_fy');
-
-      [$startYY, $endYY] = explode('-', $financial_year_session);
-
-      $fy_start_date = '20' . $startYY . '-04-01';
-
-      $fy_end_date   = '20' . $endYY   . '-03-31';
-
-      if(
-         $date < $fy_start_date
-         ||
-         $date > $fy_end_date
-      ){
-         return redirect()
-            ->back()
-            ->withInput()
-            ->withErrors([
-               'date' =>
-               'Selected date is outside the current financial year.'
-            ]);
-      }
       $request->validate([
          'consume_item.*' => 'nullable|integer',
          'consume_weight.*' => 'nullable|numeric',

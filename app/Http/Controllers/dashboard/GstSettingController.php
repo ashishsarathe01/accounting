@@ -117,7 +117,7 @@ class GstSettingController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-   public function store(Request $request){      
+   public function store(Request $request){
       $validator = Validator::make($request->all(), [
          'gst_type' => 'required|string',
       ],[
@@ -155,6 +155,10 @@ class GstSettingController extends Controller
       $branch_pincode = $request->branch_pincode;
       $branch_matcenter = $request->branch_matcenter;
       $branch_series = $request->branch_series;
+      $authorized_signatory_1 = $request->authorized_signatory_1;
+      $authorized_signatory_pan_no_1 = $request->authorized_signatory_pan_no_1;
+      $authorized_signatory_2 = $request->authorized_signatory_2;
+      $authorized_signatory_pan_no_2 = $request->authorized_signatory_pan_no_2;
       //$branch_invoice_start_from = $request->branch_invoice_start_from;
       //$branch_invoice_prefix = $request->branch_invoice_prefix;
       // Update Gst types in company table
@@ -188,7 +192,11 @@ class GstSettingController extends Controller
                'einvoice_password'=>encrypt($einvoice_password[$index][0]), 
                'ewaybill'=> $ewaybill[$index][0], 
                'ewaybill_username'=>$ewaybill_username[$index][0], 
-               'ewaybill_password'=>encrypt($ewaybill_password[$index][0])
+               'ewaybill_password'=>encrypt($ewaybill_password[$index][0]),
+               'authorized_signatory_1'=>$authorized_signatory_1[$index][0],
+               'authorized_signatory_pan_no_1'=>$authorized_signatory_pan_no_1[$index][0],
+               'authorized_signatory_2'=>$authorized_signatory_2[$index][0],
+               'authorized_signatory_pan_no_2'=>$authorized_signatory_pan_no_2[$index][0],
             );
             $gst_settings_id = DB::table('gst_settings_multiple')->insertGetId($gst_data);
             if($branch_address!='' && count($branch_address[$index])>0){
@@ -238,7 +246,11 @@ class GstSettingController extends Controller
                'einvoice_password'=>encrypt($einvoice_password[$index][0]), 
                'ewaybill'=> $ewaybill[$index][0], 
                'ewaybill_username'=>$ewaybill_username[$index][0], 
-               'ewaybill_password'=>encrypt($ewaybill_password[$index][0])
+               'ewaybill_password'=>encrypt($ewaybill_password[$index][0]),
+               'authorized_signatory_1'=>$authorized_signatory_1[$index][0],
+               'authorized_signatory_pan_no_1'=>$authorized_signatory_pan_no_1[$index][0],
+               'authorized_signatory_2'=>$authorized_signatory_2[$index][0],
+               'authorized_signatory_pan_no_2'=>$authorized_signatory_pan_no_2[$index][0],
             );
             $gst_settings_id = DB::table('gst_settings')->insertGetId($gst_data);
             if($branch_address!='' && count($branch_address[$index])>0){
@@ -308,6 +320,11 @@ class GstSettingController extends Controller
       $branch_pincode = $request->branch_pincode;
       $branch_matcenter = $request->branch_matcenter;
       $branch_series = $request->branch_series;
+      $authorized_signatory_1 = $request->authorized_signatory_1;
+      $authorized_signatory_pan_no_1 = $request->authorized_signatory_pan_no_1;
+      $authorized_signatory_2 = $request->authorized_signatory_2;
+      $authorized_signatory_pan_no_2 = $request->authorized_signatory_pan_no_2;
+      $scheme = $request->scheme;
       // $branch_invoice_start_from = $request->branch_invoice_start_from;
       //$branch_invoice_prefix = $request->branch_invoice_prefix;
       // Update Gst types in company table
@@ -361,7 +378,11 @@ class GstSettingController extends Controller
                   'einvoice_password'=>$einvoice_password1, 
                   'ewaybill'=> $ewaybill[$index][0], 
                   'ewaybill_username'=>$ewaybill_username1, 
-                  'ewaybill_password'=>$ewaybill_password1
+                  'ewaybill_password'=>$ewaybill_password1,
+                  'authorized_signatory_1'=>$authorized_signatory_1[$index][0],
+                  'authorized_signatory_pan_no_1'=>$authorized_signatory_pan_no_1[$index][0],
+                  'authorized_signatory_2'=>$authorized_signatory_2[$index][0],
+                  'authorized_signatory_pan_no_2'=>$authorized_signatory_pan_no_2[$index][0],
                );
                
                $gst_settings_id = DB::table('gst_settings_multiple')->insertGetId($gst_data);
@@ -429,7 +450,12 @@ class GstSettingController extends Controller
                'einvoice_password'=>$einvoice_password1, 
                'ewaybill'=> $ewaybill[$index][0], 
                'ewaybill_username'=>$ewaybill_username1, 
-               'ewaybill_password'=>$ewaybill_password1
+               'ewaybill_password'=>$ewaybill_password1,
+               'authorized_signatory_1'=>$authorized_signatory_1[$index][0],
+               'authorized_signatory_pan_no_1'=>$authorized_signatory_pan_no_1[$index][0],
+               'authorized_signatory_2'=>$authorized_signatory_2[$index][0],
+               'authorized_signatory_pan_no_2'=>$authorized_signatory_pan_no_2[$index][0],
+
             );
             $gst_settings_id = DB::table('gst_settings')->insertGetId($gst_data);
             if($branch_address!='' && count($branch_address[$index])>0){

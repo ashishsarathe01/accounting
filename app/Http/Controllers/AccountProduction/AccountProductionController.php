@@ -652,6 +652,7 @@ class AccountProductionController extends Controller
                   ->where('company_id', Session::get('user_company_id'))
                   ->where('source', 7)
                   ->update([
+                     'in_weight' => $totalGeneratedWeight,
                      'source_id' => $id,
                      'price' => $request->generated_price[$key],
                      'total_price' => DB::raw(
@@ -664,6 +665,7 @@ class AccountProductionController extends Controller
                   ->where('company_id', Session::get('user_company_id'))
                   ->where('type', 'PRODUCTION GENERATE')
                   ->update([
+                     'production_in_weight' => $totalGeneratedWeight,
                      'production_in_id' => $id,
                      'production_in_amount' => DB::raw(
                            'ROUND(production_in_weight * ' . (float)$request->generated_price[$key] . ',2)'

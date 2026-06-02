@@ -127,7 +127,7 @@
                            
                               <tr id="tr_{{$i}}" class="font-14 font-heading bg-white">
                                     <td class="w-min-50" id="consume_srn_{{$i}}">{{$i}}</td>
-                                    <td class="w-min-50">                                       
+                                    <td class="w-min-50">
                                        <div class="d-flex align-items-center">
                                           @php $isSelectedProductionEnabled = 0;@endphp
                                           <select class="form-control consume_item select2-single" name="consume_item[]" data-id="{{$i}}" id="consume_item_{{$i}}">
@@ -147,7 +147,7 @@
                                                       {{$item->name}}
                                                    </option>
                                                 @endforeach
-                                          </select>                                          
+                                          </select>
                                           @if($isSelectedProductionEnabled == 1)
                                              <button type="button" class="btn btn-outline-secondary p-1 px-2 configure-size-btn ms-1" 
                                                 data-id="{{ $i }}" 
@@ -486,7 +486,6 @@
    // Track original item per row (EDIT only)
    let originalConsumeItem = {};
    let originalGenerateItem = {};
-
    // Track rows where item is changed
    let changedConsumeRows = {};
    let changedGenerateRows = {};
@@ -494,15 +493,13 @@
    let acceptedGenerateItem = {};
    let isNewConsumeRow = {};
    let isNewGenerateRow = {};
-                                                   
-
-    let productionItems = @json($production_items);
-    productionItems = productionItems.map(obj => parseInt(obj.item_id));
-
+   let productionItems = @json($production_items);
+   productionItems = productionItems.map(obj => parseInt(obj.item_id));
+   var givenDate = $('#date').val();   
    let availableReels = @json($availableReels);
-    let consumedReels = @json($consumed_reels);
-    let generatedReels = @json($generated_reels);
-    var itemsOptions = {!! json_encode($items->map(function($item) use ($production_items) {
+   let consumedReels = @json($consumed_reels);
+   let generatedReels = @json($generated_reels);
+   var itemsOptions = {!! json_encode($items->map(function($item) use ($production_items) {
         return ['id' => $item->id,'name' => $item->name,'unit_id' => $item->u_name,'unit_name' => $item->unit,'production_status' => $production_items->contains('item_id', $item->id) ? 1 : 0];})) !!};
 
    // Consumed items filtered by stock date (populated via AJAX)
@@ -590,20 +587,6 @@
       $( ".select2-single, .select2-multiple" ).select2(); 
       calculateAmount(1);
       calculateAmountNew(1);
-
-      // Load consumed items for the journal date
-      var initialDate = $("#date").val();
-      if (initialDate) {
-         loadConsumedItemsByDate(initialDate);
-      }
-
-      // Reload on date change
-      $("#date").on('change', function() {
-         var selectedDate = $(this).val();
-         if (selectedDate) {
-            loadConsumedItemsByDate(selectedDate);
-         }
-      });
    });   
    var add_more_count = {{$i}} - 1;
    $(".add_more").click(function() {      
@@ -642,7 +625,6 @@
       $newSelect.select2();
       refreshConsumeItemOptionsEdit();
    });
-
    var add_more_count1 = '<?php echo $j;?>';
    add_more_count1--;
    $(".add_more1").click(function() {
@@ -671,25 +653,6 @@
    });
    $(".savebtn").click(function(){
       let date = $("#date").val();
-      let from_date = "{{ $fy_start_date }}";
-
-      let to_date = "{{ $fy_end_date }}";
-
-      let selected_date = $("#date").val();
-
-      if(
-         selected_date < from_date
-         ||
-         selected_date > to_date
-      ){
-         alert(
-            "Selected date is outside the current financial year."
-         );
-
-         $("#date").focus();
-
-         return false;
-      }
       let item_count = 0;
       $(".consume_item").each(function(){
          let id = $(this).attr('data-id');
@@ -777,19 +740,17 @@
       $("#voucher_no").val($(this).val());
    });
    $(document).on('change', '.consume_item', function () {
+      let rowId = $(this).data("id");
+      let newItemId = $(this).val();
+      // unit update
+      $('#consume_unit_tr_' + rowId).val($(this).find(':selected').data('unit_name'));
+      $('#consume_units_tr_' + rowId).val($(this).find(':selected').data('unit_id'));
 
-    let rowId = $(this).data("id");
-    let newItemId = $(this).val();
+      let isProduction = $(this).find(':selected').data('production_status') == 1;
+      let gearBtn = $('#tr_' + rowId + ' .configure-size-btn');
 
-    // unit update
-    $('#consume_unit_tr_' + rowId).val($(this).find(':selected').data('unit_name'));
-    $('#consume_units_tr_' + rowId).val($(this).find(':selected').data('unit_id'));
-
-    let isProduction = $(this).find(':selected').data('production_status') == 1;
-    let gearBtn = $('#tr_' + rowId + ' .configure-size-btn');
-
-    // same item → do nothing
-    // NEW ROW → behave like Add Stock Journal
+      // same item → do nothing
+      // NEW ROW → behave like Add Stock Journal
       if (isNewConsumeRow[rowId]) {
 
       // if still empty → do NOTHING
@@ -821,124 +782,119 @@
       }
 
 
-    // item changed → reset row
-    $('#item_size_info_' + rowId).val('');
-    $('#consume_weight_' + rowId).val('');
-    $('#consume_price_' + rowId).val('');
-    $('#consume_amount_' + rowId).val('');
+      // item changed → reset row
+      $('#item_size_info_' + rowId).val('');
+      $('#consume_weight_' + rowId).val('');
+      $('#consume_price_' + rowId).val('');
+      $('#consume_amount_' + rowId).val('');
 
-    // show & auto-open modal if parameterized
-    if (isProduction && productionModuleStatus === 1) {
-        gearBtn.show();
-        gearBtn.trigger('click');
-    } else {
-        gearBtn.hide();
-    }
+      // show & auto-open modal if parameterized
+      if (isProduction && productionModuleStatus === 1) {
+         gearBtn.show();
+         gearBtn.trigger('click');
+      } else {
+         gearBtn.hide();
+      }
 
-    calculateAmount(rowId);
-    refreshConsumeItemOptionsEdit();
+      calculateAmount(rowId);
+      refreshConsumeItemOptionsEdit();
    });
-
-
    $(document).on('change', '.generated_item', function () {
+      let rowId = $(this).data("id");
+      let newItemId = $(this).val();
 
-    let rowId = $(this).data("id");
-    let newItemId = $(this).val();
+      // update unit
+      $('#generated_unit_tr_' + rowId).val($(this).find(':selected').data('unit_name') || '');
+      $('#generated_units_tr_' + rowId).val($(this).find(':selected').data('unit_id') || '');
 
-    // update unit
-    $('#generated_unit_tr_' + rowId).val($(this).find(':selected').data('unit_name') || '');
-    $('#generated_units_tr_' + rowId).val($(this).find(':selected').data('unit_id') || '');
+      let isProduction = isGeneratedItemParameterized(newItemId);
+      let gearBtn = $('#tr1_' + rowId + ' .configure-size-btn-gen');
 
-    let isProduction = isGeneratedItemParameterized(newItemId);
-    let gearBtn = $('#tr1_' + rowId + ' .configure-size-btn-gen');
-
-    /* ===============================
+      /* ===============================
        NEW ROW (Add Row behaviour)
        =============================== */
-    if (isNewGenerateRow[rowId] === true) {
+      if (isNewGenerateRow[rowId] === true) {
 
-        // nothing selected → hide gear
-        if (!newItemId) {
-            gearBtn.hide();
-            return;
-        }
+         // nothing selected → hide gear
+         if (!newItemId) {
+               gearBtn.hide();
+               return;
+         }
 
-        // reset row data
-        $('#item_size_info_gen_' + rowId).val('');
-        $('#generated_weight_' + rowId).val('');
-        $('#generated_price_' + rowId).val('');
-        $('#generated_amount_' + rowId).val('');
+         // reset row data
+         $('#item_size_info_gen_' + rowId).val('');
+         $('#generated_weight_' + rowId).val('');
+         $('#generated_price_' + rowId).val('');
+         $('#generated_amount_' + rowId).val('');
 
-        if (isProduction && productionModuleStatus === 1) {
-            gearBtn.show();
+         if (isProduction && productionModuleStatus === 1) {
+               gearBtn.show();
 
-            // ✅ ALWAYS open modal safely
-            openGeneratedModal(rowId);
-        } else {
-            gearBtn.hide();
-        }
+               // ✅ ALWAYS open modal safely
+               openGeneratedModal(rowId);
+         } else {
+               gearBtn.hide();
+         }
 
-        return;
-    }
+         return;
+      }
 
-    /* ===============================
-       EXISTING ROW (Edit behaviour)
-       =============================== */
-    if (acceptedGenerateItem[rowId] && newItemId === acceptedGenerateItem[rowId]) {
+      /* ===============================
+         EXISTING ROW (Edit behaviour)
+         =============================== */
+      if (acceptedGenerateItem[rowId] && newItemId === acceptedGenerateItem[rowId]) {
 
-        if (isProduction && productionModuleStatus === 1) {
-            gearBtn.show();
-        } else {
-            gearBtn.hide();
-        }
+         if (isProduction && productionModuleStatus === 1) {
+               gearBtn.show();
+         } else {
+               gearBtn.hide();
+         }
 
-        return;
-    }
+         return;
+      }
 
-    /* ===============================
-       ITEM CHANGED
-       =============================== */
-    $('#item_size_info_gen_' + rowId).val('');
-    $('#generated_weight_' + rowId).val('');
-    $('#generated_price_' + rowId).val('');
-    $('#generated_amount_' + rowId).val('');
+      /* ===============================
+         ITEM CHANGED
+         =============================== */
+      $('#item_size_info_gen_' + rowId).val('');
+      $('#generated_weight_' + rowId).val('');
+      $('#generated_price_' + rowId).val('');
+      $('#generated_amount_' + rowId).val('');
 
-    if (isProduction && productionModuleStatus === 1) {
-        gearBtn.show();
-        openGeneratedModal(rowId);
-    } else {
-        gearBtn.hide();
-    }
+      if (isProduction && productionModuleStatus === 1) {
+         gearBtn.show();
+         openGeneratedModal(rowId);
+      } else {
+         gearBtn.hide();
+      }
 
-    calculateAmountNew(rowId);
-});
-
+      calculateAmountNew(rowId);
+   });
    $(document).on('click', '.configure-size-btn', function () {
-
-    let rowId = $(this).data("id");
-    let itemId = $("#consume_item_" + rowId).val();
-    
+      let rowId = $(this).data("id");
+      let itemId = $("#consume_item_" + rowId).val();    
       if (!(productionModuleStatus === 1 && productionItems.includes(parseInt(itemId)))) {
          return; // ❌ Skip because condition not satisfied
       }
-
-    if (!itemId) {
-        alert("Select item first!");
-        return;
-    }
-
-    // Filter available reels for this item
-    let itemAvailable = availableReels.filter(r => r.item_id == itemId);
+      if (!itemId) {
+         alert("Select item first!");
+         return;
+      }
+      // Filter available reels for this item
+      //let itemAvailable = availableReels.filter(r => r.item_id == itemId);
+      let itemAvailable = availableReels.filter(r => 
+         r.item_id == itemId &&
+         new Date(r.created_at) <= new Date(givenDate)
+      );
 
       // Load reels saved earlier (from hidden input)
       let savedJson = "";
+      
       if ($("#consume_item_" + rowId).val() === acceptedConsumeItem[rowId]) {
          savedJson = $("#item_size_info_" + rowId).val();
       }
-
-
+      // console.log(savedJson)
       let savedReels = [];
-
       if (savedJson) {
          try {
             savedReels = JSON.parse(savedJson);
@@ -946,13 +902,10 @@
             savedReels = [];
          }
       }
-
       // Load consumed reels from DB
       let dbReels = consumedReels.filter(r => r.item_id == itemId);
-
       // Merge both lists
       let itemConsumed = [...dbReels];
-
       // Add saved reels ONLY if not already included
       savedReels.forEach(sr => {
          if (!itemConsumed.some(r => r.id == sr.id)) {
@@ -965,20 +918,14 @@
             });
          }
       });
-
       // If still empty → add blank row
       if (itemConsumed.length == 0) {
          itemConsumed = [{ id: "", size: "", weight: "", reel_no: "" }];
       }
-
-
       let totalWeight = 0;
       let rowsHTML = '';
-
       itemConsumed.forEach(function(c, index){
-
          let match = itemAvailable.find(a => a.id == c.id);
-
          // 2️⃣ FIX — IF FOUND, FILL MISSING VALUES
          if (match) {
             c.size  = c.size  || match.size;
@@ -986,12 +933,8 @@
             c.weight = c.weight || match.weight;
             c.reel_no = c.reel_no || match.reel_no;
          }
-            
-         let optionsHTML = "";
-         let optionsUnit = "";
-
-         
-
+      let optionsHTML = "";
+      let optionsUnit = "";
       if (c.size) {  
          optionsHTML = `<option value="${c.id}">${c.size} (Reel ${c.reel_no}) - ${c.weight}kg</option>`;
          optionsUnit = `<option value="${c.unit}">${c.unit}</option>`
@@ -1004,18 +947,18 @@
       }
 
 
-    itemAvailable.forEach(function(a){
-        optionsHTML += `
-            <option value="${a.id}" 
-                    data-weight="${a.weight}" 
-                    data-reel="${a.reel_no}"
-                    data-unit ="${a.unit}"
-                    ${a.id == c.id ? 'selected' : ''}>
-                ${a.size} (Reel ${a.reel_no}) - ${a.weight}kg
-            </option>`;
-    });
+      itemAvailable.forEach(function(a){
+         optionsHTML += `
+               <option value="${a.id}" 
+                     data-weight="${a.weight}" 
+                     data-reel="${a.reel_no}"
+                     data-unit ="${a.unit}"
+                     ${a.id == c.id ? 'selected' : ''}>
+                  ${a.size} (Reel ${a.reel_no}) - ${a.weight}kg
+               </option>`;
+      });
 
-    rowsHTML += `
+      rowsHTML += `
         <tr class="size-row">
             <td>
                 <select class="form-select size-select">
@@ -1036,18 +979,15 @@
             </td>
         </tr>`;
         totalWeight += Number(c.weight || 0);
-   });
-   
-    $("#size_rows").html(rowsHTML);
-    $("#total_weight").text(totalWeight.toFixed(2));
-
-    $("#item_size_row_id").val(rowId);
-    $("#sizeModal").modal("show");
+   });   
+   $("#size_rows").html(rowsHTML);
+   $("#total_weight").text(totalWeight.toFixed(2));
+   $("#item_size_row_id").val(rowId);
+   $("#sizeModal").modal("show");
 });
 
 $(document).on("change", ".size-select", function () {
-          refreshReelDropdowns();
-
+   refreshReelDropdowns();
     let selected = $(this).find("option:selected");
     let row = $(this).closest("tr");
 
@@ -1073,7 +1013,11 @@ $(document).on("click",".add_new_reel", function(){
     let itemId = $(this).data("item-id");
 
     
-let itemAvailable = availableReels.filter(r => r.item_id == itemId);
+//let itemAvailable = availableReels.filter(r => r.item_id == itemId);
+ let itemAvailable = availableReels.filter(r => 
+      r.item_id == itemId &&
+      new Date(r.created_at) <= new Date(givenDate)
+   );
 
     itemAvailable.forEach(function(a){
         optionsHTML += `
@@ -1144,11 +1088,6 @@ $(document).on("click", ".remove-reel", function () {
 
 
 function generateOptions() {
-    // Used ONLY for consumed items (new rows added via add_more)
-    return buildConsumedOptions([]);
-}
-
-function generateOptionsForGenerated() {
     let html = `<option value="">Select Item</option>`;
     itemsOptions.forEach(function(item) {
         html += `<option value="${item.id}" 
@@ -1162,51 +1101,41 @@ function generateOptionsForGenerated() {
 }
 
 
-$(document).on("click", ".item_size_btn", function () {
-
-
-    let modal = $("#sizeModal");     // LIMIT to this modal only
-    let total = 0;
-
-    modal.find(".size-weight").each(function () {
-        total += parseFloat($(this).val() || 0);
-    });
-
-    modal.find("#total_weight").text(total.toFixed(2));
- let totalWeight = modal.find("#total_weight").text().trim();     // remove spaces
-
-
-    let rowId = $("#item_size_row_id").val(); 
-    // row in main table
-    let reels = [];
-
-    $("#size_rows .size-row").each(function () {
-        let selected = $(this).find(".size-select option:selected");
-
-        let reelId = selected.val();
-       
-        let weight = $(this).find(".size-weight").val() || "";
-        let reelNo = $(this).find(".size-reel").val() || "";
-
-        // Skip blank rows
-        if (reelId !== "" && weight !== "") {
+   $(document).on("click", ".item_size_btn", function () {
+      let modal = $("#sizeModal");     // LIMIT to this modal only
+      let total = 0;
+      modal.find(".size-weight").each(function () {
+         total += parseFloat($(this).val() || 0);
+      });
+      modal.find("#total_weight").text(total.toFixed(2));
+      let totalWeight = modal.find("#total_weight").text().trim();// remove spaces
+      let rowId = $("#item_size_row_id").val(); 
+      // row in main table
+      let reels = [];
+      $("#size_rows .size-row").each(function () {
+         let selected = $(this).find(".size-select option:selected");
+         let reelId = selected.val();
+         let weight = $(this).find(".size-weight").val() || "";
+         let reelNo = $(this).find(".size-reel").val() || "";
+         // Skip blank rows
+         if (reelId !== "" && weight !== "") {
             reels.push({
-                id: reelId,
-                weight: weight,
-                reel_no: reelNo
+               id: reelId,
+               weight: weight,
+               reel_no: reelNo
             });
-        }
-    });
-
-    // Save as JSON inside hidden input of this main row
-    $("#item_size_info_" + rowId).val(JSON.stringify(reels));
-     $("#consume_weight_" + rowId).val(totalWeight);
-     isNewConsumeRow[rowId] = false;                 // mark row as existing
-    acceptedConsumeItem[rowId] = $("#consume_item_" + rowId).val();
-     calculateAmount(rowId);
-
-    $("#sizeModal").modal("hide");
-});
+            
+         }
+      });
+      
+      // Save as JSON inside hidden input of this main row
+      $("#item_size_info_" + rowId).val(JSON.stringify(reels));
+      $("#consume_weight_" + rowId).val(totalWeight);
+      isNewConsumeRow[rowId] = false;                 // mark row as existing
+      acceptedConsumeItem[rowId] = $("#consume_item_" + rowId).val();
+      calculateAmount(rowId);
+      $("#sizeModal").modal("hide");
+   });
 // Recalculate when user types in size (if that affects something) OR directly edits weight
 $(document).on("input", ".size_gen, .size-weight", function () {
     // find the modal containing the changed input (works for any modal)
@@ -1323,7 +1252,7 @@ $(document).on('click', '.configure-size-btn-gen', function () {
     // 4️⃣ FILL MODAL TABLE
     let totalWeight = 0;
     let rowsHTML = "";
-    console.log(finalReels)
+    
     finalReels.forEach((c, index) => {
         let unitOptions = `
             <option value="">Select Unit</option>
@@ -1501,11 +1430,14 @@ $(document).on("click", ".remove-reel-gen", function () {
          
          if($(this).find(':selected').data('production_status')==0) return;
         // Filter available reels for this item
-         let itemAvailable = availableReels.filter(r => r.item_id == itemId);
-
+         //let itemAvailable = availableReels.filter(r => r.item_id == itemId);
+          let itemAvailable = availableReels.filter(r => 
+            r.item_id == itemId &&
+            new Date(r.created_at) <= new Date(givenDate)
+         );
         // Load consumed reels from DB
          let dbReels = consumedReels.filter(r => r.item_id == itemId);
-
+         
         // Merge both lists
          let reels = [...dbReels];
 
@@ -1519,7 +1451,7 @@ $(document).on("click", ".remove-reel-gen", function () {
                 unit: itemAvailable[0].unit
             });
         }
-
+        
         // Save as JSON in hidden input
         $("#item_size_info_" + rowId).val(JSON.stringify(reels));
 
@@ -1648,5 +1580,13 @@ function refreshConsumeItemOptionsEdit() {
 
     $(".consume_item").trigger("change.select2");
 }
+$("#date").change(function () {
+   givenDate = $(this).val();
+   // populateItemSizeInfo();
+    // When date changes, we need to refetch prices for all items
+   //  $(".consume_item").each(function () {
+   //      $(this).trigger('change');
+   //  });
+});
 </script>
 @endsection

@@ -739,17 +739,21 @@
             Object.entries(grouped).forEach(([generatedItemId, items]) => {
                if(generatedItemId==generated_item_id){
                   items.forEach(item => {
-                        if(consume_item_price_arr[item.consumed_item_id] && consume_item_price_arr[item.consumed_item_id]!='' && consume_item_price_arr[item.consumed_item_id]!=undefined){
+                        if(consume_item_price_arr[item.consumed_item_id] && consume_item_price_arr[item.consumed_item_id]!='' && consume_item_price_arr[item.consumed_item_id]!=undefined && item.consume_weight_percentage!=undefined){
+                            
                            generated_item_amount = parseFloat(generated_item_amount) + (item.consume_weight_percentage*consume_item_price_arr[item.consumed_item_id]);
                         }
                   });
                }
             }); 
+            
             generated_item_amount = parseFloat(generated_item_amount) + (weight*electricity_fixed_average);
             generated_item_amount = generated_item_amount.toFixed(2);
+            
             pricePerUnit = generated_item_amount/weight;
             pricePerUnit = pricePerUnit.toFixed(2);
             $(this).val(pricePerUnit);
+           
             $("#generated_amount_" + id).val((weight * pricePerUnit).toFixed(2));
       });   
       }, 1000);

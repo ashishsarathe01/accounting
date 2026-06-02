@@ -1516,6 +1516,12 @@ Route::post(
     'reelInfo']
 
 )->name('reel.info');
+Route::post(
+    '/extend-eway-validity',
+    [SalesController::class,
+    'extendEwayValidity']
+
+)->name('sale.extend-eway');
 
 Route::get(
     '/box-sale-order-view/{id}',

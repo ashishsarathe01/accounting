@@ -2,6 +2,18 @@
 @section('content')
 <!-- header-section -->
 @include('layouts.header')
+<style>
+   /* Hide number input arrows */
+.no-spinner::-webkit-outer-spin-button,
+.no-spinner::-webkit-inner-spin-button {
+   -webkit-appearance: none;
+   margin: 0;
+}
+
+.no-spinner {
+   -moz-appearance: textfield;
+}
+</style>
 <!-- list-view-company-section -->
 <div class="list-of-view-company ">
    <section class="list-of-view-company-section container-fluid">
@@ -165,6 +177,7 @@
                                        brightness(119%)
                                        contrast(119%);';
                                     }
+
                                     ?>
                                     <img src="{{ asset('public/assets/imgs/start.svg') }}"
                                        class="px-1 start_status"
@@ -188,13 +201,10 @@
                            </td>
                         </tr>
                         <tr class="font-12 text-muted bg-light">
-                           <td colspan="5" class="ps-4 py-1" style="text-align:left;">
-                              
+                           <td colspan="5" class="ps-4 py-1" style="text-align:left;">                              
                               <strong>Created By:</strong> 
                               {{ $value->created_by_name ?? '-' }}
-
                               &nbsp;&nbsp;|&nbsp;&nbsp;
-
                               <strong>Approved By:</strong> 
                               @if($value->approved_status == 1)
                                  {{ $value->approved_by_name ?? '-' }}
@@ -368,57 +378,42 @@
      id="eway_status_modal"
      tabindex="-1"
      aria-hidden="true">
-
    <div class="modal-dialog modal-dialog-centered">
-
       <div class="modal-content border-0">
-
          <div class="modal-header py-2 px-3">
-
             <h5 class="modal-title fw-bold">
                E-Way Bill Status
             </h5>
-
             <button type="button"
                     class="btn-close"
                     data-bs-dismiss="modal">
             </button>
-
          </div>
-
          <div class="modal-body px-3 py-3">
-
             <table class="table table-bordered mb-0">
-
                <tr>
                   <th width="40%" class="bg-light">
                      E-Way Bill No
                   </th>
-
                   <td id="eway_bill_no"></td>
                </tr>
-
                <tr>
                   <th class="bg-light">
                      Valid Upto
                   </th>
-
                   <td id="eway_valid_upto"></td>
                </tr>
-
                <tr>
                   <th class="bg-light">
                      Status
                   </th>
-
                   <td id="eway_delivery_text"></td>
                </tr>
-
             </table>
-
             <input type="hidden"
                    id="eway_sale_id">
-
+                   
+                  
          </div>
 
          <div class="modal-footer py-2 px-3">
@@ -434,6 +429,303 @@
 
    </div>
 
+</div>
+<div class="modal fade" id="extend_eway_modal" tabindex="-1" aria-hidden="true">
+   <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content p-4 border-radius-8">
+         <div class="modal-header border-0 p-0 mb-3">
+            <h5 class="modal-title">
+               Extend E-Way Bill Validity
+            </h5>
+            <button type="button"
+               class="btn-close"
+               data-bs-dismiss="modal">
+            </button>
+         </div>
+
+         <form method="POST" action="{{ route('sale.extend-eway') }}">
+            @csrf
+            <input type="hidden"
+               name="sale_id"
+               id="extend_sale_id">
+            <div class="modal-body p-0">
+
+               <!-- Eway Bill No -->
+               <div class="row">
+                  
+               <!-- Current Place -->
+               <div class="mb-3 col-md-6">
+                  <label class="form-label">
+                     Current Place
+                  </label>
+
+                  <input type="text"
+                     name="current_place"
+                     class="form-control"
+                     placeholder="Enter current place"
+                     required>
+               </div>
+            
+               
+               
+               <!-- Current Pincode -->
+               <div class="mb-3 col-md-6">
+                  <label class="form-label">
+                     Current Pincode
+                  </label>
+
+                  <input type="text"
+                     name="current_pincode"
+                     class="form-control no-spinner"
+                     placeholder="Enter current pincode"
+                     maxlength="6"
+                     pattern="\d{6}"
+                     inputmode="numeric"
+                     oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0,6)"
+                     required>
+               </div>
+               <!-- Current State -->
+               <div class="mb-3 col-md-6">
+                  <label class="form-label">
+                     Current State
+                  </label>
+
+                  <select name="current_state" class="form-select" required>
+                     <option value="">Select State</option>
+                     @foreach ($states as $state)
+                        <option value="{{ $state->state_code }}">
+                           {{ $state->name }}
+                        </option>
+                        
+                     @endforeach
+                  </select>
+               </div>
+               <!-- Remaining Distance -->
+               <div class="mb-3 col-md-6">
+                  <label class="form-label">
+                     Remaining Distance (KM)
+                  </label>
+
+                  <input type="number"
+                     name="remaining_distance"
+                     class="form-control no-spinner"
+                     placeholder="Enter remaining distance"
+                     inputmode="numeric"
+                     oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0,6)"
+                     required>
+               </div>
+               <!-- Remaining Distance -->
+               <div class="mb-3 col-md-12">
+                  <label class="form-label">
+                     Consignment Is
+                  </label>
+                  <input type="radio"
+                     name="consignment_is"
+                     class="form-check-input consignment"
+                     value="T"
+                     required>
+                  <label class="form-check-label">
+                     In Transit
+                  </label>
+
+                  <input type="radio"
+                     name="consignment_is"
+                     class="form-check-input consignment"
+                     value="M"
+                     required>
+                  <label class="form-check-label">
+                     Movement
+                  </label>
+               </div>
+               <!-- Vehicle Number -->
+               
+               <div class="mb-3 col-md-6 movement_div" style="display:none;">
+                  <label class="form-label">
+                     Vehicle Number
+                  </label>
+                  <input type="text"
+                     name="vehicle_no"
+                     class="form-control"
+                     placeholder="Enter vehicle number"
+                     required>
+               </div>
+               <div class="mb-3 col-md-6 movement_div" style="display:none;">
+                  <label class="form-label">
+                     Mode
+                  </label>
+                  <br>
+                  <input type="radio"
+                     name="mode"
+                     class="form-check-input mode"
+                     value="1"
+                     required>
+                  <label class="form-check-label">
+                     Road
+                  </label>
+                  <br>
+                  <input type="radio"
+                     name="mode"
+                     class="form-check-input mode"
+                     value="2"
+                     required>
+                  <label class="form-check-label">
+                     Rail
+                  </label>
+                  <br>
+                  <input type="radio"
+                     name="mode"
+                     class="form-check-input mode"
+                     value="3"
+                     required>
+                  <label class="form-check-label">
+                     Air
+                  </label>
+                  <br>
+                  <input type="radio"
+                     name="mode"
+                     class="form-check-input mode"
+                     value="4"
+                     required>
+                  <label class="form-check-label">
+                     Ship
+                  </label>
+               </div>
+               <div class="mb-3 col-md-6 transit_div" style="display:none;">
+                  <label class="form-label">
+                     Transit Type
+                  </label>
+                  <br>
+                  <input type="radio"
+                     name="transit_type"
+                     class="form-check-input transit_type"
+                     value="R"
+                     required>
+                  <label class="form-check-label">
+                     On Road
+                  </label>
+                  <br>
+                  <input type="radio"
+                     name="transit_type"
+                     class="form-check-input transit_type"
+                     value="W"
+                     required>
+                  <label class="form-check-label">
+                     Warehouse
+                  </label>
+                  <br>
+                  <input type="radio"
+                     name="transit_type"
+                     class="form-check-input transit_type"
+                     value="O"
+                     required>
+                  <label class="form-check-label">
+                     Others
+                  </label>
+               </div>
+               <div class="mb-3 col-md-6 transit_div" style="display:none;">
+                  <label class="form-label">
+                     Address Line 1
+                  </label>
+
+                  <input type="text"
+                     name="address_line_1"
+                     class="form-control"
+                     placeholder="Enter address line 1"
+                     required>
+               </div>
+               <div class="mb-3 col-md-6 transit_div" style="display:none;">
+                  <label class="form-label">
+                     Address Line 2
+                  </label>
+
+                  <input type="text"
+                     name="address_line_2"
+                     class="form-control"
+                     placeholder="Enter address line 2"
+                     required>
+               </div>
+               <div class="mb-3 col-md-6 transit_div" style="display:none;">
+                  <label class="form-label">
+                     Address Line 3
+                  </label>
+
+                  <input type="text"
+                     name="address_line_3"
+                     class="form-control"
+                     placeholder="Enter address line 3"
+                     required>
+               </div>
+               <!-- Reason -->
+               <div class="mb-3 col-md-6">
+                  <label class="form-label">
+                     Reason
+                  </label>
+
+                  <select name="reason"
+                     class="form-select"
+                     required>
+
+                     <option value="">
+                        Select Reason
+                     </option>
+
+                     <option value="1">
+                        Natural Calamity
+                     </option>
+
+                     <option value="2">
+                        Law and Order Situation
+                     </option>
+
+                     <option value="4">
+                        Transshipment Delay
+                     </option>
+
+                     <option value="5">
+                        Accident
+                     </option>
+
+                     <option value="99">
+                        Others
+                     </option>
+
+                  </select>
+               </div>
+
+               <!-- Remarks -->
+               <div class="mb-3 col-md-6">
+                  <label class="form-label">
+                     Remarks
+                  </label>
+
+                  <textarea
+                     name="remarks"
+                     class="form-control"
+                     rows="3"
+                     placeholder="Enter remarks"></textarea>
+               </div>
+               </div>
+            </div>
+
+            <div class="modal-footer border-0 p-0 pt-3">
+
+               <button type="button"
+                  class="btn btn-secondary"
+                  data-bs-dismiss="modal">
+                  Cancel
+               </button>
+
+               <button type="submit"
+                  class="btn btn-primary ms-2">
+                  Extend Validity
+               </button>
+
+            </div>
+
+         </form>
+
+      </div>
+   </div>
 </div>
 </body>
 @include('layouts.footer')
@@ -489,7 +781,7 @@
 
       if(validUpto != '')
       {
-         let dateObj = new Date(validUpto);
+         let dateObj = parseDateTime(validUpto);
 
          let formatted =
             ("0" + dateObj.getDate()).slice(-2) + "-" +
@@ -499,7 +791,7 @@
                hour: '2-digit',
                minute:'2-digit'
             });
-
+            console.log(formatted);
          $("#eway_valid_upto").html(formatted);
       }
       else
@@ -511,10 +803,8 @@
 
       if(validUpto != '')
       {
-         validUpto = validUpto.replace(' ', 'T');
-
-         let validDate = new Date(validUpto);
-
+         let validDate = parseDateTime(validUpto);
+        
          let before8Hours = new Date(
             validDate.getTime() - (8 * 60 * 60 * 1000)
          );
@@ -536,7 +826,7 @@
             showExtendBtn = true;
          }
       }
-      showExtendBtn = true;
+      
       if(status == 1)
       {
          $("#eway_delivery_text").html(
@@ -592,7 +882,7 @@
 
       $.ajax({
 
-         url: "{{ route('sale.mark.reached') }}",
+         url: "",
 
          type: "POST",
 
@@ -852,44 +1142,80 @@
    });
 
    $("#extend_eway_btn").click(function () {
-
       let saleId = $("#eway_sale_id").val();
-
-      $.ajax({
-
-         url: "{{ route('sale.extend.eway') }}",
-
-         type: "POST",
-
-         data: {
-
-            _token: "{{ csrf_token() }}",
-
-            sale_id: saleId
-
-         },
-
-         success: function(response)
-         {
-            if(response.success == true)
-            {
-               alert(response.message);
-
-               location.reload();
-            }
-            else
-            {
-               alert(response.message);
-            }
-         },
-
-         error: function()
-         {
-            alert('Something went wrong.');
-         }
-
-      });
+       $("#extend_sale_id").val(saleId);
+      $("#extend_eway_modal").modal('show');
 
    });
+   function parseDateTime(dateStr) {
+
+   if (!dateStr) return null;
+
+   // Format: YYYY-MM-DD HH:mm:ss
+   if (dateStr.includes('-')) {
+
+      return new Date(dateStr.replace(' ', 'T'));
+   }
+
+   // Format: DD/MM/YYYY HH:mm:ss AM/PM
+   if (dateStr.includes('/')) {
+
+      let [datePart, timePart, modifier] = dateStr.split(' ');
+
+      let [day, month, year] = datePart.split('/');
+
+      let [hours, minutes, seconds] = timePart.split(':');
+
+      hours = parseInt(hours);
+
+      if (modifier === 'PM' && hours < 12) {
+         hours += 12;
+      }
+
+      if (modifier === 'AM' && hours === 12) {
+         hours = 0;
+      }
+
+      return new Date(
+         year,
+         month - 1,
+         day,
+         hours,
+         minutes,
+         seconds
+      );
+   }
+
+   return null;
+}
+$(".consignment").click(function(){
+   $(".mode").prop("required", false);
+   $("input[name='vehicle_no']").prop("required", false);
+   $(".transit_type").prop("required", false);
+   $("input[name='address_line_1']").prop("required", false);
+   $("input[name='address_line_2']").prop("required", false);
+   $("input[name='address_line_3']").prop("required", false);
+   if($(this).prop("value") == "M"){
+      $(".movement_div").show();
+      $(".transit_div").hide();
+      $(".mode").prop("required", true);
+      $("input[name='vehicle_no']").prop("required", true);
+
+      $(".transit_type").prop("checked", false);
+      $("input[name='address_line_1']").val("");
+      $("input[name='address_line_2']").val("");
+      $("input[name='address_line_3']").val("");
+   } else {
+      $(".movement_div").hide();
+      $(".transit_div").show();
+      $(".transit_type").prop("required", true);
+      $("input[name='address_line_1']").prop("required", true);
+      $("input[name='address_line_2']").prop("required", true);
+      $("input[name='address_line_3']").prop("required", true);
+
+      $(".mode").prop("checked", false);
+      $("input[name='vehicle_no']").val("");
+   }
+});
 </script>
 @endsection

@@ -2152,7 +2152,10 @@ class SalesController extends Controller
                      ->with('sale', $sale)
                      ->with('SaleDescription', $SaleDescription)
                      ->with('SaleSundry', $SaleSundry)
+<<<<<<< HEAD
                      ->with('selectedBoxSaleOrders',$selectedBoxSaleOrders)
+=======
+>>>>>>> changes
                      ->with('config',$config)
                      ->with('itemGroups', $itemGroups)
                      ->with('accountunit', $accountunit)

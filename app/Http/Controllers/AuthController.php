@@ -400,7 +400,10 @@ class AuthController extends Controller{
                                 ->where('id', Session::get('user_company_id'))
                                 ->where('delete','0')
                                 ->first();
-            $company_list = Companies::whereIn('id',$assign_company)->where('delete','0')->get();
+            $company_list = Companies::where('user_id', $user->user_id)->whereIn('id',$assign_company)->where('delete','0')->get();
+            if(Session('user_id')==114){
+                //echo "<pre>";print_r($company_list->toArray());
+            }
             $company_list = $company_list
                                     ->merge($company_list_owner)
                                     ->unique()

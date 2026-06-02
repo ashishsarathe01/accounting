@@ -514,20 +514,6 @@ $(document).ready(function() {
     // Initialize select2
     $(".select2-single, .select2-multiple").select2();
 
-    // Load consumed items for the initial date
-    var initialDate = $("#date").val();
-    if (initialDate) {
-        loadConsumedItemsByDate(initialDate);
-    }
-
-    // Reload consumed items when date changes
-    $("#date").on('change', function() {
-        var selectedDate = $(this).val();
-        if (selectedDate) {
-            loadConsumedItemsByDate(selectedDate);
-        }
-    });
-
     // Trigger series_no change if needed
     $("#series_no").change();
 
@@ -578,8 +564,8 @@ $(document).ready(function() {
     let last_srn = $("#consum_total").closest('tr').prev().find("td:first").html();
     let srn = last_srn ? parseInt(last_srn) + 1 : 1;
 
-    // Option elements (consumed items filtered by selected date)
-    var optionElements = consumedItemsOptions;
+    // Option elements
+    var optionElements = '<?php echo addslashes($items_list); ?>';
 
     // Conditionally add ⚙️ button
     var configureButton = '';
@@ -705,25 +691,6 @@ $(document).on("click", ".remove1", function() {
     calculateAmountNew(1);
 });
    $(".savebtn").click(function(){
-      let from_date = "{{ $fy_start_date }}";
-
-      let to_date = "{{ $fy_end_date }}";
-
-      let selected_date = $("#date").val();
-
-      if(
-         selected_date < from_date
-         ||
-         selected_date > to_date
-      ){
-         alert(
-            "Selected date is outside the current financial year."
-         );
-
-         $("#date").focus();
-
-         return false;
-      }
       if(confirm("Are you sure to submit?")==true){            
          $("#frm").validate({
             ignore: [], 
@@ -892,6 +859,9 @@ function calculateAmountNew(id) {
          calculateAmount(rowId);
          return;
       }
+      $("#consume_weight_" + rowId).val('');
+        
+         $("#consume_amount_" + rowId).val('');
       $("#consume_weight_"+rowId).attr('readonly',false);
       //FETCH PRICE FOR SELECTED ITEM
       let itemId = $(this).val();
@@ -928,6 +898,7 @@ function calculateAmountNew(id) {
             data: {
                _token: '{{ csrf_token() }}',
                item_id: itemId,
+               date: $("#date").val(),
                series: $("#series_no").val()
             },
             success: function (res) {
@@ -1305,7 +1276,8 @@ $(document).on('click', '.configure-size-btn', function() {
         data: {
             _token: '{{ csrf_token() }}',
             item_id: itemId,
-            series: seriesNo
+            series: seriesNo,
+            date: $("#date").val(),
         },
         success: function(res) {
             if (res.length == 0) {
@@ -1393,7 +1365,8 @@ $(document).on('change', '.item_size', function() {
             data: {
                 _token: '{{ csrf_token() }}',
                 item_id: itemId,
-                series: seriesNo
+                series: seriesNo,
+                date: $("#date").val(),
             },
             success: function(res) {
                 let newRow = buildSizeRow(res, '', nextIndex, '', '');
@@ -1460,7 +1433,8 @@ $(document).on('click', '.remove-row', function() {
             data: {
                 _token: '{{ csrf_token() }}',
                 item_id: itemId,
-                series: seriesNo
+                series: seriesNo,
+                date: $("#date").val(),
             },
             success: function(res) {
                 let newRow = buildSizeRow(res, '', 1, '', '');
@@ -1679,7 +1653,7 @@ $(document).ready(function () {
     // STEP 1: REMOVE DEFAULT FIRST ROW
     $("#tr_1").remove();
 
-    let optionHtml = consumedItemsOptions;
+    let optionHtml = `<?php echo addslashes($items_list); ?>`;
 
     let rowCount = 0;
 
@@ -1775,6 +1749,11 @@ $(document).ready(function () {
     }, 300);
 
 });
-
+$("#date").change(function () {
+    // When date changes, we need to refetch prices for all items
+    $(".consume_item").each(function () {
+        $(this).trigger('change');
+    });
+});
 </script>
 @endsection
