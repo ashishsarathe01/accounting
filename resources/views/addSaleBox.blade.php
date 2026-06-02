@@ -49,6 +49,57 @@
        appearance: none;
        margin: 0; 
    }
+   .selected-so-wrapper{
+
+    display:flex;
+
+    flex-wrap:wrap;
+
+    gap:8px;
+
+    min-height:34px;
+
+    align-items:center;
+
+}
+
+.selected-so-badge{
+
+    background:#e7f1ff;
+
+    border:1px solid #0d6efd;
+
+    color:#0d6efd;
+
+    border-radius:20px;
+
+    padding:4px 10px;
+
+    font-size:13px;
+
+    font-weight:600;
+
+    display:flex;
+
+    align-items:center;
+
+    gap:8px;
+
+}
+
+.selected-so-remove{
+
+    cursor:pointer;
+
+    color:red;
+
+    font-weight:bold;
+
+    font-size:14px;
+
+    line-height:1;
+
+}
 </style>
 @php
    $to_pay_freight = "";
@@ -69,7 +120,7 @@
    <section class="list-of-view-company-section container-fluid">
       <div class="row vh-100">
          @include('layouts.leftnav')
-         <div class="col-md-12 ml-sm-auto  col-lg-9 px-md-4 bg-mint">
+         <div class="col-md-12 ml-sm-auto  col-lg-10 px-md-4 bg-mint">
              @if (session('error'))
              <div class="alert alert-danger" role="alert"> {{session('error')}}
              </div>
@@ -82,7 +133,8 @@
             
             <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Add Sales Voucher </h5>
             <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('sale.store') }}" id="saleForm">
-               @csrf
+            <div id="selected_sale_order_inputs"></div>   
+            @csrf
 
                <div class="row">
                   <input type="hidden" name="vehicle_info_type" value="{{request('vehicle_info_type')}}">
@@ -183,7 +235,46 @@
                        @error('material_center'){{$message}}@enderror                        
                      </ul>
                   </div>
-               </div>
+                  @if($company_sale_type=="BOX")
+
+<div class="mb-4 col-md-8">
+
+    <label class="form-label font-14 font-heading">
+
+        Box Sale Order
+
+    </label>
+
+    <div class="d-flex align-items-start gap-3">
+
+        {{-- SALE ORDER DROPDOWN --}}
+        <div style="width:320px;">
+
+            <select class="form-select select2-single"
+                    id="box_sale_order_id"
+                    disabled>
+
+                <option value="">
+
+                    Select Party First
+
+                </option>
+
+            </select>
+
+        </div>
+
+        {{-- SELECTED SALE ORDERS --}}
+        <div id="selected_sale_orders"
+             class="selected-so-wrapper">
+
+        </div>
+
+    </div>
+
+</div>
+
+@endif
                <div class="transaction-table transaction-main-table bg-white table-view shadow-sm border-radius-8 mb-4">
                   <table id="example11" class="table-striped table m-0 shadow-sm table-bordered">
                      <thead>
@@ -214,7 +305,7 @@
                                     <select class="form-control item_id select2-single" name="goods_discription[]" id="item_id_{{$add_more_count}}" data-id="{{$add_more_count}}" data-modal="itemModal">
                                        <option value="">Select Item</option>
                                        @foreach($item as $item_list)
-                                          <option value="{{$item_list->id}}" @if($item_list->id==$sale_order_item['item_id']) selected @endif data-unit_id="{{$item_list->u_name}}" data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id="{{$item_list->id}}" data-itemid="{{$item_list->id}}" data-available_item="{{$item_list->available_item}}" data-parameterized_stock_status="{{$item_list->parameterized_stock_status}}" data-config_status="{{$item_list->config_status}}" data-group_id="{{$item_list->group_id}}">{{$item_list->name}}</option>
+                                          <option value="{{$item_list->id}}" @if($item_list->id==$sale_order_item['item_id']) selected @endif data-unit_id="{{$item_list->u_name}}" data-unit_name="{{$item_list->unit}}" data-percent="{{$item_list->gst_rate}}" data-val="{{$item_list->unit}}" data-id="{{$item_list->id}}" data-itemid="{{$item_list->id}}" data-available_item="{{$item_list->available_item}}" data-parameterized_stock_status="{{$item_list->parameterized_stock_status}}" data-config_status="{{$item_list->config_status}}" data-group_id="{{$item_list->group_id}}">{{$item_list->name}}</option>
                                        @endforeach
                                     </select>
                                     <span id="gst_rate_span_{{$add_more_count}}" style="color: red;"></span>
@@ -245,6 +336,14 @@
                                     <svg xmlns="http://www.w3.org/2000/svg" data-id="{{$add_more_count}}"class="bg-primary rounded-circle add_more_wrapper" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;" tabindex="0" role="button"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg>
                                  </td>
                                  <input type="hidden" name="item_parameters[]" id="item_parameters_{{$add_more_count}}">
+                                 <input type="hidden"
+       name="box_sale_order_item_id[]"
+       class="box_sale_order_item_id"
+       id="box_sale_order_item_id_{{$add_more_count}}">
+
+<input type="hidden"
+       class="pending_qty"
+       id="pending_qty_{{$add_more_count}}">
                                  <input type="hidden" name="config_status[]" id="config_status_{{$add_more_count}}">
                               </tr>
                               @php $add_more_count++; @endphp
@@ -260,7 +359,8 @@
                                        <option value="">Select Item</option>
                                        @foreach($item as $item_list)
                                           <option value="{{$item_list->id}}" 
-                                                   data-unit_id="{{$item_list->u_name}}" 
+                                                   data-unit_id="{{$item_list->u_name}}"
+data-unit_name="{{$item_list->unit}}"
                                                    data-percent="{{$item_list->gst_rate}}" 
                                                    data-val="{{$item_list->unit}}" 
                                                    data-id="{{$item_list->id}}" 
@@ -309,6 +409,14 @@
                                  <svg xmlns="http://www.w3.org/2000/svg" data-id="1"class="bg-primary rounded-circle add_more_wrapper" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;" tabindex="0" role="button"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" /></svg>
                               </td>
                               <input type="hidden" name="item_parameters[]" id="item_parameters_1">
+                              <input type="hidden"
+       name="box_sale_order_item_id[]"
+       class="box_sale_order_item_id"
+       id="box_sale_order_item_id_1">
+
+<input type="hidden"
+       class="pending_qty"
+       id="pending_qty_1">
                               <input type="hidden" name="config_status[]" id="config_status_1">
                            </tr>
                         @endif
@@ -716,96 +824,7 @@
                </div>
             </form>
          </div>
-         <div class="col-lg-1 d-none d-lg-flex justify-content-center px-1">
-            <div class="shortcut-key w-100">
-               <p class="font-14 fw-500 font-heading m-0">Shortcut Keys</p>
-               <button class="p-2 transaction-shortcut-btn my-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Help">F1
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Help</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Account">
-                  <span class="border-bottom-black">F1</span><span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Account</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Item">
-                  <span class="border-bottom-black">F2</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Item</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Master">F3
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Master</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Voucher">
-                  <span class="border-bottom-black">F3</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Voucher</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Payment">
-                  <span class="border-bottom-black">F5</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Payment</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Receipt">
-                  <span class="border-bottom-black">F6</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Receipt</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Journal">
-                  <span class="border-bottom-black">F7</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Journal</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Sales">
-                  <span class="border-bottom-black">F8</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Sales</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-4 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Purchase">
-                  <span class="border-bottom-black">F9</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Purchase</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Balance Sheet">
-                  <span class="border-bottom-black">B</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Balance Sheet</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Trial Balance">
-                  <span class="border-bottom-black">T</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Trial Balance</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Stock Status">
-                  <span class="border-bottom-black">S</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Stock Status</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Acc. Ledger">
-                  <span class="border-bottom-black">L</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Acc. Ledger</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Item Summary">
-                  <span class="border-bottom-black">I</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Item Summary</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Item Ledger">
-                  <span class="border-bottom-black">D</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Item Ledger</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="GST Summary">
-                  <span class="border-bottom-black">G</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">GST Summary</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Switch User">
-                  <span class="border-bottom-black">U</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Switch User</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Configuration">
-                  <span class="border-bottom-black">F</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Configuration</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Lock Program">
-                  <span class="border-bottom-black">K</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Lock Program</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Training Videos">
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Training Videos</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="GST Portal">
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">GST Portal</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-4 text-ellipsis d-inline-block" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Search Menu">Search Menu
-               </button>
-            </div>
-         </div>
+         
       </div>
    </section>
 </div>
@@ -1264,6 +1283,7 @@
    var bill_to_id = "{{$bill_to_id}}";
    var shipp_to_id = "{{$shipp_to_id}}";
    var enter_gst_status = 0;
+   let boxSaleOrderItemsOptions = '';
    var auto_gst_calculation = 0;
    var customer_gstin = "";
    var merchant_gstin = "";
@@ -1310,6 +1330,7 @@
                      '@foreach($item as $item_list)' +
                         '<option value="{{ $item_list->id }}" ' +
                            'data-unit_id="{{ $item_list->u_name }}" ' +
+                           'data-unit_name="{{ $item_list->unit }}" ' +
                            'data-percent="{{ $item_list->gst_rate }}" ' +
                            'data-val="{{ $item_list->unit }}" ' +
                            'data-available_item="{{ $item_list->available_item }}" ' +
@@ -1346,13 +1367,32 @@
 
          '<td class="w-min-50"><input type="number" class="quantity w-100 form-control" name="qty[]" id="quantity_tr_' + add_more_count + '" required placeholder="Quantity" style="text-align:right" data-id="' + add_more_count + '" /></td>' +
          '<td class="w-min-50"><input type="text" class="w-100 form-control unit" id="unit_tr_' + add_more_count + '" readonly style="text-align:center;" data-id="' + add_more_count + '"/><input type="hidden" class="units w-100" name="units[]" id="units_tr_' + add_more_count + '"/></td>' +
-         '<td class="w-min-50"><input type="number" class="price w-100 form-control" name="price[]" id="price_tr_' + add_more_count + '" required placeholder="Price" style="text-align:right" data-id="' + add_more_count + '"/></td>' +
+         '<td class="w-min-50"><input type="number" class="price w-100 form-control" name="price[]" id="price_tr_' + add_more_count + '" required placeholder="Price" style="text-align:right" data-id="' + add_more_count + '" /></td>' +
          '<td class="w-min-50"><input type="number" class="amount w-100 form-control" name="amount[]" id="amount_tr_' + add_more_count + '" required placeholder="Amount" style="text-align:right" data-id="' + add_more_count + '"/></td>' +
          '<input type="hidden" name="item_parameters[]" id="item_parameters_' + add_more_count + '">' +
+         '<input type="hidden" ' +
+         'name="box_sale_order_item_id[]" ' +
+         'class="box_sale_order_item_id" ' +
+         'id="box_sale_order_item_id_' + add_more_count + '">' +
+
+         '<input type="hidden" ' +
+         'class="pending_qty" ' +
+         'id="pending_qty_' + add_more_count + '">' +
+
          '<input type="hidden" name="config_status[]" id="config_status_' + add_more_count + '">' +
          '<td class="w-min-50 action-cell" style="display: flex;"></td>' +
          '</tr>';
       $("#example11").append(newRow);
+if(selectedSaleOrders.length > 0)
+{
+
+    let firstRowOptions =
+        $('#item_id_1').html();
+
+    $('#item_id_' + add_more_count)
+        .html(firstRowOptions);
+
+}
       $("#max_sale_descrption").val(add_more_count);
       // Re-index serial numbers
       let k = 1;
@@ -1475,19 +1515,233 @@ function removeItem() {
   });
 }
 
-   
+        let selectedSaleOrders = [];
 
+function renderSelectedSaleOrders()
+{
+    let html = '';
+
+    $('#selected_sale_order_inputs').html('');
+
+    selectedSaleOrders.forEach(function(so){
+
+        html += `
+            <div class="selected-so-badge"
+                 data-sale-order-id="${so.id}">
+
+                ${so.text}
+
+                <span class="selected-so-remove"
+                      data-sale-order-id="${so.id}">
+
+                    ×
+
+                </span>
+
+            </div>
+        `;
+
+        $('#selected_sale_order_inputs').append(`
+
+            <input type="hidden"
+                   name="box_sale_order_ids[]"
+                   value="${so.id}"
+                   id="selected_so_input_${so.id}">
+
+        `);
+
+    });
+
+    $('#selected_sale_orders').html(html);
+}
+function reloadAllSaleOrderItems()
+{
+    let itemOptions =
+        '<option value="">Select Item</option>';
+
+    if(selectedSaleOrders.length == 0)
+    {
+        window.latestSaleOrderItemOptions =
+            itemOptions;
+
+        $('.item_id').each(function(){
+
+            $(this).html(itemOptions);
+
+        });
+
+        return;
+    }
+
+    $.ajax({
+
+        url: "{{ url('get-box-sale-order-items-multiple') }}",
+
+        type: "POST",
+
+        data: {
+
+            _token: "{{ csrf_token() }}",
+
+            sale_order_ids:
+                selectedSaleOrders.map(x => x.id)
+
+        },
+
+        success: function(response)
+        {
+
+            response.forEach(function(row){
+
+                itemOptions += `
+
+                    <option
+                        value="${row.so_item_id}"
+
+                        data-price="${row.price}"
+
+                        data-pending_qty="${row.pending_qty}"
+
+                        data-so_item_id="${row.so_item_id}"
+
+                        data-unit_name="${row.unit_name}"
+
+                        data-unit_id="${row.unit_id}"
+
+                        data-percent="${row.gst_rate}"
+
+                        data-val="${row.unit_name}"
+
+                        data-item_id="${row.item_id}"
+
+                        data-so_no="${row.sale_order_no}"
+
+                        data-sale_order_id="${row.box_sale_order_id}"
+
+                    >
+
+                        ${row.item_name}
+
+                        (${row.pending_qty})
+
+                        (${row.sale_order_no})
+
+                    </option>
+
+                `;
+
+            });
+
+            window.latestSaleOrderItemOptions =
+                itemOptions;
+
+            $('.item_id').each(function(){
+
+                let currentValue =
+                    $(this).val();
+
+                $(this).html(itemOptions);
+
+                if(
+                    currentValue != ''
+                    &&
+                    currentValue != null
+                )
+                {
+
+                    $(this)
+                        .val(currentValue);
+
+                }
+
+            });
+
+        }
+
+    });
+}
    $(document).ready(function(){
-     
+$(document).on(
+    'click',
+    '.selected-so-remove',
+    function(){
+
+        let saleOrderId =
+            $(this).attr(
+                'data-sale-order-id'
+            );
+
+        $('tr[data-sale-order-id="' + saleOrderId + '"]')
+        .each(function(){
+
+            let rowId =
+                $(this)
+                .attr('id')
+                .replace('tr_','');
+
+            $('#item_id_' + rowId)
+                .val('')
+                .trigger('change');
+
+            $('#quantity_tr_' + rowId)
+                .val('');
+
+            $('#price_tr_' + rowId)
+                .val('');
+
+            $('#amount_tr_' + rowId)
+                .val('');
+
+            $('#unit_tr_' + rowId)
+                .val('');
+
+            $('#units_tr_' + rowId)
+                .val('');
+
+            $('#pending_qty_' + rowId)
+                .val('');
+
+            $('#box_sale_order_item_id_' + rowId)
+                .val('');
+
+            $('#config_status_' + rowId)
+                .val('');
+
+            $('#item_parameters_' + rowId)
+                .val('');
+
+            $(this)
+                .removeAttr(
+                    'data-sale-order-id'
+                );
+
+        });
+
+        selectedSaleOrders =
+            selectedSaleOrders.filter(
+                x => x.id != saleOrderId
+            );
+
+        renderSelectedSaleOrders();
+
+        reloadAllSaleOrderItems();
+
+        calculateAmount();
+
+    }
+);
       // Function to calculate amount and update total sum
-      
-      window.calculateAmount = function(key=null) {
+      window.defaultItemsOptions =
+         $('#item_id_1').html();
+            window.calculateAmount = function(key=null) {
+               
          customer_gstin = $('#party_id option:selected').attr('data-state_code');
          let under_group = $('#party_id option:selected').attr('data-under_group'); 
          
          if(cash_group_ids.includes(Number(under_group))){
             customer_gstin = merchant_gstin.substring(0,2);
          } 
+         console.log("Customer GSTIN:", customer_gstin);
          if(customer_gstin==undefined || customer_gstin==""){
             return;
          }     
@@ -1955,6 +2209,25 @@ function removeItem() {
          configuration = 0;
       }
       $("#saveBtn").click(function(){
+         let from_date = "{{ $fy_start_date }}";
+
+         let to_date = "{{ $fy_end_date }}";
+
+         let selected_date = $("#date").val();
+
+         if(
+            selected_date < from_date
+            ||
+            selected_date > to_date
+         ){
+            alert(
+               "Selected date is outside the current financial year."
+            );
+
+            $("#date").focus();
+
+            return false;
+         }
          if(confirm("Are you sure to submit?")==true){
             $("#saleForm").validate({
                ignore: [], 
@@ -2327,7 +2600,10 @@ function removeItem() {
             $("#sale_type").val('CENTER');
          }
       }
-      $("#date").attr('min',last_bill_date)
+      let todayDate =
+         new Date().toISOString().split('T')[0];
+
+      $("#date").attr('min', todayDate);
       calculateAmount();            
    });
    $('#voucher_no').keydown(function(e) {      
@@ -2427,7 +2703,10 @@ function removeItem() {
          }
       }
    });   
-   $(document).on('change', '#party_id', function(){      
+   $(document).on('change', '#party_id', function(){   
+   selectedSaleOrders = [];
+
+renderSelectedSaleOrders();   
       if($('option:selected', this).attr('data-state_code')==merchant_gstin.substring(0,2)){  
          $("#sale_type").val('LOCAL');
       }else{
@@ -2467,6 +2746,128 @@ function removeItem() {
          $("#address").attr('required',false);
       }
       calculateAmount(); 
+
+      $('#example11 tbody tr[id^="tr_"]')
+         .not('#tr_1')
+         .remove();
+
+      $('#item_id_1')
+         .html(defaultItemsOptions)
+         .val('')
+         .trigger('change');
+
+      $('#quantity_tr_1').val('');
+      $('#price_tr_1').val('');
+      $('#amount_tr_1').val('');
+      $('#unit_tr_1').val('');
+      $('#units_tr_1').val('');
+
+      $('#box_sale_order_item_id_1').val('');
+      $('#pending_qty_1').val('');
+
+      $('#config_status_1').val('');
+      $('#item_parameters_1').val('');
+
+      $('#tr_1 td:last').html(`
+
+      <svg xmlns="http://www.w3.org/2000/svg"
+         data-id="1"
+         class="bg-primary rounded-circle add_more_wrapper"
+         width="24"
+         height="24"
+         viewBox="0 0 24 24"
+         fill="none"
+         style="cursor: pointer;"
+         tabindex="0"
+         role="button">
+
+         <path
+            d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z"
+            fill="white"
+         />
+
+      </svg>
+
+      `);
+
+      $('#totalSum').html('');
+      $('#total_taxable_amounts').val(0);
+
+      $('#bill_sundry_amt').html('');
+      $('#total_amounts').val(0);
+
+      $('.bill_amt').val('');
+      $('.tax_amount').html('');
+
+      $('#box_sale_order_id')
+         .html(
+            '<option value="">Loading...</option>'
+         );
+
+
+      if($(this).val() == '')
+      {
+
+         $('#box_sale_order_id')
+
+            .prop('disabled', true)
+
+            .html(
+                  '<option value="">Select Party First</option>'
+            );
+
+      }
+      else
+      {
+
+         $.ajax({
+
+            url:
+                  "{{ url('get-box-sale-orders') }}/"
+                  + $(this).val(),
+
+            type: "GET",
+               data: {
+                     sale_date: $('#date').val()
+                  },
+            success: function(response)
+            {
+
+                  let options =
+                     '<option value="">Select Box Sale Order</option>';
+
+
+                  $.each(response, function(index, row){
+
+                     options += `
+
+                        <option value="${row.id}">
+
+                              ${row.sale_order_no}
+
+                              ${row.po_number
+                                 ? '(' + row.po_number + ')'
+                                 : ''
+                              }
+
+                        </option>
+
+                     `;
+                  });
+
+
+                  $('#box_sale_order_id')
+
+         .prop('disabled', false)
+
+         .html(options)
+
+         .trigger('change.select2');
+            }
+
+         });
+
+      }
    }); 
    $("#address").change(function(){
       if($(this).val()!=""){
@@ -2507,7 +2908,107 @@ function removeItem() {
          return;
       }
       let rowId = $(this).attr("data-id");
-      let newItemId = $(this).val();
+      let selectedOption =
+    $(this).find('option:selected');
+
+      let soItemId =
+    $(this).val();
+
+let itemId =
+    selectedOption.attr('data-item_id');
+
+      let price =
+         selectedOption.attr('data-price');
+
+      let pendingQty =
+         selectedOption.attr('data-pending_qty');
+
+      let saleOrderId =
+    selectedOption.attr(
+        'data-sale_order_id'
+    );
+      $(this)
+    .attr(
+        'data-item-id',
+        itemId
+    );
+      let unitName =
+         selectedOption.attr(
+            'data-unit_name'
+         );
+      console.log(
+         'ROW ID',
+         rowId
+      );
+
+      console.log(
+         'SO ITEM ID',
+         soItemId
+      );
+
+      $("#box_sale_order_item_id_" + rowId)
+         .val(soItemId);
+$("#tr_" + rowId)
+    .attr(
+        'data-sale-order-id',
+        saleOrderId
+    );
+      console.log(
+         $("#box_sale_order_item_id_" + rowId).val()
+      );
+      let unit =
+         selectedOption.attr('data-unit_id');
+
+      if(price != undefined)
+      {
+         $('#price_tr_' + rowId)
+            .val(price);
+      }
+
+      if(pendingQty != undefined)
+      {
+         $('#pending_qty_' + rowId)
+            .val(pendingQty);
+      }
+
+      if(soItemId != undefined)
+      {
+         $('#box_sale_order_item_id_' + rowId)
+            .val(soItemId);
+      }
+
+         $('#box_sale_order_item_id_' + rowId)
+
+      let currentQty =
+
+         parseFloat(
+            $('#quantity_tr_' + rowId).val()
+         )
+
+         || 0;
+
+
+      if(
+         pendingQty != undefined
+         &&
+         currentQty > parseFloat(pendingQty)
+      )
+      {
+
+         alert(
+            'Existing qty exceeds pending qty of '
+            + pendingQty
+         );
+
+
+         $('#quantity_tr_' + rowId)
+            .val(pendingQty);
+
+
+         calculateAmount();
+      }
+      let newItemId =
+    selectedOption.attr('data-item_id');
 
       let oldItemId = $(this).attr("data-prev-item");
 
@@ -2527,7 +3028,19 @@ function removeItem() {
       $('#unit_tr_'+rowId).attr('data-config_status',$('option:selected', this).attr('data-config_status'));
 
       call_fun('tr_'+rowId);
-      getItemGstRate(newItemId,rowId);
+      if(
+    newItemId != ''
+    &&
+    newItemId != undefined
+    &&
+    newItemId != null
+)
+{
+    getItemGstRate(
+        newItemId,
+        rowId
+    );
+}
       if($('option:selected', this).attr('data-parameterized_stock_status') == 1){
          $('#unit_tr_'+rowId).css({ cursor: 'pointer' });
       }
@@ -2584,22 +3097,43 @@ function removeItem() {
             }
          });
       }
-});
 
-   $(document).on('change', '.quantity',function(){
-      let id = $(this).attr("data-id");
-      let item_id = $("#item_id_"+id).val();
-      let available_weight = $("#item_id_"+id).attr('data-available_item');
-      let asssign_weight = 0;
-      $(".quantity").each(function(){
-         if($("#item_id_"+$(this).attr('data-id')).val()==item_id){
-            asssign_weight = parseFloat(asssign_weight) + parseFloat($(this).val());
-         }
-      });
-      if(asssign_weight>available_weight){
-         alert("Please Check Quantity Greater Than Available Quantity");
-      }
+      setTimeout(function(){
+
+         let finalUnit =
+
+            selectedOption.attr('data-unit_id')
+
+            ||
+
+            selectedOption.attr('data-unit')
+
+            ||
+
+            '';
+
+         let finalUnitName =
+
+            selectedOption.attr('data-unit_name')
+
+            ||
+
+            '';
+
+         $('#unit_tr_' + rowId)
+         .val(
+            selectedOption.attr('data-unit_name')
+         );
+
+         $('#units_tr_' + rowId)
+            .val(
+               selectedOption.attr('data-unit_id')
+            );
+
+      }, 200);
    });
+
+
    var modal_item_arr = [];
    var parameter_modal_id = "1";
    var option = ""; 
@@ -3093,13 +3627,13 @@ $(document).on("keydown", ".remove", function (event) {
 
     let id = $(this).data("id");
     let lastRowId = $(".item_id").last().data("id");
-if(id==lastRowId){
-   if ((event.key === "Tab" && !event.shiftKey)) {
-      event.preventDefault();
-   $("#tr_" + id).find(".add_more_wrapper").focus();
-}
-    
-  }else{}
+   if(id==lastRowId){
+      if ((event.key === "Tab" && !event.shiftKey)) {
+            event.preventDefault();
+         $("#tr_" + id).find(".add_more_wrapper").focus();
+      }
+      
+   }else{}
 });
 
 
@@ -3945,13 +4479,141 @@ function getItemGstRate(item_id,index){
    });
 }
 $("#date").on("change", function(){
+
    $(".item_id").each(function(){
+
       let item_id = $(this).val();
+
       let index = $(this).data("id");
+
       if(item_id){
+
          getItemGstRate(item_id,index);
+
       }
-   });   
+
+   });
+
+   let partyId = $('#party_id').val();
+
+   if(partyId == '')
+   {
+      return;
+   }
+
+   $.ajax({
+
+      url:
+         "{{ url('get-box-sale-orders') }}/"
+         + partyId,
+
+      type: "GET",
+
+      data: {
+         sale_date: $('#date').val()
+      },
+
+      success: function(response)
+      {
+
+         let currentSoId =
+            $('#box_sale_order_id').val();
+
+         let soExists = false;
+
+
+         let options =
+            '<option value="">Select Box Sale Order</option>';
+
+
+         $.each(response, function(index, row){
+
+            if(row.id == currentSoId)
+            {
+               soExists = true;
+            }
+
+            options += `
+
+               <option value="${row.id}">
+
+                  ${row.sale_order_no}
+
+                  ${row.po_number
+                     ? '(' + row.po_number + ')'
+                     : ''
+                  }
+
+               </option>
+
+               `;
+
+         });
+
+         if(
+            currentSoId != ''
+            &&
+            soExists == false
+         )
+         {
+
+            $('#box_sale_order_id')
+               .val('');
+
+            $('#example11 tbody tr[id^="tr_"]')
+               .not('#tr_1')
+               .not('.totalrow')
+               .remove();
+
+            $('.item_id').each(function(){
+
+               $(this)
+
+                  .html(defaultItemsOptions)
+
+                  .val('');
+
+            });
+
+
+            $('#item_id_1')
+               .trigger('change');
+
+            $('#quantity_tr_1').val('');
+
+            $('#price_tr_1').val('');
+
+            $('#amount_tr_1').val('');
+
+            $('#unit_tr_1').val('');
+
+            $('#units_tr_1').val('');
+
+            $('#pending_qty_1').val('');
+
+            $('#box_sale_order_item_id_1').val('');
+
+            $('#totalSum').html('');
+
+            $('#bill_sundry_amt').html('');
+
+            $('#total_taxable_amounts').val(0);
+
+            $('#total_amounts').val(0);
+
+            $('.bill_amt').val('');
+
+         }
+
+         $('#box_sale_order_id')
+            .empty()
+            .html(options)
+            .trigger('change');
+
+      }
+
+   });
+
 });
 $(document).on('click', '.add-desc', function () {
     let wrapper = $(this).closest('.description-wrapper');
@@ -4040,6 +4702,129 @@ $(document).on('change', '.item_id', function () {
     checkPartyItemPrice(rowId);
 
 });
+   $(document).on('change', '.quantity',function(){
+      let id = $(this).attr("data-id");
+      let enteredQty =
+
+         parseFloat($(this).val())
+
+         || 0;
+
+
+      let pendingQty =
+
+         parseFloat(
+
+            $("#item_id_"+id)
+
+            .find(':selected')
+
+            .attr('data-pending_qty')
+
+         )
+
+         || 0;
+
+
+      if(
+         pendingQty > 0
+         &&
+         enteredQty > pendingQty
+      )
+      {
+
+         alert(
+            'Qty cannot exceed pending qty of '
+            + pendingQty
+         );
+
+
+         $(this).val(pendingQty);
+
+         calculateAmount();
+
+         return;
+      }
+      // ===== TOTAL ITEM QTY VALIDATION =====
+
+      let totalQty = 0;
+
+
+      $(".quantity").each(function(){
+
+         let currentRowId =
+
+            $(this).attr('data-id');
+
+
+         let currentItem =
+
+         $("#item_id_" + currentRowId)
+
+         .find(':selected')
+
+         .attr('data-so_item_id');
+
+
+      let selectedItem =
+
+         $("#item_id_" + id)
+
+         .find(':selected')
+
+         .attr('data-so_item_id');
+
+
+      if(
+         currentItem != undefined
+         &&
+         currentItem == selectedItem
+      )
+      {
+
+         totalQty =
+
+            parseFloat(totalQty)
+
+            +
+
+            parseFloat($(this).val() || 0);
+      }
+
+      });
+
+
+      if(
+         pendingQty > 0
+         &&
+         totalQty > pendingQty
+      )
+      {
+
+         alert(
+            'Total qty for this item cannot exceed pending qty of '
+            + pendingQty
+         );
+
+
+         $(this).val('');
+
+         calculateAmount();
+
+         return;
+      }
+      let item_id = $("#item_id_"+id).val();
+      let available_weight = $("#item_id_"+id).attr('data-available_item');
+      let asssign_weight = 0;
+      $(".quantity").each(function(){
+         if($("#item_id_"+$(this).attr('data-id')).val()==item_id){
+            asssign_weight = parseFloat(asssign_weight) + parseFloat($(this).val());
+         }
+      });
+      if(asssign_weight>available_weight){
+         alert("Please Check Quantity Greater Than Available Quantity");
+      }
+   });
 $('#party_id').on('change', function () {
 
     $('.item_id').each(function () {
@@ -4101,5 +4886,57 @@ $(document).ready(function () {
             toggleFixedWeightValue();
 
         }); 
+
+$(document).on(
+    'change',
+    '#box_sale_order_id',
+    function ()
+{
+
+    let saleOrderId =
+        $(this).val();
+
+    let saleOrderText =
+        $('#box_sale_order_id option:selected')
+        .text();
+
+    if(!saleOrderId){
+        return;
+    }
+
+    let alreadySelected =
+        selectedSaleOrders.find(
+            x => x.id == saleOrderId
+        );
+
+    if(alreadySelected){
+
+        alert('Sale Order already selected');
+
+        $('#box_sale_order_id')
+            .val('')
+            .trigger('change');
+
+        return;
+    }
+
+    selectedSaleOrders.push({
+
+        id: saleOrderId,
+
+        text: saleOrderText
+
+    });
+
+    renderSelectedSaleOrders();
+
+    reloadAllSaleOrderItems();
+
+    $('#box_sale_order_id')
+        .val('')
+        .trigger('change');
+
+});
+
 </script>
 @endsection

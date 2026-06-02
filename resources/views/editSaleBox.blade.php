@@ -49,6 +49,31 @@
        appearance: none;
        margin: 0; 
    }
+   .selected-so-wrapper{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      min-height:34px;
+      align-items:center;
+   }
+   .selected-so-badge{
+      background:#e7f1ff;
+      border:1px solid #0d6efd;
+      color:#0d6efd;
+      border-radius:20px;
+      padding:4px 10px;
+      font-size:13px;
+      font-weight:600;
+      display:flex;
+      align-items:center;
+      gap:8px;
+   }
+   .selected-so-remove{
+      cursor:pointer;
+      color:red;
+      font-weight:bold;
+      font-size:14px;
+   }
 </style>
 <?php
 $item_list = '<option value="">Select Item</option>';
@@ -98,6 +123,7 @@ foreach($manageitems as $value) {
             
             <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Edit Sales Voucher</h5>
             <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('sale.update') }}" id="saleForm">
+               <div id="selected_sale_order_inputs"></div>
                @csrf
                <div class="row">
                   <input type="hidden" name="vehicle_info_type" value="{{request('vehicle_info_type')}}">
@@ -207,6 +233,29 @@ foreach($manageitems as $value) {
                        @error('material_center'){{$message}}@enderror                        
                      </ul>
                   </div>
+                  @if($company_sale_type=="BOX")
+                  <div class="mb-4 col-md-8">
+                     <label class="form-label font-14 font-heading">
+                        Box Sale Order
+                     </label>
+                     <div class="d-flex align-items-start gap-3">
+                        <div style="width:320px;">
+                           <select
+                              class="form-select select2-single"
+                              id="box_sale_order_id"
+                              disabled
+                           >
+                              <option value="">
+                                 Select Party First
+                              </option>
+                           </select>
+                        </div>
+                        <div id="selected_sale_orders"
+                             class="selected-so-wrapper">
+                        </div>
+                     </div>
+                  </div>
+                  @endif
                </div>
                <div class=" transaction-table transaction-main-table bg-white table-view shadow-sm border-radius-8 mb-4">
                   <table id="example11" class="table-striped table m-0 shadow-sm table-bordered">
@@ -304,20 +353,65 @@ foreach($manageitems as $value) {
                            @endforeach
                         @else
                            @foreach($SaleDescription as $item)
-                              <tr id="tr_{{$i}}" class="font-14 font-heading bg-white">
+                              @php
+                                 $rowSoId = null;
+                                 if ($item->box_sale_order_item_id) {
+                                    foreach ($boxSaleOrderItems as $soItem) {
+                                       if ($soItem['so_item_id'] == $item->box_sale_order_item_id) {
+                                          $rowSoId = $soItem['box_sale_order_id'];
+                                          break;
+                                       }
+                                    }
+                                 }
+                              @endphp
+                              <tr id="tr_{{$i}}" class="font-14 font-heading bg-white"@if($rowSoId) data-sale-order-id="{{ $rowSoId }}"@endif>
                                  <td class="w-min-50" id="srn_{{$i}}">{{$i}}</td>
                                  <td class="w-min-50">
                                     <div class="d-flex align-items-center gap-2">
                                        <select class="form-control goods_items select2-single"
-                                             name="goods_discription[]"
-                                             id="goods_discription_tr_{{$i}}"
-                                             data-id="{{$i}}"
-                                             onchange="call_fun({{$i}}); handleItemChange({{$i}});"
-                                             required data-modal="itemModal"> 
+                                          name="goods_discription[]"
+                                          id="goods_discription_tr_{{$i}}"
+                                          data-id="{{$i}}"
+                                          onchange="call_fun({{$i}}); handleItemChange({{$i}});"
+                                          required
+                                          data-modal="itemModal">
+                                       <option value="">Select Item</option>
+                                       @if(count($selectedBoxSaleOrders) > 0)
+                                          @foreach($boxSaleOrderItems as $soItem)
+                                                <option
+                                                      value="{{ $soItem['so_item_id'] }}"
+                                                      data-item_id="{{ $soItem['item_id'] }}"
+                                                      data-itemid="{{ $soItem['item_id'] }}"
+                                                      data-so_item_id="{{ $soItem['so_item_id'] }}"
+                                                      data-pending_qty="{{ $soItem['pending_qty'] }}"
+                                                      data-unit_id="{{ $soItem['unit'] }}"
+                                                      data-unit_name="{{ $soItem['unit_name'] }}"
+                                                      data-val="{{ $soItem['unit_name'] }}"
+                                                      data-price="{{ $soItem['price'] }}"
+                                                      data-percent="{{ $soItem['gst_rate'] }}"
+                                                      data-sale_order_id="{{ $soItem['box_sale_order_id'] }}"
+                                                      data-available_item="{{ $soItem['pending_qty'] }}"
+                                                      data-parameterized_stock_status="0"
+                                                      data-config_status="0"
+                                                      data-group_id=""
+                                                   @if(
+                                                      $item->box_sale_order_item_id
+                                                      &&
+                                                      $item->box_sale_order_item_id == $soItem['so_item_id']
+                                                   )
+                                                      selected
+                                                   @endif
+                                                   >
+                                                   {{ $soItem['item_name'] }}
 
-                                          <option value="">Select Item</option>
+                                                   ({{ $soItem['pending_qty'] }})
+
+                                                   ({{ $soItem['sale_order_no'] }})
+                                                </option>
+                                          @endforeach
+                                       @else
                                           @foreach($manageitems as $value)
-                                             <option value="{{ $value->id }}"
+                                                <option value="{{ $value->id }}"
                                                       data-unit_id="{{ $value->u_name }}"
                                                       data-val="{{ $value->unit }}"
                                                       data-percent="{{ $value->gst_rate }}"
@@ -326,11 +420,14 @@ foreach($manageitems as $value) {
                                                       data-parameterized_stock_status="{{ $value->parameterized_stock_status }}"
                                                       data-config_status="{{ $value->config_status }}"
                                                       data-group_id="{{ $value->group_id }}"
-                                                      @if($value->id == $item->goods_discription) selected @endif>
+                                                      @if($value->id == $item->goods_discription)
+                                                            selected
+                                                      @endif>
                                                    {{ $value->name }}
-                                             </option>
+                                                </option>
                                           @endforeach
-                                       </select>
+                                       @endif
+                                    </select>
                                        <span id="gst_rate_span_{{$i}}" style="color: red;"></span>
                                        <button type="button"class="btn btn-outline-secondary p-1 px-2 editItemDetailsBtn"data-row="{{$i}}"title="Configure item">⚙️</button>
                                     </div>
@@ -367,6 +464,25 @@ foreach($manageitems as $value) {
                                     </div>
                                     @endif
                                     <input type="hidden"id="item_size_info_{{$i}}"name="item_size_info[]"value='@json($item->selected_sizes ?? [])'data-id="{{$i}}">
+                                    <input type="hidden"
+                                          name="sale_description_id[]"
+                                          value="{{ $item->id }}">
+
+                                    <input type="hidden"
+                                          class="box_sale_order_item_id"
+                                          name="box_sale_order_item_id[]"
+                                          id="box_sale_order_item_id_{{$i}}"
+                                          value="{{ $item->box_sale_order_item_id }}">
+
+                                    <input type="hidden"
+                                          class="old_qty"
+                                          id="old_qty_{{$i}}"
+                                          value="{{ $item->qty }}">
+
+                                    <input type="hidden"
+                                          class="pending_qty"
+                                          id="pending_qty_{{$i}}"
+                                          value="@if($item->pending_qty ?? false){{ $item->pending_qty }}@else 0 @endif">
                                  </td>                              
                                  <td class="w-min-50">
                                     <input type="number" class="quantity w-100 form-control" id="quantity_tr_{{$i}}" name="qty[]" value="{{$item->qty}}"data-id="{{$i}}"  placeholder="Quantity"  style="text-align:right;" >
@@ -1475,6 +1591,193 @@ foreach($manageitems as $value) {
    var to_pay_freight = "{{$to_pay_freight}}";
    var to_pay_other_charges = "{{$to_pay_other_charges}}";
    var cash_group_ids = @json($cash_group_ids);
+   let selectedSaleOrders = @json($selectedBoxSaleOrders);
+   function renderSelectedSaleOrders()
+   {
+      let html = '';
+      $('#selected_sale_order_inputs').html('');
+      selectedSaleOrders.forEach(function(so){
+         html += `
+               <div class="selected-so-badge"
+                  data-sale-order-id="${so.id}">
+                  ${so.text}
+                  <span class="selected-so-remove"
+                        data-sale-order-id="${so.id}">
+                     ×
+                  </span>
+               </div>
+         `;
+         $('#selected_sale_order_inputs').append(`
+               <input type="hidden"
+                     name="box_sale_order_ids[]"
+                     value="${so.id}"
+                     id="selected_so_input_${so.id}">
+         `);
+      });
+      $('#selected_sale_orders').html(html);
+   }
+   function reloadAllSaleOrderItems()
+   {
+      let itemOptions =
+         '<option value="">Select Item</option>';
+      if(selectedSaleOrders.length == 0)
+      {
+         window.latestSaleOrderItemOptions =
+               itemOptions;
+         $('.goods_items').each(function(){
+               $(this).html(itemOptions);
+         });
+         return;
+      }
+      $.ajax({
+         url: "{{ url('get-box-sale-order-items-multiple') }}",
+         type: "POST",
+         data: {
+               _token: "{{ csrf_token() }}",
+               sale_id: "{{ $sale->id }}",
+               sale_order_ids:
+                  selectedSaleOrders.map(x => x.id)
+            },
+         success: function(response)
+         {
+               response.forEach(function(row){
+                  itemOptions += `
+                     <option
+                           value="${row.so_item_id}"
+
+                           data-price="${row.price}"
+
+                           data-pending_qty="${row.pending_qty}"
+
+                           data-so_item_id="${row.so_item_id}"
+
+                           data-unit_name="${row.unit_name}"
+
+                           data-unit_id="${row.unit_id}"
+
+                           data-percent="${row.gst_rate}"
+
+                           data-val="${row.unit_name}"
+
+                           data-item_id="${row.item_id}"
+
+                           data-so_no="${row.sale_order_no}"
+
+                           data-sale_order_id="${row.box_sale_order_id}"
+
+                     >
+
+                           ${row.item_name}
+
+                           (${row.pending_qty})
+
+                           (${row.sale_order_no})
+
+                     </option>
+
+                  `;
+
+               });
+
+               window.latestSaleOrderItemOptions =
+                  itemOptions;
+
+               $('.goods_items').each(function(){
+
+                  let currentValue =
+                     $(this).val();
+
+                  let selectedText =
+                     $(this)
+                           .find('option:selected')
+                           .text();
+
+                  $(this).html(itemOptions);
+
+                  if(
+                     currentValue != ''
+                     &&
+                     currentValue != null
+                  )
+                  {
+                     $(this).val(currentValue);
+
+                     if($(this).val() == null)
+                     {
+                           $(this).prepend(
+                              `<option value="${currentValue}" selected>
+                                 ${selectedText}
+                              </option>`
+                           );
+                     }
+                  }
+
+               });
+
+         }
+
+      });
+   }
+
+   function loadBoxSaleOrderDropdown()
+   {
+      let partyId = $('#party').val();
+
+      if(partyId == '')
+      {
+         $('#box_sale_order_id')
+               .prop('disabled', true)
+               .html('<option value="">Select Party First</option>');
+         return;
+      }
+
+      $.ajax({
+
+         url:
+               "{{ url('get-box-sale-orders') }}/"
+               + partyId,
+
+         type: "GET",
+
+         data: {
+               sale_date: $('#date').val()
+         },
+
+         success: function(response)
+         {
+
+               let options =
+                  '<option value="">Select Box Sale Order</option>';
+
+               $.each(response, function(index, row){
+
+                  options += `
+
+                     <option value="${row.id}">
+
+                           ${row.sale_order_no}
+
+                           ${row.po_number
+                              ? '(' + row.po_number + ')'
+                              : ''
+                           }
+
+                     </option>
+
+                  `;
+
+               });
+
+               $('#box_sale_order_id')
+                  .prop('disabled', false)
+                  .html(options)
+                  .trigger('change.select2');
+
+         }
+
+      });
+   }
+
    function addMoreItem() {
 
    
@@ -1497,7 +1800,22 @@ srn++;
 
 add_more_count++;
 
-let optionElements = `<?php echo $item_list; ?>`;
+   let optionElements = '';
+
+   if(selectedSaleOrders.length > 0)
+   {
+
+      optionElements =
+         window.latestSaleOrderItemOptions
+         || $('#goods_discription_tr_1').html();
+
+   }
+   else
+   {
+
+      optionElements = `<?php echo $item_list; ?>`;
+
+   }
 
 // Build new row
 let newRow = `
@@ -1514,7 +1832,6 @@ let newRow = `
                 data-id="${add_more_count}"
                 onchange="call_fun('${add_more_count}'); handleItemChange(${add_more_count});"
                 required data-modal="itemModal">
-            <option value="">Select Item</option>
             ${optionElements}
         </select>
         <span id="gst_rate_span_${add_more_count}" style="color: red;"></span>
@@ -1542,6 +1859,30 @@ let newRow = `
            id="item_size_info_${add_more_count}"
            name="item_size_info[]"
            data-id="${add_more_count}">
+      <input type="hidden"
+            id="item_size_info_${add_more_count}"
+            name="item_size_info[]"
+            data-id="${add_more_count}">
+
+      <input type="hidden"
+            name="sale_description_id[]"
+            value="">
+
+      <input type="hidden"
+            class="box_sale_order_item_id"
+            name="box_sale_order_item_id[]"
+            id="box_sale_order_item_id_${add_more_count}"
+            value="">
+
+      <input type="hidden"
+            class="old_qty"
+            id="old_qty_${add_more_count}"
+            value="0">
+
+      <input type="hidden"
+            class="pending_qty"
+            id="pending_qty_${add_more_count}"
+            value="0">
 </td>
 
 <td class="w-min-50">
@@ -1585,7 +1926,8 @@ let newRow = `
 $("#example11").find("tr[id^='tr_']").last().after(newRow);
 
 $("#goods_discription_tr_" + add_more_count).select2();
-
+$("#goods_discription_tr_" + add_more_count)
+    .val('');
 let k = 1;
 $(".goods_items").each(function () {
     let id = $(this).attr("data-id");
@@ -2255,6 +2597,7 @@ $(".goods_items").each(function (index) {
             $("#shipping_name").change();
          }
       }
+      let initialPartyLoad = true;
    $(document).ready(function() {
       let si = "";
       $('.add_sundry_btn_class').each(function(){  
@@ -2263,6 +2606,53 @@ $(".goods_items").each(function (index) {
       let last_index = si;
       $("#add_sundry_btn_id_"+last_index).html('<svg style="cursor:pointer;float:right" xmlns="http://www.w3.org/2000/svg" tabindex="0" class="bg-primary rounded-circle add_more_bill_sundry_up" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"></path></svg>'); 
       $("#party").change();
+      initialPartyLoad = false;
+      @if($company_sale_type=="BOX")
+      renderSelectedSaleOrders();
+      loadBoxSaleOrderDropdown();
+      if(selectedSaleOrders.length > 0)
+      {
+         window.latestSaleOrderItemOptions =
+            $('#goods_discription_tr_1').html();
+
+         $('.goods_items').each(function(){
+
+            let rowId = $(this).data('id');
+            let soItemId = $(this).val();
+
+            if(soItemId)
+            {
+               $('#box_sale_order_item_id_' + rowId)
+                  .val(soItemId);
+
+               $('#pending_qty_' + rowId)
+                  .val(
+                     $(this)
+                        .find('option:selected')
+                        .attr('data-pending_qty')
+                     || 0
+                  );
+
+               let saleOrderId =
+                  $(this)
+                     .find('option:selected')
+                     .attr('data-sale_order_id');
+
+               if(saleOrderId)
+               {
+                  $('#tr_' + rowId)
+                     .attr(
+                        'data-sale-order-id',
+                        saleOrderId
+                     );
+               }
+            }
+
+         });
+      }
+      @endif
+      window.defaultItemsOptions =
+   $('#goods_discription_tr_1').html();
       selected_series = "{{$sale->series_no}}";
       calculateAmount();
       // Function to calculate amount and update total sum
@@ -2273,6 +2663,89 @@ $(".goods_items").each(function (index) {
       });
       $(document).on('input', '.quantity',function(){
          calculateAmount();
+
+         if(selectedSaleOrders.length == 0)
+         {
+            return;
+         }
+         let rowId =
+
+            $(this).attr('data-id');
+         let enteredQty =
+            parseFloat($(this).val())
+            || 0;
+         let pendingQty =
+            parseFloat(
+               $('#pending_qty_' + rowId).val()
+            )
+            || 0;
+         let oldQty =
+            parseFloat(
+               $('#old_qty_' + rowId).val()
+            )
+            || 0;
+
+         let allowedQty =
+
+         parseFloat(pendingQty);
+         if(
+            enteredQty > allowedQty
+         )
+         {
+            alert(
+               'Qty cannot exceed allowed qty of '
+               + allowedQty
+            );
+            $(this).val(allowedQty);
+            calculateAmount();
+            return;
+         }
+
+         let currentSoItemId =
+
+            $('#box_sale_order_item_id_' + rowId)
+               .val();
+
+         let totalQty = 0;
+         $('.quantity').each(function(){
+            let currentRowId =
+
+               $(this).attr('data-id');
+
+
+            let soItemId =
+
+               $('#box_sale_order_item_id_' + currentRowId)
+                  .val();
+
+
+            if(
+               currentSoItemId == soItemId
+            )
+            {
+
+               totalQty =
+
+                  parseFloat(totalQty)
+
+                  +
+
+                  parseFloat($(this).val() || 0);
+            }
+
+         });
+         if(
+            totalQty > allowedQty
+         )
+         {
+            alert(
+               'Total qty cannot exceed '
+               + allowedQty
+            );
+            $(this).val('');
+            calculateAmount();
+            return;
+         }
       });
       $(document).on('input', '.amount',function(){
          calculateAmount('A');
@@ -2304,6 +2777,25 @@ $(".goods_items").each(function (index) {
          calculateAmount($("#bill_sundry_"+$(this).attr('data-id')).val());
       });       
       $("#saveBtn").click(function(){
+         let from_date = "{{ Session::get('from_date') }}";
+
+            let to_date = "{{ Session::get('to_date') }}";
+
+         let selected_date = $("#date").val();
+
+         if(
+            selected_date < from_date
+            ||
+            selected_date > to_date
+         ){
+            alert(
+               "Selected date is outside the current financial year."
+            );
+
+            $("#date").focus();
+
+            return false;
+         }
          if(confirm("Are you sure to submit?")==true){            
             $("#saleForm").validate({
                ignore: [], 
@@ -2345,7 +2837,34 @@ $(".goods_items").each(function (index) {
             return false;
          } 
       });
-      $("#date").trigger('change');
+
+
+      setTimeout(function(){
+
+         $('.goods_items').each(function(){
+
+            let item_id = $(this).val();
+
+            let index = $(this).data('id');
+
+            if(item_id)
+            {
+               if(selectedSaleOrders.length > 0)
+               {
+                  item_id =
+                     $(this)
+                        .find('option:selected')
+                        .attr('data-item_id')
+                     || item_id;
+               }
+
+               getItemGstRate(item_id, index);
+
+            }
+
+         });
+
+      }, 1000);
    });
    function call_fun(data){
       if($('#goods_discription_'+data).val()==""){
@@ -2492,6 +3011,67 @@ $(".goods_items").each(function (index) {
          $(".address_div").show();
       }
       calculateAmount();
+
+      if(initialPartyLoad == false)
+      {
+         @if($company_sale_type=="BOX")
+
+            selectedSaleOrders = [];
+
+            renderSelectedSaleOrders();
+
+            loadBoxSaleOrderDropdown();
+
+            $('#example11 tbody tr[id^="tr_"]')
+               .not('#tr_1')
+               .remove();
+
+            $('#goods_discription_tr_1')
+               .html('<option value="">Select Item</option>')
+               .val('');
+
+            $('#quantity_tr_1').val('');
+            $('#price_tr_1').val('');
+            $('#amount_tr_1').val('');
+            $('#unit_tr_1').val('');
+            $('#units_tr_1').val('');
+            $('#pending_qty_1').val('');
+            $('#box_sale_order_item_id_1').val('');
+            $('#config_status_1').val('');
+            $('#item_parameters_1').val('');
+
+            $('#tr_1')
+               .removeAttr('data-sale-order-id');
+
+            window.latestSaleOrderItemOptions =
+               '<option value="">Select Item</option>';
+
+            $('#tr_1 td:last').html(`
+
+            <svg xmlns="http://www.w3.org/2000/svg"
+               data-id="1"
+               class="bg-primary rounded-circle add_more_wrapper"
+               width="24"
+               height="24"
+               viewBox="0 0 24 24"
+               fill="none"
+               style="cursor:pointer;"
+               tabindex="0"
+               role="button">
+
+               <path
+                  d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z"
+                  fill="white"
+               />
+
+            </svg>
+
+            `);
+
+            calculateAmount();
+
+            @endif
+      }
    });
     $("#voucher_prefix").keyup(function(){
       $("#voucher_no").val($(this).val());
@@ -2525,7 +3105,16 @@ $(".goods_items").each(function (index) {
       }else{
          $("#goods_discription_tr_"+id+"-error").hide();
       }
-      getItemGstRate($(this).val(),$(this).attr('data-id'));
+      let itemIdForGst = $(this).val();
+      if(selectedSaleOrders.length > 0)
+      {
+         itemIdForGst =
+            $(this)
+               .find('option:selected')
+               .attr('data-item_id')
+            || '';
+      }
+      getItemGstRate(itemIdForGst, id);
    });
    $("#series_no").change(function(){
       let series = $(this).val();      
@@ -3263,7 +3852,84 @@ function handleItemChange(rowId) {
     console.log("Checking row:", rowId);
 
     let ddl = $("#goods_discription_tr_" + rowId);
-    let itemId = ddl.val();
+    let selectedOption = ddl.find(':selected');
+    let soItemId = ddl.val();
+    let itemId =
+      selectedOption.attr('data-item_id')
+      || soItemId;
+
+   let pendingQty =
+      selectedOption.attr('data-pending_qty')
+      || 0;
+
+   let saleOrderId =
+      selectedOption.attr('data-sale_order_id');
+
+   if(selectedSaleOrders.length > 0)
+   {
+
+      $('#box_sale_order_item_id_' + rowId)
+         .val(soItemId);
+
+      $('#pending_qty_' + rowId)
+         .val(pendingQty);
+
+      if(saleOrderId)
+      {
+         $('#tr_' + rowId)
+            .attr(
+               'data-sale-order-id',
+               saleOrderId
+            );
+      }
+      else
+      {
+         $('#tr_' + rowId)
+            .removeAttr('data-sale-order-id');
+      }
+
+      let price =
+         selectedOption.attr('data-price');
+
+      if(price != undefined)
+      {
+         $('#price_tr_' + rowId).val(price);
+      }
+
+      let unitName =
+         selectedOption.attr('data-unit_name');
+
+      let unitId =
+         selectedOption.attr('data-unit_id');
+
+      if(unitName != undefined)
+      {
+         $('#unit_tr_' + rowId).val(unitName);
+      }
+
+      if(unitId != undefined)
+      {
+         $('#units_tr_' + rowId).val(unitId);
+      }
+
+      let currentQty =
+         parseFloat($('#quantity_tr_' + rowId).val())
+         || 0;
+
+      if(
+         pendingQty != undefined
+         &&
+         currentQty > parseFloat(pendingQty)
+      )
+      {
+         alert(
+            'Existing qty exceeds pending qty of '
+            + pendingQty
+         );
+         $('#quantity_tr_' + rowId).val(pendingQty);
+         calculateAmount();
+      }
+   }
     let btn = $("#tr_" + rowId + " .editItemDetailsBtn");
 
     if (!itemId || itemId === "") {
@@ -3669,16 +4335,99 @@ setTimeout(function() {
         $("#saveBtn").hide();
     }
 }, 2000);
-
 $("#date").on("change", function(){
-   
+
    $(".goods_items").each(function(){
       let item_id = $(this).val();
       let index = $(this).data("id");
       if(item_id){
+         if(selectedSaleOrders.length > 0)
+         {
+            item_id =
+               $(this)
+                  .find('option:selected')
+                  .attr('data-item_id')
+               || item_id;
+         }
          getItemGstRate(item_id,index);
       }
-   });   
+   });
+
+   @if($company_sale_type=="BOX")
+
+      selectedSaleOrders = [];
+
+      renderSelectedSaleOrders();
+
+      loadBoxSaleOrderDropdown();
+
+      $('#example11 tbody tr[id^="tr_"]')
+         .not('#tr_1')
+         .remove();
+
+      $('#goods_discription_tr_1')
+         .val('');
+
+      $('#quantity_tr_1')
+         .val('');
+
+      $('#price_tr_1')
+         .val('');
+
+      $('#amount_tr_1')
+         .val('');
+
+      $('#unit_tr_1')
+         .val('');
+
+      $('#units_tr_1')
+         .val('');
+
+      $('#pending_qty_1')
+         .val('');
+
+      $('#box_sale_order_item_id_1')
+         .val('');
+
+      $('#config_status_1')
+         .val('');
+
+      $('#item_parameters_1')
+         .val('');
+
+      $('#tr_1')
+         .removeAttr('data-sale-order-id');
+      $('#tr_1 td:last').html(`
+
+      <svg xmlns="http://www.w3.org/2000/svg"
+         data-id="1"
+         class="bg-primary rounded-circle add_more_wrapper"
+         width="24"
+         height="24"
+         viewBox="0 0 24 24"
+         fill="none"
+         style="cursor:pointer;"
+         tabindex="0"
+         role="button">
+
+         <path
+            d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z"
+            fill="white"
+         />
+
+      </svg>
+
+      `);
+      $('#goods_discription_tr_1')
+         .html('<option value="">Select Item</option>');
+
+      window.latestSaleOrderItemOptions =
+         '<option value="">Select Item</option>';
+
+      calculateAmount();
+
+      @endif
+
 });
 $(document).on('click', '.add-desc', function () {
     let wrapper = $(this).closest('.description-wrapper');
@@ -3731,35 +4480,60 @@ $(document).ready(function () {
     });
 });
 
-function checkPartyItemPriceEdit(rowId) {
-
-    let party_id = $('#party').val(); // IMPORTANT
-    let item_id  = $('#goods_discription_tr_' + rowId).val();
-
-    if (!party_id || !item_id) return;
-
-    $.ajax({
-        url: '{{ url("get-party-item-price") }}',
-        type: 'GET',
-        data: {
-            party_id: party_id,
-            item_id: item_id
-        },
-        success: function (res) {
-
-            let priceInput = $('#price_tr_' + rowId);
-
-            if (res.status) {
-                priceInput.val(res.price);
-                priceInput.prop('readonly', true);
-                priceInput.addClass('bg-light');
-            } else {
-                priceInput.prop('readonly', false);
-                priceInput.removeClass('bg-light');
+   function checkPartyItemPriceEdit(rowId) {
+      if(selectedSaleOrders.length > 0)
+      {
+         let selectedOption =
+               $('#goods_discription_tr_' + rowId + ' option:selected');
+         let soPrice =
+               selectedOption.attr('data-price');
+         if(
+               soPrice != undefined
+               &&
+               soPrice != ''
+            )
+            {
+               let oldItemId =
+               $('#goods_discription_tr_' + rowId)
+               .attr('data-old_item');
+               let currentItemId =
+               $('#goods_discription_tr_' + rowId)
+               .val();
+            if(
+               $('#price_tr_' + rowId).val() == ''
+               ||
+               $('#price_tr_' + rowId).val() == '0'
+               ||
+               $('#price_tr_' + rowId).val() == '0.00'
+               ||
+               (
+                  oldItemId != undefined
+                  &&
+                  oldItemId != currentItemId
+               )
+            )
+            {
+               $('#price_tr_' + rowId)
+                  .val(soPrice);
             }
-        }
-    });
-}
+            $('#goods_discription_tr_' + rowId)
+               .attr(
+                  'data-old_item',
+                  currentItemId
+               );
+               $('#price_tr_' + rowId)
+                  .prop('readonly', false);
+               $('#price_tr_' + rowId)
+                  .removeClass('bg-light');
+               calculateAmount();
+            }
+         return;
+      }
+      $('#price_tr_' + rowId)
+         .prop('readonly', false);
+      $('#price_tr_' + rowId)
+         .removeClass('bg-light');
+   }
 
 $('#party').on('change', function () {
     $('.goods_items').each(function () {
@@ -3772,6 +4546,120 @@ $('#party').on('change', function () {
 $(document).on('change', '.goods_items', function () {
     let rowId = $(this).data('id');
     checkPartyItemPriceEdit(rowId);
+});
+
+$(document).on(
+    'click',
+    '.selected-so-remove',
+    function(){
+
+        let saleOrderId =
+            $(this).attr(
+                'data-sale-order-id'
+            );
+
+        $('tr[data-sale-order-id="' + saleOrderId + '"]')
+        .each(function(){
+
+            let rowId =
+                $(this)
+                .attr('id')
+                .replace('tr_','');
+
+            $('#goods_discription_tr_' + rowId)
+                .val('');
+
+            $('#quantity_tr_' + rowId)
+                .val('');
+
+            $('#price_tr_' + rowId)
+                .val('');
+
+            $('#amount_tr_' + rowId)
+                .val('');
+
+            $('#unit_tr_' + rowId)
+                .val('');
+
+            $('#units_tr_' + rowId)
+                .val('');
+
+            $('#pending_qty_' + rowId)
+                .val('');
+
+            $('#box_sale_order_item_id_' + rowId)
+                .val('');
+
+            $(this)
+                .removeAttr(
+                    'data-sale-order-id'
+                );
+
+        });
+
+        selectedSaleOrders =
+            selectedSaleOrders.filter(
+                x => x.id != saleOrderId
+            );
+
+        renderSelectedSaleOrders();
+
+        reloadAllSaleOrderItems();
+
+        calculateAmount();
+
+    }
+);
+
+$(document).on(
+    'change',
+    '#box_sale_order_id',
+    function ()
+{
+
+    let saleOrderId =
+        $(this).val();
+
+    let saleOrderText =
+        $('#box_sale_order_id option:selected')
+        .text();
+
+    if(!saleOrderId){
+        return;
+    }
+
+    let alreadySelected =
+        selectedSaleOrders.find(
+            x => x.id == saleOrderId
+        );
+
+    if(alreadySelected){
+
+        alert('Sale Order already selected');
+
+        $('#box_sale_order_id')
+            .val('')
+            .trigger('change');
+
+        return;
+    }
+
+    selectedSaleOrders.push({
+
+        id: saleOrderId,
+
+        text: saleOrderText
+
+    });
+
+    renderSelectedSaleOrders();
+
+    reloadAllSaleOrderItems();
+
+    $('#box_sale_order_id')
+        .val('')
+        .trigger('change');
+
 });
 
 

@@ -156,11 +156,13 @@ class SalesController extends Controller
       if (!$from_date && !$to_date) {
          $sale = $sale->reverse()->values();
       }
+      $states = State::select('name','state_code')->get();
       return view('sale')
          ->with('sale', $sale)
          ->with('month_arr', $month_arr)
          ->with('from_date', $from_date)
          ->with('to_date', $to_date)
+         ->with('states', $states)
          ->with('maxVoucher', $maxVoucher);
    }
    /**
@@ -579,7 +581,39 @@ class SalesController extends Controller
                ->with('shipp_to_other_pincode',$shipp_to_other_pincode)
                ->with('cash_group_ids',$cash_group_ids)
                ->with('company_sale_type',$cpmp->company_sale_type);
-
+      }else if($comp->company_sale_type=="BOX"){
+      return view('addSaleBox')
+         ->with('current_financial_year',$current_financial_year)
+         ->with('fy_start_date', $fy_start_date)
+         ->with('config', $config)
+         ->with('itemGroups', $itemGroups)
+         ->with('boxSaleOrders',$boxSaleOrders)
+         ->with('box_sale_order_id',$box_sale_order_id)
+         ->with('accountunit', $accountunit)
+         ->with('series', $series)
+         ->with('state_list', $state_list)
+         ->with('allowedAccountGroups', $allowedAccountGroups)
+         ->with('credit_days', $credit_days)
+         ->with('fy_end_date', $fy_end_date)
+         ->with('party_list', $party_list)
+         ->with('billsundry', $billsundry)
+         ->with('bill_date', $bill_date)
+         ->with('GstSettings', $GstSettings)
+         ->with('item', $item)
+         ->with('bill_to_id', $bill_to_id)
+         ->with('shipp_to_id', $shipp_to_id)
+         ->with('freight', $freight)
+         ->with('sale_order_id', $sale_order_id)
+         ->with('sale_order_items',$sale_order_items)
+         ->with('sale_enter_data',$sale_enter_data)
+         ->with('new_order',$new_order)
+         ->with('production_module_status',$production_module_status)
+         ->with('bill_to_address_id',$bill_to_address_id)
+         ->with('shipp_to_address_id',$shipp_to_address_id)
+         ->with('shipp_to_other_address',$shipp_to_other_address)
+         ->with('shipp_to_other_pincode',$shipp_to_other_pincode)
+         ->with('cash_group_ids',$cash_group_ids)
+         ->with('company_sale_type',$comp->company_sale_type);
       }else{
          return view('addSale')
          ->with('current_financial_year',$current_financial_year)
@@ -781,26 +815,20 @@ class SalesController extends Controller
       }
 
       if(
+         !empty($request->box_sale_order_ids)
+         &&
          $request->filled('goods_discription')
          &&
          is_array($request->goods_discription)
       )
       {
-
          $actualGoodsDescriptions = [];
 
-         foreach(
-            $request->goods_discription
-            as $soItemId
-         )
+         foreach($request->goods_discription as $soItemId)
          {
-
             $soItem = DB::table('box_sale_order_items')
-
-                  ->where('id',$soItemId)
-
+                  ->where('id', $soItemId)
                   ->select('item_id')
-
                   ->first();
 
             $actualGoodsDescriptions[] =
@@ -810,13 +838,8 @@ class SalesController extends Controller
          }
 
          $request->merge([
-
-            'box_sale_order_item_id' =>
-                  $request->goods_discription,
-
-            'goods_discription' =>
-                  $actualGoodsDescriptions
-
+            'box_sale_order_item_id' => $request->goods_discription,
+            'goods_discription' => $actualGoodsDescriptions
          ]);
 
       }
@@ -892,8 +915,10 @@ class SalesController extends Controller
             $desc = new SaleDescription;
             $itemData = ManageItems::find($good);
             $desc->sale_id = $sale->id;
-            $desc->box_sale_order_item_id = $request->box_sale_order_item_id[$key]
-                                            ?? null;
+            $desc->box_sale_order_item_id =
+                                    !empty($request->box_sale_order_ids)
+                                    ? ($request->box_sale_order_item_id[$key] ?? null)
+                                    : null;
             $desc->goods_discription = $good;
             $desc->item_description = $item_descriptions[$key] ?? null;
             if($itemData && $itemData->dual_unit == 1){
@@ -2113,6 +2138,39 @@ class SalesController extends Controller
                ->with('item', $manageitems)
                ->with('cash_group_ids',$cash_group_ids)
                ->with('company_sale_type',$comp->company_sale_type);
+         }else if($comp->company_sale_type=='BOX'){
+            return view('editSaleBox')
+                     ->with('production_module_status', $production_module_status)
+                     ->with('fy_start_date', $fy_start_date)
+                     ->with('fy_end_date', $fy_end_date)
+                     ->with('party_list', $party_list)
+                     ->with('manageitems', $manageitems)
+                     ->with('billsundry', $billsundry)
+                     ->with('mat_center', $mat_center)
+                     ->with('GstSettings', $GstSettings)
+                     ->with('mat_series', $mat_series)
+                     ->with('sale', $sale)
+                     ->with('SaleDescription', $SaleDescription)
+                     ->with('SaleSundry', $SaleSundry)
+                     ->with('selectedBoxSaleOrders',$selectedBoxSaleOrders)
+                     ->with('config',$config)
+                     ->with('itemGroups', $itemGroups)
+                     ->with('accountunit', $accountunit)
+                     ->with('boxSaleOrders', $boxSaleOrders)
+                     ->with('boxSaleOrderItems', $boxSaleOrderItems)
+                     ->with('series', $series)
+                     ->with('state_list', $state_list)
+                     ->with('allowedAccountGroups', $allowedAccountGroups)
+                     ->with('credit_days', $credit_days)
+                     ->with('bill_to_id', $bill_to_id)
+                     ->with('shipp_to_id', $shipp_to_id)
+                     ->with('freight', $freight)
+                     ->with('sale_order_id', $sale_order_id)
+                     ->with('sale_order_items',$sale_order_items)
+                     ->with('sale_enter_data',$sale_enter_data)
+                     ->with('new_order',$new_order)
+                     ->with('cash_group_ids',$cash_group_ids)
+                     ->with('company_sale_type',$comp->company_sale_type);
          }else{
             return view('editSale')
                      ->with('production_module_status', $production_module_status)
@@ -2934,10 +2992,15 @@ class SalesController extends Controller
             $desc = new SaleDescription;
             $desc->sale_id = $sale->id;
             $desc->goods_discription = $good;
-            $boxSaleOrderItemIds =
-               $request->input('box_sale_order_item_id');
-            $desc->box_sale_order_item_id =
-               $boxSaleOrderItemIds[$key] ?? null;
+            if(!empty($request->box_sale_order_ids))
+            {
+               $desc->box_sale_order_item_id =
+                  $request->box_sale_order_item_id[$key] ?? null;
+            }
+            else
+            {
+               $desc->box_sale_order_item_id = null;
+            }
             $desc->item_description = $item_descriptions[$key] ?? '';
             $itemData = ManageItems::find($good);
 
@@ -4734,7 +4797,8 @@ class SalesController extends Controller
       $i = 1;
       if(count($item_data)>0){
          foreach ($item_data as $key => $value) {
-            $unit = substr($value->unit_code, 0, 3);
+            $unit = $value->unit_name;
+            
             $item_freight = 0;
             $item_discount = 0;
             $item_total = $value->tprice;            
@@ -5209,6 +5273,7 @@ class SalesController extends Controller
           curl_close($curl);
           if($response){
              $result = json_decode($response);
+            //  echo "<pre>";print_r($result);
              if(isset($result->status_cd) && $result->status_cd=='1'){
                 //echo json_encode(array("status"=>1,"message"=>"Token Generate Successfully"));
              }else{
@@ -5312,6 +5377,7 @@ class SalesController extends Controller
             foreach ($item_data as $key => $value) {
                $unit = $value->u_name;
                $qtyUnit = substr(Units::where('id', $unit)->value('unit_code'), 0, 3);
+               
                $item_freight = 0;
                $item_discount = 0;
                $item_total = $value->tprice;            
@@ -5461,7 +5527,7 @@ class SalesController extends Controller
                "vehicleType"=>"R",
                "itemList"=>$ItemList
             );
-         }
+         }       
          
          $curl = curl_init();
          curl_setopt_array($curl, array(
@@ -5483,15 +5549,16 @@ class SalesController extends Controller
             ),
          ));
          $response = curl_exec($curl);
-         if (curl_errno($curl)) {
-                $error_msg = curl_error($curl);
-                echo "<pre>";echo "---";print_r($error_msg);die;
-            }
+        if (curl_errno($curl)) {
+            $error_msg = curl_error($curl);
+            echo "<pre>";echo "---";print_r($error_msg);die;
+        }
 
-        // echo "<pre>";print_r($response);die;
+        
          curl_close($curl);
          if($response){
             $result = json_decode($response);
+           // echo "<pre>";print_r($result);
             if(isset($result->status_cd) && $result->status_cd=='1'){
                $data_array = [];
                $ewayBillDate = $result->data->ewayBillDate;
@@ -5502,6 +5569,7 @@ class SalesController extends Controller
                $invoice_update = Sales::find($request->id);
                $invoice_update->eway_bill_response = json_encode($data_array);
                $invoice_update->e_waybill_status = 1;
+               $invoice_update->e_waybill_distance = $request->distance;
                $invoice_update->eway_bill_by = Session::get('user_id');
                if($invoice_update->save()){
                   $response = [
@@ -6078,7 +6146,14 @@ class SalesController extends Controller
       } 
    }
    public function getItemSizeQuantity(Request $request){
-      $size = ItemSizeStock::select('reel_no','size','weight','id')->where('item_id',$request->item_id)
+      $size = ItemSizeStock::select('reel_no','size','weight','id','created_at')
+                     ->where('item_id',$request->item_id)
+                     ->where('status',1)
+                     ->when($request->date, function($query) use ($request){
+                        $query->where(function($q) use ($request){
+                           $q->where('created_at','<=',date('Y-m-d',strtotime($request->date)).' 23:59:59');
+                        });
+                     })
                      ->where('status',1)
                      ->where('company_id',Session::get('user_company_id'))
                      ->get();
@@ -6104,7 +6179,7 @@ class SalesController extends Controller
          ->where('item_id', $itemId)
          ->where('company_id', $companyId)
          ->where('status', 1)
-         ->whereNull('sale_id')
+         //->whereNull('sale_id')
          ->get();
 
       return response()->json([
@@ -7633,6 +7708,7 @@ public function bulkDeleteSalesByDate(Request $request)
                         $request->from_date,
                         $request->to_date
                     ])
+                    ->where('company_id', Session::get('user_company_id'))
                     ->where('delete', '0')
                     ->orderBy('date', 'ASC')
                     ->get();
@@ -8050,4 +8126,165 @@ public function getBoxSaleOrderItemsMultiple(Request $request)
 
     return response()->json($finalItems);
 }
+
+   function extendEwayValidity(Request $request){
+      echo "<pre>";
+      print_r($request->all());
+      die;
+      $request->validate([
+         'sale_id' => 'required|exists:sales,id',
+         'current_place' => 'required|string',
+         'current_pincode' => 'required',
+         'current_state' => 'required',
+         'remaining_distance' => 'required|numeric',
+         'consignment_is' => 'required'
+      ]);
+      $sale_id = $request->sale_id;
+      $sale = Sales::find($sale_id);
+      if(!$sale){
+         return response()->json([
+            'success' => false,
+            'message' => 'Sale not found.'
+         ]);
+      }
+      if($sale->e_waybill_status != 1){
+         return response()->json([
+            'success' => false,
+            'message' => 'Eway Bill not generated for this sale.'
+         ]);
+      }
+      //Get Api Credentails
+      $credentials = json_decode(CommonHelper::gstApiCredentials('EWAYBILL'));
+      if(!$credentials){
+            $response = [
+                     'success' => false,
+                     'data'    => "",
+                     'message' => "Api Credentails Not Found ",
+                  ];
+         return response()->json($response, 200);
+      }
+      if($credentials->status != 1){
+            $response = [
+                     'success' => false,
+                     'data'    => "",
+                     'message' => "Api Credentails Not Found ",
+                  ];
+         return response()->json($response, 200);
+      }
+      $base_url = $credentials->base_url;
+      $email_id = $credentials->email_id;
+      $client_id = $credentials->client_id;
+      $client_secret = $credentials->client_secret;
+      $ip_address = $credentials->ip_address;
+      $curl = curl_init();
+      curl_setopt_array($curl, array(
+         CURLOPT_URL => $base_url.'/ewaybillapi/v1.03/authenticate?email='.$email_id.'&username='.trim($einvoice_username).'&password='.trim(decrypt($einvoice_password)),
+         CURLOPT_RETURNTRANSFER => true,
+         CURLOPT_ENCODING => '',
+         CURLOPT_MAXREDIRS => 10,
+         CURLOPT_TIMEOUT => 0,
+         CURLOPT_FOLLOWLOCATION => true,
+         CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+         CURLOPT_CUSTOMREQUEST => 'GET',
+         //CURLOPT_POSTFIELDS =>json_encode($eway_bill_request),
+         CURLOPT_HTTPHEADER => array(
+            'ip_address: '.$ip_address,
+            'client_id: '.$client_id,
+            'client_secret: '.$client_secret,
+            'gstin: '.trim($einvoice_gst),
+            'Content-Type: application/json'
+         ),
+      ));
+      $response = curl_exec($curl);
+      curl_close($curl);
+      if($response){
+         $result = json_decode($response);
+         if(isset($result->status_cd) && $result->status_cd=='1'){
+         }else{
+            $response = [
+               'success' => false,
+               'data'    => "",
+               'message' => "Token Issue - ".$result->error->message,
+            ];
+            return response()->json($response, 200);
+         }
+      }
+      $ewayData = json_decode($sale->eway_bill_response, true);
+      $ewbNo = $ewayData['ewbNo'];
+      $vehicleNo = $request->vehicle_no;
+      $fromPlace = $request->current_place;
+      $fromState = $request->current_state;
+      $addressLine1 = $request->address_line_1;
+      $addressLine2 = $request->address_line_2;
+      $addressLine3 = $request->address_line_3;
+      $fromPincode = $request->current_pincode;
+      $remainingDistance = $request->remaining_distance;
+      $actFromStateCode = $request->consignment_is;
+      $extnRsnCode = $request->extension_reason_code;
+      $extnRemarks = $request->extension_remarks;
+      $transMode = $request->mode ?? "";
+      $transitType = $request->transit_type ?? "";
+      $eway_bill_request = array(
+         "ewbNo"=>$ewbNo,
+         "fromPlace"=>$fromPlace,
+         "fromState"=>$fromState,
+         "fromPincode"=>$fromPincode,
+         "remainingDistance"=>$remainingDistance,
+         "consignmentStatus"=>$consignmentStatus,
+         // "transDocNo"=>$transDocNo,
+         // "transDocDate"=>date('d/m/Y',strtotime($sale->date)),
+         "transMode"=>$transMode,
+         "vehicleNo"=>$vehicleNo,
+         "transitType"=>$transitType,
+         "addressLine1"=>$addressLine1,
+         "addressLine2"=>$addressLine2,
+         "addressLine3"=>$addressLine3,
+         "extnRsnCode"=>$extnRsnCode,
+         "extnRemarks"=>$extnRemarks
+      );
+      $curl = curl_init();
+      curl_setopt_array($curl, array(
+         CURLOPT_URL => $base_url.'/ewaybillapi/v1.03/authenticate?email='.$email_id.'&username='.trim($einvoice_username).'&password='.trim(decrypt($einvoice_password)),
+         CURLOPT_RETURNTRANSFER => true,
+         CURLOPT_ENCODING => '',
+         CURLOPT_MAXREDIRS => 10,
+         CURLOPT_TIMEOUT => 0,
+         CURLOPT_FOLLOWLOCATION => true,
+         CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+         CURLOPT_CUSTOMREQUEST => 'GET',
+         CURLOPT_POSTFIELDS =>json_encode($eway_bill_request),
+         CURLOPT_HTTPHEADER => array(
+            'ip_address: '.$ip_address,
+            'client_id: '.$client_id,
+            'client_secret: '.$client_secret,
+            'gstin: '.trim($einvoice_gst),
+            'Content-Type: application/json'
+         ),
+      ));
+      $response = curl_exec($curl);
+      curl_close($curl);
+      if($response){
+         $result = json_decode($response);
+         if(isset($result->status_cd) && $result->status_cd=='1'){
+
+         }else{
+            $response = [
+               'success' => false,
+               'data'    => "",
+               'message' => "Some error occurred ",
+            ];
+            return response()->json($response, 200);
+         }
+      }
+      // // $current_validity = Carbon::parse($sale->eway_validity);
+      // // $new_validity = $current_validity->addDays(7); // Extend by 7 days
+      // // $sale->eway_validity = $new_validity;
+      // // $sale->update();
+
+      // return response()->json([
+      //    'success' => true,
+      //    'message' => 'Eway Bill validity extended successfully.',
+      //    'new_validity' => $new_validity->toDateString()
+      // ]);
+   }
 }
