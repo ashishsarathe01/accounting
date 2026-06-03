@@ -2277,10 +2277,15 @@ if(
                   let optionElements = '<option value="">Select</option>';
 
                   $.each(data, function(key, val) {
+                     let production_status = 0;
+                     if($.inArray(val.item_id, production_items) !== -1){
+                        production_status = 1;
+                     }
                      optionElements += '<option value="' + val.item_id + '" ' +
                            'unit_id="' + val.unit_id + '" ' +
                            'data-val="' + val.unit + '" ' +
-                           'data-percent="' + val.gst_rate + '">' +
+                           'data-percent="' + val.gst_rate + '" ' +
+                           'data-production="' + production_status + '">' +
                            val.items_name + ' (' + val.qty + ' ' + val.unit + ')' +
                            '</option>';
                   });
@@ -2941,19 +2946,66 @@ if(
          });
 
       // save JSON to hidden field
-      hiddenInput.val(JSON.stringify(selectedData));
-
-      // update quantity = total weight
       let totalWeight = selectedData.reduce(
          (sum, row) => sum + (parseFloat(row.weight) || 0),
          0
       );
 
-      $("#quantity_tr_" + numeric)
-         .val(totalWeight.toFixed(2))
-         .attr("readonly", true);
+      let maxQty = 0;
 
-      // close modal
+      let itemText = $('#goods_discription_tr_' + numeric + ' option:selected').text();
+
+      let matches = itemText.match(/\(([^()]*)\)/g);
+
+      if (matches && matches.length > 0) {
+
+         let lastBracket = matches[matches.length - 1];
+
+         let qtyMatch = lastBracket.match(/(\d+(\.\d+)?)/);
+
+         if (qtyMatch) {
+            maxQty = parseFloat(qtyMatch[1]);
+         }
+      }
+
+      let usedQty = 0;
+
+      $(".goods_items").each(function () {
+
+         let rowId = $(this).attr("data-id");
+
+         if (
+            $(this).val() == $('#goods_discription_tr_' + numeric).val() &&
+            rowId != numeric
+         ) {
+            usedQty += parseFloat($("#quantity_tr_" + rowId).val()) || 0;
+         }
+      });
+
+      let remainingQty = maxQty - usedQty;
+
+      if (totalWeight > remainingQty) {
+
+         alert(
+            'Total quantity of this item cannot exceed ' +
+            maxQty +
+            '.\nMaximum allowed weight for this row is ' +
+            remainingQty.toFixed(2)
+         );
+
+         return;
+      }
+
+      hiddenInput.val(JSON.stringify(selectedData));
+
+      $("#quantity_tr_" + numeric)
+         .val(totalWeight.toFixed(2));
+
+      let price = parseFloat($("#price_tr_" + numeric).val()) || 0;
+      $("#amount_tr_" + numeric).val(
+         (totalWeight * price).toFixed(2)
+      );
+      calculateAmount();
       bootstrap.Modal.getInstance(document.getElementById('productionModal')).hide();
    });
 
@@ -2962,34 +3014,6 @@ if(
       $(".with_gst_with_item_section:hidden :input").prop("disabled", true);
       $(".with_gst_without_item_section:hidden :input").prop("disabled", true);
       $(".without_gst_section:hidden :input").prop("disabled", true);
-
-   });
-
-   function getMaxQtyFromText(rowId) {
-
-      let text = $('#goods_discription_' + rowId + ' option:selected').text();
-
-      // extract number inside brackets (e.g. 30 from "Parli (30 BKT)")
-      let match = text.match(/\((\d+)/);
-
-      return match ? parseFloat(match[1]) : 0;
-   }
-
-   // validate on qty input
-   $(document).on('input', '.quantity', function () {
-
-      let rowId = $(this).attr('id').replace('quantity_', '');
-
-      let maxQty = getMaxQtyFromText(rowId);
-      let enteredQty = parseFloat($(this).val()) || 0;
-
-      let invoiceNo = $('#voucher_no').val();
-
-if (invoiceNo !== 'OTHER' && enteredQty > maxQty) {
-    alert("Entered quantity cannot exceed available quantity (" + maxQty + ").");
-    $(this).val('');
-    $(this).focus();
-}
 
    });
    function checkTotalItemQty(currentRowId) {
@@ -3011,11 +3035,19 @@ if (invoiceNo !== 'OTHER' && enteredQty > maxQty) {
 
                let text = $(this).find("option:selected").text();
 
-               let match = text.match(/\((\d+)/); 
+               let matches = text.match(/\(([^()]*)\)/g);
 
-               if (match) {
-                  maxQty = parseInt(match[1]);
+               if (matches && matches.length > 0) {
+
+                  let lastBracket = matches[matches.length - 1];
+
+                  let qtyMatch = lastBracket.match(/(\d+(\.\d+)?)/);
+
+                  if (qtyMatch) {
+                     maxQty = parseFloat(qtyMatch[1]);
+                  }
                }
+
          }
       });
 
@@ -3033,6 +3065,52 @@ if (invoiceNo !== 'OTHER' && enteredQty > maxQty) {
    }
    $(document).on("input", ".quantity", function () {
       let rowId = $(this).attr("id").replace("quantity_tr_", "");
+      let hiddenData = $("#item_size_info_tr_" + rowId).val();
+
+      if (
+         hiddenData &&
+         hiddenData !== "" &&
+         hiddenData !== "[]" &&
+         hiddenData !== "null"
+      ) {
+
+         let reelData = [];
+
+         try {
+            reelData = JSON.parse(hiddenData);
+         } catch (e) {
+            reelData = [];
+         }
+
+         let reelTotal = 0;
+
+         reelData.forEach(function(row){
+            reelTotal += parseFloat(row.weight || 0);
+         });
+
+         let enteredQty = parseFloat($(this).val()) || 0;
+
+         if (Math.abs(enteredQty - reelTotal) > 0.01) {
+
+            alert(
+               "Qty must match Production Total Weight (" +
+               reelTotal.toFixed(2) +
+               ").\n\nTo change quantity, update Reel Weights in Production Details."
+            );
+
+            $(this).val(reelTotal.toFixed(2));
+
+            let price = parseFloat($("#price_tr_" + rowId).val()) || 0;
+
+            $("#amount_tr_" + rowId).val(
+               (reelTotal * price).toFixed(2)
+            );
+
+            calculateAmount();
+
+            return;
+         }
+      }
       checkTotalItemQty(rowId);
    });
    $(document).on("change", ".goods_items", function () {
@@ -3040,14 +3118,6 @@ if (invoiceNo !== 'OTHER' && enteredQty > maxQty) {
       let rowId = $(this).attr("data-id");
 
       checkTotalItemQty(rowId);
-   });
-   $(document).ready(function () {
-
-      $(".quantity").each(function () {
-         let rowId = $(this).attr("id").replace("quantity_tr_", "");
-         checkTotalItemQty(rowId);
-      });
-
    });
    let previousType = $("#type").val(); 
 

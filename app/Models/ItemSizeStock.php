@@ -12,7 +12,7 @@ class ItemSizeStock extends Model
     protected $fillable = [
     'item_id', 'size', 'weight', 'reel_no', 'deckle_id',
     'quality_row_id', 'bf', 'gsm', 'unit', 'sale_description_id',
-    'sale_return_id', 'sale_order_id', 'sale_id', 'status',
+    'sale_return_desc_id','sale_return_id', 'sale_order_id', 'sale_id', 'status',
     'company_id', 'created_by'
     ];
 

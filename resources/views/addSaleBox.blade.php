@@ -131,11 +131,7 @@
                </div>
             @endif
             
-<<<<<<< HEAD
             <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Add Sales Voucher </h5>
-=======
-            <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Add Sales Voucher(Box) </h5>
->>>>>>> changes
             <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('sale.store') }}" id="saleForm">
             <div id="selected_sale_order_inputs"></div>   
             @csrf
@@ -1387,7 +1383,6 @@ data-unit_name="{{$item_list->unit}}"
          '<td class="w-min-50 action-cell" style="display: flex;"></td>' +
          '</tr>';
       $("#example11").append(newRow);
-<<<<<<< HEAD
 if(selectedSaleOrders.length > 0)
 {
 
@@ -1396,20 +1391,6 @@ if(selectedSaleOrders.length > 0)
 
     $('#item_id_' + add_more_count)
         .html(firstRowOptions);
-=======
-      if(selectedSaleOrders.length > 0)
-{
-
-    $('#item_id_' + add_more_count)
-        .html(
-            $('.item_id:first').html()
-        );
-
-    $('#item_id_' + add_more_count)
-        .select2({
-            width:'100%'
-        });
->>>>>>> changes
 
 }
       $("#max_sale_descrption").val(add_more_count);
@@ -1580,21 +1561,12 @@ function reloadAllSaleOrderItems()
 
     if(selectedSaleOrders.length == 0)
     {
-<<<<<<< HEAD
         window.latestSaleOrderItemOptions =
             itemOptions;
 
         $('.item_id').each(function(){
 
             $(this).html(itemOptions);
-=======
-        $('.item_id').each(function(){
-
-            $(this)
-                .html(defaultItemsOptions)
-                .val('')
-                .trigger('change');
->>>>>>> changes
 
         });
 
@@ -1624,11 +1596,7 @@ function reloadAllSaleOrderItems()
                 itemOptions += `
 
                     <option
-<<<<<<< HEAD
                         value="${row.so_item_id}"
-=======
-                        value="${row.item_id}"
->>>>>>> changes
 
                         data-price="${row.price}"
 
@@ -1644,11 +1612,7 @@ function reloadAllSaleOrderItems()
 
                         data-val="${row.unit_name}"
 
-<<<<<<< HEAD
                         data-item_id="${row.item_id}"
-=======
-                        data-itemid="${row.item_id}"
->>>>>>> changes
 
                         data-so_no="${row.sale_order_no}"
 
@@ -1668,7 +1632,6 @@ function reloadAllSaleOrderItems()
 
             });
 
-<<<<<<< HEAD
             window.latestSaleOrderItemOptions =
                 itemOptions;
 
@@ -1692,30 +1655,6 @@ function reloadAllSaleOrderItems()
                 }
 
             });
-=======
-            $('.item_id').each(function(){
-
-    let currentValue =
-        $(this).val();
-
-    let currentHtml =
-        $(this).html();
-
-    $(this).html(itemOptions);
-
-    if(currentValue != '')
-    {
-        $(this)
-            .val(currentValue)
-            .trigger('change');
-    }
-
-    $(this).select2({
-        width:'100%'
-    });
-
-});
->>>>>>> changes
 
         }
 
@@ -2970,7 +2909,6 @@ renderSelectedSaleOrders();
       }
       let rowId = $(this).attr("data-id");
       let selectedOption =
-<<<<<<< HEAD
     $(this).find('option:selected');
 
       let soItemId =
@@ -2978,9 +2916,6 @@ renderSelectedSaleOrders();
 
 let itemId =
     selectedOption.attr('data-item_id');
-=======
-      $(this).find('option:selected');
->>>>>>> changes
 
       let price =
          selectedOption.attr('data-price');
@@ -2992,19 +2927,11 @@ let itemId =
     selectedOption.attr(
         'data-sale_order_id'
     );
-<<<<<<< HEAD
       $(this)
     .attr(
         'data-item-id',
         itemId
     );
-=======
-      soItemId =
-
-         selectedOption.attr(
-            'data-so_item_id'
-         );
->>>>>>> changes
       let unitName =
          selectedOption.attr(
             'data-unit_name'
@@ -3080,12 +3007,8 @@ $("#tr_" + rowId)
 
          calculateAmount();
       }
-<<<<<<< HEAD
       let newItemId =
     selectedOption.attr('data-item_id');
-=======
-      let newItemId = $(this).val();
->>>>>>> changes
 
       let oldItemId = $(this).attr("data-prev-item");
 
@@ -3105,7 +3028,6 @@ $("#tr_" + rowId)
       $('#unit_tr_'+rowId).attr('data-config_status',$('option:selected', this).attr('data-config_status'));
 
       call_fun('tr_'+rowId);
-<<<<<<< HEAD
       if(
     newItemId != ''
     &&
@@ -3119,9 +3041,6 @@ $("#tr_" + rowId)
         rowId
     );
 }
-=======
-      getItemGstRate(newItemId,rowId);
->>>>>>> changes
       if($('option:selected', this).attr('data-parameterized_stock_status') == 1){
          $('#unit_tr_'+rowId).css({ cursor: 'pointer' });
       }
@@ -4976,7 +4895,6 @@ $(document).on(
 
     let saleOrderId =
         $(this).val();
-<<<<<<< HEAD
 
     let saleOrderText =
         $('#box_sale_order_id option:selected')
@@ -4998,120 +4916,10 @@ $(document).on(
         $('#box_sale_order_id')
             .val('')
             .trigger('change');
-=======
-let saleOrderText =
-    $('#box_sale_order_id option:selected').text();
-
-if(!saleOrderId){
-    return;
-}
-
-let alreadySelected =
-    selectedSaleOrders.find(
-        x => x.id == saleOrderId
-    );
-
-if(alreadySelected){
-
-    alert('Sale Order already selected');
-
-    $('#box_sale_order_id')
-        .val('')
-        .trigger('change');
-
-    return;
-}
-
-selectedSaleOrders.push({
-
-    id: saleOrderId,
-
-    text: saleOrderText
-
-});
-
-renderSelectedSaleOrders();
-
-reloadAllSaleOrderItems();
-
-$('#box_sale_order_id')
-    .val('')
-    .trigger('change');
-$('#example11 tbody tr[id^="tr_"]')
-    .not('#tr_1')
-    .remove();
-
-    $('#item_id_1')
-    .html(defaultItemsOptions)
-    .val('')
-    .trigger('change');
-
-    $('#quantity_tr_1').val('');
-
-    $('#price_tr_1').val('');
-
-    $('#amount_tr_1').val('');
-
-    $('#unit_tr_1').val('');
-
-    $('#units_tr_1').val('');
-
-    $('#box_sale_order_item_id_1').val('');
-
-    $('#pending_qty_1').val('');
-
-    $('#config_status_1').val('');
-
-    $('#item_parameters_1').val('');
-
-    $('#tr_1 td:last').html(`
-
-   <svg xmlns="http://www.w3.org/2000/svg"
-      data-id="1"
-      class="bg-primary rounded-circle add_more_wrapper"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      style="cursor: pointer;"
-      tabindex="0"
-      role="button">
-
-      <path
-         d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z"
-         fill="white"
-      />
-
-   </svg>
-
-   `);
-
-    $('#totalSum').html('');
-
-    $('#total_taxable_amounts').val(0);
-
-    $('#bill_sundry_amt').html('');
-
-    $('#total_amounts').val(0);
-
-    $('.bill_amt').val('');
-
-    $('.tax_amount').html('');
-
-    if(saleOrderId == '')
-    {
-
-        $('.item_id').each(function(){
-
-            $(this).html(defaultItemsOptions);
-
-        });
->>>>>>> changes
 
         return;
     }
 
-<<<<<<< HEAD
     selectedSaleOrders.push({
 
         id: saleOrderId,
@@ -5128,61 +4936,6 @@ $('#example11 tbody tr[id^="tr_"]')
         .val('')
         .trigger('change');
 
-=======
-    $.ajax({
-
-        url:
-            "{{ url('get-box-sale-order-items') }}/"
-            + saleOrderId,
-
-        type: "GET",
-
-        success: function(response)
-        {
-
-            let options =
-                '<option value="">Select Item</option>';
-
-
-            $.each(response, function(index, row){
-
-                options += `
-
-            <option value="${row.item_id}"
-
-               data-price="${row.price}"
-
-               data-unit_id="${row.unit}"
-
-               data-unit_name="${row.unit_name}"
-
-               data-pending_qty="${row.pending_qty}"
-
-               data-so_item_id="${row.so_item_id}">
-
-               ${row.item_name}
-
-               (Pending :
-               ${row.pending_qty})
-
-            </option>
-
-            `;
-
-            });
-            boxSaleOrderItemsOptions = options;
-
-            $('#item_id_1')
-                .html(options)
-                .trigger('change');
-
-        }
-
-    });
-$('#box_sale_order_id')
-    .val('')
-    .trigger('change');
->>>>>>> changes
 });
 
 </script>

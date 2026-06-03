@@ -2968,13 +2968,74 @@
 
       if (!isValid) return;
 
+      // Get max available qty from selected item text
+      let maxQty = 0;
+
+      let itemText = $('#goods_discription_tr_' + numeric + ' option:selected').text();
+
+      let matches = itemText.match(/\(([^()]*)\)/g);
+
+      if (matches && matches.length > 0) {
+
+         let lastBracket = matches[matches.length - 1];
+
+         let qtyMatch = lastBracket.match(/(\d+(\.\d+)?)/);
+
+         if (qtyMatch) {
+            maxQty = parseFloat(qtyMatch[1]);
+         }
+      }
+
+      // Stop if modal total weight exceeds available qty
+      // Calculate already used qty in other rows
+let usedQty = 0;
+
+$(".goods_items").each(function () {
+
+   let rowId = $(this).attr("data-id");
+
+   if (
+      $(this).val() == $('#goods_discription_tr_' + numeric).val() &&
+      rowId != numeric
+   ) {
+      usedQty += parseFloat($("#quantity_tr_" + rowId).val()) || 0;
+   }
+});
+
+let remainingQty = maxQty - usedQty;
+
+if (totalWeight > remainingQty) {
+
+   alert(
+      'Total quantity of this item cannot exceed ' +
+      maxQty +
+      '.\nMaximum allowed weight for this row is ' +
+      remainingQty.toFixed(2)
+   );
+
+   return;
+}
+
       productionData['tr_' + numeric] = data;
 
       // Save to hidden input
       $('#item_size_info_tr_' + numeric).val(JSON.stringify(data));
 
       // Update quantity in main table row
-      $('#quantity_tr_' + numeric).val(totalWeight.toFixed(2));
+$('#quantity_tr_' + numeric).val(totalWeight.toFixed(2));
+
+// Check total qty of same item across all rows
+checkTotalItemQty(numeric);
+
+let finalQty = parseFloat($('#quantity_tr_' + numeric).val()) || 0;
+
+let price = parseFloat($('#price_tr_' + numeric).val()) || 0;
+
+$('#amount_tr_' + numeric).val(
+   (finalQty * price).toFixed(2)
+);
+
+calculateAmount();
 
       $('#productionModal').modal('hide');
       updateTotalWeight();
@@ -3062,23 +3123,33 @@
       if (!currentItem) return;
       let totalQty = 0;
       let maxQty = 0;
-      maxQty = $("#goods_discription_tr_" + currentRowId).attr('data-qty');
-      
+
+      // Get max qty from selected item text
+      let text = $("#goods_discription_tr_" + currentRowId + " option:selected").text();
+
+      let matches = text.match(/\(([^()]*)\)/g);
+
+      if (matches && matches.length > 0) {
+
+         let lastBracket = matches[matches.length - 1];
+
+         let qtyMatch = lastBracket.match(/(\d+(\.\d+)?)/);
+
+         if (qtyMatch) {
+            maxQty = parseFloat(qtyMatch[1]);
+         }
+      }
+
       $(".goods_items").each(function () {
          let rowId = $(this).attr("data-id");
 
          if ($(this).val() == currentItem) {
-              let qty = parseFloat($("#quantity_tr_" + rowId).val()) || 0;
-              totalQty += qty;
-              let text = $(this).find("option:selected").text();
-              let match = text.match(/\((\d+)/);
-              if (match) {
-                  //maxQty = parseInt(match[1]);
-              }
+
+            let qty = parseFloat($("#quantity_tr_" + rowId).val()) || 0;
+            totalQty += qty;
          }
       });
-    
-      if (maxQty > 0 && parseFloat(totalQty) > parseFloat(maxQty)) {
+      if (maxQty > 0 && totalQty > maxQty) {
 
          alert("Max allowed quantity is " + maxQty);
 
@@ -3087,11 +3158,61 @@
 
          let newQty = currentQty - excess;
 
-         $("#quantity_tr_" + currentRowId).val(newQty > 0 ? newQty : 0);
+         $("#quantity_tr_" + currentRowId).val(
+            newQty > 0 ? newQty.toFixed(2) : 0
+         );
       }
    }
    $(document).on("input", ".quantity", function () {
       let rowId = $(this).attr("id").replace("quantity_tr_", "");
+
+      let hiddenData = $("#item_size_info_tr_" + rowId).val();
+
+      if (
+         hiddenData &&
+         hiddenData !== "" &&
+         hiddenData !== "[]" &&
+         hiddenData !== "null"
+      ) {
+
+         let reelData = [];
+
+         try {
+            reelData = JSON.parse(hiddenData);
+         } catch (e) {
+            reelData = [];
+         }
+
+         let reelTotal = 0;
+
+         reelData.forEach(function(row){
+            reelTotal += parseFloat(row.weight || 0);
+         });
+
+         let enteredQty = parseFloat($(this).val()) || 0;
+
+         if (Math.abs(enteredQty - reelTotal) > 0.01) {
+
+            alert(
+               "Qty must match Production Total Weight (" +
+               reelTotal.toFixed(2) +
+               ").\n\nTo change quantity, update Reel Weights in Production Details."
+            );
+
+            $(this).val(reelTotal.toFixed(2));
+
+            let price = parseFloat($("#price_tr_" + rowId).val()) || 0;
+
+            $("#amount_tr_" + rowId).val(
+               (reelTotal * price).toFixed(2)
+            );
+
+            calculateAmount();
+
+            return;
+         }
+      }
+
       checkTotalItemQty(rowId);
    });
    let previousType = "";

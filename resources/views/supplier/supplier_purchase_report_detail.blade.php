@@ -1970,9 +1970,9 @@ var fuelModal  = $("#boilerfuel_report_modal");
     // BODY: only checked rows
     $('#purchase_table tbody tr').each(function () {
 
-        let checkbox = $(this).find('.check_row');
+        let isChecked = $(this).find('.check_row:checked, .payment_print_row:checked').length > 0;
 
-        if (checkbox.length && checkbox.is(':checked')) {
+        if (isChecked) {
 
             let row = [];
 
