@@ -13,6 +13,7 @@ use App\Models\AccountLedger;
 use App\Models\AccountHeading;
 use App\Models\Bank;
 use App\Models\Sales;
+use App\Models\AccountGstDetail;
 use App\Models\AccountOtherAddress;
 use Session;
 use DB;
@@ -314,7 +315,7 @@ public function datatable(Request $request)
    public function store(Request $request){
       // echo "<pre>";
       // print_r($request->all());die;
-      //dd($request->sms_status, $request->credit_days);
+      //dd($request->all());
       Gate::authorize('view-module', 73);
       $formCompanyId = Session::get('user_company_id');
       if (!$formCompanyId) {
@@ -431,26 +432,69 @@ public function datatable(Request $request)
             );
             return json_encode($res);
          }
+         $gstDetailMapping = [];
+
+         if(!empty($request->additional_gstin))
+         {
+            foreach($request->additional_gstin as $key => $gstin)
+            {
+               if(empty($gstin)){
+                     continue;
+               }
+
+               $gstDetail = new AccountGstDetail();
+
+               $gstDetail->account_id = $account->id;
+               $gstDetail->company_id = $formCompanyId;
+
+               $gstDetail->gstin = $gstin;
+               $gstDetail->state = $request->additional_state[$key] ?? null;
+               $gstDetail->address = $request->additional_address[$key] ?? null;
+               $gstDetail->pincode = $request->additional_pincode[$key] ?? null;
+
+               $location = $request->additional_location[$key] ?? null;
+
+               $location = preg_replace('/[^A-Za-z0-9 ]/', '', (string)$location);
+               $location = preg_replace('/\s+/', ' ', trim($location));
+
+               $gstDetail->location = strtoupper($location);
+
+               $gstDetail->pan = $request->additional_pan[$key] ?? null;
+
+               $gstDetail->save();
+
+               $gstDetailMapping['additional_'.$key] = $gstDetail->id;
+            }
+         }
          //Other Address
           
-         if(!empty($request->input('other_address'))  && !empty($request->input('other_pincode'))){
-            $other_address = $request->input('other_address');
-            $other_pincode = $request->input('other_pincode');
-            $other_pincode = $request->input('other_location');
-            if(count($other_address)>0 && count($other_pincode)>0){
-               foreach($other_address as $key => $val){
-                  if(!empty($val) && !empty($other_pincode[$key])){
-                     DB::table('account_other_addresses')->insert([
-                        'account_id' => $account->id,
-                        'address' => $val,
-                        'pincode' => $other_pincode[$key],
-                        'location' => $other_location[$key],
-                        'created_at' => Carbon::now(),
-                        'company_id' => $formCompanyId,
-                     ]);
-                  }
+         if(!empty($request->other_address))
+         {
+            foreach($request->other_address as $key => $address)
+            {
+               if(empty($address)){
+                     continue;
                }
-            }            
+
+               $group = $request->address_gst_group[$key] ?? 'primary';
+
+               $gstDetailId = null;
+
+               if($group != 'primary')
+               {
+                     $gstDetailId = $gstDetailMapping[$group] ?? null;
+               }
+
+               DB::table('account_other_addresses')->insert([
+                     'account_id'    => $account->id,
+                     'gst_detail_id' => $gstDetailId,
+                     'address'       => $address,
+                     'pincode'       => $request->other_pincode[$key] ?? null,
+                     'location'      => $request->other_location[$key] ?? null,
+                     'company_id'    => $formCompanyId,
+                     'created_at'    => Carbon::now(),
+               ]);
+            }
          }
          
          if ($request->ajax()) {
@@ -518,11 +562,28 @@ public function datatable(Request $request)
                   ->get();
       $state_list = State::all();  
       $other_address = AccountOtherAddress::where('account_id',$id)
+         ->whereNull('gst_detail_id')
          ->where('status','1')
          ->where('company_id',$formCompanyId)
-         ->get();    
+         ->get();
+      $additional_gsts = DB::table('account_gst_details')
+         ->where('account_id', $id)
+         ->where('company_id', $formCompanyId)
+         ->whereNull('deleted_at')
+         ->where('status',1)
+         ->get();
+
+      foreach($additional_gsts as $gst)
+      {
+         $gst->other_addresses = DB::table('account_other_addresses')
+            ->where('account_id', $id)
+            ->where('gst_detail_id', $gst->id)
+            ->where('status', 1)
+            ->get();
+      } 
+
       $tds_sections = DB::table('tds_sections')->orderBy('section')->get();
-      return view('account/add_account')->with('state_list', $state_list)->with('tds_sections', $tds_sections)->with('credit_days', $credit_days)->with('formCompanyId', $formCompanyId)->with('formCompanyName', $formCompanyName)->with('accountheading', $accountheading)->with('accountgroup', $accountgroup)->with('account', $account)->with('id', $id)->with('other_address', $other_address)->with('bank', $bank);
+      return view('account/add_account')->with('state_list', $state_list)->with('additional_gsts', $additional_gsts)->with('tds_sections', $tds_sections)->with('credit_days', $credit_days)->with('formCompanyId', $formCompanyId)->with('formCompanyName', $formCompanyName)->with('accountheading', $accountheading)->with('accountgroup', $accountgroup)->with('account', $account)->with('id', $id)->with('other_address', $other_address)->with('bank', $bank);
    }
    /**
      * Update the specified resource in storage.
@@ -533,6 +594,7 @@ public function datatable(Request $request)
    */
    public function update(Request $request){
       Gate::authorize('view-module', 41);
+      //dd($request->all());
       $validator = Validator::make($request->all(), [
          'account_name' => 'required|string',
       ],[
@@ -662,29 +724,120 @@ public function datatable(Request $request)
             Bank::where('id',$account->bank_map_id)->delete();
          }
       }
-      //Other Address
-      AccountOtherAddress::where('account_id',$request->account_id)
-      ->where('company_id',$formCompanyId)
-      ->update(['status'=>'0','updated_at'=>Carbon::now()]); 
-      if(!empty($request->input('other_address'))  && !empty($request->input('other_pincode'))){
-         $other_address = $request->input('other_address');
-         $other_pincode = $request->input('other_pincode');
-         $other_location = $request->input('other_location');
-         if(count($other_address)>0 && count($other_pincode)>0){
-            foreach($other_address as $key => $val){
-               if(!empty($val) && !empty($other_pincode[$key])){
-                  DB::table('account_other_addresses')->insert([
-                     'account_id' => $account->id,
-                     'address' => $val,
-                     'pincode' => $other_pincode[$key],
-                     'location' => $other_location[$key],
-                     'created_at' => Carbon::now(),
-                     'company_id' => $formCompanyId,
-                  ]);
-               }
+      $gstDetailMapping = [];
+
+      DB::table('account_gst_details')
+         ->where('account_id', $account->id)
+         ->update([
+            'status' => 0,
+            'deleted_at' => Carbon::now(),
+            'updated_at' => Carbon::now()
+         ]);
+
+      if(!empty($request->additional_gstin))
+      {
+         foreach($request->additional_gstin as $key => $gstin)
+         {
+            if(empty($gstin)){
+                  continue;
             }
-         }            
+
+            $gstId = $request->additional_gst_id[$key] ?? null;
+
+            $location = $request->additional_location[$key] ?? null;
+            $location = preg_replace('/[^A-Za-z0-9 ]/', '', (string)$location);
+            $location = preg_replace('/\s+/', ' ', trim($location));
+
+            if(!empty($gstId))
+            {
+                  DB::table('account_gst_details')
+                     ->where('id', $gstId)
+                     ->update([
+                        'gstin'      => $gstin,
+                        'state'      => $request->additional_state[$key] ?? null,
+                        'address'    => $request->additional_address[$key] ?? null,
+                        'pincode'    => $request->additional_pincode[$key] ?? null,
+                        'location'   => strtoupper($location),
+                        'pan'        => $request->pan,
+                        'status'     => 1,
+                        'deleted_at' => null,
+                        'updated_at' => Carbon::now()
+                     ]);
+
+                  $gstDetailMapping['additional_'.$key] = $gstId;
+            }
+            else
+            {
+                  $newGstId = DB::table('account_gst_details')->insertGetId([
+                     'account_id' => $account->id,
+                     'company_id' => $formCompanyId,
+                     'gstin'      => $gstin,
+                     'state'      => $request->additional_state[$key] ?? null,
+                     'address'    => $request->additional_address[$key] ?? null,
+                     'pincode'    => $request->additional_pincode[$key] ?? null,
+                     'location'   => strtoupper($location),
+                     'pan'        => $request->pan,
+                     'status'     => 1,
+                     'created_at' => Carbon::now(),
+                     'updated_at' => Carbon::now()
+                  ]);
+
+                  $gstDetailMapping['additional_'.$key] = $newGstId;
+            }
+         }
       }
+
+      AccountOtherAddress::where('account_id',$account->id)
+         ->where('company_id',$formCompanyId)
+         ->update([
+            'status' => 0,
+            'updated_at' => Carbon::now()
+         ]);
+
+      if(!empty($request->other_address))
+      {
+         foreach($request->other_address as $key => $address)
+         {
+            if(empty($address)){
+                  continue;
+            }
+
+            $addressId = $request->other_address_id[$key] ?? null;
+
+            $group = $request->address_gst_group[$key] ?? 'primary';
+
+            $gstDetailId = null;
+
+               if($group != 'primary')
+               {
+                  $gstDetailId = $gstDetailMapping[$group] ?? null;
+               }
+
+
+                     $addressData = [
+                        'gst_detail_id' => $gstDetailId,
+                        'address'       => $address,
+                        'pincode'       => $request->other_pincode[$key] ?? null,
+                        'location'      => $request->other_location[$key] ?? null,
+                        'status'        => 1,
+                        'updated_at'    => Carbon::now()
+                     ];
+
+                     if(!empty($addressId))
+                     {
+                        AccountOtherAddress::where('id', $addressId)
+                           ->update($addressData);
+                     }
+                     else
+                     {
+                        $addressData['account_id'] = $account->id;
+                        $addressData['company_id'] = $formCompanyId;
+                        $addressData['created_at'] = Carbon::now();
+
+                        AccountOtherAddress::insert($addressData);
+                     }
+                  }
+         }
       if($incomplete_status==1){
          return redirect('account?filter=InComplete')->withSuccess('Account updated successfully!');
       }else{

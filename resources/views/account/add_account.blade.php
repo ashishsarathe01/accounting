@@ -143,6 +143,7 @@
                      </select>
                   </div>
                   <div class="clearfix"></div>
+                  <div id="primary_gst_section" class="gstin-parent">
                     <div class="mb-4 col-md-4 gstin_div common_div" style="display: none;">
                         <label for="gstin" class="form-label font-14 font-heading">GST NO.</label>
                         <div class="input-group">
@@ -208,6 +209,13 @@
                            <div class="clearfix added-address row">
                               <div class="mb-4 col-md-7 address_div common_div">
                                  <label class="form-label font-14 font-heading">ADDRESS</label>
+                                 <input type="hidden"
+                                    name="other_address_id[]"
+                                    value="{{ $address->id }}">
+
+                                <input type="hidden"
+                                    name="address_gst_group[]"
+                                    value="primary">
                                  <textarea class="form-control common_val" name="other_address[]" placeholder="ENTER ADDRESS" maxlength="100" rows="2">{{$address->address}}</textarea> 
                               </div>
                               <div class="mb-2 col-md-2 pincode_div common_div">
@@ -228,6 +236,205 @@
                            @endif
 
                   </div>
+                </div>
+                <div class="gstin_div common_div" style="display:none;">
+
+                    <div id="primary_add_gst_btn">
+                        <button type="button"
+                                class="btn btn-primary"
+                                id="add_more_gst">
+                            Add GST
+                        </button>
+                    </div>
+
+                <div id="multiple_gst_container">
+
+                @if(isset($additional_gsts) && count($additional_gsts))
+
+                    @foreach($additional_gsts as $gst)
+
+                        <div class="gst-block border rounded p-3 mb-3">
+
+                            <div class="gstin-parent" data-validated="1">
+
+                                <div class="address-wrapper">
+                                    <input type="hidden"
+                                        class="gst_group_key"
+                                        value="additional_{{ $loop->index }}">
+                                </div>
+
+                                <div class="mb-4 col-md-4 gstin_div common_div">
+                                    <label class="form-label font-14 font-heading">GST NO.</label>
+
+                                    <div class="input-group">
+                                        <input type="text"
+                                            class="form-control"
+                                            name="additional_gstin[]"
+                                            value="{{ $gst->gstin }}">
+                                        <input type="hidden"
+                                            name="additional_gst_id[]"
+                                            value="{{ $gst->id }}">
+                                        <button type="button"
+                                                class="btn btn-info btn-sm validate_additional_gstin">
+                                            Validate
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="mb-4 col-md-4 state_div common_div">
+
+                                    <label class="form-label font-14 font-heading">STATE</label>
+
+                                    <select class="form-select select2-single"
+                                            name="additional_state[]">
+
+                                        <option value="">SELECT STATE</option>
+
+                                        @foreach($state_list as $state)
+
+                                            <option value="{{ $state->id }}"
+                                                @if($gst->state == $state->id) selected @endif>
+                                                {{ $state->state_code }} - {{ $state->name }}
+                                            </option>
+
+                                        @endforeach
+
+                                    </select>
+
+                                </div>
+
+                                <div class="mb-4 col-md-7 address_div common_div">
+
+                                    <label class="form-label font-14 font-heading">ADDRESS</label>
+
+                                    <textarea class="form-control"
+                                            name="additional_address[]"
+                                            rows="2">{{ $gst->address }}</textarea>
+
+                                </div>
+
+                                <div class="mb-2 col-md-2 pincode_div common_div">
+
+                                    <label class="form-label font-14 font-heading">PINCODE</label>
+
+                                    <input type="number"
+                                        class="form-control"
+                                        name="additional_pincode[]"
+                                        value="{{ $gst->pincode }}">
+
+                                </div>
+
+                                <div class="mb-2 col-md-2 pincode_div common_div">
+
+                                    <label class="form-label font-14 font-heading">LOCATION/STATION</label>
+
+                                    <input type="text"
+                                        class="form-control"
+                                        name="additional_location[]"
+                                        value="{{ $gst->location }}">
+
+                                </div>
+
+                                <div class="mb-2 col-md-1 pincode_div common_div">
+                                    <svg style="color: green;cursor: pointer;margin-top:42px;"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="24"
+                                        height="24"
+                                        fill="currentColor"
+                                        class="bg-primary rounded-circle add_address"
+                                        viewBox="0 0 24 24">
+                                        <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/>
+                                    </svg>
+                                </div>
+
+                                <div class="address-wrapper">
+
+                                    @if(isset($gst->other_addresses))
+
+                                        @foreach($gst->other_addresses as $address)
+
+                                            <div class="clearfix added-address row">
+
+                                                <div class="mb-4 col-md-7">
+
+                                                    <label class="form-label">ADDRESS</label>
+
+                                                    <input type="hidden"
+                                                        name="other_address_id[]"
+                                                        value="{{ $address->id }}">
+
+                                                    <input type="hidden"
+                                                        name="address_gst_group[]"
+                                                        value="additional_{{ $loop->parent->index }}">
+
+                                                    <textarea class="form-control"
+                                                            name="other_address[]"
+                                                            rows="2">{{ $address->address }}</textarea>
+
+                                                </div>
+
+                                                <div class="mb-2 col-md-2">
+
+                                                    <label class="form-label">PINCODE</label>
+
+                                                    <input type="number"
+                                                        class="form-control"
+                                                        name="other_pincode[]"
+                                                        value="{{ $address->pincode }}">
+
+                                                </div>
+
+                                                <div class="mb-2 col-md-2">
+
+                                                    <label class="form-label">LOCATION</label>
+
+                                                    <input type="text"
+                                                        class="form-control"
+                                                        name="other_location[]"
+                                                        value="{{ $address->location }}">
+
+                                                </div>
+
+                                                <div class="mb-2 col-md-1">
+                                                    <svg style="color:red;cursor:pointer;margin-top:42px;"
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        width="24"
+                                                        height="24"
+                                                        fill="currentColor"
+                                                        class="bg-danger rounded-circle remove_address"
+                                                        viewBox="0 0 24 24">
+                                                        <path d="M19 13H5V11H19V13Z" fill="white"/>
+                                                    </svg>
+                                                </div>
+
+                                            </div>
+
+                                        @endforeach
+
+                                    @endif
+
+                                </div>
+
+                            </div>
+
+                            <div class="col-md-12 text-end mb-3 gst-action-area">
+
+                                <button type="button"
+                                        class="btn btn-danger remove_gst_block">
+                                    Remove GST
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    @endforeach
+
+                @endif
+
+                </div>
+
+                </div>
                   <div class="clearfix"></div>
                   <div class="mb-4 col-md-4 pan_div common_div" style="display: none;">
                      <label for="pan" class="form-label font-14 font-heading">PAN</label>
@@ -435,6 +642,7 @@
 @include('layouts.footer')
 <script>
    var edit_id = "@if(isset($id)){{$id}} @endif";
+   var primaryGSTValidated = false;
     window.hasGstinOnLoad = {{ $hasGstin ? 'true' : 'false' }};
 
     function syncStateValue() {
@@ -494,7 +702,7 @@ $(document).ready(function() {
         $("#pincode").val("");
         $("#state").val("").trigger('change');
         $("#state").css('pointer-events', 'auto');
-
+         primaryGSTValidated = false;
         if (inputvalues === "") return;
         checkGSTIN(inputvalues);
         
@@ -511,6 +719,64 @@ $("#validateGSTIN").click(function(){
     if (inputvalues === "") return;
     checkGSTIN(inputvalues);
 })
+    $(document).on("click", ".validate_additional_gstin", function(){
+
+        let currentBlock = $(this).closest(".gstin-parent");
+
+        let gstin = currentBlock.find('input[name="additional_gstin[]"]').val().trim();
+
+        if(gstin == ""){
+            alert("Please enter GST Number");
+            return;
+        }
+
+        $.ajax({
+            url: '{{ url("check-gstin") }}',
+            type: 'POST',
+            dataType: 'JSON',
+            data: {
+                _token: '{{ csrf_token() }}',
+                gstin: gstin
+            },
+            success: function(data){
+
+                if(data && data.status == 1){
+                currentBlock.attr("data-validated","1");
+
+                    let stateCode = gstin.substr(0,2);
+
+                    let stateDropdown = currentBlock.find('select');
+
+                    let matchedValue = stateDropdown
+                        .find('option[data-state_code="' + stateCode + '"]')
+                        .val();
+
+                    if(matchedValue){
+                        stateDropdown.val(matchedValue).trigger('change');
+                    }
+
+                    currentBlock
+                        .find('input[name="additional_pan[]"]')
+                        .val(gstin.substring(2,12));
+
+                    currentBlock
+                        .find('textarea[name="additional_address[]"]')
+                        .val(data.address.toUpperCase());
+
+                    currentBlock
+                        .find('input[name="additional_pincode[]"]')
+                        .val(data.pinCode);
+
+                }else{
+
+                    alert(data.message);
+
+                }
+
+            }
+        });
+
+    });
 function checkGSTIN(inputvalues){
     //$("#cover-spain").show();
     $.ajax({
@@ -542,6 +808,7 @@ function checkGSTIN(inputvalues){
                     $("#pincode").val(data.pinCode);
 
                     syncStateValue(); // update hidden input
+                    primaryGSTValidated = true;
                 } else if (data.status == 0) {
                     alert(data.message);
                 }
@@ -558,6 +825,7 @@ function checkGSTIN(inputvalues){
          $(".rcm-rate-div").hide();
 
       $(".common_div").hide();
+      $("#multiple_gst_container").hide();
       $("#state").attr('required',false);
       $("#tax_type").attr('required',false);
       if(edit_id==""){
@@ -569,6 +837,7 @@ function checkGSTIN(inputvalues){
       }else if(($(this).val()==11 && $('option:selected', this).attr('data-type')=='group') || $('option:selected', this).attr('data-under_debtor_status')=='1'){
          $("#state").attr('required',true);
          $(".gstin_div").show();
+         $("#multiple_gst_container").show();
          $(".state_div").show();
          $(".address_div").show();
          $(".pan_div").show();
@@ -664,30 +933,68 @@ function checkGSTIN(inputvalues){
    });
 });
 
-   $(document).on('click', '.add_address', function() {
-      let newAddressBlock = `
+$(document).on('click', '.add_address', function() {
+
+    let currentWrapper = $(this)
+        .closest('.gstin-parent')
+        .find('.address-wrapper')
+        .last();
+    let groupValue = 'primary';
+
+    if($(this).closest('.gst-block').length){
+
+        groupValue = $(this)
+            .closest('.gstin-parent')
+            .find('.gst_group_key')
+            .val();
+    }
+    let newAddressBlock = `
         <div class="clearfix added-address row">
             <div class="mb-4 col-md-7 address_div common_div">
                 <label class="form-label font-14 font-heading">ADDRESS</label>
-                <textarea class="form-control common_val" name="other_address[]" placeholder="ENTER ADDRESS" maxlength="100" rows="2"></textarea>
+                <input type="hidden"
+                    name="other_address_id[]"
+                    value="">
+                <input type="hidden"
+                    name="address_gst_group[]"
+                    value="${groupValue}">
+                <textarea class="form-control common_val"
+                          name="other_address[]"
+                          placeholder="ENTER ADDRESS"
+                          maxlength="100"
+                          rows="2"></textarea>
             </div>
             <div class="mb-2 col-md-2 pincode_div common_div">
                 <label class="form-label font-14 font-heading">PINCODE</label>
-                <input type="number" class="form-control common_val" name="other_pincode[]" placeholder="ENTER PINCODE" />
+                <input type="number"
+                       class="form-control common_val"
+                       name="other_pincode[]"
+                       placeholder="ENTER PINCODE" />
             </div>
             <div class="mb-2 col-md-2 pincode_div common_div">
                 <label class="form-label font-14 font-heading">STATION/LOCATION</label>
-                <input type="text" class="form-control common_val" name="other_location[]" placeholder="ENTER STATION" />
+                <input type="text"
+                       class="form-control common_val"
+                       name="other_location[]"
+                       placeholder="ENTER STATION" />
             </div>
             <div class="mb-2 col-md-1 pincode_div common_div">
-                <svg style="color: red;cursor: pointer;margin-top: 42px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bg-danger rounded-circle remove_address" viewBox="0 0 24 24">
+                <svg style="color:red;cursor:pointer;margin-top:42px;"
+                     xmlns="http://www.w3.org/2000/svg"
+                     width="24"
+                     height="24"
+                     fill="currentColor"
+                     class="bg-danger rounded-circle remove_address"
+                     viewBox="0 0 24 24">
                     <path d="M19 13H5V11H19V13Z" fill="white"/>
                 </svg>
             </div>
         </div>
-        `;
-        $('.address-wrapper').append(newAddressBlock);
-   });
+    `;
+
+    currentWrapper.append(newAddressBlock);
+
+});
    $(document).on('click', '.remove_address', function() {
         $(this).closest('.added-address').remove();
     });
@@ -763,6 +1070,115 @@ $(document).ready(function () {
          }
       });
    });
+   $(document).on("blur", 'input[name="additional_gstin[]"]', function () {
+        let currentInput = $(this);
+        let gstin = currentInput.val().trim();
+
+        if (gstin === "") {
+            return;
+        }
+
+        // Check against Primary GST
+        let primaryGstin = $("#gstin").val().trim();
+
+        if (
+            primaryGstin !== "" &&
+            primaryGstin.toUpperCase() === gstin.toUpperCase()
+        ) {
+
+            alert("This GST Number is already used in Primary GST.");
+
+            currentInput.val("");
+
+            let currentBlock = currentInput.closest(".gstin-parent");
+
+            currentBlock.find('select[name="additional_state[]"]')
+                .val("")
+                .trigger("change");
+
+            currentBlock.find('textarea[name="additional_address[]"]')
+                .val("");
+
+            currentBlock.find('input[name="additional_pincode[]"]')
+                .val("");
+
+            currentBlock.find('input[name="additional_location[]"]')
+                .val("");
+
+            currentBlock.find('input[name="additional_pan[]"]')
+                .val("");
+
+            currentInput.focus();
+
+            return;
+        }
+
+        let duplicateFound = false;
+
+        $('input[name="additional_gstin[]"]').not(currentInput).each(function () {
+
+            if (
+                $(this).val().trim().toUpperCase() === gstin.toUpperCase()
+            ) {
+                duplicateFound = true;
+                return false;
+            }
+
+        });
+
+        if (duplicateFound) {
+
+            alert("This GST Number is already added.");
+
+            currentInput.val("");
+
+            let currentBlock = currentInput.closest(".gstin-parent");
+
+            currentBlock.find('select[name="additional_state[]"]')
+                .val("")
+                .trigger("change");
+
+            currentBlock.find('textarea[name="additional_address[]"]')
+                .val("");
+
+            currentBlock.find('input[name="additional_pincode[]"]')
+                .val("");
+
+            currentBlock.find('input[name="additional_location[]"]')
+                .val("");
+
+            currentBlock.find('input[name="additional_pan[]"]')
+                .val("");
+
+            currentInput.focus();
+
+            return;
+        }
+
+        $.ajax({
+            url: '{{ url("check-gstin-exists") }}',
+            type: 'POST',
+            dataType: 'JSON',
+            data: {
+                _token: '{{ csrf_token() }}',
+                gstin: gstin,
+                account_id: $("#account_id").val() || null
+            },
+            success: function (res) {
+
+                if (res.exists === true) {
+
+                    alert("This GST Number already exists. Please enter a new GST Number.");
+
+                    currentInput.val("");
+                    currentInput.focus();
+
+                }
+
+            }
+        });
+
+    });
     $("#tds_tcs").change(function(){
         if($(this).val()=="yes"){
             $("#tds_type_row").show();
@@ -804,8 +1220,155 @@ $(document).ready(function () {
             @endif
         @endif
     });
+    $("#add_more_gst").click(function(){
+        if(!primaryGSTValidated){
+            alert("Please validate Primary GST first.");
+            return false;
+        }
+        let originalBlock = $("#primary_gst_section").clone();
+        let gstIndex = $(".gst-block").length;
+
+        originalBlock.find(".added-address").remove();
+
+        originalBlock.addClass("gstin-parent");
+        originalBlock.removeAttr("id");
+
+        originalBlock.find(".address-wrapper").html(`
+            <input type="hidden"
+                class="gst_group_key"
+                value="additional_${gstIndex}">
+        `);
+        originalBlock.prepend(`
+            <input type="hidden"
+                name="additional_gst_id[]"
+                value="">
+        `);
+        originalBlock.find("#gstin")
+            .attr("id","")
+            .attr("name","additional_gstin[]")
+            .val("");
+
+        originalBlock.find("#address")
+            .attr("id","")
+            .attr("name","additional_address[]")
+            .val("");
+
+        originalBlock.find("#pincode")
+            .attr("id","")
+            .attr("name","additional_pincode[]")
+            .val("");
+
+        originalBlock.find("#location")
+            .attr("id","")
+            .attr("name","additional_location[]")
+            .val("");
+
+        originalBlock.find("#pan")
+            .attr("id","")
+            .attr("name","additional_pan[]")
+            .val("");
+
+        originalBlock.find("#state_hidden").remove();
+
+        originalBlock.find("#validateGSTIN")
+            .attr("id","")
+            .addClass("validate_additional_gstin");
+
+        originalBlock.find("#state")
+            .attr("id","")
+            .attr("name","additional_state[]")
+            .removeClass("select2-hidden-accessible")
+            .removeAttr("data-select2-id")
+            .val("");
+
+        // Remove select2 html
+        originalBlock.find("span.select2").remove();
+
+        // Create wrapper
+        let gstBlock = $('<div class="gst-block border rounded p-3 mb-3"></div>');
+
+        gstBlock.append(originalBlock);
+
+        gstBlock.append(`
+            <div class="col-md-12 text-end mb-3 gst-action-area">
+                <button type="button"
+                        class="btn btn-danger remove_gst_block">
+                    Remove GST
+                </button>
+            </div>
+        `);
+
+        $("#multiple_gst_container").append(gstBlock);
+
+        gstBlock.find("select").select2();
+        refreshGSTButtons();
+    });
+    function refreshGSTButtons()
+    {
+        $(".gst-action-area .add_more_gst_inside").remove();
+
+        let totalAdditional = $(".gst-block").length;
+
+        if(totalAdditional == 0){
+
+            $("#primary_add_gst_btn").show();
+
+            $(".gst-block .remove_gst_block").hide();
+
+        }else{
+
+            $("#primary_add_gst_btn").hide();
+
+            $(".gst-block .remove_gst_block").show();
+
+            $(".gst-block:last")
+                .find(".gst-action-area")
+                .append(`
+                    <button type="button"
+                            class="btn btn-primary ms-2 add_more_gst_inside">
+                        Add GST
+                    </button>
+                `);
+        }
+    }
+    $(document).on("click",".add_more_gst_inside",function(){
+
+        let currentGST = $(this).closest(".gst-block");
+
+        let gstParent = currentGST.find(".gstin-parent");
+
+        let gstValue = gstParent
+            .find('input[name="additional_gstin[]"]')
+            .val()
+            .trim();
+
+        if(gstValue == ""){
+            alert("Please enter GST Number first.");
+            return false;
+        }
+
+        if(gstParent.attr("data-validated") != "1"){
+            alert("Please validate GST before adding another GST.");
+            return false;
+        }
+
+        $("#add_more_gst").trigger("click");
+
+    });
+    $(document).on("click",".remove_gst_block",function(){
+
+        $(this).closest(".gst-block").remove();
+
+        refreshGSTButtons();
+
+    });
     $(document).on("input", "#account_name", function () {
         this.value = this.value.replace(/"/g, '');
+    });
+    $(document).ready(function(){
+
+        refreshGSTButtons();
+
     });
 </script>
 @endsection
