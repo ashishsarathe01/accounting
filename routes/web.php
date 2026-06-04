@@ -118,7 +118,7 @@ use App\Http\Controllers\TransactionConfiguration\TransactionConfigurationContro
 use App\Http\Controllers\BoxSaleOrderController;
 use App\Http\Controllers\CompanySaleType\CompanySaleTypeController;
 use App\Http\Controllers\ExportMonthlyReportController;
-
+use App\Http\Controllers\ConsumptionReport\ConsumptionReportController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -1543,4 +1543,18 @@ Route::post(
    'sale/mark-reached',
    [SalesController::class, 'markReached']
 )->name('sale.mark.reached');
+
+Route::get(
+    'consumption-report-settings',
+    [ConsumptionReportController::class, 'settings']
+)->name('consumption-report-settings');
+
+Route::post(
+    'consumption-report-settings-save',
+    [ConsumptionReportController::class, 'saveSettings']
+)->name('consumption-report-settings-save');
+Route::get(
+    'consumption-report',
+    [ConsumptionReportController::class, 'report']
+)->name('consumption-report');
 });
