@@ -5428,7 +5428,7 @@ class SalesController extends Controller
                   "hsnCode"=>(int)$value->hsn_code,
                   "quantity"=>(float)$value->tweight,
                   "qtyUnit"=>$qtyUnit,
-                  "taxableAmount"=>(float)$item_total,
+                  "taxableAmount"=>round((float)$item_total,2),
                   "sgstRate"=>$cgst_rate,
                   "cgstRate"=>$sgst_rate,
                   "igstRate"=>$igst_rate,
@@ -5467,10 +5467,10 @@ class SalesController extends Controller
                "actToStateCode"=>(int)substr($shipp_gst_state,0,2),
                "toStateCode"=>(int)substr($shipp_gst,0,2),
                "transactionType"=>$transactionType,
-               "totalValue"=>(float)$AssVal,
-               "cgstValue"=>(float)$CGST,
-               "sgstValue"=>(float)$SGST,
-               "igstValue"=>(float)$IGST,
+               "totalValue"=>round((float)$AssVal,2),
+               "cgstValue"=>round((float)$CGST,2),
+               "sgstValue"=>round((float)$SGST,2),
+               "igstValue"=>round((float)$IGST,2),
                "cessValue"=>0,
                "cessNonAdvolValue"=>0,
                "totInvValue"=>(float)$TotInvVal,
@@ -5510,10 +5510,10 @@ class SalesController extends Controller
                "transactionType"=>$transactionType,
                "shipToGSTIN"=>$shipp_gst_state_billtoshippto,
                "shipToTradeName"=>$shipp_name,
-               "totalValue"=>(float)$AssVal,
-               "cgstValue"=>(float)$CGST,
-               "sgstValue"=>(float)$SGST,
-               "igstValue"=>(float)$IGST,
+               "totalValue"=>round((float)$AssVal,2),
+               "cgstValue"=>round((float)$CGST,2),
+               "sgstValue"=>round((float)$SGST,2),
+               "igstValue"=>round((float)$IGST,2),
                "cessValue"=>0,
                "cessNonAdvolValue"=>0,
                "totInvValue"=>(float)$TotInvVal,
@@ -5528,6 +5528,10 @@ class SalesController extends Controller
                "itemList"=>$ItemList
             );
          }       
+         if($request->id==76648){
+             //print_r(json_encode($eway_bill_request));
+             
+         }
          
          $curl = curl_init();
          curl_setopt_array($curl, array(
@@ -5558,7 +5562,7 @@ class SalesController extends Controller
          curl_close($curl);
          if($response){
             $result = json_decode($response);
-           // echo "<pre>";print_r($result);
+           //echo "<pre>";print_r($result);
             if(isset($result->status_cd) && $result->status_cd=='1'){
                $data_array = [];
                $ewayBillDate = $result->data->ewayBillDate;
@@ -6313,6 +6317,9 @@ class SalesController extends Controller
    {
       $exists = \DB::table('sales')
          ->where('voucher_no_prefix', $request->voucher_no_prefix)
+         ->where('financial_year',Session::get('default_fy'))
+         ->where('delete',"0")
+         ->where('company_id',Session::get('company_id'))
          ->exists();
 
       return response()->json(['exists' => $exists]);

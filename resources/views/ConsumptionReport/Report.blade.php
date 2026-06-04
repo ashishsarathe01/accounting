@@ -80,7 +80,7 @@
     <h5 class="transaction-table-title m-0">
         Consumption Report
     </h5>
-
+    <a href="{{route('consumption-report-settings')}}"><button class="btn btn-info">Setting</button></a>
 </div>
 
 <form method="GET" action="{{ route('consumption-report') }}">
