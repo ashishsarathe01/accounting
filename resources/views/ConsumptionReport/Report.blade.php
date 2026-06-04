@@ -239,7 +239,7 @@
                     </td>
 
                     <td class="text-right">
-                        {{ number_format($row['avg_price'], 4) }}
+                        {{ number_format($row['avg_price'], 2) }}
                     </td>
 
                     <td class="text-right">

@@ -974,7 +974,7 @@ public function updateAging(Request $request)
     Gate::authorize('action-module',157);
     $company_id = Session::get('user_company_id');
     $today = $request->date ?? Carbon::today()->toDateString();
- 
+    $showType = $request->show_type ?? 'all';
     $buckets = AgingBucket::where('company_id', $company_id)
         ->orderBy('from_days')
         ->get();
@@ -1000,33 +1000,66 @@ public function updateAging(Request $request)
         
     }
     $all_groups_list = array_unique($all_groups_list);
+    $allGroupsList = DB::table('account_groups')
+        ->where('company_id', $company_id)
+        ->whereIn('id', $all_groups_list)
+        ->where('delete', '0')
+        ->select('id', 'name')
+        ->orderBy('name')
+        ->get();
 
+    $allParties = DB::table('accounts')
+        ->where('company_id', $company_id)
+        ->where('delete', '0')
+        ->whereIn('under_group', $all_groups_list)
+        ->select('id', 'account_name')
+        ->orderBy('account_name')
+        ->get();
     $accounts = DB::table('accounts')
         ->where('company_id', $company_id)
         ->where('delete', '0')
         ->whereIn('under_group', $all_groups_list)
         ->get();
+    $ledgerBalances = DB::table('account_ledger')
+        ->where('company_id', $company_id)
+        ->where('txn_date', '<=', $today)
+        ->where('delete_status', '0')
+        ->groupBy('account_id')
+        ->selectRaw('account_id, SUM(debit) as dr, SUM(credit) as cr')
+        ->get()
+        ->keyBy('account_id');
 
+    $openingBalances = DB::table('account_ledger')
+        ->where('company_id', $company_id)
+        ->where('entry_type', '-1')
+        ->groupBy('account_id')
+        ->selectRaw('account_id, SUM(debit) as dr, SUM(credit) as cr')
+        ->get()
+        ->keyBy('account_id');
+
+    $salesData = DB::table('sales')
+        ->where('company_id', $company_id)
+        ->where('date', '<=', $today)
+        ->where('status', '1')
+        ->where('delete', '0')
+        ->select('party', 'date', 'total')
+        ->get()
+        ->groupBy('party');
     $data = [];
-
+    $groupAccountData = [];
     foreach ($accounts as $acc) {
 
         // Closing balance
-        $ledger = DB::table('account_ledger')
-            ->where('company_id', $company_id)
-            ->where('account_id', $acc->id)
-            ->where('txn_date', '<=', $today)
-            ->where('delete_status', '0')
-            ->selectRaw('SUM(debit) as dr, SUM(credit) as cr')
-            ->first();
+        $ledger = $ledgerBalances[$acc->id] ?? (object)[
+            'dr' => 0,
+            'cr' => 0
+        ];
 
         // Opening balance
-        $open = DB::table('account_ledger')
-            ->where('company_id', $company_id)
-            ->where('account_id', $acc->id)
-            ->where('entry_type', '-1')
-            ->selectRaw('SUM(debit) as dr, SUM(credit) as cr')
-            ->first();
+        $open = $openingBalances[$acc->id] ?? (object)[
+            'dr' => 0,
+            'cr' => 0
+        ];
 
         $total = ($ledger->dr - $ledger->cr) + ($open->dr - $open->cr);
 
@@ -1047,13 +1080,7 @@ public function updateAging(Request $request)
         }
 
         // invoice rows
-        $sales = DB::table('sales')
-            ->where('company_id', $company_id)
-            ->where('party', $acc->id)
-            ->where('date', '<=', $today)
-            ->where('status', '1')
-            ->where('delete', '0')
-            ->get();
+        $sales = $salesData[$acc->id] ?? collect();
 
         foreach ($sales as $inv) {
             $agingRows[] = [
@@ -1113,15 +1140,127 @@ public function updateAging(Request $request)
 
         // ----------------------------------
 
-        $data[] = [
-            'party' => $acc->account_name,
-            'total' => $total,
-            'buckets' => $bucketAmt,
-            'moreThan' => $moreThan
+        $rowData = [
+            'account_id' => $acc->id,
+            'group_id'   => $acc->under_group,
+            'party'      => $acc->account_name,
+            'total'      => $total,
+            'buckets'    => $bucketAmt,
+            'moreThan'   => $moreThan
         ];
-    }
 
-    return view('receiable.aging_report', compact('today', 'buckets', 'data'));
+        $data[] = $rowData;
+        $groupAccountData[] = $rowData;
+    }
+    $allGroupRecords = DB::table('account_groups')
+        ->where('company_id', $company_id)
+        ->where('delete', '0')
+        ->select('id','name','heading')
+        ->get();
+
+    $groupChildren = [];
+
+    foreach ($allGroupRecords as $g) {
+        $groupChildren[$g->heading ?? 0][] = $g->id;
+    }
+        $buildGroupTree = function ($groupIds) use (
+            &$buildGroupTree,
+            $company_id,
+            $groupAccountData,
+            $buckets
+        ) {
+
+            $groups = DB::table('account_groups')
+                ->whereIn('id', $groupIds)
+                ->where('delete', '0')
+                ->select('id','name','heading')
+                ->get();
+
+            $tree = [];
+
+            foreach ($groups as $grp) {
+
+                $childGroups = DB::table('account_groups')
+                    ->where('heading', $grp->id)
+                    ->where('company_id', $company_id)
+                    ->where('delete', '0')
+                    ->pluck('id')
+                    ->toArray();
+
+                $accounts = collect($groupAccountData)
+                    ->where('group_id', $grp->id)
+                    ->values()
+                    ->toArray();
+
+                $groupTotal = 0;
+                $groupMoreThan = 0;
+
+                $bucketTotals = [];
+
+                foreach ($buckets as $b) {
+                    $bucketTotals[$b->id] = 0;
+                }
+
+                foreach ($accounts as $acc) {
+
+                    $groupTotal += $acc['total'];
+
+                    foreach ($buckets as $b) {
+                        $bucketTotals[$b->id] += $acc['buckets'][$b->id];
+                    }
+
+                    $groupMoreThan += $acc['moreThan'];
+                }
+
+                $children = [];
+
+                if (!empty($childGroups)) {
+
+                    $children = $buildGroupTree($childGroups);
+
+                    foreach ($children as $child) {
+
+                        $groupTotal += $child['total'];
+
+                        foreach ($buckets as $b) {
+                            $bucketTotals[$b->id] += $child['bucketTotals'][$b->id];
+                        }
+
+                        $groupMoreThan += $child['moreThan'];
+                    }
+                }
+
+                if ($groupTotal != 0 || !empty($children)) {
+
+                    $tree[] = [
+                        'group_id'      => $grp->id,
+                        'group_name'    => $grp->name,
+                        'total'         => $groupTotal,
+                        'bucketTotals'  => $bucketTotals,
+                        'moreThan'      => $groupMoreThan,
+                        'accounts'      => $accounts,
+                        'children'      => $children,
+                        'parent_id'     => $grp->heading
+                    ];
+                }
+            }
+
+            return $tree;
+        };
+
+        $groupWiseData = $buildGroupTree($top_groups_list);
+        return view(
+        'receiable.aging_report',
+        compact(
+            'today',
+            'buckets',
+            'data',
+            'allGroupsList',
+            'allParties'
+        )
+    )->with([
+        'groupWiseData' => $groupWiseData
+    ]);
 }
 
 

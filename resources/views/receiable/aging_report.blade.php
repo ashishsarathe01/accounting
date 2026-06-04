@@ -107,7 +107,24 @@
 .text-end {
     font-weight: 600;
 }
+.hidden {
+    display:none;
+}
 
+.group-row {
+    cursor:pointer;
+    font-weight:bold;
+}
+
+.arrow {
+    display:inline-block;
+    margin-right:6px;
+    transition:0.2s;
+}
+
+.arrow.rotate {
+    transform:rotate(90deg);
+}
 </style>
 <div class="list-of-view-company" style="background:#f8fafc;">
 <section class="list-of-view-company-section container-fluid">
@@ -136,21 +153,54 @@
                 </span>
 
                 <!-- FORM -->
-                <form method="GET" class="row"
-                    style="display:flex; align-items:end; gap:15px; margin:0;">
+                <form method="GET"
+                    class="d-flex align-items-center flex-wrap"
+                    style="gap:20px; margin:0;">
 
-                    <div class="col-md-3" style="min-width:180px;">
-                        <input type="date" name="date" value="{{ $today }}"
+                    <!-- Date -->
+                    <div>
+                        <label class="d-block mb-1 fw-bold">Date</label>
+                        <input type="date"
+                            name="date"
+                            value="{{ $today }}"
                             class="form-control"
-                            style="border-radius:10px; padding:8px 12px; border:1px solid #d0d0d0; box-shadow:none; font-size:14px;">
+                            style="min-width:170px;">
                     </div>
 
-                    <div class="col-md-2 d-flex align-items-end" style="min-width:120px;">
-                        <button class="btn btn-primary w-100"
-                            style="border-radius:10px; padding:8px 0; font-weight:600; font-size:14px; box-shadow:0 3px 6px rgba(0,0,0,0.15);">
+                    <!-- Show Report -->
+                    <div>
+                        <label class="d-block mb-1 fw-bold">Show Report</label>
+
+                        <div class="d-flex align-items-center" style="gap:20px;">
+
+                            <label class="mb-0">
+                                <input type="radio"
+                                    name="show_type"
+                                    value="all"
+                                    {{ request('show_type','all')=='all' ? 'checked' : '' }}>
+                                All Parties
+                            </label>
+
+                            <label class="mb-0">
+                                <input type="radio"
+                                    name="show_type"
+                                    value="allgroup"
+                                    {{ request('show_type')=='allgroup' ? 'checked' : '' }}>
+                                All Group
+                            </label>
+
+                        </div>
+                    </div>
+
+                    <!-- Button -->
+                    <div>
+                        <button type="submit"
+                                class="btn btn-primary"
+                                style="margin-top:24px;">
                             Show
                         </button>
                     </div>
+
                 </form>
 
                 <!-- UPDATE BUCKET BUTTON -->
@@ -220,39 +270,70 @@
                     }
                     $moreThanTotal = 0;
                 @endphp
+                @if(request('show_type','all') == 'all')
 
-                @foreach($data as $row)
-                
-                @php
-                    $grandReceivable += $row['total'];
-                    foreach ($buckets as $b) {
-                        $bucketTotals[$b->id] += $row['buckets'][$b->id];
-                    }
-                    $moreThanTotal += $row['moreThan'];
-                @endphp
-                <tr style="transition:0.2s;" 
-                    onmouseover="this.style.background='#eef6ff';"
-                    onmouseout="this.style.background='#fff';">
+                    @foreach($data as $row)
 
-                    <td>{{ $i++ }}</td>
-                    <td>{{ $row['party'] }}</td>
+                        @php
+                            $grandReceivable += $row['total'];
 
-                    <td class="text-end" style="font-weight:600;">
-                        {{ FormatIndianNumber($row['total'],2) }}
-                    </td>
+                            foreach ($buckets as $b) {
+                                $bucketTotals[$b->id] += $row['buckets'][$b->id];
+                            }
 
-                    @foreach($buckets as $b)
-                        <td class="text-end">
-                            {{ FormatIndianNumber($row['buckets'][$b->id], 2) }}
-                        </td>
+                            $moreThanTotal += $row['moreThan'];
+                        @endphp
+
+                        <tr>
+
+                            <td>{{ $i++ }}</td>
+
+                            <td>{{ $row['party'] }}</td>
+
+                            <td class="text-end">
+                                {{ FormatIndianNumber($row['total'],2) }}
+                            </td>
+
+                            @foreach($buckets as $b)
+                                <td class="text-end">
+                                    {{ FormatIndianNumber($row['buckets'][$b->id],2) }}
+                                </td>
+                            @endforeach
+
+                            <td class="text-end">
+                                {{ FormatIndianNumber($row['moreThan'],2) }}
+                            </td>
+
+                        </tr>
+
                     @endforeach
 
-                    <td class="text-end" >
-                        {{ FormatIndianNumber($row['moreThan'], 2) }}
-                    </td>
+                @endif
 
-                </tr>
-                @endforeach
+
+                @if(request('show_type') == 'allgroup')
+
+                    @foreach($groupWiseData as $grp)
+
+                        @php
+                            $grandReceivable += $grp['total'];
+
+                            foreach ($buckets as $b) {
+                                $bucketTotals[$b->id] += $grp['bucketTotals'][$b->id];
+                            }
+
+                            $moreThanTotal += $grp['moreThan'];
+                        @endphp
+
+                        @include('components.aging-group-row',[
+                            'grp' => $grp,
+                            'level' => 0,
+                            'buckets' => $buckets
+                        ])
+
+                    @endforeach
+
+                @endif
                 <tr class="total-row">
                         <td colspan="2" class="text-end">TOTAL</td>
                     
@@ -281,5 +362,62 @@
 </div>
 </section>
 </div>
+@include('layouts.footer')
+<script>
+document.addEventListener("DOMContentLoaded", function () {
 
+    document.querySelectorAll(".group-row").forEach(function (row) {
+
+        row.addEventListener("click", function (event) {
+
+            let groupId = this.dataset.group;
+
+            let arrow = this.querySelector(".arrow");
+
+            if (arrow) {
+                arrow.classList.toggle("rotate");
+            }
+
+            let children = document.querySelectorAll(".child-of-" + groupId);
+
+            children.forEach(function (tr) {
+
+                tr.classList.toggle("hidden");
+
+                if (tr.classList.contains("hidden")) {
+
+                    if (tr.dataset.group) {
+                        collapseAllNested(tr.dataset.group);
+                    }
+                }
+            });
+
+        });
+
+    });
+
+    function collapseAllNested(parentId) {
+
+        let nested = document.querySelectorAll(".child-of-" + parentId);
+
+        nested.forEach(function (tr) {
+
+            tr.classList.add("hidden");
+
+            let arrow = tr.querySelector(".arrow");
+
+            if (arrow) {
+                arrow.classList.remove("rotate");
+            }
+
+            if (tr.dataset.group) {
+                collapseAllNested(tr.dataset.group);
+            }
+
+        });
+
+    }
+
+});
+</script>
 @endsection
