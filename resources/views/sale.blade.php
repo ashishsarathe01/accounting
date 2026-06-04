@@ -150,7 +150,8 @@
                                        <?php 
                                     }
                               } 
-                              if($value->status=='1'){?>
+                              if($value->status=='1'){
+                                 ?>
                                  <a title="View Invoice"
                                     href="{{ url('sale-invoice/' . $value->sales_id) }}?source=sale"
                                     target="_blank">
@@ -158,13 +159,11 @@
                                        class="px-1"
                                        alt="View Invoice">
                                  </a>
-                                 <?php
-                                 if(!empty($value->eway_bill_response))
-                                 {
+                                 @if(!empty($value->eway_bill_response) && (auth()->user()->can('action-module',267) || auth()->user()->can('action-module',268)))
+                                    <?php
                                     $ewayData = json_decode($value->eway_bill_response, true);
                                     $iconStyle = '';
-                                    if(!empty($value->eway_delivery_status)
-                                       && $value->eway_delivery_status == 1)
+                                    if(!empty($value->eway_delivery_status) && $value->eway_delivery_status == 1)
                                     {
                                        $iconStyle =
                                        'filter:
@@ -176,9 +175,7 @@
                                        hue-rotate(88deg)
                                        brightness(119%)
                                        contrast(119%);';
-                                    }
-
-                                    ?>
+                                    }?>
                                     <img src="{{ asset('public/assets/imgs/start.svg') }}"
                                        class="px-1 start_status"
                                        data-id="{{$value->sales_id}}"
@@ -188,9 +185,8 @@
                                        data-status="{{$value->eway_delivery_status ?? 0}}"
                                        alt=""
                                        style="width:30px;cursor:pointer;{{$iconStyle}}">
-                                    <?php
-                                 }
-                                 ?>
+                                   
+                                 @endif
                                  <?php
                               }
                               if($value->status=='2'){?>
@@ -417,13 +413,17 @@
          </div>
 
          <div class="modal-footer py-2 px-3">
-            <button type="button"
-                  class="btn btn-primary"
-                  id="extend_eway_btn"
-                  style="display:none;">
-               Extend E-Way Bill
-            </button>
-            <button type="button" class="btn btn-success" id="mark_as_reached_btn">Mark As Reached</button>
+            @can('action-module',267)
+               <button type="button"
+                     class="btn btn-primary"
+                     id="extend_eway_btn"
+                     style="display:none;">
+                  Extend E-Way Bill
+               </button>
+            @endcan
+            @can('action-module',268)
+               <button type="button" class="btn btn-success" id="mark_as_reached_btn">Mark As Reached</button>
+            @endcan
          </div>
       </div>
 
@@ -882,7 +882,7 @@
 
       $.ajax({
 
-         url: "",
+         url: "{{route('sale.mark.reached')}}",
 
          type: "POST",
 

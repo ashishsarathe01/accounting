@@ -309,50 +309,6 @@ foreach($manageitems as $value) {
                                  <td class="w-min-50">
                                     <div class="d-flex align-items-center gap-2">
                                        <select class="form-control goods_items select2-single"
-<<<<<<< HEAD
-=======
-                                          name="goods_discription[]"
-                                          id="goods_discription_tr_{{$i}}"
-                                          data-id="{{$i}}"
-                                          onchange="call_fun({{$i}}); handleItemChange({{$i}});"
-                                          required
-                                          data-modal="itemModal">
-                                       <option value="">Select Item</option>
-                                       @if(count($selectedBoxSaleOrders) > 0)
-                                          @foreach($boxSaleOrderItems as $soItem)
-                                                <option
-                                                      value="{{ $soItem['so_item_id'] }}"
-                                                      data-item_id="{{ $soItem['item_id'] }}"
-                                                      data-itemid="{{ $soItem['item_id'] }}"
-                                                      data-so_item_id="{{ $soItem['so_item_id'] }}"
-                                                      data-pending_qty="{{ $soItem['pending_qty'] }}"
-                                                      data-unit_id="{{ $soItem['unit'] }}"
-                                                      data-unit_name="{{ $soItem['unit_name'] }}"
-                                                      data-val="{{ $soItem['unit_name'] }}"
-                                                      data-price="{{ $soItem['price'] }}"
-                                                      data-percent="{{ $soItem['gst_rate'] }}"
-                                                      data-sale_order_id="{{ $soItem['box_sale_order_id'] }}"
-                                                      data-available_item="{{ $soItem['pending_qty'] }}"
-                                                      data-parameterized_stock_status="0"
-                                                      data-config_status="0"
-                                                      data-group_id=""
-                                                   @if(
-                                                      $item->box_sale_order_item_id
-                                                      &&
-                                                      $item->box_sale_order_item_id == $soItem['so_item_id']
-                                                   )
-                                                      selected
-                                                   @endif
-                                                   >
-                                                   {{ $soItem['item_name'] }}
-
-                                                   ({{ $soItem['pending_qty'] }})
-
-                                                   ({{ $soItem['sale_order_no'] }})
-                                                </option>
-                                          @endforeach
-                                       @else
->>>>>>> changes
                                              name="goods_discription[]"
                                              id="goods_discription_tr_{{$i}}"
                                              data-id="{{$i}}"
@@ -1541,25 +1497,6 @@ srn++;
 
 add_more_count++;
 
-<<<<<<< HEAD
-=======
-   let optionElements = '';
-
-   if(selectedSaleOrders.length > 0)
-   {
-
-      optionElements =
-         window.latestSaleOrderItemOptions
-         || $('#goods_discription_tr_1').html();
-
-   }
-   else
-   {
-
-      optionElements = `<?php echo $item_list; ?>`;
-
-   }
->>>>>>> changes
 let optionElements = `<?php echo $item_list; ?>`;
 
 // Build new row
@@ -2408,37 +2345,6 @@ $(".goods_items").each(function (index) {
             return false;
          } 
       });
-<<<<<<< HEAD
-=======
-
-
-      setTimeout(function(){
-
-         $('.goods_items').each(function(){
-
-            let item_id = $(this).val();
-
-            let index = $(this).data('id');
-
-            if(item_id)
-            {
-               if(selectedSaleOrders.length > 0)
-               {
-                  item_id =
-                     $(this)
-                        .find('option:selected')
-                        .attr('data-item_id')
-                     || item_id;
-               }
-
-               getItemGstRate(item_id, index);
-
-            }
-
-         });
-
-      }, 1000);
->>>>>>> changes
       $("#date").trigger('change');
    });
    function call_fun(data){
@@ -3357,87 +3263,6 @@ function handleItemChange(rowId) {
     console.log("Checking row:", rowId);
 
     let ddl = $("#goods_discription_tr_" + rowId);
-<<<<<<< HEAD
-=======
-    let selectedOption = ddl.find(':selected');
-    let soItemId = ddl.val();
-    let itemId =
-      selectedOption.attr('data-item_id')
-      || soItemId;
-
-   let pendingQty =
-      selectedOption.attr('data-pending_qty')
-      || 0;
-
-   let saleOrderId =
-      selectedOption.attr('data-sale_order_id');
-
-   if(selectedSaleOrders.length > 0)
-   {
-
-      $('#box_sale_order_item_id_' + rowId)
-         .val(soItemId);
-
-      $('#pending_qty_' + rowId)
-         .val(pendingQty);
-
-      if(saleOrderId)
-      {
-         $('#tr_' + rowId)
-            .attr(
-               'data-sale-order-id',
-               saleOrderId
-            );
-      }
-      else
-      {
-         $('#tr_' + rowId)
-            .removeAttr('data-sale-order-id');
-      }
-
-      let price =
-         selectedOption.attr('data-price');
-
-      if(price != undefined)
-      {
-         $('#price_tr_' + rowId).val(price);
-      }
-
-      let unitName =
-         selectedOption.attr('data-unit_name');
-
-      let unitId =
-         selectedOption.attr('data-unit_id');
-
-      if(unitName != undefined)
-      {
-         $('#unit_tr_' + rowId).val(unitName);
-      }
-
-      if(unitId != undefined)
-      {
-         $('#units_tr_' + rowId).val(unitId);
-      }
-
-      let currentQty =
-         parseFloat($('#quantity_tr_' + rowId).val())
-         || 0;
-
-      if(
-         pendingQty != undefined
-         &&
-         currentQty > parseFloat(pendingQty)
-      )
-      {
-         alert(
-            'Existing qty exceeds pending qty of '
-            + pendingQty
-         );
-         $('#quantity_tr_' + rowId).val(pendingQty);
-         calculateAmount();
-      }
-   }
->>>>>>> changes
     let itemId = ddl.val();
     let btn = $("#tr_" + rowId + " .editItemDetailsBtn");
 
@@ -3844,13 +3669,6 @@ setTimeout(function() {
         $("#saveBtn").hide();
     }
 }, 2000);
-<<<<<<< HEAD
-=======
-
-
-$("#date").on("change", function(){
-   
->>>>>>> changes
 
 $("#date").on("change", function(){
    
@@ -3860,91 +3678,7 @@ $("#date").on("change", function(){
       if(item_id){
          getItemGstRate(item_id,index);
       }
-<<<<<<< HEAD
    });   
-=======
-
-   });
-
-   @if($company_sale_type=="BOX")
-
-      selectedSaleOrders = [];
-
-      renderSelectedSaleOrders();
-
-      loadBoxSaleOrderDropdown();
-
-      $('#example11 tbody tr[id^="tr_"]')
-         .not('#tr_1')
-         .remove();
-
-      $('#goods_discription_tr_1')
-         .val('');
-
-      $('#quantity_tr_1')
-         .val('');
-
-      $('#price_tr_1')
-         .val('');
-
-      $('#amount_tr_1')
-         .val('');
-
-      $('#unit_tr_1')
-         .val('');
-
-      $('#units_tr_1')
-         .val('');
-
-      $('#pending_qty_1')
-         .val('');
-
-      $('#box_sale_order_item_id_1')
-         .val('');
-
-      $('#config_status_1')
-         .val('');
-
-      $('#item_parameters_1')
-         .val('');
-
-      $('#tr_1')
-         .removeAttr('data-sale-order-id');
-      $('#tr_1 td:last').html(`
-
-      <svg xmlns="http://www.w3.org/2000/svg"
-         data-id="1"
-         class="bg-primary rounded-circle add_more_wrapper"
-         width="24"
-         height="24"
-         viewBox="0 0 24 24"
-         fill="none"
-         style="cursor:pointer;"
-         tabindex="0"
-         role="button">
-
-         <path
-            d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z"
-            fill="white"
-         />
-
-      </svg>
-
-      `);
-      $('#goods_discription_tr_1')
-         .html('<option value="">Select Item</option>');
-
-      window.latestSaleOrderItemOptions =
-         '<option value="">Select Item</option>';
-
-      calculateAmount();
-
-      @endif
-
-
-   });   
-
->>>>>>> changes
 });
 $(document).on('click', '.add-desc', function () {
     let wrapper = $(this).closest('.description-wrapper');
@@ -3997,55 +3731,6 @@ $(document).ready(function () {
     });
 });
 
-<<<<<<< HEAD
-=======
-   function checkPartyItemPriceEdit(rowId) {
-      if(selectedSaleOrders.length > 0)
-      {
-         let selectedOption =
-               $('#goods_discription_tr_' + rowId + ' option:selected');
-         let soPrice =
-               selectedOption.attr('data-price');
-         if(
-               soPrice != undefined
-               &&
-               soPrice != ''
-            )
-            {
-               let oldItemId =
-               $('#goods_discription_tr_' + rowId)
-               .attr('data-old_item');
-               let currentItemId =
-               $('#goods_discription_tr_' + rowId)
-               .val();
-            if(
-               $('#price_tr_' + rowId).val() == ''
-               ||
-               $('#price_tr_' + rowId).val() == '0'
-               ||
-               $('#price_tr_' + rowId).val() == '0.00'
-               ||
-               (
-                  oldItemId != undefined
-                  &&
-                  oldItemId != currentItemId
-               )
-            )
-            {
-               $('#price_tr_' + rowId)
-                  .val(soPrice);
-            }
-            $('#goods_discription_tr_' + rowId)
-               .attr(
-                  'data-old_item',
-                  currentItemId
-               );
-               $('#price_tr_' + rowId)
-                  .prop('readonly', false);
-               $('#price_tr_' + rowId)
-                  .removeClass('bg-light');
-               calculateAmount();
->>>>>>> changes
 function checkPartyItemPriceEdit(rowId) {
 
     let party_id = $('#party').val(); // IMPORTANT

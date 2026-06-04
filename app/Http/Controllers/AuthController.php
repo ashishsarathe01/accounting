@@ -804,6 +804,26 @@ class AuthController extends Controller{
         Session::put('user_company_id', $request->change_company);
         $comps = \App\Models\Companies::where('id',$request->change_company)
                                                 ->first();
+        $user_data = User::where('id',$comp->user_id)
+                        ->where('mobile_no',Session::get('user_mobile_no'))
+                        ->first();
+        if($user_data){
+            Companies::where('user_id',Session::get('user_id'))->update(['default_company'=>'1']);
+             $y = explode("-",$comps->default_fy);
+            $from_date = date('Y-m-d',strtotime($y[0]."-04-01"));
+            $to_date = date('Y-m-d',strtotime($y[1]."-03-31"));
+            Session::put([
+                'user_id' => $user_data->id,
+                'user_name' => $user_data->name,
+                'user_email' => $user_data->email,
+                'user_mobile_no' => $user_data->mobile_no,
+                'user_type' => $user_data->type,
+                'default_fy' => $comps->default_fy,
+                'from_date'=> $from_date,
+            'to_date'=> $to_date
+            ]);
+            return redirect("dashboard")->withSuccess('Company change successfully!');
+        }  
         $comp_ids = \App\Models\Companies::where('user_id', $comps->user_id)
                                                 ->pluck('id');
         $user_data = User::whereIn('company_id',$comp_ids)
@@ -814,7 +834,7 @@ class AuthController extends Controller{
             Companies::where('user_id',Session::get('user_id'))->update(['default_company'=>'1']);
             $y = explode("-",$comps->default_fy);
             $from_date = date('Y-m-d',strtotime($y[0]."-04-01"));
-      $to_date = date('Y-m-d',strtotime($y[1]."-03-31"));
+            $to_date = date('Y-m-d',strtotime($y[1]."-03-31"));
             Session::put([
                 'user_id' => $user_data->id,
                 'user_name' => $user_data->name,
@@ -832,8 +852,8 @@ class AuthController extends Controller{
             if($user_data){
                 Companies::where('user_id',Session::get('user_id'))->update(['default_company'=>'1']);
                  $y = explode("-",$comps->default_fy);
-            $from_date = date('Y-m-d',strtotime($y[0]."-04-01"));
-      $to_date = date('Y-m-d',strtotime($y[1]."-03-31"));
+                $from_date = date('Y-m-d',strtotime($y[0]."-04-01"));
+                $to_date = date('Y-m-d',strtotime($y[1]."-03-31"));
                 Session::put([
                     'user_id' => $user_data->id,
                     'user_name' => $user_data->name,
