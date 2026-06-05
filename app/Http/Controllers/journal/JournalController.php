@@ -1222,7 +1222,7 @@ public function index(Request $request)
     ->where('journal_id', $journal->id)
     ->get();
 
-      return view('journal/editJournal')->with('fy_start_date', $fy_start_date)->with('bill_sundry_rows', $bill_sundry_rows)->with('billsundry', $billsundry)->with('fy_end_date', $fy_end_date)->with('journal', $journal)->with('party_list', $party_list)->with('journal_detail', $journal_detail)->with('mat_series', $mat_series)->with('vendors', $vendors)->with('items', $items)->with('company_gst', $companyData->gst)->with('sundry', $sundry_arr)->with('state_list', $state_list);
+      return view('journal/editJournal')->with('fy_start_date', $fy_start_date)->with('bill_sundry_rows', $bill_sundry_rows)->with('billsundry', $billsundry)->with('fy_end_date', $fy_end_date)->with('journal', $journal)->with('party_list', $party_list)->with('journal_detail', $journal_detail)->with('mat_series', $mat_series)->with('vendors', $vendors)->with('companyData',$companyData)->with('items', $items)->with('company_gst', $companyData->gst)->with('sundry', $sundry_arr)->with('state_list', $state_list);
    }
    public function update(Request $request){
       //dd($request->all());

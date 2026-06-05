@@ -256,7 +256,10 @@
                 </th>
 
                 <th style="text-align:right;">
-                    Per KG
+                    Cost Per KG
+                </th>
+                <th style="text-align:right;">
+                    Consumed Per Ton
                 </th>
 
             </tr>
@@ -271,6 +274,7 @@
                 $totalAmount = 0;
                 $totalGeneratedQty = 0;
                 $totalPerKg = 0;
+                $totalConsumedPerTon = 0;
 
             @endphp
 
@@ -282,7 +286,11 @@
                     $totalAmount += $row['amount'];
                     $totalGeneratedQty += $row['generated_qty'];
                     $totalPerKg += round($row['per_kg'], 2);
+                    $consumedPerTon = $totalProduction > 0
+                        ? (($row['qty'] / $totalProduction) * 1000)
+                        : 0;
 
+                    $totalConsumedPerTon += $consumedPerTon;
                 @endphp
 
                 <tr>
@@ -315,13 +323,17 @@
                         {{ number_format($row['per_kg'], 2) }}
                     </td>
 
+                    <td style="text-align:right;">
+                        {{ number_format($consumedPerTon, 2) }}
+                    </td>
+
                 </tr>
 
             @empty
 
                 <tr>
 
-                    <td colspan="7" class="text-center">
+                    <td colspan="8" class="text-center">
                         No Records Found
                     </td>
 
@@ -356,8 +368,11 @@
                 </td>
 
                 <td style="text-align:right;">
-    {{ number_format($totalPerKg, 2) }}
-</td>
+                    {{ number_format($totalPerKg, 2) }}
+                </td>
+                <td style="text-align:right;">
+                    {{ number_format($totalConsumedPerTon, 2) }}
+                </td>
 
             </tr>
 

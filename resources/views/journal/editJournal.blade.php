@@ -104,36 +104,105 @@ input[type=number] {
     margin: 0 !important;
 }
 }
-@page { size: auto;  margin: 0mm; }
+@page{
+    size:A4 portrait;
+    margin:8mm;
+}
+
 @media print {
 
-    table {
-        width: 100% !important;
-        border-collapse: collapse;
+    html,
+    body{
+        width:100%;
+        margin:0 !important;
+        padding:0 !important;
+        overflow:visible !important;
+        background:#fff !important;
     }
 
-    td, th {
-        padding: 5px !important;
-        font-size: 12px !important;
+    body > *{
+        display:none !important;
     }
 
-    .narration-col {
-        min-width: 150px !important;
-        white-space: normal !important;
-        word-wrap: break-word !important;
+    #journalPrintArea{
+        display:block !important;
+        position:relative !important;
+        visibility:visible !important;
+
+        width:96% !important;
+        margin:0 auto !important;
+        padding:0 !important;
+
+        box-sizing:border-box !important;
+        overflow:visible !important;
     }
 
-    input {
-        border: none !important;
-        overflow: visible !important;
+    #journalPrintArea *{
+        visibility:visible !important;
     }
 
-    .header-section {
-        display: none !important; /* hide buttons only */
+    .print-footer{
+        page-break-inside:avoid;
     }
-    .sidebar {
-        display: none !important; /* hide buttons only */
-    }
+}
+
+#printCompany{
+    text-align:center;
+    margin-bottom:10px;
+}
+
+#printCompany h2{
+    margin:0;
+    font-size:22px;
+    font-weight:700;
+}
+
+#printCompany p{
+    margin:2px 0;
+    font-size:12px;
+}
+
+#printVoucherTitle{
+    text-align:center;
+    font-size:20px;
+    font-weight:700;
+    margin:15px 0;
+}
+
+.print-table{
+    width:100%;
+    border-collapse:collapse;
+    table-layout:fixed;
+    margin-top:3px;
+}
+
+.print-table th,
+.print-table td{
+    border:1px solid #000;
+    padding:6px;
+    font-size:13px;
+    box-sizing:border-box;
+}
+
+.print-right{
+    text-align:right;
+}
+
+.print-footer{
+    margin-top:25px;
+    display:flex;
+    justify-content:space-between;
+}
+
+.print-sign{
+    width:220px;
+    text-align:center;
+}
+
+.print-sign hr{
+    margin-bottom:10px;
+    border:none;
+    border-top:1px solid #000;
 }
 </style>
 <!-- list-view-company-section -->
@@ -488,6 +557,11 @@ input[type=number] {
                     <div class=" d-flex header-section ">
 
                         <div class="ms-auto">
+                            <button type="button"
+                                    class="btn btn-info ms-2"
+                                    onclick="printJournal()">
+                                PRINT
+                            </button>
                            <button type="button" onclick="redirectBack()" class="btn btn-danger">QUIT</button>
                             <input type="button" value="SUBMIT" class="btn btn-xs-primary submit_data">
 
@@ -665,6 +739,7 @@ input[type=number] {
   </div>
 </div>
 </body>
+<div id="journalPrintArea" style="display:none;"></div>
 @include('layouts.footer')
 <script>
 
@@ -1765,6 +1840,392 @@ $(document).ready(function(){
                 `<button type="button" class="icon-btn add-btn add_bs">+</button>`
             );
         }
+    }
+    function printJournal(){
+
+        let claimGST = $("#claim_gst").val();
+
+        if(claimGST === "YES"){
+            buildGSTJournalPrint();
+        }else{
+            buildNormalJournalPrint();
+        }
+
+        window.onafterprint = function () {
+            $("#journalPrintArea").hide();
+        };
+
+        $("#journalPrintArea").show();
+        window.print();
+    }
+    function buildNormalJournalPrint(){
+
+        let rows = '';
+
+        let totalDebit = 0;
+        let totalCredit = 0;
+
+        $("#without_gst_section tr[id^='tr_']").each(function(){
+
+            let rowId = $(this).attr('id').replace('tr_','');
+
+            let account =
+                $("#account_"+rowId+" option:selected").text();
+
+            let debit =
+                parseFloat($("#debit_"+rowId).val()) || 0;
+
+            let credit =
+                parseFloat($("#credit_"+rowId).val()) || 0;
+
+            totalDebit += debit;
+            totalCredit += credit;
+
+            let narration =
+                $("#narration_"+rowId).val() || '';
+
+            rows += `
+            <tr>
+                <td>${account}</td>
+                <td class="print-right">${debit ? debit.toFixed(2) : ''}</td>
+                <td class="print-right">${credit ? credit.toFixed(2) : ''}</td>
+                <td>${narration}</td>
+            </tr>`;
+        });
+
+        let narration =
+            $("input[name='long_narration']").val() || '';
+
+        let html = `
+        <div id="printCompany">
+
+            <h2>{{ $companyData->company_name ?? '' }}</h2>
+
+            <p>{{ $companyData->address ?? '' }}</p>
+
+            <p>
+                CIN :
+                {{ $companyData->cin ?? '' }}
+            </p>
+
+        </div>
+
+        <div id="printVoucherTitle">
+            JOURNAL VOUCHER
+        </div>
+
+        <table style="width:100%;margin-bottom:10px;">
+            <tr>
+                <td>
+                    <b>Voucher No:</b>
+                    ${$("#voucher_prefix").val()}
+                </td>
+
+                <td style="text-align:right;">
+                    <b>Date:</b>
+                    ${$("#date").val()}
+                </td>
+            </tr>
+        </table>
+
+        <table class="print-table">
+
+            <thead>
+                <tr>
+                    <th>Particulars</th>
+                    <th width="150">Debit</th>
+                    <th width="150">Credit</th>
+                    <th>Narration</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                ${rows}
+
+                <tr>
+                    <th>Total</th>
+                    <th class="print-right">
+                        ${totalDebit.toFixed(2)}
+                    </th>
+                    <th class="print-right">
+                        ${totalCredit.toFixed(2)}
+                    </th>
+                    <th></th>
+                </tr>
+
+            </tbody>
+
+        </table>
+
+        <div style="margin-top:20px;">
+            <b>Narration :</b><br>
+            ${narration}
+        </div>
+
+        <div class="print-footer">
+
+            <div class="print-sign">
+                <hr>
+                Prepared By
+            </div>
+
+            <div class="print-sign">
+                <hr>
+                Authorized Signatory
+            </div>
+
+        </div>
+        `;
+
+        $("#journalPrintArea").html(html);
+    }
+    function buildGSTJournalPrint(){
+
+        let itemRows = '';
+
+        $(".item").each(function(){
+
+            let id = $(this).data('index');
+
+            let item = $("#item_"+id+" option:selected").text();
+            let gst = $("#percentage_"+id).val();
+            let amount = $("#amount_"+id).val();
+
+            if(item !== "Select Item" && item !== ""){
+
+                itemRows += `
+                <tr>
+                    <td>${item}</td>
+                    <td class="print-right">${gst}%</td>
+                    <td class="print-right">${amount}</td>
+                </tr>`;
+            }
+        });
+
+        let bsRows = '';
+
+        $("#bill_sundry_section tr").each(function(){
+
+            let sundry =
+                $(this).find(".bill_sundry option:selected").text();
+
+            let amount =
+                $(this).find(".bs_amount").val();
+
+            if(
+                sundry !== "Select" &&
+                sundry !== "" &&
+                amount !== ""
+            ){
+
+                bsRows += `
+                <tr>
+                    <td>${sundry}</td>
+                    <td class="print-right">${amount}</td>
+                </tr>`;
+            }
+        });
+
+        let billSundrySection = '';
+
+        if(bsRows.trim() !== ''){
+
+            billSundrySection = `
+            <br>
+
+            <table class="print-table">
+
+                <thead>
+                    <tr>
+                        <th>Bill Sundry</th>
+                        <th width="180">Amount</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    ${bsRows}
+                </tbody>
+
+            </table>`;
+        }
+
+        let gstRows = '';
+
+        let cgst = parseFloat($("#cgst").val()) || 0;
+        let sgst = parseFloat($("#sgst").val()) || 0;
+        let igst = parseFloat($("#igst").val()) || 0;
+
+        if(igst > 0){
+
+            gstRows += `
+            <tr>
+                <td>IGST</td>
+                <td class="print-right">${igst.toFixed(2)}</td>
+            </tr>`;
+
+        }else{
+
+            if(cgst > 0){
+
+                gstRows += `
+                <tr>
+                    <td>CGST</td>
+                    <td class="print-right">${cgst.toFixed(2)}</td>
+                </tr>`;
+            }
+
+            if(sgst > 0){
+
+                gstRows += `
+                <tr>
+                    <td>SGST</td>
+                    <td class="print-right">${sgst.toFixed(2)}</td>
+                </tr>`;
+            }
+        }
+
+        let invoiceSection = '';
+
+        if($("#invoice_no").val() !== ''){
+
+            invoiceSection = `
+            <tr>
+                <td>
+                    <b>Vendor:</b>
+                    <strong>${$("#vendor option:selected").text()}</strong>
+                </td>
+
+                <td style="text-align:right;">
+                    <b>Invoice:</b>
+                    <strong>${$("#invoice_no").val()}</strong>
+                </td>
+            </tr>`;
+        }else{
+
+            invoiceSection = `
+            <tr>
+                <td colspan="2">
+                    <b>Vendor:</b>
+                    <strong>${$("#vendor option:selected").text()}</strong>
+                </td>
+            </tr>`;
+        }
+
+        let remarkSection = '';
+
+        let remark = $("input[name='remark']").val();
+
+        if(remark && remark.trim() !== ''){
+
+            remarkSection = `
+            <div style="margin-top:20px;">
+                <b>Remark :</b><br>
+                ${remark}
+            </div>`;
+        }
+        let roundOffRows = '';
+
+        let roundOff = parseFloat($("#round_off").val()) || 0;
+
+        if(roundOff !== 0){
+
+            roundOffRows = `
+            <tr>
+                <td>Round Off</td>
+                <td class="print-right">${roundOff.toFixed(2)}</td>
+            </tr>`;
+        }
+        let html = `
+        <div id="printCompany">
+
+            <h2>{{ $companyData->company_name ?? '' }}</h2>
+
+            <p>{{ $companyData->address ?? '' }}</p>
+
+            <p>
+                CIN :
+                {{ $companyData->cin ?? '' }}
+            </p>
+
+        </div>
+
+        <div id="printVoucherTitle">
+            GST CLAIM JOURNAL
+        </div>
+
+        <table style="width:100%;margin-bottom:10px;">
+
+            <tr>
+                <td>
+                    <b>Voucher No:</b>
+                    ${$("#voucher_prefix").val()}
+                </td>
+
+                <td style="text-align:right;">
+                    <b>Date:</b>
+                    ${$("#date").val()}
+                </td>
+            </tr>
+
+            ${invoiceSection}
+
+        </table>
+
+        <table class="print-table" style="border:1px solid #000;">
+
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th width="120">GST %</th>
+                    <th width="180">Amount</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                ${itemRows}
+            </tbody>
+
+        </table>
+
+        ${billSundrySection}
+
+        <table class="print-table" style="border:1px solid #000;">
+
+            <tr>
+                <td>Net Amount</td>
+                <th class="print-right">${$("#net_amount").val()}</th>
+            </tr>
+
+            ${gstRows}
+
+            ${roundOffRows}
+
+            <tr>
+                <th>Total Amount</th>
+                <th class="print-right">${$("#total_amount").val()}</th>
+            </tr>
+
+        </table>
+
+        ${remarkSection}
+
+        <div class="print-footer">
+
+            <div class="print-sign">
+                <hr>
+                Prepared By
+            </div>
+
+            <div class="print-sign">
+                <hr>
+                Authorized Signatory
+            </div>
+
+        </div>
+        `;
+
+        $("#journalPrintArea").html(html);
     }
     function printpage() {
         window.print();
