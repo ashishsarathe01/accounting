@@ -13,15 +13,20 @@ public function settings()
 {
     $company_id = Session::get('user_company_id');
 
-    $consumedItems = DB::table('consumption_items')
-        ->join('manage_items', 'consumption_items.item_id', '=', 'manage_items.id')
-        ->where('consumption_items.company_id', $company_id)
-        ->select(
-            'consumption_items.item_id',
-            'manage_items.name'
-        )
-        ->distinct()
-        ->orderBy('manage_items.name')
+    $consumedItems = DB::table('manage_items')
+        ->whereIn('id', function ($query) use ($company_id) {
+            $query->select('item_id')
+                ->from('consumption_items')
+                ->where('company_id', $company_id)
+                ->union(
+                    DB::table('account_production_details')
+                        ->select('consume_item')
+                        ->where('company_id', $company_id)
+                        ->whereNotNull('consume_item')
+                );
+        })
+        ->select('id as item_id', 'name')
+        ->orderBy('name')
         ->get();
 
     $generatedItems = DB::table('production_items')
