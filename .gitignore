@@ -14,3 +14,15 @@ yarn-error.log
 .github
 .DS_Store
 .codex/
+
+
+
+# //ignore everything in the public folder except for main files
+
+# !/public/index.php
+# !/public/favicon.ico
+# !/public/robots.txt
+# !/public/web.config
+# !/public/.htaccess
+# !/public/assets
+# !/public/csv-template
