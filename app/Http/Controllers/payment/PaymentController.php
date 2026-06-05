@@ -369,7 +369,7 @@ class PaymentController extends Controller
          $account_names = $request->input('account_name');
          $debits = $request->input('debit');
          $credits = $request->input('credit');         
-         $narrations = $request->input('narration');
+         $narrations = $request->input('narration', []);
          //Details
          $credit_id = "";$credit_narration = "";
          foreach($types as $key => $type){
@@ -631,7 +631,9 @@ class PaymentController extends Controller
          $mat_series[$key]->invoice_prefix = $invoice_prefix;
          $mat_series[$key]->manual_enter_invoice_no = $manual_enter_invoice_no;
       }
-      return view('payment/editPayment')->with('fy_start_date', $fy_start_date)->with('fy_end_date', $fy_end_date)->with('payment', $payment)->with('party_list', $party_list)->with('payment_detail', $payment_detail)->with('credit_bank_accounts', $credit_bank_accounts)->with('credit_cash_accounts', $credit_cash_accounts)->with('mat_series', $mat_series);
+      $creditRow = $payment_detail->where('type','Credit')->first();
+      $debitRows = $payment_detail->where('type','Debit')->values();
+      return view('payment/editPayment')->with('fy_start_date', $fy_start_date)->with('creditRow', $creditRow)->with('debitRows', $debitRows)->with('fy_end_date', $fy_end_date)->with('payment', $payment)->with('party_list', $party_list)->with('payment_detail', $payment_detail)->with('credit_bank_accounts', $credit_bank_accounts)->with('credit_cash_accounts', $credit_cash_accounts)->with('mat_series', $mat_series);
    }
     /**
      * Update the specified resource in storage.
@@ -725,7 +727,7 @@ class PaymentController extends Controller
       $account_names = $request->input('account_name');
       $debits = $request->input('debit');
       $credits = $request->input('credit');
-      $narrations = $request->input('narration');
+      $narrations = $request->input('narration', []);
       //Details
       $credit_id = "";$credit_narration = "";
       foreach($types as $key => $type) {
@@ -740,7 +742,7 @@ class PaymentController extends Controller
          $paytype->account_name = $account_names[$key];
          $paytype->debit = isset($debits[$key]) ? $debits[$key] : 0;
          $paytype->credit = isset($credits[$key]) ? $credits[$key] : 0;         
-         $paytype->narration = $narrations[$key];
+         $paytype->narration = $narrations[$key] ?? '';
          $paytype->status = '1';
          $paytype->save();
       }

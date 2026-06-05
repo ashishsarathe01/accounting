@@ -374,12 +374,12 @@ class ReceiptController extends Controller
          $account_names = $request->input('account_name');
          $debits = $request->input('debit');
          $credits = $request->input('credit');
-         $narrations = $request->input('narration');
+         $narrations = $request->input('narration', []);
          $debit_id = "";$debit_narration = "";
          foreach($types as $key => $type){
             if($type=="Debit"){
                $debit_id = $request->input('account_name')[$key];
-               $debit_narration = isset($request->input('narration')[$key]) ? $request->input('narration')[$key] : '';
+               $debit_narration = $narrations[$key] ?? '';
             }
             $rectype = new ReceiptDetails;
             $rectype->receipt_id = $receipt->id;
@@ -388,7 +388,7 @@ class ReceiptController extends Controller
             $rectype->account_name = $account_names[$key];
             $rectype->debit = isset($debits[$key]) ? $debits[$key] :'0';
             $rectype->credit = isset($credits[$key]) ? $credits[$key] :'0';
-            $rectype->narration = $narrations[$key];
+            $rectype->narration = $narrations[$key] ?? '';
             $rectype->status = '1';
             $rectype->save();            
          }
@@ -627,7 +627,9 @@ class ReceiptController extends Controller
          $mat_series[$key]->invoice_prefix = $invoice_prefix;
          $mat_series[$key]->manual_enter_invoice_no = $manual_enter_invoice_no;
       }
-      return view('receipt/editReceipt')->with('fy_start_date', $fy_start_date)->with('fy_end_date', $fy_end_date)->with('receipt', $receipt)->with('party_list', $party_list)->with('receipt_detail', $receipt_detail)->with('debit_bank_accounts', $debit_bank_accounts)->with('debit_cash_accounts', $debit_cash_accounts)->with('mat_series', $mat_series);
+      $receipt_mode_account = $receipt_detail->where('type','Debit')->first();
+      $receipt_rows = $receipt_detail->where('type','Credit')->values();
+      return view('receipt/editReceipt')->with('fy_start_date', $fy_start_date)->with('receipt_mode_account', $receipt_mode_account)->with('receipt_rows', $receipt_rows)->with('fy_end_date', $fy_end_date)->with('receipt', $receipt)->with('party_list', $party_list)->with('receipt_detail', $receipt_detail)->with('debit_bank_accounts', $debit_bank_accounts)->with('debit_cash_accounts', $debit_cash_accounts)->with('mat_series', $mat_series);
    }
 
     /**
@@ -716,12 +718,12 @@ class ReceiptController extends Controller
       $account_names = $request->input('account_name');
       $debits = $request->input('debit');
       $credits = $request->input('credit');
-      $narrations = $request->input('narration');
+      $narrations = $request->input('narration', []);
       $debit_id = "";$debit_narration = "";
       foreach ($types as $key => $type){
          if($type=="Debit"){
             $debit_id = $request->input('account_name')[$key];
-            $debit_narration = isset($request->input('narration')[$key]) ? $request->input('narration')[$key] : '';
+            $debit_narration = $narrations[$key] ?? '';
          }
          $paytype = new ReceiptDetails;
          $paytype->receipt_id = $request->receipt_id;
@@ -730,7 +732,7 @@ class ReceiptController extends Controller
          $paytype->account_name = $account_names[$key];
          $paytype->debit = isset($debits[$key]) ? $debits[$key] : '0';
          $paytype->credit = isset($credits[$key]) ? $credits[$key] : '0';
-         $paytype->narration = $narrations[$key];
+         $paytype->narration = $narrations[$key] ?? '';
          $paytype->status = '1';
          $paytype->save();
          

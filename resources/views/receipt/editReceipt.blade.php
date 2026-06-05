@@ -87,12 +87,43 @@
                            <input type="hidden" id="manual_enter_invoice_no" name="manual_enter_invoice_no">
                         </div>
                         <div class="mb-2 col-md-2">
-                           <label for="name" class="form-label font-14 font-heading">Mode</label>
-                           <select id="mode" class="form-control" name="mode">
-                              <option value="">Select Mode</option>
-                              <option value="0" @if($receipt->mode==0) selected @endif>IMPS/NEFT/RTGS</option>
-                              <option value="1" @if($receipt->mode==1) selected @endif>CASH</option>                        
-                              <option value="2" @if($receipt->mode==2) selected @endif>CHEQUE</option>
+                           <label class="form-label font-14 font-heading">
+                              Receipt Mode
+                           </label>
+
+                           <select id="receipt_mode" class="form-control">
+
+                              <option value="">Select Receipt Account</option>
+
+                              @foreach($debit_cash_accounts as $cash)
+                                 <option value="{{ $cash->id }}"
+                                       data-group="cash"
+                                       {{ !empty($receipt_mode_account) && $receipt_mode_account->account_name == $cash->id ? 'selected' : '' }}>
+                                    {{ $cash->account_name }}
+                                 </option>
+                              @endforeach
+
+                              @foreach($debit_bank_accounts as $bank)
+                                 <option value="{{ $bank->id }}"
+                                       data-group="bank"
+                                       {{ !empty($receipt_mode_account) && $receipt_mode_account->account_name == $bank->id ? 'selected' : '' }}>
+                                    {{ $bank->account_name }}
+                                 </option>
+                              @endforeach
+
+                           </select>
+                        </div>
+                        <div class="mb-2 col-md-2">
+                           <label class="form-label font-14 font-heading">
+                              Receipt Type
+                           </label>
+
+                           <select id="mode"
+                                 name="mode"
+                                 class="form-control">
+
+                              <option value="">Select Type</option>
+
                            </select>
                         </div>
                         <div class="mb-2 col-md-2">
@@ -105,96 +136,67 @@
                         <table id="example11" class="table-striped table m-0 shadow-sm table-bordered">
                            <thead>
                               <tr class=" font-12 text-body bg-light-pink ">
-                                 <th class="w-min-120 border-none bg-light-pink text-body ">Debit/Credit</th>
-                                 <th class="w-min-120 border-none bg-light-pink text-body ">Account</th>
-                                 <th class="w-min-120 border-none bg-light-pink text-body ">Debit</th>
-                                 <th class="w-min-120 border-none bg-light-pink text-body ">Credit</th>
-                                 <th class="w-min-120 border-none bg-light-pink text-body ">Narration</th>
+                                 <th style="width:55%;">Account</th>
+                                 <th style="width:25%;">Amount</th>
+                                 <th style="width:20%;">Action</th>
                               </tr>
                            </thead>
-                          @php $i = 1; @endphp
+                           @php
+                           $i = 1;
+                           @endphp
 
-@foreach($receipt_detail as $value)
-    <tbody>
-        <tr class="font-14 font-heading bg-white" id="tr_{{ $i }}">
-            <td>
-                <select class="form-control type" name="type[]" data-id="{{ $i }}" id="type_{{ $i }}">
-                    <option value="">Type</option>
-                    <option value="Credit" {{ $value->type == 'Credit' ? 'selected' : '' }}>Credit</option>
-                    <option value="Debit" {{ $value->type == 'Debit' ? 'selected' : '' }}>Debit</option>
-                </select>
-            </td>
+                           <tbody>
 
-            <td>
-                <select class="form-select select2-single account-dropdown" id="account_{{ $i }}" name="account_name[]" required>
-                    <option value="">Select</option>
+                           @foreach($receipt_rows as $value)
 
-                    @if($value->type == "Credit")
-                        {{-- Party accounts --}}
-                        @foreach($party_list as $party)
-                            <option value="{{ $party->id }}" class="account-option mode-cash mode-bank" {{ $value->account_name == $party->id ? 'selected' : '' }}>
-                                {{ $party->account_name }}
-                            </option>
-                        @endforeach
+                           <tr id="tr_{{ $i }}">
 
-                    @elseif($value->type == "Debit")
-                        {{-- Cash accounts --}}
-                        @foreach($debit_cash_accounts as $cash)
-                            <option value="{{ $cash->id }}" class="account-option mode-cash" {{ $value->account_name == $cash->id ? 'selected' : '' }}>
-                                {{ $cash->account_name }}
-                            </option>
-                        @endforeach
+                              <td>
+                                 <select class="form-select select2-single"
+                                          id="account_{{ $i }}"
+                                          data-id="{{ $i }}"
+                                          name="account_name[]">
 
-                        {{-- Bank accounts --}}
-                        @foreach($debit_bank_accounts as $bank)
-                            <option value="{{ $bank->id }}" class="account-option mode-bank" {{ $value->account_name == $bank->id ? 'selected' : '' }}>
-                                {{ $bank->account_name }}
-                            </option>
-                        @endforeach
-                    @endif
-                </select>
-            </td>
+                                       <option value="">Select</option>
 
-            <td>
-                <input type="number" name="debit[]" value="{{ $value->debit }}" class="form-control debit" data-id="{{ $i }}" id="debit_{{ $i }}" placeholder="Debit Amount" {{ $value->type == "Credit" ? 'readonly' : '' }} onkeyup="debitTotal();">
-            </td>
+                                       @foreach($party_list as $party)
 
-            <td>
-                <input type="number" name="credit[]" value="{{ $value->credit }}" class="form-control credit" data-id="{{ $i }}" id="credit_{{ $i }}" placeholder="Credit Amount" {{ $value->type == "Debit" ? 'readonly' : '' }} onkeyup="creditTotal();">
-            </td>
+                                          <option value="{{ $party->id }}"
+                                             {{ $value->account_name == $party->id ? 'selected' : '' }}>
 
-            <td>
-                <input type="text" name="narration[]" value="{{ $value->narration }}" class="form-control narration" data-id="{{ $i }}" id="narration_{{ $i }}" placeholder="Enter Narration">
-            </td>
+                                             {{ $party->account_name }}
 
-            <td>
-                <svg style="color: red; cursor: pointer;" tabindex="0" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="{{ $i }}" viewBox="0 0 16 16">
-                    <path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/>
-                </svg>
-            </td>
-        </tr>
-    </tbody>
-    @php $i++; @endphp
-@endforeach
+                                          </option>
 
-                            <div class="plus-icon">
-                                <tr class="font-14 font-heading bg-white">
-                                    <!-- icon 3 tr ma joi aavi nathi rahyo -->
-                                    <td class="w-min-120 " colspan="7">
-                                        <a class="add_more" tabindex="0"><svg xmlns="http://www.w3.org/2000/svg" class="bg-primary rounded-circle" width="24" height="24" viewBox="0 0 24 24" fill="none" style="cursor: pointer;">
-                                                <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white" />
-                                            </svg></a>
-                                    </td>
+                                       @endforeach
 
-                                </tr>
-                            </div>
+                                 </select>
+                              </td>
+
+                              <td>
+                                 <input type="number"
+                                          class="form-control amount"
+                                          data-id="{{ $i }}"
+                                          id="amount_{{ $i }}"
+                                          value="{{ $value->credit }}"
+                                          placeholder="Amount">
+                              </td>
+
+                              <td class="text-center align-middle">
+                                 <div class="action-buttons"></div>
+                              </td>
+
+                           </tr>
+
+                           @php $i++; @endphp
+
+                           @endforeach
+
+                           </tbody>
                             <div class="total">
                                 <tr class="font-14 font-heading bg-white">
-                                    <td></td>
-                                    <td class="w-min-120 fw-bold">Total</td>
-                                    <td class="w-min-120 fw-bold" id="total_debit"></td>
-                                    <td class="w-min-120 fw-bold" id="total_credit"></td>
-                                    <td></td>
+                                    <td class="fw-bold">Total</td>
+                                    <td class="fw-bold" id="total_amount">0.00</td>
                                     <td></td>
                                 </tr>
                                 <tr class="font-14 font-heading bg-white">
@@ -215,6 +217,7 @@
                        
 
                     </div>
+                    <input type="hidden" id="receipt_account" name="receipt_account" value="{{ !empty($receipt_mode_account) ? $receipt_mode_account->account_name : '' }}">
                 </form>
             </div>
         </div>
@@ -238,108 +241,162 @@ function redirectBack(){
       }
    }
    
-   $(document).on("change", ".type", function() {
-      let id = $(this).attr('data-id');
-      $("#debit_" + id).val('');
-      $("#credit_" + id).val('');
-      let debit_total = 0;
-      $(".debit").each(function(){
-         if($(this).val()!=""){
-            debit_total = parseFloat(debit_total) + parseFloat($(this).val());
-         }
-      });
-      let credit_total = 0;
-      $(".credit").each(function(){
-         if($(this).val()!=""){
-            credit_total = parseFloat(credit_total) + parseFloat($(this).val());
-         }
-      });
+      let add_more_count = 1;
 
-      if($("#type_" + id).val() == "Credit") {
-         $("#debit_" + id).prop('readonly', true);
-         $("#credit_" + id).prop('readonly', false);
-         let amount = debit_total - credit_total;
-         if(amount>0){
-            $("#credit_"+id).val(amount);
-         }
-         $("#account_"+id).html("<?php echo $credit_html;?>");
-         $("#account_" + id).select2();
-      }else if ($("#type_" + id).val() == "Debit") {
-         $("#debit_" + id).prop('readonly', false);
-         $("#credit_" + id).prop('readonly', true);
-         let amount = credit_total - debit_total;
-         if(amount>0){
-            $("#debit_"+id).val(amount);
-         }
-         $("#account_"+id).html("<?php echo $debit_html;?>");
-         $("#account_" + id).select2();
-      }
-      debitTotal();
-      creditTotal();
-   });
-   var add_more_count = '<?php echo $i;?>';
-   $(".add_more").click(function() {
-      add_more_count++;
-      var $curRow = $(this).closest('tr');
-      var optionElements = "";
-      let type_option = '<option value="Credit">Credit</option><option value="Debit">Debit</option>';
-      $(".type").each(function(){
-         if(this.value == 'Debit') {
-            type_option = '<option value="Credit">Credit</option>';
-         }
-      });
-      newRow = '<tr id="tr_' + add_more_count + '"><td><select class="form-control type" name="type[]"  data-id="' + add_more_count + '" id="type_' + add_more_count + '"><option value="">Type</option>'+type_option+'</select></td><td><select class="form-control account select2-single" name="account_name[]" data-id="' + add_more_count + '" id="account_' + add_more_count + '">';
-      newRow += optionElements;
-      newRow += '</select></td><td><input type="number" name="debit[]" class="form-control debit" data-id="' + add_more_count + '" id="debit_' + add_more_count + '" placeholder="Debit Amount" readonly onkeyup="debitTotal();"></td><td><input type="number" name="credit[]" class="form-control credit" data-id="' + add_more_count + '" id="credit_' + add_more_count + '" placeholder="Credit Amount" readonly onkeyup="creditTotal();"></td><td><input type="text" name="narration[]" class="form-control narration" data-id="' + add_more_count + '" id="narration_' + add_more_count + '" placeholder="Enter Narration"></td><td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td></tr>';
-      $curRow.before(newRow);
-$('.select2-single').select2();
+   function refreshButtons() {
 
-// focus on new row type
-setTimeout(function(){
-   $("#type_" + add_more_count).focus();
-},100);
-      // Add change event handler for new Type dropdown
-      $(`#type_${add_more_count}`).change(function () {
-         const selectedType = $(this).val();
-         const accountDropdown = $(`#account_${add_more_count}`);
-         const currentMode = $('#mode').val(); // Get mode from mode dropdown
+      let rows = $('tr[id^="tr_"]');
 
-         accountDropdown.empty().append(`<option value="">Select</option>`);
+      rows.each(function(index){
 
-         if (selectedType === 'Credit') {
-               partyList.forEach(item => {
-                  accountDropdown.append(`<option value="${item.id}">${item.account_name}</option>`);
-               });
-         } else if (selectedType === 'Debit') {
-               if (currentMode == 1) {
-                  cashAccounts.forEach(item => {
-                     accountDropdown.append(`<option value="${item.id}">${item.account_name}</option>`);
-                  });
-               } else if (currentMode == 0 || currentMode == 2) {
-                  bankAccounts.forEach(item => {
-                     accountDropdown.append(`<option value="${item.id}">${item.account_name}</option>`);
-                  });
+         let rowId = $(this).attr('id').replace('tr_','');
+
+         let html = '';
+
+         if(rows.length === 1){
+
+               html = `
+                  <a class="add_more" tabindex="0">
+                     <svg xmlns="http://www.w3.org/2000/svg"
+                           class="bg-primary rounded-circle"
+                           width="24"
+                           height="24"
+                           viewBox="0 0 24 24"
+                           fill="none"
+                           style="cursor:pointer;">
+
+                           <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z"
+                                 fill="white"/>
+
+                     </svg>
+                  </a>
+               `;
+
+         } else {
+
+               html = `
+                  <svg xmlns="http://www.w3.org/2000/svg"
+                        width="28"
+                        height="28"
+                        fill="#dc3545"
+                        class="bi bi-dash-circle-fill remove"
+                        data-id="${rowId}"
+                        viewBox="0 0 16 16"
+                        style="cursor:pointer;">
+
+                     <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M4 8a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 0-1h-7A.5.5 0 0 0 4 8"/>
+
+                  </svg>
+               `;
+
+               if(index === rows.length - 1){
+
+                  html += `
+                     <a class="add_more ms-2" tabindex="0">
+
+                           <svg xmlns="http://www.w3.org/2000/svg"
+                              class="bg-primary rounded-circle"
+                              width="24"
+                              height="24"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              style="cursor:pointer;">
+
+                              <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z"
+                                    fill="white"/>
+
+                           </svg>
+
+                     </a>
+                  `;
                }
          }
 
-         accountDropdown.val('').trigger('change.select2');
+         $(this).find('.action-buttons').html(html);
+
       });
-   });
-   $(document).on("click", ".remove", function() {
-      let id = $(this).attr('data-id');
-      $("#tr_" + id).remove();
-      debitTotal();
-      creditTotal();
-   });
-   function debitTotal() {
-      let total_debit_amount = 0;
-      $(".debit").each(function() {
-         if($(this).val() != '') {
-            total_debit_amount = parseFloat(total_debit_amount) + parseFloat($(this).val());
-         }
-      });
-      $("#total_debit").html(total_debit_amount);
+
    }
+
+   function calculateTotal() {
+
+      let total = 0;
+
+      $('.amount').each(function(){
+
+         total += parseFloat($(this).val()) || 0;
+
+      });
+
+      $('#total_amount').html(total.toFixed(2));
+
+   }
+
+   $(document).on("click", ".add_more", function () {
+
+      add_more_count++;
+
+      let newRow = `
+      <tr id="tr_${add_more_count}">
+
+         <td>
+               <select class="form-select select2-single"
+                     id="account_${add_more_count}"
+                     data-id="${add_more_count}"
+                     name="account_name[]"
+                     required>
+
+                  <option value="">Select</option>
+
+                  @foreach($party_list as $value)
+                     <option value="{{ $value->id }}">
+                           {{ $value->account_name }}
+                     </option>
+                  @endforeach
+
+               </select>
+         </td>
+
+         <td>
+               <input type="number"
+                     class="form-control amount"
+                     data-id="${add_more_count}"
+                     id="amount_${add_more_count}"
+                     placeholder="Amount">
+         </td>
+
+         <td class="text-center align-middle">
+               <div class="action-buttons"></div>
+         </td>
+
+      </tr>
+      `;
+
+      $('tr[id^="tr_"]:last').after(newRow);
+
+      $('.select2-single').select2();
+
+      refreshButtons();
+
+   });
+
+   $(document).on("click", ".remove", function () {
+
+      let id = $(this).data('id');
+
+      $("#tr_" + id).remove();
+
+      refreshButtons();
+
+      calculateTotal();
+
+   });
+
+   $(document).on('keyup change', '.amount', function(){
+
+      calculateTotal();
+
+   });
    function creditTotal() {
       let total_credit_amount = 0;
       $(".credit").each(function() {
@@ -349,6 +406,37 @@ setTimeout(function(){
       });
       $("#total_credit").html(total_credit_amount);
    }
+   $(document).on('change', '#receipt_mode', function(){
+
+      let accountType = $('#receipt_mode option:selected').attr('data-group');
+
+      $('#receipt_account').val($(this).val());
+
+      let options = '<option value="">Select Type</option>';
+
+      let defaultValue = '';
+
+      if(accountType === 'bank'){
+
+         options += '<option value="0">IMPS/NEFT/RTGS</option>';
+         options += '<option value="2">CHEQUE</option>';
+
+         defaultValue = '0';
+
+      }
+      else if(accountType === 'cash'){
+
+         options += '<option value="1">CASH</option>';
+         options += '<option value="2">CHEQUE</option>';
+
+         defaultValue = '1';
+
+      }
+
+      $('#mode').html(options);
+      $('#mode').val(defaultValue).trigger('change');
+
+   });
    $("#mode").change(function(){
       $("#cheque_no").val('');
       $("#cheque_no").prop('readonly',true);
@@ -377,59 +465,104 @@ setTimeout(function(){
 
             return false;
          }
-         var form_data = [];
-         let dr = 0;
-         let cr = 0;
-         let ids = 0;
          let error = false;
-         let debit_count = 0;
-         $(".type").each(function() {
-            let id = $(this).attr('data-id');
-            if($(this).val() != '' && $("#account_" + id).val() != "" && $("#date").val()!='' && $("#mode").val()!='') {
-               if($(this).val() == "Credit" && $("#credit_" + id).val() != ""  && $("#account_" + id).val() != "") {
-                  form_data.push({
-                     "type": "Credit",
-                     "credit": $("#credit_" + id).val(),
-                     "debit": 0,
-                     "user_id": $("#account_" + id).val(),
-                     "remark": $("#narration_" + id).val()
-                  });
-                  cr = parseFloat(cr) + parseFloat($("#credit_" + id).val());
-               }else if($(this).val() == "Debit" && $("#debit_" + id).val() != "" && $("#account_" + id).val() != "") {
-                  form_data.push({
-                     "type": "Debit",
-                     "credit": 0,
-                     "debit": $("#debit_" + id).val(),
-                     "user_id": $("#account_" + id).val(),
-                     "remark": $("#narration_" + id).val()
-                  });
-                  dr = parseFloat(dr) + parseFloat($("#debit_" + id).val());
-                  debit_count++;
-               }
-            }else{
-               error = true; // Set error flag if any required field is empty
+         let totalAmount = 0;
+
+         $('.amount').each(function(){
+
+            let id = $(this).data('id');
+
+            let account = $("#account_" + id).val();
+            let amount  = $(this).val();
+
+            if(account == "" || amount == "" || parseFloat(amount) <= 0){
+               error = true;
             }
+
+            totalAmount += parseFloat(amount || 0);
+
          });
-         if(error) {
-            alert("Please fill in all required fields.");
+
+         if(error){
+            alert("Please fill all Account and Amount fields.");
             return false;
          }
-         if(form_data.length == 0) {
+
+         if(totalAmount <= 0){
             alert("Please enter at least one transaction.");
             return false;
          }
-         if(debit_count >1) {
-            alert("Only 1 Bank/Cash Account(Debit) Allowed.");
+
+         if($("#receipt_mode").val() == ""){
+            alert("Please select Receipt Mode.");
             return false;
          }
-         if(cr != dr) {
-            alert("Debit and credit amounts should be equal.");
-            return false;
-         }
+
+         /* remove old generated fields */
+         $('.generated-field').remove();
+
+         /* Credit Entries (Party Accounts) */
+
+         $('.amount').each(function(){
+
+            let amount = parseFloat($(this).val()) || 0;
+
+            $('<input>',{
+               type:'hidden',
+               name:'type[]',
+               value:'Credit',
+               class:'generated-field'
+            }).appendTo('#frm');
+
+            $('<input>',{
+               type:'hidden',
+               name:'credit[]',
+               value:amount,
+               class:'generated-field'
+            }).appendTo('#frm');
+
+            $('<input>',{
+               type:'hidden',
+               name:'debit[]',
+               value:0,
+               class:'generated-field'
+            }).appendTo('#frm');
+
+         });
+
+         /* Debit Entry (Receipt Mode Account) */
+
+         $('<input>',{
+            type:'hidden',
+            name:'account_name[]',
+            value:$('#receipt_account').val(),
+            class:'generated-field'
+         }).appendTo('#frm');
+
+         $('<input>',{
+            type:'hidden',
+            name:'type[]',
+            value:'Debit',
+            class:'generated-field'
+         }).appendTo('#frm');
+
+         $('<input>',{
+            type:'hidden',
+            name:'debit[]',
+            value:totalAmount,
+            class:'generated-field'
+         }).appendTo('#frm');
+
+         $('<input>',{
+            type:'hidden',
+            name:'credit[]',
+            value:0,
+            class:'generated-field'
+         }).appendTo('#frm');
+
          $("#frm").submit();
       });
    });
-   debitTotal();
    creditTotal();
 
    $(document).ready(function () {
@@ -629,7 +762,9 @@ $(document).ready(function(){
         isEditPage = false;
 
     });
-
+   $('#receipt_mode').trigger('change');
+   refreshButtons();
+   calculateTotal();
     $('#series_no').trigger('change');
 
 });
