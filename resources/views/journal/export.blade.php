@@ -60,6 +60,9 @@
                                     <option value="voucher_date" {{ old('date_type') == 'voucher_date' ? 'selected' : '' }}>
                                         Voucher Date
                                     </option>
+                                    <option value="updated_at" {{ old('date_type') == 'updated_at' ? 'selected' : '' }}>
+                                        Updated Date
+                                    </option>
                                 </select>
                             </div>
                         

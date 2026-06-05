@@ -286,8 +286,8 @@
                     $totalAmount += $row['amount'];
                     $totalGeneratedQty += $row['generated_qty'];
                     $totalPerKg += round($row['per_kg'], 2);
-                    $consumedPerTon = $totalProduction > 0
-                        ? (($row['qty'] / $totalProduction) * 1000)
+                    $consumedPerTon = $row['generated_qty'] > 0
+                        ? (($row['qty'] / $row['generated_qty']) * 1000)
                         : 0;
 
                     $totalConsumedPerTon += $consumedPerTon;

@@ -2643,15 +2643,19 @@ public function export(Request $request)
    $request->validate([
     'from_date' => 'required|date',
     'to_date'   => 'required|date',
-    'date_type' => 'required|in:created_at,voucher_date',
+    'date_type' => 'required|in:created_at,voucher_date,updated_at',
     ]);
     
     $companyId = Session::get('user_company_id');
     
     $dateType   = $request->date_type;
-    $dateColumn = $dateType === 'created_at'
-        ? 'created_at'
-        : 'date';
+      if ($dateType === 'created_at') {
+         $dateColumn = 'created_at';
+      } elseif ($dateType === 'updated_at') {
+         $dateColumn = 'updated_at';
+      } else {
+         $dateColumn = 'date';
+      }
     
     $query = DB::table('journals')
         ->where('company_id', $companyId)
@@ -2662,17 +2666,25 @@ public function export(Request $request)
         });
     
     /* ✅ Apply correct date filter */
-    if ($dateType === 'created_at') {
-        // created_at = datetime (2025-03-28 06:26:37)
-        $query->whereDate($dateColumn, '>=', $request->from_date)
-              ->whereDate($dateColumn, '<=', $request->to_date);
-    } else {
-        // voucher date = normal date
-        $query->whereBetween($dateColumn, [
+      if ($dateType === 'created_at') {
+
+         $query->whereDate($dateColumn, '>=', $request->from_date)
+               ->whereDate($dateColumn, '<=', $request->to_date);
+
+      } elseif ($dateType === 'updated_at') {
+
+         $query->whereDate($dateColumn, '>=', $request->from_date)
+               ->whereDate($dateColumn, '<=', $request->to_date)
+               ->whereNotNull('updated_by');
+
+      } else {
+
+         $query->whereBetween($dateColumn, [
             $request->from_date,
             $request->to_date
-        ]);
-    }
+         ]);
+
+      }
     
     $journals = $query
         ->orderBy($dateColumn)

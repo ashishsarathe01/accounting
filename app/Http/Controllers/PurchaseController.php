@@ -3248,7 +3248,7 @@ public function exportPurchasesView()
         'from_date'     => 'required|date',
         'to_date'       => 'required|date',
         'purchase_type' => 'required|in:LOCAL,CENTER',
-        'date_type'     => 'required|in:created_at,voucher_date',
+        'date_type'     => 'required|in:created_at,voucher_date,updated_at',
     ]);
 
     $from         = $request->input('from_date');
@@ -3259,9 +3259,13 @@ public function exportPurchasesView()
     $company_id = Session::get('user_company_id');
 
     // ✅ Decide column dynamically
-    $dateColumn = $dateType === 'created_at' 
-        ? 'purchases.created_at' 
-        : 'purchases.date';
+      if ($dateType === 'created_at') {
+         $dateColumn = 'purchases.created_at';
+      } elseif ($dateType === 'updated_at') {
+         $dateColumn = 'purchases.updated_at';
+      } else {
+         $dateColumn = 'purchases.date';
+      }
 
     $query = DB::table('purchases')
         ->leftJoin('accounts', 'purchases.party', '=', 'accounts.id')
@@ -3272,14 +3276,22 @@ public function exportPurchasesView()
         });
 
     // ✅ Apply date filter
-    if ($dateType === 'created_at') {
-        // created_at has datetime → use whereDate
-        $query->whereDate($dateColumn, '>=', $from)
-              ->whereDate($dateColumn, '<=', $to);
-    } else {
-        // voucher date is normal date
-        $query->whereBetween($dateColumn, [$from, $to]);
-    }
+      if ($dateType === 'created_at') {
+
+         $query->whereDate($dateColumn, '>=', $from)
+               ->whereDate($dateColumn, '<=', $to);
+
+      } elseif ($dateType === 'updated_at') {
+
+         $query->whereDate($dateColumn, '>=', $from)
+               ->whereDate($dateColumn, '<=', $to)
+               ->whereNotNull('purchases.updated_by');
+
+      } else {
+
+         $query->whereBetween($dateColumn, [$from, $to]);
+
+      }
 
     $purchases = $query
         ->select([

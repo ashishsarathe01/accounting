@@ -6330,7 +6330,7 @@ public function exportSales(Request $request)
                 'from_date' => 'required|date',
                 'to_date'   => 'required|date',
                 'sale_type' => 'required|in:LOCAL,CENTER',
-                'date_type' => 'required|in:created_at,voucher_date',
+                'date_type' => 'required|in:created_at,voucher_date,updated_at',
                 ]);
                 
                 $from     = $request->input('from_date');
@@ -6341,9 +6341,13 @@ public function exportSales(Request $request)
                 $company_id = Session::get('user_company_id');
                 
                 /* ✅ Decide column */
-                $dateColumn = $dateType === 'created_at'
-                    ? 'sales.created_at'
-                    : 'sales.date';
+                if ($dateType === 'created_at') {
+    $dateColumn = 'sales.created_at';
+} elseif ($dateType === 'updated_at') {
+    $dateColumn = 'sales.updated_at';
+} else {
+    $dateColumn = 'sales.date';
+}
                 
                 $query = DB::table('sales')
                     ->leftJoin('accounts', 'sales.party', '=', 'accounts.id')
@@ -6356,11 +6360,21 @@ public function exportSales(Request $request)
                 
                 /* ✅ Apply date filter */
                 if ($dateType === 'created_at') {
-                    $query->whereDate($dateColumn, '>=', $from)
-                          ->whereDate($dateColumn, '<=', $to);
-                } else {
-                    $query->whereBetween($dateColumn, [$from, $to]);
-                }
+
+    $query->whereDate($dateColumn, '>=', $from)
+          ->whereDate($dateColumn, '<=', $to);
+
+} elseif ($dateType === 'updated_at') {
+
+    $query->whereDate($dateColumn, '>=', $from)
+          ->whereDate($dateColumn, '<=', $to)
+          ->whereNotNull('sales.updated_by');
+
+} else {
+
+    $query->whereBetween($dateColumn, [$from, $to]);
+
+}
                 
                 $sales = $query
                     ->select([
@@ -6937,24 +6951,50 @@ public function exportSaleBill(Request $request)
          'from_date' => 'required|date',
          'to_date'   => 'required|date',
          'sale_type' => 'required|in:LOCAL,CENTER',
+         'date_type' => 'required|in:created_at,voucher_date,updated_at',
       ]);
 
       $from = $request->input('from_date');
       $to   = $request->input('to_date');
       $saleType = $request->input('sale_type');
+      $dateType = $request->input('date_type');
 
       $company_id = Session::get('user_company_id');
       $company = DB::table('companies')->where('id', $company_id)->first();
       $company_state_code = substr($company->gst, 0, 2);
-
-      $sales = DB::table('sales')
+      if ($dateType === 'created_at') {
+         $dateColumn = 'sales.created_at';
+      } elseif ($dateType === 'updated_at') {
+         $dateColumn = 'sales.updated_at';
+      } else {
+         $dateColumn = 'sales.date';
+      }
+      $salesQuery = DB::table('sales')
          ->leftJoin('accounts', 'sales.party', '=', 'accounts.id')
          ->leftJoin('states', 'accounts.state', '=', 'states.id')
          ->where('sales.company_id', $company_id)
          ->where(function($q){
-               $q->where('sales.delete', '0')->orWhereNull('sales.delete');
-         })
-         ->whereBetween('sales.date', [$from, $to])
+            $q->where('sales.delete', '0')->orWhereNull('sales.delete');
+      });
+
+      if ($dateType === 'updated_at') {
+
+         $salesQuery->whereDate($dateColumn, '>=', $from)
+                     ->whereDate($dateColumn, '<=', $to)
+                     ->whereNotNull('sales.updated_by');
+
+      } elseif ($dateType === 'created_at') {
+
+         $salesQuery->whereDate($dateColumn, '>=', $from)
+                     ->whereDate($dateColumn, '<=', $to);
+
+      } else {
+
+         $salesQuery->whereBetween($dateColumn, [$from, $to]);
+
+      }
+
+      $sales = $salesQuery
          ->select(
                'sales.*',
                'accounts.account_name as party_name',
@@ -6964,7 +7004,7 @@ public function exportSaleBill(Request $request)
                'states.state_code as party_state_code',
                'states.name as party_state_name'
          )
-         ->orderBy('sales.date')
+         ->orderBy($dateColumn)
          ->get();
 
       $filename = "sale_bill_{$from}_to_{$to}_" . strtolower($saleType) . ".csv";

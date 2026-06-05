@@ -68,7 +68,6 @@ class ContraController extends Controller
             'contras.date',
             'accounts.account_name as acc_name',
             'contra_details.*',
-            'contras.mode as m',
             'contras.voucher_no',
             'contras.created_by',
             'contras.approved_by',
@@ -324,8 +323,6 @@ class ContraController extends Controller
       $con->company_id = Session::get('user_company_id');
       $con->voucher_no_prefix = $request->input('voucher_prefix');
       $con->voucher_no = $voucher_no;
-      $con->mode = $request->input('mode');
-      $con->cheque_no = $request->input('cheque_no');
       $con->series_no = $request->input('series_no');
       $con->long_narration = $request->input('long_narration');
       $con->financial_year = $financial_year;
@@ -337,7 +334,6 @@ class ContraController extends Controller
          $debits = $request->input('debit');
          $credits = $request->input('credit');
          
-         $narrations = $request->input('narration');
          $i=0;
          foreach($types as $key => $type){
             $contype = new ContraDetails;
@@ -348,15 +344,18 @@ class ContraController extends Controller
             $contype->debit = isset($debits[$key]) ? $debits[$key] :'0';
             $contype->credit = isset($credits[$key]) ? $credits[$key] :'0';
            
-            $contype->narration = $narrations[$key];
             $contype->status = '1';
             $contype->save();
             //ADD DATA IN Customer ACCOUNT
-            if($i==0){
-                  $map_account_id = $account_names['1'];
+            if(count($account_names) >= 2){
+               if($i == 0){
+                  $map_account_id = $account_names[1];
                }else{
-                  $map_account_id = $account_names['0'];
+                  $map_account_id = $account_names[0];
                }
+            }else{
+               $map_account_id = 0;
+            }
             $ledger = new AccountLedger();
             $ledger->account_id = $account_names[$key];
             if(isset($debits[$key]) && !empty($debits[$key])){
@@ -371,7 +370,7 @@ class ContraController extends Controller
             $ledger->entry_type = 8;
             $ledger->entry_type_id = $con->id;
             $ledger->entry_type_detail_id = $contype->id;
-            $ledger->entry_narration = $narrations[$key];
+            $ledger->entry_narration = $request->input('long_narration');
             $ledger->map_account_id = $map_account_id;
             $ledger->created_by = Session::get('user_id');
             $ledger->created_at = date('d-m-Y H:i:s');
@@ -635,9 +634,7 @@ class ContraController extends Controller
          }
       }
       $contra->voucher_no = $voucher_no;
-      $contra->mode = $request->input('mode');
       $contra->series_no = $request->input('series_no');
-      $contra->cheque_no = $request->input('cheque_no');
       $contra->long_narration = $request->input('long_narration');
       $contra->save();
       $contra_detail = ContraDetails::where('contra_id', '=', $request->contra_id)->delete();
@@ -648,7 +645,6 @@ class ContraController extends Controller
       $account_names = $request->input('account_name');
       $debits = $request->input('debit');
       $credits = $request->input('credit');
-      $narrations = $request->input('narration');
       $i=0;
       foreach($types as $key => $type) {
          $paytype = new ContraDetails;
@@ -658,14 +654,21 @@ class ContraController extends Controller
          $paytype->account_name = $account_names[$key];
          $paytype->debit = isset($debits[$key]) ? $debits[$key] : 0;
          $paytype->credit = isset($credits[$key]) ? $credits[$key] : 0;         
-         $paytype->narration = $narrations[$key];
          $paytype->status = '1';
          $paytype->save();
          //ADD DATA IN Customer ACCOUNT
-         if($i==0){
-            $map_account_id = $account_names['1'];
+         if(count($account_names) >= 2){
+
+            if($i == 0){
+               $map_account_id = $account_names[1];
+            }else{
+               $map_account_id = $account_names[0];
+            }
+
          }else{
-            $map_account_id = $account_names['0'];
+
+            $map_account_id = 0;
+
          }
          $ledger = new AccountLedger();
          $ledger->account_id = $account_names[$key];
@@ -682,7 +685,7 @@ class ContraController extends Controller
          $ledger->entry_type_id = $contra->id;
          $ledger->entry_type_detail_id = $paytype->id;
          $ledger->map_account_id = $map_account_id;
-         $ledger->entry_narration = $narrations[$key];
+         $ledger->entry_narration = $request->input('long_narration');
          $ledger->created_by = Session::get('user_id');
          $ledger->created_at = date('d-m-Y H:i:s');
          $ledger->save();
@@ -1132,22 +1135,52 @@ public function export(Request $request)
     $request->validate([
         'from_date' => 'required|date',
         'to_date'   => 'required|date',
+        'date_type' => 'required|in:created_at,voucher_date,updated_at',
     ]);
 
     $companyId = Session::get('user_company_id');
 
-    $contras = DB::table('contras')
-        ->where('company_id', $companyId)
-        ->where('status', '1')
-        ->where(function ($q) {
+    $dateType = $request->date_type;
+
+      if ($dateType === 'created_at') {
+         $dateColumn = 'created_at';
+      } elseif ($dateType === 'updated_at') {
+         $dateColumn = 'updated_at';
+      } else {
+         $dateColumn = 'date';
+      }
+         $query = DB::table('contras')
+         ->where('company_id', $companyId)
+         ->where('status', '1')
+         ->where(function ($q) {
             $q->where('delete', '0')
-              ->orWhereNull('delete');
-        })
-        ->whereDate('date', '>=', $request->from_date)
-        ->whereDate('date', '<=', $request->to_date)
-        ->orderBy('date')
-        ->orderBy('voucher_no')
-        ->get();
+               ->orWhereNull('delete');
+         });
+
+      if ($dateType === 'created_at') {
+
+         $query->whereDate($dateColumn, '>=', $request->from_date)
+               ->whereDate($dateColumn, '<=', $request->to_date);
+
+      } elseif ($dateType === 'updated_at') {
+
+         $query->whereDate($dateColumn, '>=', $request->from_date)
+               ->whereDate($dateColumn, '<=', $request->to_date)
+               ->whereNotNull('updated_by');
+
+      } else {
+
+         $query->whereBetween($dateColumn, [
+            $request->from_date,
+            $request->to_date
+         ]);
+
+      }
+
+      $contras = $query
+         ->orderBy($dateColumn)
+         ->orderBy('voucher_no')
+         ->get();
 
     if ($contras->isEmpty()) {
         return back()->with('error', 'No Contra data found');

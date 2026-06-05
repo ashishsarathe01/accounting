@@ -4681,7 +4681,7 @@ class SalesReturnController extends Controller
        $request->validate([
                 'from_date'  => 'required|date',
                 'to_date'    => 'required|date',
-                'date_type'  => 'required|in:created_at,voucher_date',
+                'date_type'  => 'required|in:created_at,voucher_date,updated_at',
                 'sr_type'    => 'required|in:WITH ITEM,RATE DIFFERENCE',
                 'sale_area'  => 'required|in:LOCAL,CENTER',
             ]);
@@ -4691,9 +4691,13 @@ class SalesReturnController extends Controller
             $srType    = $request->sr_type;
             
             $dateType   = $request->date_type;
-            $dateColumn = $dateType === 'created_at'
-                ? 'created_at'
-                : 'date';
+            if ($dateType === 'created_at') {
+               $dateColumn = 'created_at';
+            } elseif ($dateType === 'updated_at') {
+               $dateColumn = 'updated_at';
+            } else {
+               $dateColumn = 'date';
+            }
             
             $query = SalesReturn::with([
                     'saleReturnDescriptions.item',
@@ -4710,13 +4714,23 @@ class SalesReturnController extends Controller
             
             /* ✅ Apply date filter */
             if ($dateType === 'created_at') {
-                $query->whereDate($dateColumn, '>=', $request->from_date)
-                      ->whereDate($dateColumn, '<=', $request->to_date);
+
+               $query->whereDate($dateColumn, '>=', $request->from_date)
+                     ->whereDate($dateColumn, '<=', $request->to_date);
+
+            } elseif ($dateType === 'updated_at') {
+
+               $query->whereDate($dateColumn, '>=', $request->from_date)
+                     ->whereDate($dateColumn, '<=', $request->to_date)
+                     ->whereNotNull('updated_by');
+
             } else {
-                $query->whereBetween($dateColumn, [
-                    $request->from_date,
-                    $request->to_date
-                ]);
+
+               $query->whereBetween($dateColumn, [
+                  $request->from_date,
+                  $request->to_date
+               ]);
+
             }
             
             $saleReturns = $query

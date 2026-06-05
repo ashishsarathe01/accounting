@@ -4569,7 +4569,7 @@ class PurchaseReturnController extends Controller
   $request->validate([
                     'from_date'     => 'required|date',
                     'to_date'       => 'required|date',
-                    'date_type'     => 'required|in:created_at,voucher_date',
+                    'date_type'     => 'required|in:created_at,voucher_date,updated_at',
                     'sr_type'       => 'required|in:WITH ITEM,RATE DIFFERENCE',
                     'purchase_area' => 'required|in:LOCAL,CENTER',
                 ]);
@@ -4579,9 +4579,13 @@ class PurchaseReturnController extends Controller
                 $srType       = $request->sr_type;
                 
                 $dateType   = $request->date_type;
-                $dateColumn = $dateType === 'created_at'
-                    ? 'created_at'
-                    : 'date';
+                  if ($dateType === 'created_at') {
+                     $dateColumn = 'created_at';
+                  } elseif ($dateType === 'updated_at') {
+                     $dateColumn = 'updated_at';
+                  } else {
+                     $dateColumn = 'date';
+                  }
                 
                 $query = \App\Models\PurchaseReturn::with([
                         'purchaseReturnDescription.item',
@@ -4597,15 +4601,25 @@ class PurchaseReturnController extends Controller
                     });
                 
                 /* ✅ Apply date filter */
-                if ($dateType === 'created_at') {
-                    $query->whereDate($dateColumn, '>=', $request->from_date)
-                          ->whereDate($dateColumn, '<=', $request->to_date);
-                } else {
-                    $query->whereBetween($dateColumn, [
+                  if ($dateType === 'created_at') {
+
+                     $query->whereDate($dateColumn, '>=', $request->from_date)
+                           ->whereDate($dateColumn, '<=', $request->to_date);
+
+                  } elseif ($dateType === 'updated_at') {
+
+                     $query->whereDate($dateColumn, '>=', $request->from_date)
+                           ->whereDate($dateColumn, '<=', $request->to_date)
+                           ->whereNotNull('updated_by');
+
+                  } else {
+
+                     $query->whereBetween($dateColumn, [
                         $request->from_date,
                         $request->to_date
-                    ]);
-                }
+                     ]);
+
+                  }
                 
                 $purchaseReturns = $query
                     ->orderBy($dateColumn)

@@ -24,77 +24,95 @@
 
             <div class="card shadow-sm border-0 mb-4">
                <div class="card-body">
-                  <form method="POST" action="{{ route('purchase-return-export') }}" class="row g-4">
-                     @csrf
-
-                     <div class="col-md-4">
-                        <label class="form-label fw-semibold">From Date</label>
-                        <input type="date"
-                               name="from_date"
-                               class="form-control"
-                               required
-                               value="{{ old('from_date', date('Y-m-d')) }}">
-                     </div>
-
-                     <div class="col-md-4">
-                        <label class="form-label fw-semibold">To Date</label>
-                        <input type="date"
-                               name="to_date"
-                               class="form-control"
-                               required
-                               value="{{ old('to_date', date('Y-m-d')) }}">
-                     </div>
-
-                     <div class="col-md-4">
-                        <label class="form-label fw-semibold">Purchase Return Type</label>
-                        <div class="d-flex mt-2">
-                           <div class="form-check me-4">
-                              <input class="form-check-input"
-                                     type="radio"
-                                     name="sr_type"
-                                     value="WITH ITEM"
-                                     checked>
-                              <label class="form-check-label">WITH ITEM</label>
-                           </div>
-
-                           <div class="form-check">
-                              <input class="form-check-input"
-                                     type="radio"
-                                     name="sr_type"
-                                     value="RATE DIFFERENCE">
-                              <label class="form-check-label">RATE DIFFERENCE</label>
-                           </div>
-                        </div>
-                     </div>
-<div class="col-md-4">
-   <label class="form-label fw-semibold">Purchase Area</label>
-   <div class="d-flex mt-2">
-      <div class="form-check me-4">
-         <input class="form-check-input"
-                type="radio"
-                name="purchase_area"
-                value="LOCAL"
-                {{ old('purchase_area','LOCAL') == 'LOCAL' ? 'checked' : '' }}>
-         <label class="form-check-label">LOCAL</label>
-      </div>
-
-      <div class="form-check">
-         <input class="form-check-input"
-                type="radio"
-                name="purchase_area"
-                value="CENTER"
-                {{ old('purchase_area') == 'CENTER' ? 'checked' : '' }}>
-         <label class="form-check-label">CENTER</label>
-      </div>
-   </div>
-</div>
-
-                     <div class="col-md-12 d-flex justify-content-end mt-3">
-                        <button type="submit" class="btn btn-primary px-5 py-2 fw-semibold">
-                           Download CSV
-                        </button>
-                     </div>
-                  </form>
+                 <form method="POST" action="{{ route('purchase-return-export') }}" class="row g-4">
+                            @csrf
+                        
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">From Date</label>
+                                <input type="date"
+                                       name="from_date"
+                                       class="form-control"
+                                       required
+                                       value="{{ old('from_date', date('Y-m-d')) }}">
+                            </div>
+                        
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">To Date</label>
+                                <input type="date"
+                                       name="to_date"
+                                       class="form-control"
+                                       required
+                                       value="{{ old('to_date', date('Y-m-d')) }}">
+                            </div>
+                        
+                            <!-- ✅ Date Type -->
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Date Type</label>
+                                <select name="date_type" class="form-select" required>
+                                    <option value="created_at" {{ old('date_type') == 'created_at' ? 'selected' : '' }}>
+                                        Created Date
+                                    </option>
+                                    <option value="voucher_date" {{ old('date_type') == 'voucher_date' ? 'selected' : '' }}>
+                                        Voucher Date
+                                    </option>
+                                    <option value="updated_at" {{ old('date_type') == 'updated_at' ? 'selected' : '' }}>
+                                        Updated Date
+                                    </option>
+                                </select>
+                            </div>
+                        
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Purchase Return Type</label>
+                                <div class="d-flex mt-2">
+                                    <div class="form-check me-4">
+                                        <input class="form-check-input"
+                                               type="radio"
+                                               name="sr_type"
+                                               value="WITH ITEM"
+                                               {{ old('sr_type','WITH ITEM') == 'WITH ITEM' ? 'checked' : '' }}>
+                                        <label class="form-check-label">WITH ITEM</label>
+                                    </div>
+                        
+                                    <div class="form-check">
+                                        <input class="form-check-input"
+                                               type="radio"
+                                               name="sr_type"
+                                               value="RATE DIFFERENCE"
+                                               {{ old('sr_type') == 'RATE DIFFERENCE' ? 'checked' : '' }}>
+                                        <label class="form-check-label">RATE DIFFERENCE</label>
+                                    </div>
+                                </div>
+                            </div>
+                        
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Purchase Area</label>
+                                <div class="d-flex mt-2">
+                                    <div class="form-check me-4">
+                                        <input class="form-check-input"
+                                               type="radio"
+                                               name="purchase_area"
+                                               value="LOCAL"
+                                               {{ old('purchase_area','LOCAL') == 'LOCAL' ? 'checked' : '' }}>
+                                        <label class="form-check-label">LOCAL</label>
+                                    </div>
+                        
+                                    <div class="form-check">
+                                        <input class="form-check-input"
+                                               type="radio"
+                                               name="purchase_area"
+                                               value="CENTER"
+                                               {{ old('purchase_area') == 'CENTER' ? 'checked' : '' }}>
+                                        <label class="form-check-label">CENTER</label>
+                                    </div>
+                                </div>
+                            </div>
+                        
+                            <div class="col-md-12 d-flex justify-content-end mt-3">
+                                <button type="submit" class="btn btn-primary px-5 py-2 fw-semibold">
+                                    Download CSV
+                                </button>
+                            </div>
+                        </form>
                </div>
             </div>
 

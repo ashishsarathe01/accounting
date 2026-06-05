@@ -1275,7 +1275,7 @@ class PaymentController extends Controller
     $request->validate([
     'from_date'   => 'required|date',
     'to_date'     => 'required|date',
-    'date_type'   => 'required|in:created_at,voucher_date',
+    'date_type'   => 'required|in:created_at,voucher_date,updated_at',
     'export_type' => 'required|in:new,old',
         ]);
         
@@ -1286,23 +1286,35 @@ class PaymentController extends Controller
         $to   = $request->to_date;
         
         $dateType   = $request->date_type;
-        $dateColumn = $dateType === 'created_at'
-            ? 'created_at'
-            : 'date';
+         if ($dateType === 'created_at') {
+            $dateColumn = 'created_at';
+         } elseif ($dateType === 'updated_at') {
+            $dateColumn = 'updated_at';
+         } else {
+            $dateColumn = 'date';
+         }
         
         $query = DB::table('payments')
             ->where('company_id', $company_id)
             ->where('delete', '0');
         
         /* ✅ Apply correct date filter */
-        if ($dateType === 'created_at') {
-            // created_at is datetime
+         if ($dateType === 'created_at') {
+
             $query->whereDate($dateColumn, '>=', $from)
                   ->whereDate($dateColumn, '<=', $to);
-        } else {
-            // voucher date
+
+         } elseif ($dateType === 'updated_at') {
+
+            $query->whereDate($dateColumn, '>=', $from)
+                  ->whereDate($dateColumn, '<=', $to)
+                  ->whereNotNull('updated_by');
+
+         } else {
+
             $query->whereBetween($dateColumn, [$from, $to]);
-        }
+
+}
         
         $payments = $query
             ->orderBy($dateColumn, 'asc')

@@ -65,7 +65,6 @@
                                 <th class="w-min-120 border-none bg-light-pink text-body " style="text-align:right;">Debit(Rs.)
                                 </th>
                                 <th class="w-min-120 border-none bg-light-pink text-body " style="text-align:right;">Credit(Rs.)</th>
-                                <th class="w-min-120 border-none bg-light-pink text-body ">Mode</th>
                                 <th class="w-min-120 border-none bg-light-pink text-body">Series </th>
                                 <th class="w-min-120 border-none bg-light-pink text-body text-center">Action </th>
                             </tr>
@@ -130,23 +129,7 @@
                                 ?></td>
 
                                 <!-- Mode (shown once per con_id) -->
-                                <td class="w-min-120 ">
-                                    <?php 
-                                    if ($value->con_id != $prev_con_id) {
-                                        if($value->m == '1'){
-                                            echo 'Cash';
-                                        } else if($value->m == '0'){
-                                            echo 'IMPS/NEFT/RTGS'; 
-                                        } else if($value->m == '2'){
-                                            echo 'CHEQUE';
-                                        } else {
-                                            echo 'IMPS/NEFT/RTGS'; 
-                                        }
-                                    } else {
-                                        echo "&nbsp;";
-                                    }
-                                    ?>
-                                </td>
+                                
 
                                 <!-- Series Number (shown once per con_id) -->
                                 <td class="w-min-120 ">
@@ -177,7 +160,7 @@
                             </tr>
                             <?php if($is_last){ ?>
                             <tr class="font-12 text-muted bg-light">
-                            <td colspan="8" class="ps-4 py-1" style="text-align:left;">
+                            <td colspan="7" class="ps-4 py-1" style="text-align:left;">
                                 
                                 <strong>Created By:</strong> 
                                 {{ $value->created_by_name ?? '-' }}
@@ -206,7 +189,6 @@
                                 <td class="w-min-120 fw-bold font-heading" style="text-align: right;"><?php echo $tot_dbt;?></td>
                                 <td class="w-min-120 fw-bold font-heading" style="text-align: right;"><?php echo $tot_crt;?></td>
                                 <td class="w-min-120"></td>
-                                <td class="w-min-120 "></td>
                                 <td class="w-min-120 "></td>
                                 </td>
                             </tr>
@@ -450,7 +432,7 @@
 
         let header = [];
         $("#contra_table thead th").each(function (index) {
-            if(index != 7){
+            if(index != 6){
                 header.push($(this).text().trim());
             }
         });
@@ -467,7 +449,7 @@
 
             $(this).find("td").each(function (index) {
 
-                if(index == 7) return; // skip action
+                if(index == 6) return; // skip action
 
                 let text = $(this).text().trim()
                     .replace(/\n/g, '')
@@ -545,7 +527,6 @@
                         <th>Account</th>
                         <th class="text-right">Debit</th>
                         <th class="text-right">Credit</th>
-                        <th>Mode</th>
                         <th>Series</th>
                     </tr>
                 </thead>
@@ -574,8 +555,7 @@
             let acc    = $(tds[2]).text().trim();
             let debit  = $(tds[3]).text().trim();
             let credit = $(tds[4]).text().trim();
-            let mode   = $(tds[5]).text().trim();
-            let series = $(tds[6]).text().trim();
+            let series = $(tds[5]).text().trim();
 
             let isSubRow = (date === "" && vch === "");
 
@@ -586,7 +566,6 @@
                     <td>${acc}</td>
                     <td class="text-right">${debit}</td>
                     <td class="text-right">${credit}</td>
-                    <td>${mode}</td>
                     <td>${series}</td>
                 </tr>
             `;

@@ -81,19 +81,7 @@
                             <input type="hidden" id="voucher_no" name="voucher_no">
                             <input type="hidden" id="manual_enter_invoice_no" name="manual_enter_invoice_no">
                         </div>
-                        <div class="mb-2 col-md-2">
-                           <label for="name" class="form-label font-14 font-heading">Mode</label>
-                           <select id="mode" class="form-control" name="mode">
-                              <option value="">Select Mode</option>
-                              <option value="0">IMPS/NEFT/RTGS</option>
-                              <option value="1">CASH</option>                        
-                              <option value="2">CHEQUE</option>
-                           </select>
-                        </div>
-                        <div class="mb-2 col-md-2">
-                           <label for="name" class="form-label font-14 font-heading">Cheque No.</label>
-                           <input type="text" id="cheque_no" class="form-control" name="cheque_no" placeholder="Cheque No." readonly>
-                        </div>
+                        
                     </div>
                     <div class="transaction-table transaction-main-table bg-white table-view shadow-sm border-radius-8 mb-4">
                         <table id="example11" class="table-striped table m-0 shadow-sm table-bordered">
@@ -103,7 +91,6 @@
                                     <th class="w-min-120 border-none bg-light-pink text-body ">Account</th>
                                     <th class="w-min-120 border-none bg-light-pink text-body ">Debit</th>
                                     <th class="w-min-120 border-none bg-light-pink text-body ">Credit</th>
-                                    <th class="w-min-120 border-none bg-light-pink text-body ">Narration</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -130,10 +117,6 @@
                                     <td class="">
                                         <input type="number" name="credit[]" class="form-control credit" data-id="1" id="credit_1" placeholder="Credit Amount" onkeyup="creditTotal();">
                                     </td>
-                                    
-                                    <td class="">
-                                        <input type="text" name="narration[]" class="form-control narration" data-id="1" id="narration_1" placeholder="Enter Narration" value="">
-                                    </td>
                                 </tr>
                                 <tr class="font-14 font-heading bg-white">
                                     <td class="">
@@ -158,10 +141,6 @@
                                     <td class="">
                                         <input type="number" name="credit[]" class="form-control credit" data-id="2" id="credit_2" placeholder="Credit Amount" readonly onkeyup="creditTotal();">
                                     </td>
-                                    
-                                    <td class="">
-                                        <input type="text" name="narration[]" class="form-control narration" data-id="2" id="narration_2" placeholder="Enter Narration" value="">
-                                    </td>
                                 </tr>
                             </tbody>
                             <div class="plus-icon">
@@ -181,11 +160,9 @@
                                     <td class="w-min-120 fw-bold">Total</td>
                                     <td class="w-min-120 fw-bold" id="total_debit"></td>
                                     <td class="w-min-120 fw-bold" id="total_credit"></td>
-                                    <td></td>
-                                    <td></td>
                                 </tr>
                                 <tr class="font-14 font-heading bg-white">
-                           <td colspan="6"><input type="text" class="form-control" placeholder="Enter Long Narration" name="long_narration"></td>
+                           <td colspan="4"><input type="text" class="form-control" placeholder="Enter Long Narration" name="long_narration"></td>
                         </tr>
                             </div>
                         </table>
@@ -380,7 +357,7 @@ setTimeout(function(){
             nextRow.find(".type").focus();
         } 
         else if (prevRow.length) {
-            prevRow.find(".narration").focus();
+            prevRow.find(".type").focus();
         }
 
     }, 100);
@@ -408,7 +385,6 @@ setTimeout(function(){
         return false;
         }
            let date = $("#date").val();
-        let mode = $("#mode").val();
         let series_no = $("#series_no").val(); // Added series_no validation
 
         // Field-wise alerts
@@ -417,10 +393,6 @@ setTimeout(function(){
             return false;
         }
 
-        if (mode === "") {
-            alert("Please select a Mode.");
-            return false;
-        }
 
         if (series_no === "") {
             alert("Please enter the Series Name/Number.");
@@ -433,14 +405,14 @@ setTimeout(function(){
           let error = false;
           $(".type").each(function() {
              let id = $(this).attr('data-id');
-             if($(this).val() != '' && $("#account_" + id).val() != "" && $("#date").val()!='' && $("#mode").val()!='') {
+             if($(this).val() != '' && $("#account_" + id).val() != "" && $("#date").val()!='') {
                 if($(this).val() == "Credit" && $("#credit_" + id).val() != ""  && $("#account_" + id).val() != "") {
                    form_data.push({
                       "type": "Credit",
                       "credit": $("#credit_" + id).val(),
                       "debit": 0,
                       "user_id": $("#account_" + id).val(),
-                      "remark": $("#narration_" + id).val()
+                      "remark": ""
                    });
                    cr = parseFloat(cr) + parseFloat($("#credit_" + id).val());
                 }else if($(this).val() == "Debit" && $("#debit_" + id).val() != ""  && $("#account_" + id).val() != "") {
@@ -449,7 +421,7 @@ setTimeout(function(){
                       "credit": 0,
                       "debit": $("#debit_" + id).val(),
                       "user_id": $("#account_" + id).val(),
-                      "remark": $("#narration_" + id).val()
+                      "remark": ""
                    });
                    dr = parseFloat(dr) + parseFloat($("#debit_" + id).val());
                 }
@@ -491,13 +463,6 @@ setTimeout(function(){
        $("#total_credit").html(total_credit_amount);
     }
 
-    $("#mode").change(function(){
-       $("#cheque_no").val('');
-       $("#cheque_no").prop('readonly',true);
-       if($(this).val()==2){
-          $("#cheque_no").prop('readonly',false);
-       }
-    });
    $(document).on("change",".debit",function(){
       // let id = $(this).attr('data-id');
       // let ind = parseInt(id)+1;
@@ -603,22 +568,7 @@ $(document).on('change','select[id^="type_"]',function(){
     },100);
 
 });
-$(document).on("keydown",".narration",function(e){
 
-    if(e.key === "Tab" && !e.shiftKey){
-
-        let id = $(this).data("id");
-
-        let next = $("#type_"+(parseInt(id)+1));
-
-        if(next.length){
-            e.preventDefault();
-            next.focus();
-        }
-
-    }
-
-});
 $(document).on("keydown","input,textarea",function(e){
 
     if(e.key === "Enter"){

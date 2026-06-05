@@ -87,19 +87,6 @@
                      <input type="hidden" id="voucher_no" name="voucher_no" value="{{ $contra->voucher_no }}">
                      <input type="hidden" id="manual_enter_invoice_no" name="manual_enter_invoice_no">
                   </div>
-                  <div class="mb-2 col-md-2">
-                     <label for="name" class="form-label font-14 font-heading">Mode</label>
-                     <select id="mode" class="form-control" name="mode">
-                        <option value="">Select Mode</option>
-                        <option value="0" @if($contra->mode==0) selected @endif>IMPS/NEFT/RTGS</option>
-                        <option value="1" @if($contra->mode==1) selected @endif>CASH</option>                        
-                        <option value="2" @if($contra->mode==2) selected @endif>CHEQUE</option>
-                     </select>
-                  </div>
-                  <div class="mb-2 col-md-2">
-                     <label for="name" class="form-label font-14 font-heading">Cheque No.</label>
-                     <input type="text" id="cheque_no" class="form-control" name="cheque_no" placeholder="Cheque No." @if($contra->mode!=2) readonly @endif value="{{$contra->cheque_no}}">
-                  </div>
                </div>
                <div class="transaction-table transaction-main-table bg-white table-view shadow-sm border-radius-8 mb-4">
                   <table id="example11" class="table-striped table m-0 shadow-sm table-bordered">
@@ -109,7 +96,6 @@
                            <th class="w-min-120 border-none bg-light-pink text-body ">Account</th>
                            <th class="w-min-120 border-none bg-light-pink text-body ">Debit</th>
                            <th class="w-min-120 border-none bg-light-pink text-body ">Credit</th>
-                           <th class="w-min-120 border-none bg-light-pink text-body ">Narration</th>
                         </tr>
                      </thead>
                      <?php
@@ -145,10 +131,6 @@
                               <td class="">
                                  <input type="number" name="credit[]" value="<?php echo $value->credit; ?>" class="form-control credit" data-id="<?php echo $i?>" id="credit_<?php echo $i?>" placeholder="Credit Amount" <?php if($value->type=="Debit"){ echo 'readonly'; }?> onkeyup="creditTotal();">
                               </td>
-                              
-                              <td class="">
-                                 <input type="text" name="narration[]" value="<?php echo $value->narration; ?>" class="form-control narration" data-id="<?php echo $i?>" id="narration_<?php echo $i?>" placeholder="Enter Narration" value="">
-                              </td>
                               <td>
                                  {{-- <svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="<?php echo $i;?>" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg> --}}
                                  
@@ -171,11 +153,9 @@
                            <td class="w-min-120 fw-bold">Total</td>
                            <td class="w-min-120 fw-bold" id="total_debit"></td>
                            <td class="w-min-120 fw-bold" id="total_credit"></td>
-                           <td></td>
-                           <td></td>
                         </tr>
                         <tr class="font-14 font-heading bg-white">
-                           <td colspan="6"><input type="text" class="form-control" placeholder="Enter Long Narration" name="long_narration" value="{{$contra->long_narration}}"></td>
+                           <td colspan="4"><input type="text" class="form-control" placeholder="Enter Long Narration" name="long_narration" value="{{$contra->long_narration}}"></td>
                         </tr>
                      </div>
                   </table>
@@ -312,14 +292,14 @@
          let error = false;
          $(".type").each(function() {
             let id = $(this).attr('data-id');
-            if($(this).val() != '' && $("#account_" + id).val() != "" && $("#date").val()!='' && $("#mode").val()!='') {
+            if($(this).val() != '' && $("#account_" + id).val() != "" && $("#date").val()!='') {
                if($(this).val() == "Credit" && $("#credit_" + id).val() != "" && $("#account_" + id).val() != "") {
                   form_data.push({
                      "type": "Credit",
                      "credit": $("#credit_" + id).val(),
                      "debit": 0,
                      "user_id": $("#account_" + id).val(),
-                     "remark": $("#narration_" + id).val(),
+                     "remark": "",
                     
                   });
                   cr = parseFloat(cr) + parseFloat($("#credit_" + id).val());
@@ -329,7 +309,7 @@
                      "credit": 0,
                      "debit": $("#debit_" + id).val(),
                      "user_id": $("#account_" + id).val(),
-                     "remark": $("#narration_" + id).val()
+                     "remark": ""
                   });
                   dr = parseFloat(dr) + parseFloat($("#debit_" + id).val());
                }
@@ -359,13 +339,7 @@
 });
 $("#date").focus();
    });
-   $("#mode").change(function(){
-      $("#cheque_no").val('');
-      $("#cheque_no").prop('readonly',true);
-      if($(this).val()==2){
-         $("#cheque_no").prop('readonly',false);
-      }
-   });
+
    
 $(document).on('select2:select','select[id^="account_"]',function(){
 
@@ -426,22 +400,7 @@ $(document).on('change','select[id^="type_"]',function(){
     },100);
 
 });
-$(document).on("keydown",".narration",function(e){
 
-    if(e.key === "Tab" && !e.shiftKey){
-
-        let id = $(this).data("id");
-
-        let next = $("#type_"+(parseInt(id)+1));
-
-        if(next.length){
-            e.preventDefault();
-            next.focus();
-        }
-
-    }
-
-});
 $(document).ready(function(){
 
     let isEditPage = true;

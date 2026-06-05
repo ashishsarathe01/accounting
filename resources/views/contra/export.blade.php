@@ -25,35 +25,50 @@
             <div class="card shadow-sm border-0 mb-4">
                <div class="card-body">
                   <form method="POST" action="{{ route('contra-export') }}" class="row g-4">
-                     @csrf
-
-                     <div class="col-md-4">
-                        <label for="from_date" class="form-label fw-semibold">From Date</label>
-                        <input type="date"
-                               id="from_date"
-                               name="from_date"
-                               class="form-control"
-                               required
-                               value="{{ old('from_date', date('Y-m-d')) }}">
-                     </div>
-
-                     <div class="col-md-4">
-                        <label for="to_date" class="form-label fw-semibold">To Date</label>
-                        <input type="date"
-                               id="to_date"
-                               name="to_date"
-                               class="form-control"
-                               required
-                               value="{{ old('to_date', date('Y-m-d')) }}">
-                     </div>
-
-                     <div class="col-md-4 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary px-5 py-2 fw-semibold">
-                           Download CSV
-                        </button>
-                     </div>
-
-                  </form>
+                        @csrf
+                    
+                        <div class="col-md-4">
+                            <label for="from_date" class="form-label fw-semibold">From Date</label>
+                            <input type="date"
+                                   id="from_date"
+                                   name="from_date"
+                                   class="form-control"
+                                   required
+                                   value="{{ old('from_date', date('Y-m-d')) }}">
+                        </div>
+                    
+                        <div class="col-md-4">
+                            <label for="to_date" class="form-label fw-semibold">To Date</label>
+                            <input type="date"
+                                   id="to_date"
+                                   name="to_date"
+                                   class="form-control"
+                                   required
+                                   value="{{ old('to_date', date('Y-m-d')) }}">
+                        </div>
+                    
+                        <!-- ✅ Date Type -->
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Date Type</label>
+                            <select name="date_type" class="form-select" required>
+                                <option value="created_at" {{ old('date_type') == 'created_at' ? 'selected' : '' }}>
+                                    Created Date
+                                </option>
+                                <option value="voucher_date" {{ old('date_type') == 'voucher_date' ? 'selected' : '' }}>
+                                    Voucher Date
+                                </option>
+                                <option value="updated_at" {{ old('date_type') == 'updated_at' ? 'selected' : '' }}>
+                                    Updated Date
+                                </option>
+                            </select>
+                        </div>
+                    
+                        <div class="col-md-12 d-flex justify-content-end">
+                            <button type="submit" class="btn btn-primary px-5 py-2 fw-semibold">
+                                Download CSV
+                            </button>
+                        </div>
+                </form>
                </div>
             </div>
 

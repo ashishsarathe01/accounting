@@ -23,44 +23,60 @@
 
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-body">
-                    <form method="POST" action="{{ route('sale-bill-export') }}" class="row g-4">
-                        @csrf
-
-                        <div class="col-md-4">
-                            <label for="from_date" class="form-label fw-semibold">From Date</label>
-                            <input type="date" id="from_date" name="from_date" class="form-control" 
-                                   required value="{{ old('from_date', date('Y-m-d')) }}">
-                        </div>
-
-                        <div class="col-md-4">
-                            <label for="to_date" class="form-label fw-semibold">To Date</label>
-                            <input type="date" id="to_date" name="to_date" class="form-control" 
-                                   required value="{{ old('to_date', date('Y-m-d')) }}">
-                        </div>
-
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">Sale Type</label>
-                            <div class="d-flex mt-2">
-                                <div class="form-check me-4">
-                                    <input class="form-check-input" type="radio" name="sale_type" id="sale_local"
-                                        value="LOCAL" {{ old('sale_type','LOCAL') == 'LOCAL' ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="sale_local">LOCAL</label>
-                                </div>
-
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="sale_type" id="sale_center"
-                                        value="CENTER" {{ old('sale_type') == 'CENTER' ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="sale_center">CENTER</label>
+                   <form method="POST" action="{{ route('sale-bill-export') }}" class="row g-4">
+                            @csrf
+                        
+                            <div class="col-md-3">
+                                <label for="from_date" class="form-label fw-semibold">From Date</label>
+                                <input type="date" id="from_date" name="from_date" class="form-control" 
+                                       required value="{{ old('from_date', date('Y-m-d')) }}">
+                            </div>
+                        
+                            <div class="col-md-3">
+                                <label for="to_date" class="form-label fw-semibold">To Date</label>
+                                <input type="date" id="to_date" name="to_date" class="form-control" 
+                                       required value="{{ old('to_date', date('Y-m-d')) }}">
+                            </div>
+                        
+                            <!-- ✅ Date Type -->
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Date Type</label>
+                                <select name="date_type" class="form-select" required>
+                                    <option value="created_at" {{ old('date_type') == 'created_at' ? 'selected' : '' }}>
+                                        Created Date
+                                    </option>
+                                    <option value="voucher_date" {{ old('date_type') == 'voucher_date' ? 'selected' : '' }}>
+                                        Voucher Date
+                                    </option>
+                                    <option value="updated_at" {{ old('date_type') == 'updated_at' ? 'selected' : '' }}>
+                                        Updated Date
+                                    </option>
+                                </select>
+                            </div>
+                        
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Sale Type</label>
+                                <div class="d-flex mt-2">
+                                    <div class="form-check me-4">
+                                        <input class="form-check-input" type="radio" name="sale_type" id="sale_local"
+                                            value="LOCAL" {{ old('sale_type','LOCAL') == 'LOCAL' ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="sale_local">LOCAL</label>
+                                    </div>
+                        
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="sale_type" id="sale_center"
+                                            value="CENTER" {{ old('sale_type') == 'CENTER' ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="sale_center">CENTER</label>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="col-md-12 d-flex justify-content-end mt-3">
-                            <button type="submit" class="btn btn-primary px-5 py-2 fw-semibold">
-                                Download CSV
-                            </button>
-                        </div>
-                    </form>
+                        
+                            <div class="col-md-12 d-flex justify-content-end mt-3">
+                                <button type="submit" class="btn btn-primary px-5 py-2 fw-semibold">
+                                    Download CSV
+                                </button>
+                            </div>
+                        </form>
                 </div>
             </div>
 

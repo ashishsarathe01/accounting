@@ -80,22 +80,29 @@
                   </div>
                   
                   <div class="mb-2 col-md-2">
-                     <label for="series_no" class="form-label font-14 font-heading">Series No.</label>
-                     <select id="series_no" class="form-control select2-single" name="series_no">
-                        <option value="">Select Series</option>
-                        <?php
-                        if(count($mat_series) > 0) {
-                           foreach ($mat_series as $value) { ?>
-                              <option value="<?php echo $value->series; ?>"
-                                 data-invoice_start_from="<?php echo $value->invoice_start_from ?? ''; ?>"
-                                 data-invoice_prefix="<?php echo $value->invoice_prefix ?? ''; ?>"
-                                 data-manual_enter_invoice_no="<?php echo $value->manual_enter_invoice_no ?? ''; ?>"
-                              >
-                                 <?php echo $value->series; ?>
+                     <label for="series_no" class="form-label font-14 font-heading">
+                        Series No.
+                     </label>
+
+                     <select id="series_no"
+                              class="form-control select2-single"
+                              name="series_no"
+                              {{ count($mat_series) == 1 ? 'readonly' : '' }}>
+
+                        @if(count($mat_series) > 1)
+                              <option value="">Select Series</option>
+                        @endif
+
+                        @foreach($mat_series as $value)
+                              <option value="{{ $value->series }}"
+                                 data-invoice_start_from="{{ $value->invoice_start_from ?? '' }}"
+                                 data-invoice_prefix="{{ $value->invoice_prefix ?? '' }}"
+                                 data-manual_enter_invoice_no="{{ $value->manual_enter_invoice_no ?? '' }}"
+                                 {{ count($mat_series) == 1 ? 'selected' : '' }}>
+                                 {{ $value->series }}
                               </option>
-                              <?php 
-                           }
-                        } ?>
+                        @endforeach
+
                      </select>
                   </div>
                   <div class="mb-2 col-md-2">
