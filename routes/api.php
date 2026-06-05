@@ -32,6 +32,7 @@ use App\Http\Controllers\API\DebitNoteController;
 use App\Http\Controllers\API\CreditNoteController;
 use App\Http\Controllers\API\StockController;
 use App\Http\Controllers\API\AccountLedgerController;
+use App\Http\Controllers\API\ContraController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -346,7 +347,12 @@ Route::middleware('auth:api')->group(function(){
     // Route::post('credit-notes/update/{id}', [CreditNoteController::class, 'update']);
     // Route::delete('credit-notes/delete/{id}', [CreditNoteController::class, 'destroy']);
     
-    
+        /*
+    |--------------------------------------------------------------------------
+    | Contra Transactions APIs
+    |--------------------------------------------------------------------------
+    */
+    Route::post('contra-list', [ContraController::class, 'index']);
     
     Route::post('/financial-year/manage', [CompanyController::class, 'manageFinancialYearApi']);
     
