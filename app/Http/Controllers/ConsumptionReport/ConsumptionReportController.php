@@ -178,13 +178,65 @@ public function report(Request $request)
             'per_kg'         => $perKg,
         ];
     }
+    $totalProduction = DB::table('account_production_details')
+        ->whereBetween('production_date', [$from_date, $to_date])
+        ->where('company_id', $company_id)
+        ->sum('new_weight');
 
+    $productionDetails = DB::table('account_production_details as apd')
+        ->join('manage_items as mi', 'mi.id', '=', 'apd.new_item')
+        ->select(
+            'apd.new_item as item_id',
+            'mi.name as item_name',
+            DB::raw('SUM(apd.new_weight) as total')
+        )
+        ->whereBetween('apd.production_date', [$from_date, $to_date])
+        ->where('apd.company_id', $company_id)
+        ->groupBy('apd.new_item', 'mi.name')
+        ->get();
+
+    $electricity = DB::table('consumption')
+        ->where('company_id', $company_id)
+        ->whereBetween('date', [$from_date, $to_date])
+        ->selectRaw('
+            SUM(COALESCE(electricity_units,0) + COALESCE(electricity_unit_night,0)) as total_units,
+            SUM(
+                (COALESCE(electricity_units,0) + COALESCE(electricity_unit_night,0))
+                * COALESCE(unit_price,0)
+            ) as total_amount
+        ')
+        ->first();
+
+    $electricityQty = $electricity->total_units ?? 0;
+    $electricityAmount = $electricity->total_amount ?? 0;
+
+    $electricityAvgPrice = 0;
+
+    if ($electricityQty > 0) {
+        $electricityAvgPrice = $electricityAmount / $electricityQty;
+    }
+
+    $electricityPerKg = 0;
+
+    if ($totalProduction > 0) {
+        $electricityPerKg = $electricityAmount / $totalProduction;
+    }
+    $reportData[] = [
+        'item_name'      => 'ELECTRICITY',
+        'qty'            => $electricityQty,
+        'amount'         => $electricityAmount,
+        'avg_price'      => $electricityAvgPrice,
+        'generated_qty'  => $totalProduction,
+        'per_kg'         => $electricityPerKg,
+    ];
     return view(
         'ConsumptionReport.Report',
         compact(
             'from_date',
             'to_date',
-            'reportData'
+            'reportData',
+            'productionDetails',
+            'totalProduction'
         )
     );
 }

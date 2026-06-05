@@ -162,6 +162,69 @@
         {{ date('d-m-Y', strtotime($to_date)) }}
 
     </div>
+    <table class="table table-bordered table-striped mb-3">
+
+        <thead>
+
+            <tr>
+
+                <th width="5%">
+                    S.No.
+                </th>
+
+                <th>
+                    Total Production
+                </th>
+
+                <th style="text-align:right;">
+                    Weight
+                </th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            @foreach($productionDetails as $key => $row)
+
+                <tr>
+
+                    <td>
+                        {{ $key + 1 }}
+                    </td>
+
+                    <td>
+                        {{ $row->item_name }}
+                    </td>
+
+                    <td style="text-align:right;">
+                        {{ number_format($row->total, 2) }}
+                    </td>
+
+                </tr>
+
+            @endforeach
+
+        </tbody>
+
+        <tfoot>
+
+            <tr style="font-weight:bold;">
+
+                <td colspan="2">
+                    Total Production
+                </td>
+
+                <td style="text-align:right;">
+                    {{ number_format($totalProduction, 2) }}
+                </td>
+
+            </tr>
+
+        </tfoot>
+
+    </table>
     <table class="table table-bordered table-striped m-0">
 
         <thead>
@@ -176,23 +239,23 @@
                     Consumed Item
                 </th>
 
-                <th class="text-right">
+                <th style="text-align:right;">
                     Qty
                 </th>
 
-                <th class="text-right">
+                <th style="text-align:right;">
                     Amount
                 </th>
 
-                <th class="text-right">
+                <th style="text-align:right;">
                     Avg Price
                 </th>
 
-                <th class="text-right">
+                <th style="text-align:right;">
                     Generated Qty
                 </th>
 
-                <th class="text-right">
+                <th style="text-align:right;">
                     Per KG
                 </th>
 
@@ -207,6 +270,7 @@
                 $totalQty = 0;
                 $totalAmount = 0;
                 $totalGeneratedQty = 0;
+                $totalPerKg = 0;
 
             @endphp
 
@@ -217,6 +281,7 @@
                     $totalQty += $row['qty'];
                     $totalAmount += $row['amount'];
                     $totalGeneratedQty += $row['generated_qty'];
+                    $totalPerKg += round($row['per_kg'], 2);
 
                 @endphp
 
@@ -230,24 +295,24 @@
                         {{ $row['item_name'] }}
                     </td>
 
-                    <td class="text-right">
+                    <td style="text-align:right;">
                         {{ number_format($row['qty'], 2) }}
                     </td>
 
-                    <td class="text-right">
+                    <td style="text-align:right;">
                         {{ number_format($row['amount'], 2) }}
                     </td>
 
-                    <td class="text-right">
+                    <td style="text-align:right;">
                         {{ number_format($row['avg_price'], 2) }}
                     </td>
 
-                    <td class="text-right">
+                    <td style="text-align:right;">
                         {{ number_format($row['generated_qty'], 2) }}
                     </td>
 
-                    <td class="text-right">
-                        {{ number_format($row['per_kg'], 4) }}
+                    <td style="text-align:right;">
+                        {{ number_format($row['per_kg'], 2) }}
                     </td>
 
                 </tr>
@@ -276,21 +341,23 @@
                     Total
                 </td>
 
-                <td class="text-right">
+                <td style="text-align:right;">
                     {{ number_format($totalQty, 2) }}
                 </td>
 
-                <td class="text-right">
+                <td style="text-align:right;">
                     {{ number_format($totalAmount, 2) }}
                 </td>
 
                 <td></td>
 
-                <td class="text-right">
+                <td style="text-align:right;">
                     {{ number_format($totalGeneratedQty, 2) }}
                 </td>
 
-                <td></td>
+                <td style="text-align:right;">
+    {{ number_format($totalPerKg, 2) }}
+</td>
 
             </tr>
 
