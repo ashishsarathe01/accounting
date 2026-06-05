@@ -91,7 +91,10 @@
                               }else{
                                  echo $value->total;
                               }
-                              $tot_amt = $tot_amt + $value->total; 
+                              if($value->total!=""){
+                                  $tot_amt = $tot_amt + (float)$value->total; 
+                              }
+                              
                               ?>
                            </td>
                            <td class="w-min-120  text-center">

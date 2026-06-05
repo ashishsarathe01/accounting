@@ -104,6 +104,37 @@ input[type=number] {
     margin: 0 !important;
 }
 }
+@page { size: auto;  margin: 0mm; }
+@media print {
+
+    table {
+        width: 100% !important;
+        border-collapse: collapse;
+    }
+
+    td, th {
+        padding: 5px !important;
+        font-size: 12px !important;
+    }
+
+    .narration-col {
+        min-width: 150px !important;
+        white-space: normal !important;
+        word-wrap: break-word !important;
+    }
+
+    input {
+        border: none !important;
+        overflow: visible !important;
+    }
+
+    .header-section {
+        display: none !important; /* hide buttons only */
+    }
+    .sidebar {
+        display: none !important; /* hide buttons only */
+    }
+}
 </style>
 <!-- list-view-company-section -->
 <div class="list-of-view-company ">
@@ -112,22 +143,12 @@ input[type=number] {
             @include('layouts.leftnav')
             <!-- view-table-Content -->
             <div class="col-md-12 ml-sm-auto  col-lg-9 px-md-4 bg-mint">
-                <div class="d-md-flex justify-content-between py-4 px-2 align-items-center">
-                    <nav aria-label="breadcrumb meri-breadcrumb ">
-                        <ol class="breadcrumb meri-breadcrumb m-0  ">
-                            <li class="breadcrumb-item">
-                                <a class="font-12 text-body text-decoration-none" href="#">Dashboard</a>
-                            </li>
-                            <li class="breadcrumb-item p-0">
-                                <a class="fw-bold font-heading font-12  text-decoration-none" href="#">
-                                Journal </a>
-                            </li>
-                        </ol>
-                    </nav>
-                </div>
-                <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">
-                    Edit Journal Voucher
+                
+                <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm ">
+                   Edit Journal Voucher 
+                   {{-- <button class="btn btn-info header-section " onclick="printpage();">Print</button> --}}
                 </h5>
+                 
                 <?php 
                 $account_html = '<option value="">Select</option>';            
                 foreach ($party_list as $value) {
@@ -235,18 +256,17 @@ input[type=number] {
                                             <input type="text" name="credit[]" value="<?php echo $value->credit; ?>" class="form-control credit" data-id="<?php echo $i ?>" id="credit_<?php echo $i ?>" placeholder="Credit Amount" <?php if($value->type=="Debit"){ echo 'readonly'; }?> onkeyup="creditTotal();">
                                         </td>
                                         <td class="">
-                                            <input type="text" name="narration[]" value="<?php echo $value->narration; ?>" class="form-control narration" data-id="<?php echo $i ?>" id="narration_<?php echo $i ?>" placeholder="Enter Narration" value="">
+                                            <input type="text" name="narration[]" value="<?php echo $value->narration; ?>" class="form-control narration narration-col" data-id="<?php echo $i ?>" id="narration_<?php echo $i ?>" placeholder="Enter Narration" value="">
                                         </td>
-                                        <td>
+                                        <td class="header-section">
                                            <svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="<?php echo $i;?>" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg>
-                                           
                                         </td>
                                         <td class="add_btn_cell_without"></td>
                                     </tr>
                                 </tbody>
                             <?php $i++;
                             } ?>
-                            <div class="plus-icon">
+                            <div class="plus-icon ">
                                 
                             </div>
                             <div class="total">
@@ -465,7 +485,7 @@ input[type=number] {
                     </div>
 
 
-                    <div class=" d-flex">
+                    <div class=" d-flex header-section ">
 
                         <div class="ms-auto">
                            <button type="button" onclick="redirectBack()" class="btn btn-danger">QUIT</button>
@@ -477,7 +497,7 @@ input[type=number] {
                     </div>
                 </form>
             </div>
-            <div class="col-lg-1 d-flex justify-content-center">
+            <div class="col-lg-1 d-flex justify-content-center header-section ">
                 <div class="shortcut-key ">
                     <p class="font-14 fw-500 font-heading m-0">Shortcut Keys</p>
                     <button class="p-2 transaction-shortcut-btn my-2 ">
@@ -788,7 +808,7 @@ input[type=number] {
 
         '<td><input type="text" name="credit[]" class="form-control credit" data-id="' + add_more_count + '" id="credit_' + add_more_count + '" readonly onkeyup="creditTotal();"></td>' +
 
-        '<td><input type="text" name="narration[]" class="form-control narration" data-id="' + add_more_count + '" id="narration_' + add_more_count + '"></td>' +
+        '<td><input type="text" name="narration[]" class="form-control narration narration-col" data-id="' + add_more_count + '" id="narration_' + add_more_count + '"></td>' +
 
         '<td><svg style="color: red;cursor: pointer;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-minus-fill remove" data-id="' + add_more_count + '" viewBox="0 0 16 16"><path d="M12 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M6 7.5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1"/></svg></td>' +
 
@@ -809,7 +829,7 @@ input[type=number] {
 
         $("#without_gst_section tr[id^='tr_']:last")
         .find(".add_btn_cell_without")
-        .html('<button type="button" class="icon-btn add-btn add_more">+</button>');
+        .html('<button type="button" class="icon-btn add-btn add_more header-section">+</button>');
     });
 
     $(document).on("click", ".remove", function() {
@@ -907,25 +927,9 @@ input[type=number] {
        creditTotal();
         $("#without_gst_section tr[id^='tr_']:last")
         .find(".add_btn_cell_without")
-        .html('<button type="button" class="icon-btn add-btn add_more">+</button>');
+        .html('<button type="button" class="icon-btn add-btn add_more header-section">+</button>');
        $(".add_btn_cell").last().html('<button type="button" class="icon-btn add-btn add_more_tr">+</button>');
        $(".submit_data").click(function() {
-        let date = $("#date").val();
-
-        let from_date = "{{ $fy_start_date }}";
-
-        let to_date = "{{ $fy_end_date }}";
-
-        if(date < from_date || date > to_date){
-
-        alert(
-            "Selected date is outside the current financial year."
-        );
-
-        $("#date").focus();
-
-        return false;
-        }
           var form_data = [];
           let dr = 0;
           let cr = 0;
@@ -1033,13 +1037,11 @@ input[type=number] {
       }, 0);
         setTimeout(function(){
             let lastRow = $("#without_gst_section tr[id^='tr_']").last();
-
             if(lastRow.length){
                 lastRow.find(".add_btn_cell_without").html(
-                    '<button type="button" class="icon-btn add-btn add_more">+</button>'
+                    '<button type="button" class="icon-btn add-btn add_more header-section">+</button>'
                 );
             }
-
         },300);
 
         setTimeout(function(){
@@ -1763,6 +1765,9 @@ $(document).ready(function(){
                 `<button type="button" class="icon-btn add-btn add_bs">+</button>`
             );
         }
+    }
+    function printpage() {
+        window.print();
     }
 </script>
 @endsection

@@ -338,26 +338,20 @@ class AuthController extends Controller{
         ]);
     }
     public function dashboard()
-    {
-      
+    {      
         if (Auth::check()) {
             $company_list = collect();
-            
-            if(Session::get('user_type')=="OWNER"){ 
-              
+            if(Session::get('user_type')=="OWNER"){
                 $user_id = Session::get('user_id');
-                if(Session::get('admin_id') && Session::get('admin_id')!=''){ 
-                    
+                if(Session::get('admin_id') && Session::get('admin_id')!=''){
                     $assign_company = DB::table('assign_companies')
                                 ->where('admin_users_id', Session::get('admin_id'))
                                 ->where('merchant_id', $user_id)
                                 ->pluck('comp_id')
                                 ->toArray();
                     $company_list = Companies::where('user_id', $user_id)->where('delete','0')->whereIn('id',$assign_company)->get();
-                    
                 }else{
-                      
-                    $login_user_mobile = User::find( $user_id);
+                    $login_user_mobile = User::find($user_id);
                     $login_user_id = User::where('mobile_no',$login_user_mobile->mobile_no)
                                     ->where('type','OWNER')
                                     ->where('status','1')
@@ -367,62 +361,63 @@ class AuthController extends Controller{
                                     ->where('type','!=','OWNER')
                                     ->where('status','1')
                                     ->where('delete_status','0')
-                                    ->pluck('company_id');                                    
+                                    ->pluck('company_id');
                     //$company_list = Companies::where('user_id', $user_id)->get();
-                    $company_list = Companies::whereIn('user_id', $login_user_id)->where('delete','0')->get();
-                    $company_list_emp = Companies::whereIn('id', $login_user_emp_comp)->where('delete','0')->get();
+                    $company_list = Companies::whereIn('user_id', $login_user_id)
+                                                ->where('delete','0')
+                                                ->get();
+                    $company_list_emp = Companies::whereIn('id', $login_user_emp_comp)
+                                                    ->where('delete','0')->get();
                     $company_list = $company_list
                                     ->merge($company_list_emp)
                                     ->unique()
                                     ->values();
-                    // echo "<pre>";
-                    // print_r($company_list->toArray());
-
                 }
-         }else if(Session::get('user_type')=="EMPLOYEE" || Session::get('user_type')=="OTHER" || Session::get('user_type')=="ACCOUNTANT" || Session::get('user_type')=="CA"){
-             //die;
-            $login_user_mobile = User::find(Session('user_id'));
-            $login_user_id = User::where('mobile_no',$login_user_mobile->mobile_no)
-                            ->where('status','1')
-                            ->where('delete_status','0')
-                            ->pluck('id');
-            $login_user_id_owner = User::where('mobile_no',$login_user_mobile->mobile_no)
-                            ->where('type','OWNER')
-                            ->where('status','1')
-                            ->where('delete_status','0')
-                            ->pluck('id');    
-            $company_list_owner = Companies::whereIn('user_id', $login_user_id_owner)->where('delete','0')->get();    
-            $assign_company = PrivilegesModuleMapping::whereIn('employee_id',$login_user_id)
-                                                        ->pluck('company_id')
-                                                        ->toArray();
-                                                        
-            $user = Companies::select('user_id')
-                                ->where('id', Session::get('user_company_id'))
-                                ->where('delete','0')
-                                ->first();
-            $company_list = Companies::where('user_id', $user->user_id)->whereIn('id',$assign_company)->where('delete','0')->get();
-            if(Session('user_id')==114){
-                //echo "<pre>";print_r($company_list->toArray());
+            }else if(Session::get('user_type')=="EMPLOYEE" || Session::get('user_type')=="OTHER" || Session::get('user_type')=="ACCOUNTANT" || Session::get('user_type')=="CA"){
+                $login_user_mobile = User::find(Session('user_id'));
+                $login_user_id = User::where('mobile_no',$login_user_mobile->mobile_no)
+                                ->where('type','!=','OWNER')
+                                ->where('status','1')
+                                ->where('delete_status','0')
+                                ->pluck('id');
+                               
+                $login_user_id_owner = User::where('mobile_no',$login_user_mobile->mobile_no)
+                                ->where('type','OWNER')
+                                ->where('status','1')
+                                ->where('delete_status','0')
+                                ->pluck('id');    
+                $company_list_owner = Companies::whereIn('user_id', $login_user_id_owner)
+                                                ->where('delete','0')
+                                                ->get();
+                // $assign_company = PrivilegesModuleMapping::whereIn('employee_id',$login_user_id)
+                //                                             ->pluck('company_id')
+                //                                             ->toArray(); 
+                $assign_company = User::whereIn('id',$login_user_id)
+                                                            ->pluck('company_id')
+                                                            ->toArray();
+                
+                $company_list = Companies::whereIn('id',$assign_company)
+                                            ->where('delete','0')
+                                            ->get();
+                if(Session('user_id')==114){
+                    //echo "<pre>";print_r($company_list->toArray());
+                }
+                $company_list = $company_list
+                                        ->merge($company_list_owner)
+                                        ->unique()
+                                        ->values();
+                                        
+                
             }
-            $company_list = $company_list
-                                    ->merge($company_list_owner)
-                                    ->unique()
-                                    ->values();
             
-         }
-        
             $companyId = Session::get('user_company_id');
-
             $today = \Carbon\Carbon::today()->toDateString();
-
             /* ============================================================
-            ======================= SALES ===============================
-            ============================================================ */
-
+                ======================= SALES ===============================
+                ============================================================ */
             $salesConfig = ConfigurationSetting::where('company_id', $companyId)
-                ->where('module', 'sales')
-                ->first();
-
+                                                ->where('module', 'sales')
+                                                ->first();
             $salesConfigData = $salesConfig ? $salesConfig->config_json : [];
             $showSalesCard = !empty(array_filter($salesConfigData));
             $salesShowAdd  = $salesConfigData['show_add']  ?? false;
@@ -431,35 +426,30 @@ class AuthController extends Controller{
             /* ================= SALES ================= */
 
             $baseSalesQuery = DB::table('sales')
-                ->where('company_id', (string) $companyId)
-                ->where('date', $today)
-                ->where('status', '1')
-                ->where('delete', '0');
+                                ->where('company_id', (string) $companyId)
+                                ->where('date', $today)
+                                ->where('status', '1')
+                                ->where('delete', '0');
 
             $totalSalesCount = (clone $baseSalesQuery)->count();
-
             $totalSalesAmount = (clone $baseSalesQuery)->sum('total');
-
             $salesWithGstAmount = (clone $baseSalesQuery)
-                ->whereNotNull('taxable_amt')
-                ->whereColumn('total', '>', 'taxable_amt')
-                ->sum('total');
-
+                                ->whereNotNull('taxable_amt')
+                                ->whereColumn('total', '>', 'taxable_amt')
+                                ->sum('total');
             $salesWithoutGstAmount = (clone $baseSalesQuery)
-                ->whereNotNull('taxable_amt')
-                ->sum('taxable_amt');
+                    ->whereNotNull('taxable_amt')
+                    ->sum('taxable_amt');
 
             $totalSalesQty = DB::table('sale_descriptions')
-                ->join('sales', 'sales.id', '=', 'sale_descriptions.sale_id')
-                ->where('sales.company_id', (string) $companyId)
-                ->where('sales.date', $today)
-                ->where('sales.status', '1')
-                ->where('sales.delete', '0')
-                ->where('sale_descriptions.status', '1')
-                ->where('sale_descriptions.delete', '0')
-                ->sum('sale_descriptions.qty');
-
-
+                                ->join('sales', 'sales.id', '=', 'sale_descriptions.sale_id')
+                                ->where('sales.company_id', (string) $companyId)
+                                ->where('sales.date', $today)
+                                ->where('sales.status', '1')
+                                ->where('sales.delete', '0')
+                                ->where('sale_descriptions.status', '1')
+                                ->where('sale_descriptions.delete', '0')
+                                ->sum('sale_descriptions.qty');
             $salesDashboardData = [
                 'show_total_sales_count'   => $salesConfigData['total_sales_count'] ?? false,
                 'show_total_sales_qty'     => $salesConfigData['total_sales_qty'] ?? false,
@@ -496,29 +486,23 @@ class AuthController extends Controller{
                 ->where('delete', '0');
 
             $totalPurchaseCount = (clone $basePurchaseQuery)->count();
-
             $totalPurchaseAmount = (clone $basePurchaseQuery)->sum('total');
-
             $purchaseWithGstAmount = (clone $basePurchaseQuery)
-                ->whereNotNull('taxable_amt')
-                ->whereColumn('total', '>', 'taxable_amt')
-                ->sum('total');
-
+                                    ->whereNotNull('taxable_amt')
+                                    ->whereColumn('total', '>', 'taxable_amt')
+                                    ->sum('total');
             $purchaseWithoutGstAmount = (clone $basePurchaseQuery)
-                ->whereNotNull('taxable_amt')
-                ->sum('taxable_amt');
-
+                                    ->whereNotNull('taxable_amt')
+                                    ->sum('taxable_amt');
             $totalPurchaseQty = DB::table('purchase_descriptions')
-                ->join('purchases', 'purchases.id', '=', 'purchase_descriptions.purchase_id')
-                ->where('purchases.company_id', (string) $companyId)
-                ->where('purchases.date', $today)
-                ->where('purchases.status', '1')
-                ->where('purchases.delete', '0')
-                ->where('purchase_descriptions.status', '1')
-                ->where('purchase_descriptions.delete', '0')
-                ->sum('purchase_descriptions.qty');
-
-
+                                    ->join('purchases', 'purchases.id', '=', 'purchase_descriptions.purchase_id')
+                                    ->where('purchases.company_id', (string) $companyId)
+                                    ->where('purchases.date', $today)
+                                    ->where('purchases.status', '1')
+                                    ->where('purchases.delete', '0')
+                                    ->where('purchase_descriptions.status', '1')
+                                    ->where('purchase_descriptions.delete', '0')
+                                    ->sum('purchase_descriptions.qty');
             $purchaseDashboardData = [
                 'show_total_purchase_count'   => $purchaseConfigData['total_purchase_count'] ?? false,
                 'show_total_purchase_qty'     => $purchaseConfigData['total_purchase_qty'] ?? false,
@@ -547,19 +531,19 @@ class AuthController extends Controller{
             $saleReturnShowView = $saleReturnConfigData['show_view'] ?? false;
 
             $baseSaleReturnQuery = DB::table('sales_returns')
-                ->where('company_id', (string) $companyId)
-                ->where('date', $today)
-                ->where('status', '1')
-                ->where('delete', '0');
+                                    ->where('company_id', (string) $companyId)
+                                    ->where('date', $today)
+                                    ->where('status', '1')
+                                    ->where('delete', '0');
 
             $totalSaleReturnCount = (clone $baseSaleReturnQuery)->count();
 
             $totalSaleReturnAmount = (clone $baseSaleReturnQuery)->sum('total');
 
             $saleReturnWithGstAmount = (clone $baseSaleReturnQuery)
-                ->whereNotNull('taxable_amt')
-                ->whereColumn('total', '>', 'taxable_amt')
-                ->sum('total');
+                                    ->whereNotNull('taxable_amt')
+                                    ->whereColumn('total', '>', 'taxable_amt')
+                                    ->sum('total');
 
             $saleReturnWithoutGstAmount = (clone $baseSaleReturnQuery)
                 ->where(function ($q) {
@@ -569,14 +553,14 @@ class AuthController extends Controller{
                 ->sum('total');
 
             $totalSaleReturnQty = DB::table('sale_return_descriptions')
-                ->join('sales_returns', 'sales_returns.id', '=', 'sale_return_descriptions.sale_return_id')
-                ->where('sales_returns.company_id', (string) $companyId)
-                ->where('sales_returns.date', $today)
-                ->where('sales_returns.status', '1')
-                ->where('sales_returns.delete', '0')
-                ->where('sale_return_descriptions.status', '1')
-                ->where('sale_return_descriptions.delete', '0')
-                ->sum('sale_return_descriptions.qty');
+                                        ->join('sales_returns', 'sales_returns.id', '=', 'sale_return_descriptions.sale_return_id')
+                                        ->where('sales_returns.company_id', (string) $companyId)
+                                        ->where('sales_returns.date', $today)
+                                        ->where('sales_returns.status', '1')
+                                        ->where('sales_returns.delete', '0')
+                                        ->where('sale_return_descriptions.status', '1')
+                                        ->where('sale_return_descriptions.delete', '0')
+                                        ->sum('sale_return_descriptions.qty');
 
             $saleReturnDashboardData = [
                 'show_total_sale_return_count'   => $saleReturnConfigData['total_sale_return_count'] ?? false,
@@ -616,9 +600,9 @@ class AuthController extends Controller{
             $totalPurchaseReturnAmount = (clone $basePurchaseReturnQuery)->sum('total');
 
             $purchaseReturnWithGstAmount = (clone $basePurchaseReturnQuery)
-                ->whereNotNull('taxable_amt')
-                ->whereColumn('total', '>', 'taxable_amt')
-                ->sum('total');
+                                    ->whereNotNull('taxable_amt')
+                                    ->whereColumn('total', '>', 'taxable_amt')
+                                    ->sum('total');
 
             $purchaseReturnWithoutGstAmount = (clone $basePurchaseReturnQuery)
                 ->where(function ($q) {
@@ -628,14 +612,14 @@ class AuthController extends Controller{
                 ->sum('total');
 
             $totalPurchaseReturnQty = DB::table('purchase_return_descriptions')
-                ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_descriptions.purchase_return_id')
-                ->where('purchase_returns.company_id', (string) $companyId)
-                ->where('purchase_returns.date', $today)
-                ->where('purchase_returns.status', '1')
-                ->where('purchase_returns.delete', '0')
-                ->where('purchase_return_descriptions.status', '1')
-                ->where('purchase_return_descriptions.delete', '0')
-                ->sum('purchase_return_descriptions.qty');
+                                        ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_descriptions.purchase_return_id')
+                                        ->where('purchase_returns.company_id', (string) $companyId)
+                                        ->where('purchase_returns.date', $today)
+                                        ->where('purchase_returns.status', '1')
+                                        ->where('purchase_returns.delete', '0')
+                                        ->where('purchase_return_descriptions.status', '1')
+                                        ->where('purchase_return_descriptions.delete', '0')
+                                        ->sum('purchase_return_descriptions.qty');
 
             $purchaseReturnDashboardData = [
                 'show_total_purchase_return_count'   => $purchaseReturnConfigData['total_purchase_return_count'] ?? false,
@@ -664,13 +648,13 @@ class AuthController extends Controller{
             $paymentShowView = $paymentConfigData['show_view'] ?? false;
 
             $basePaymentQuery = DB::table('payment_details')
-                ->join('payments', 'payments.id', '=', 'payment_details.payment_id')
-                ->where('payment_details.company_id', (string)$companyId)
-                ->where('payments.date', $today)
-                ->where('payments.status', '1')
-                ->where('payments.delete', '0')
-                ->where('payment_details.status', '1')
-                ->where('payment_details.delete', '0');
+                                ->join('payments', 'payments.id', '=', 'payment_details.payment_id')
+                                ->where('payment_details.company_id', (string)$companyId)
+                                ->where('payments.date', $today)
+                                ->where('payments.status', '1')
+                                ->where('payments.delete', '0')
+                                ->where('payment_details.status', '1')
+                                ->where('payment_details.delete', '0');
 
             $totalPaidCount = (clone $basePaymentQuery)
                 ->where('payment_details.type', 'Debit')
@@ -714,13 +698,13 @@ class AuthController extends Controller{
             $receiptShowView = $receiptConfigData['show_view'] ?? false;
 
             $baseReceiptQuery = DB::table('receipt_details')
-                ->join('receipts', 'receipts.id', '=', 'receipt_details.receipt_id')
-                ->where('receipt_details.company_id', (string)$companyId)
-                ->where('receipts.date', $today)
-                ->where('receipts.status', '1')
-                ->where('receipts.delete', '0')
-                ->where('receipt_details.status', '1')
-                ->where('receipt_details.delete', '0');
+                                ->join('receipts', 'receipts.id', '=', 'receipt_details.receipt_id')
+                                ->where('receipt_details.company_id', (string)$companyId)
+                                ->where('receipts.date', $today)
+                                ->where('receipts.status', '1')
+                                ->where('receipts.delete', '0')
+                                ->where('receipt_details.status', '1')
+                                ->where('receipt_details.delete', '0');
 
             $totalReceivedCount = (clone $baseReceiptQuery)
                 ->where('receipt_details.type', 'Credit')
@@ -820,16 +804,16 @@ class AuthController extends Controller{
                 'user_type' => $user_data->type,
                 'default_fy' => $comps->default_fy,
                 'from_date'=> $from_date,
-            'to_date'=> $to_date
+                'to_date'=> $to_date
             ]);
             return redirect("dashboard")->withSuccess('Company change successfully!');
-        }  
-        $comp_ids = \App\Models\Companies::where('user_id', $comps->user_id)
-                                                ->pluck('id');
-        $user_data = User::whereIn('company_id',$comp_ids)
-            ->whereIN('type',['EMPLOYEE','OTHER','ACCOUNTANT','CA'])
-            ->where('mobile_no',Session::get('user_mobile_no'))
-            ->first();
+        }
+        // $comp_ids = \App\Models\Companies::where('user_id', $comps->user_id)
+        //                                         ->pluck('id');
+        $user_data = User::where('company_id',$comps->id)
+                        ->whereIN('type',['EMPLOYEE','OTHER','ACCOUNTANT','CA'])
+                        ->where('mobile_no',Session::get('user_mobile_no'))
+                        ->first();
         if($user_data){
             Companies::where('user_id',Session::get('user_id'))->update(['default_company'=>'1']);
             $y = explode("-",$comps->default_fy);
@@ -845,26 +829,6 @@ class AuthController extends Controller{
                 'from_date'=> $from_date,
                 'to_date'=> $to_date
             ]);
-        }else{
-            $user_data = User::where('id',$comp->user_id)
-                        ->where('mobile_no',Session::get('user_mobile_no'))
-                        ->first();
-            if($user_data){
-                Companies::where('user_id',Session::get('user_id'))->update(['default_company'=>'1']);
-                 $y = explode("-",$comps->default_fy);
-                $from_date = date('Y-m-d',strtotime($y[0]."-04-01"));
-                $to_date = date('Y-m-d',strtotime($y[1]."-03-31"));
-                Session::put([
-                    'user_id' => $user_data->id,
-                    'user_name' => $user_data->name,
-                    'user_email' => $user_data->email,
-                    'user_mobile_no' => $user_data->mobile_no,
-                    'user_type' => $user_data->type,
-                    'default_fy' => $comps->default_fy,
-                    'from_date'=> $from_date,
-                'to_date'=> $to_date
-                ]);
-            }           
         }
         return redirect("dashboard")->withSuccess('Company change successfully!');
     }

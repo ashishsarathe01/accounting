@@ -1504,57 +1504,57 @@ Route::get(
     'download']
 
 )->name('export.monthly.report.download');
-Route::get(
-    '/reel-info',
-    [ProductionController::class,
-    'reelInfo']
+    Route::get(
+        '/reel-info',
+        [ProductionController::class,
+        'reelInfo']
 
-)->name('reel.info');
-Route::post(
-    '/reel-info',
-    [ProductionController::class,
-    'reelInfo']
+    )->name('reel.info');
+    Route::post(
+        '/reel-info',
+        [ProductionController::class,
+        'reelInfo']
 
-)->name('reel.info');
-Route::post(
-    '/extend-eway-validity',
-    [SalesController::class,
-    'extendEwayValidity']
+    )->name('reel.info');
+    Route::post(
+        '/extend-eway-validity',
+        [SalesController::class,
+        'extendEwayValidity']
 
-)->name('sale.extend-eway');
+    )->name('sale.extend-eway');
 
-Route::get(
-    '/box-sale-order-view/{id}',
-    [BoxSaleOrderController::class,'view']
-)->name('box.sale.order.view');
+    Route::get(
+        '/box-sale-order-view/{id}',
+        [BoxSaleOrderController::class,'view']
+    )->name('box.sale.order.view');
 
-Route::post(
-    'get-box-sale-order-items-multiple',
-    [SalesController::class,
-    'getBoxSaleOrderItemsMultiple']
-);
-Route::get(
-    '/check-box-sale-order-po',
-    [BoxSaleOrderController::class,'checkPoNumber']
-)->name('check.box.sale.order.po');
+    Route::post(
+        'get-box-sale-order-items-multiple',
+        [SalesController::class,
+        'getBoxSaleOrderItemsMultiple']
+    );
+    Route::get(
+        '/check-box-sale-order-po',
+        [BoxSaleOrderController::class,'checkPoNumber']
+    )->name('check.box.sale.order.po');
 
 
-Route::post(
-   'sale/mark-reached',
-   [SalesController::class, 'markReached']
-)->name('sale.mark.reached');
+    Route::post(
+    'sale/mark-reached',
+    [SalesController::class, 'markReached']
+    )->name('sale.mark.reached');
 
-Route::get(
-    'consumption-report-settings',
-    [ConsumptionReportController::class, 'settings']
-)->name('consumption-report-settings');
+    Route::get(
+        'consumption-report-settings',
+        [ConsumptionReportController::class, 'settings']
+    )->name('consumption-report-settings');
 
-Route::post(
-    'consumption-report-settings-save',
-    [ConsumptionReportController::class, 'saveSettings']
-)->name('consumption-report-settings-save');
-Route::get(
-    'consumption-report',
-    [ConsumptionReportController::class, 'report']
-)->name('consumption-report');
+    Route::post(
+        'consumption-report-settings-save',
+        [ConsumptionReportController::class, 'saveSettings']
+    )->name('consumption-report-settings-save');
+    Route::get(
+        'consumption-report',
+        [ConsumptionReportController::class, 'report']
+    )->name('consumption-report');
 });

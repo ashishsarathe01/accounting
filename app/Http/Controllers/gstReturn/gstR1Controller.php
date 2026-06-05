@@ -543,7 +543,7 @@ class gstR1Controller extends Controller
         $invoiceSummaries = [];
         if (isset($result['data']['b2b']) && is_array($result['data']['b2b'])) {
             foreach ($result['data']['b2b'] as $party) {
-                $ctin = $party['ctin'];        
+                $ctin = $party['ctin'];
                 $accountName = Accounts::where('gstin', $ctin)
                     ->where('company_id', Session::get('user_company_id'))
                     ->value('account_name');
