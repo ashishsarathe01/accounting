@@ -646,26 +646,51 @@ class AccountProductionController extends Controller
                   'created_by' => Session::get('user_id'),
                   'created_at' => now(),
                ]);
-
+               $totalGeneratedWeight = DeckleProcess::whereDate('end_time_stamp', $date)
+                                        ->join('item_size_stocks', 'deckle_processes.id', '=', 'item_size_stocks.deckle_id')
+                                        ->where('deckle_processes.status', 4)
+                                        ->where('item_size_stocks.item_id', $itemId)
+                                        ->selectRaw('item_size_stocks.deckle_id, item_size_stocks.item_id, SUM(item_size_stocks.weight) as total_weight')
+                                        ->groupBy('item_size_stocks.deckle_id', 'item_size_stocks.item_id')
+                                        ->get();
+                foreach($totalGeneratedWeight as $deckle_weight){
+                    ItemLedger::where('item_id', $deckle_weight->item_id)
+                              ->where('deckle_id', $deckle_weight->deckle_id)
+                              ->where('txn_date', $date)
+                              ->where('company_id', Session::get('user_company_id'))
+                              ->where('source', 7)
+                              ->update([
+                                 'in_weight' => $deckle_weight->total_weight
+                              ]);
+                
+                   ItemAverageDetail::where('item_id', $deckle_weight->item_id)
+                                  ->where('deckle_id', $deckle_weight->deckle_id)
+                                  ->where('entry_date', $date)
+                                  ->where('company_id', Session::get('user_company_id'))
+                                  ->where('type', 'PRODUCTION GENERATE')
+                                  ->update([
+                                     'production_in_weight' => $deckle_weight->total_weight,
+                                  ]);
+                }
                ItemLedger::where('item_id', $itemId)
                   ->where('txn_date', $date)
                   ->where('company_id', Session::get('user_company_id'))
                   ->where('source', 7)
                   ->update([
-                     'in_weight' => $totalGeneratedWeight,
+                     //'in_weight' => $request->generated_weight[$key],
                      'source_id' => $id,
                      'price' => $request->generated_price[$key],
                      'total_price' => DB::raw(
                            'ROUND(in_weight * ' . (float)$request->generated_price[$key] . ',2)'
                      ),
                   ]);
-
+                
                ItemAverageDetail::where('item_id', $itemId)
                   ->where('entry_date', $date)
                   ->where('company_id', Session::get('user_company_id'))
                   ->where('type', 'PRODUCTION GENERATE')
                   ->update([
-                     'production_in_weight' => $totalGeneratedWeight,
+                     //'production_in_weight' => $request->generated_weight[$key],
                      'production_in_id' => $id,
                      'production_in_amount' => DB::raw(
                            'ROUND(production_in_weight * ' . (float)$request->generated_price[$key] . ',2)'

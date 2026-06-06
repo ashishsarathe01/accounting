@@ -57,8 +57,15 @@ Route::post('login-with-otp',[AuthController::class,'loginWithOtp']);
 Route::post('generate-mpin',[AuthController::class,'generateMpin']);
 Route::post('reset-mpin',[AuthController::class,'resetMpin']);
 Route::post('login-with-mpin',[AuthController::class,'loginWithMpin']);
+Route::post('add-sales-voucher-api',[SalesController::class,'createSalesVoucher']);
+Route::post('add-bulk-sales-voucher-api',[SalesController::class,'BulkSalesVoucherApi']);
+Route::post('receipts/store-api', [ReceiptController::class, 'store']);
+Route::post('payments/store-api', [PaymentController::class, 'store']);
+Route::post('add-purchase-voucher-api',[PurchaseController::class,'createPurchaseVoucher']);
 
 Route::middleware('auth:api')->group(function(){
+    
+    
     Route::get('get-user',[AuthController::class,'userInfo']);
     /*********** Settings ***********/
 
@@ -273,6 +280,8 @@ Route::middleware('auth:api')->group(function(){
     // Route::get('receipts/{id}', [ReceiptController::class, 'show']);
      Route::post('receipts/store', [ReceiptController::class, 'store']);
     Route::post('receipts/update', [ReceiptController::class, 'update']);
+    Route::post('receipt/edit', [ReceiptController::class, 'edit']);
+    Route::post('receipts/bulk/store', [ReceiptController::class, 'bulkStore']);
     // Route::delete('receipts/delete/{id}', [ReceiptController::class, 'destroy']);
 
 
@@ -284,7 +293,10 @@ Route::middleware('auth:api')->group(function(){
     Route::post('payment-list', [PaymentController::class, 'index']);
     // Route::get('payments/{id}', [PaymentController::class, 'show']);
      Route::post('payments/store', [PaymentController::class, 'store']);
-    // Route::post('payments/update/{id}', [PaymentController::class, 'update']);
+     Route::post('payment/edit', [PaymentController::class, 'edit']);
+     Route::post('payment/update', [PaymentController::class, 'update']);
+     Route::post('payments/bulk/store', [PaymentController::class, 'bulkStore']);
+     
     // Route::delete('payments/delete/{id}', [PaymentController::class, 'destroy']);
 
 
@@ -347,11 +359,6 @@ Route::middleware('auth:api')->group(function(){
     // Route::post('credit-notes/update/{id}', [CreditNoteController::class, 'update']);
     // Route::delete('credit-notes/delete/{id}', [CreditNoteController::class, 'destroy']);
     
-        /*
-    |--------------------------------------------------------------------------
-    | Contra Transactions APIs
-    |--------------------------------------------------------------------------
-    */
     Route::post('contra-list', [ContraController::class, 'index']);
     
     Route::post('/financial-year/manage', [CompanyController::class, 'manageFinancialYearApi']);

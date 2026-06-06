@@ -859,9 +859,9 @@ function calculateAmountNew(id) {
          calculateAmount(rowId);
          return;
       }
-      $("#consume_weight_" + rowId).val('');
+      //$("#consume_weight_" + rowId).val('');
         
-         $("#consume_amount_" + rowId).val('');
+         //$("#consume_amount_" + rowId).val('');
       $("#consume_weight_"+rowId).attr('readonly',false);
       //FETCH PRICE FOR SELECTED ITEM
       let itemId = $(this).val();
@@ -1740,6 +1740,7 @@ $(document).ready(function () {
     $(".select2-single").select2();
 
     // 🔥 IMPORTANT: TRIGGER CHANGE → THIS FILLS UNIT + PRICE LOGIC
+    
     setTimeout(() => {
         $(".consume_item").trigger('change');
 

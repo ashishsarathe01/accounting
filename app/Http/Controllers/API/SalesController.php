@@ -448,15 +448,14 @@ class SalesController extends Controller
             'series_no' => 'required',
             'date' => 'required',
             'voucher_no' => 'required',
-            'party' => 'required',
             'material_center' => 'required',
             'taxable_amt' => 'required',
             'total' => 'required',
-            'goods_discription' => 'required',
-            'qty' => 'required',
-            'unit' => 'required',
-            'price' => 'required',
-            'amount' => 'required',
+            // 'goods_discription' => 'required',
+            // 'qty' => 'required',
+            // 'unit' => 'required',
+            // 'price' => 'required',
+            // 'amount' => 'required',
             'bill_sundry' => 'required',
             'tax_amt' => 'required',
             'bill_sundry_amount' => 'required',
@@ -803,6 +802,322 @@ $billing_address = $account->address;
         ], 500);
     }
 }
+
+
+
+
+public function BulkSalesVoucherApi(Request $request)
+{
+    $successEntries = [];
+    $errorEntries   = [];
+
+    $company_id     = $request->company_id;
+    $financial_year = $request->financial_year;
+
+    if (empty($request->sales)) {
+
+        return response()->json([
+            'status'  => false,
+            'message' => 'Sales array is required'
+        ], 422);
+    }
+
+    foreach ($request->sales as $index => $saleData) {
+
+        DB::beginTransaction();
+
+        try {
+
+            /* =====================================================
+               BASIC VALIDATION
+            ===================================================== */
+
+            if (empty($saleData['party_alias'])) {
+
+                $errorEntries[] = [
+                    'voucher_no' => $saleData['voucher_no'] ?? '',
+                    'message'    => 'Party alias missing'
+                ];
+
+                continue;
+            }
+
+            /* =====================================================
+               FIND ACTIVE PARTY
+            ===================================================== */
+
+            $party = Accounts::where('company_id', $company_id)
+                ->where('alias', $saleData['party_alias'])
+                ->where('delete', "0")
+                ->first();
+
+            if (!$party) {
+
+                $errorEntries[] = [
+                    'voucher_no' => $saleData['voucher_no'] ?? '',
+                    'party_alias'=> $saleData['party_alias'],
+                    'message'    => 'Party not found or inactive'
+                ];
+
+                continue;
+            }
+
+            $party_id = $party->id;
+
+            /* =====================================================
+               DUPLICATE CHECK
+            ===================================================== */
+
+            $duplicate = Sales::where('company_id', $company_id)
+                ->where('voucher_no', $saleData['voucher_no'])
+                ->where('series_no', $saleData['series_no'])
+                ->where('financial_year', $financial_year)
+                ->where('delete', "0")
+                ->first();
+
+            if ($duplicate) {
+
+                $errorEntries[] = [
+                    'voucher_no' => $saleData['voucher_no'],
+                    'message'    => 'Duplicate voucher number'
+                ];
+
+                continue;
+            }
+
+            /* =====================================================
+               CREATE SALE
+            ===================================================== */
+
+            $sale = new Sales();
+
+            $sale->series_no         = $saleData['series_no'];
+            $sale->company_id        = $company_id;
+            $sale->date              = $saleData['date'];
+            $sale->voucher_no        = $saleData['voucher_no'];
+            $sale->voucher_no_prefix = $saleData['voucher_no_prefix'] ?? '';
+            $sale->party             = $party_id;
+            $sale->material_center   = $saleData['material_center'];
+            $sale->taxable_amt       = $saleData['taxable_amt'];
+            $sale->total             = $saleData['total'];
+            $sale->merchant_gst       = $saleData['merchant_gst'];
+
+            $sale->billing_name      = $party->print_name;
+            $sale->billing_address   = $party->address;
+            $sale->billing_pincode   = $party->pin_code;
+            $sale->billing_gst       = $party->gstin;
+            $sale->billing_pan       = $party->pan;
+            $sale->billing_state     = $party->state;
+
+            $sale->financial_year    = $financial_year;
+
+            $sale->save();
+
+            $SaleLgr = 0;
+
+            /* =====================================================
+               ITEMS
+            ===================================================== */
+
+            foreach ($saleData['items'] as $item) {
+
+                $manageItem = ManageItems::where('company_id', $company_id)
+                    ->where('name', $item['item_name'])
+                    ->where('delete', "0")
+                    ->first();
+
+                if (!$manageItem) {
+
+                    throw new \Exception(
+                        'Item not found or inactive : ' . $item['item_name']
+                    );
+                }
+
+                $item_id = $manageItem->id;
+                $unit_id = $manageItem->u_name;
+
+                $desc = new SaleDescription();
+
+                $desc->sale_id           = $sale->id;
+                $desc->goods_discription = $item_id;
+                $desc->qty               = $item['qty'];
+                $desc->unit              = $unit_id;
+                $desc->price             = $item['price'];
+                $desc->amount            = $item['amount'];
+                $desc->company_id        = $company_id;
+                $desc->status            = 1;
+
+                $desc->save();
+
+                $SaleLgr += $item['amount'];
+
+                /* ITEM LEDGER */
+
+                $itemLedger = new ItemLedger();
+
+                $itemLedger->item_id      = $item_id;
+                $itemLedger->out_weight   = $item['qty'];
+                $itemLedger->txn_date     = $saleData['date'];
+                $itemLedger->price        = $item['price'];
+                $itemLedger->total_price  = $item['amount'];
+                $itemLedger->company_id   = $company_id;
+                $itemLedger->source       = 1;
+                $itemLedger->source_id    = $sale->id;
+                $itemLedger->created_by   = 1;
+
+                $itemLedger->save();
+
+                /* ITEM AVERAGE */
+
+                $avg = new ItemAverageDetail();
+
+                $avg->entry_date  = $saleData['date'];
+                $avg->series_no   = $saleData['series_no'];
+                $avg->item_id     = $item_id;
+                $avg->type        = 'SALE';
+                $avg->sale_id     = $sale->id;
+                $avg->sale_weight = $item['qty'];
+                $avg->company_id  = $company_id;
+
+                $avg->save();
+            }
+
+            /* =====================================================
+               BILL SUNDRY
+            ===================================================== */
+
+            if (!empty($saleData['bill_sundry'])) {
+
+                foreach ($saleData['bill_sundry'] as $sundry) {
+
+                    $billSundry = BillSundrys::whereIn('company_id',[ $company_id,0])
+                        ->where('name', $sundry['name'])
+                        ->where('status', "1")
+                        ->where('delete', "0")
+                        ->first();
+
+                    if (!$billSundry) {
+
+                        throw new \Exception(
+                            'Bill sundry not found or inactive : ' . $sundry['name']
+                        );
+                    }
+
+                    $saleSundry = new SaleSundry();
+
+                    $saleSundry->sale_id      = $sale->id;
+                    $saleSundry->bill_sundry  = $billSundry->id;
+                    $saleSundry->rate         = $sundry['rate'];
+                    $saleSundry->amount       = $sundry['amount'];
+                    $saleSundry->company_id   = $company_id;
+                    $saleSundry->status       = 1;
+
+                    $saleSundry->save();
+
+                    if ($billSundry->adjust_sale_amt == 'No') {
+
+                        $ledger = new AccountLedger();
+
+                        $ledger->account_id = $billSundry->sale_amt_account;
+
+                        if ($billSundry->bill_sundry_type == 'subtractive') {
+                            $ledger->debit = $sundry['amount'];
+                        } else {
+                            $ledger->credit = $sundry['amount'];
+                        }
+
+                        $ledger->txn_date        = $saleData['date'];
+                        $ledger->series_no       = $saleData['series_no'];
+                        $ledger->company_id      = $company_id;
+                        $ledger->financial_year  = $financial_year;
+                        $ledger->entry_type      = 1;
+                        $ledger->entry_type_id   = $sale->id;
+                        $ledger->map_account_id  = $party_id;
+                        $ledger->created_by      = 1;
+
+                        $ledger->save();
+
+                    } else {
+
+                        if ($billSundry->bill_sundry_type == "additive") {
+                            $SaleLgr += $sundry['amount'];
+                        } else {
+                            $SaleLgr -= $sundry['amount'];
+                        }
+                    }
+                }
+            }
+
+            /* =====================================================
+               PARTY LEDGER
+            ===================================================== */
+
+            $partyLedger = new AccountLedger();
+
+            $partyLedger->account_id      = $party_id;
+            $partyLedger->debit           = $saleData['total'];
+            $partyLedger->txn_date        = $saleData['date'];
+            $partyLedger->series_no       = $saleData['series_no'];
+            $partyLedger->company_id      = $company_id;
+            $partyLedger->financial_year  = $financial_year;
+            $partyLedger->entry_type      = 1;
+            $partyLedger->entry_type_id   = $sale->id;
+            $partyLedger->map_account_id  = 35;
+            $partyLedger->created_by      = 1;
+
+            $partyLedger->save();
+
+            /* SALES LEDGER */
+
+            $salesLedger = new AccountLedger();
+
+            $salesLedger->account_id      = 35;
+            $salesLedger->credit          = $SaleLgr;
+            $salesLedger->txn_date        = $saleData['date'];
+            $salesLedger->series_no       = $saleData['series_no'];
+            $salesLedger->company_id      = $company_id;
+            $salesLedger->financial_year  = $financial_year;
+            $salesLedger->entry_type      = 1;
+            $salesLedger->entry_type_id   = $sale->id;
+            $salesLedger->map_account_id  = $party_id;
+            $salesLedger->created_by      = 1;
+
+            $salesLedger->save();
+
+            DB::commit();
+
+            $successEntries[] = [
+                'voucher_no' => $sale->voucher_no,
+                'sale_id'    => $sale->id,
+                'message'    => 'Sale stored successfully'
+            ];
+
+        } catch (\Exception $e) {
+
+            DB::rollBack();
+
+            $errorEntries[] = [
+                'voucher_no' => $saleData['voucher_no'] ?? '',
+                'message'    => $e->getMessage()
+            ];
+        }
+    }
+
+    return response()->json([
+
+        'status'         => true,
+
+        'success_count'  => count($successEntries),
+
+        'failed_count'   => count($errorEntries),
+
+        'success_entries'=> $successEntries,
+
+        'error_entries'  => $errorEntries
+
+    ]);
+}
+
 
 
     public function GetSalesVoucherbyId(Request $request)

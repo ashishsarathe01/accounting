@@ -96,9 +96,9 @@ public function companyListing(Request $request)
                                 ->where('delete_status','0')
                                 ->pluck('company_id');
 
-            $company_list = Companies::whereIn('user_id', $login_user_id)->get();
+            $company_list = Companies::whereIn('user_id', $login_user_id)->where('delete','0')->get();
 
-            $company_list_emp = Companies::whereIn('id', $login_user_emp_comp)->get();
+            $company_list_emp = Companies::whereIn('id', $login_user_emp_comp)->where('delete','0')->get();
 
             $company_list = $company_list
                             ->merge($company_list_emp)
@@ -129,13 +129,13 @@ public function companyListing(Request $request)
                             ->where('delete_status','0')
                             ->pluck('id');
 
-        $company_list_owner = Companies::whereIn('user_id', $login_user_id_owner)->get();
+        $company_list_owner = Companies::whereIn('user_id', $login_user_id_owner)->where('delete','0')->get();
 
         $assign_company = PrivilegesModuleMapping::whereIn('employee_id',$login_user_id)
                             ->pluck('company_id')
                             ->toArray();
 
-        $company_list = Companies::whereIn('id',$assign_company)->get();
+        $company_list = Companies::whereIn('id',$assign_company)->where('delete','0')->get();
 
         $company_list = $company_list
                         ->merge($company_list_owner)

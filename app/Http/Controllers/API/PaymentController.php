@@ -699,5 +699,254 @@ public function update(Request $request)
 }
 
 
+public function bulkStore(Request $request)
+{
+    try {
+
+        $com_id = $request->company_id;
+        $financial_year = $request->financial_year;
+        $user_id = $request->user_id;
+
+        $user_data = DB::table('users')
+            ->where('id', $user_id)
+            ->first();
+
+        if (!$user_data) {
+            return response()->json([
+                'status' => false,
+                'message' => 'User not found'
+            ], 404);
+        }
+
+        if ($user_data->type != "OWNER") {
+
+            $permission = DB::table('privileges_module_mappings')
+                ->where('employee_id', $user_id)
+                ->where('module_id', 84)
+                ->where('company_id', $com_id)
+                ->first();
+
+            if (!$permission) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Unauthorized'
+                ], 403);
+            }
+        }
+
+        DB::beginTransaction();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Fetch all aliases once
+        |--------------------------------------------------------------------------
+        */
+
+        $allAliases = [];
+
+        foreach ($request->vouchers as $voucher) {
+
+            if (!empty($voucher['party_alias'])) {
+                $allAliases = array_merge(
+                    $allAliases,
+                    $voucher['party_alias']
+                );
+            }
+        }
+
+        $accounts = Accounts::where('company_id', $com_id)
+            ->whereIn('alias', array_unique($allAliases))
+            ->where('delete', '0')
+            ->get()
+            ->keyBy('alias');
+
+        $createdVoucherIds = [];
+        $errors = [];
+
+        foreach ($request->vouchers as $rowNo => $voucher) {
+
+            try {
+
+                $types = $voucher['type'];
+                $aliases = $voucher['party_alias'];
+                $debits = $voucher['debit'];
+                $credits = $voucher['credit'];
+                $narrations = $voucher['narration'];
+
+                /*
+                |--------------------------------------------------------------------------
+                | Convert Alias To Account ID
+                |--------------------------------------------------------------------------
+                */
+
+                $account_names = [];
+
+                foreach ($aliases as $alias) {
+
+                    $account = $accounts[$alias] ?? null;
+
+                    if (!$account) {
+
+                        $errors[] = [
+                            'voucher_no' => $voucher['voucher_no'] ?? '',
+                            'alias' => $alias,
+                            'message' => "Party alias '{$alias}' not found"
+                        ];
+
+                        continue 2;
+                    }
+
+                    $account_names[] = $account->id;
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | Create Payment
+                |--------------------------------------------------------------------------
+                */
+
+                $payment = new Payment();
+                $payment->date = $voucher['date'];
+                $payment->voucher_no = $voucher['voucher_no'];
+                $payment->mode = $voucher['mode'];
+                $payment->series_no = $voucher['series_no'];
+                $payment->cheque_no = $voucher['cheque_no'] ?? '';
+                $payment->long_narration = $voucher['long_narration'] ?? '';
+                $payment->company_id = $com_id;
+                $payment->financial_year = $financial_year;
+                $payment->save();
+
+                $credit_id = "";
+                $credit_narration = "";
+
+                /*
+                |--------------------------------------------------------------------------
+                | Payment Details
+                |--------------------------------------------------------------------------
+                */
+
+                foreach ($types as $key => $type) {
+
+                    if ($type == "Credit") {
+                        $credit_id = $account_names[$key];
+                        $credit_narration = $narrations[$key] ?? '';
+                    }
+
+                    $paytype = new PaymentDetails();
+                    $paytype->payment_id = $payment->id;
+                    $paytype->company_id = $com_id;
+                    $paytype->type = $type;
+                    $paytype->account_name = $account_names[$key];
+                    $paytype->debit = $debits[$key] ?? 0;
+                    $paytype->credit = $credits[$key] ?? 0;
+                    $paytype->narration = $narrations[$key] ?? '';
+                    $paytype->status = 1;
+                    $paytype->save();
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | Ledger Logic
+                |--------------------------------------------------------------------------
+                */
+
+                $debit_arr = [];
+                $credit_arr = [];
+
+                foreach ($types as $key => $type) {
+
+                    if ($type == "Debit") {
+
+                        $debit_arr[] = [
+                            'type' => $type,
+                            'account_name' => $account_names[$key],
+                            'debit' => $debits[$key],
+                            'credit' => 0,
+                            'narration' => $narrations[$key] ?? '',
+                            'mapped_account_id' => $credit_id
+                        ];
+
+                        $accountName = $account_names[$key];
+                        $debitValue = $debits[$key];
+
+                        if (isset($credit_arr[$accountName])) {
+
+                            $credit_arr[$accountName]['credit'] += $debitValue;
+
+                        } else {
+
+                            $credit_arr[$accountName] = [
+                                'type' => 'Credit',
+                                'account_name' => $credit_id,
+                                'debit' => 0,
+                                'credit' => $debitValue,
+                                'narration' => $credit_narration,
+                                'mapped_account_id' => $accountName
+                            ];
+                        }
+                    }
+                }
+
+                $final_arr = array_merge(
+                    $debit_arr,
+                    array_values($credit_arr)
+                );
+
+                foreach ($final_arr as $value) {
+
+                    $ledger = new AccountLedger();
+                    $ledger->account_id = $value['account_name'];
+
+                    if (!empty($value['debit']) && $value['debit'] != 0) {
+                        $ledger->debit = $value['debit'];
+                    } else {
+                        $ledger->credit = $value['credit'];
+                    }
+
+                    $ledger->series_no = $voucher['series_no'];
+                    $ledger->txn_date = $voucher['date'];
+                    $ledger->company_id = $com_id;
+                    $ledger->financial_year = $financial_year;
+                    $ledger->entry_type = 5;
+                    $ledger->entry_type_id = $payment->id;
+                    $ledger->entry_narration = $value['narration'];
+                    $ledger->map_account_id = $value['mapped_account_id'];
+                    $ledger->created_by = $user_id;
+                    $ledger->created_at = now();
+                    $ledger->save();
+                }
+
+                $createdVoucherIds[] = $payment->id;
+
+            } catch (\Exception $e) {
+
+                $errors[] = [
+                    'voucher_no' => $voucher['voucher_no'] ?? '',
+                    'message' => $e->getMessage()
+                ];
+
+                continue;
+            }
+        }
+
+        DB::commit();
+
+        return response()->json([
+            'status' => true,
+            'message' => count($createdVoucherIds) . ' payment vouchers imported successfully',
+            'payment_ids' => $createdVoucherIds,
+            'errors' => $errors
+        ]);
+
+    } catch (\Exception $e) {
+
+        DB::rollBack();
+
+        return response()->json([
+            'status' => false,
+            'message' => $e->getMessage()
+        ], 500);
+    }
+}                                                                                                                                                                                                                                                
 
 }

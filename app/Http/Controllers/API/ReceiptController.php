@@ -645,5 +645,528 @@ public function update(Request $request)
         ],500);
     }
 }
+public function bulkStore(Request $request)
+{
+    try {
+
+        $user_id    = $request->user_id;
+        $company_id = $request->company_id;
+
+        /*
+        |--------------------------------------------------------------------------
+        | Check User
+        |--------------------------------------------------------------------------
+        */
+        $user_data = DB::table('users')
+            ->where('id', $user_id)
+            ->first();
+
+        if (!$user_data) {
+            return response()->json([
+                'status' => false,
+                'message' => 'User not found'
+            ], 404);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Permission Check
+        |--------------------------------------------------------------------------
+        */
+        if ($user_data->type != "OWNER") {
+
+            $permission = DB::table('privileges_module_mappings')
+                ->where('employee_id', $user_id)
+                ->where('module_id', 84)
+                ->where('company_id', $company_id)
+                ->first();
+
+            if (!$permission) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Unauthorized'
+                ], 403);
+            }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Validation
+        |--------------------------------------------------------------------------
+        */
+        $validator = Validator::make($request->all(), [
+            'receipts' => 'required|array',
+            'receipts.*.date' => 'required',
+            'receipts.*.voucher_no' => 'required',
+            'receipts.*.mode' => 'required',
+            'receipts.*.series_no' => 'required',
+            'receipts.*.financial_year' => 'required',
+            'receipts.*.details' => 'required|array',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation Error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        DB::beginTransaction();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Fetch All Aliases Once
+        |--------------------------------------------------------------------------
+        */
+
+        $allAliases = [];
+
+        foreach ($request->receipts as $receipt) {
+
+            foreach ($receipt['details'] as $detail) {
+
+                if (!empty($detail['party_alias'])) {
+                    $allAliases[] = $detail['party_alias'];
+                }
+            }
+        }
+
+        $accounts = Accounts::where('company_id', $company_id)
+            ->whereIn('alias', array_unique($allAliases))
+            ->where('delete', '0')
+            ->get()
+            ->keyBy('alias');
+
+        $saved_receipts = [];
+        $errors = [];
+
+        foreach ($request->receipts as $receiptData) {
+
+            try {
+
+                /*
+                |--------------------------------------------------------------------------
+                | Validate Aliases First
+                |--------------------------------------------------------------------------
+                */
+
+                foreach ($receiptData['details'] as $detail) {
+
+                    $party = $accounts[$detail['party_alias']] ?? null;
+
+                    if (!$party) {
+
+                        $errors[] = [
+                            'voucher_no' => $receiptData['voucher_no'] ?? '',
+                            'alias' => $detail['party_alias'],
+                            'message' => 'Party alias not found'
+                        ];
+
+                        continue 2;
+                    }
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | Create Receipt
+                |--------------------------------------------------------------------------
+                */
+
+                $receipt = new Receipt();
+                $receipt->date            = $receiptData['date'];
+                $receipt->voucher_no      = $receiptData['voucher_no'];
+                $receipt->mode            = $receiptData['mode'];
+                $receipt->series_no       = $receiptData['series_no'];
+                $receipt->cheque_no       = $receiptData['cheque_no'] ?? null;
+                $receipt->long_narration  = $receiptData['long_narration'] ?? null;
+                $receipt->company_id      = $company_id;
+                $receipt->financial_year  = $receiptData['financial_year'];
+                $receipt->save();
+
+                $debit_id = "";
+                $debit_narration = "";
+
+                $debit_arr = [];
+                $credit_arr = [];
+
+                /*
+                |--------------------------------------------------------------------------
+                | Receipt Details
+                |--------------------------------------------------------------------------
+                */
+
+                foreach ($receiptData['details'] as $detail) {
+
+                    $party = $accounts[$detail['party_alias']];
+                    $account_id = $party->id;
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Debit Account
+                    |--------------------------------------------------------------------------
+                    */
+
+                    if ($detail['type'] == "Debit") {
+
+                        $debit_id = $account_id;
+                        $debit_narration = $detail['narration'] ?? '';
+                    }
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Save Receipt Details
+                    |--------------------------------------------------------------------------
+                    */
+
+                    $receiptDetail = new ReceiptDetails();
+                    $receiptDetail->receipt_id   = $receipt->id;
+                    $receiptDetail->company_id   = $company_id;
+                    $receiptDetail->type         = $detail['type'];
+                    $receiptDetail->account_name = $account_id;
+                    $receiptDetail->debit        = $detail['debit'] ?? 0;
+                    $receiptDetail->credit       = $detail['credit'] ?? 0;
+                    $receiptDetail->narration    = $detail['narration'] ?? '';
+                    $receiptDetail->status       = 1;
+                    $receiptDetail->save();
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Ledger Preparation
+                    |--------------------------------------------------------------------------
+                    */
+
+                    if ($detail['type'] == "Credit") {
+
+                        $credit_arr[] = [
+                            'type' => 'Credit',
+                            'account_name' => $account_id,
+                            'credit' => $detail['credit'],
+                            'debit' => 0,
+                            'narration' => $detail['narration'] ?? '',
+                            'mapped_account_id' => $debit_id
+                        ];
+
+                        if (isset($debit_arr[$account_id])) {
+
+                            $debit_arr[$account_id]['debit'] += $detail['credit'];
+
+                        } else {
+
+                            $debit_arr[$account_id] = [
+                                'type' => 'Debit',
+                                'account_name' => $debit_id,
+                                'debit' => $detail['credit'],
+                                'credit' => 0,
+                                'narration' => $debit_narration,
+                                'mapped_account_id' => $account_id
+                            ];
+                        }
+                    }
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | Save Ledger
+                |--------------------------------------------------------------------------
+                */
+
+                $final_arr = array_merge($debit_arr, array_values($credit_arr));
+
+                foreach ($final_arr as $value) {
+
+                    $ledger = new AccountLedger();
+
+                    $ledger->account_id = $value['account_name'];
+
+                    if (!empty($value['debit']) && $value['debit'] != 0) {
+                        $ledger->debit = $value['debit'];
+                    } else {
+                        $ledger->credit = $value['credit'];
+                    }
+
+                    $ledger->series_no       = $receiptData['series_no'];
+                    $ledger->txn_date        = $receiptData['date'];
+                    $ledger->company_id      = $company_id;
+                    $ledger->financial_year  = $receiptData['financial_year'];
+                    $ledger->entry_type      = 6;
+                    $ledger->entry_type_id   = $receipt->id;
+                    $ledger->entry_narration = $value['narration'];
+                    $ledger->map_account_id  = $value['mapped_account_id'];
+                    $ledger->created_by      = $user_id;
+                    $ledger->created_at      = now();
+                    $ledger->save();
+                }
+
+                $saved_receipts[] = [
+                    'receipt_id' => $receipt->id,
+                    'voucher_no' => $receipt->voucher_no
+                ];
+
+            } catch (\Exception $e) {
+
+                $errors[] = [
+                    'voucher_no' => $receiptData['voucher_no'] ?? '',
+                    'message' => $e->getMessage()
+                ];
+
+                continue;
+            }
+        }
+
+        DB::commit();
+
+        return response()->json([
+            'status' => true,
+            'message' => count($saved_receipts) . ' receipts imported successfully',
+            'data' => $saved_receipts,
+            'errors' => $errors
+        ], 200);
+
+    } catch (\Exception $e) {
+
+        DB::rollBack();
+
+        return response()->json([
+            'status' => false,
+            'message' => 'Something went wrong',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
+public function bulkUpdate(Request $request)
+{
+    try {
+
+        $user_id    = $request->user_id;
+        $company_id = $request->company_id;
+
+        /*
+        |--------------------------------------------------------------------------
+        | Check User
+        |--------------------------------------------------------------------------
+        */
+        $user_data = DB::table('users')
+            ->where('id', $user_id)
+            ->first();
+
+        if (!$user_data) {
+            return response()->json([
+                'status' => false,
+                'message' => 'User not found'
+            ], 404);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Permission Check
+        |--------------------------------------------------------------------------
+        */
+        if ($user_data->type != "OWNER") {
+
+            $permission = DB::table('privileges_module_mappings')
+                ->where('employee_id', $user_id)
+                ->where('module_id', 84)
+                ->where('company_id', $company_id)
+                ->first();
+
+            if (!$permission) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Unauthorized'
+                ], 403);
+            }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Validation
+        |--------------------------------------------------------------------------
+        */
+        $validator = Validator::make($request->all(), [
+            'receipts' => 'required|array',
+            'receipts.*.receipt_id' => 'required',
+            'receipts.*.date' => 'required',
+            'receipts.*.voucher_no' => 'required',
+            'receipts.*.mode' => 'required',
+            'receipts.*.series_no' => 'required',
+            'receipts.*.details' => 'required|array',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation Error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        DB::beginTransaction();
+
+        foreach ($request->receipts as $receiptData) {
+
+            $receipt = Receipt::where('id', $receiptData['receipt_id'])
+                ->where('company_id', $company_id)
+                ->first();
+
+            if (!$receipt) {
+                continue;
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Update Receipt
+            |--------------------------------------------------------------------------
+            */
+            $receipt->date            = $receiptData['date'];
+            $receipt->voucher_no      = $receiptData['voucher_no'];
+            $receipt->mode            = $receiptData['mode'];
+            $receipt->series_no       = $receiptData['series_no'];
+            $receipt->cheque_no       = $receiptData['cheque_no'] ?? null;
+            $receipt->long_narration  = $receiptData['long_narration'] ?? null;
+            $receipt->financial_year  = $receiptData['financial_year'];
+            $receipt->save();
+
+            /*
+            |--------------------------------------------------------------------------
+            | Delete Old Details & Ledger
+            |--------------------------------------------------------------------------
+            */
+            ReceiptDetails::where('receipt_id', $receipt->id)->delete();
+
+            AccountLedger::where('entry_type', 6)
+                ->where('entry_type_id', $receipt->id)
+                ->delete();
+
+            $debit_id = "";
+            $debit_narration = "";
+
+            $debit_arr = [];
+            $credit_arr = [];
+
+            /*
+            |--------------------------------------------------------------------------
+            | Save Receipt Details
+            |--------------------------------------------------------------------------
+            */
+            foreach ($receiptData['details'] as $detail) {
+
+                /*
+                |--------------------------------------------------------------------------
+                | Find Party By Alias
+                |--------------------------------------------------------------------------
+                */
+                $party = DB::table('accounts')
+                    ->where('alias', $detail['party_alias'])
+                    ->where('company_id', $company_id)
+                    ->first();
+
+                if (!$party) {
+                    continue;
+                }
+
+                $account_id = $party->id;
+
+                if ($detail['type'] == "Debit") {
+                    $debit_id = $account_id;
+                    $debit_narration = $detail['narration'] ?? '';
+                }
+
+                $receiptDetail = new ReceiptDetails();
+                $receiptDetail->receipt_id  = $receipt->id;
+                $receiptDetail->company_id  = $company_id;
+                $receiptDetail->type        = $detail['type'];
+                $receiptDetail->account_name = $account_id;
+                $receiptDetail->debit       = $detail['debit'] ?? 0;
+                $receiptDetail->credit      = $detail['credit'] ?? 0;
+                $receiptDetail->narration   = $detail['narration'] ?? '';
+                $receiptDetail->status      = 1;
+                $receiptDetail->save();
+
+                /*
+                |--------------------------------------------------------------------------
+                | Ledger Logic
+                |--------------------------------------------------------------------------
+                */
+                if ($detail['type'] == "Credit") {
+
+                    $credit_arr[] = [
+                        'type' => 'Credit',
+                        'account_name' => $account_id,
+                        'credit' => $detail['credit'],
+                        'debit' => 0,
+                        'narration' => $detail['narration'] ?? '',
+                        'mapped_account_id' => $debit_id
+                    ];
+
+                    if (isset($debit_arr[$account_id])) {
+
+                        $debit_arr[$account_id]['debit'] += $detail['credit'];
+
+                    } else {
+
+                        $debit_arr[$account_id] = [
+                            'type' => 'Debit',
+                            'account_name' => $debit_id,
+                            'debit' => $detail['credit'],
+                            'credit' => 0,
+                            'narration' => $debit_narration,
+                            'mapped_account_id' => $account_id
+                        ];
+                    }
+                }
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Save Ledger
+            |--------------------------------------------------------------------------
+            */
+            $final_arr = array_merge($debit_arr, array_values($credit_arr));
+
+            foreach ($final_arr as $value) {
+
+                $ledger = new AccountLedger();
+                $ledger->account_id = $value['account_name'];
+
+                if (!empty($value['debit']) && $value['debit'] != 0) {
+                    $ledger->debit = $value['debit'];
+                } else {
+                    $ledger->credit = $value['credit'];
+                }
+
+                $ledger->series_no       = $receiptData['series_no'];
+                $ledger->txn_date        = $receiptData['date'];
+                $ledger->company_id      = $company_id;
+                $ledger->financial_year  = $receiptData['financial_year'];
+                $ledger->entry_type      = 6;
+                $ledger->entry_type_id   = $receipt->id;
+                $ledger->entry_narration = $value['narration'];
+                $ledger->map_account_id  = $value['mapped_account_id'];
+                $ledger->created_by      = $user_id;
+                $ledger->created_at      = now();
+                $ledger->save();
+            }
+        }
+
+        DB::commit();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Bulk receipt update successful'
+        ], 200);
+
+    } catch (\Exception $e) {
+
+        DB::rollBack();
+
+        return response()->json([
+            'status' => false,
+            'message' => 'Something went wrong',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
 
 }
