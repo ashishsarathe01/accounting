@@ -1118,33 +1118,297 @@ public function BulkSalesVoucherApi(Request $request)
     ]);
 }
 
+public function GetSalesVoucherbyId(Request $request)
+{
+    try {
 
-
-    public function GetSalesVoucherbyId(Request $request)
-    {
         $validator = Validator::make($request->all(), [
             'sales_id' => 'required|integer',
         ], [
             'sales_id.required' => 'Sales voucher id is required.',
         ]);
+
         if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
-        }
-
-        $saleData = Sales::select('sales.id as sales_id','sales.date','sales.voucher_no','sale_descriptions.*')->join('sale_descriptions', 'sale_descriptions.sale_id', '=', 'sales.id')->where('sales.id',$request->sales_id)->first();
-            
-
-        if ($saleData) {
             return response()->json([
-                'code' => 200,
-                'data' =>$saleData,
-                'dataCount' => $saleData->count(),
-            ]);
-        } else {
-            $this->failedMessage();
+                'code' => 422,
+                'errors' => $validator->errors()
+            ], 422);
         }
 
+        $sale = Sales::find($request->sales_id);
+
+        if (!$sale) {
+            return response()->json([
+                'code' => 404,
+                'message' => 'Sales voucher not found'
+            ], 404);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | COMPANY ID
+        |--------------------------------------------------------------------------
+        */
+
+        $companyId = Session::get('user_company_id');
+
+        if (!$companyId) {
+            $companyId = $sale->company_id ?? null;
+        }
+
+        if (!$companyId) {
+            return response()->json([
+                'code' => 404,
+                'message' => 'Company id not found'
+            ], 404);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | COMPANY
+        |--------------------------------------------------------------------------
+        */
+
+        $comp = Companies::select(
+                'id',
+                'user_id',
+                'company_sale_type'
+            )
+            ->where('id', $companyId)
+            ->first();
+
+        if (!$comp) {
+            return response()->json([
+                'code' => 404,
+                'message' => 'Company not found'
+            ], 404);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | PRODUCTION MODULE STATUS
+        |--------------------------------------------------------------------------
+        */
+
+        $productionModule = MerchantModuleMapping::where('module_id', 4)
+            ->where('merchant_id', $comp->user_id)
+            ->where('company_id', $companyId)
+            ->first();
+
+        $production_module_status = $productionModule ? 1 : 0;
+
+        /*
+        |--------------------------------------------------------------------------
+        | SALE DESCRIPTION
+        |--------------------------------------------------------------------------
+        */
+
+        $saleDescription = SaleDescription::join(
+                'units',
+                'sale_descriptions.unit',
+                '=',
+                'units.id'
+            )
+            ->where('sale_id', $sale->id)
+            ->select([
+                'sale_descriptions.*',
+                'units.s_name'
+            ])
+            ->get();
+
+        foreach ($saleDescription as $desc) {
+
+            $desc->selected_sizes = DB::table('item_size_stocks')
+                ->where('sale_id', $sale->id)
+                ->where('item_id', $desc->goods_discription)
+                ->select(
+                    'id',
+                    'size',
+                    'weight',
+                    'reel_no'
+                )
+                ->get();
+
+            $desc->lines = DB::table('sale_description_lines')
+                ->where(
+                    'sale_description_id',
+                    $desc->id
+                )
+                ->orderBy('sort_order')
+                ->get();
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | SALE SUNDRY
+        |--------------------------------------------------------------------------
+        */
+
+        $saleSundry = SaleSundry::join(
+                'bill_sundrys',
+                'sale_sundries.bill_sundry',
+                '=',
+                'bill_sundrys.id'
+            )
+            ->select([
+                'bill_sundrys.effect_gst_calculation',
+                'bill_sundrys.nature_of_sundry',
+                'sale_sundries.*'
+            ])
+            ->where('sale_sundries.sale_id', $sale->id)
+            ->get();
+
+        /*
+        |--------------------------------------------------------------------------
+        | BOX SALE ORDERS
+        |--------------------------------------------------------------------------
+        */
+
+        $boxSaleOrders = DB::table('box_sale_orders')
+            ->where('company_id', $companyId)
+            ->where('party_id', $sale->party)
+            ->where('delete', '0')
+            ->orderBy('id', 'DESC')
+            ->get();
+
+        /*
+        |--------------------------------------------------------------------------
+        | SELECTED BOX SALE ORDERS
+        |--------------------------------------------------------------------------
+        */
+
+        $selectedBoxSaleOrders = DB::table('sale_box_sale_orders')
+            ->join(
+                'box_sale_orders',
+                'box_sale_orders.id',
+                '=',
+                'sale_box_sale_orders.box_sale_order_id'
+            )
+            ->where(
+                'sale_box_sale_orders.sale_id',
+                $sale->id
+            )
+            ->select(
+                'box_sale_orders.id',
+                'box_sale_orders.sale_order_no as text'
+            )
+            ->get();
+
+        /*
+        |--------------------------------------------------------------------------
+        | CONFIG
+        |--------------------------------------------------------------------------
+        */
+
+        // $config = SaleInvoiceConfiguration::where(
+        //         'company_id',
+        //         $companyId
+        //     )
+        //     ->first();
+
+        /*
+        |--------------------------------------------------------------------------
+        | CREDIT DAYS
+        |--------------------------------------------------------------------------
+        */
+
+        $creditDays = DB::table('manage_credit_days')
+            ->where('status', '1')
+            ->where('company_id', $companyId)
+            ->orderBy('days')
+            ->get();
+
+        /*
+        |--------------------------------------------------------------------------
+        | STATES
+        |--------------------------------------------------------------------------
+        */
+
+        $stateList = DB::table('states')
+            ->orderBy('state_code')
+            ->get();
+
+        /*
+        |--------------------------------------------------------------------------
+        | ITEM GROUPS
+        |--------------------------------------------------------------------------
+        */
+
+        $itemGroups = DB::table('item_groups')
+            ->where('delete', '0')
+            ->where('company_id', $companyId)
+            ->orderBy('group_name')
+            ->get();
+        
+
+    //          $mat_center = array();
+    //   $mat_center = GstBranch::select('branch_matcenter')->where('delete', '0')
+    //         ->where('company_id', $companyId)->get()->toArray();
+    //   if(!empty($GstSettings->mat_center)) {
+    //      $mat_center[] = array("branch_matcenter" => $GstSettings->mat_center);
+    //   }
+      
+
+        /*
+        |--------------------------------------------------------------------------
+        | ACCOUNT UNITS
+        |--------------------------------------------------------------------------
+        */
+
+        $accountUnits = DB::table('units')
+            ->where('delete', '0')
+            ->where('company_id', $companyId)
+            ->orderBy('name')
+            ->get();
+
+        /*
+        |--------------------------------------------------------------------------
+        | RESPONSE
+        |--------------------------------------------------------------------------
+        */
+
+        return response()->json([
+            'code' => 200,
+            'message' => 'Sales voucher fetched successfully',
+
+            'sale' => $sale,
+
+            'sale_description' => $saleDescription,
+
+            // 'mat_center' => $mat_center,
+
+            'sale_sundry' => $saleSundry,
+
+            'box_sale_orders' => $boxSaleOrders,
+
+            'selected_box_sale_orders' => $selectedBoxSaleOrders,
+
+            'item_groups' => $itemGroups,
+
+            'account_units' => $accountUnits,
+
+            'credit_days' => $creditDays,
+
+            'state_list' => $stateList,
+
+            // 'config' => $config,
+
+            'company_sale_type' => $comp->company_sale_type,
+
+            'production_module_status' => $production_module_status
+        ]);
+
+    } catch (\Exception $e) {
+
+        return response()->json([
+            'code' => 500,
+            'message' => $e->getMessage(),
+            'line' => $e->getLine(),
+            'file' => $e->getFile()
+        ], 500);
     }
+}
+
 
     public function updateSalesVoucher(Request $request)
     {
