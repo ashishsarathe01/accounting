@@ -710,7 +710,9 @@
                                     <li class="py-1 clickable-row-blue">
                                        <a href="{{ route('item-summary.index') }}" class="text-blue">Items Summary</a>
                                     </li>
-                                    
+                                    <li class="py-1 clickable-row-blue">
+                                       <a href="{{ route('export.monthly.report') }}" class="text-blue">Stock Statement</a>
+                                    </li>
                               </ul>
                            </div>
                         </li>
