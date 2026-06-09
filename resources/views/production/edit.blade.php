@@ -235,6 +235,37 @@ $(document).ready(function() {
 
     // Initialize buttons on load
     refreshActionButtons();
+    function parseDateTime(dt) {
+        let parts = dt.match(/^(\d{2})-(\d{2})-(\d{4}) (\d{2}):(\d{2}):(\d{2})$/);
+        if (!parts) {
+            return null;
+        }
+        return new Date(
+            parts[3],
+            parts[2] - 1,
+            parts[1],
+            parts[4],
+            parts[5],
+            parts[6]
+        );
+    }
+    $('input[name="end_time"]').on('blur', function () {
+        let currentValue = $(this).val().trim();
+        let oldValue = $(this).data('old');
+        let startValue = $('input[name="start_time"]').val().trim();
+        let startDate = parseDateTime(startValue);
+        let endDate = parseDateTime(currentValue);
+        if (!endDate) {
+            $(this).val(oldValue);
+            return;
+        }
+        if (endDate < startDate) {
+            alert('End Time cannot be less than Start Time!');
+            $(this).val(oldValue);
+            return;
+        }
+        $(this).data('old', currentValue);
+    });
     // $('input[name="start_time"]').on('change', function () {
     //     let val = $(this).val().trim();
     //     let old = $(this).data('old');

@@ -290,7 +290,7 @@
                                     <td>{{ $deckle->deckle_no }}</td>
                                     <td>{{ date('d-m-Y H:i:s',strtotime($deckle->end_time_stamp)) }} 
                                         @php if($deckle->ledger_id==""){ @endphp
-                                        <img src="{{ asset('public/assets/imgs/edit-icon.svg') }}" class="px-1 edit_end_time" data-id="{{$deckle->id}}" alt="" title="Edit End Time" data-deckle_no="{{ $deckle->deckle_no }}" data-end_time_stamp="{{date('Y-m-d',strtotime($deckle->end_time_stamp))}}" style="cursor: pointer">
+                                        <img src="{{ asset('public/assets/imgs/edit-icon.svg') }}" class="px-1 edit_end_time" data-id="{{$deckle->id}}" alt="" title="Edit End Time" data-deckle_no="{{ $deckle->deckle_no }}" data-start_time_stamp="{{ $deckle->start_time_stamp }}" data-end_time_stamp="{{date('Y-m-d',strtotime($deckle->end_time_stamp))}}" style="cursor: pointer">
                                         @php } @endphp
                                         <table class="mt-2 table table-borderd">
                                             <thead>
@@ -855,9 +855,12 @@
 
 
     $(".edit_end_time").click(function () {
-        let deckleId = $(this).data("id");
-        let deckleNo = $(this).data("deckle_no");
-        let endTime  = $(this).data("end_time_stamp");
+        let deckleId  = $(this).data("id");
+        let deckleNo  = $(this).data("deckle_no");
+        let endTime   = $(this).data("end_time_stamp");
+        let startTime = $(this).data("start_time_stamp");
+        window.deckleStartDate = startTime;
+        window.lastValidEndDate = endTime;
         $("#missingModalLabel").text("Edit Deckle No. " + deckleNo);
         $("#edit_deckle_id").val(deckleId);
         $("#edit_end_time_stamp").val(endTime);
@@ -1061,7 +1064,25 @@
             });
         }
     }); 
+    $(document).on('blur', '#edit_end_time_stamp', function () {
 
+        let selectedDate = $(this).val();
+
+        if (!selectedDate || !window.deckleStartDate) {
+            return;
+        }
+
+        if (selectedDate < window.deckleStartDate) {
+
+            alert('Deckle end date cannot be less than start date.');
+
+            $(this).val(window.lastValidEndDate);
+
+            return false;
+        }
+
+        window.lastValidEndDate = selectedDate;
+    });
 </script>
 
 
