@@ -183,7 +183,7 @@ Route::middleware('auth:api')->group(function(){
     Route::post('sales-voucher-list',[SalesController::class,'SalesVoucherList']);
     Route::post('sales-voucher-list-today',[SalesController::class,'SalesVoucherListToday']);
     Route::post('get-sales-voucher',[SalesController::class,'GetSalesVoucherbyId']);
-    Route::post('update-sales-voucher',[SalesController::class,'updateSalesVoucher']);
+    Route::post('update-sales-voucher',[SalesController::class,'update']);
     Route::post('delete-sales-voucher',[SalesController::class,'deleteSalesVoucher']);
     Route::post('party-sale-summary', [SalesController::class, 'partyWiseSummary']);
     Route::post('sale-invoice', [SalesController::class, 'saleInvoicePdfApi']);
