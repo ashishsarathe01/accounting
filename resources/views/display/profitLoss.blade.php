@@ -130,12 +130,12 @@ input[type=number]::-webkit-outer-spin-button {
 </div>
 
                      <div class="col-md-12 fw-500 font-14  px-3 py-12 border-bottom-divider">
-                        <a class="text-decoration-none text-primary fw-500" href="{{url('purchase-by-month-detail')}}/{{$data['financial_year']}}/{{$from_date}}/{{$to_date}}">
+                        <a class="text-decoration-none text-primary fw-500" href="{{ url('accountledger-filter') }}?_token={{ csrf_token() }}&party=36&from_date={{ $from_date }}&to_date={{ $to_date }}">
                            <p class="d-flex m-0">Purchase
                               <span class="ms-auto">
                                  @php
                                     
-                                    echo formatIndianNumber($data['tot_purchase_amt']-$data['tot_purchase_return_amt']+$data['tot_sale_return_amt_purchase'],2);
+                                    echo formatIndianNumber(round($data['tot_purchase_amt'],2));
                                  @endphp
                               </span>
                            </p>

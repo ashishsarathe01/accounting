@@ -794,26 +794,28 @@ class SalesReturnController extends Controller
                      }
                   }
                }
-               //Add In Stock Table
-               $unit_name = ManageItems::where('manage_items.id',$good)
-                                    ->join('units','units.id','manage_items.u_name')
-                                    ->value('units.s_name');
-               $json = $itemSizeInfos[$key] ?? null;
-               if (!$json) continue;
-               $sizes = json_decode($json, true);
-               if (!is_array($sizes)) continue;
-               foreach ($sizes as $s) {
-                  ItemSizeStock::create([
-                        'item_id' => $good,
-                        'sale_return_id' => $sale->id,
-                        'sale_return_desc_id' => $desc->id,
-                        'size' => $s['size'] ?? null,
-                        'reel_no' => $s['reel_no'] ?? null,
-                        'weight' => $s['weight'] ?? null,
-                        'unit' => $unit_name ?? null, 
-                        'status' => 1,
-                        'company_id' => Session::get('user_company_id') 
-                  ]);
+               //Add In Stock Table — only for WITH ITEM, not RATE DIFFERENCE
+               if($request->input('type') == "WITH ITEM") {
+                  $unit_name = ManageItems::where('manage_items.id',$good)
+                                       ->join('units','units.id','manage_items.u_name')
+                                       ->value('units.s_name');
+                  $json = $itemSizeInfos[$key] ?? null;
+                  if (!$json) continue;
+                  $sizes = json_decode($json, true);
+                  if (!is_array($sizes)) continue;
+                  foreach ($sizes as $s) {
+                     ItemSizeStock::create([
+                           'item_id' => $good,
+                           'sale_return_id' => $sale->id,
+                           'sale_return_desc_id' => $desc->id,
+                           'size' => $s['size'] ?? null,
+                           'reel_no' => $s['reel_no'] ?? null,
+                           'weight' => $s['weight'] ?? null,
+                           'unit' => $unit_name ?? null, 
+                           'status' => 1,
+                           'company_id' => Session::get('user_company_id') 
+                     ]);
+                  }
                }
             }
 
@@ -888,19 +890,41 @@ class SalesReturnController extends Controller
                   //$roundoff = $roundoff - $bill_sundry_amounts[$key];
                }
             }
-            //Average Calculation
-            $goods_discriptions = $request->input('goods_discription');
-            $qtys = $request->input('qty');
-            $sale_item_array = [];
-            foreach($goods_discriptions as $key => $good){
-               if($good=="" || $qtys[$key]==""){
-                  continue;
+            //Average Calculation — only for WITH ITEM, not RATE DIFFERENCE
+            if($request->input('type') == "WITH ITEM") {
+               $goods_discriptions = $request->input('goods_discription');
+               $qtys = $request->input('qty');
+               $sale_item_array = [];
+               foreach($goods_discriptions as $key => $good){
+                  if($good=="" || $qtys[$key]==""){
+                     continue;
+                  }
+                  if(array_key_exists($good,$sale_item_array)){
+                     $sale_item_array[$good] = $sale_item_array[$good] + $qtys[$key];
+                  }else{
+                     $sale_item_array[$good] = $qtys[$key];
+                  }     
                }
+               foreach ($sale_item_array as $key => $value) {
+                  //Add Data In Average Details table
+                  $average_detail = new ItemAverageDetail;
+                  $average_detail->entry_date = $request->date;
+                  $average_detail->series_no = $request->input('series_no');
+                  $average_detail->item_id = $key;
+                  $average_detail->type = 'SALE RETURN';
+                  $average_detail->sale_return_id = $sale->id;
+                  $average_detail->sale_return_weight = $value;
+                  $average_detail->company_id = Session::get('user_company_id');
+                  $average_detail->created_at = Carbon::now();
+                  $average_detail->save();
+                  CommonHelper::RewriteItemAverageByItem($request->date,$key,$request->input('series_no')); 
+               }
+
                if(array_key_exists($good,$sale_item_array)){
                   $sale_item_array[$good] = $sale_item_array[$good] + $qtys[$key];
                }else{
                   $sale_item_array[$good] = $qtys[$key];
-               }     
+               }
             }
             foreach ($sale_item_array as $key => $value) {
                //Add Data In Average Details table
@@ -915,6 +939,7 @@ class SalesReturnController extends Controller
                $average_detail->created_at = Carbon::now();
                $average_detail->save();
                CommonHelper::RewriteItemAverageByItem($request->date,$key,$request->input('series_no')); 
+
             }
             //ADD DATA IN Customer ACCOUNT
             $ledger = new AccountLedger();

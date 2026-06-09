@@ -263,9 +263,12 @@ public function index(Request $request)
       array_push($fixed_asset_group, 15);
       array_push($fixed_asset_group, 13);
       array_push($fixed_asset_group, 14);
+      array_push($fixed_asset_group, 23);
       $fixed_asset_group = array_merge($fixed_asset_group, CommonHelper::getAllChildGroupIds(12,Session::get('user_company_id')));
       $fixed_asset_group = array_merge($fixed_asset_group, CommonHelper::getAllChildGroupIds(15,Session::get('user_company_id')));
       $fixed_asset_group = array_merge($fixed_asset_group, CommonHelper::getAllChildGroupIds(13,Session::get('user_company_id')));
+      $fixed_asset_group = array_merge($fixed_asset_group, CommonHelper::getAllChildGroupIds(14,Session::get('user_company_id')));
+      $fixed_asset_group = array_merge($fixed_asset_group, CommonHelper::getAllChildGroupIds(23,Session::get('user_company_id')));
       $fixed_asset_group = array_merge($fixed_asset_group, CommonHelper::getAllChildGroupIds(14,Session::get('user_company_id')));
       $items = Accounts::select('id','account_name')
                ->whereIn('company_id',[Session::get('user_company_id'),0])
@@ -1096,6 +1099,7 @@ public function index(Request $request)
       array_push($fixed_asset_group, 15);
       array_push($fixed_asset_group, 13);
       array_push($fixed_asset_group, 14);
+      array_push($fixed_asset_group, 23);
       $fixed_asset_group = array_merge($fixed_asset_group, CommonHelper::getAllChildGroupIds(12,Session::get('user_company_id')));
       $fixed_asset_group = array_merge($fixed_asset_group, CommonHelper::getAllChildGroupIds(15,Session::get('user_company_id')));
       $fixed_asset_group = array_merge($fixed_asset_group, CommonHelper::getAllChildGroupIds(13,Session::get('user_company_id')));

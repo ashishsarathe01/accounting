@@ -398,6 +398,71 @@ select.no-arrow {
                                                 $date_head_totals = [];
                                             @endphp
                                             @foreach($rows as $k => $row)
+                                            @if(isset($row->is_payment_only) && $row->is_payment_only)
+                                                <tr style="background:#e8f7ff;">
+                                                    @if(in_array('date',$selectedDateColumns))
+                                                        <td>{{ date('d-m-Y', strtotime($row->entry_date)) }}</td>
+                                                    @endif
+                                                    @if(in_array('account',$selectedDateColumns))
+                                                        <td></td>
+                                                    @endif
+                                                    @if(in_array('invoice',$selectedDateColumns))
+                                                        <td>Payment</td>
+                                                    @endif
+                                                    @if(in_array('area',$selectedDateColumns))
+                                                        <td></td>
+                                                    @endif
+                                                    @if(in_array('net_weight',$selectedDateColumns))
+                                                        <td></td>
+                                                    @endif
+                                                    @if(in_array('cut_weight',$selectedDateColumns))
+                                                        <td></td>
+                                                    @endif
+                                                    @if(in_array('actual_weight',$selectedDateColumns))
+                                                        <td></td>
+                                                    @endif
+                                                    @foreach($sub_heads as $head)
+                                                        @if(in_array('sub_head_'.$head->id, $selectedDateColumns))
+                                                            <td></td>
+                                                        @endif
+                                                    @endforeach
+                                                    @if(in_array('invoice_amount',$selectedDateColumns))
+                                                        <td></td>
+                                                    @endif
+                                                    @if(in_array('gst_amount',$selectedDateColumns))
+                                                        <td></td>
+                                                    @endif
+                                                    @if(in_array('taxable_amount',$selectedDateColumns))
+                                                        <td></td>
+                                                    @endif
+                                                    @if(in_array('actual_amount',$selectedDateColumns))
+                                                        <td></td>
+                                                    @endif
+                                                    @if(in_array('actual_with_gst',$selectedDateColumns))
+                                                        <td></td>
+                                                    @endif
+                                                    @if(in_array('payment',$selectedDateColumns))
+                                                        <td style="text-align:right;font-weight:bold;">
+                                                            {{ formatIndianNumber($row->payment_amount,2) }}
+                                                        </td>
+                                                    @endif
+                                                    @if(in_array('billing_rate',$selectedDateColumns))
+                                                        <td></td>
+                                                    @endif
+                                                    @if(in_array('contract_rate',$selectedDateColumns))
+                                                        <td></td>
+                                                    @endif
+                                                    @if(in_array('difference',$selectedDateColumns))
+                                                        <td></td>
+                                                    @endif
+                                                    <td class="header-section"></td>
+                                                </tr>
+                                                @php
+                                                    $date_payment_amount += $row->payment_amount;
+                                                    $grand_payment_amount += $row->payment_amount;
+                                                @endphp
+                                                @continue
+                                                @endif
                                                 @php 
                                                     $headMap = []; $actual_amount = 0; $contract_rate = "";
                                                     foreach ($row->purchaseReport as $rp) {
@@ -439,7 +504,6 @@ select.no-arrow {
                                                     @if(in_array('date',$selectedDateColumns))
                                                     <td>{{ date('d-m-Y', strtotime($row->entry_date)) }}</td>
                                                     @endif
-
                                                     @if(in_array('account',$selectedDateColumns))
                                                     <td>{{ $row->account_name ?? '-' }}</td>
                                                     @endif

@@ -485,7 +485,21 @@ class ProfitLossController extends Controller{
 
    $total_closing_stock = $closing_stock + $stock_in_transit_value;
       
-      
+      $purchase_debit = AccountLedger::where('account_id', 36)
+         ->where('delete_status', '0')
+         ->where('company_id', Session::get('user_company_id'))
+         ->whereBetween('txn_date', [$from_date, $to_date])
+         ->where('status', '1')
+         ->sum('debit');
+
+      $purchase_credit = AccountLedger::where('account_id', 36)
+         ->where('delete_status', '0')
+         ->where('company_id', Session::get('user_company_id'))
+         ->whereBetween('txn_date', [$from_date, $to_date])
+         ->where('status', '1')
+         ->sum('credit');
+
+      $purchase_ledger_amount = $purchase_debit - $purchase_credit;
 
       $companyData = Companies::where('id', Session::get('user_company_id'))->first();
       $GstSettings = (object)NULL;
@@ -533,7 +547,7 @@ class ProfitLossController extends Controller{
                   ->where('form_source','profitloss')
                   ->select('journals.id','series_no','voucher_no','long_narration')
                   ->get();
-      return  view('display/profitLoss')->with('data', ['tot_purchase_amt' => $tot_purchase_amt+$tot_purchase_sundry_amt, 'tot_sale_amt' => $tot_sale_amt+$tot_sale_sundry_amt, 'tot_purchase_return_amt' => $tot_purchase_return_amt, 'tot_sale_return_amt' => $tot_sale_return_amt, 'financial_year' => $financial_year,'direct_expenses' => $direct_expenses,'direct_income' => $direct_income,'opening_stock' => $opening_stock,'stock_in_transit_opening_value'=>$stock_in_transit_opening_value,'total_opening_stock'=>$total_opening_stock,'total_closing_stock' => $total_closing_stock,'closing_stock'=>$closing_stock,'stock_in_transit_value'=>$stock_in_transit_value,'indirect_expenses' => $indirect_expenses,'indirect_income' => $indirect_income,'series'=>$req_series,'tot_purchase_return_amt_sale'=>$tot_purchase_return_amt_sale,'tot_sale_return_amt_purchase'=>$tot_sale_return_amt_purchase,])->with('from_date',$from_date)->with('to_date',$to_date)->with('opening_stock',$opening_stock)->with('indirect_expenses_credit',$indirect_expenses_credit)->with('direct_expenses_credit',$direct_expenses_credit)->with('debit_indirect_income',$debit_indirect_income)->with('debit_direct_income',$debit_direct_income)->with('current_year',$current_year)->with('mat_series',$mat_series)->with('party_list',$party_list)->with('journal',$journal);
+      return  view('display/profitLoss')->with('data', ['tot_purchase_amt' => $purchase_ledger_amount, 'tot_sale_amt' => $tot_sale_amt+$tot_sale_sundry_amt, 'tot_purchase_return_amt' => $tot_purchase_return_amt, 'tot_sale_return_amt' => $tot_sale_return_amt, 'financial_year' => $financial_year,'direct_expenses' => $direct_expenses,'direct_income' => $direct_income,'opening_stock' => $opening_stock,'stock_in_transit_opening_value'=>$stock_in_transit_opening_value,'total_opening_stock'=>$total_opening_stock,'total_closing_stock' => $total_closing_stock,'closing_stock'=>$closing_stock,'stock_in_transit_value'=>$stock_in_transit_value,'indirect_expenses' => $indirect_expenses,'indirect_income' => $indirect_income,'series'=>$req_series,'tot_purchase_return_amt_sale'=>$tot_purchase_return_amt_sale,'tot_sale_return_amt_purchase'=>$tot_sale_return_amt_purchase,])->with('from_date',$from_date)->with('to_date',$to_date)->with('opening_stock',$opening_stock)->with('indirect_expenses_credit',$indirect_expenses_credit)->with('direct_expenses_credit',$direct_expenses_credit)->with('debit_indirect_income',$debit_indirect_income)->with('debit_direct_income',$debit_direct_income)->with('current_year',$current_year)->with('mat_series',$mat_series)->with('party_list',$party_list)->with('journal',$journal);
    }
    public function saleByMonth(Request $request,$financial_year,$from_date,$to_date){
       $companyId = Session::get('user_company_id');

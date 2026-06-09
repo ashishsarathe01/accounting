@@ -5008,12 +5008,13 @@ class SalesController extends Controller
       $einvoice_username = "";
       $einvoice_password = "";
       $einvoice_gst = ""; 
-      $einvoice_company = "";    
+      $einvoice_company = "";
       $sale = Sales::join('accounts','sales.party','=','accounts.id')
                     ->join('companies','sales.company_id','=','companies.id')
                     ->join('states','accounts.state','=','states.id')
                     ->where('sales.id',$request->id)
-                    ->first(['sales.*','accounts.account_name','accounts.gstin','accounts.address','accounts.state','states.name','accounts.pin_code','companies.company_name','companies.gst_config_type']);          
+                    ->first(['sales.*','accounts.account_name','accounts.gstin','accounts.address','accounts.state','states.name','accounts.pin_code','companies.company_name','companies.gst_config_type']);
+      
       if($sale->gst_config_type=="multiple_gst"){
          $gst_info = DB::table('gst_settings_multiple')
                            ->where(['company_id' => $sale->company_id, 'gst_type' => 'multiple_gst'])
@@ -5126,6 +5127,40 @@ class SalesController extends Controller
             return response()->json($response, 200);
          }
       }
+      $missing = [];
+
+      // Bill To Validation
+      if(empty($sale->billing_name))
+         $missing[] = 'Bill To Name';
+
+      if(empty($sale->billing_address))
+         $missing[] = 'Bill To Address';
+
+      if(empty($sale->billing_pincode))
+         $missing[] = 'Bill To Pincode';
+
+      if(empty($sale->billing_gst))
+         $missing[] = 'Bill To GSTIN';
+
+      // Ship To Validation (only if ship-to is used)
+      if(!empty($sale->shipping_name)){
+
+         if(empty($sale->shipping_address))
+            $missing[] = 'Ship To Address';
+
+         if(empty($sale->shipping_pincode))
+            $missing[] = 'Ship To Pincode';
+
+         if(empty($sale->shipping_gst))
+            $missing[] = 'Ship To GSTIN';
+      }
+
+      if(count($missing) > 0){
+         return response()->json([
+            'success' => false,
+            'message' => 'Please complete the following details before generating E-Way Bill: '.implode(', ', $missing)
+         ]);
+      }
       if($sale->e_invoice_status==1 && !empty($sale->einvoice_response)){
          $einvoice_data = json_decode($sale->einvoice_response);
          $Irn = $einvoice_data->Irn;
@@ -5227,6 +5262,7 @@ class SalesController extends Controller
             }
          }
       }else{
+
          //Get Api Credentails
          $credentials = json_decode(CommonHelper::gstApiCredentials('EWAYBILL'));
          if(!$credentials){
