@@ -2449,6 +2449,17 @@ if (!is_array($deletedReels)) {
                     'updated_at'       => now()
                 ]);
             }
+            //Update Item Average Detail And Item Ledger Date
+            ItemAverageDetail::where('deckle_id',$request->deckle_id)
+                            ->where('company_id',Session::get('user_company_id'))
+                            ->where('type','PRODUCTION GENERATE')
+                            ->update(['entry_date'=>$request->end_time_stamp]);
+            ItemLedger::where('deckle_id', $request->deckle_id)
+                              ->where('company_id', Session::get('user_company_id'))
+                              ->where('source', 7)
+                              ->update([
+                                 'txn_date' => $request->end_time_stamp
+                              ]);
             DB::commit();
             return response()->json([
                 'success' => true,
@@ -2529,7 +2540,7 @@ if (!is_array($deletedReels)) {
                     'created_by'          => Session::get('user_id'),
                 ]);
             }
-
+            
             DB::commit();
 
             return redirect()->route('ConsumptionRate')->with('success', 'Consumption Rate Saved Successfully');
@@ -2962,6 +2973,7 @@ public function updateMachineLoss(Request $request)
                 ->join('manage_items', 'item_size_stocks.item_id', '=', 'manage_items.id')
                 ->leftJoin('deckle_processes', 'item_size_stocks.deckle_id', '=', 'deckle_processes.id')
                 ->leftJoin('sales', 'item_size_stocks.sale_id', '=', 'sales.id')
+                ->leftJoin('sales_returns','item_size_stocks.sale_return_id','=','sales_returns.id' )
                 ->leftJoin('stock_journal as sj', 'item_size_stocks.sj_generated_id', '=', 'sj.id')
                 ->leftJoin('stock_journal', 'item_size_stocks.sj_consumption_id', '=', 'stock_journal.id')
                 ->select(
@@ -2976,6 +2988,9 @@ public function updateMachineLoss(Request $request)
                     'deckle_processes.deckle_no',
                     'sales.voucher_no_prefix',
                     'sales.id as sale_id',
+                    'sales_returns.id as sales_return_id',
+                    'sales_returns.sr_prefix',
+                    'item_size_stocks.deckle_id',
                     'sj.voucher_no as sj_generated_voucher',
                     'sj.id as sj_generated_id',
                     'stock_journal.voucher_no as sj_consumption_voucher',

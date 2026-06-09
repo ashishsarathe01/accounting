@@ -1950,7 +1950,7 @@ function removeItem() {
          }
          calculateAmount($("#bill_sundry_"+$(this).attr('data-id')).val());
       });
-      let configuration = @json($config->transport_info_status);      
+      let configuration = @json($config->transport_info_status ?? null);      
       if(configuration==null || configuration==undefined || configuration==""){
          configuration = 0;
       }

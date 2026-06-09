@@ -5008,12 +5008,13 @@ class SalesController extends Controller
       $einvoice_username = "";
       $einvoice_password = "";
       $einvoice_gst = ""; 
-      $einvoice_company = "";    
+      $einvoice_company = "";
       $sale = Sales::join('accounts','sales.party','=','accounts.id')
                     ->join('companies','sales.company_id','=','companies.id')
                     ->join('states','accounts.state','=','states.id')
                     ->where('sales.id',$request->id)
-                    ->first(['sales.*','accounts.account_name','accounts.gstin','accounts.address','accounts.state','states.name','accounts.pin_code','companies.company_name','companies.gst_config_type']);          
+                    ->first(['sales.*','accounts.account_name','accounts.gstin','accounts.address','accounts.state','states.name','accounts.pin_code','companies.company_name','companies.gst_config_type']);
+      
       if($sale->gst_config_type=="multiple_gst"){
          $gst_info = DB::table('gst_settings_multiple')
                            ->where(['company_id' => $sale->company_id, 'gst_type' => 'multiple_gst'])
@@ -5261,6 +5262,7 @@ class SalesController extends Controller
             }
          }
       }else{
+
          //Get Api Credentails
          $credentials = json_decode(CommonHelper::gstApiCredentials('EWAYBILL'));
          if(!$credentials){

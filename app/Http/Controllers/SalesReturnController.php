@@ -919,6 +919,27 @@ class SalesReturnController extends Controller
                   $average_detail->save();
                   CommonHelper::RewriteItemAverageByItem($request->date,$key,$request->input('series_no')); 
                }
+
+               if(array_key_exists($good,$sale_item_array)){
+                  $sale_item_array[$good] = $sale_item_array[$good] + $qtys[$key];
+               }else{
+                  $sale_item_array[$good] = $qtys[$key];
+               }
+            }
+            foreach ($sale_item_array as $key => $value) {
+               //Add Data In Average Details table
+               $average_detail = new ItemAverageDetail;
+               $average_detail->entry_date = $request->date;
+               $average_detail->series_no = $request->input('series_no');
+               $average_detail->item_id = $key;
+               $average_detail->type = 'SALE RETURN';
+               $average_detail->sale_return_id = $sale->id;
+               $average_detail->sale_return_weight = $value;
+               $average_detail->company_id = Session::get('user_company_id');
+               $average_detail->created_at = Carbon::now();
+               $average_detail->save();
+               CommonHelper::RewriteItemAverageByItem($request->date,$key,$request->input('series_no')); 
+
             }
             //ADD DATA IN Customer ACCOUNT
             $ledger = new AccountLedger();
