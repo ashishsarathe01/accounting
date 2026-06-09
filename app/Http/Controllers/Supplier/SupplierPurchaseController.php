@@ -2606,6 +2606,9 @@ class SupplierPurchaseController extends Controller
                         ->where('pd.delete', '0')
                         ->where('p.company_id', Session::get('user_company_id'))
                         ->where('pd.type', 'Debit')
+                        ->when($id && $id != 'all', function ($q) use ($id) {
+                            $q->where('pd.account_name', $id);
+                        })
                         ->whereBetween('p.date', [$from_date, $to_date])
                         ->select(
                             DB::raw('DATE(p.date) as pay_date'),
@@ -2643,6 +2646,56 @@ class SupplierPurchaseController extends Controller
                             }
                         }
                     }
+
+                        $finalGroupedData = collect();
+
+                        $purchaseDates = collect($purchases_details_by_date->keys());
+
+                        $paymentDates = $paymentsByDate
+                            ->pluck('pay_date')
+                            ->unique();
+
+                        $allDates = $purchaseDates
+                            ->merge($paymentDates)
+                            ->unique()
+                            ->sort();
+
+                        foreach ($allDates as $date) {
+
+                            $rowsForDate = $purchases_details_by_date->get($date, collect());
+
+                            $dateRows = collect();
+
+                            foreach ($rowsForDate as $row) {
+                                $dateRows->push($row);
+                            }
+
+                            if ($rowsForDate->count() == 0) {
+
+                                $paymentAmount = $paymentsByDate
+                                    ->filter(function ($payment) use ($date, $id) {
+                                        return $payment->pay_date == $date
+                                            && $payment->account_id == $id;
+                                    })
+                                    ->sum('amount');
+
+                                if ($paymentAmount > 0) {
+
+                                    $dateRows->push((object)[
+                                        'is_payment_only' => true,
+                                        'entry_date'      => $date,
+                                        'payment_amount'  => $paymentAmount
+                                    ]);
+                                }
+                            }
+
+                            if ($dateRows->count() > 0) {
+                                $finalGroupedData->put($date, $dateRows);
+                            }
+                        }
+
+                        $purchases_details_by_date = $finalGroupedData;
+                    
             }
             
             // echo "<pre>";
@@ -2985,6 +3038,9 @@ class SupplierPurchaseController extends Controller
                         ->where('pd.delete', '0')
                         ->where('p.company_id', Session::get('user_company_id'))
                         ->where('pd.type', 'Debit')
+                        ->when($id && $id != 'all', function ($q) use ($id) {
+                            $q->where('pd.account_name', $id);
+                        })
                         ->whereBetween('p.date', [$from_date, $to_date])
                         ->select(
                             DB::raw('DATE(p.date) as pay_date'),
@@ -3021,6 +3077,57 @@ class SupplierPurchaseController extends Controller
                                 }
                             }
                         }
+                    }
+                    if ($id != 'all') {
+
+                        $finalGroupedData = collect();
+
+                        $purchaseDates = collect($purchases_details_by_date->keys());
+
+                        $paymentDates = $paymentsByDate
+                            ->pluck('pay_date')
+                            ->unique();
+
+                        $allDates = $purchaseDates
+                            ->merge($paymentDates)
+                            ->unique()
+                            ->sort();
+
+                        foreach ($allDates as $date) {
+
+                            $rowsForDate = $purchases_details_by_date->get($date, collect());
+
+                            $dateRows = collect();
+
+                            foreach ($rowsForDate as $row) {
+                                $dateRows->push($row);
+                            }
+
+                            if ($rowsForDate->count() == 0) {
+
+                                $paymentAmount = $paymentsByDate
+                                    ->filter(function ($payment) use ($date, $id) {
+                                        return $payment->pay_date == $date
+                                            && $payment->account_id == $id;
+                                    })
+                                    ->sum('amount');
+
+                                if ($paymentAmount > 0) {
+
+                                    $dateRows->push((object)[
+                                        'is_payment_only' => true,
+                                        'entry_date'      => $date,
+                                        'payment_amount'  => $paymentAmount
+                                    ]);
+                                }
+                            }
+
+                            if ($dateRows->count() > 0) {
+                                $finalGroupedData->put($date, $dateRows);
+                            }
+                        }
+
+                        $purchases_details_by_date = $finalGroupedData;
                     }
             }
             
