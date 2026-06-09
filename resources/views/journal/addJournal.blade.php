@@ -1515,30 +1515,34 @@ border-radius:12px;
 
       });
       $(document).ready(function(){
+         if($('#series_no option').length == 2){
+            $('#series_no').prop('selectedIndex', 1);
+         }
 
          $('#series_no').change(function(){
 
-         let selected = $(this).find(':selected');
+            let selected = $(this).find(':selected');
 
-         let prefix = selected.data('invoice_prefix') || '';
-         let manual = selected.data('manual_enter_invoice_no');
+            let prefix = selected.data('invoice_prefix') || '';
+            let manual = selected.data('manual_enter_invoice_no');
 
-         let start = selected.data('invoice_start_from') || '';
-         $('#voucher_prefix').val(prefix);
-         $('#voucher_no').val(start);
-         $('#manual_enter_invoice_no').val(manual ?? '');
+            let start = selected.data('invoice_start_from') || '';
 
-         if(manual === undefined || manual === null || manual === ''){
-            $('#voucher_prefix').prop('readonly', false);
-         }
-         else if(manual == '1'){
-            $('#voucher_prefix').prop('readonly', false);
-         }
-         else if(manual == '0'){
-            $('#voucher_prefix').prop('readonly', true);
-         }
+            $('#voucher_prefix').val(prefix);
+            $('#voucher_no').val(start);
+            $('#manual_enter_invoice_no').val(manual ?? '');
 
-      });
+            if(manual === undefined || manual === null || manual === ''){
+               $('#voucher_prefix').prop('readonly', false);
+            }
+            else if(manual == '1'){
+               $('#voucher_prefix').prop('readonly', false);
+            }
+            else if(manual == '0'){
+               $('#voucher_prefix').prop('readonly', true);
+            }
+
+         });
 
          $('#series_no').trigger('change');
 

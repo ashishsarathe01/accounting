@@ -875,7 +875,6 @@ $(document).ready(function(){
       else if(accountType === 'cash'){
 
          options += '<option value="1">CASH</option>';
-         options += '<option value="2">CHEQUE</option>';
 
          $('#mode').html(options);
          $('#mode').val('1');

@@ -909,7 +909,6 @@ $('#payment_mode').change(function(){
     }else if(group === 'cash'){
 
         html += '<option value="1">CASH</option>';
-        html += '<option value="2">CHEQUE</option>';
 
     }
 

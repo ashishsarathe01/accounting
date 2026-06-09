@@ -870,7 +870,11 @@ $(document).ready(function(){
     $('#series_no').trigger('change');
 
 });
-   $('#payment_mode').change(function(){
+$(document).ready(function(){
+
+   let initialMode = "{{ $payment->mode }}";
+
+   $('#payment_mode').on('change', function(){
 
       let accountId = $(this).val();
 
@@ -878,7 +882,7 @@ $(document).ready(function(){
 
       let group = $(this).find(':selected').data('group');
 
-      let html = '';
+      let html = '<option value="">Select Type</option>';
 
       if(group === 'bank'){
 
@@ -888,12 +892,25 @@ $(document).ready(function(){
       }else if(group === 'cash'){
 
          html += '<option value="1">CASH</option>';
-         html += '<option value="2">CHEQUE</option>';
 
       }
 
-      $('#mode').html(html).trigger('change');
+      $('#mode').html(html);
+
+      if(initialMode !== null){
+         $('#mode').val(initialMode);
+         initialMode = null;
+      }
+      else{
+         $('#mode option:eq(1)').prop('selected', true);
+      }
+
+      $('#mode').trigger('change');
 
    });
+
+   $('#payment_mode').trigger('change');
+
+});
 </script>
 @endsection

@@ -427,7 +427,6 @@ function redirectBack(){
       else if(accountType === 'cash'){
 
          options += '<option value="1">CASH</option>';
-         options += '<option value="2">CHEQUE</option>';
 
          defaultValue = '1';
 
