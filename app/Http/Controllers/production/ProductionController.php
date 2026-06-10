@@ -2460,6 +2460,59 @@ if (!is_array($deletedReels)) {
                               ->update([
                                  'txn_date' => $request->end_time_stamp
                               ]);
+            ItemLedger::where('deckle_id', $deckle->id)
+                ->where('company_id', Session::get('user_company_id'))
+                ->where('source', 7)
+                ->delete();
+
+            $ledgerData = ItemSizeStock::select(
+                    'item_id',
+                    DB::raw('SUM(weight) as total_weight')
+                )
+                ->where('deckle_id', $deckle->id)
+                ->where('status', 1)
+                ->groupBy('item_id')
+                ->get();
+
+            foreach ($ledgerData as $ledger) {
+
+                $itemLedger = new ItemLedger();
+                $itemLedger->series_no = 'Main';
+                $itemLedger->item_id = $ledger->item_id;
+                $itemLedger->in_weight = $ledger->total_weight;
+                $itemLedger->txn_date = date('Y-m-d', strtotime($deckle->end_time_stamp));
+                $itemLedger->price = 1;
+                $itemLedger->total_price = $ledger->total_weight;
+                $itemLedger->source = 7;
+                $itemLedger->deckle_id = $deckle->id;
+                $itemLedger->status = 1;
+                $itemLedger->delete_status = 0;
+                $itemLedger->company_id = Session::get('user_company_id');
+                $itemLedger->created_by = Session::get('user_id');
+                $itemLedger->created_at = now();
+                $itemLedger->save();
+            }
+            ItemAverageDetail::where('deckle_id', $deckle->id)
+                ->where('company_id', Session::get('user_company_id'))
+                ->where('type', 'PRODUCTION GENERATE')
+                ->delete();
+
+            foreach ($ledgerData as $ledger) {
+
+                $averageDetail = new ItemAverageDetail();
+                $averageDetail->entry_date = date('Y-m-d', strtotime($deckle->end_time_stamp));
+                $averageDetail->item_id = $ledger->item_id;
+                $averageDetail->type = 'PRODUCTION GENERATE';
+                $averageDetail->series_no = 'Main';
+                $averageDetail->production_in_weight = $ledger->total_weight;
+                $averageDetail->production_in_amount = $ledger->total_weight;
+                $averageDetail->deckle_id = $deckle->id;
+                $averageDetail->status = 1;
+                $averageDetail->company_id = Session::get('user_company_id');
+                $averageDetail->created_at = now();
+                $averageDetail->updated_at = now();
+                $averageDetail->save();
+            }
             DB::commit();
             return response()->json([
                 'success' => true,
