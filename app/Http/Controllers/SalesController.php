@@ -8370,4 +8370,1494 @@ public function getBoxSaleOrderItemsMultiple(Request $request)
       //    'new_validity' => $new_validity->toDateString()
       // ]);
    }
+
+public function serviceSaleCreate(Request $request){
+      Gate::authorize('action-module',85);
+      $financial_year = Session::get('default_fy');
+      [$startYY, $endYY] = explode('-', $financial_year);
+      $current_financial_year = CommonHelper::getFinancialYear(date('Y-m-d'));
+      if($financial_year!=$current_financial_year){
+            //return $this->failedMessage('This entry does not belong to the current financial year!','sale');
+      }
+      $fy_start_date = '20' . $startYY . '-04-01'; 
+      $fy_end_date   = '20' . $endYY   . '-03-31';   
+      $companyData = Companies::where('id', Session::get('user_company_id'))->first();
+      $gstApplicable = $companyData->gst_applicable;
+      $config = SaleInvoiceConfiguration::where('company_id', Session::get('user_company_id'))->first();
+      //Ashish Code Start Here
+      // echo "<pre>";
+      //invoice_prefix
+      //Sale Order Data
+      $bill_to_id     = $request->query('bill_to_id');     // 2
+      $shipp_to_id = $request->query('shipp_to_id'); // 332
+      $freight   = $request->query('freight');   // 1
+      $sale_order_id = $request->query('sale_order_id');
+      $new_order = $request->query('new_order');
+      // ===== BOX SALE ORDER =====
+
+      $box_sale_order_id =
+         $request->query('box_sale_order_id');
+
+
+      $boxSaleOrders = DB::table('box_sale_orders')
+
+         ->where(
+            'company_id',
+            Session::get('user_company_id')
+         )
+
+         ->where(
+            'delete',
+            '0'
+         )
+
+         ->orderBy(
+            'id',
+            'DESC'
+         )
+
+         ->get();
+      $sale_order_items = [];
+      if($request->query('item_arr')){
+         $sale_order_items = json_decode($request->query('item_arr'),true);
+      }
+      
+      $sale_enter_data = [];
+      if($request->query('item_arr')){
+         $sale_enter_data = $request->query('sale_enter_data');
+         // echo "<pre>";
+         // print_r(json_decode($sale_enter_data,true));
+         $merged = array_unique(
+            array_merge(...array_column(json_decode($sale_enter_data,true), 'reel_weight_id'))
+         );
+         $check_size_status = ItemSizeStock::select('id')->whereIn('id',$merged)->where('status',0)->get();
+         if(count($check_size_status)>0){
+            return $this->failedMessage('Please Check Selected Weight Stock!','sale-order-start/'.$sale_order_id);
+         }
+         
+      } 
+      
+      if($companyData->gst_config_type == "single_gst"){
+         $GstSettings = DB::table('gst_settings')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])
+                           ->get();
+         $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series')
+                           ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_id'=>$GstSettings[0]->id])
+                           ->get();
+         if(count($branch)>0){
+            $GstSettings = $GstSettings->merge($branch);
+         }         
+      }else if($companyData->gst_config_type == "multiple_gst"){
+         $GstSettings = DB::table('gst_settings_multiple')
+                           ->select('id','gst_no','mat_center','series')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst"])
+                           ->get();
+         foreach ($GstSettings as $key => $value) {
+            $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series')
+                        ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_multiple_id'=>$value->id])
+                        ->get();
+            if(count($branch)>0){
+               $GstSettings = $GstSettings->merge($branch);
+            }
+         }         
+      }
+     
+      if(!$companyData->gst_config_type || empty($companyData->gst_config_type) || !$GstSettings){
+         return $this->failedMessage('Please Enter GST Configuration!','sale');
+      }
+      foreach ($GstSettings as $key => $value) {         
+         $series_configuration = VoucherSeriesConfiguration::where('company_id',Session::get('user_company_id'))
+               ->where('series',$value->series)
+               ->where('configuration_for','SALE')
+               ->where('status','1')
+               ->first();
+         $voucher_no = Sales::select('bill_date')                     
+                        ->where('company_id',Session::get('user_company_id'))
+                        ->where('financial_year','=',$financial_year)
+                        ->where('series_no','=',$value->series)
+                        ->where('delete','=','0')
+                        ->max(\DB::raw("cast(voucher_no as SIGNED)"));
+         $last_bill_date = Sales::select('date')                     
+                        ->where('company_id',Session::get('user_company_id'))
+                        ->where('financial_year','=',$financial_year)
+                        ->where('series_no','=',$value->series)
+                        ->where('delete','=','0')
+                        ->max("date");
+         if(!$voucher_no){
+            if($series_configuration && $series_configuration->manual_numbering=="NO" && $series_configuration->invoice_start!=""){
+                  if ($series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
+                     $GstSettings[$key]->invoice_start_from =  sprintf("%'03d",$series_configuration->invoice_start);
+                  }else{
+                     $GstSettings[$key]->invoice_start_from =  $series_configuration->invoice_start;
+                  }
+            }else{
+               $GstSettings[$key]->invoice_start_from =  "1";
+            }
+         }else{
+            $invc = $voucher_no + 1;
+            if ($series_configuration && $series_configuration->manual_numbering=="NO" && $series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
+                  $invc = sprintf("%'03d", $invc);
+            }
+            $GstSettings[$key]->invoice_start_from =  $invc;
+         }
+         $GstSettings[$key]->last_bill_date =  $last_bill_date;         
+         $invoice_prefix = "";
+         $duplicate_voucher = "";
+         $blank_voucher = "";
+         $manual_enter_invoice_no = "0";
+         if($series_configuration && $series_configuration->manual_numbering=="YES"){
+            $manual_enter_invoice_no = "1";
+            $duplicate_voucher = $series_configuration->duplicate_voucher;
+            $blank_voucher = $series_configuration->blank_voucher;
+         }
+         if($series_configuration && $series_configuration->manual_numbering=="NO"){
+            $manual_enter_invoice_no = "0";
+            if($series_configuration->prefix=="ENABLE" && $series_configuration->prefix_value!=""){
+               $invoice_prefix.=$series_configuration->prefix_value;
+            }        
+            if($series_configuration->prefix=="ENABLE" && $series_configuration->prefix_value!="" && $series_configuration->separator_1!=""){
+                  $invoice_prefix.=$series_configuration->separator_1;
+            }
+            if($series_configuration->year=="PREFIX TO NUMBER" && $series_configuration->year_format!=""){
+               if($series_configuration->year_format=="YY-YY"){
+                  $invoice_prefix.=Session::get('default_fy');
+               }else if($series_configuration->year_format=="YYYY-YY"){
+                  $default_fy = Session::get('default_fy');  // 23-24
+                  $fy_parts = explode('-', $default_fy);     // [23, 24]
+                  $invoice_prefix .= '20' . $fy_parts[0] . '-' . $fy_parts[1];
+               }
+            }            
+            if($series_configuration->year=="PREFIX TO NUMBER" && $series_configuration->year_format!="" && $series_configuration->separator_2!=""){
+                  $invoice_prefix.=$series_configuration->separator_2;
+            }
+            $invoice_prefix.=$GstSettings[$key]->invoice_start_from;
+            if($series_configuration->year=="SUFFIX TO NUMBER" && $series_configuration->year_format!="" && $series_configuration->separator_2!=""){
+                  $invoice_prefix.=$series_configuration->separator_2;
+            }
+            if($series_configuration->year=="SUFFIX TO NUMBER" && $series_configuration->year_format!=""){
+                  if($series_configuration->year_format=="YY-YY"){
+                  $invoice_prefix.=Session::get('default_fy');
+               }else if($series_configuration->year_format=="YYYY-YY"){
+                  $default_fy = Session::get('default_fy');  // 23-24
+                  $fy_parts = explode('-', $default_fy);     // [23, 24]
+                  $invoice_prefix .= '20' . $fy_parts[0] . '-' . $fy_parts[1];
+
+               }
+            }        
+            if($series_configuration->suffix=="ENABLE" && $series_configuration->suffix_value!="" && $series_configuration->separator_3!=""){
+                  $invoice_prefix.=$series_configuration->separator_3;
+            }
+            if($series_configuration->suffix=="ENABLE" && $series_configuration->suffix_value!=""){
+                  $invoice_prefix.=$series_configuration->suffix_value;
+            } 
+         }
+         $GstSettings[$key]->manual_enter_invoice_no =  $manual_enter_invoice_no;
+         $GstSettings[$key]->duplicate_voucher =  $duplicate_voucher;
+         $GstSettings[$key]->blank_voucher =  $blank_voucher;
+         $GstSettings[$key]->invoice_prefix =  $invoice_prefix;
+         
+         
+      }
+      // echo "<pre>";
+      // print_r($GstSettings->toArray());
+      // die;
+      $billsundry = BillSundrys::where('delete', '=', '0')
+                                 ->where('status', '=', '1')
+                                 ->whereIn('company_id',[Session::get('user_company_id'),0])
+                                 //->OrwhereIn('id',[1,2,3,8,9])
+                                 ->orderBy('name')
+                                 ->get();
+      $bill_date = date('Y-m-d');
+      if(date('m')<=3){
+         $current_year = (date('y')-1) . '-' . date('y');
+      }else{
+         $current_year = date('y') . '-' . (date('y') + 1);
+      }
+      if($financial_year!=$current_year){
+         $y =  explode("-",$financial_year);
+         $bill_date = $y[1]."-03-31";
+         $bill_date = date('Y-m-d',strtotime($bill_date));
+      }
+      // print_r($GstSettings);die;
+      // die;
+      //Ashish Code End Here
+
+
+
+      //Account List
+      $top_groups = [3, 11,7,8];
+
+      // Step 2: Get all child group IDs recursively
+      $all_groups = [];
+      foreach ($top_groups as $group_id) {
+         $all_groups[] = $group_id; // include the top group itself
+         $all_groups = array_merge($all_groups, CommonHelper::getAllChildGroupIds($group_id, Session::get('user_company_id')));
+      }
+      // Remove duplicates just in case
+      $groups = array_unique($all_groups);
+      $allowed_group_ids = array_unique($all_groups);
+
+      $no_gst_groups = [7, 8];
+      $no_gst_all_groups = [];
+      foreach ($no_gst_groups as $gid) {
+         $no_gst_all_groups[] = $gid;
+
+         $no_gst_all_groups = array_merge(
+            $no_gst_all_groups,
+            CommonHelper::getAllChildGroupIds($gid, Session::get('user_company_id'))
+         );
+      }
+      $cash_group_ids = array_unique($no_gst_all_groups);
+      $allowedAccountGroups = DB::table('account_groups')
+         ->select('id', 'name')
+         ->whereIn('id', $allowed_group_ids)
+         ->orderBy('name')
+         ->get();
+      $party_list = Accounts::with('otherAddress')
+                              ->leftjoin('states','accounts.state','=','states.id')
+                              ->where('delete', '=', '0')
+                              ->where('status', '=', '1')
+                              ->whereIn('company_id', [Session::get('user_company_id'),0])
+                              ->whereIn('under_group',$groups)
+                              ->select('accounts.id','accounts.gstin','accounts.address','accounts.pin_code','accounts.account_name','states.state_code','under_group')
+                              ->orderBy('account_name')
+                              ->get(); 
+                                 
+      //Item List
+      $item = DB::table('manage_items')->join('units', 'manage_items.u_name', '=', 'units.id')
+            ->leftjoin('item_gst_rate','item_gst_rate.id','=','manage_items.gst_rate')
+            ->join('item_groups', 'item_groups.id', '=', 'manage_items.g_name')
+            ->where('manage_items.delete', '=', '0')
+            ->where('manage_items.status', '=', '1')
+            ->where('manage_items.company_id',Session::get('user_company_id'))
+            ->orderBy('manage_items.name')
+            ->select(['units.s_name as unit', 'manage_items.id','manage_items.u_name','manage_items.dual_unit','manage_items.fixed_weight','manage_items.fixed_weight_value','manage_items.gst_rate','manage_items.name','parameterized_stock_status','config_status','item_groups.id as group_id'])
+            ->get(); 
+
+      $credit_days = DB::table('manage_credit_days')
+            ->where('status','1')
+            ->where('company_id', Session::get('user_company_id'))
+            ->orderBy('days')
+            ->get();
+            
+         $state_list = DB::table('states') ->orderBy('state_code') ->get();
+               foreach($item as $key=>$row){
+                  $item_in_weight = DB::table('item_ledger')->where('status','1')->where('delete_status','0')->where('company_id',Session::get('user_company_id'))->where('item_id',$row->id)->sum('in_weight');
+
+                  $item_out_weight = DB::table('item_ledger')->where('status','1')->where('delete_status','0')->where('company_id',Session::get('user_company_id'))->where('item_id',$row->id)->sum('out_weight');
+
+                  $available_item = $item_in_weight-$item_out_weight;
+                  $item[$key]->available_item = $available_item;
+               }
+
+
+         $com_id = Session::get('user_company_id');
+
+         // Item Groups
+         $itemGroups = DB::table('item_groups')
+            ->where('delete','0')
+            ->where('company_id', $com_id)
+            ->orderBy('group_name')
+            ->get();
+
+         // Units
+         $accountunit = DB::table('units')
+            ->where('delete', '0')
+            ->where('company_id', $com_id)
+            ->orderBy('name')
+            ->get();
+
+         // ✅ USE ALREADY MERGED GST SETTINGS
+         if ($companyData->gst_config_type == "single_gst") {
+
+            $series = DB::table('gst_settings')
+               ->where([
+                     'company_id' => Session::get('user_company_id'),
+                     'gst_type' => "single_gst"
+               ])
+               ->select('id', 'series')
+               ->get();
+
+            $branch = GstBranch::select('branch_series as series')
+               ->where([
+                     'delete' => '0',
+                     'company_id' => Session::get('user_company_id'),
+                     'gst_setting_id' => $series[0]->id ?? null
+               ])
+               ->get();
+
+            if ($branch->count()) {
+               $series = $series->merge($branch);
+            }
+
+         } else {
+
+            $series = DB::table('gst_settings_multiple')
+               ->select('id', 'series')
+               ->where([
+                     'company_id' => Session::get('user_company_id'),
+                     'gst_type' => "multiple_gst"
+               ])
+               ->get();
+
+            foreach ($series as $value) {
+               $branch = GstBranch::select('branch_series as series')
+                     ->where([
+                        'delete' => '0',
+                        'company_id' => Session::get('user_company_id'),
+                        'gst_setting_multiple_id' => $value->id
+                     ])
+                     ->get();
+
+               if ($branch->count()) {
+                     $series = $series->merge($branch);
+               }
+            }
+         }
+
+      //Check Production Module Permission
+
+      $comp = Companies::select('user_id','company_sale_type')
+                        ->where('id',Session::get('user_company_id'))
+                        ->first();
+      $production_module_status = MerchantModuleMapping::where('module_id',4)
+                                                      ->where('merchant_id',$comp->user_id)
+                                                      ->where('company_id', Session()
+                                                      ->get('user_company_id'))
+                                                      ->first();
+      $production_module_status = $production_module_status ? 1 : 0;
+      //Sale Order Other Address
+      $bill_to_address_id = "";
+      $shipp_to_address_id = "";
+      $shipp_to_other_address = "";
+      $shipp_to_other_pincode = "";
+      if(!empty($sale_order_id)){
+         $saleOrderData = SaleOrder::find($sale_order_id);
+         if($saleOrderData->bill_to_address_id){
+            $bill_to_address_id = $saleOrderData->bill_to_address_id;
+         }
+         if($saleOrderData->shipp_to_address_id){
+            $shipp_add = SaleOrder::with('shippToOtherAddress:id,address,pincode')->select('shipp_to_address_id')->find($sale_order_id);
+            if($shipp_add){
+               $shipp_to_other_address = $shipp_add->shippToOtherAddress->address;
+               $shipp_to_other_pincode = $shipp_add->shippToOtherAddress->pincode;
+            }
+            $shipp_to_address_id = $saleOrderData->shipp_to_address_id;
+         }
+      }
+      
+         return view('addServiceSale')
+         ->with('current_financial_year',$current_financial_year)
+         ->with('fy_start_date', $fy_start_date)->with('config', $config)->with('gstApplicable', $gstApplicable)->with('itemGroups', $itemGroups)->with('boxSaleOrders',$boxSaleOrders)->with('box_sale_order_id',$box_sale_order_id)->with('accountunit', $accountunit)->with('series', $series)->with('state_list', $state_list)->with('allowedAccountGroups', $allowedAccountGroups)->with('credit_days', $credit_days)->with('fy_end_date', $fy_end_date)->with('party_list', $party_list)->with('billsundry', $billsundry)->with('bill_date', $bill_date)->with('GstSettings', $GstSettings)->with('item', $item)->with('bill_to_id', $bill_to_id)->with('shipp_to_id', $shipp_to_id)->with('freight', $freight)->with('sale_order_id', $sale_order_id)->with('sale_order_items',$sale_order_items)->with('sale_enter_data',$sale_enter_data)->with('new_order',$new_order)->with('production_module_status',$production_module_status)->with('bill_to_address_id',$bill_to_address_id)->with('shipp_to_address_id',$shipp_to_address_id)->with('shipp_to_other_address',$shipp_to_other_address)->with('shipp_to_other_pincode',$shipp_to_other_pincode)->with('cash_group_ids',$cash_group_ids)->with('company_sale_type',$comp->company_sale_type);
+   }
+
+public function serviceSaleStore(Request $request)
+{
+      // echo "<pre>";
+      // print_r($request->all());
+      // die;
+      //dd($request->all());
+      Gate::authorize('action-module',85);
+      $validated = $request->validate([
+         'series_no' => 'required',
+         'date' => 'required',
+         'voucher_no' => 'required',
+         'party_id' => 'required',
+         'material_center' => 'required',
+         'total' => 'required',
+         'goods_discription' => 'required|array|min:1',
+      ]); 
+
+    //   echo "<pre>";
+    //   print_r($request->all());
+    //   $sale_enter_data = json_decode($request->sale_enter_data,true);
+    //   $grouped = [];
+    //   foreach ($sale_enter_data as $item) {
+    //       $key = $item['detail_row_id'];
+    //       $grouped[$key][] = $item;
+    //   }
+    //   print_r($grouped);
+      
+
+    //   die;
+
+      //Check Item Empty or not
+      if($request->input('goods_discription')[0]=="" || $request->input('qty')[0]=="" || $request->input('price')[0]=="" || $request->input('amount')[0]==""){
+         return $this->failedMessage('Plases Select Item','service-sale/create');
+      }
+      $default_fy = Session::get('default_fy');
+
+      [$startYY, $endYY] = explode('-', $default_fy);
+
+      $fy_start_date = '20'.$startYY.'-04-01';
+
+      $fy_end_date = '20'.$endYY.'-03-31';
+
+      if(
+         $request->input('date') < $fy_start_date
+         ||
+         $request->input('date') > $fy_end_date
+      ){
+         return back()
+
+            ->withInput()
+
+            ->withErrors([
+               'date' =>
+               'Selected date is outside current financial year.'
+            ]);
+      }
+      $financial_year = CommonHelper::getFinancialYear($request->input('date'));
+      //Check Dulicate Invoice Number
+      $check_invoice = Sales::where('company_id',Session::get('user_company_id'))
+                              ->where('voucher_no',$request->input('voucher_no'))
+                              ->where('series_no',$request->input('series_no'))
+                              ->where('financial_year','=',$financial_year)
+                              ->where('delete','0')
+                              ->first();
+      if($check_invoice){
+         return $this->failedMessage('Duplicate Invoice No.','service-sale/create');
+      }
+      $account = Accounts::where('id',$request->input('party_id'))->first();
+      if($request->input('manual_enter_invoice_no')=='0'){
+         $voucher_no = Sales::select('voucher_no')                     
+                        ->where('company_id',Session::get('user_company_id'))
+                        ->where('series_no',$request->input('series_no'))
+                        ->where('financial_year','=',$financial_year)
+                        ->where('delete','=','0')
+                        ->max(\DB::raw("cast(voucher_no as SIGNED)"));
+         $series_configuration = VoucherSeriesConfiguration::where('company_id',Session::get('user_company_id'))
+               ->where('series',$request->input('series_no'))
+               ->where('configuration_for','SALE')
+               ->where('status','1')
+               ->first();
+         if(!$voucher_no){
+               if($series_configuration && $series_configuration->manual_numbering=="NO" && $series_configuration->invoice_start!=""){
+                  if ($series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
+                     $voucher_no =  sprintf("%'03d",$series_configuration->invoice_start);
+                  }else{
+                     $voucher_no =  $series_configuration->invoice_start;
+                  }
+               }else{
+                  $voucher_no = "1";
+               }
+         }else{
+            $voucher_no++;
+            if($series_configuration && $series_configuration->manual_numbering=="NO" && $series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != ""){
+               $voucher_no = sprintf("%'03d", $voucher_no);
+            }
+         }
+      }else{
+         $voucher_no = $request->input('voucher_no');
+      }
+
+      $billing_address = $account->address;
+      $billing_pincode = $account->pin_code;
+      if($request->input('address') && !empty($request->input('address'))){
+         $add = AccountOtherAddress::find($request->input('address'));
+         $billing_address = $add->address.",".$add->pincode;
+         $billing_pincode = $add->pincode;            
+      } 
+      $sale = new Sales;
+      $sale->series_no = $request->input('series_no');
+      $sale->po_no = $request->po_no;
+      $sale->po_date = $request->po_date;
+      $sale->company_id = Session::get('user_company_id');
+      $sale->date = $request->input('date');
+      $voucher_prefix = $request->input('voucher_prefix');
+      $sale->voucher_no_prefix = $voucher_prefix;
+      $sale->voucher_no = $voucher_no;
+      $sale->party = $request->input('party_id');
+      $sale->material_center = $request->input('material_center');
+      
+      $sale->address_id = $request->input('address');
+      $sale->taxable_amt = $request->input('taxable_amt');
+      $sale->total = $request->input('total');
+      $sale->self_vehicle = $request->input('self_vehicle');
+      $sale->vehicle_no = $request->input('vehicle_no');
+      $sale->merchant_gst = $request->input('merchant_gst');
+      $sale->transport_name = $request->input('transport_name');
+      $sale->reverse_charge = $request->input('reverse_charge');
+      $sale->gr_pr_no = $request->input('gr_pr_no');
+      $sale->station = $request->input('station');
+      $sale->ewaybill_no = $request->input('ewaybill_no');
+      $sale->billing_name = $account->print_name;
+      $sale->billing_address = $billing_address;
+      $sale->billing_pincode = $billing_pincode;
+      $sale->billing_gst = $account->gstin;
+      $sale->billing_pan = $account->pan;
+      $sale->billing_state = $account->state;
+      $sale->shipping_name = $request->input('shipping_name');
+      $sale->shipping_state = $request->input('shipping_state');
+      $sale->shipping_address = $request->input('shipping_address');
+      $sale->shipping_pincode = $request->input('shipping_pincode');
+      $sale->shipping_gst = $request->input('shipping_gst'); 
+      $sale->shipping_pan = $request->input('shipping_pan');
+      $sale->financial_year = $financial_year;
+      $sale->created_by = Session::get('user_id');
+      
+      $sale->narration = $request->input('narration'); 
+      $roundoff = $request->input('total')-$request->input('taxable_amt');
+      $sale->save();
+
+
+      if($sale->id){
+         $goods_discriptions = $request->input('goods_discription');
+         $item_descriptions = $request->input('item_description');
+         $description_lines = $request->input('description_lines'); // NEW
+         $qtys = $request->input('qty');
+         $units = $request->input('units');
+         $prices = $request->input('price');
+         $amounts = $request->input('amount');
+         $pricewithgst = $request->input('pricewithgst');
+         $profit = $request->input('profit');
+         
+         foreach($goods_discriptions as $key => $good){
+            if($good=="" || $qtys[$key]=="" || $units[$key]=="" || $prices[$key]=="" || $amounts[$key]==""){
+               continue;
+            }
+            
+            $desc = new SaleDescription;
+            $itemData = ManageItems::find($good);
+            $desc->sale_id = $sale->id;
+            $desc->box_sale_order_item_id = null;
+            $desc->goods_discription = $good;
+            $desc->item_description = $item_descriptions[$key] ?? null;
+            if($itemData && $itemData->dual_unit == 1){
+               $desc->qty = rtrim(rtrim(number_format((float)($total_weights[$key] ?? 0), 2, '.', ''), '0'), '.');
+               $desc->taarobaar_qty = rtrim(rtrim(number_format((float)$qtys[$key], 2, '.', ''), '0'), '.');
+            }else{
+               $desc->qty = rtrim(rtrim(number_format((float)$qtys[$key], 2, '.', ''), '0'), '.');
+               $desc->taarobaar_qty =
+                  rtrim(rtrim(number_format((float)($total_weights[$key] ?? 0), 2, '.', ''), '0'), '.');
+            }
+            $desc->dual_unit =
+               ($itemData && $itemData->dual_unit == 1)
+               ? 1
+               : 0;
+            $desc->unit = $units[$key];
+            $desc->pricewithgst = $pricewithgst[$key] ?? 0;
+            $desc->profit = $profit[$key] ?? 0;
+            $desc->price = $prices[$key];
+            $desc->amount = $amounts[$key];
+            $desc->company_id = Session::get('user_company_id');
+            $desc->status = '1';
+            $desc->save();
+
+            //Item Description Lines
+            if (isset($description_lines[$key]) && is_array($description_lines[$key])) {
+               foreach ($description_lines[$key] as $lineIndex => $lineText) {
+                  if (!empty($lineText)) {
+                        DB::table('sale_description_lines')->insert([
+                           'sale_id' => $sale->id,
+                           'sale_description_id' => $desc->id,
+                           'line_text' => $lineText,
+                           'sort_order' => $lineIndex + 1,
+                           'company_id' => Session::get('user_company_id'),
+                           'created_at' => now(),
+                           'updated_at' => now(),
+                        ]);
+                  }
+               }
+            }
+
+         }
+
+         $bill_sundrys = $request->input('bill_sundry');
+         $tax_amts = $request->input('tax_rate');
+         $bill_sundry_amounts = $request->input('bill_sundry_amount');
+         foreach($bill_sundrys as $key => $bill){
+            if($bill_sundry_amounts[$key]=="" || $bill==""){
+               continue;
+            }
+            $sundry = new SaleSundry;
+            $sundry->sale_id = $sale->id;
+            $sundry->bill_sundry = $bill;
+            $sundry->rate = $tax_amts[$key];
+            $sundry->amount = $bill_sundry_amounts[$key];
+            $sundry->company_id = Session::get('user_company_id');
+            $sundry->status = '1';
+            $sundry->save();
+            //ADD DATA IN CGST ACCOUNT
+            $billsundry = BillSundrys::where('id', $bill)->first();
+
+            if($billsundry->adjust_sale_amt=='No'){
+               $ledger = new AccountLedger();
+               $ledger->account_id = $billsundry->sale_amt_account;
+               if($billsundry->bill_sundry_type=='subtractive'){
+                  $ledger->debit = $bill_sundry_amounts[$key];
+               }else{
+                  $ledger->credit = $bill_sundry_amounts[$key];
+               }              
+               $ledger->txn_date = $request->input('date');
+               $ledger->series_no = $request->input('series_no');
+               $ledger->company_id = Session::get('user_company_id');
+               $ledger->financial_year = $financial_year;
+               $ledger->entry_type = 1;
+               $ledger->entry_type_id = $sale->id;
+               $ledger->map_account_id = $request->input('party_id');
+               $ledger->created_by = Session::get('user_id');
+               $ledger->created_at = date('d-m-Y H:i:s');
+               $ledger->save();
+               $roundoff = $roundoff - $bill_sundry_amounts[$key];
+            }
+         }
+
+         //ADD DATA IN Customer ACCOUNT
+         $ledger = new AccountLedger();
+         $ledger->account_id = $request->input('party_id');
+         $ledger->debit = $request->input('total');
+         $ledger->txn_date = $request->input('date');
+         $ledger->series_no = $request->input('series_no');
+         $ledger->company_id = Session::get('user_company_id');
+         $ledger->financial_year = $financial_year;
+         $ledger->entry_type = 1;
+         $ledger->entry_type_id = $sale->id;
+         $ledger->map_account_id = 35;//Sales Account
+         $ledger->created_by = Session::get('user_id');
+         $ledger->created_at = date('d-m-Y H:i:s');
+         $ledger->save();
+         //ADD DATA IN Sale ACCOUNT
+         $SaleLgr=0;
+         if($sale->id){
+            $goods_discriptions = $request->input('goods_discription');
+            $qtys = $request->input('qty');
+            $units = $request->input('units');
+            $prices = $request->input('price');
+            $amounts = $request->input('amount');
+            foreach($goods_discriptions as $key => $good){
+               if($good=="" || $qtys[$key]=="" || $units[$key]=="" || $prices[$key]=="" || $amounts[$key]==""){
+                  continue;
+               }
+               $SaleLgr += $amounts[$key];
+               
+            }
+         }               
+         $bill_sundrys = $request->input('bill_sundry');
+         $tax_amts = $request->input('tax_rate');
+         $bill_sundry_amounts = $request->input('bill_sundry_amount');
+         foreach($bill_sundrys as $key => $bill){
+            if($bill_sundry_amounts[$key]=="" || $bill==""){
+               continue;
+            }            
+            //ADD DATA IN CGST ACCOUNT
+            $billsundry = BillSundrys::where('id', $bill)->first();
+            if($billsundry->adjust_sale_amt=='Yes'){
+               if( $billsundry->bill_sundry_type=="additive"){
+                  $SaleLgr += $bill_sundry_amounts[$key];
+               }else if( $billsundry->bill_sundry_type=="subtractive"){
+                  $SaleLgr -= $bill_sundry_amounts[$key];
+               }
+            }
+         }
+         $ledger = new AccountLedger();
+         $ledger->account_id = 35;//Sales Account
+         $ledger->credit = $SaleLgr;
+         $ledger->txn_date = $request->input('date');
+         $ledger->series_no = $request->input('series_no');
+         $ledger->company_id = Session::get('user_company_id');
+         $ledger->financial_year = $financial_year;
+         $ledger->entry_type = 1;
+         $ledger->entry_type_id = $sale->id;
+         $ledger->map_account_id = $request->input('party_id');
+         $ledger->created_by = Session::get('user_id');
+         $ledger->created_at = date('d-m-Y H:i:s');
+         $ledger->save();
+
+         session(['previous_url' => URL::previous()]);
+         return redirect('sale-invoice/'.$sale->id.'?source=service-sale')->withSuccess('Service sale voucher added successfully!');
+      }else{
+         return $this->failedMessage('Something went wrong','service-sale/create');
+         exit();
+      }
+}
+public function editServiceSale(Request $request, $id)
+{
+      Gate::authorize('action-module',61);
+      $bill_to_id     = $request->query('bill_to_id');     // 2
+      $shipp_to_id = $request->query('shipp_to_id'); // 332
+      $freight   = $request->query('freight');   // 1
+      $sale_order_id = $request->query('sale_order_id');
+      $new_order = $request->query('new_order');
+      $sale_order_items = [];
+      if($request->query('item_arr')){
+         $sale_order_items = json_decode($request->query('item_arr'),true);
+      }
+      $sale_enter_data = [];
+      if($request->query('item_arr')){
+         $sale_enter_data = $request->query('sale_enter_data');
+      }
+      $sale = Sales::find($id);
+      $boxSaleOrders = DB::table('box_sale_orders')
+                     ->where('company_id', Session::get('user_company_id'))
+                     ->where('party_id', $sale->party)
+                     ->where('delete', '0')
+                     ->orderBy('id', 'DESC')
+                     ->get();
+      $SaleDescription = SaleDescription::join('units','sale_descriptions.unit','=','units.id')
+                                          ->where('sale_id', $id)
+                                          ->select(['sale_descriptions.*','units.s_name'])
+                                          ->get();
+      $SaleSundry = SaleSundry::join('bill_sundrys','sale_sundries.bill_sundry','=','bill_sundrys.id')
+                                 ->select(['bill_sundrys.effect_gst_calculation','bill_sundrys.nature_of_sundry','sale_sundries.*'])
+                                 ->where('sale_sundries.sale_id', $id)
+                                 ->get();
+      $top_groups = [3, 11,7,8];
+
+      // Step 2: Get all child group IDs recursively
+      $all_groups = [];
+      foreach ($top_groups as $group_id) {
+         $all_groups[] = $group_id; // include the top group itself
+         $all_groups = array_merge($all_groups, CommonHelper::getAllChildGroupIds($group_id, Session::get('user_company_id')));
+      }
+
+      // Remove duplicates just in case
+      $groups = array_unique($all_groups);
+      $allowed_group_ids = array_unique($all_groups);
+      $no_gst_groups = [7, 8];
+      $no_gst_all_groups = [];
+      foreach ($no_gst_groups as $gid) {
+         $no_gst_all_groups[] = $gid;
+
+         $no_gst_all_groups = array_merge(
+            $no_gst_all_groups,
+            CommonHelper::getAllChildGroupIds($gid, Session::get('user_company_id'))
+         );
+      }
+      $cash_group_ids = array_unique($no_gst_all_groups);
+      $allowedAccountGroups = DB::table('account_groups')
+         ->select('id', 'name')
+         ->whereIn('id', $allowed_group_ids)
+         ->orderBy('name')
+         ->get();
+      $party_list = Accounts::with(['otherAddress'])->select('accounts.*','states.state_code')
+                              ->leftjoin('states','accounts.state','=','states.id')
+                              ->where('accounts.delete', '=', '0')
+                              ->where('accounts.status', '=', '1')
+                              ->whereIn('company_id', [Session::get('user_company_id'),0])
+                              ->whereIn('under_group',$groups)
+                              ->orderBy('account_name')
+                              ->get();
+      $manageitems = DB::table('manage_items')
+                           ->join('units', 'manage_items.u_name', '=', 'units.id')
+                           ->leftJoin('item_gst_rate', 'item_gst_rate.id', '=', 'manage_items.gst_rate')
+                           ->join('item_groups', 'item_groups.id', '=', 'manage_items.g_name')
+                           ->where('manage_items.delete', '0')
+                           ->where('manage_items.status', '1')
+                           ->where('manage_items.company_id', Session::get('user_company_id'))
+                           ->orderBy('manage_items.name')
+                           ->select([
+                              'units.s_name as unit',
+                              'manage_items.id',
+                              'manage_items.u_name',
+                              'manage_items.dual_unit',
+                              'manage_items.gst_rate',
+                              'manage_items.name',
+                              'manage_items.fixed_weight',
+                              'manage_items.fixed_weight_value',
+                              'item_groups.parameterized_stock_status',
+                              'item_groups.config_status',
+                              'item_groups.id as group_id'
+                           ])
+                           ->get();
+
+
+      // Add available stock same as create
+      foreach ($manageitems as $key => $row) {
+
+         $item_in_weight = DB::table('item_ledger')
+            ->where('status', '1')
+            ->where('delete_status', '0')
+            ->where('company_id', Session::get('user_company_id'))
+            ->where('item_id', $row->id)
+            ->sum('in_weight');
+
+         $item_out_weight = DB::table('item_ledger')
+            ->where('status', '1')
+            ->where('delete_status', '0')
+            ->where('company_id', Session::get('user_company_id'))
+            ->where('item_id', $row->id)
+            ->sum('out_weight');
+
+         $available_item = $item_in_weight - $item_out_weight;
+         $manageitems[$key]->available_item = $available_item;
+      }
+
+      $companyData = Companies::where('id', Session::get('user_company_id'))->first();
+      $gstApplicable = $companyData->gst_applicable;
+      $GstSettings = (object)NULL;
+      $GstSettings->mat_center = array();
+      $GstSettings->series = array();
+      $mat_series = array();
+      if($companyData->gst_config_type == "single_gst") {
+         $GstSettings = DB::table('gst_settings')->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])->first();
+
+         $mat_series = DB::table('gst_settings')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])
+                           ->get();
+         $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series','branch_invoice_prefix as invoice_prefix')
+                           ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_id'=>$mat_series[0]->id])
+                           ->get();
+         if(count($branch)>0){
+            $mat_series = $mat_series->merge($branch);
+         }
+      }else if($companyData->gst_config_type == "multiple_gst"){
+         $GstSettings = DB::table('gst_settings_multiple')->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst"])->first();
+
+         $mat_series = DB::table('gst_settings_multiple')
+                           ->select('id','gst_no','mat_center','series','invoice_prefix')
+                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst"])
+                           ->get();
+         foreach ($mat_series as $key => $value) {
+            $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series','branch_invoice_prefix as invoice_prefix')
+                        ->where(['delete' => '0', 'company_id' => Session::get('user_company_id'),'gst_setting_multiple_id'=>$value->id])
+                        ->get();
+            if(count($branch)>0){
+               $mat_series = $mat_series->merge($branch);
+            }
+         } 
+      }
+
+      
+      
+      if(!$GstSettings || !isset($companyData->gst_config_type)){
+         return $this->failedMessage('Please Enter GST Configuration!','sale');
+      }      
+      $financial_year = Session::get('default_fy');
+      [$startYY, $endYY] = explode('-', $financial_year);
+
+      $fy_start_date = '20' . $startYY . '-04-01'; 
+      $fy_end_date   = '20' . $endYY   . '-03-31';       
+      foreach ($mat_series as $key => $value) {
+         if($sale->series_no==$value->series){
+            $mat_series[$key]->invoice_start_from =  $sale->voucher_no;
+         }else{
+            $voucher_no = Sales::select('voucher_no')                     
+                           ->where('company_id',Session::get('user_company_id'))
+                           ->where('financial_year','=',$financial_year)
+                           ->where('series_no','=',$value->series)
+                           ->where('delete','=','0')
+                           ->max(\DB::raw("cast(voucher_no as SIGNED)"));
+            if(!$voucher_no){
+               $mat_series[$key]->invoice_start_from =  "001";
+            }else{
+               $invc = $voucher_no + 1;
+               $invc = sprintf("%'03d", $invc);
+               $mat_series[$key]->invoice_start_from =  $invc;
+            }
+         }
+      }
+      $mat_center = array();
+      $mat_center = GstBranch::select('branch_matcenter')->where(['delete' => '0', 'company_id' => Session::get('user_company_id')])->get()->toArray();
+      if(!empty($GstSettings->mat_center)) {
+         $mat_center[] = array("branch_matcenter" => $GstSettings->mat_center);
+      }
+      
+      // $mat_series = GstBranch::select('branch_series')->where(['delete' => '0', 'company_id' => Session::get('user_company_id')])->get()->toArray();
+      // if(!empty($GstSettings->series)){
+      //    $mat_series[] = array("branch_series" => $GstSettings->series);
+      // }
+      $billsundry = BillSundrys::where('delete', '=', '0')
+                                 ->where('status', '=', '1')
+                                 ->whereIn('company_id',[Session::get('user_company_id'),0])
+                                 //->OrwhereIn('id',[1,2,3,8,9])
+                                 ->orderBy('name')
+                                 ->get();
+      $comp = Companies::select('user_id','company_sale_type')
+         ->where('id', Session::get('user_company_id'))
+         ->first();
+
+      $production_module_status = MerchantModuleMapping::where('module_id', 4)
+         ->where('merchant_id', $comp->user_id)
+         ->where('company_id', Session()->get('user_company_id'))
+         ->first();
+
+      $production_module_status = $production_module_status ? 1 : 0;
+
+      $selectedBoxSaleOrders = DB::table('sale_box_sale_orders')
+         ->join(
+            'box_sale_orders',
+            'box_sale_orders.id',
+            '=',
+            'sale_box_sale_orders.box_sale_order_id'
+         )
+         ->where(
+            'sale_box_sale_orders.sale_id',
+            $sale->id
+         )
+         ->select(
+            'box_sale_orders.id as id',
+            'box_sale_orders.sale_order_no as text'
+         )
+         ->get();
+      $boxSaleOrderItems = [];
+      $selectedBoxSaleOrderIds = $selectedBoxSaleOrders
+         ->pluck('id')
+         ->toArray();
+      if(count($selectedBoxSaleOrderIds) > 0)
+      {
+         $soItems = DB::table('box_sale_order_items')
+            ->leftJoin(
+               'manage_items',
+               'manage_items.id',
+               '=',
+               'box_sale_order_items.item_id'
+            )
+            ->leftJoin(
+               'units',
+               'units.id',
+               '=',
+               'manage_items.u_name'
+            )
+            ->leftJoin(
+               'box_sale_orders',
+               'box_sale_orders.id',
+               '=',
+               'box_sale_order_items.box_sale_order_id'
+            )
+            ->whereIn(
+               'box_sale_order_items.box_sale_order_id',
+               $selectedBoxSaleOrderIds
+            )
+            ->where(
+               'box_sale_order_items.company_id',
+               Session::get('user_company_id')
+            )
+            ->where(
+               'box_sale_order_items.delete',
+               '0'
+            )
+            ->select(
+
+               'box_sale_order_items.id as so_item_id',
+
+               'box_sale_order_items.item_id',
+
+               'box_sale_order_items.qty',
+
+               'box_sale_order_items.price',
+
+               'box_sale_order_items.box_sale_order_id',
+
+               'manage_items.name',
+
+               'manage_items.gst_rate',
+
+               'units.id as unit_id',
+
+               'units.s_name as unit_name',
+
+               'box_sale_orders.sale_order_no'
+
+            )
+            ->get();
+         foreach($soItems as $row)
+         {
+            $soldQty = DB::table('sale_descriptions')
+               ->where(
+                  'box_sale_order_item_id',
+                  $row->so_item_id
+               )
+               ->where(
+                  'company_id',
+                  Session::get('user_company_id')
+               )
+               ->where(
+                  'delete',
+                  '0'
+               )
+               ->sum('qty');
+            $currentSaleQty = DB::table('sale_descriptions')
+               ->where(
+                  'sale_id',
+                  $sale->id
+               )
+               ->where(
+                  'box_sale_order_item_id',
+                  $row->so_item_id
+               )
+               ->sum('qty');
+            $pendingQty =
+
+               (float)$row->qty
+
+               -
+
+               (float)$soldQty
+
+               +
+
+               (float)$currentSaleQty;
+
+            if($pendingQty > 0)
+            {
+
+               $boxSaleOrderItems[] = [
+
+                  'so_item_id' =>
+                     $row->so_item_id,
+
+                  'item_id' =>
+                     $row->item_id,
+
+                  'item_name' =>
+                     $row->name,
+
+                  'pending_qty' =>
+                     round($pendingQty,2),
+
+                  'price' =>
+                     $row->price,
+
+                  'unit' =>
+                     $row->unit_id,
+
+                  'unit_name' =>
+                     $row->unit_name,
+
+                  'gst_rate' =>
+                     $row->gst_rate,
+
+                  'sale_order_no' =>
+                     $row->sale_order_no,
+
+                  'box_sale_order_id' =>
+                     $row->box_sale_order_id
+
+               ];
+
+            }
+
+         }
+
+      }
+      foreach ($SaleDescription as $desc) {
+         $desc->selected_sizes = DB::table('item_size_stocks')
+            ->where('sale_id', $sale->id)
+            ->where('item_id', $desc->goods_discription)
+            ->select('id', 'size', 'weight', 'reel_no')
+            ->get();
+      }
+      foreach ($SaleDescription as $desc) {
+         $desc->lines = DB::table('sale_description_lines')
+            ->where('sale_description_id', $desc->id)
+            ->orderBy('sort_order')
+            ->get();
+      }
+       $credit_days = DB::table('manage_credit_days')
+            ->where('status','1')
+            ->where('company_id', Session::get('user_company_id'))
+            ->orderBy('days')
+            ->get();
+            
+      $state_list = DB::table('states') ->orderBy('state_code') ->get();
+      $com_id = Session::get('user_company_id');
+      // Item Groups
+      $itemGroups = DB::table('item_groups')
+            ->where('delete','0')
+            ->where('company_id', $com_id)
+            ->orderBy('group_name')
+            ->get();
+
+      // Units
+      $accountunit = DB::table('units')
+         ->where('delete', '0')
+         ->where('company_id', $com_id)
+         ->orderBy('name')
+         ->get();
+
+         // ✅ USE ALREADY MERGED GST SETTINGS
+         if ($companyData->gst_config_type == "single_gst") {
+
+            $series = DB::table('gst_settings')
+               ->where([
+                     'company_id' => Session::get('user_company_id'),
+                     'gst_type' => "single_gst"
+               ])
+               ->select('id', 'series')
+               ->get();
+
+            $branch = GstBranch::select('branch_series as series')
+               ->where([
+                     'delete' => '0',
+                     'company_id' => Session::get('user_company_id'),
+                     'gst_setting_id' => $series[0]->id ?? null
+               ])
+               ->get();
+
+            if ($branch->count()) {
+               $series = $series->merge($branch);
+            }
+
+         } else {
+
+            $series = DB::table('gst_settings_multiple')
+               ->select('id', 'series')
+               ->where([
+                     'company_id' => Session::get('user_company_id'),
+                     'gst_type' => "multiple_gst"
+               ])
+               ->get();
+
+            foreach ($series as $value) {
+               $branch = GstBranch::select('branch_series as series')
+                     ->where([
+                        'delete' => '0',
+                        'company_id' => Session::get('user_company_id'),
+                        'gst_setting_multiple_id' => $value->id
+                     ])
+                     ->get();
+
+               if ($branch->count()) {
+                     $series = $series->merge($branch);
+               }
+            }
+         }
+         $config = SaleInvoiceConfiguration::where('company_id', Session::get('user_company_id'))->first();
+         $bill_to_address_id     = $sale->address_id ?? '';
+         $shipp_to_address_id    = '';
+         $shipp_to_other_address = '';
+         $shipp_to_other_pincode = '';
+         
+            return view('editServiceSale')
+                     ->with('production_module_status', $production_module_status)
+                     ->with('fy_start_date', $fy_start_date)
+                     ->with('fy_end_date', $fy_end_date)
+                     ->with('party_list', $party_list)
+                     ->with('manageitems', $manageitems)
+                     ->with('billsundry', $billsundry)
+                     ->with('mat_center', $mat_center)
+                     ->with('GstSettings', $GstSettings)
+                     ->with('mat_series', $mat_series)
+                     ->with('sale', $sale)
+                     ->with('SaleDescription', $SaleDescription)
+                     ->with('SaleSundry', $SaleSundry)
+                     ->with('config',$config)
+                     ->with('itemGroups', $itemGroups)
+                     ->with('accountunit', $accountunit)
+                     ->with('selectedBoxSaleOrders',$selectedBoxSaleOrders)
+                     ->with('boxSaleOrders', $boxSaleOrders)
+                     ->with('boxSaleOrderItems', $boxSaleOrderItems)
+                     ->with('series', $series)
+                     ->with('state_list', $state_list)
+                     ->with('allowedAccountGroups', $allowedAccountGroups)
+                     ->with('credit_days', $credit_days)
+                     ->with('bill_to_id', $bill_to_id)
+                     ->with('shipp_to_id', $shipp_to_id)
+                     ->with('freight', $freight)
+                     ->with('sale_order_id', $sale_order_id)
+                     ->with('sale_order_items',$sale_order_items)
+                     ->with('sale_enter_data',$sale_enter_data)
+                     ->with('new_order',$new_order)
+                     ->with('cash_group_ids',$cash_group_ids)
+                     ->with('gstApplicable', $gstApplicable)
+                     ->with('company_sale_type',$comp->company_sale_type);
+}
+   public function serviceSaleUpdate(Request $request){
+      Gate::authorize('action-module',61);
+      $validated = $request->validate([
+         'series_no' => 'required',
+         'date' => 'required',
+         'voucher_no' => 'required',
+         'party' => 'required',
+         'material_center' => 'required',
+         'total' => 'required',
+         'goods_discription' => 'required|array|min:1',
+      ]); 
+      //Check Item Empty or not
+      if($request->input('goods_discription')[0]==""){
+         return $this->failedMessage('Plases Select Item','service-sale/create');
+      }
+      $default_fy = Session::get('default_fy');
+
+      [$startYY, $endYY] = explode('-', $default_fy);
+
+      $fy_start_date = '20'.$startYY.'-04-01';
+
+      $fy_end_date = '20'.$endYY.'-03-31';
+
+      if(
+         $request->input('date') < $fy_start_date
+         ||
+         $request->input('date') > $fy_end_date
+      ){
+         return back()
+
+            ->withInput()
+
+            ->withErrors([
+               'date' =>
+               'Selected date is outside current financial year.'
+            ]);
+      }
+      $financial_year = CommonHelper::getFinancialYear($request->input('date'));
+
+         $sale = Sales::find($request->input('sale_edit_id'));
+         
+      //Check Dulicate Invoice Number
+     //dd($request->all());
+      // echo "<pre>";
+      // print_r($request->all());
+      // $sale_enter_data = json_decode($request->sale_enter_data,true);
+      //       $grouped = [];
+      //       foreach ($sale_enter_data as $item) {
+      //          $key = $item['detail_row_id'];
+      //          $grouped[$key][] = $item;
+      //       }
+      //       print_r($grouped);
+      //die;
+
+      $account = Accounts::where('id',$request->input('party'))->first();
+         
+     
+      $oldSnapshot = [
+         'sale' => $sale->toArray(),
+
+         'items' => SaleDescription::where('sale_id', $sale->id)->get()->toArray(),
+
+         'sundries' => SaleSundry::where('sale_id', $sale->id)->get()->toArray(),
+
+         'account_ledgers' => AccountLedger::where('entry_type', 1)
+            ->where('entry_type_id', $sale->id)
+            ->get()->toArray(),
+
+      ];
+      //If Same Series Edit
+      $sale->series_no = $request->input('series_no');
+      $sale->date = $request->input('date');
+      $voucher_prefix = "";
+      if(!empty($request->input('voucher_prefix'))){
+         $voucher_prefix_arr = explode("/",$request->input('voucher_prefix'));
+         if(count($voucher_prefix_arr)>1){
+            $voucher_prefix = $voucher_prefix_arr[0]."/".$voucher_prefix_arr[1]."/";
+         }else if(count($voucher_prefix_arr)==1){
+            $voucher_prefix = "";
+         }
+      }
+      $billing_address = $account->address;
+      $billing_pincode = $account->pin_code;
+      if($request->input('address') && !empty($request->input('address'))){
+         $add = AccountOtherAddress::find($request->input('address'));
+         $billing_address = $add->address.",".$add->pincode;
+         $billing_pincode = $add->pincode;
+      } 
+      $sale->party = $request->input('party');
+      $sale->material_center = $request->input('material_center');
+      $sale->taxable_amt = $request->input('taxable_amt');
+      $sale->total = $request->input('total');
+      $sale->self_vehicle = $request->input('self_vehicle');
+      $sale->vehicle_no = $request->input('vehicle_no');
+      $sale->address_id = $request->input('address');
+      $sale->ewaybill_no = $request->input('ewaybill_no');
+      $sale->transport_name = $request->input('transport_name');
+      $sale->reverse_charge = $request->input('reverse_charge');
+      $sale->gr_pr_no = $request->input('gr_pr_no');
+      $sale->station = $request->input('station');
+      $sale->billing_name = $account->print_name;
+      $sale->billing_address = $billing_address;
+      $sale->billing_pincode = $billing_pincode;
+      $sale->billing_gst = $account->gstin;
+      $sale->billing_pan = $account->pan;
+      $sale->billing_state = $account->state;
+      $sale->shipping_name = $request->input('shipping_name');
+      $sale->shipping_state = $request->input('shipping_state');
+      $sale->shipping_address = $request->input('shipping_address');
+      $sale->shipping_pincode = $request->input('shipping_pincode');
+      $sale->shipping_gst = $request->input('shipping_gst');
+      $sale->shipping_pan = $request->input('shipping_pan');
+      $sale->financial_year = $financial_year;
+      $sale->updated_by = Session::get('user_id');
+      $sale->narration = $request->input('narration');
+      $sale->po_no = $request->input('po_no');
+      $sale->po_date = $request->input('po_date');
+      $sale->save();
+
+
+      if ($sale->id) {
+         $goods_discriptions = $request->input('goods_discription');
+         $item_descriptions = $request->input('item_description');
+         $description_lines = $request->input('description_lines');
+         $qtys   = $request->input('qty');
+         $units  = $request->input('units');
+         $prices = $request->input('price');
+         $amounts = $request->input('amount');
+         DB::table('sale_description_lines')
+            ->where('sale_id', $sale->id)
+            ->delete();
+
+         SaleDescription::where('sale_id', $sale->id)->delete();
+
+         $pricewithgst = $request->input('pricewithgst');
+         $profit = $request->input('profit');
+         foreach ($goods_discriptions as $key => $good) {
+
+            if ($good=="" || $qtys[$key]=="" || $units[$key]=="" || 
+               $prices[$key]=="" || $amounts[$key]=="") {
+               continue;
+            }
+            $desc = new SaleDescription;
+            $desc->sale_id = $sale->id;
+            $desc->goods_discription = $good;
+            $desc->box_sale_order_item_id = null;
+            $desc->item_description = $item_descriptions[$key] ?? '';
+            $itemData = ManageItems::find($good);
+
+            if($itemData && $itemData->dual_unit == 1){
+
+               // Store Total Wt in qty
+               $desc->qty = rtrim(rtrim(number_format((float)($total_weights[$key] ?? 0), 2, '.', ''), '0'), '.');
+
+               // Store Qty in taarobaar_qty
+               $desc->taarobaar_qty = rtrim(rtrim(number_format((float)$qtys[$key], 2, '.', ''), '0'), '.');
+
+            }else{
+
+               // Normal items
+               $desc->qty = rtrim(rtrim(number_format((float)$qtys[$key], 2, '.', ''), '0'), '.');
+
+               $desc->taarobaar_qty =
+                  rtrim(rtrim(number_format((float)($total_weights[$key] ?? 0), 2, '.', ''), '0'), '.');
+            }
+
+            $desc->dual_unit =
+               ($itemData && $itemData->dual_unit == 1)
+               ? 1
+               : 0;
+
+            $desc->unit = $units[$key];
+            $desc->pricewithgst = $pricewithgst[$key] ?? 0;
+            $desc->profit = $profit[$key] ?? 0;
+            $desc->price = $prices[$key];
+            $desc->amount = $amounts[$key];
+            $desc->company_id = Session::get('user_company_id');
+            $desc->status = '1';
+            $desc->save();
+
+            // Description lines
+             if (isset($description_lines[$key]) && is_array($description_lines[$key])) {
+               foreach ($description_lines[$key] as $lineIndex => $lineText) {
+                  if (!empty($lineText)) {
+                     DB::table('sale_description_lines')->insert([
+                        'sale_id' => $sale->id,
+                        'sale_description_id' => $desc->id,
+                        'line_text' => $lineText,
+                        'sort_order' => $lineIndex + 1,
+                        'company_id' => Session::get('user_company_id'),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                     ]);
+                  }
+               }
+            }
+       
+         }
+
+         $bill_sundrys = $request->input('bill_sundry');
+         $tax_amts = $request->input('tax_rate');
+         $bill_sundry_amounts = $request->input('bill_sundry_amount');
+         SaleSundry::where('sale_id',$sale->id)->delete();
+         AccountLedger::where('entry_type_id',$sale->id)->where('entry_type',1)->delete();
+         foreach($bill_sundrys as $key => $bill){
+            if($bill_sundry_amounts[$key]=="" || $bill==""){
+               continue;
+            }
+            $sundry = new SaleSundry;
+            $sundry->sale_id = $sale->id;
+            $sundry->bill_sundry = $bill;
+            $sundry->rate = $tax_amts[$key];
+            $sundry->company_id = Session::get('user_company_id');
+            $sundry->amount = $bill_sundry_amounts[$key];
+            $sundry->status = '1';
+            $sundry->save();
+            //ADD DATA IN CGST ACCOUNT
+            $billsundry = BillSundrys::where('id', $bill)->first();
+            
+            if($billsundry->adjust_sale_amt=='No'){
+               $ledger = new AccountLedger();
+               $ledger->account_id = $billsundry->sale_amt_account;
+               if($billsundry->bill_sundry_type=='subtractive'){
+               $ledger->debit = $bill_sundry_amounts[$key];
+            }else{
+               $ledger->credit = $bill_sundry_amounts[$key];
+            }   
+               $ledger->txn_date = $request->input('date');
+               $ledger->series_no = $request->input('series_no');
+               $ledger->company_id = Session::get('user_company_id');
+               $ledger->financial_year = $financial_year;
+               $ledger->entry_type = 1;
+               $ledger->entry_type_id = $sale->id;
+               $ledger->map_account_id = $request->input('party');
+               $ledger->created_by = Session::get('user_id');
+               $ledger->created_at = date('d-m-Y H:i:s');
+               $ledger->save();
+               
+            }
+         }
+
+         //ADD DATA IN Customer ACCOUNT
+         $ledger = new AccountLedger();
+         $ledger->account_id = $request->input('party');
+         $ledger->debit = $request->input('total');
+         $ledger->txn_date = $request->input('date');
+         $ledger->series_no = $request->input('series_no');
+         $ledger->company_id = Session::get('user_company_id');
+         $ledger->financial_year = $financial_year;
+         $ledger->entry_type = 1;
+         $ledger->entry_type_id = $sale->id;
+         $ledger->map_account_id = 35;//Sales Account
+         $ledger->created_by = Session::get('user_id');
+         $ledger->created_at = date('d-m-Y H:i:s');
+         $ledger->save();
+         //ADD DATA IN Sale ACCOUNT
+         $ledger = new AccountLedger();
+         $ledger->account_id = 35;//Sales Account
+         $ledger->credit = $request->input('taxable_amt');
+         $ledger->txn_date = $request->input('date');
+         $ledger->series_no = $request->input('series_no');
+         $ledger->company_id = Session::get('user_company_id');
+         $ledger->financial_year = $financial_year;
+         $ledger->entry_type = 1;
+         $ledger->entry_type_id = $sale->id;
+         $ledger->map_account_id = $request->input('party');
+         $ledger->created_by = Session::get('user_id');
+         $ledger->created_at = date('d-m-Y H:i:s');
+         $ledger->save();
+
+         $newSnapshot = [
+            'sale' => Sales::find($sale->id)->toArray(),
+
+            'items' => SaleDescription::where('sale_id', $sale->id)->get()->toArray(),
+
+            'sundries' => SaleSundry::where('sale_id', $sale->id)->get()->toArray(),
+
+
+            'account_ledgers' => AccountLedger::where('entry_type', 1)
+               ->where('entry_type_id', $sale->id)
+               ->get()->toArray(),
+
+         ];
+         ActivityLog::create([
+            'module_type' => 'sale',
+            'module_id'   => $sale->id,
+            'action'      => 'edit',
+            'old_data'    => $oldSnapshot,
+            'new_data'    => $newSnapshot,
+            'action_by'   => Session::get('user_id'),
+            'company_id'  => Session::get('user_company_id'),
+            'action_at'   => now(),
+         ]);
+        
+         if(!empty(Session::get('redirect_url'))){
+            return redirect(Session::get('redirect_url'));
+         }else{
+            session(['previous_url_saleEdit' => URL::previous()]);
+            return redirect('sale-invoice/'.$sale->id.'?source=service-sale')->withSuccess('Service sale voucher updated successfully!');
+         }
+         
+      }else{
+         return $this->failedMessage('Something went wrong','service-sale/create');
+         exit();
+      }
+      
+   }
 }

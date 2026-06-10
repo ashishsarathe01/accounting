@@ -1557,4 +1557,12 @@ Route::get(
         'consumption-report',
         [ConsumptionReportController::class, 'report']
     )->name('consumption-report');
+
+Route::get('service-sale/create', [SalesController::class, 'serviceSaleCreate'])->name('service-sale.create');
+
+Route::post('service-sale/store', [SalesController::class, 'serviceSaleStore'])->name('service-sale.store');
+
+Route::get('service-sale/edit/{id}',[SalesController::class, 'editServiceSale'])->name('service-sale.edit');
+
+Route::post('service-sale/update',[SalesController::class, 'serviceSaleUpdate'])->name('service-sale.update');
 });
