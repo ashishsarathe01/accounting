@@ -360,6 +360,7 @@ Route::middleware('auth:api')->group(function(){
     // Route::delete('credit-notes/delete/{id}', [CreditNoteController::class, 'destroy']);
     
     Route::post('contra-list', [ContraController::class, 'index']);
+    Route::post('get-add-contra-data', [ContraController::class, 'create']);
     Route::post('add-contra-voucher', [ContraController::class, 'store']); 
     Route::post('edit-contra-voucher', [ContraController::class, 'edit']);   
     Route::post('update-contra-voucher', [ContraController::class, 'update']);
