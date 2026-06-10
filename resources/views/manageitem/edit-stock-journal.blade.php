@@ -642,34 +642,60 @@
       $("#tr1_" + add_more_count1 + " .configure-size-btn-gen").hide();
    });
    $(document).on("click", ".remove", function(){
-      let id = $(this).attr('data-id');
-      $("#tr_" + id).remove();
-      calculateAmount(1)
-   });
-   $(document).on("click", ".remove1", function(){
-      let id = $(this).attr('data-id');
-      $("#tr1_" + id).remove();
-      calculateAmountNew(1)
-   });
-   $(".savebtn").click(function(){
-      let date = $("#date").val();
-      let item_count = 0;
-      $(".consume_item").each(function(){
-         let id = $(this).attr('data-id');
-         let consume_item = $(this).val();
-         let consume_weight = $("#consume_weight_"+id).val();
-         let new_item = $("#new_item_"+id).val();
-         let new_weight = $("#new_weight_"+id).val();
-         if(consume_item!="" && consume_weight!="" && new_item!="" && new_weight!=""){
-            item_count++;
-         }
-      });
-      if(item_count==0){
-         alert("Please item and weight.");
+      if($(".consume_item").length <= 1 &&
+         $(".generated_item").length <= 0){
+         alert("At least one item row is required.");
          return false;
       }
-      $("#frm").submit();
+      let id = $(this).data('id');
+      $("#tr_" + id).remove();
    });
+   $(document).on("click", ".remove1", function(){
+      if($(".generated_item").length <= 1 &&
+         $(".consume_item").length <= 0){
+         alert("At least one item row is required.");
+         return false;
+      }
+      let id = $(this).data('id');
+      $("#tr1_" + id).remove();
+   });
+   $(".savebtn").click(function(){
+
+    let consumedCount = 0;
+    let generatedCount = 0;
+
+    $(".consume_item").each(function () {
+
+        let id = $(this).data("id");
+
+        if (
+            $(this).val() != "" &&
+            $("#consume_weight_" + id).val() != ""
+        ) {
+            consumedCount++;
+        }
+    });
+
+    $(".generated_item").each(function () {
+
+        let id = $(this).data("id");
+
+        if (
+            $(this).val() != "" &&
+            $("#generated_weight_" + id).val() != ""
+        ) {
+            generatedCount++;
+        }
+    });
+
+    if (consumedCount == 0 && generatedCount == 0) {
+
+        alert("Please enter at least one item in Consumed or Generated.");
+        return false;
+    }
+
+    $("#frm").submit();
+});
    $(document).on('keyup','.consume_weight',function(){
       let id = $(this).attr('data-id');
       calculateAmount(id);

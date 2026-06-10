@@ -546,12 +546,20 @@ $(document).ready(function() {
     let empty_status = 0;
 
     // Check for empty required fields
-    $('.consume_item').each(function() {
-        let i = $(this).attr('data-id');
-        if ($(this).val() == "" || $("#consume_weight_" + i).val() == "" || $("#consume_price_" + i).val() == "") {
-            empty_status = 1;
-        }
-    });
+   $('.consume_item').each(function() {
+      let i = $(this).attr('data-id');
+
+      // Only validate row if item selected
+      if ($(this).val() != "") {
+
+         if (
+               $("#consume_weight_" + i).val() == "" ||
+               $("#consume_price_" + i).val() == ""
+         ) {
+               empty_status = 1;
+         }
+      }
+   });
 
     if (empty_status == 1) {
         alert("Please enter required fields");
@@ -623,12 +631,20 @@ $(document).ready(function() {
 // Add new generated item row
 $(".add_more1").click(function() {
     let empty_status = 0;
-    $('.generated_item').each(function(){   
-        let i = $(this).attr('data-id');
-        if($(this).val()=="" || $("#generated_weight_"+i).val()=="" || $("#generated_price_"+i).val()==""){
-            empty_status=1;            
-        }                   
-    });
+   $('.generated_item').each(function(){   
+      let i = $(this).attr('data-id');
+
+      // Only validate row if item selected
+      if($(this).val() != ""){
+
+         if(
+               $("#generated_weight_"+i).val()=="" ||
+               $("#generated_price_"+i).val()==""
+         ){
+               empty_status=1;
+         }
+      }
+   });
     if(empty_status==1){
         alert("Please enter required fields");
         return;
@@ -691,19 +707,48 @@ $(document).on("click", ".remove1", function() {
     calculateAmountNew(1);
 });
    $(".savebtn").click(function(){
-      if(confirm("Are you sure to submit?")==true){            
+      if(confirm("Are you sure to submit?")==true){    
+         let consumedCount = 0;
+         let generatedCount = 0;
+
+         // Consumed
+         $(".consume_item").each(function () {
+
+            let id = $(this).data("id");
+
+            if (
+               $(this).val() != "" &&
+               $("#consume_weight_" + id).val() != "" &&
+               $("#consume_price_" + id).val() != ""
+            ) {
+               consumedCount++;
+            }
+         });
+
+         // Generated
+         $(".generated_item").each(function () {
+
+            let id = $(this).data("id");
+
+            if (
+               $(this).val() != "" &&
+               $("#generated_weight_" + id).val() != "" &&
+               $("#generated_price_" + id).val() != ""
+            ) {
+               generatedCount++;
+            }
+         });
+
+         if (consumedCount == 0 && generatedCount == 0) {
+            alert("Please enter at least one item in Consumed or Generated.");
+            return false;
+         }        
          $("#frm").validate({
             ignore: [], 
             rules: {
                series_no: "required",
                voucher_no: "required",
-               material_center: "required",
-               "consume_item[]": "required",
-               "consume_weight[]" : "required",
-               "consume_price[]" : "required",
-               "generated_item[]": "required",
-               "generated_weight[]" : "required",
-               "generated_price[]" : "required"
+               material_center: "required"
             },
             messages: {
                series_no: "Please select series no",

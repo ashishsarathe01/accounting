@@ -900,6 +900,9 @@ class ManageItemsController extends Controller
       $size_exists = 1;
       $generated_size_info_arr = $request->input('generated_size_info', []);
       foreach ($generated_item as $key => $value){
+         if(empty($value)){
+            continue;
+         }
          if (isset($generated_size_info_arr[$key])) {
             $generated_size_info = json_decode($generated_size_info_arr[$key], true);
             if(empty($generated_size_info) || count($generated_size_info)==0) {
@@ -935,6 +938,10 @@ class ManageItemsController extends Controller
                   ]);
          }
          foreach ($consume_item as $key => $value){
+
+            if(empty($value)){
+               continue;
+            }
             $stockjournaldetail = new StockJournalDetail;
             $stockjournaldetail->journal_date = $date;
             $stockjournaldetail->parent_id = $stockjournal->id;
@@ -1003,6 +1010,9 @@ class ManageItemsController extends Controller
             CommonHelper::RewriteItemAverageByItem($request->date,$consume_item[$key],$request->input('series_no'));
          }
          foreach ($generated_item as $key => $value){
+            if(empty($value)){
+               continue;
+            }
             $stockjournaldetail = new StockJournalDetail;
             $stockjournaldetail->journal_date = $date;
             $stockjournaldetail->parent_id = $stockjournal->id;
@@ -1360,19 +1370,19 @@ class ManageItemsController extends Controller
       $voucher_no = $request->input('voucher_no');
       $material_center = $request->input('material_center');
       
-      $consume_item = $request->input('consume_item');
-      $consume_weight = $request->input('consume_weight');
-      $consume_price = $request->input('consume_price');
-      $consume_amount = $request->input('consume_amount');
-      $consume_units = $request->input('consume_units');
-      $consume_unit_name = $request->input('consume_unit_name');
+      $consume_item = $request->input('consume_item', []);
+      $consume_weight = $request->input('consume_weight', []);
+      $consume_price = $request->input('consume_price', []);
+      $consume_amount = $request->input('consume_amount', []);
+      $consume_units = $request->input('consume_units', []);
+      $consume_unit_name = $request->input('consume_unit_name', []);
 
       $generated_item = $request->input('generated_item', []);
-      $generated_weight = $request->input('generated_weight');
-      $generated_price = $request->input('generated_price');
-      $generated_amount = $request->input('generated_amount');
-      $generated_units = $request->input('generated_units');
-      $generated_unit_name = $request->input('generated_unit_name');
+      $generated_weight = $request->input('generated_weight', []);
+      $generated_price = $request->input('generated_price', []);
+      $generated_amount = $request->input('generated_amount', []);
+      $generated_units = $request->input('generated_units', []);
+      $generated_unit_name = $request->input('generated_unit_name', []);
       $generated_size_info_arr = $request->item_size_info_gen ?? [];
 
       $stockjournal = StockJournal::find($request->input('edit_id'));
@@ -1472,7 +1482,10 @@ class ManageItemsController extends Controller
          StockJournalDetail::where('parent_id',$request->input('edit_id'))->delete();
          ItemLedger::where('source',3)->where('source_id',$request->input('edit_id'))->delete();
          foreach ($consume_item as $key => $value) {
-            if (empty($consume_item[$key])) {
+            if (
+               empty($value) ||
+               empty($consume_weight[$key])
+            ) {
                continue;
             }
             $stockjournaldetail = new StockJournalDetail;
@@ -1556,6 +1569,9 @@ class ManageItemsController extends Controller
             CommonHelper::RewriteItemAverageByItem($lower_date,$consume_item[$key],$request->input('series_no'));
          }
          foreach ($generated_item as $key => $value){
+            if (empty($value)) {
+               continue;
+            }
             $stockjournaldetail = new StockJournalDetail;
             $stockjournaldetail->journal_date = $date;
             $stockjournaldetail->parent_id = $stockjournal->id;
