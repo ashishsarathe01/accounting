@@ -162,69 +162,60 @@
         {{ date('d-m-Y', strtotime($to_date)) }}
 
     </div>
-    <table class="table table-bordered table-striped mb-3">
+<table class="table table-bordered table-striped mb-3">
 
-        <thead>
+    <thead>
+        <tr>
+            <th width="5%">S.No.</th>
+            <th>Total Production</th>
+            <th style="text-align:right;">Weight</th>
+        </tr>
+    </thead>
+
+    <tbody>
+
+        {{-- Summary Row --}}
+        <tr
+            style="font-weight:bold; cursor:pointer; background:#f8f9fa;"
+            onclick="toggleProductionDetails()"
+        >
+            <td colspan="2">
+                <span id="productionIcon">▶</span>
+                Total Production
+            </td>
+
+            <td style="text-align:right;">
+                {{ number_format($totalProduction, 2) }}
+            </td>
+        </tr>
+
+    </tbody>
+
+    <tbody id="productionDetailsBody" style="display:none;">
+
+        @foreach($productionDetails as $key => $row)
 
             <tr>
 
-                <th width="5%">
-                    S.No.
-                </th>
+                <td>
+                    {{ $key + 1 }}
+                </td>
 
-                <th>
-                    Total Production
-                </th>
-
-                <th style="text-align:right;">
-                    Weight
-                </th>
-
-            </tr>
-
-        </thead>
-
-        <tbody>
-
-            @foreach($productionDetails as $key => $row)
-
-                <tr>
-
-                    <td>
-                        {{ $key + 1 }}
-                    </td>
-
-                    <td>
-                        {{ $row->item_name }}
-                    </td>
-
-                    <td style="text-align:right;">
-                        {{ number_format($row->total, 2) }}
-                    </td>
-
-                </tr>
-
-            @endforeach
-
-        </tbody>
-
-        <tfoot>
-
-            <tr style="font-weight:bold;">
-
-                <td colspan="2">
-                    Total Production
+                <td>
+                    {{ $row->item_name }}
                 </td>
 
                 <td style="text-align:right;">
-                    {{ number_format($totalProduction, 2) }}
+                    {{ number_format($row->total, 2) }}
                 </td>
 
             </tr>
 
-        </tfoot>
+        @endforeach
 
-    </table>
+    </tbody>
+
+</table>
     <table class="table table-bordered table-striped m-0">
 
         <thead>
@@ -278,72 +269,131 @@
 
             @endphp
 
-            @forelse($reportData as $key => $row)
+            @php $sr = 1; @endphp
+
+            @forelse($groupedReport as $group)
 
                 @php
-
-                    $totalQty += $row['qty'];
-                    $totalAmount += $row['amount'];
-                    $totalGeneratedQty += $row['generated_qty'];
-                    $totalPerKg += round($row['per_kg'], 2);
-                    $consumedPerTon = $row['generated_qty'] > 0
-                        ? (($row['qty'] / $row['generated_qty']) * 1000)
+                    $groupConsumedPerTon = $group['generated_qty'] > 0
+                        ? (($group['qty'] / $group['generated_qty']) * 1000)
                         : 0;
 
-                    $totalConsumedPerTon += $consumedPerTon;
+                    $groupAvgPrice = $group['qty'] > 0
+                        ? ($group['amount'] / $group['qty'])
+                        : 0;
+
+                    $groupPerKg = $group['generated_qty'] > 0
+                        ? ($group['amount'] / $group['generated_qty'])
+                        : 0;
+
+                    $totalQty += $group['qty'];
+                    $totalAmount += $group['amount'];
+                    $totalGeneratedQty += $group['generated_qty'];
+                    $totalPerKg += $groupPerKg;
+                    $totalConsumedPerTon += $groupConsumedPerTon;
                 @endphp
 
-                <tr>
+                {{-- GROUP ROW --}}
+                <tr
+                    class="consumption-group-row bg-light fw-bold"
+                    data-group-id="{{ $group['group_id'] }}"
+                    data-expanded="0"
+                    style="cursor:pointer;"
+                >
+
+                    <td>{{ $sr++ }}</td>
 
                     <td>
-                        {{ $key + 1 }}
-                    </td>
-
-                    <td>
-                        {{ $row['item_name'] }}
+                        ▶ {{ $group['group_name'] }}
                     </td>
 
                     <td style="text-align:right;">
-                        {{ number_format($row['qty'], 2) }}
+                        {{ number_format($group['qty'], 2) }}
                     </td>
 
                     <td style="text-align:right;">
-                        {{ number_format($row['amount'], 2) }}
+                        {{ number_format($group['amount'], 2) }}
                     </td>
 
                     <td style="text-align:right;">
-                        {{ number_format($row['avg_price'], 2) }}
+                        {{ number_format($groupAvgPrice, 2) }}
                     </td>
 
                     <td style="text-align:right;">
-                        {{ number_format($row['generated_qty'], 2) }}
+                        {{ number_format($group['generated_qty'], 2) }}
                     </td>
 
                     <td style="text-align:right;">
-                        {{ number_format($row['per_kg'], 2) }}
+                        {{ number_format($groupPerKg, 2) }}
                     </td>
 
                     <td style="text-align:right;">
-                        {{ number_format($consumedPerTon, 2) }}
+                        {{ number_format($groupConsumedPerTon, 2) }}
                     </td>
 
                 </tr>
 
+                {{-- ITEM ROWS --}}
+                @foreach($group['items'] as $item)
+
+                    @php
+                        $consumedPerTon = $item['generated_qty'] > 0
+                            ? (($item['qty'] / $item['generated_qty']) * 1000)
+                            : 0;
+                    @endphp
+
+                    <tr
+                        class="consumption-item-row d-none"
+                        data-group-id="{{ $group['group_id'] }}"
+                    >
+
+                        <td></td>
+
+                        <td class="ps-4 text-muted">
+                            {{ $item['item_name'] }}
+                        </td>
+
+                        <td style="text-align:right;">
+                            {{ number_format($item['qty'], 2) }}
+                        </td>
+
+                        <td style="text-align:right;">
+                            {{ number_format($item['amount'], 2) }}
+                        </td>
+
+                        <td style="text-align:right;">
+                            {{ number_format($item['avg_price'], 2) }}
+                        </td>
+
+                        <td style="text-align:right;">
+                            {{ number_format($item['generated_qty'], 2) }}
+                        </td>
+
+                        <td style="text-align:right;">
+                            {{ number_format($item['per_kg'], 2) }}
+                        </td>
+
+                        <td style="text-align:right;">
+                            {{ number_format($consumedPerTon, 2) }}
+                        </td>
+
+                    </tr>
+
+                @endforeach
+
             @empty
 
                 <tr>
-
                     <td colspan="8" class="text-center">
                         No Records Found
                     </td>
-
                 </tr>
 
             @endforelse
 
         </tbody>
 
-        @if(count($reportData) > 0)
+        @if(count($groupedReport) > 0)
 
         <tfoot>
 
@@ -432,6 +482,44 @@ function downloadPDF() {
 
         });
 }
+function toggleProductionDetails()
+{
+    let details = document.getElementById('productionDetailsBody');
+    let icon = document.getElementById('productionIcon');
 
+    if(details.style.display === 'none')
+    {
+        details.style.display = '';
+        icon.innerHTML = '▼';
+    }
+    else
+    {
+        details.style.display = 'none';
+        icon.innerHTML = '▶';
+    }
+}
+$(document).on('click', '.consumption-group-row', function () {
+
+    let $groupRow = $(this);
+
+    let gid = $groupRow.data('group-id');
+
+    let expanded = $groupRow.data('expanded') || 0;
+
+    let $items = $('.consumption-item-row[data-group-id="' + gid + '"]');
+
+    if (expanded == 0) {
+
+        $items.removeClass('d-none');
+
+        $groupRow.data('expanded', 1);
+
+    } else {
+
+        $items.addClass('d-none');
+
+        $groupRow.data('expanded', 0);
+    }
+});
 </script>
 @endsection

@@ -111,17 +111,21 @@ public function report(Request $request)
 
     $from_date = $request->from_date ?: date('Y-m-01');
     $to_date   = $request->to_date ?: date('Y-m-d');
-
+    $groupedReport = [];
     $reportData = [];
 
     $consumedItems = DB::table('consumption_report_settings')
         ->join('manage_items', 'consumption_report_settings.consumed_item_id', '=', 'manage_items.id')
+        ->leftJoin('item_groups', 'manage_items.g_name', '=', 'item_groups.id')
         ->where('consumption_report_settings.company_id', $company_id)
         ->select(
             'consumption_report_settings.consumed_item_id',
-            'manage_items.name'
+            'manage_items.name',
+            'item_groups.id as group_id',
+            'item_groups.group_name'
         )
         ->distinct()
+        ->orderBy('item_groups.group_name')
         ->orderBy('manage_items.name')
         ->get();
 
@@ -174,13 +178,29 @@ public function report(Request $request)
             $perKg = $totalAmount / $generatedQty;
         }
 
-        $reportData[] = [
-            'item_name'      => $consumedItem->name,
-            'qty'            => $totalQty,
-            'amount'         => $totalAmount,
-            'avg_price'      => $avgPrice,
-            'generated_qty'  => $generatedQty,
-            'per_kg'         => $perKg,
+        if (!isset($groupedReport[$consumedItem->group_id])) {
+
+            $groupedReport[$consumedItem->group_id] = [
+                'group_id' => $consumedItem->group_id,
+                'group_name' => $consumedItem->group_name ?? 'Others',
+                'qty' => 0,
+                'amount' => 0,
+                'generated_qty' => 0,
+                'items' => []
+            ];
+        }
+
+        $groupedReport[$consumedItem->group_id]['qty'] += $totalQty;
+        $groupedReport[$consumedItem->group_id]['amount'] += $totalAmount;
+        $groupedReport[$consumedItem->group_id]['generated_qty'] += $generatedQty;
+
+        $groupedReport[$consumedItem->group_id]['items'][] = [
+            'item_name' => $consumedItem->name,
+            'qty' => $totalQty,
+            'amount' => $totalAmount,
+            'avg_price' => $avgPrice,
+            'generated_qty' => $generatedQty,
+            'per_kg' => $perKg
         ];
     }
     $totalProduction = DB::table('account_production_details')
@@ -239,7 +259,7 @@ public function report(Request $request)
         compact(
             'from_date',
             'to_date',
-            'reportData',
+            'groupedReport',
             'productionDetails',
             'totalProduction'
         )
