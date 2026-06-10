@@ -144,4 +144,519 @@ class ContraController extends Controller
         ]
     ], 200);
 }
+
+   public function store(Request $request){
+
+    //   Gate::authorize('action-module',75);
+$validator = Validator::make($request->all(), [
+    'company_id'   => 'required',
+    'user_id'      => 'required',
+    'date'         => 'required',
+    'voucher_no'   => 'required',
+    'party'        => 'required',
+    'series_no'    => 'required',
+    'account_name' => 'required|array',
+    'account_name.*' => 'required|exists:accounts,id',
+    'debit'        => 'required|array',
+    'credit'       => 'required|array',
+]);
+
+if ($validator->fails()) {
+    return response()->json([
+        'code' => 400,
+        'message' => $validator->errors()->first()
+    ], 400);
+}
+      $financial_year_session = $request->input('financial_year');
+      $company_id = $request->input('company_id');
+      $user_id = $request->input('user_id');
+      //Session::get('default_fy');
+
+      [$startYY, $endYY] = explode('-', $financial_year_session);
+
+      $fy_start_date = '20' . $startYY . '-04-01';
+
+      $fy_end_date   = '20' . $endYY   . '-03-31';
+
+      if(
+         $request->input('date') < $fy_start_date
+         ||
+         $request->input('date') > $fy_end_date
+      ){
+        return response()->json([
+            'code' => 400,
+            'message' => 'Selected date is outside the current financial year.'
+        ], 400);
+       
+      }
+      $financial_year = CommonHelper::getFinancialYear($request->input('date'));
+      $series_configuration = VoucherSeriesConfiguration::where('company_id', $company_id)
+         ->where('series', $request->input('series_no'))
+         ->where('configuration_for', 'CONTRA')
+         ->where('status', '1')
+         ->first();
+      $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
+      if ($series_configuration && $series_configuration->manual_numbering == "YES") {
+         $voucher_no = $request->input('voucher_no') ?: $request->input('voucher_prefix');
+      } else {
+         $last_voucher_no = DB::table('contras')
+            ->where('company_id', $company_id)
+            ->where('series_no', $request->input('series_no'))
+            ->where('financial_year', $financial_year)
+            ->where('delete', '0')
+            ->max(DB::raw("cast(voucher_no as SIGNED)"));
+         if (!$last_voucher_no) {
+            if ($series_configuration && $series_configuration->invoice_start != "") {
+               $voucher_no = sprintf("%0" . $number_digit . "d", (int)$series_configuration->invoice_start);
+            } else {
+               $voucher_no = sprintf("%0" . $number_digit . "d", 1);
+            }
+         } else {
+            $voucher_no = sprintf("%0" . $number_digit . "d", ((int)$last_voucher_no + 1));
+         }
+      }
+      $con = new Contra;
+      $con->date = $request->input('date');
+      $con->company_id = $company_id;
+      $con->voucher_no_prefix = $request->input('voucher_prefix');
+      $con->voucher_no = $voucher_no;
+      $con->series_no = $request->input('series_no');
+      $con->long_narration = $request->input('long_narration');
+      $con->financial_year = $financial_year;
+      $con->created_by = $user_id;
+      $con->save();
+      if($con->id){
+         $types = $request->input('type');
+         $account_names = $request->input('account_name');
+         $debits = $request->input('debit');
+         $credits = $request->input('credit');
+         
+         $i=0;
+         foreach($types as $key => $type){
+            $contype = new ContraDetails;
+            $contype->contra_id = $con->id;
+            $contype->company_id = $company_id;
+            $contype->type = $type;
+            $contype->account_name = $account_names[$key];
+            $contype->debit = isset($debits[$key]) ? $debits[$key] :'0';
+            $contype->credit = isset($credits[$key]) ? $credits[$key] :'0';
+           
+            $contype->status = '1';
+            $contype->save();
+            //ADD DATA IN Customer ACCOUNT
+            if(count($account_names) >= 2){
+               if($i == 0){
+                  $map_account_id = $account_names[1];
+               }else{
+                  $map_account_id = $account_names[0];
+               }
+            }else{
+               $map_account_id = 0;
+            }
+            $ledger = new AccountLedger();
+            $ledger->account_id = $account_names[$key];
+            if(isset($debits[$key]) && !empty($debits[$key])){
+               $ledger->debit = $debits[$key];
+            }else{
+               $ledger->credit = $credits[$key];
+            }            
+            $ledger->txn_date = $request->input('date');
+            $ledger->series_no = $request->input('series_no');
+            $ledger->company_id = $company_id;
+            $ledger->financial_year = $financial_year;
+            $ledger->entry_type = 8;
+            $ledger->entry_type_id = $con->id;
+            $ledger->entry_type_detail_id = $contype->id;
+            $ledger->entry_narration = $request->input('long_narration');
+            $ledger->map_account_id = $map_account_id;
+            $ledger->created_by = $user_id;
+            $ledger->created_at = date('d-m-Y H:i:s');
+            $ledger->save();
+            $i++;
+         }
+         return response()->json([
+            'success' => true,
+            'message' => 'Contra added successfully!',
+            'data' => [
+               'contra_id' => $con->id,
+               'voucher_no' => $voucher_no,
+               'series_no' => $request->input('series_no'),
+               'date' => $request->input('date'),
+               'long_narration' => $request->input('long_narration'),
+            ]
+         ], 201);
+   
+      }else{
+        $failedMessage = $this->failedMessage();
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to add contra. Please try again. ' . $failedMessage
+        ], 400);
+      }        
+   }
+
+
+  public function edit(request $request){
+    try {
+        $validator = Validator::make($request->all(), [
+         'edit_id' => 'required|exists:contras,id',
+         'user_id' => 'required',
+         'company_id' => 'required',
+      ], [
+            'edit_id.required' => 'Contra ID is required.',
+            'edit_id.exists' => 'Contra not found.',
+            'user_id.required' => 'User ID is required.',
+            'company_id.required' => 'Company ID is required.',
+      ]);
+      if ($validator->fails()) {
+         return response()->json($validator->errors(), 422);
+      }
+        $id = $request->input('edit_id');
+        $user_id = $request->input('user_id');
+        
+    //   Gate::authorize('action-module',45);
+      $com_id = request()->input('company_id');
+      $financial_year = request()->input('financial_year');
+      [$startYY, $endYY] = explode('-', $financial_year);
+
+      $fy_start_date = '20' . $startYY . '-04-01';
+
+      $fy_end_date   = '20' . $endYY   . '-03-31';
+      $contra = Contra::find($id);
+      $contra_detail = ContraDetails::where('contra_id', '=', $id)->where('delete', '=', '0')->get();
+      $party_list = Accounts::whereIn('company_id', [$com_id,0])                   ->where('delete', '=', '0')
+                           ->where('under_group_type', '=', 'group')
+                           ->whereIn('under_group', [7,8])
+                           ->orderBy('account_name')
+                           ->get();
+      $companyData = Companies::where('id', $com_id)->first();
+      $GstSettings = (object)NULL;
+      $GstSettings->series = array();$mat_series = array();
+      if($companyData->gst_config_type == "single_gst") {
+         $GstSettings = DB::table('gst_settings')->where(['company_id' => $com_id, 'gst_type' => "single_gst"])->first();
+         $mat_series = DB::table('gst_settings')
+                           ->where(['company_id' => $com_id, 'gst_type' => "single_gst"])
+                           ->get();
+         $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series','branch_invoice_start_from as invoice_start_from')
+                           ->where(['delete' => '0', 'company_id' => $com_id,'gst_setting_id'=>$mat_series[0]->id])
+                           ->get();
+         if(count($branch)>0){
+            $mat_series = $mat_series->merge($branch);
+         }
+      }else if($companyData->gst_config_type == "multiple_gst") {
+         $GstSettings = DB::table('gst_settings_multiple')->where(['company_id' => $com_id, 'gst_type' => "multiple_gst"])->first();
+         $mat_series = DB::table('gst_settings_multiple')
+                           ->select('id','gst_no','mat_center','series','invoice_start_from')
+                           ->where(['company_id' => $com_id, 'gst_type' => "multiple_gst"])
+                           ->get();
+         foreach ($mat_series as $key => $value) {
+            $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series','branch_invoice_start_from as invoice_start_from')
+                        ->where(['delete' => '0', 'company_id' => $com_id,'gst_setting_multiple_id'=>$value->id])
+                        ->get();
+            if(count($branch)>0){
+               $mat_series = $mat_series->merge($branch);
+            }
+         }
+      }
+      // $mat_series = array();
+      // $mat_series = GstBranch::select('branch_series')->where(['delete' => '0', 'company_id' => Session::get('user_company_id')])->get()->toArray();
+      // if(!empty($GstSettings->series)) {
+      //    $mat_series[] = array("branch_series" => $GstSettings->series);
+      // }
+      foreach ($mat_series as $key => $value) {
+
+         $series_configuration = VoucherSeriesConfiguration::where('company_id', $com_id)
+            ->where('series', $value->series)
+            ->where('configuration_for', 'CONTRA') 
+            ->where('status','1')
+            ->first();
+
+         if ($contra->series_no == $value->series) {
+
+            $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
+            $mat_series[$key]->invoice_start_from = sprintf("%0" . $number_digit . "d", (int)$contra->voucher_no);
+
+         } else {
+
+            $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
+            $lastNumber = DB::table('contras')
+               ->where('company_id',$com_id)
+               ->where('financial_year',$financial_year)
+               ->where('series_no',$value->series)
+               ->where('delete','0')
+               ->max(DB::raw("cast(voucher_no as SIGNED)"));
+
+            if (!$lastNumber) {
+               if ($series_configuration && $series_configuration->manual_numbering == "NO" && $series_configuration->invoice_start != "") {
+                  $next = (int)$series_configuration->invoice_start;
+               } else {
+                  $next = 1;
+               }
+            } else {
+               $next = ((int)$lastNumber) + 1;
+            }
+
+            $mat_series[$key]->invoice_start_from = sprintf("%0" . $number_digit . "d",$next);
+         }
+
+         $invoice_prefix = "";
+         $manual_enter_invoice_no = "";
+
+         if ($series_configuration) {
+            $manual_enter_invoice_no = ($series_configuration->manual_numbering == "YES") ? "1" : "0";
+         }
+
+         if ($series_configuration && $series_configuration->manual_numbering == "NO") {
+
+            if ($series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
+               $invoice_prefix .= $series_configuration->prefix_value;
+            }
+
+            if ($series_configuration->prefix == "ENABLE" && $series_configuration->separator_1 != "") {
+               $invoice_prefix .= $series_configuration->separator_1;
+            }
+
+            if ($series_configuration->year == "PREFIX TO NUMBER") {
+
+               if ($series_configuration->year_format == "YY-YY") {
+                  $invoice_prefix .= $financial_year_session;
+               } else {
+                  $fy = explode('-', $financial_year_session);
+                  $invoice_prefix .= '20'.$fy[0].'-'.$fy[1];
+               }
+
+               if ($series_configuration->separator_2 != "") {
+                  $invoice_prefix .= $series_configuration->separator_2;
+               }
+            }
+            $invoice_prefix .= $mat_series[$key]->invoice_start_from;
+
+            if ($series_configuration->year == "SUFFIX TO NUMBER") {
+
+               if ($series_configuration->separator_2 != "") {
+                  $invoice_prefix .= $series_configuration->separator_2;
+               }
+
+               if ($series_configuration->year_format == "YY-YY") {
+                  $invoice_prefix .= $financial_year_session;
+               } else {
+                  $fy = explode('-', Session::get('default_fy'));
+                  $invoice_prefix .= '20'.$fy[0].'-'.$fy[1];
+               }
+            }
+
+            if ($series_configuration->suffix == "ENABLE" && $series_configuration->separator_3 != "") {
+               $invoice_prefix .= $series_configuration->separator_3;
+            }
+
+            if ($series_configuration->suffix == "ENABLE" && $series_configuration->suffix_value != "") {
+               $invoice_prefix .= $series_configuration->suffix_value;
+            }
+         }
+
+         $mat_series[$key]->invoice_prefix = $invoice_prefix;
+         $mat_series[$key]->manual_enter_invoice_no = $manual_enter_invoice_no;
+      }
+      return response()->json([
+         'code' => 200,
+         'data' => [
+            'contra' => $contra,
+            'contra_detail' => $contra_detail,
+            'party_list' => $party_list,
+            'mat_series' => $mat_series,
+            'fy_start_date' => $fy_start_date,
+            'fy_end_date' => $fy_end_date
+         ]
+      ], 200);
+}catch (\Exception $e) {
+      return response()->json([
+         'code' => 400,
+         'message' => 'An error occurred while fetching the contra details: ' . $e->getMessage()
+      ], 500);
+   }
+  }
+
+public function update(Request $request){
+    try {
+    //   Gate::authorize('action-module',45);
+      $validator = Validator::make($request->all(), [
+         'date' => 'required|string',
+         'user_id' => 'required',
+         'company_id' => 'required',
+         'contra_id' => 'required|exists:contras,id',
+         'series_no' => 'required',
+      ], [
+         'date.required' => 'Date is required.',
+         'user_id.required' => 'User ID is required.',
+         'company_id.required' => 'Company ID is required.',
+            'contra_id.required' => 'Contra ID is required.',
+            'contra_id.exists' => 'Contra not found.',
+         'series_no.required' => 'Series number is required.',
+      ]);
+      if ($validator->fails()) {
+         return response()->json($validator->errors(), 422);
+      }
+      $financial_year_session = $request->input('financial_year');
+      $user_id = $request->input('user_id');
+      $company_id = $request->input('company_id');
+      $series_no = $request->input('series_no');
+
+      [$startYY, $endYY] = explode('-', $financial_year_session);
+
+      $fy_start_date = '20' . $startYY . '-04-01';
+
+      $fy_end_date   = '20' . $endYY   . '-03-31';
+
+      if(
+         $request->input('date') < $fy_start_date
+         ||
+         $request->input('date') > $fy_end_date
+      ){
+         return response()->json([
+            "code" => 422,
+            'message' =>
+            'Selected date is outside the current financial year.'
+         ], 422);
+      }
+      $financial_year = CommonHelper::getFinancialYear($request->input('date'));
+      $contra =  Contra::find($request->contra_id);
+      if (!$contra) {
+    return response()->json([
+        'code' => 404,
+        'message' => 'The requested Contra voucher could not be found.'
+    ], 404);
+}
+      $oldSnapshot = [
+         'contra' => $contra->toArray(),
+         'details' => ContraDetails::where('contra_id', $contra->id)
+                        ->where('delete', '0')
+                        ->get()
+                        ->toArray(),
+      ];
+      $contra->date = $request->input('date');
+      $contra->voucher_no_prefix = $request->input('voucher_prefix');
+      $contra->updated_by = $user_id;;
+      $series_changed = ($contra->series_no != $series_no);
+      $series_configuration = VoucherSeriesConfiguration::where('company_id', $company_id)
+         ->where('series', $series_no)
+         ->where('configuration_for', 'CONTRA')
+         ->where('status', '1')
+         ->first();
+      $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
+      $voucher_no = $contra->voucher_no;
+      if ($series_configuration && $series_configuration->manual_numbering == "YES") {
+         $voucher_no = $request->input('voucher_no') ?: $request->input('voucher_prefix');
+      } elseif ($series_changed) {
+         $last_voucher_no = DB::table('contras')
+            ->where('company_id', $company_id)
+            ->where('series_no', $series_no)
+            ->where('financial_year', $financial_year)
+            ->where('delete', '0')
+            ->max(DB::raw("cast(voucher_no as SIGNED)"));
+         if (!$last_voucher_no) {
+            if ($series_configuration && $series_configuration->invoice_start != "") {
+               $voucher_no = sprintf("%0" . $number_digit . "d", (int)$series_configuration->invoice_start);
+            } else {
+               $voucher_no = sprintf("%0" . $number_digit . "d", 1);
+            }
+         } else {
+            $voucher_no = sprintf("%0" . $number_digit . "d", ((int)$last_voucher_no + 1));
+         }
+      }
+      $contra->voucher_no = $voucher_no;
+      $contra->series_no = $series_no;
+      $contra->long_narration = $request->input('long_narration');
+      $contra->save();
+      $contra_detail = ContraDetails::where('contra_id', '=', $request->contra_id)->delete();
+      AccountLedger::where('entry_type',8)
+                     ->where('entry_type_id',$request->contra_id)
+                     ->delete();
+      $types = $request->input('type');
+      $account_names = $request->input('account_name');
+      $debits = $request->input('debit');
+      $credits = $request->input('credit');
+      $i=0;
+      foreach($types as $key => $type) {
+         $paytype = new ContraDetails;
+         $paytype->contra_id = $request->contra_id;
+         $paytype->company_id = $company_id;
+         $paytype->type = $type;
+         $paytype->account_name = $account_names[$key];
+         $paytype->debit = isset($debits[$key]) ? $debits[$key] : 0;
+         $paytype->credit = isset($credits[$key]) ? $credits[$key] : 0;         
+         $paytype->status = '1';
+         $paytype->save();
+         //ADD DATA IN Customer ACCOUNT
+         if(count($account_names) >= 2){
+
+            if($i == 0){
+               $map_account_id = $account_names[1];
+            }else{
+               $map_account_id = $account_names[0];
+            }
+
+         }else{
+
+            $map_account_id = 0;
+
+         }
+         $ledger = new AccountLedger();
+         $ledger->account_id = $account_names[$key];
+         if(isset($debits[$key]) && !empty($debits[$key])){
+            $ledger->debit = $debits[$key];
+         }else{
+            $ledger->credit = $credits[$key];
+         }            
+         $ledger->txn_date = $request->input('date');
+         $ledger->series_no = $series_no;
+         $ledger->company_id = $company_id;
+         $ledger->financial_year = $financial_year;
+         $ledger->entry_type = 8;
+         $ledger->entry_type_id = $contra->id;
+         $ledger->entry_type_detail_id = $paytype->id;
+         $ledger->map_account_id = $map_account_id;
+         $ledger->entry_narration = $request->input('long_narration');
+         $ledger->created_by = $user_id;
+         $ledger->created_at = date('d-m-Y H:i:s');
+         $ledger->save();
+         $i++;
+      }
+      $newSnapshot = [
+         'contra' => Contra::find($contra->id)->toArray(),
+         'details' => ContraDetails::where('contra_id', $contra->id)
+                        ->where('delete', '0')
+                        ->get()
+                        ->toArray(),
+      ];
+
+      ActivityLog::create([
+         'module_type' => 'contra',
+         'module_id'   => $contra->id,
+         'action'      => 'edit',
+         'old_data'    => $oldSnapshot,
+         'new_data'    => $newSnapshot,
+         'action_by'   => $user_id,
+         'company_id'  => $company_id,
+         'action_at'   => now(),
+      ]);
+      return response()->json([
+         'code' => 200,
+         'message' => 'Contra updated successfully!',
+         'data' => [
+            'contra_id' => $contra->id,
+            'voucher_no' => $voucher_no,
+            'series_no' => $series_no,
+            'date' => $request->input('date'),
+            'long_narration' => $request->input('long_narration'),
+         ]
+      ], 200);
+          
+   }catch (\Exception $e) {
+      return response()->json([
+         'code' => 500,
+         'message' => 'An error occurred while updating the contra: ' . $e->getMessage()
+      ], 500);
+   }
+}
 }
