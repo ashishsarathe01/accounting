@@ -406,33 +406,47 @@ class GstDetailController extends Controller
         $client_id = $credentials->client_id;
         $client_secret = $credentials->client_secret;
         $ip_address = $credentials->ip_address;
+        $request_data = array(
+         "gstin" => $request->gstin,
+         "userName" => $gst_user_name,
+         "Otp" => $request->otp,
+         "KeepAliveDays" => 30
+        );
+
         $curl = curl_init();
         curl_setopt_array($curl, array(
-            CURLOPT_URL => $base_url.'/authentication/authtoken?email='.$email_id.'&otp='.$request->otp,
+            CURLOPT_URL => $base_url.'/authentication/authtoken?email='.urlencode($email_id),
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_ENCODING => '',
             CURLOPT_MAXREDIRS => 10,
             CURLOPT_TIMEOUT => 0,
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => 'GET',
+            CURLOPT_CUSTOMREQUEST => 'POST',
             CURLOPT_HTTPHEADER => array(
-                'gst_username:'.$gst_user_name,
-                'state_cd: '.$state_code,
-                'txn:'.$txn,
-                'ip_address: '.$ip_address,
-                'client_id: '.$client_id,
-                'client_secret: '.$client_secret,
-            ),
+                'accept: */*',
+                'Content-Type: application/json',
+                'env: production',
+                'client_id: ' . $client_id,
+                'client_secret: ' . $client_secret
+             ),
+            // CURLOPT_HTTPHEADER => array(
+            //     'gst_username:'.$gst_user_name,
+            //     'state_cd: '.$state_code,
+            //     'txn:'.$txn,
+            //     'ip_address: '.$ip_address,
+            //     'client_id: '.$client_id,
+            //     'client_secret: '.$client_secret,
+            // ),
         ));
         $response = curl_exec($curl);
         curl_close($curl);
         $result = json_decode($response);
         if(isset($result->status_cd) && $result->status_cd=='1'){
-            $gst_token = gstToken::find($gst_token->id);
-            $gst_token->status = 1;
-            $gst_token->updated_at = Carbon::now();
-            $gst_token->update();
+            // $gst_token = gstToken::find($gst_token->id);
+            // $gst_token->status = 1;
+            // $gst_token->updated_at = Carbon::now();
+            // $gst_token->update();
             $response = array(
                         'status' => true,
                         'message' => '',

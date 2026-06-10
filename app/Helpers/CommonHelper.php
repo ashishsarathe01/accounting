@@ -718,44 +718,59 @@ class CommonHelper
         $client_id = $credentials->client_id;
         $client_secret = $credentials->client_secret;
         $ip_address = $credentials->ip_address;
+        $gst_request = array(
+            "gstin" => $gstin,
+            "userName" => $gst_username,
+        );
         $curl = curl_init();
         curl_setopt_array($curl, array(
-            CURLOPT_URL => $base_url.'/authentication/otprequest?email='.$email_id,
+            CURLOPT_URL => $base_url.'/authentication/otprequest?email='.urlencode($email_id),
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_ENCODING => '',
             CURLOPT_MAXREDIRS => 10,
             CURLOPT_TIMEOUT => 0,
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => 'GET',
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS => json_encode($gst_request),
             CURLOPT_HTTPHEADER => array(
-                'gst_username:'.$gst_username,
-                'state_cd: '.$state_code,
-                'ip_address: '.$ip_address,
-                'client_id: '.$client_id,
-                'client_secret: '.$client_secret
+                'accept: */*',
+                'Content-Type: application/json',
+                'env: production',
+                'client_id: ' . $client_id,
+                'client_secret: ' . $client_secret
             ),
+            // CURLOPT_HTTPHEADER => array(
+            //     'gst_username:'.$gst_username,
+            //     'state_cd: '.$state_code,
+            //     'ip_address: '.$ip_address,
+            //     'client_id: '.$client_id,
+            //     'client_secret: '.$client_secret
+            // ),
         ));
         $response = curl_exec($curl);
         curl_close($curl);
         $result = json_decode($response);
+        // echo "<pre>";
+        // print_r($result);
         if(isset($result->status_cd) && $result->status_cd=='1'){
-            if(isset($result->header->txn) && !empty($result->header->txn)){
-                $gstToken = new gstToken;
-                $gstToken->txn = $result->header->txn;
-                $gstToken->created_at = Carbon::now();
-                $gstToken->status = 0;
-                $gstToken->company_id = Session::get('user_company_id');
-                $gstToken->company_gstin = $gstin;
-                $gstToken->save();
-                return $result->header->txn;
-            }else{
-                return 0;
-            }         
+            return 1;
+            // if(isset($result->header->txn) && !empty($result->header->txn)){
+            //     $gstToken = new gstToken;
+            //     $gstToken->txn = $result->header->txn;
+            //     $gstToken->created_at = Carbon::now();
+            //     $gstToken->status = 0;
+            //     $gstToken->company_id = Session::get('user_company_id');
+            //     $gstToken->company_gstin = $gstin;
+            //     $gstToken->save();
+                
+            // }else{
+            //     return 0;
+            // }         
         }else{
-            if(isset($result->error)){
+            
                 return 0;
-            }
+            
         }       
     }
     public static function getAllGroupIds($parentIds)

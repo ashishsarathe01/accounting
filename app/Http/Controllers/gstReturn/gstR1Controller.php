@@ -398,260 +398,262 @@ class gstR1Controller extends Controller
         $totalNotes = 0;
 
         if($data_source == "portal"){
-        $from = \DateTime::createFromFormat('Y-m-d', $from_date);
-        $month = $from->format('mY'); // MMYYYY => 042025
-        $company = Companies::select('gst_config_type')
-                                ->where('id', Session::get('user_company_id'))
+            $from = \DateTime::createFromFormat('Y-m-d', $from_date);
+            $month = $from->format('mY'); // MMYYYY => 042025
+            $company = Companies::select('gst_config_type')
+                                    ->where('id', Session::get('user_company_id'))
+                                    ->first();
+            if($company->gst_config_type == "single_gst"){
+                $gst = DB::table('gst_settings')
+                                ->select('gst_username','einvoice')
+                                ->where([
+                                    'company_id' => Session::get('user_company_id'),
+                                    'gst_no' => $request->series
+                                ])
                                 ->first();
-        if($company->gst_config_type == "single_gst"){
-            $gst = DB::table('gst_settings')
-                            ->select('gst_username')
-                            ->where([
-                                'company_id' => Session::get('user_company_id'),
-                                'gst_no' => $request->series
-                            ])
-                            ->first();
-            $gst_user_name = $gst->gst_username;
-        }else if($company->gst_config_type == "multiple_gst"){            
-            $gst = DB::table('gst_settings_multiple')
-                            ->select('gst_username')
-                            ->where([
-                                'company_id' => Session::get('user_company_id'),
-                                'gst_no' => $request->series
-                            ])
-                            ->first();
-            $gst_user_name = $gst->gst_username;
-        }
-        if($gst_user_name==""){
-            $response = array(
-                    'status' => false,
-                    'message' => 'Please Enter GST User Name In GST Configuration.'
-                );
-            return json_encode($response);
-        }
-        $state_code = substr(trim($request->series), 0, 2); // e.g., "07"
-        $gst_token = gstToken::select('txn','created_at')
-                                ->where('company_gstin',$request->series)
-                                ->where('company_id',Session::get('user_company_id'))
-                                ->where('status',1)
-                                ->orderBy('id','desc')
+                $gst_user_name = $gst->gst_username;
+                $einvoice_status = $gst->einvoice;
+            }else if($company->gst_config_type == "multiple_gst"){            
+                $gst = DB::table('gst_settings_multiple')
+                                ->select('gst_username','einvoice')
+                                ->where([
+                                    'company_id' => Session::get('user_company_id'),
+                                    'gst_no' => $request->series
+                                ])
                                 ->first();
-        if($gst_token){
-            $token_expiry = date('d-m-Y H:i:s',strtotime('+6 hour',strtotime($gst_token->created_at)));
-            $current_time = date('d-m-Y H:i:s');
-            if(strtotime($token_expiry)<strtotime($current_time)){
-                $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
-                if($token_res==0){
-                    $response = array(
-                        'status' => false,
-                        'message' => 'Something Went Wrong In Token Generation'
-                    );
-                    return json_encode($response);
-                }
+                $gst_user_name = $gst->gst_username;
+                $einvoice_status = $gst->einvoice;
+            }
+            if($gst_user_name==""){
                 $response = array(
-                    'status' => true,
-                    'message' => 'TOKEN-OTP'
-                );
+                        'status' => false,
+                        'message' => 'Please Enter GST User Name In GST Configuration.'
+                    );
                 return json_encode($response);
             }
-            $txn = $gst_token->txn;
-        }else{
-            $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
-            if($token_res==0){
+            $state_code = substr(trim($request->series), 0, 2); // e.g., "07"
+            $gst_token = gstToken::select('txn','created_at')
+                                    ->where('company_gstin',$request->series)
+                                    ->where('company_id',Session::get('user_company_id'))
+                                    ->where('status',1)
+                                    ->orderBy('id','desc')
+                                    ->first();
+            if($gst_token){
+                $token_expiry = date('d-m-Y H:i:s',strtotime('+6 hour',strtotime($gst_token->created_at)));
+                $current_time = date('d-m-Y H:i:s');
+                if(strtotime($token_expiry)<strtotime($current_time)){
+                    $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
+                    if($token_res==0){
+                        $response = array(
+                            'status' => false,
+                            'message' => 'Something Went Wrong In Token Generation'
+                        );
+                        return json_encode($response);
+                    }
                     $response = array(
-                        'status' => false,
-                        'message' => 'Something Went Wrong In Token Generation'
+                        'status' => true,
+                        'message' => 'TOKEN-OTP'
                     );
                     return json_encode($response);
                 }
-            $response = array(
-                    'status' => true,
-                    'message' => 'TOKEN-OTP'
-            );
-            return json_encode($response);
-        } 
-        //Gst Credenatial
-        if(!$this->gstCredentials){
-            $response = [
-                            'success' => false,
-                            'data'    => "",
-                            'message' => "Api Credentails Not Found ",
-                        ];
-            return response()->json($response, 200);
-        }
-        if($this->gstCredentials->status != 1){
-            $response = [
-                            'success' => false,
-                            'data'    => "",
-                            'message' => "Api Credentails Not Found ",
-                        ];
-            return response()->json($response, 200);
-        }
-        $base_url = $this->gstCredentials->base_url;
-        $email_id = $this->gstCredentials->email_id;
-        $client_id = $this->gstCredentials->client_id;
-        $client_secret = $this->gstCredentials->client_secret;
-        $ip_address = $this->gstCredentials->ip_address;
-       
-        $curl = curl_init();
-        curl_setopt_array($curl, [
-            CURLOPT_URL => $base_url.'/gstr1/b2b?' . http_build_query([
-                'email'     => $email_id,
-                'gstin'     => $request->series,
-                'retperiod' => $month,
-                // 'smrytyp' => 'L' // Optional for long summary
-            ]),
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING       => '',
-            CURLOPT_MAXREDIRS      => 10,
-            CURLOPT_TIMEOUT        => 0,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST  => 'GET',
-            CURLOPT_HTTPHEADER     => [
-                'Accept: application/json',
-                'gst_username: ' . $gst_user_name,
-                'state_cd: ' . $state_code,
-                'ip_address: '.$ip_address, // Use your public server IP
-                'txn: ' . $txn,
-                'client_id: '.$client_id,
-                'client_secret: '.$client_secret
-            ],
-        ]);
-        $response = curl_exec($curl);
-        curl_close($curl);
-        $result = json_decode($response, true); // Convert to array
-        // Debug response
-        
-        if (isset($result['status_cd']) && $result['status_cd'] == 0 && $result['error']['error_cd']!='RET11416') {
-            return response()->json(["status" => 0, "message" => $result['error']['message']]);
-        }
-        // Example: extract invoice summaries
-        $sale = Sales::where('sales.company_id', Session::get('user_company_id'))
-            ->whereBetween('sales.date', [$from_date, $to_date])
-            ->where('sales.merchant_gst', $request->series)
-            ->where('sales.delete', '0' )
-            ->whereNotNull('sales.billing_gst')
-            ->Where('billing_gst','!=','')
-            ->where('status','1')
-            ->where('delete', '0')
-            ->select('sales.billing_gst', 'sales.total')
-            ->get();
-        $saleTotals = $sale->groupBy('billing_gst')->map(function ($group) {
-            return $group->sum('total');
-        });
-        $invoiceSummaries = [];
-        if (isset($result['data']['b2b']) && is_array($result['data']['b2b'])) {
-            foreach ($result['data']['b2b'] as $party) {
-                $ctin = $party['ctin'];
-                $accountName = Accounts::where('gstin', $ctin)
-                    ->where('company_id', Session::get('user_company_id'))
-                    ->value('account_name');
-
-                
-                $name = $accountName ?? 'NOT FOUND (' . $ctin . ')';
-                $apiInvoices = collect($party['inv'] ?? []);
-                $apiTotal = $apiInvoices->sum('val');
-
-            
-                $dbInvoices = Sales::where('billing_gst', $ctin)
-                    ->where('company_id', Session::get('user_company_id'))
-                    ->where('status','1')
-                    ->where('delete', '0')
-                    ->whereBetween('date', [$from_date, $to_date])
-                    ->get(['id', 'voucher_no_prefix', 'date', 'total']);
-
-                
-                // Match by invoice number
-                $matched = [];
-                $onlyInApi = [];
-                $onlyInBooks = [];
-
-                foreach ($apiInvoices as $apiInv) {
-                    $match = $dbInvoices->firstWhere('voucher_no_prefix', $apiInv['inum']);
-                    if ($match) {
-                        $matched[] = [
-                            'invoice_no' => $apiInv['inum'],
-                            'api_value' => $apiInv['val'],
-                            'db_value' => $match->total,
-                            'match' => round($apiInv['val'], 2) == round($match->total, 2)
-                        ];
-                    } else {
-                        $onlyInApi[] = [
-                            'invoice_no' => $apiInv['inum'],
-                            'api_value' => $apiInv['val'],
-                        ];
+                $txn = $gst_token->txn;
+            }else{
+                $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
+                if($token_res==0){
+                        $response = array(
+                            'status' => false,
+                            'message' => 'Something Went Wrong In Token Generation'
+                        );
+                        return json_encode($response);
                     }
-                }
-
-                // Now find DB invoices not in API
-                $apiInvoiceNumbers = $apiInvoices->pluck('inum')->toArray();
-                foreach ($dbInvoices as $dbInv) {
-                    if (!in_array($dbInv->voucher_no_prefix, $apiInvoiceNumbers)) {
-                        $onlyInBooks[] = [
-                            'invoice_no' => $dbInv->voucher_no_prefix,
-                            'db_value' => $dbInv->total,
-                        ];
-                    }
-                }
-                $invoiceSummaries[] = [
-                    'ctin' => $name,
-                    'gstin' => $ctin,
-                    'total_value' => $apiTotal,
-                    'db_value' => $saleTotals[$ctin] ?? 0,
-                    'match' => round($apiTotal, 2) == round($saleTotals[$ctin] ?? 0, 2),
-                    'matched_invoices' => $matched,
-                    'only_in_api' => $onlyInApi,
-                    'only_in_books' => $onlyInBooks,
-                ];
+                $response = array(
+                        'status' => true,
+                        'message' => 'TOKEN-OTP'
+                );
+                return json_encode($response);
+            } 
+            //Gst Credenatial
+            if(!$this->gstCredentials){
+                $response = [
+                                'success' => false,
+                                'data'    => "",
+                                'message' => "Api Credentails Not Found ",
+                            ];
+                return response()->json($response, 200);
             }
-        }
-        // Step 1: Get all CTINs from API
-        $apiCtins = [];
-        if(isset($result['data']['b2b'])){
-            $apiCtins = collect($result['data']['b2b'])->pluck('ctin')->toArray();
-        }
+            if($this->gstCredentials->status != 1){
+                $response = [
+                                'success' => false,
+                                'data'    => "",
+                                'message' => "Api Credentails Not Found ",
+                            ];
+                return response()->json($response, 200);
+            }
+            $base_url = $this->gstCredentials->base_url;
+            $email_id = $this->gstCredentials->email_id;
+            $client_id = $this->gstCredentials->client_id;
+            $client_secret = $this->gstCredentials->client_secret;
+            $ip_address = $this->gstCredentials->ip_address;
         
+            $curl = curl_init();
+            curl_setopt_array($curl, [
+                CURLOPT_URL => $base_url.'/gstr1/b2b?' . http_build_query([
+                    'email'     => $email_id,
+                    'gstin'     => $request->series,
+                    'retperiod' => $month,
+                    // 'smrytyp' => 'L' // Optional for long summary
+                ]),
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_ENCODING       => '',
+                CURLOPT_MAXREDIRS      => 10,
+                CURLOPT_TIMEOUT        => 0,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
+                CURLOPT_CUSTOMREQUEST  => 'GET',
+                CURLOPT_HTTPHEADER     => [
+                    'Accept: application/json',
+                    'gst_username: ' . $gst_user_name,
+                    'state_cd: ' . $state_code,
+                    'ip_address: '.$ip_address, // Use your public server IP
+                    'txn: ' . $txn,
+                    'client_id: '.$client_id,
+                    'client_secret: '.$client_secret
+                ],
+            ]);
+            $response = curl_exec($curl);
+            curl_close($curl);
+            $result = json_decode($response, true); // Convert to array
+            // Debug response
+            
+            if (isset($result['status_cd']) && $result['status_cd'] == 0 && $result['error']['error_cd']!='RET11416') {
+                return response()->json(["status" => 0, "message" => $result['error']['message']]);
+            }
+            // Example: extract invoice summaries
+            $sale = Sales::where('sales.company_id', Session::get('user_company_id'))
+                ->whereBetween('sales.date', [$from_date, $to_date])
+                ->where('sales.merchant_gst', $request->series)
+                ->where('sales.delete', '0' )
+                ->whereNotNull('sales.billing_gst')
+                ->Where('billing_gst','!=','')
+                ->where('status','1')
+                ->where('delete', '0')
+                ->select('sales.billing_gst', 'sales.total')
+                ->get();
+            $saleTotals = $sale->groupBy('billing_gst')->map(function ($group) {
+                return $group->sum('total');
+            });
+            $invoiceSummaries = [];
+            if (isset($result['data']['b2b']) && is_array($result['data']['b2b'])) {
+                foreach ($result['data']['b2b'] as $party) {
+                    $ctin = $party['ctin'];
+                    $accountName = Accounts::where('gstin', $ctin)
+                        ->where('company_id', Session::get('user_company_id'))
+                        ->value('account_name');
 
-        // Step 2: Loop through book GSTINs and find missing ones
-        foreach ($saleTotals as $ctin => $dbValue) {
-            if (!in_array($ctin, $apiCtins)) {
-                $accountName = Accounts::where('gstin', $ctin)
-                    ->where('company_id', Session::get('user_company_id'))
-                    ->value('account_name');
+                    
+                    $name = $accountName ?? 'NOT FOUND (' . $ctin . ')';
+                    $apiInvoices = collect($party['inv'] ?? []);
+                    $apiTotal = $apiInvoices->sum('val');
 
-                $name = $accountName ?? 'NOT FOUND (' . $ctin . ')';
+                
+                    $dbInvoices = Sales::where('billing_gst', $ctin)
+                        ->where('company_id', Session::get('user_company_id'))
+                        ->where('status','1')
+                        ->where('delete', '0')
+                        ->whereBetween('date', [$from_date, $to_date])
+                        ->get(['id', 'voucher_no_prefix', 'date', 'total']);
 
-                $dbInvoices = Sales::where('billing_gst', $ctin)
-                    ->where('company_id', Session::get('user_company_id'))
-                    ->whereBetween('date', [$from_date, $to_date])
-                    ->where('status','1')
-                    ->where('delete', '0')
-                    ->get(['voucher_no_prefix', 'total']);     
+                    
+                    // Match by invoice number
+                    $matched = [];
+                    $onlyInApi = [];
+                    $onlyInBooks = [];
 
-                $matched = [];          // No matched invoices since this CTIN is not in API
-                $onlyInApi = [];        // No API data for this CTIN
-                $onlyInBooks = [];      // List all DB invoices here
+                    foreach ($apiInvoices as $apiInv) {
+                        $match = $dbInvoices->firstWhere('voucher_no_prefix', $apiInv['inum']);
+                        if ($match) {
+                            $matched[] = [
+                                'invoice_no' => $apiInv['inum'],
+                                'api_value' => $apiInv['val'],
+                                'db_value' => $match->total,
+                                'match' => round($apiInv['val'], 2) == round($match->total, 2)
+                            ];
+                        } else {
+                            $onlyInApi[] = [
+                                'invoice_no' => $apiInv['inum'],
+                                'api_value' => $apiInv['val'],
+                            ];
+                        }
+                    }
 
-                foreach ($dbInvoices as $inv) {
-                    $onlyInBooks[] = [
-                        'invoice_no' => $inv->voucher_no_prefix,
-                        'db_value' => $inv->total
+                    // Now find DB invoices not in API
+                    $apiInvoiceNumbers = $apiInvoices->pluck('inum')->toArray();
+                    foreach ($dbInvoices as $dbInv) {
+                        if (!in_array($dbInv->voucher_no_prefix, $apiInvoiceNumbers)) {
+                            $onlyInBooks[] = [
+                                'invoice_no' => $dbInv->voucher_no_prefix,
+                                'db_value' => $dbInv->total,
+                            ];
+                        }
+                    }
+                    $invoiceSummaries[] = [
+                        'ctin' => $name,
+                        'gstin' => $ctin,
+                        'total_value' => $apiTotal,
+                        'db_value' => $saleTotals[$ctin] ?? 0,
+                        'match' => round($apiTotal, 2) == round($saleTotals[$ctin] ?? 0, 2),
+                        'matched_invoices' => $matched,
+                        'only_in_api' => $onlyInApi,
+                        'only_in_books' => $onlyInBooks,
                     ];
                 }
-
-                $invoiceSummaries[] = [
-                    'ctin' => $name,
-                    'gstin' => $ctin,
-                    'total_value' => 0, // Portal has no value
-                    'db_value' => $dbValue,
-                    'match' => false,
-                    'matched_invoices' => $matched,
-                    'only_in_api' => $onlyInApi,
-                    'only_in_books' => $onlyInBooks,
-                ];
             }
-        }
+            // Step 1: Get all CTINs from API
+            $apiCtins = [];
+            if(isset($result['data']['b2b'])){
+                $apiCtins = collect($result['data']['b2b'])->pluck('ctin')->toArray();
+            }
+        
+
+            // Step 2: Loop through book GSTINs and find missing ones
+            foreach ($saleTotals as $ctin => $dbValue) {
+                if (!in_array($ctin, $apiCtins)) {
+                    $accountName = Accounts::where('gstin', $ctin)
+                        ->where('company_id', Session::get('user_company_id'))
+                        ->value('account_name');
+
+                    $name = $accountName ?? 'NOT FOUND (' . $ctin . ')';
+
+                    $dbInvoices = Sales::where('billing_gst', $ctin)
+                        ->where('company_id', Session::get('user_company_id'))
+                        ->whereBetween('date', [$from_date, $to_date])
+                        ->where('status','1')
+                        ->where('delete', '0')
+                        ->get(['voucher_no_prefix', 'total']);     
+
+                    $matched = [];          // No matched invoices since this CTIN is not in API
+                    $onlyInApi = [];        // No API data for this CTIN
+                    $onlyInBooks = [];      // List all DB invoices here
+
+                    foreach ($dbInvoices as $inv) {
+                        $onlyInBooks[] = [
+                            'invoice_no' => $inv->voucher_no_prefix,
+                            'db_value' => $inv->total
+                        ];
+                    }
+
+                    $invoiceSummaries[] = [
+                        'ctin' => $name,
+                        'gstin' => $ctin,
+                        'total_value' => 0, // Portal has no value
+                        'db_value' => $dbValue,
+                        'match' => false,
+                        'matched_invoices' => $matched,
+                        'only_in_api' => $onlyInApi,
+                        'only_in_books' => $onlyInBooks,
+                    ];
+                }
+            }
         // === 1. CURL to fetch CDNR from API ===
         //Gst Credenatial
         if(!$this->gstCredentials){
@@ -1609,7 +1611,30 @@ class gstR1Controller extends Controller
                         $debitKeys_small
                     )));
                     
-                   
+        $company = Companies::select('gst_config_type')
+                                    ->where('id', Session::get('user_company_id'))
+                                    ->first();
+            if($company->gst_config_type == "single_gst"){
+                $gst = DB::table('gst_settings',)
+                                ->select('gst_username','einvoice')
+                                ->where([
+                                    'company_id' => Session::get('user_company_id'),
+                                    'gst_no' => $request->series
+                                ])
+                                ->first();
+                $gst_user_name = $gst->gst_username;
+                $einvoice_status = $gst->einvoice;
+            }else if($company->gst_config_type == "multiple_gst"){            
+                $gst = DB::table('gst_settings_multiple')
+                                ->select('gst_username','einvoice')
+                                ->where([
+                                    'company_id' => Session::get('user_company_id'),
+                                    'gst_no' => $request->series
+                                ])
+                                ->first();
+                $gst_user_name = $gst->gst_username;
+                $einvoice_status = $gst->einvoice;
+            }      
         
         return view('gstReturn.gstR1', [
             // B2B
@@ -1618,7 +1643,7 @@ class gstR1Controller extends Controller
             'total_cgst' => $taxSummary->total_cgst ?? 0,
             'total_sgst' => $taxSummary->total_sgst ?? 0,
             'total_igst' => $taxSummary->total_igst ?? 0,
-        
+            'einvoice_status' =>$einvoice_status,
             // B2C Large
             'b2c_large_taxable_amt' => $summaryB2CLarge->total_taxable_amt ?? 0,
             'b2c_large_sale_amt' => $summaryB2CLarge->total_sale_amt ?? 0,
@@ -3682,46 +3707,46 @@ if (!$b2cSmallIds->isEmpty()) {
     $ret_period = date('mY',strtotime($from_date));
     $state_code = substr($merchant_gst,0,2);
     //Check and generate token
-    $gst_token = gstToken::select('txn','created_at')
-                        ->where('company_gstin',$merchant_gst)
-                        ->where('company_id',Session::get('user_company_id'))
-                        ->where('status',1)
-                        ->orderBy('id','desc')
-                        ->first();
-    if($gst_token){
-        $token_expiry = date('d-m-Y H:i:s',strtotime('+6 hour',strtotime($gst_token->created_at)));
-        $current_time = date('d-m-Y H:i:s');
-        if(strtotime($token_expiry)<strtotime($current_time)){
-            $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$merchant_gst);
-            if($token_res==0){
-                $response = array(
-                    'status' => false,
-                    'message' => 'Something Went Wrong In Token Generation'
-                );
-                return json_encode($response);
-            }
-            $response = array(
-                'status' => true,
-                'message' => 'TOKEN-OTP'
-            );
-            return json_encode($response);
-        }
-        $txn = $gst_token->txn;
-    }else{
-        $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$merchant_gst);
-        if($token_res==0){
-                $response = array(
-                    'status' => false,
-                    'message' => 'Something Went Wrong In Token Generation'
-                );
-                return json_encode($response);
-            }
-        $response = array(
-                'status' => true,
-                'message' => 'TOKEN-OTP'
-        );
-        return json_encode($response);
-    }
+    // $gst_token = gstToken::select('txn','created_at')
+    //                     ->where('company_gstin',$merchant_gst)
+    //                     ->where('company_id',Session::get('user_company_id'))
+    //                     ->where('status',1)
+    //                     ->orderBy('id','desc')
+    //                     ->first();
+    // if($gst_token){
+    //     $token_expiry = date('d-m-Y H:i:s',strtotime('+6 hour',strtotime($gst_token->created_at)));
+    //     $current_time = date('d-m-Y H:i:s');
+    //     if(strtotime($token_expiry)<strtotime($current_time)){
+    //         $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$merchant_gst);
+    //         if($token_res==0){
+    //             $response = array(
+    //                 'status' => false,
+    //                 'message' => 'Something Went Wrong In Token Generation'
+    //             );
+    //             return json_encode($response);
+    //         }
+    //         $response = array(
+    //             'status' => true,
+    //             'message' => 'TOKEN-OTP'
+    //         );
+    //         return json_encode($response);
+    //     }
+    //     $txn = $gst_token->txn;
+    // }else{
+    //     $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$merchant_gst);
+    //     if($token_res==0){
+    //             $response = array(
+    //                 'status' => false,
+    //                 'message' => 'Something Went Wrong In Token Generation'
+    //             );
+    //             return json_encode($response);
+    //         }
+    //     $response = array(
+    //             'status' => true,
+    //             'message' => 'TOKEN-OTP'
+    //     );
+    //     return json_encode($response);
+    // }
     
     //Gst Credenatial
     if(!$this->gstCredentials){
@@ -3747,7 +3772,9 @@ if (!$b2cSmallIds->isEmpty()) {
     $ip_address = $this->gstCredentials->ip_address;
     $curl = curl_init();
     curl_setopt_array($curl, array(
-        CURLOPT_URL => $base_url.'/gstr1/retsave?email='.$email_id,
+        // CURLOPT_URL => $base_url.'/gstr1/save?email='.$email_id,
+        
+        CURLOPT_URL => $base_url.'/gstr1/save?email='.$email_id.'&gstin='.$merchant_gst.'&ret_period='.$ret_period,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_ENCODING => '',
         CURLOPT_MAXREDIRS => 10,
@@ -3757,28 +3784,34 @@ if (!$b2cSmallIds->isEmpty()) {
         CURLOPT_CUSTOMREQUEST => 'PUT',
         CURLOPT_POSTFIELDS =>json_encode($gstr1_request),
         CURLOPT_HTTPHEADER => array(
-            'gstin:'.$merchant_gst,
-            'ret_period:'.$ret_period,
-            'gst_username:'.$gst_user_name,
-            'state_cd:'.$state_code,
-            'ip_address: '.$ip_address,
-            'txn:'.$txn,
-            'client_id: '.$client_id,
-            'client_secret: '.$client_secret,
-            'Content-Type: application/json'
-        ),
+            'accept: */*',
+            'Content-Type: application/json',
+            'env: production',
+            'client_id: ' . $client_id,
+            'client_secret: ' . $client_secret
+         ),
+        // CURLOPT_HTTPHEADER => array(
+        //     'gstin:'.$merchant_gst,
+        //     'ret_period:'.$ret_period,
+        //     'gst_username:'.$gst_user_name,
+        //     'state_cd:'.$state_code,
+        //     'ip_address: '.$ip_address,
+        //     'txn:'.$txn,
+        //     'client_id: '.$client_id,
+        //     'client_secret: '.$client_secret,
+        //     'Content-Type: application/json'
+        // ),
     ));
     $response = curl_exec($curl);
-    $err = curl_error($curl);
+    $err = curl_error($curl); 
     if($response){
         $result = json_decode($response);
-        // echo "<pre>";
-        // print_r($result);echo "**".$result->data->reference_id."--".$result->status_cd;
-        // die;
+        //  echo "<pre>";
+        //        print_r($result);die;
         if(isset($result->status_cd) && $result->status_cd==1 ){
             $curl = curl_init();
             curl_setopt_array($curl, array(
-               CURLOPT_URL => $base_url.'/gstr/retstatus?email='.$email_id.'&gstin='.$merchant_gst.'&returnperiod='.$ret_period.'&refid='.$result->data->reference_id,
+               CURLOPT_URL => $base_url.'/all/newretstatus?email='.$email_id.'&gstin='.$merchant_gst.'&ret_period='.$ret_period.'&ref_id='.$result->data->reference_id,
                CURLOPT_RETURNTRANSFER => true,
                CURLOPT_ENCODING => '',
                CURLOPT_MAXREDIRS => 10,
@@ -3786,16 +3819,22 @@ if (!$b2cSmallIds->isEmpty()) {
                CURLOPT_FOLLOWLOCATION => true,
                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
                CURLOPT_CUSTOMREQUEST => 'GET',
-               //CURLOPT_POSTFIELDS =>json_encode($gstr1_requset),
                CURLOPT_HTTPHEADER => array(
-                  'gst_username:'.$gst_user_name,
-                  'state_cd:'.$state_code,
-                  'ip_address:' .$ip_address,
-                  'txn:'.$txn,
-                  'client_id: '.$client_id,
-                  'client_secret: '.$client_secret,
-                  'Content-Type: application/json'
-               ),
+                    'accept: */*',
+                    'Content-Type: application/json',
+                    'env: production',
+                    'client_id: ' . $client_id,
+                    'client_secret: ' . $client_secret
+                ),
+            //    CURLOPT_HTTPHEADER => array(
+            //       'gst_username:'.$gst_user_name,
+            //       'state_cd:'.$state_code,
+            //       'ip_address:' .$ip_address,
+            //       'txn:'.$txn,
+            //       'client_id: '.$client_id,
+            //       'client_secret: '.$client_secret,
+            //       'Content-Type: application/json'
+            //    ),
             ));
             $res = curl_exec($curl);
             $err = curl_error($curl);
@@ -3805,9 +3844,9 @@ if (!$b2cSmallIds->isEmpty()) {
                //echo "<pre>";
                //print_r($rult);die;
                if(isset($rult->status_cd) && $rult->status_cd==1){
-                  if($rult->data->status_cd=="P"){                     
+                  if($rult->data->status_cd=="P"){
                      echo json_encode(array("status"=>true,"message"=>"Data Saved Successfully."));
-                  }else if($rult->data->status_cd=="IP"){                     
+                  }else if($rult->data->status_cd=="IP"){
                      echo json_encode(array("status"=>true,"message"=>"In Processing....Please Wait Processed Within 20 minutes"));
                   }else{
                      echo json_encode(array("status"=>false,"message"=>$rult->errorReport));
@@ -3817,7 +3856,24 @@ if (!$b2cSmallIds->isEmpty()) {
                }
             }
         }else{
-            echo json_encode(array("status"=>false,"message"=>$result->error));            
+            if (empty((array) $result)) {
+                $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$merchant_gst);
+                if($token_res==0){
+                        $response = array(
+                            'status' => false,
+                            'message' => 'Something Went Wrong In Token Generation'
+                        );
+                        return json_encode($response);
+                    }
+                $response = array(
+                        'status' => true,
+                        'message' => 'TOKEN-OTP'
+                );
+                return json_encode($response);
+            }else{
+                echo json_encode(array("status"=>false,"message"=>$result->error));
+            }
+                        
         }
     }
     // curl_close($curl); 
@@ -7150,67 +7206,67 @@ $payments = DB::table('payments')
         // =========================
         $state_code = substr(trim($request->merchant_gst), 0, 2);
 
-        $gst_token = gstToken::select('txn', 'created_at')
-            ->where('company_gstin', $request->merchant_gst)
-            ->where('company_id', Session::get('user_company_id'))
-            ->where('status', 1)
-            ->orderBy('id', 'desc')
-            ->first();
+        // $gst_token = gstToken::select('txn', 'created_at')
+        //     ->where('company_gstin', $request->merchant_gst)
+        //     ->where('company_id', Session::get('user_company_id'))
+        //     ->where('status', 1)
+        //     ->orderBy('id', 'desc')
+        //     ->first();
 
-        if ($gst_token) {
+        // if ($gst_token) {
 
-            $token_expiry = date(
-                'd-m-Y H:i:s',
-                strtotime('+6 hour', strtotime($gst_token->created_at))
-            );
+        //     $token_expiry = date(
+        //         'd-m-Y H:i:s',
+        //         strtotime('+6 hour', strtotime($gst_token->created_at))
+        //     );
 
-            $current_time = date('d-m-Y H:i:s');
+        //     $current_time = date('d-m-Y H:i:s');
 
-            if (strtotime($token_expiry) < strtotime($current_time)) {
+        //     if (strtotime($token_expiry) < strtotime($current_time)) {
 
-                $token_res = CommonHelper::gstTokenOtpRequest(
-                    $state_code,
-                    $gst_user_name,
-                    $request->merchant_gst
-                );
+        //         $token_res = CommonHelper::gstTokenOtpRequest(
+        //             $state_code,
+        //             $gst_user_name,
+        //             $request->merchant_gst
+        //         );
 
-                if ($token_res == 0) {
+        //         if ($token_res == 0) {
 
-                    return response()->json([
-                        'status'  => false,
-                        'message' => 'Something Went Wrong In Token Generation'
-                    ]);
-                }
+        //             return response()->json([
+        //                 'status'  => false,
+        //                 'message' => 'Something Went Wrong In Token Generation'
+        //             ]);
+        //         }
 
-                return response()->json([
-                    'status'  => true,
-                    'message' => 'TOKEN-OTP'
-                ]);
-            }
+        //         return response()->json([
+        //             'status'  => true,
+        //             'message' => 'TOKEN-OTP'
+        //         ]);
+        //     }
 
-            $txn = $gst_token->txn;
+        //     $txn = $gst_token->txn;
 
-        } else {
+        // } else {
 
-            $token_res = CommonHelper::gstTokenOtpRequest(
-                $state_code,
-                $gst_user_name,
-                $request->merchant_gst
-            );
+        //     $token_res = CommonHelper::gstTokenOtpRequest(
+        //         $state_code,
+        //         $gst_user_name,
+        //         $request->merchant_gst
+        //     );
 
-            if ($token_res == 0) {
+        //     if ($token_res == 0) {
 
-                return response()->json([
-                    'status'  => false,
-                    'message' => 'Something Went Wrong In Token Generation'
-                ]);
-            }
+        //         return response()->json([
+        //             'status'  => false,
+        //             'message' => 'Something Went Wrong In Token Generation'
+        //         ]);
+        //     }
 
-            return response()->json([
-                'status'  => true,
-                'message' => 'TOKEN-OTP'
-            ]);
-        }
+        //     return response()->json([
+        //         'status'  => true,
+        //         'message' => 'TOKEN-OTP'
+        //     ]);
+        // }
 
         // =========================
         // GST API CREDENTIALS
@@ -7247,7 +7303,7 @@ $payments = DB::table('payments')
             CURLOPT_URL => $base_url . '/gstr1/retsum?' . http_build_query([
                 'email'     => $email_id,
                 'gstin'     => $request->merchant_gst,
-                'retperiod' => $month,
+                'ret_period' => $month,
             ]),
 
             CURLOPT_RETURNTRANSFER => true,
@@ -7257,16 +7313,22 @@ $payments = DB::table('payments')
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
             CURLOPT_CUSTOMREQUEST  => 'GET',
-
-            CURLOPT_HTTPHEADER => [
-                'Accept: application/json',
-                'gst_username: ' . $gst_user_name,
-                'state_cd: ' . $state_code,
-                'ip_address: ' . $ip_address,
-                'txn: ' . $txn,
+            CURLOPT_HTTPHEADER => array(
+                'accept: */*',
+                'Content-Type: application/json',
+                'env: production',
                 'client_id: ' . $client_id,
                 'client_secret: ' . $client_secret
-            ],
+            ),
+            // CURLOPT_HTTPHEADER => [
+            //     'Accept: application/json',
+            //     'gst_username: ' . $gst_user_name,
+            //     'state_cd: ' . $state_code,
+            //     'ip_address: ' . $ip_address,
+            //     'txn: ' . $txn,
+            //     'client_id: ' . $client_id,
+            //     'client_secret: ' . $client_secret
+            // ],
 
         ]);
 

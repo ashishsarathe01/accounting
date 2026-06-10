@@ -121,7 +121,7 @@ Opening Bal. : {{ formatIndianNumber($open) }} @if($opening < 0) CR @else DR @en
                         <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Balance(Rs.)</th>
                         <th class="w-min-100 border-none bg-light-pink text-body" style="text-align: right;">Short Narration</th>
                          @php
-                            $isSpecialParty = $configuration->purchase_order_info_show_in_ledger;
+                            $isSpecialParty = $configuration->purchase_order_info_show_in_ledger ?? '';
                         @endphp
                         @if($isSpecialParty)
                             <th>PO Number</th>
