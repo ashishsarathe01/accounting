@@ -96,8 +96,11 @@
             </div>
 
 
-            <form method="GET"
-                  action="{{ route('export.monthly.report.download') }}">
+            <form method="POST"
+                id="previewReportForm"
+                action="{{ route('export.monthly.report.preview') }}"
+                target="_blank">
+                @csrf
 
                 <div class="modal-body">
 
@@ -219,9 +222,7 @@
 
                     <button type="submit"
                             class="btn btn-dark">
-
-                        Download
-
+                        Preview
                     </button>
 
                 </div>
@@ -253,6 +254,24 @@
 
         $('#stockReportModal')
             .modal('show');
+
+    });
+
+    $('#previewReportForm').submit(function(){
+
+        let month = $('#stock_month').val();
+        let bank  = $('select[name="bank_id"]').val();
+        let type  = $('select[name="stock_type"]').val();
+
+        if(!month || !bank || !type)
+        {
+            alert('Please fill all fields.');
+
+            return false;
+        }
+
+        // form submits normally, opens preview in new tab
+        return true;
 
     });
 

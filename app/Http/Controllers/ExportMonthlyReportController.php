@@ -8424,4 +8424,1392 @@ else
 
     exit;
 }
+    // =========================================
+    // GET REPORT DATA (single source of truth)
+    // =========================================
+
+    private function getReportData(
+        string $month,
+        string $stockType,
+        int $bankId
+    ): array {
+
+        $company_id = Session::get('user_company_id');
+
+        $lastDate = date('Y-m-t', strtotime($month));
+
+        $selectedMonthStart = date('Y-m-01', strtotime($lastDate));
+
+        $company = DB::table('companies')
+            ->where('id', $company_id)
+            ->first();
+
+        $bank = DB::table('banks')
+            ->where('id', $bankId)
+            ->first();
+
+
+        // =========================================
+        // STOCK ROWS
+        // =========================================
+
+        $reportData = [];
+        $grandTotal  = 0;
+        $sr          = 1;
+
+        if ($stockType == 'item') {
+
+            $sub = DB::table('item_averages')
+                ->select(DB::raw('MAX(id) as latest_id'))
+                ->where('stock_date', '<=', $lastDate)
+                ->where('company_id', $company_id)
+                ->groupBy('item_id');
+
+            $items = DB::table('item_averages')
+                ->join('manage_items', 'item_averages.item_id', '=', 'manage_items.id')
+                ->whereIn('item_averages.id', $sub)
+                ->select(
+                    'manage_items.name as item_name',
+                    'item_averages.average_weight as qty',
+                    'item_averages.amount as value'
+                )
+                ->orderBy('manage_items.name')
+                ->get();
+
+        } else {
+
+            $sub = DB::table('item_averages')
+                ->select(DB::raw('MAX(id) as latest_id'))
+                ->where('stock_date', '<=', $lastDate)
+                ->where('company_id', $company_id)
+                ->groupBy('item_id');
+
+            $items = DB::table('item_averages')
+                ->join('manage_items', 'item_averages.item_id', '=', 'manage_items.id')
+                ->join('item_groups', 'manage_items.g_name', '=', 'item_groups.id')
+                ->whereIn('item_averages.id', $sub)
+                ->select(
+                    'item_groups.group_name as item_name',
+                    DB::raw('SUM(item_averages.average_weight) as qty'),
+                    DB::raw('SUM(item_averages.amount) as value')
+                )
+                ->groupBy('item_groups.group_name')
+                ->orderBy('item_groups.group_name')
+                ->get();
+        }
+
+        foreach ($items as $item) {
+
+            if (round($item->qty, 2) == 0 && round($item->value, 2) == 0) {
+                continue;
+            }
+
+            $rate = (float)$item->qty > 0
+                ? round((float)$item->value / (float)$item->qty, 2)
+                : 0;
+
+            $grandTotal += $item->value;
+
+            $reportData[] = [
+                'sr_no' => $sr++,
+                'name'  => $item->item_name,
+                'qty'   => $item->qty,
+                'rate'  => $rate,
+                'value' => $item->value,
+            ];
+        }
+
+
+        // =========================================
+        // DEBTORS AGING (shared helper)
+        // =========================================
+
+        $debtorBuckets = $this->calcDebtorBuckets(
+            $company_id,
+            $lastDate
+        );
+
+        $upto90Total      = $debtorBuckets['upto90'];
+        $days91to180Total = $debtorBuckets['days91to180'];
+        $moreThan180Total = $debtorBuckets['moreThan180'];
+        $debtorsGrandTotal = $upto90Total + $days91to180Total + $moreThan180Total;
+
+
+        // =========================================
+        // DEBTORS LIST (Sheet 3)
+        // =========================================
+
+        $debtorsListData  = $this->calcDebtorsList($company_id, $lastDate);
+        $less90Total      = $debtorsListData['less90Total'];
+        $greater90Total   = $debtorsListData['greater90Total'];
+        $debtorsRows      = $debtorsListData['rows'];
+
+
+        // =========================================
+        // CREDITORS TOTAL (Sheet 1 Part C)
+        // =========================================
+
+        $creditorsResult = $this->calcCreditorsTotal($company_id, $lastDate);
+        $creditorsTotal  = $creditorsResult['total'];
+        $creditorsRows   = $creditorsResult['rows'];
+        $creditorsTotalBalance = $creditorsResult['totalBalance'];
+
+
+        // =========================================
+        // SALES
+        // =========================================
+
+        $salesData = $this->calcSales($company_id, $selectedMonthStart, $lastDate);
+
+        $salesUptoLastMonthLacs  = $salesData['uptoLastMonthLacs'];
+        $salesDuringMonthLacs    = $salesData['duringMonthLacs'];
+        $totalSalesLacs          = $salesData['totalLacs'];
+
+
+        // =========================================
+        // PURCHASES
+        // =========================================
+
+        $purchaseData = $this->calcPurchases($company_id, $selectedMonthStart, $lastDate);
+
+        $purchaseUptoLastMonthLacs = $purchaseData['uptoLastMonthLacs'];
+        $purchaseDuringMonthLacs   = $purchaseData['duringMonthLacs'];
+        $totalPurchaseLacs         = $purchaseData['totalLacs'];
+
+
+        // =========================================
+        // CALCULATION SHEET
+        // =========================================
+
+        $sub = DB::table('item_averages')
+            ->select(DB::raw('MAX(id) as latest_id'))
+            ->where('stock_date', '<=', $lastDate)
+            ->where('company_id', $company_id)
+            ->groupBy('item_id');
+
+        $stockTotal = DB::table('item_averages')
+            ->whereIn('id', $sub)
+            ->sum('amount');
+
+        $debtorsAvailability = round((($upto90Total - $creditorsTotal) * 70) / 100, 0);
+        $stockAvailability   = round(($stockTotal * 75) / 100, 0);
+        $dp                  = $debtorsAvailability + $stockAvailability;
+
+
+        // =========================================
+        // RETURN ALL DATA
+        // =========================================
+
+        return [
+
+            'company'    => $company,
+            'bank'       => $bank,
+            'month'      => $month,
+            'lastDate'   => $lastDate,
+            'stockType'  => $stockType,
+
+            // Sheet 1 - Stock
+            'stockRows'  => $reportData,
+            'grandTotal' => $grandTotal,
+
+            // Sheet 1 - Part B Debtors summary
+            'upto90Total'       => $upto90Total,
+            'days91to180Total'  => $days91to180Total,
+            'moreThan180Total'  => $moreThan180Total,
+            'debtorsGrandTotal' => $debtorsGrandTotal,
+
+            // Sheet 1 - Sales
+            'salesUptoLastMonthLacs' => $salesUptoLastMonthLacs,
+            'salesDuringMonthLacs'   => $salesDuringMonthLacs,
+            'totalSalesLacs'         => $totalSalesLacs,
+
+            // Sheet 1 - Part C Creditors summary
+            'creditorsTotal' => $creditorsTotal,
+
+            // Sheet 1 - Purchases
+            'purchaseUptoLastMonthLacs' => $purchaseUptoLastMonthLacs,
+            'purchaseDuringMonthLacs'   => $purchaseDuringMonthLacs,
+            'totalPurchaseLacs'         => $totalPurchaseLacs,
+
+            // Sheet 2 - Creditors list
+            'creditorsRows'        => $creditorsRows,
+            'creditorsTotalBalance' => $creditorsTotalBalance,
+
+            // Sheet 3 - Debtors list
+            'debtorsRows'    => $debtorsRows,
+            'less90Total'    => $less90Total,
+            'greater90Total' => $greater90Total,
+
+            // Sheet 4 - Calculation
+            'stockTotal'           => $stockTotal,
+            'debtorsAvailability'  => $debtorsAvailability,
+            'stockAvailability'    => $stockAvailability,
+            'dp'                   => $dp,
+        ];
+    }
+
+
+    // =========================================
+    // HELPER: DEBTORS AGING BUCKETS
+    // =========================================
+
+    private function calcDebtorBuckets(int $company_id, string $lastDate): array
+    {
+        $upto90      = 0;
+        $days91to180 = 0;
+        $moreThan180 = 0;
+
+        $top_groups_list = [11];
+        $all_groups_list = [];
+
+        foreach ($top_groups_list as $gid) {
+            $all_groups_list[] = $gid;
+            $all_groups_list   = array_merge(
+                $all_groups_list,
+                CommonHelper::getAllChildGroupIds($gid, $company_id)
+            );
+        }
+
+        $all_groups_list = array_unique($all_groups_list);
+
+        $accounts = DB::table('accounts')
+            ->where('company_id', $company_id)
+            ->where('delete', '0')
+            ->whereIn('under_group', $all_groups_list)
+            ->get();
+
+        $allSales = DB::table('sales')
+            ->where('company_id', $company_id)
+            ->where('date', '<=', $lastDate)
+            ->where('status', '1')
+            ->where('delete', '0')
+            ->get()
+            ->groupBy('party');
+
+        $booksStart = DB::table('companies')
+            ->where('id', $company_id)
+            ->value('books_start_from');
+
+        foreach ($accounts as $acc) {
+
+            $ledger = DB::table('account_ledger')
+                ->where('company_id', $company_id)
+                ->where('account_id', $acc->id)
+                ->where('txn_date', '<=', $lastDate)
+                ->where('delete_status', '0')
+                ->selectRaw('SUM(debit) as dr, SUM(credit) as cr')
+                ->first();
+
+            $open = DB::table('account_ledger')
+                ->where('company_id', $company_id)
+                ->where('account_id', $acc->id)
+                ->where('entry_type', '-1')
+                ->selectRaw('SUM(debit) as dr, SUM(credit) as cr')
+                ->first();
+
+            $total = ($ledger->dr - $ledger->cr) + ($open->dr - $open->cr);
+
+            if ($total <= 0) continue;
+
+            $agingRows = [];
+
+            if (($open->dr - $open->cr) > 0) {
+                $agingRows[] = [
+                    'age'    => Carbon::parse($booksStart)->diffInDays($lastDate),
+                    'amount' => ($open->dr - $open->cr),
+                ];
+            }
+
+            $sales = $allSales[$acc->id] ?? collect();
+
+            foreach ($sales as $inv) {
+                $agingRows[] = [
+                    'age'    => Carbon::parse($inv->date)->diffInDays($lastDate),
+                    'amount' => $inv->total,
+                ];
+            }
+
+            usort($agingRows, fn($a, $b) => $b['age'] <=> $a['age']);
+
+            $payment = array_sum(array_column($agingRows, 'amount')) - $total;
+
+            foreach ($agingRows as $key => $row) {
+                if ($payment <= 0) break;
+                $deduct = min($row['amount'], $payment);
+                $agingRows[$key]['amount'] -= $deduct;
+                $payment -= $deduct;
+            }
+
+            foreach ($agingRows as $row) {
+                if ($row['amount'] <= 0) continue;
+                $age = (int)$row['age'];
+                if ($age <= 90)                    $upto90      += $row['amount'];
+                elseif ($age >= 91 && $age <= 180) $days91to180 += $row['amount'];
+                elseif ($age > 180)                $moreThan180 += $row['amount'];
+            }
+        }
+
+        return [
+            'upto90'      => $upto90,
+            'days91to180' => $days91to180,
+            'moreThan180' => $moreThan180,
+        ];
+    }
+
+
+    // =========================================
+    // HELPER: DEBTORS LIST ROWS
+    // =========================================
+
+    private function calcDebtorsList(int $company_id, string $lastDate): array
+    {
+        $top_groups_list = [11];
+        $all_groups_list = [];
+
+        foreach ($top_groups_list as $gid) {
+            $all_groups_list[] = $gid;
+            $all_groups_list   = array_merge(
+                $all_groups_list,
+                CommonHelper::getAllChildGroupIds($gid, $company_id)
+            );
+        }
+
+        $all_groups_list = array_unique($all_groups_list);
+
+        $accounts = DB::table('accounts')
+            ->where('company_id', $company_id)
+            ->where('delete', '0')
+            ->whereIn('under_group', $all_groups_list)
+            ->get();
+
+        $allSales = DB::table('sales')
+            ->where('company_id', $company_id)
+            ->where('date', '<=', $lastDate)
+            ->where('status', '1')
+            ->where('delete', '0')
+            ->get()
+            ->groupBy('party');
+
+        $booksStart = DB::table('companies')
+            ->where('id', $company_id)
+            ->value('books_start_from');
+
+        $rows           = [];
+        $sr             = 1;
+        $less90Total    = 0;
+        $greater90Total = 0;
+
+        foreach ($accounts as $acc) {
+
+            $ledger = DB::table('account_ledger')
+                ->where('company_id', $company_id)
+                ->where('account_id', $acc->id)
+                ->where('txn_date', '<=', $lastDate)
+                ->where('delete_status', '0')
+                ->selectRaw('SUM(debit) as dr, SUM(credit) as cr')
+                ->first();
+
+            $open = DB::table('account_ledger')
+                ->where('company_id', $company_id)
+                ->where('account_id', $acc->id)
+                ->where('entry_type', '-1')
+                ->selectRaw('SUM(debit) as dr, SUM(credit) as cr')
+                ->first();
+
+            $total = ($ledger->dr - $ledger->cr) + ($open->dr - $open->cr);
+
+            if ($total <= 0) continue;
+
+            $agingRows = [];
+
+            if (($open->dr - $open->cr) > 0) {
+                $agingRows[] = [
+                    'age'    => Carbon::parse($booksStart)->diffInDays($lastDate),
+                    'amount' => ($open->dr - $open->cr),
+                ];
+            }
+
+            $sales = $allSales[$acc->id] ?? collect();
+
+            foreach ($sales as $inv) {
+                $agingRows[] = [
+                    'age'    => Carbon::parse($inv->date)->diffInDays($lastDate),
+                    'amount' => $inv->total,
+                ];
+            }
+
+            usort($agingRows, fn($a, $b) => $b['age'] <=> $a['age']);
+
+            $payment = array_sum(array_column($agingRows, 'amount')) - $total;
+
+            foreach ($agingRows as $key => $row) {
+                if ($payment <= 0) break;
+                $deduct = min($row['amount'], $payment);
+                $agingRows[$key]['amount'] -= $deduct;
+                $payment -= $deduct;
+            }
+
+            $less90    = 0;
+            $greater90 = 0;
+
+            foreach ($agingRows as $row) {
+                if ($row['amount'] <= 0) continue;
+                $age = (int)$row['age'];
+                if ($age <= 90) $less90    += $row['amount'];
+                else            $greater90 += $row['amount'];
+            }
+
+            $less90Total    += $less90;
+            $greater90Total += $greater90;
+
+            $rows[] = [
+                'sr_no'     => $sr++,
+                'party'     => $acc->account_name,
+                'less90'    => $less90,
+                'greater90' => $greater90,
+            ];
+        }
+
+        return [
+            'rows'           => $rows,
+            'less90Total'    => $less90Total,
+            'greater90Total' => $greater90Total,
+        ];
+    }
+
+
+    // =========================================
+    // HELPER: CREDITORS TOTAL + ROWS
+    // =========================================
+
+    private function calcCreditorsTotal(int $company_id, string $lastDate): array
+    {
+        $sundry_group_ids = [];
+
+        foreach ([3] as $gid) {
+            $sundry_group_ids[] = $gid;
+            $sundry_group_ids   = array_merge(
+                $sundry_group_ids,
+                CommonHelper::getAllChildGroupIds($gid, $company_id)
+            );
+        }
+
+        $sundry_group_ids = array_unique($sundry_group_ids);
+
+        $accounts = \App\Models\Accounts::whereIn('company_id', [$company_id, 0])
+            ->where('delete', '0')
+            ->where('status', '1')
+            ->whereIn('under_group', $sundry_group_ids)
+            ->orderBy('account_name')
+            ->get();
+
+        $rows       = [];
+        $sr         = 1;
+        $grandTotal = 0;
+
+        foreach ($accounts as $account) {
+
+            $ledger = DB::table('account_ledger')
+                ->selectRaw('SUM(debit) as total_debit, SUM(credit) as total_credit')
+                ->where('account_id', $account->id)
+                ->where('company_id', $company_id)
+                ->where('status', '1')
+                ->where('delete_status', '0')
+                ->whereDate('txn_date', '<=', $lastDate)
+                ->first();
+
+            $balance = $ledger
+                ? ($ledger->total_debit ?? 0) - ($ledger->total_credit ?? 0)
+                : 0;
+
+            $openingEntry = DB::table('account_ledger')
+                ->where('account_id', $account->id)
+                ->where('company_id', $company_id)
+                ->where('entry_type', '-1')
+                ->where('delete_status', '0')
+                ->first();
+
+            if ($openingEntry) {
+                if (!empty($openingEntry->credit)) $balance -= $openingEntry->credit;
+                elseif (!empty($openingEntry->debit)) $balance += $openingEntry->debit;
+            }
+
+            if (round($balance, 2) == 0) continue;
+
+            $grandTotal += $balance;
+
+            $finalBalance = $balance < 0
+                ? formatIndianNumber(abs(round($balance, 2)))
+                : '(' . formatIndianNumber(abs(round($balance, 2))) . ')';
+
+            $rows[] = [
+                'sr_no'           => $sr++,
+                'account_name'    => $account->account_name,
+                'closing_balance' => $finalBalance,
+                'raw_balance'     => $balance,
+            ];
+        }
+
+        $totalBalance = $grandTotal < 0
+            ? formatIndianNumber(abs(round($grandTotal, 2)))
+            : '(' . formatIndianNumber(abs(round($grandTotal, 2))) . ')';
+
+        return [
+            'total'        => abs(round($grandTotal, 2)),
+            'rows'         => $rows,
+            'totalBalance' => $totalBalance,
+        ];
+    }
+
+
+    // =========================================
+    // HELPER: SALES
+    // =========================================
+
+    private function calcSales(int $company_id, string $selectedMonthStart, string $lastDate): array
+    {
+        $salesOpening = 0;
+
+        $openingEntry = DB::table('account_ledger')
+            ->where('account_id', 35)
+            ->where('company_id', $company_id)
+            ->where('entry_type', '-1')
+            ->where('delete_status', '0')
+            ->first();
+
+        if ($openingEntry) {
+            if ($openingEntry->credit != '')  $salesOpening = -$openingEntry->credit;
+            elseif ($openingEntry->debit != '') $salesOpening = $openingEntry->debit;
+        }
+
+        $salesLedger = DB::table('account_ledger')
+            ->selectRaw('SUM(debit) as debit, SUM(credit) as credit')
+            ->where('account_id', 35)
+            ->where('company_id', $company_id)
+            ->where('txn_date', '<', $selectedMonthStart)
+            ->where('status', '1')
+            ->where('delete_status', '0')
+            ->first();
+
+        $salesUptoLastMonth = abs(round(
+            $salesOpening + (($salesLedger->debit ?? 0) - ($salesLedger->credit ?? 0)),
+            2
+        ));
+
+        $salesDuringMonthLedger = DB::table('account_ledger')
+            ->selectRaw('SUM(debit) as debit, SUM(credit) as credit')
+            ->where('account_id', 35)
+            ->where('company_id', $company_id)
+            ->whereBetween('txn_date', [$selectedMonthStart, $lastDate])
+            ->where('status', '1')
+            ->where('delete_status', '0')
+            ->first();
+
+        $salesDuringMonth = abs(round(
+            ($salesDuringMonthLedger->debit ?? 0) - ($salesDuringMonthLedger->credit ?? 0),
+            2
+        ));
+
+        $totalSales = $salesUptoLastMonth + $salesDuringMonth;
+
+        return [
+            'uptoLastMonthLacs' => round($salesUptoLastMonth / 100000, 2),
+            'duringMonthLacs'   => round($salesDuringMonth / 100000, 2),
+            'totalLacs'         => round($totalSales / 100000, 2),
+        ];
+    }
+
+
+    // =========================================
+    // HELPER: PURCHASES
+    // =========================================
+
+    private function calcPurchases(int $company_id, string $selectedMonthStart, string $lastDate): array
+    {
+        $purchaseOpening = 0;
+
+        $openingEntry = DB::table('account_ledger')
+            ->where('account_id', 36)
+            ->where('company_id', $company_id)
+            ->where('entry_type', '-1')
+            ->where('delete_status', '0')
+            ->first();
+
+        if ($openingEntry) {
+            if ($openingEntry->credit != '')  $purchaseOpening = -$openingEntry->credit;
+            elseif ($openingEntry->debit != '') $purchaseOpening = $openingEntry->debit;
+        }
+
+        $purchaseLedger = DB::table('account_ledger')
+            ->selectRaw('SUM(debit) as debit, SUM(credit) as credit')
+            ->where('account_id', 36)
+            ->where('company_id', $company_id)
+            ->where('txn_date', '<', $selectedMonthStart)
+            ->where('status', '1')
+            ->where('delete_status', '0')
+            ->first();
+
+        $purchaseUptoLastMonth = abs(round(
+            $purchaseOpening + (($purchaseLedger->debit ?? 0) - ($purchaseLedger->credit ?? 0)),
+            2
+        ));
+
+        $purchaseDuringMonthLedger = DB::table('account_ledger')
+            ->selectRaw('SUM(debit) as debit, SUM(credit) as credit')
+            ->where('account_id', 36)
+            ->where('company_id', $company_id)
+            ->whereBetween('txn_date', [$selectedMonthStart, $lastDate])
+            ->where('status', '1')
+            ->where('delete_status', '0')
+            ->first();
+
+        $purchaseDuringMonth = abs(round(
+            ($purchaseDuringMonthLedger->debit ?? 0) - ($purchaseDuringMonthLedger->credit ?? 0),
+            2
+        ));
+
+        $totalPurchase = $purchaseUptoLastMonth + $purchaseDuringMonth;
+
+        return [
+            'uptoLastMonthLacs' => round($purchaseUptoLastMonth / 100000, 2),
+            'duringMonthLacs'   => round($purchaseDuringMonth / 100000, 2),
+            'totalLacs'         => round($totalPurchase / 100000, 2),
+        ];
+    }
+
+
+    // =========================================
+    // PREVIEW
+    // =========================================
+
+    public function preview(Request $request)
+    {
+        $request->validate([
+            'month'      => 'required',
+            'bank_id'    => 'required|integer',
+            'stock_type' => 'required|in:item,group',
+        ]);
+
+        $data = $this->getReportData(
+            $request->month,
+            $request->stock_type,
+            (int)$request->bank_id
+        );
+
+        return view('ExportMonthlyReportPreview', $data);
+    }
+
+
+    // =========================================
+    // DOWNLOAD EXCEL (from edited preview values)
+    // =========================================
+
+    public function downloadExcel(Request $request)
+    {
+        $month     = $request->input('month');
+        $stockType = $request->input('stock_type');
+        
+        $bankId    = (int)$request->input('bank_id');
+        $limitAmount = $request->input('limit_amount', '');
+
+        // Use edited values from POST — not DB
+        $company_id = Session::get('user_company_id');
+        $company    = DB::table('companies')->where('id', $company_id)->first();
+        $bank       = DB::table('banks')->where('id', $bankId)->first();
+        $lastDate   = date('Y-m-t', strtotime($month));
+
+        // ===== EDITED STOCK ROWS =====
+        $stockNames  = $request->input('stock_name', []);
+        $stockQtys   = $request->input('stock_qty', []);
+        $stockRates  = $request->input('stock_rate', []);
+        $stockValues = $request->input('stock_value', []);
+
+        $reportData = [];
+        $grandTotal = 0;
+
+        foreach ($stockNames as $i => $name) {
+            $value = (float)str_replace(',', '', $stockValues[$i] ?? 0);
+            $grandTotal += $value;
+            $reportData[] = [
+                'sr_no' => $i + 1,
+                'name'  => $name,
+                'qty'   => (float)str_replace(',', '', $stockQtys[$i]  ?? 0),
+                'rate'  => (float)str_replace(',', '', $stockRates[$i] ?? 0),
+                'value' => $value,
+            ];
+        }
+
+        // ===== EDITED SINGLE VALUES =====
+        $upto90Total = (float)str_replace(
+            ',',
+            '',
+            $request->input(
+                'calc_upto90',
+                $request->input('upto90_total', 0)
+            )
+        );
+        $days91to180Total = (float)str_replace(',', '', $request->input('days91to180_total', 0));
+        $moreThan180Total = (float)str_replace(',', '', $request->input('moreThan180_total', 0));
+        $debtorsGrandTotal = $upto90Total + $days91to180Total + $moreThan180Total;
+
+        $salesUptoLastMonthLacs  = (float)str_replace(',', '', $request->input('sales_upto_last_month_lacs', 0));
+        $salesDuringMonthLacs    = (float)str_replace(',', '', $request->input('sales_during_month_lacs', 0));
+        $totalSalesLacs          = $salesUptoLastMonthLacs + $salesDuringMonthLacs;
+
+        $creditorsTotal = (float)str_replace(
+            ',',
+            '',
+            $request->input(
+                'calc_creditors',
+                $request->input('creditors_total', 0)
+            )
+        );
+
+        $purchaseUptoLastMonthLacs = (float)str_replace(',', '', $request->input('purchase_upto_last_month_lacs', 0));
+        $purchaseDuringMonthLacs   = (float)str_replace(',', '', $request->input('purchase_during_month_lacs', 0));
+        $totalPurchaseLacs         = $purchaseUptoLastMonthLacs + $purchaseDuringMonthLacs;
+
+        // ===== EDITED CREDITORS ROWS =====
+        $creditorNames    = $request->input('creditor_name', []);
+        $creditorBalances = $request->input('creditor_balance', []);
+        $creditorsRows    = [];
+
+        foreach ($creditorNames as $i => $name) {
+            $creditorsRows[] = [
+                'sr_no'           => $i + 1,
+                'account_name'    => $name,
+                'closing_balance' => $creditorBalances[$i] ?? '',
+            ];
+        }
+
+        // ===== EDITED DEBTORS ROWS =====
+        $debtorParties  = $request->input('debtor_party', []);
+        $debtorLess90   = $request->input('debtor_less90', []);
+        $debtorGreater90 = $request->input('debtor_greater90', []);
+        $debtorsRows    = [];
+        $less90Total    = 0;
+        $greater90Total = 0;
+
+        foreach ($debtorParties as $i => $party) {
+            $l = (float)str_replace(',', '', $debtorLess90[$i]    ?? 0);
+            $g = (float)str_replace(',', '', $debtorGreater90[$i] ?? 0);
+            $less90Total    += $l;
+            $greater90Total += $g;
+            $debtorsRows[] = [
+                'sr_no'     => $i + 1,
+                'party'     => $party,
+                'less90'    => $l,
+                'greater90' => $g,
+            ];
+        }
+
+        // ===== CALCULATION =====
+        $stockTotal          = (float)str_replace(',', '', $request->input('stock_total', 0));
+        $debtorsAvailability = (float)str_replace(',', '', $request->input('debtors_availability', 0));
+        $stockAvailability   = (float)str_replace(',', '', $request->input('stock_availability', 0));
+        $dp                  = $debtorsAvailability + $stockAvailability;
+
+        // ===== NOW BUILD EXCEL (reusing your existing PhpSpreadsheet logic) =====
+
+        $spreadsheet = new Spreadsheet();
+
+        // --- SHEET 1 ---
+        $sheet1 = $spreadsheet->getActiveSheet();
+        $sheet1->setTitle('Stock Report');
+
+        $sheet1->getColumnDimension('A')->setWidth(10);
+        $sheet1->getColumnDimension('B')->setWidth(35);
+        $sheet1->getColumnDimension('C')->setWidth(18);
+        $sheet1->getColumnDimension('D')->setWidth(18);
+        $sheet1->getColumnDimension('E')->setWidth(18);
+        $sheet1->getColumnDimension('F')->setWidth(18);
+        $sheet1->getColumnDimension('G')->setWidth(20);
+
+        $sheet1->mergeCells('F1:G1');
+        $sheet1->setCellValue('F1', 'PART - A');
+        $sheet1->getStyle('F1:G1')->getFont()->setBold(true)->setSize(14);
+        $sheet1->getStyle('F1:G1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+
+        $sheet1->mergeCells('F2:G2');
+        $sheet1->setCellValue('F2', 'ANNEXURE');
+        $sheet1->getStyle('F2:G2')->getFont()->setBold(true)->setSize(14);
+        $sheet1->getStyle('F2:G2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+
+        $sheet1->mergeCells('A4:G4');
+        $sheet1->setCellValue('A4', $bank->bank_name);
+        $sheet1->getStyle('A4:G4')->getFont()->setBold(true)->setSize(22);
+        $sheet1->getStyle('A4:G4')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $sheet1->mergeCells('A5:G5');
+        $sheet1->setCellValue('A5', 'STOCK STATEMENT (REVISED PROFORMA)');
+        $sheet1->getStyle('A5:G5')->getFont()->setBold(true)->setSize(18);
+        $sheet1->getStyle('A5:G5')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $sheet1->mergeCells('A6:G6');
+        $sheet1->setCellValue('A6', '(TO BE SUBMITTED BY THE BORROWER)');
+        $sheet1->getStyle('A6:G6')->getFont()->setBold(true)->setSize(14);
+        $sheet1->getStyle('A6:G6')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $sheet1->mergeCells('A8:G8');
+        $sheet1->setCellValue('A8', 'Preodicity of submission of stock statement : Fortnightly / Monthly / quarterly / half yearly.');
+        $sheet1->getStyle('A8:G8')->getFont()->setSize(13);
+
+        $sheet1->mergeCells('A10:G10');
+        $sheet1->setCellValue('A10',
+            'Statement as on ' . strtoupper(date('d-M-y', strtotime($lastDate))) .
+            ' belonging to M/s ' . $company->company_name . ' ' . $company->address .
+            ' Hypothecated as security with ' . $bank->bank_name . ', ' . $bank->branch
+        );
+        $sheet1->getStyle('A10:G10')->getAlignment()->setWrapText(true);
+        $sheet1->getStyle('A10:G10')->getFont()->setSize(13);
+        $sheet1->getRowDimension(10)->setRowHeight(45);
+
+        $sheet1->mergeCells('A12:C12');
+        $sheet1->setCellValue('A12', 'A/c No. : ' . $bank->account_no);
+        $sheet1->mergeCells('D12:E12');
+        $sheet1->setCellValue('D12', 'Facility');
+        $sheet1->mergeCells('F12:G12');
+        $sheet1->setCellValue('F12', 'Cash Credit');
+
+        $sheet1->mergeCells('A14:G14');
+        $sheet1->setCellValue('A14', 'Limit Rs. :'.$limitAmount);
+        $sheet1->getStyle('A14:G14')->getFont()->setBold(true);
+
+        $sheet1->setCellValue('A16', 'Sr No');
+        $sheet1->setCellValue('B16', 'Particulars of Goods');
+        $sheet1->setCellValue('C16', 'Where Lying');
+        $sheet1->setCellValue('D16', 'Quantity In Kgs');
+        $sheet1->setCellValue('E16', 'Rate');
+        $sheet1->setCellValue('F16', 'Value');
+        $sheet1->setCellValue('G16', 'Remarks');
+        $sheet1->getStyle('A16:G16')->getFont()->setBold(true);
+        $sheet1->getStyle('A16:G16')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet1->getStyle('A16:G16')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+        $rowNumber = 17;
+        foreach ($reportData as $row) {
+            $sheet1->setCellValue('A'.$rowNumber, $row['sr_no']);
+            $sheet1->setCellValue('B'.$rowNumber, $row['name']);
+            $sheet1->setCellValue('C'.$rowNumber, 'FACTORY');
+            $sheet1->setCellValue('D'.$rowNumber, FormatIndianNumber($row['qty'], 2));
+            $sheet1->setCellValue('E'.$rowNumber, FormatIndianNumber($row['rate'], 2));
+            $sheet1->setCellValue('F'.$rowNumber, FormatIndianNumber($row['value'], 2));
+            $sheet1->setCellValue('G'.$rowNumber, '');
+            $sheet1->getStyle('D'.$rowNumber.':F'.$rowNumber)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+            $sheet1->getStyle('A'.$rowNumber.':G'.$rowNumber)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+            $rowNumber++;
+        }
+
+        $sheet1->mergeCells('A'.$rowNumber.':E'.$rowNumber);
+        $sheet1->setCellValue('A'.$rowNumber, 'TOTAL');
+        $sheet1->setCellValue('F'.$rowNumber, FormatIndianNumber($grandTotal, 2));
+        $sheet1->getStyle('A'.$rowNumber.':G'.$rowNumber)->getFont()->setBold(true);
+        $sheet1->getStyle('A'.$rowNumber.':G'.$rowNumber)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+        $rowNumber += 2;
+        $sheet1->mergeCells('A'.$rowNumber.':G'.$rowNumber);
+        $sheet1->setCellValue('A'.$rowNumber, '(Extra Sheet to be attached in case of Need)');
+        $rowNumber++;
+        $sheet1->mergeCells('A'.$rowNumber.':G'.$rowNumber);
+        $sheet1->setCellValue('A'.$rowNumber, 'PNB 938 revised (8/2009)');
+
+        // PART B
+        $rowNumber += 3;
+        $sheet1->mergeCells('A'.$rowNumber.':G'.$rowNumber);
+        $sheet1->setCellValue('A'.$rowNumber, 'PART-B');
+        $sheet1->getStyle('A'.$rowNumber)->getFont()->setBold(true)->setSize(18);
+
+        $rowNumber += 2;
+        $sheet1->mergeCells('A'.$rowNumber.':G'.$rowNumber);
+        $sheet1->setCellValue('A'.$rowNumber, 'Sundry Debtors (Receivables) @');
+        $sheet1->getStyle('A'.$rowNumber)->getFont()->setBold(true)->setSize(16);
+
+        $rowNumber += 2;
+        $sheet1->setCellValue('A'.$rowNumber, 'S.NO');
+        $sheet1->mergeCells('B'.$rowNumber.':C'.$rowNumber);
+        $sheet1->setCellValue('B'.$rowNumber, 'List of Debtors as per Annexure');
+        $sheet1->setCellValue('D'.$rowNumber, 'Amount (Rs.)');
+        $sheet1->getStyle('A'.$rowNumber.':D'.$rowNumber)->getFont()->setBold(true);
+        $sheet1->getStyle('A'.$rowNumber.':D'.$rowNumber)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet1->getStyle('A'.$rowNumber.':D'.$rowNumber)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+        $rowNumber++;
+
+        foreach ([
+            ['I',   'Upto 90 Days',        $upto90Total],
+            ['II',  '>90 Days To 180 Days', $days91to180Total],
+            ['III', '>180 Days',            $moreThan180Total],
+        ] as [$sno, $label, $val]) {
+            $sheet1->setCellValue('A'.$rowNumber, $sno);
+            $sheet1->mergeCells('B'.$rowNumber.':C'.$rowNumber);
+            $sheet1->setCellValue('B'.$rowNumber, $label);
+            $sheet1->setCellValue('D'.$rowNumber, FormatIndianNumber($val, 2));
+            $sheet1->getStyle('D'.$rowNumber)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+            $sheet1->getStyle('A'.$rowNumber.':D'.$rowNumber)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+            $rowNumber++;
+        }
+
+        $sheet1->mergeCells('A'.$rowNumber.':C'.$rowNumber);
+        $sheet1->setCellValue('A'.$rowNumber, 'TOTAL');
+        $sheet1->setCellValue('D'.$rowNumber, FormatIndianNumber($debtorsGrandTotal, 2));
+        $sheet1->getStyle('D'.$rowNumber)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+        $sheet1->getStyle('A'.$rowNumber.':D'.$rowNumber)->getFont()->setBold(true);
+        $sheet1->getStyle('A'.$rowNumber.':D'.$rowNumber)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+        $rowNumber += 2;
+        $sheet1->mergeCells('A'.$rowNumber.':G'.$rowNumber);
+        $sheet1->setCellValue('A'.$rowNumber, '@ Sundry debtors acceptable as per terms of sanction');
+        $rowNumber++;
+        $sheet1->mergeCells('A'.$rowNumber.':G'.$rowNumber);
+        $sheet1->setCellValue('A'.$rowNumber, '$ Separate Annexure for i, ii and iii to be enclosed');
+
+        $rowNumber += 3;
+        $sheet1->mergeCells('A'.$rowNumber.':C'.$rowNumber);
+        $sheet1->setCellValue('A'.$rowNumber, 'Sales during the financial year');
+        $sheet1->getStyle('A'.$rowNumber)->getFont()->setBold(true)->setSize(14);
+        $sheet1->setCellValue('D'.$rowNumber, 'In Lacs');
+        $sheet1->getStyle('D'.$rowNumber)->getFont()->setBold(true);
+        $sheet1->getStyle('D'.$rowNumber)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $rowNumber += 2;
+        foreach ([
+            ['1', 'Sales upto last month',   $salesUptoLastMonthLacs],
+            ['2', 'Sales during the month',  $salesDuringMonthLacs],
+            ['3', 'Total Sales',             $totalSalesLacs],
+        ] as [$num, $label, $val]) {
+            $sheet1->setCellValue('A'.$rowNumber, $num);
+            $sheet1->mergeCells('B'.$rowNumber.':C'.$rowNumber);
+            $sheet1->setCellValue('B'.$rowNumber, $label);
+            $sheet1->setCellValue('D'.$rowNumber, FormatIndianNumber($val, 2));
+            $sheet1->getStyle('D'.$rowNumber)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+            $rowNumber++;
+        }
+        $sheet1->getStyle('D'.($rowNumber-3).':D'.($rowNumber-1))->getFont()->setBold(true);
+
+        // PART C
+        $rowNumber += 4;
+        $sheet1->mergeCells('A'.$rowNumber.':D'.$rowNumber);
+        $sheet1->setCellValue('A'.$rowNumber, 'PART - C');
+        $sheet1->getStyle('A'.$rowNumber)->getFont()->setBold(true)->setSize(18);
+
+        $rowNumber += 2;
+        $sheet1->mergeCells('A'.$rowNumber.':D'.$rowNumber);
+        $sheet1->setCellValue('A'.$rowNumber, 'Sundry Creditors');
+        $sheet1->getStyle('A'.$rowNumber)->getFont()->setBold(true)->setSize(16);
+
+        $rowNumber += 2;
+        $sheet1->mergeCells('A'.$rowNumber.':C'.$rowNumber);
+        $sheet1->setCellValue('D'.$rowNumber, 'Amount (Rs.)');
+        $sheet1->getStyle('A'.$rowNumber.':D'.$rowNumber)->getFont()->setBold(true);
+        $sheet1->getStyle('A'.$rowNumber.':D'.$rowNumber)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet1->getStyle('A'.$rowNumber.':D'.$rowNumber)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+        $rowNumber++;
+
+        $sheet1->mergeCells('A'.$rowNumber.':C'.$rowNumber);
+        $sheet1->setCellValue('A'.$rowNumber, 'List of Creditors as per Annexure #');
+        $sheet1->setCellValue('D'.$rowNumber, FormatIndianNumber($creditorsTotal, 2));
+        $sheet1->getStyle('D'.$rowNumber)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+        $sheet1->getStyle('A'.$rowNumber.':D'.$rowNumber)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+        $rowNumber += 2;
+        $sheet1->mergeCells('A'.$rowNumber.':G'.$rowNumber);
+        $sheet1->setCellValue('A'.$rowNumber, '# List of Creditors as per Annexure to be enclosed.');
+
+        $rowNumber += 3;
+        $sheet1->mergeCells('A'.$rowNumber.':C'.$rowNumber);
+        $sheet1->setCellValue('A'.$rowNumber, 'Purchase during the Financial Year');
+        $sheet1->getStyle('A'.$rowNumber)->getFont()->setBold(true)->setSize(14);
+        $sheet1->setCellValue('D'.$rowNumber, 'In Lacs');
+        $sheet1->getStyle('D'.$rowNumber)->getFont()->setBold(true);
+        $sheet1->getStyle('D'.$rowNumber)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $rowNumber += 2;
+        foreach ([
+            ['1', 'Purchases upto last month',   $purchaseUptoLastMonthLacs],
+            ['2', 'Purchases during the month',  $purchaseDuringMonthLacs],
+            ['3', 'Total Purchase',              $totalPurchaseLacs],
+        ] as [$num, $label, $val]) {
+            $sheet1->setCellValue('A'.$rowNumber, $num);
+            $sheet1->mergeCells('B'.$rowNumber.':C'.$rowNumber);
+            $sheet1->setCellValue('B'.$rowNumber, $label);
+            $sheet1->setCellValue('D'.$rowNumber, FormatIndianNumber($val, 2));
+            $sheet1->getStyle('D'.$rowNumber)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+            $rowNumber++;
+        }
+        $sheet1->getStyle('D'.($rowNumber-3).':D'.($rowNumber-1))->getFont()->setBold(true);
+
+        // Notes + declarations (static - same as your original)
+        $rowNumber += 3;
+        $sheet1->mergeCells('A'.$rowNumber.':G'.$rowNumber);
+        $sheet1->setCellValue('A'.$rowNumber, '* Note: as per the periodicity of submission of stock statement in terms of sanction ( fortnightly / monthly / quarterly / half yearly )');
+        $sheet1->getStyle('A'.$rowNumber)->getAlignment()->setWrapText(true);
+        $sheet1->getRowDimension($rowNumber)->setRowHeight(40);
+
+        $rowNumber += 2;
+        $sheet1->mergeCells('A'.$rowNumber.':G'.$rowNumber);
+        $sheet1->setCellValue('A'.$rowNumber, '(Extra sheet to be attached in case of need)');
+        $sheet1->getStyle('A'.$rowNumber)->getFont()->setItalic(true);
+
+        $rowNumber += 4;
+        $declarations = [
+            'I/We declare and acknowledge that all the goods noted above stand hypothecated to the bank and the same are my/our own property and that I/We/am/are entitled to hypothecate them with the bank. They are unencumbered and are not subject to any other lien, claim or charge of any sort.',
+            'I/We certify that the quality and quantity of the stock are correct and in accordance with the entries in our record. The stock shown do not include damaged unsaleable / obsolete / old goods.',
+            'I/We certify that the valuation of stocks has been made as per mandatory Accounting Standard (AS-2) (i.e. cost price / Net Realisable Value whichever is lower) as prescribed by ICAI.',
+            'I/We certify that the above goods are adequately covered by insurance against fire and other necessary risks in terms of sanction. All premia on insurance policies have been paid and these are in force.',
+            'I/We certify that the amount of sundry debtors / sundry creditors and Sales / Purchase are correct and in accordance with the entries in our record.',
+            'In case the above contain any mis-statement (of which the bank is the sole judge) or there be any shortage of security, I/We shall render myself / ourselves liable to legal action.',
+        ];
+        foreach ($declarations as $i => $text) {
+            $sheet1->setCellValue('A'.$rowNumber, ($i+1).')');
+            $sheet1->mergeCells('B'.$rowNumber.':G'.$rowNumber);
+            $sheet1->setCellValue('B'.$rowNumber, $text);
+            $sheet1->getStyle('B'.$rowNumber)->getAlignment()->setWrapText(true);
+            $sheet1->getRowDimension($rowNumber)->setRowHeight(55);
+            $rowNumber += 2;
+        }
+
+        $rowNumber += 2;
+        $sheet1->mergeCells('E'.$rowNumber.':G'.$rowNumber);
+        $sheet1->setCellValue('E'.$rowNumber, 'BORROWER / AUTHORISED SIGNATORY');
+        $sheet1->getStyle('E'.$rowNumber)->getFont()->setBold(true)->setSize(14);
+        $sheet1->getStyle('E'.$rowNumber)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $rowNumber += 4;
+        $sheet1->mergeCells('E'.$rowNumber.':G'.$rowNumber);
+        $sheet1->setCellValue('E'.$rowNumber, 'For '.$company->company_name);
+        $sheet1->getStyle('E'.$rowNumber)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $rowNumber += 3;
+        $sheet1->mergeCells('E'.$rowNumber.':G'.$rowNumber);
+        $sheet1->setCellValue('E'.$rowNumber, 'Director');
+        $sheet1->getStyle('E'.$rowNumber)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $rowNumber += 5;
+
+        $sheet1->mergeCells('A'.$rowNumber.':G'.$rowNumber);
+        $sheet1->setCellValue('A'.$rowNumber, 'FOR OFFICE USE ONLY');
+        $sheet1->getStyle('A'.$rowNumber)->getFont()->setBold(true)->setSize(14);
+
+        $rowNumber += 2;
+        $sheet1->mergeCells('A'.$rowNumber.':G'.$rowNumber);
+        $sheet1->setCellValue(
+            'A'.$rowNumber,
+            '1. Limit _______________________'
+        );
+
+        $rowNumber += 2;
+        $sheet1->mergeCells('A'.$rowNumber.':G'.$rowNumber);
+        $sheet1->setCellValue(
+            'A'.$rowNumber,
+            '2. Value of security (value of stock minus surplus sundry creditors, if any, to be deducted in terms of sanction) _______________________'
+        );
+
+        $sheet1->getStyle('A'.$rowNumber)
+            ->getAlignment()
+            ->setWrapText(true);
+
+        $rowNumber += 3;
+        $sheet1->mergeCells('A'.$rowNumber.':G'.$rowNumber);
+        $sheet1->setCellValue(
+            'A'.$rowNumber,
+            '3. Margin (as per sanction) _______________________'
+        );
+
+        $rowNumber += 2;
+        $sheet1->mergeCells('A'.$rowNumber.':G'.$rowNumber);
+        $sheet1->setCellValue(
+            'A'.$rowNumber,
+            '4. Drawing power (value of security as per above less margin) _______________________'
+        );
+
+        $rowNumber += 2;
+        $sheet1->mergeCells('A'.$rowNumber.':G'.$rowNumber);
+        $sheet1->setCellValue(
+            'A'.$rowNumber,
+            '5. SRM updated on _________ Entered by (Name) __________________'
+        );
+
+        $rowNumber += 1;
+        $sheet1->mergeCells('A'.$rowNumber.':G'.$rowNumber);
+        $sheet1->setCellValue(
+            'A'.$rowNumber,
+            '   Verified by (Name) __________________'
+        );
+
+        $rowNumber += 2;
+        $sheet1->mergeCells('A'.$rowNumber.':G'.$rowNumber);
+        $sheet1->setCellValue(
+            'A'.$rowNumber,
+            '6. Inspected on _________ by (Name) __________________'
+        );
+
+        $rowNumber += 2;
+        $sheet1->mergeCells('A'.$rowNumber.':G'.$rowNumber);
+        $sheet1->setCellValue(
+            'A'.$rowNumber,
+            '   Designation ___________________________'
+        );
+
+        $rowNumber += 3;
+        $sheet1->mergeCells('A'.$rowNumber.':G'.$rowNumber);
+        $sheet1->setCellValue(
+            'A'.$rowNumber,
+            '   (Signature) ___________________________'
+        );
+        // --- SHEET 2: CREDITORS ---
+        $sheet2 = $spreadsheet->createSheet();
+        $sheet2->setTitle('Creditors');
+        $sheet2->getColumnDimension('A')->setWidth(10);
+        $sheet2->getColumnDimension('B')->setWidth(45);
+        $sheet2->getColumnDimension('C')->setWidth(25);
+
+        $sheet2->mergeCells('A1:C1');
+        $sheet2->setCellValue('A1', $company->company_name);
+        $sheet2->getStyle('A1:C1')->getFont()->setBold(true)->setSize(16);
+        $sheet2->getStyle('A1:C1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $sheet2->mergeCells('A2:C2');
+        $sheet2->setCellValue('A2', 'Sundry Creditors Closing Balance As On ' . date('d-m-Y', strtotime($lastDate)));
+        $sheet2->getStyle('A2:C2')->getFont()->setBold(true);
+        $sheet2->getStyle('A2:C2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $sheet2->setCellValue('A4', 'Sr No');
+        $sheet2->setCellValue('B4', 'Account Name');
+        $sheet2->setCellValue('C4', 'Amount');
+        $sheet2->getStyle('A4:C4')->getFont()->setBold(true);
+        $sheet2->getStyle('A4:C4')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet2->getStyle('A4:C4')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+        $rowNumber = 5;
+        foreach ($creditorsRows as $row) {
+            $sheet2->setCellValue('A'.$rowNumber, $row['sr_no']);
+            $sheet2->setCellValue('B'.$rowNumber, $row['account_name']);
+            $sheet2->setCellValue('C'.$rowNumber, $row['closing_balance']);
+            $sheet2->getStyle('C'.$rowNumber)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+            $sheet2->getStyle('A'.$rowNumber.':C'.$rowNumber)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+            $rowNumber++;
+        }
+
+        $creditorsTotalBalance = $request->input('creditors_total_balance', '');
+        $sheet2->mergeCells('A'.$rowNumber.':B'.$rowNumber);
+        $sheet2->setCellValue('A'.$rowNumber, 'TOTAL');
+        $sheet2->setCellValue('C'.$rowNumber, $creditorsTotalBalance);
+        $sheet2->getStyle('A'.$rowNumber.':C'.$rowNumber)->getFont()->setBold(true);
+        $sheet2->getStyle('A'.$rowNumber.':C'.$rowNumber)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+        $sheet2->getStyle('C'.$rowNumber)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+
+        // --- SHEET 3: DEBTORS ---
+        $sheet3 = $spreadsheet->createSheet();
+        $sheet3->setTitle('Debtors');
+        $sheet3->getColumnDimension('A')->setWidth(10);
+        $sheet3->getColumnDimension('B')->setWidth(45);
+        $sheet3->getColumnDimension('C')->setWidth(20);
+        $sheet3->getColumnDimension('D')->setWidth(20);
+
+        $sheet3->mergeCells('A1:D1');
+        $sheet3->setCellValue('A1', $company->company_name);
+        $sheet3->getStyle('A1:D1')->getFont()->setBold(true)->setSize(16);
+        $sheet3->getStyle('A1:D1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $sheet3->mergeCells('A2:D2');
+        $sheet3->setCellValue('A2', 'Sundry Debtors As On ' . date('d-m-Y', strtotime($lastDate)));
+        $sheet3->getStyle('A2:D2')->getFont()->setBold(true);
+        $sheet3->getStyle('A2:D2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $sheet3->setCellValue('A4', 'Sr No');
+        $sheet3->setCellValue('B4', 'Particulars');
+        $sheet3->setCellValue('C4', '<= 90 Days');
+        $sheet3->setCellValue('D4', '>= 91 Days');
+        $sheet3->getStyle('A4:D4')->getFont()->setBold(true);
+        $sheet3->getStyle('A4:D4')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet3->getStyle('A4:D4')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+        $rowNumber = 5;
+        foreach ($debtorsRows as $row) {
+            $sheet3->setCellValue('A'.$rowNumber, $row['sr_no']);
+            $sheet3->setCellValue('B'.$rowNumber, $row['party']);
+            $sheet3->setCellValue('C'.$rowNumber, FormatIndianNumber($row['less90'], 2));
+            $sheet3->setCellValue('D'.$rowNumber, FormatIndianNumber($row['greater90'], 2));
+            $sheet3->getStyle('C'.$rowNumber.':D'.$rowNumber)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+            $sheet3->getStyle('A'.$rowNumber.':D'.$rowNumber)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+            $rowNumber++;
+        }
+
+        $sheet3->mergeCells('A'.$rowNumber.':B'.$rowNumber);
+        $sheet3->setCellValue('A'.$rowNumber, 'TOTAL');
+        $sheet3->setCellValue('C'.$rowNumber, FormatIndianNumber($less90Total, 2));
+        $sheet3->setCellValue('D'.$rowNumber, FormatIndianNumber($greater90Total, 2));
+        $sheet3->getStyle('A'.$rowNumber.':D'.$rowNumber)->getFont()->setBold(true);
+        $sheet3->getStyle('A'.$rowNumber.':D'.$rowNumber)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+        $sheet3->getStyle('C'.$rowNumber.':D'.$rowNumber)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+
+        // --- SHEET 4: CALCULATION ---
+        $sheet4 = $spreadsheet->createSheet();
+        $sheet4->setTitle('Calculation');
+        $sheet4->getColumnDimension('A')->setWidth(25);
+        $sheet4->getColumnDimension('B')->setWidth(25);
+        $sheet4->getColumnDimension('C')->setWidth(25);
+        $sheet4->getColumnDimension('D')->setWidth(25);
+
+        $sheet4->mergeCells('A1:D1');
+        $sheet4->setCellValue('A1', 'FOR BANK');
+        $sheet4->getStyle('A1:D1')->getFont()->setBold(true)->setSize(18);
+        $sheet4->getStyle('A1:D1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $sheet4->setCellValue('A3', '');
+        $sheet4->setCellValue('B3', 'Debtors');
+        $sheet4->setCellValue('C3', 'Creditors');
+        $sheet4->setCellValue('D3', 'Availability');
+        $sheet4->getStyle('A3:D3')->getFont()->setBold(true);
+        $sheet4->getStyle('A3:D3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $sheet4->setCellValue('A4', 'Assesable');
+        $sheet4->setCellValue('B4', FormatIndianNumber($upto90Total, 2));
+        $sheet4->setCellValue('C4', FormatIndianNumber($creditorsTotal, 2));
+        $sheet4->setCellValue('D4', FormatIndianNumber($debtorsAvailability, 2));
+
+        $sheet4->setCellValue('A5', 'Stock');
+        $sheet4->setCellValue('C5', FormatIndianNumber($stockTotal, 2));
+        $sheet4->setCellValue('D5', FormatIndianNumber($stockAvailability, 2));
+
+        $sheet4->mergeCells('A6:C6');
+        $sheet4->setCellValue('A6', 'D.P');
+        $sheet4->setCellValue('D6', FormatIndianNumber($dp, 2));
+
+        $sheet4->getStyle('A3:D6')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+        $sheet4->getStyle('A3:D6')->getFont()->setBold(true);
+        $sheet4->getStyle('B4:D6')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+
+        // ===== OUTPUT =====
+        $writer   = new Xlsx($spreadsheet);
+        $fileName = 'Complete_Report_' . $month . '.xlsx';
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="'.$fileName.'"');
+        header('Cache-Control: max-age=0');
+
+        $writer->save('php://output');
+        exit;
+    }
+
+    // =========================================
+    // DOWNLOAD PDF 
+    // =========================================
+
+    public function downloadPdf(Request $request)
+    {
+        $month     = $request->input('month');
+        $stockType = $request->input('stock_type');
+        $bankId    = (int)$request->input('bank_id');
+        $limitAmount = $request->input('limit_amount', '');
+
+        $company_id = Session::get('user_company_id');
+        $company    = DB::table('companies')->where('id', $company_id)->first();
+        $bank       = DB::table('banks')->where('id', $bankId)->first();
+        $lastDate   = date('Y-m-t', strtotime($month));
+
+        // ===== EDITED STOCK ROWS =====
+        $stockNames  = $request->input('stock_name', []);
+        $stockQtys   = $request->input('stock_qty', []);
+        $stockRates  = $request->input('stock_rate', []);
+        $stockValues = $request->input('stock_value', []);
+
+        $reportData = [];
+        $grandTotal = 0;
+
+        foreach ($stockNames as $i => $name) {
+            $value = (float)str_replace(',', '', $stockValues[$i] ?? 0);
+            $grandTotal += $value;
+            $reportData[] = [
+                'sr_no' => $i + 1,
+                'name'  => $name,
+                'qty'   => (float)str_replace(',', '', $stockQtys[$i]  ?? 0),
+                'rate'  => (float)str_replace(',', '', $stockRates[$i] ?? 0),
+                'value' => $value,
+            ];
+        }
+        $stockRows = $reportData;
+
+        $upto90Total = (float)str_replace(
+            ',',
+            '',
+            $request->input(
+                'calc_upto90',
+                $request->input('upto90_total', 0)
+            )
+        );
+        $days91to180Total = (float)str_replace(',', '', $request->input('days91to180_total', 0));
+        $moreThan180Total = (float)str_replace(',', '', $request->input('moreThan180_total', 0));
+        $debtorsGrandTotal = $upto90Total + $days91to180Total + $moreThan180Total;
+
+        $salesUptoLastMonthLacs  = (float)str_replace(',', '', $request->input('sales_upto_last_month_lacs', 0));
+        $salesDuringMonthLacs    = (float)str_replace(',', '', $request->input('sales_during_month_lacs', 0));
+        $totalSalesLacs          = $salesUptoLastMonthLacs + $salesDuringMonthLacs;
+
+        $creditorsTotal = (float)str_replace(
+            ',',
+            '',
+            $request->input(
+                'calc_creditors',
+                $request->input('creditors_total', 0)
+            )
+        );
+
+        $purchaseUptoLastMonthLacs = (float)str_replace(',', '', $request->input('purchase_upto_last_month_lacs', 0));
+        $purchaseDuringMonthLacs   = (float)str_replace(',', '', $request->input('purchase_during_month_lacs', 0));
+        $totalPurchaseLacs         = $purchaseUptoLastMonthLacs + $purchaseDuringMonthLacs;
+
+        $creditorNames    = $request->input('creditor_name', []);
+        $creditorBalances = $request->input('creditor_balance', []);
+        $creditorsRows    = [];
+        foreach ($creditorNames as $i => $name) {
+            $creditorsRows[] = [
+                'sr_no'           => $i + 1,
+                'account_name'    => $name,
+                'closing_balance' => $creditorBalances[$i] ?? '',
+            ];
+        }
+
+        $debtorParties   = $request->input('debtor_party', []);
+        $debtorLess90    = $request->input('debtor_less90', []);
+        $debtorGreater90 = $request->input('debtor_greater90', []);
+        $debtorsRows     = [];
+        $less90Total     = 0;
+        $greater90Total  = 0;
+
+        foreach ($debtorParties as $i => $party) {
+            $l = (float)str_replace(',', '', $debtorLess90[$i]    ?? 0);
+            $g = (float)str_replace(',', '', $debtorGreater90[$i] ?? 0);
+            $less90Total    += $l;
+            $greater90Total += $g;
+            $debtorsRows[] = [
+                'sr_no'     => $i + 1,
+                'party'     => $party,
+                'less90'    => $l,
+                'greater90' => $g,
+            ];
+        }
+
+        $stockTotal          = (float)str_replace(',', '', $request->input('stock_total', 0));
+        $debtorsAvailability = (float)str_replace(',', '', $request->input('debtors_availability', 0));
+        $stockAvailability   = (float)str_replace(',', '', $request->input('stock_availability', 0));
+        $dp                  = $debtorsAvailability + $stockAvailability;
+        $creditorsTotalBalance = $request->input('creditors_total_balance', '');
+        $isPdf = true;
+        // Build the view and pass all data to a PDF blade
+        $html = view('ExportMonthlyReportPreview', compact(
+            'company', 'bank', 'month', 'lastDate', 'stockType',
+            'reportData', 'grandTotal',
+            'upto90Total', 'days91to180Total', 'moreThan180Total', 'debtorsGrandTotal',
+            'salesUptoLastMonthLacs', 'salesDuringMonthLacs', 'totalSalesLacs',
+            'creditorsTotal', 'creditorsRows', 'creditorsTotalBalance',
+            'debtorsRows', 'less90Total', 'greater90Total',
+            'purchaseUptoLastMonthLacs', 'purchaseDuringMonthLacs', 'totalPurchaseLacs',
+            'stockTotal', 'debtorsAvailability', 'stockAvailability', 'dp','stockRows', 'limitAmount', 'isPdf'
+        ))->render();
+
+        // Using DomPDF (install via: composer require barryvdh/laravel-dompdf)
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)
+            ->setPaper('a4', 'portrait');
+
+        return $pdf->download('Complete_Report_' . $month . '.pdf');
+    }
 }

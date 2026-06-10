@@ -1504,6 +1504,23 @@ Route::get(
     'download']
 
 )->name('export.monthly.report.download');
+// Preview (opens in new tab, POST to send month/bank/report type)
+Route::post(
+    '/export-monthly-report-preview',
+    [ExportMonthlyReportController::class, 'preview']
+)->name('export.monthly.report.preview');
+
+// Download Excel using edited preview values
+Route::post(
+    '/export-monthly-report-download-excel',
+    [ExportMonthlyReportController::class, 'downloadExcel']
+)->name('export.monthly.report.download.excel');
+
+// Download PDF using edited preview values
+Route::post(
+    '/export-monthly-report-download-pdf',
+    [ExportMonthlyReportController::class, 'downloadPdf']
+)->name('export.monthly.report.download.pdf');
     Route::get(
         '/reel-info',
         [ProductionController::class,
