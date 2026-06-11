@@ -178,7 +178,7 @@ class GSTR2BController extends Controller
             ));
             $response = curl_exec($curl);
             curl_close($curl);
-            $result = json_decode($response);           
+            $result = json_decode($response);
             // echo "<pre>";
             // print_r($result);die;
             if(isset($result->status_cd) && $result->status_cd==0){

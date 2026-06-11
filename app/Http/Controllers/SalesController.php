@@ -4165,6 +4165,15 @@ class SalesController extends Controller
                   $failed_invoice_count++;
                   continue;
                }
+               $checkaccount = Accounts::where('account_name',trim($value['party']))
+                        ->where('company_id',trim(Session::get('user_company_id')))
+                        ->where('delete','0')
+                        ->first();
+                if(!$checkaccount){
+                    array_push($all_error_arr,array($value['party'].' Not Found'));
+                  $failed_invoice_count++;
+                  continue;
+                }
                $date = date('Y-m-d',strtotime($value['date']));
                if ($smallestDate === null || strtotime($date) < strtotime($smallestDate)) {
                   $smallestDate = $date;

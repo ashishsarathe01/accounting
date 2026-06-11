@@ -120,51 +120,51 @@ class GSTR2AController extends Controller
         $ip_address = $this->gstCredentials->ip_address;
         if(!$GSTR2A){
             //Check and generate token
-            $gst_token = gstToken::select('txn','created_at')
-                                ->where('company_gstin',$request->gstin)
-                                ->where('company_id',Session::get('user_company_id'))
-                                ->where('status',1)
-                                ->orderBy('id','desc')
-                                ->first();
-            if($gst_token){
-                $token_expiry = date('d-m-Y H:i:s',strtotime('+6 hour',strtotime($gst_token->created_at)));
-                $current_time = date('d-m-Y H:i:s');
-                if(strtotime($token_expiry)<strtotime($current_time)){
-                    $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->gstin);
-                    if($token_res==0){
-                        $response = array(
-                            'status' => false,
-                            'message' => 'Something Went Wrong In Token Generation'
-                        );
-                        return json_encode($response);
-                    }
-                    $response = array(
-                        'status' => true,
-                        'message' => 'TOKEN-OTP'
-                    );
-                    return json_encode($response);
-                }
-                $txn = $gst_token->txn;
-            }else{
-                $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->gstin);
-                if($token_res==0){
-                        $response = array(
-                            'status' => false,
-                            'message' => 'Something Went Wrong In Token Generation'
-                        );
-                        return json_encode($response);
-                    }
-                $response = array(
-                        'status' => true,
-                        'message' => 'TOKEN-OTP'
-                );
-                return json_encode($response);
-            }
+            // $gst_token = gstToken::select('txn','created_at')
+            //                     ->where('company_gstin',$request->gstin)
+            //                     ->where('company_id',Session::get('user_company_id'))
+            //                     ->where('status',1)
+            //                     ->orderBy('id','desc')
+            //                     ->first();
+            // if($gst_token){
+            //     $token_expiry = date('d-m-Y H:i:s',strtotime('+6 hour',strtotime($gst_token->created_at)));
+            //     $current_time = date('d-m-Y H:i:s');
+            //     if(strtotime($token_expiry)<strtotime($current_time)){
+            //         $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->gstin);
+            //         if($token_res==0){
+            //             $response = array(
+            //                 'status' => false,
+            //                 'message' => 'Something Went Wrong In Token Generation'
+            //             );
+            //             return json_encode($response);
+            //         }
+            //         $response = array(
+            //             'status' => true,
+            //             'message' => 'TOKEN-OTP'
+            //         );
+            //         return json_encode($response);
+            //     }
+            //     $txn = $gst_token->txn;
+            // }else{
+            //     $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->gstin);
+            //     if($token_res==0){
+            //             $response = array(
+            //                 'status' => false,
+            //                 'message' => 'Something Went Wrong In Token Generation'
+            //             );
+            //             return json_encode($response);
+            //         }
+            //     $response = array(
+            //             'status' => true,
+            //             'message' => 'TOKEN-OTP'
+            //     );
+            //     return json_encode($response);
+            // }
             //B2B Data
              
             $curl = curl_init();
             curl_setopt_array($curl, array(
-                CURLOPT_URL => $base_url.'/gstr2a/b2b?email='.$email_id.'&gstin='.$request->gstin.'&retperiod='.$month,
+                CURLOPT_URL => $base_url.'/gstr2a/b2b?email='.urlencode($email_id).'&gstin='.$request->gstin.'&ret_period='.$month,
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_ENCODING => '',
                 CURLOPT_MAXREDIRS => 10,
@@ -173,26 +173,48 @@ class GSTR2AController extends Controller
                 CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
                 CURLOPT_CUSTOMREQUEST => 'GET',
                 CURLOPT_HTTPHEADER => array(
-                'gst_username:'.$gst_user_name,
-                'state_cd: '.$state_code,  
-                'ip_address: '.$ip_address,
-                'txn: '.$txn,
-                'client_id: '.$client_id,
-                'client_secret: '.$client_secret
-                ),
+                    'accept: */*',
+                    'env: production',
+                    'client_id: ' . $client_id,
+                    'client_secret: ' . $client_secret
+                    ),
+                // CURLOPT_HTTPHEADER => array(
+                // 'gst_username:'.$gst_user_name,
+                // 'state_cd: '.$state_code,  
+                // 'ip_address: '.$ip_address,
+                // 'txn: '.$txn,
+                // 'client_id: '.$client_id,
+                // 'client_secret: '.$client_secret
+                // ),
             ));
             $response = curl_exec($curl);
             curl_close($curl);
             $result = json_decode($response);
-            
-            if(isset($result->status_cd) && $result->status_cd==0){
-                $response = array(
-                    'status' => false,
-                    'message' => $result->error->message,
-                    'data' => ""
-                );
-                return json_encode($response);
+            if(isset($result->details)){
+                if($result->details=='Request failed with status code 403'){
+                    $response = array(
+                        'status' => false,
+                        'message' => "TOKEN-OTP",
+                        'data' => ""
+                    );
+                    return json_encode($response);
+                }else{
+                    $response = array(
+                        'status' => false,
+                        'message' => $result->details,
+                        'data' => ""
+                    );
+                    return json_encode($response);
+                }
             }
+            // if(isset($result->status_cd) && $result->status_cd==0){
+            //     $response = array(
+            //         'status' => false,
+            //         'message' => $result->error->message,
+            //         'data' => ""
+            //     );
+            //     return json_encode($response);
+            // }
             if(isset($result->data)){
                 $GSTR2A = new GSTR2A;
                 $GSTR2A->res_month = $request->month;
