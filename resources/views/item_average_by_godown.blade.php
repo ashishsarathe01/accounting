@@ -82,12 +82,41 @@
                   <tbody>
                     @php $qty_total = 0; $amount_total = 0; @endphp
                     @foreach ($series as $value)
-                        <tr class="redirect_average_page" data-series="{{$value->series}}" data-item_id="{{$_GET['items_id']}}" data-from_date="{{$_GET['from_date']}}" data-to_date="{{$_GET['to_date']}}" style="cursor:pointer">
-                            <td>{{$value->series}}</td>
-                            <td style="text-align: right;">{{$value->weight}}</td>
-                            <td>{{$value->unit}}</td>
-                            <td style="text-align: right;">{{$value->price}}</td>
-                            <td style="text-align: right;">{{formatIndianNumber($value->amount)}}</td>
+                        @php
+                           $negativeRow = ((float)$value->weight < 0);
+
+                           $redStyle = $negativeRow
+                                 ? 'color:#dc3545 !important;font-weight:bold;'
+                                 : '';
+                        @endphp
+
+                        <tr class="redirect_average_page"
+                           data-series="{{$value->series}}"
+                           data-item_id="{{$_GET['items_id']}}"
+                           data-from_date="{{$_GET['from_date']}}"
+                           data-to_date="{{$_GET['to_date']}}"
+                           style="cursor:pointer">
+
+                           <td style="{{ $redStyle }}">
+                                 {{$value->series}}
+                           </td>
+
+                           <td style="text-align:right;{{ $redStyle }}">
+                                 {{ formatIndianNumber($value->weight) }}
+                           </td>
+
+                           <td style="{{ $redStyle }}">
+                                 {{$value->unit}}
+                           </td>
+
+                           <td style="text-align:right;{{ $redStyle }}">
+                                 {{$value->price}}
+                           </td>
+
+                           <td style="text-align:right;{{ $redStyle }}">
+                                 {{ formatIndianNumber($value->amount) }}
+                           </td>
+
                         </tr>
                         @php $qty_total = $qty_total + (float) $value->weight; $amount_total = $amount_total + (float) $value->amount; @endphp
                     @endforeach

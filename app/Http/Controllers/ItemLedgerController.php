@@ -282,12 +282,33 @@ class ItemLedgerController extends Controller
                $row = $finalItemMap[$it->id];
                $groupQty += $row['average_weight'];
                $groupAmount += $row['amount'];
+               $hasNegativeStock = false;
+
+               foreach ($series_list as $s) {
+
+                  $sub = DB::table('item_averages')
+                     ->select(DB::raw('MAX(id) as latest_id'))
+                     ->where('item_id', $it->id)
+                     ->where('series_no', $s->series)
+                     ->where('company_id', Session::get('user_company_id'))
+                     ->where('stock_date', '<=', $tdate)
+                     ->pluck('latest_id');
+
+                  $latestStock = ItemAverage::whereIn('id', $sub)->first();
+
+                  if ($latestStock && (float)$latestStock->average_weight < 0) {
+                     $hasNegativeStock = true;
+                     break;
+                  }
+               }
+
                $itemRows[] = [
                   'item_id' => $it->id,
                   'item_name' => $row['item_name'],
                   'average_weight' => $row['average_weight'],
                   'amount' => $row['amount'],
                   'unit_name' => $row['unit_name'],
+                  'has_negative_stock' => $hasNegativeStock,
                ];
             }
             // skip empty groups
@@ -397,6 +418,29 @@ class ItemLedgerController extends Controller
          //die;
          // Re-index array
          $result = array_values($result);
+         foreach ($result as &$row) {
+
+            $row['has_negative_stock'] = false;
+
+            foreach ($series_list as $s) {
+
+               $sub = DB::table('item_averages')
+                     ->select(DB::raw('MAX(id) as latest_id'))
+                     ->where('item_id', $row['item_id'])
+                     ->where('series_no', $s->series)
+                     ->where('company_id', Session::get('user_company_id'))
+                     ->where('stock_date', '<=', $tdate)
+                     ->pluck('latest_id');
+
+               $latestStock = ItemAverage::whereIn('id', $sub)->first();
+
+               if ($latestStock && (float)$latestStock->average_weight < 0) {
+                     $row['has_negative_stock'] = true;
+                     break;
+               }
+            }
+         }
+         unset($row);
          $result = collect($result)
             ->sortBy('item_name', SORT_NATURAL | SORT_FLAG_CASE)
             ->values()

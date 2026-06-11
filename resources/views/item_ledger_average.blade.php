@@ -168,20 +168,47 @@
                                 $total_in = 0;
                                 $total_out = 0;
                             @endphp
-                            @foreach($average_data as $purchase)      
-                                @php
-                                    $total_in += $purchase->purchase_weight ?? 0;
-                                    $total_out += $purchase->sale_weight ?? 0;
-                                @endphp
-                                <tr class="average_details" data-date="{{$purchase->stock_date}}" style="cursor: pointer;">
-                                    <td>{{date('d-m-Y',strtotime($purchase->stock_date))}}</td>
-                                    <td style="text-align: right;">{{formatIndianNumber($purchase->purchase_weight)}}</td>
-                                    <td style="text-align: right;">{{formatIndianNumber($purchase->sale_weight)}}</td>
-                                    <td style="text-align: right;">{{formatIndianNumber($purchase->average_weight)}}</td>
-                                    <td style="text-align: right;">{{$purchase->price}}</td>
-                                    <td style="text-align: right;">{{formatIndianNumber($purchase->amount,2)}}</td>
-                                </tr>
-                            @endforeach
+                           @foreach($average_data as $purchase)
+                              @php
+                                 $total_in += $purchase->purchase_weight ?? 0;
+                                 $total_out += $purchase->sale_weight ?? 0;
+
+                                 $negativeRow = ((float)$purchase->average_weight < 0);
+
+                                 $redStyle = $negativeRow
+                                       ? 'color:#dc3545 !important;font-weight:bold;'
+                                       : '';
+                              @endphp
+
+                              <tr class="average_details"
+                                 data-date="{{$purchase->stock_date}}"
+                                 style="cursor:pointer;">
+
+                                 <td style="{{ $redStyle }}">
+                                       {{ date('d-m-Y',strtotime($purchase->stock_date)) }}
+                                 </td>
+
+                                 <td style="text-align:right;{{ $redStyle }}">
+                                       {{ formatIndianNumber($purchase->purchase_weight) }}
+                                 </td>
+
+                                 <td style="text-align:right;{{ $redStyle }}">
+                                       {{ formatIndianNumber($purchase->sale_weight) }}
+                                 </td>
+
+                                 <td style="text-align:right;{{ $redStyle }}">
+                                       {{ formatIndianNumber($purchase->average_weight) }}
+                                 </td>
+
+                                 <td style="text-align:right;{{ $redStyle }}">
+                                       {{ $purchase->price }}
+                                 </td>
+
+                                 <td style="text-align:right;{{ $redStyle }}">
+                                       {{ formatIndianNumber($purchase->amount,2) }}
+                                 </td>
+                              </tr>
+                           @endforeach
                             <tr style="font-weight: bold; background: #f8f9fa;">
                                 <td>Total</td>
                                 <td style="text-align: right;">{{ formatIndianNumber($total_in,2) }}</td>
