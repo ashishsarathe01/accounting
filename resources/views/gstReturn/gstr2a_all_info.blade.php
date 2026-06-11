@@ -575,8 +575,9 @@ $(document).on('click','.check_action',function(){
          selected_ids.push($(this).data('id'));
       });
       if(selected_ids.length==0) {
-         alert('Please select at least one entry to link.');
-         return;
+         if(!confirm('Do you want to unlink this invoice?')){
+            return;
+         }
       }
          $.ajax({
             url: "{{ route('link-cdnr') }}", // Replace with your actual route
@@ -586,13 +587,12 @@ $(document).on('click','.check_action',function(){
                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') // Add this if CSRF token is needed
             },
             success: function (response) {
-               let res = JSON.parse(response);
-               if(res.status==true) {
-                  alert('linked successfully.');
-                  $('#linkCDNRModal').modal('hide'); 
-                  location.reload(); // Reload the page to reflect changes
+               if(response.status == true) {
+                  alert(response.message);
+                  $('#linkCDNRModal').modal('hide');
+                  location.reload();
                } else {
-                  alert('Failed to link CDNR');
+                  alert(response.message);
                }
             },
             error: function (xhr) {
@@ -674,8 +674,9 @@ $(document).on('click','.check_action',function(){
             selected_ids.push({'id':$(this).data('id'),'type':$(this).attr('data-type')});
          });
          if(selected_ids.length==0) {
-            alert('Please select at least one entry to link.');
-            return;
+            if(!confirm('Do you want to unlink this entry?')){
+               return;
+            }
          }
          $.ajax({
             url: "{{ route('link-gstr2b-invoice-entry') }}", // Replace with your actual route

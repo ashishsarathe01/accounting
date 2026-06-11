@@ -1864,7 +1864,29 @@ if($total_book_value_only_in_book > 0){
         return json_encode($response);
     }
     
-    public function linkGstr2bInvoiceEntry(Request $request){       
+    public function linkGstr2bInvoiceEntry(Request $request){   
+        if(empty($request->ids)){
+            Purchase::where('gstr2b_invoice_id', $request->invoice_no)
+                ->where('billing_gst',$request->ctin)
+                ->where('company_id',Session::get('user_company_id'))
+                ->where('merchant_gst',$request->gstin)
+                ->update([
+                    'gstr2b_invoice_id' => null,
+                    'gstr2b_invoice_month' => null
+                ]);
+            Journal::where('gstr2b_invoice_id', $request->invoice_no)
+                ->where('vendor_gstin',$request->ctin)
+                ->where('company_id',Session::get('user_company_id'))
+                ->where('merchant_gst',$request->gstin)
+                ->update([
+                    'gstr2b_invoice_id' => null,
+                    'gstr2b_invoice_month' => null
+                ]);
+            return json_encode([
+                'status' => true,
+                'message' => 'Unlinked Successfully'
+            ]);
+        }    
         foreach($request->ids as $value){
             if($value['type']=="PURCHASE"){
                 Purchase::where('gstr2b_invoice_id', $request->invoice_no)
