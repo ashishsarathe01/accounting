@@ -157,13 +157,19 @@ class ContraController extends Controller
             'user_id.required' => 'User ID is required.',
             'company_id.required' => 'Company ID is required.',
       ]);
-      if ($validator->fails()) {
-         return response()->json($validator->errors(), 422);
-      }
+     if ($validator->fails()) {
+    return response()->json([
+        'code' => 422,
+        'message' => $validator->errors()->first(),
+        'errors' => $validator->errors()
+    ], 422);
+}
 
       $financial_year = $request->input('financial_year');
       $com_id = $request->input('company_id');
-      $party_list = Accounts::whereIn('company_id', [$com_id, 0])                   ->where('delete', '=', '0')
+      $party_list = Accounts::select('id', 'account_name', 'company_id', 'under_group', 'under_group_type', 'print_name', 'dr_cr', 'address', 'address2', 'state', 'country', 'pin_code', 'gstin')
+                           ->whereIn('company_id', [$com_id, 0])
+                           ->where('delete', '=', '0')
                            ->whereIn('under_group', [7,8])
                            ->where('under_group_type', '=', 'group')
                            ->orderBy('account_name')
@@ -487,9 +493,12 @@ if ($validator->fails()) {
             'user_id.required' => 'User ID is required.',
             'company_id.required' => 'Company ID is required.',
       ]);
-      if ($validator->fails()) {
-         return response()->json($validator->errors(), 422);
-      }
+   if ($validator->fails()) {
+    return response()->json([
+        'code' => 400,
+        'message' => $validator->errors()->first()
+    ], 400);
+}
         $id = $request->input('edit_id');
         $user_id = $request->input('user_id');
         
@@ -503,146 +512,146 @@ if ($validator->fails()) {
       $fy_end_date   = '20' . $endYY   . '-03-31';
       $contra = Contra::find($id);
       $contra_detail = ContraDetails::where('contra_id', '=', $id)->where('delete', '=', '0')->get();
-      $party_list = Accounts::whereIn('company_id', [$com_id,0])                   ->where('delete', '=', '0')
-                           ->where('under_group_type', '=', 'group')
-                           ->whereIn('under_group', [7,8])
-                           ->orderBy('account_name')
-                           ->get();
-      $companyData = Companies::where('id', $com_id)->first();
-      $GstSettings = (object)NULL;
-      $GstSettings->series = array();$mat_series = array();
-      if($companyData->gst_config_type == "single_gst") {
-         $GstSettings = DB::table('gst_settings')->where(['company_id' => $com_id, 'gst_type' => "single_gst"])->first();
-         $mat_series = DB::table('gst_settings')
-                           ->where(['company_id' => $com_id, 'gst_type' => "single_gst"])
-                           ->get();
-         $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series','branch_invoice_start_from as invoice_start_from')
-                           ->where(['delete' => '0', 'company_id' => $com_id,'gst_setting_id'=>$mat_series[0]->id])
-                           ->get();
-         if(count($branch)>0){
-            $mat_series = $mat_series->merge($branch);
-         }
-      }else if($companyData->gst_config_type == "multiple_gst") {
-         $GstSettings = DB::table('gst_settings_multiple')->where(['company_id' => $com_id, 'gst_type' => "multiple_gst"])->first();
-         $mat_series = DB::table('gst_settings_multiple')
-                           ->select('id','gst_no','mat_center','series','invoice_start_from')
-                           ->where(['company_id' => $com_id, 'gst_type' => "multiple_gst"])
-                           ->get();
-         foreach ($mat_series as $key => $value) {
-            $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series','branch_invoice_start_from as invoice_start_from')
-                        ->where(['delete' => '0', 'company_id' => $com_id,'gst_setting_multiple_id'=>$value->id])
-                        ->get();
-            if(count($branch)>0){
-               $mat_series = $mat_series->merge($branch);
-            }
-         }
-      }
-      // $mat_series = array();
-      // $mat_series = GstBranch::select('branch_series')->where(['delete' => '0', 'company_id' => Session::get('user_company_id')])->get()->toArray();
-      // if(!empty($GstSettings->series)) {
-      //    $mat_series[] = array("branch_series" => $GstSettings->series);
+      // $party_list = Accounts::whereIn('company_id', [$com_id,0])                   ->where('delete', '=', '0')
+      //                      ->where('under_group_type', '=', 'group')
+      //                      ->whereIn('under_group', [7,8])
+      //                      ->orderBy('account_name')
+      //                      ->get();
+      // $companyData = Companies::where('id', $com_id)->first();
+      // $GstSettings = (object)NULL;
+      // $GstSettings->series = array();$mat_series = array();
+      // if($companyData->gst_config_type == "single_gst") {
+      //    $GstSettings = DB::table('gst_settings')->where(['company_id' => $com_id, 'gst_type' => "single_gst"])->first();
+      //    $mat_series = DB::table('gst_settings')
+      //                      ->where(['company_id' => $com_id, 'gst_type' => "single_gst"])
+      //                      ->get();
+      //    $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series','branch_invoice_start_from as invoice_start_from')
+      //                      ->where(['delete' => '0', 'company_id' => $com_id,'gst_setting_id'=>$mat_series[0]->id])
+      //                      ->get();
+      //    if(count($branch)>0){
+      //       $mat_series = $mat_series->merge($branch);
+      //    }
+      // }else if($companyData->gst_config_type == "multiple_gst") {
+      //    $GstSettings = DB::table('gst_settings_multiple')->where(['company_id' => $com_id, 'gst_type' => "multiple_gst"])->first();
+      //    $mat_series = DB::table('gst_settings_multiple')
+      //                      ->select('id','gst_no','mat_center','series','invoice_start_from')
+      //                      ->where(['company_id' => $com_id, 'gst_type' => "multiple_gst"])
+      //                      ->get();
+      //    foreach ($mat_series as $key => $value) {
+      //       $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series','branch_invoice_start_from as invoice_start_from')
+      //                   ->where(['delete' => '0', 'company_id' => $com_id,'gst_setting_multiple_id'=>$value->id])
+      //                   ->get();
+      //       if(count($branch)>0){
+      //          $mat_series = $mat_series->merge($branch);
+      //       }
+      //    }
       // }
-      foreach ($mat_series as $key => $value) {
+      // // $mat_series = array();
+      // // $mat_series = GstBranch::select('branch_series')->where(['delete' => '0', 'company_id' => Session::get('user_company_id')])->get()->toArray();
+      // // if(!empty($GstSettings->series)) {
+      // //    $mat_series[] = array("branch_series" => $GstSettings->series);
+      // // }
+      // foreach ($mat_series as $key => $value) {
 
-         $series_configuration = VoucherSeriesConfiguration::where('company_id', $com_id)
-            ->where('series', $value->series)
-            ->where('configuration_for', 'CONTRA') 
-            ->where('status','1')
-            ->first();
+      //    $series_configuration = VoucherSeriesConfiguration::where('company_id', $com_id)
+      //       ->where('series', $value->series)
+      //       ->where('configuration_for', 'CONTRA') 
+      //       ->where('status','1')
+      //       ->first();
 
-         if ($contra->series_no == $value->series) {
+      //    if ($contra->series_no == $value->series) {
 
-            $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
-            $mat_series[$key]->invoice_start_from = sprintf("%0" . $number_digit . "d", (int)$contra->voucher_no);
+      //       $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
+      //       $mat_series[$key]->invoice_start_from = sprintf("%0" . $number_digit . "d", (int)$contra->voucher_no);
 
-         } else {
+      //    } else {
 
-            $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
-            $lastNumber = DB::table('contras')
-               ->where('company_id',$com_id)
-               ->where('financial_year',$financial_year)
-               ->where('series_no',$value->series)
-               ->where('delete','0')
-               ->max(DB::raw("cast(voucher_no as SIGNED)"));
+      //       $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
+      //       $lastNumber = DB::table('contras')
+      //          ->where('company_id',$com_id)
+      //          ->where('financial_year',$financial_year)
+      //          ->where('series_no',$value->series)
+      //          ->where('delete','0')
+      //          ->max(DB::raw("cast(voucher_no as SIGNED)"));
 
-            if (!$lastNumber) {
-               if ($series_configuration && $series_configuration->manual_numbering == "NO" && $series_configuration->invoice_start != "") {
-                  $next = (int)$series_configuration->invoice_start;
-               } else {
-                  $next = 1;
-               }
-            } else {
-               $next = ((int)$lastNumber) + 1;
-            }
+      //       if (!$lastNumber) {
+      //          if ($series_configuration && $series_configuration->manual_numbering == "NO" && $series_configuration->invoice_start != "") {
+      //             $next = (int)$series_configuration->invoice_start;
+      //          } else {
+      //             $next = 1;
+      //          }
+      //       } else {
+      //          $next = ((int)$lastNumber) + 1;
+      //       }
 
-            $mat_series[$key]->invoice_start_from = sprintf("%0" . $number_digit . "d",$next);
-         }
+      //       $mat_series[$key]->invoice_start_from = sprintf("%0" . $number_digit . "d",$next);
+      //    }
 
-         $invoice_prefix = "";
-         $manual_enter_invoice_no = "";
+      //    $invoice_prefix = "";
+      //    $manual_enter_invoice_no = "";
 
-         if ($series_configuration) {
-            $manual_enter_invoice_no = ($series_configuration->manual_numbering == "YES") ? "1" : "0";
-         }
+      //    if ($series_configuration) {
+      //       $manual_enter_invoice_no = ($series_configuration->manual_numbering == "YES") ? "1" : "0";
+      //    }
 
-         if ($series_configuration && $series_configuration->manual_numbering == "NO") {
+      //    if ($series_configuration && $series_configuration->manual_numbering == "NO") {
 
-            if ($series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
-               $invoice_prefix .= $series_configuration->prefix_value;
-            }
+      //       if ($series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
+      //          $invoice_prefix .= $series_configuration->prefix_value;
+      //       }
 
-            if ($series_configuration->prefix == "ENABLE" && $series_configuration->separator_1 != "") {
-               $invoice_prefix .= $series_configuration->separator_1;
-            }
+      //       if ($series_configuration->prefix == "ENABLE" && $series_configuration->separator_1 != "") {
+      //          $invoice_prefix .= $series_configuration->separator_1;
+      //       }
 
-            if ($series_configuration->year == "PREFIX TO NUMBER") {
+      //       if ($series_configuration->year == "PREFIX TO NUMBER") {
 
-               if ($series_configuration->year_format == "YY-YY") {
-                  $invoice_prefix .= $financial_year_session;
-               } else {
-                  $fy = explode('-', $financial_year_session);
-                  $invoice_prefix .= '20'.$fy[0].'-'.$fy[1];
-               }
+      //          if ($series_configuration->year_format == "YY-YY") {
+      //             $invoice_prefix .= $financial_year_session;
+      //          } else {
+      //             $fy = explode('-', $financial_year_session);
+      //             $invoice_prefix .= '20'.$fy[0].'-'.$fy[1];
+      //          }
 
-               if ($series_configuration->separator_2 != "") {
-                  $invoice_prefix .= $series_configuration->separator_2;
-               }
-            }
-            $invoice_prefix .= $mat_series[$key]->invoice_start_from;
+      //          if ($series_configuration->separator_2 != "") {
+      //             $invoice_prefix .= $series_configuration->separator_2;
+      //          }
+      //       }
+      //       $invoice_prefix .= $mat_series[$key]->invoice_start_from;
 
-            if ($series_configuration->year == "SUFFIX TO NUMBER") {
+      //       if ($series_configuration->year == "SUFFIX TO NUMBER") {
 
-               if ($series_configuration->separator_2 != "") {
-                  $invoice_prefix .= $series_configuration->separator_2;
-               }
+      //          if ($series_configuration->separator_2 != "") {
+      //             $invoice_prefix .= $series_configuration->separator_2;
+      //          }
 
-               if ($series_configuration->year_format == "YY-YY") {
-                  $invoice_prefix .= $financial_year_session;
-               } else {
-                  $fy = explode('-', Session::get('default_fy'));
-                  $invoice_prefix .= '20'.$fy[0].'-'.$fy[1];
-               }
-            }
+      //          if ($series_configuration->year_format == "YY-YY") {
+      //             $invoice_prefix .= $financial_year_session;
+      //          } else {
+      //             $fy = explode('-', Session::get('default_fy'));
+      //             $invoice_prefix .= '20'.$fy[0].'-'.$fy[1];
+      //          }
+      //       }
 
-            if ($series_configuration->suffix == "ENABLE" && $series_configuration->separator_3 != "") {
-               $invoice_prefix .= $series_configuration->separator_3;
-            }
+      //       if ($series_configuration->suffix == "ENABLE" && $series_configuration->separator_3 != "") {
+      //          $invoice_prefix .= $series_configuration->separator_3;
+      //       }
 
-            if ($series_configuration->suffix == "ENABLE" && $series_configuration->suffix_value != "") {
-               $invoice_prefix .= $series_configuration->suffix_value;
-            }
-         }
+      //       if ($series_configuration->suffix == "ENABLE" && $series_configuration->suffix_value != "") {
+      //          $invoice_prefix .= $series_configuration->suffix_value;
+      //       }
+      //    }
 
-         $mat_series[$key]->invoice_prefix = $invoice_prefix;
-         $mat_series[$key]->manual_enter_invoice_no = $manual_enter_invoice_no;
-      }
+      //    $mat_series[$key]->invoice_prefix = $invoice_prefix;
+      //    $mat_series[$key]->manual_enter_invoice_no = $manual_enter_invoice_no;
+      // }
       return response()->json([
          'code' => 200,
          'data' => [
             'contra' => $contra,
             'contra_detail' => $contra_detail,
-            'party_list' => $party_list,
-            'mat_series' => $mat_series,
+            // 'party_list' => $party_list,
+            // 'mat_series' => $mat_series,
             'fy_start_date' => $fy_start_date,
             'fy_end_date' => $fy_end_date
          ]
