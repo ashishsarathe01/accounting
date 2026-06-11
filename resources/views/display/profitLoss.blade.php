@@ -130,7 +130,7 @@ input[type=number]::-webkit-outer-spin-button {
 </div>
 
                      <div class="col-md-12 fw-500 font-14  px-3 py-12 border-bottom-divider">
-                        <a class="text-decoration-none text-primary fw-500" href="{{ url('accountledger-filter') }}?_token={{ csrf_token() }}&party=36&from_date={{ $from_date }}&to_date={{ $to_date }}">
+                        <a class="text-decoration-none text-primary fw-500" href="{{url('account-balance-by-group/23')}}/{{$data['financial_year']}}/{{$from_date}}/{{$to_date}}">
                            <p class="d-flex m-0">Purchase
                               <span class="ms-auto">
                                  @php
@@ -174,7 +174,11 @@ input[type=number]::-webkit-outer-spin-button {
                      </div>
                      <?php
                      $gross_profit = 0;$gross_loss = 0;
-                     $total_net_sale = $data['total_closing_stock'] + $data['tot_sale_amt'] - $data['tot_sale_return_amt'] + $data['tot_purchase_return_amt_sale'] + $data['direct_income']  - $debit_direct_income;
+                     $total_net_sale =
+                        $data['total_closing_stock']
+                        + $data['tot_sale_amt']
+                        + $data['direct_income']
+                        - $debit_direct_income;
                      $total_net_purchase = $data['total_opening_stock'] + $data['tot_purchase_amt'] - $data['tot_purchase_return_amt'] + $data['tot_sale_return_amt_purchase'] + $data['direct_expenses'] - $direct_expenses_credit;
                      $balance = $total_net_purchase - $total_net_sale;
                      if($balance < 0) {
@@ -399,12 +403,12 @@ input[type=number]::-webkit-outer-spin-button {
 
                      <div class="col-md-12 fw-500 font-14  px-3 py-12 border-bottom-divider">
                         {{-- <a class="text-decoration-none text-primary fw-500" href="{{url('sale-by-month-detail')}}/{{$data['financial_year']}}/{{$from_date}}/{{$to_date}}"> --}}
-                        <a class="text-decoration-none text-primary fw-500" href="{{url('sale-by-month')}}/{{$data['financial_year']}}/{{$from_date}}/{{$to_date}}">
+                        <a class="text-decoration-none text-primary fw-500" href="{{url('account-balance-by-group/24')}}/{{$data['financial_year']}}/{{$from_date}}/{{$to_date}}">
                            <p class="d-flex m-0">
                            Sale
                            <span class="ms-auto">
                            @php
-                              echo formatIndianNumber(round($data['tot_sale_amt'] - $data['tot_sale_return_amt']+ $data['tot_purchase_return_amt_sale'], 2));
+                              echo formatIndianNumber(round($data['tot_sale_amt'], 2));  
                            @endphp
                            </span>
                            </p>                        

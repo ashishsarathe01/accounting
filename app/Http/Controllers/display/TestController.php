@@ -28,53 +28,54 @@ class TestController extends Controller{
      * @return \Illuminate\Http\Response
    */
     public function index(){
-        echo "Einvoice Client Id";
-        echo "<br>";
-        $client_id_einvoice = "";
-        echo $client_id_einvoice_encrypt = Crypt::encryptString($client_id_einvoice);
-        echo "<br>";
-        echo $client_id_einvoice_decrypt = Crypt::decryptString($client_id_einvoice_encrypt);
-        echo "<br>";
+        //CommonHelper::RewriteItemAverageByItem('2025-04-01',139,'Main'); 
+        // echo "Einvoice Client Id";
+        // echo "<br>";
+        // $client_id_einvoice = "";
+        // echo $client_id_einvoice_encrypt = Crypt::encryptString($client_id_einvoice);
+        // echo "<br>";
+        // echo $client_id_einvoice_decrypt = Crypt::decryptString($client_id_einvoice_encrypt);
+        // echo "<br>";
 
-        echo "Einvoice Client secret";
-        echo "<br>";
-        $client_secret_einvoice = "";
-        echo $client_secret_einvoice_encrypt = Crypt::encryptString($client_secret_einvoice);
-        echo "<br>";
-        echo $client_secret_einvoice_decrypt = Crypt::decryptString($client_secret_einvoice_encrypt);
-        echo "<br>";
+        // echo "Einvoice Client secret";
+        // echo "<br>";
+        // $client_secret_einvoice = "";
+        // echo $client_secret_einvoice_encrypt = Crypt::encryptString($client_secret_einvoice);
+        // echo "<br>";
+        // echo $client_secret_einvoice_decrypt = Crypt::decryptString($client_secret_einvoice_encrypt);
+        // echo "<br>";
 
-        echo "Eway Bill Client Id";
-        echo "<br>";
-        $client_id_eway_bill = "";
-        echo $client_id_eway_bill_encrypt = Crypt::encryptString($client_id_eway_bill);
-        echo "<br>";
-        echo $client_id_eway_bill_decrypt = Crypt::decryptString($client_id_eway_bill_encrypt);
-        echo "<br>";
+        // echo "Eway Bill Client Id";
+        // echo "<br>";
+        // $client_id_eway_bill = "";
+        // echo $client_id_eway_bill_encrypt = Crypt::encryptString($client_id_eway_bill);
+        // echo "<br>";
+        // echo $client_id_eway_bill_decrypt = Crypt::decryptString($client_id_eway_bill_encrypt);
+        // echo "<br>";
 
-         echo "Eway Bill Client secret";
-        echo "<br>";
-        $client_secret_eway_bill = "";
-        echo $client_secret_eway_bill_encrypt = Crypt::encryptString($client_secret_eway_bill);
-        echo "<br>";
-        echo $client_secret_eway_bill_decrypt = Crypt::decryptString($client_secret_eway_bill_encrypt);
-        echo "<br>";
+        //  echo "Eway Bill Client secret";
+        // echo "<br>";
+        // $client_secret_eway_bill = "";
+        // echo $client_secret_eway_bill_encrypt = Crypt::encryptString($client_secret_eway_bill);
+        // echo "<br>";
+        // echo $client_secret_eway_bill_decrypt = Crypt::decryptString($client_secret_eway_bill_encrypt);
+        // echo "<br>";
 
-        echo "Gst Client Id";
-        echo "<br>";
-        $client_id_gst = "";
-        echo $client_id_gst_encrypt = Crypt::encryptString($client_id_gst);
-        echo "<br>";
-        echo $client_id_gst_decrypt = Crypt::decryptString($client_id_gst_encrypt);
-        echo "<br>";
+        // echo "Gst Client Id";
+        // echo "<br>";
+        // $client_id_gst = "";
+        // echo $client_id_gst_encrypt = Crypt::encryptString($client_id_gst);
+        // echo "<br>";
+        // echo $client_id_gst_decrypt = Crypt::decryptString($client_id_gst_encrypt);
+        // echo "<br>";
 
-        echo "Gst Client secret";
-        echo "<br>";
-        $client_secret_gst = "";
-        echo $client_secret_gst_encrypt = Crypt::encryptString($client_secret_gst);
-        echo "<br>";
-        echo $client_secret_gst_decrypt = Crypt::decryptString($client_secret_gst_encrypt);
-        echo "<br>";
+        // echo "Gst Client secret";
+        // echo "<br>";
+        // $client_secret_gst = "";
+        // echo $client_secret_gst_encrypt = Crypt::encryptString($client_secret_gst);
+        // echo "<br>";
+        // echo $client_secret_gst_decrypt = Crypt::decryptString($client_secret_gst_encrypt);
+        // echo "<br>";
     }
     private function getAllChildGroups1($parentIds, $companyId)
     {

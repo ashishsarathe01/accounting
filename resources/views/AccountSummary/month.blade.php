@@ -23,6 +23,11 @@
                         <span class="text-warning">{{ $account->account_name }}</span>
                     </h5>
                     <div class="d-flex justify-content-end mb-2">
+                        <button type="button"
+                                class="btn btn-outline-secondary px-4 py-2 me-2"
+                                onclick="window.history.back();">
+                            Back
+                        </button>
                         <a href="{{ route('account.summary.export.month.csv', [
                             'account_id' => $account->id,
                             'from_date'  => $from,
@@ -39,7 +44,45 @@
                         </a>
                     </div>
                 </div>
+                @php
+                    $fy = explode('-', Session::get('default_fy'));
 
+                    $fyStart = '20'.$fy[0].'-04';
+                    $fyEnd   = '20'.$fy[1].'-03';
+                @endphp
+
+                <form method="GET" action="{{ url('account-summary/month') }}" class="row mb-3">
+
+                    <input type="hidden" name="account_id" value="{{ $account->id }}">
+
+                    <div class="col-md-2">
+                        <label>From Month</label>
+                        <input type="month"
+                            name="from_month"
+                            class="form-control"
+                            min="{{ $fyStart }}"
+                            max="{{ $fyEnd }}"
+                            value="{{ request('from_month', \Carbon\Carbon::parse($from)->format('Y-m')) }}">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label>To Month</label>
+                        <input type="month"
+                            name="to_month"
+                            class="form-control"
+                            min="{{ $fyStart }}"
+                            max="{{ $fyEnd }}"
+                            value="{{ request('to_month', \Carbon\Carbon::parse($to)->format('Y-m')) }}">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label>&nbsp;</label>
+                        <button type="submit" class="btn btn-info d-block">
+                            Filter
+                        </button>
+                    </div>
+
+                </form>
                 {{-- Month Summary Table --}}
                 <div class="table-responsive mt-4 mb-4">
                     <table class="table table-bordered table-hover table-sm align-middle bg-white shadow-sm">

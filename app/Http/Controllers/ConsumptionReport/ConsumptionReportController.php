@@ -246,13 +246,22 @@ public function report(Request $request)
     if ($totalProduction > 0) {
         $electricityPerKg = $electricityAmount / $totalProduction;
     }
-    $reportData[] = [
-        'item_name'      => 'ELECTRICITY',
-        'qty'            => $electricityQty,
-        'amount'         => $electricityAmount,
-        'avg_price'      => $electricityAvgPrice,
-        'generated_qty'  => $totalProduction,
-        'per_kg'         => $electricityPerKg,
+    $groupedReport['electricity'] = [
+        'group_id' => 'electricity',
+        'group_name' => 'ELECTRICITY',
+        'qty' => $electricityQty,
+        'amount' => $electricityAmount,
+        'generated_qty' => $totalProduction,
+        'items' => [
+            [
+                'item_name' => 'ELECTRICITY',
+                'qty' => $electricityQty,
+                'amount' => $electricityAmount,
+                'avg_price' => $electricityAvgPrice,
+                'generated_qty' => $totalProduction,
+                'per_kg' => $electricityPerKg
+            ]
+        ]
     ];
     return view(
         'ConsumptionReport.Report',

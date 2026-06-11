@@ -1009,8 +1009,61 @@ class AccountSummaryController extends Controller
     public function monthSummary(Request $request)
     {
         $accountId = $request->account_id;
-        $from      = $request->from_date;
-        $to        = $request->to_date;
+        $fromMonth = $request->from_month;
+        $toMonth   = $request->to_month;
+        $financial_year = Session::get('default_fy');
+
+        $fy = explode('-', $financial_year);
+
+        $fyStartMonth = '20'.$fy[0].'-04';
+        $fyEndMonth   = '20'.$fy[1].'-03';
+
+        if (!empty($fromMonth)) {
+
+            if ($fromMonth < $fyStartMonth) {
+                $fromMonth = $fyStartMonth;
+            }
+
+            if ($fromMonth > $fyEndMonth) {
+                $fromMonth = $fyEndMonth;
+            }
+        }
+
+        if (!empty($toMonth)) {
+
+            if ($toMonth < $fyStartMonth) {
+                $toMonth = $fyStartMonth;
+            }
+
+            if ($toMonth > $fyEndMonth) {
+                $toMonth = $fyEndMonth;
+            }
+        }
+        if (!empty($fromMonth) && !empty($toMonth)) {
+
+            $from = \Carbon\Carbon::createFromFormat('Y-m', $fromMonth)
+                        ->startOfMonth()
+                        ->format('Y-m-d');
+
+            $to = \Carbon\Carbon::createFromFormat('Y-m', $toMonth)
+                    ->endOfMonth()
+                    ->format('Y-m-d');
+
+        } else {
+
+            $from = $request->from_date;
+            $to   = $request->to_date;
+
+            if (empty($from) || empty($to)) {
+
+                $financial_year = Session::get('default_fy');
+
+                $fy = explode('-', $financial_year);
+
+                $from = '20'.$fy[0].'-04-01';
+                $to   = '20'.$fy[1].'-03-31';
+            }
+        }
         $companyId = Session::get('user_company_id');
 
         $account = Accounts::where('id', $accountId)

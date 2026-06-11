@@ -587,6 +587,20 @@
       $( ".select2-single, .select2-multiple" ).select2(); 
       calculateAmount(1);
       calculateAmountNew(1);
+
+      // Load consumed items for the journal date
+      var initialDate = $("#date").val();
+      if (initialDate) {
+         loadConsumedItemsByDate(initialDate);
+      }
+
+      // Reload on date change
+      $("#date").on('change', function() {
+         var selectedDate = $(this).val();
+         if (selectedDate) {
+            loadConsumedItemsByDate(selectedDate);
+         }
+      });
    });   
    var add_more_count = {{$i}} - 1;
    $(".add_more").click(function() {      
@@ -1114,6 +1128,11 @@ $(document).on("click", ".remove-reel", function () {
 
 
 function generateOptions() {
+    // Used ONLY for consumed items (new rows added via add_more)
+    return buildConsumedOptions([]);
+}
+
+function generateOptionsForGenerated() {
     let html = `<option value="">Select Item</option>`;
     itemsOptions.forEach(function(item) {
         html += `<option value="${item.id}" 

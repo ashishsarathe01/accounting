@@ -404,5 +404,35 @@ Opening Bal. : {{ formatIndianNumber($open) }} @if($opening < 0) CR @else DR @en
     }
 
 });
+document.addEventListener('keydown', function(e) {
+
+    if (e.altKey && (e.key === 'a' || e.key === 'A')) {
+
+        e.preventDefault();
+
+        const params = new URLSearchParams(window.location.search);
+
+        const accountId = params.get('party');
+
+        if (!accountId) {
+            alert('Please select an account first.');
+            return;
+        }
+
+        const fy = "{{ Session::get('default_fy') }}"; // e.g. 26-27
+
+        const years = fy.split('-');
+
+        const fromDate = '20' + years[0] + '-04-01';
+        const toDate   = '20' + years[1] + '-03-31';
+
+        window.location.href =
+            "{{ url('account-summary/month') }}" +
+            '?account_id=' + accountId +
+            '&from_date=' + fromDate +
+            '&to_date=' + toDate;
+    }
+
+});
 </script>
 @endsection

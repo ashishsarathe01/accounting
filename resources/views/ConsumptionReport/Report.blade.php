@@ -274,17 +274,24 @@
             @forelse($groupedReport as $group)
 
                 @php
-                    $groupConsumedPerTon = $group['generated_qty'] > 0
-                        ? (($group['qty'] / $group['generated_qty']) * 1000)
-                        : 0;
 
                     $groupAvgPrice = $group['qty'] > 0
                         ? ($group['amount'] / $group['qty'])
                         : 0;
 
-                    $groupPerKg = $group['generated_qty'] > 0
-                        ? ($group['amount'] / $group['generated_qty'])
-                        : 0;
+                    $groupPerKg = 0;
+                    $groupConsumedPerTon = 0;
+
+                    foreach($group['items'] as $tmpItem){
+
+                        $groupPerKg += $tmpItem['per_kg'];
+
+                        $groupConsumedPerTon += (
+                            $tmpItem['generated_qty'] > 0
+                                ? (($tmpItem['qty'] / $tmpItem['generated_qty']) * 1000)
+                                : 0
+                        );
+                    }
 
                     $totalQty += $group['qty'];
                     $totalAmount += $group['amount'];
@@ -319,9 +326,7 @@
                         {{ number_format($groupAvgPrice, 2) }}
                     </td>
 
-                    <td style="text-align:right;">
-                        {{ number_format($group['generated_qty'], 2) }}
-                    </td>
+                    <td style="text-align:right;"></td>
 
                     <td style="text-align:right;">
                         {{ number_format($groupPerKg, 2) }}

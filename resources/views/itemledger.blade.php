@@ -225,8 +225,7 @@
                            <button type="button" class="btn btn-primary" id="serachBtn">Apply</button>
                            <button type="button" onclick="printLedger()" class="btn btn-success">Print</button>
 
-                           <a href="{{ url('item-ledger-main-csv?items_id='.request()->items_id.'&selected_series='.request()->selected_series.'&from_date='.request()->from_date.'&to_date='.request()->to_date) }}"
-                              class="btn btn-dark">
+                           <a href="{{ url('item-ledger-main-csv?items_id='.(request()->show_type == 'all'? 'all': (request()->show_type == 'all_groups'? 'all_groups': request()->item_id)).'&selected_series='.request()->selected_series.'&from_date='.request()->from_date.'&to_date='.request()->to_date) }}"class="btn btn-dark">
                               CSV
                            </a>
                      </div>
@@ -304,7 +303,7 @@
                         data-from_date="{{ $fdate }}"
                         data-to_date="{{ request('to_date') }}"
                         style="cursor:pointer;">
-                                    <td class="ps-4 text-muted">↳ {{ $item['item_name'] }}</td>
+                                    <td class="ps-4 text-muted" style="{{ !empty($item['has_negative_stock']) ? 'color:#dc3545 !important;font-weight:bold;' : '' }}"> ↳ {{ $item['item_name'] }}</td>
                                     <td>Item</td>
                                     <td class="text-end">{{ formatIndianNumber($item['average_weight']) }}</td>
                                     <td>{{ $item['unit_name'] }}</td>
@@ -323,7 +322,7 @@
                                  data-from_date="{{ $fdate }}"
                                  data-to_date="{{ request('to_date') }}"
                                  style="cursor:pointer;">
-                                 <td>{{ $value['item_name'] }}</td>
+                                 <td style="{{ !empty($value['has_negative_stock']) ? 'color:#dc3545 !important;font-weight:bold;' : '' }}">{{ $value['item_name'] }}</td>
                                  <td>Item</td>
                                  <td class="text-end">{{ formatIndianNumber($value['average_weight']) }}</td>
                                  <td>{{ $value['unit_name'] }}</td>

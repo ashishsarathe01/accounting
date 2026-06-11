@@ -514,6 +514,20 @@ $(document).ready(function() {
     // Initialize select2
     $(".select2-single, .select2-multiple").select2();
 
+    // Load consumed items for the initial date
+    var initialDate = $("#date").val();
+    if (initialDate) {
+        loadConsumedItemsByDate(initialDate);
+    }
+
+    // Reload consumed items when date changes
+    $("#date").on('change', function() {
+        var selectedDate = $(this).val();
+        if (selectedDate) {
+            loadConsumedItemsByDate(selectedDate);
+        }
+    });
+
     // Trigger series_no change if needed
     $("#series_no").change();
 
@@ -572,8 +586,8 @@ $(document).ready(function() {
     let last_srn = $("#consum_total").closest('tr').prev().find("td:first").html();
     let srn = last_srn ? parseInt(last_srn) + 1 : 1;
 
-    // Option elements
-    var optionElements = '<?php echo addslashes($items_list); ?>';
+    // Option elements (consumed items filtered by selected date)
+    var optionElements = consumedItemsOptions;
 
     // Conditionally add ⚙️ button
     var configureButton = '';
@@ -1698,7 +1712,7 @@ $(document).ready(function () {
     // STEP 1: REMOVE DEFAULT FIRST ROW
     $("#tr_1").remove();
 
-    let optionHtml = `<?php echo addslashes($items_list); ?>`;
+    let optionHtml = consumedItemsOptions;
 
     let rowCount = 0;
 
