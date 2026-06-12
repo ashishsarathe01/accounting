@@ -224,8 +224,7 @@
                      <div class="filter-actions">
                            <button type="button" class="btn btn-primary" id="serachBtn">Apply</button>
                            <button type="button" onclick="printLedger()" class="btn btn-success">Print</button>
-
-                           <a href="{{ url('item-ledger-main-csv?items_id='.(request()->show_type == 'all'? 'all': (request()->show_type == 'all_groups'? 'all_groups': request()->item_id)).'&selected_series='.request()->selected_series.'&from_date='.request()->from_date.'&to_date='.request()->to_date) }}"class="btn btn-dark">
+                              <a href="{{ url('item-ledger-main-csv'.'?show_type='.request()->show_type.'&items_id='.(request()->show_type == 'all'? 'all': (request()->show_type == 'all_groups'? 'all_groups': request()->item_id)).'&group_id='.request()->group_id.'&selected_series='.request()->selected_series.'&from_date='.request()->from_date.'&to_date='.request()->to_date) }}" class="btn btn-dark">
                               CSV
                            </a>
                      </div>
@@ -250,6 +249,7 @@
                            <th class="w-min-120 border-none bg-light-pink text-body">Type</th>
                            <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Qty</th>
                            <th class="w-min-120 border-none bg-light-pink text-body">Unit</th>
+                           <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Price</th>
                            <th class="w-min-120 border-none bg-light-pink text-body" style="text-align: right;">Amount</th>
                         @else
                            <th class="w-min-120 border-none bg-light-pink text-body">Date </th>
@@ -287,6 +287,11 @@
                                  <td>Group</td>
                                  <td class="text-end">{{ formatIndianNumber($grp['qty']) }}</td>
                                  <td></td>
+                                 <td class="text-end">
+                                    {{ ($grp['qty'] ?? 0) != 0
+                                       ? number_format($grp['amount'] / $grp['qty'], 2)
+                                       : '0.00' }}
+                                 </td>
                                  <td class="text-end">{{ formatIndianNumber($grp['amount']) }}</td>
                            </tr>
 
@@ -307,6 +312,11 @@
                                     <td>Item</td>
                                     <td class="text-end">{{ formatIndianNumber($item['average_weight']) }}</td>
                                     <td>{{ $item['unit_name'] }}</td>
+                                    <td class="text-end">
+                                       {{ ($item['average_weight'] ?? 0) != 0
+                                          ? number_format($item['amount'] / $item['average_weight'], 2)
+                                          : '0.00' }}
+                                    </td>
                                     <td class="text-end">{{ formatIndianNumber($item['amount']) }}</td>
                                  </tr>
                            @endforeach
@@ -326,6 +336,11 @@
                                  <td>Item</td>
                                  <td class="text-end">{{ formatIndianNumber($value['average_weight']) }}</td>
                                  <td>{{ $value['unit_name'] }}</td>
+                                 <td class="text-end">
+                                    {{ ($value['average_weight'] ?? 0) != 0
+                                       ? number_format($value['amount'] / $value['average_weight'], 2)
+                                       : '0.00' }}
+                                 </td>
                                  <td class="text-end">{{ formatIndianNumber($value['amount']) }}</td>
                            </tr>
 
@@ -414,6 +429,11 @@
                            ?>                           
                         </th>
                         <th></th>
+                        <th class="text-end">
+                           {{ $qty != 0
+                              ? number_format($tot_blance / $qty, 2)
+                              : '0.00' }}
+                        </th>
                         <th class="text-end" style="text-align: right;">
                            <?php 
                            echo formatIndianNumber($tot_blance);                          

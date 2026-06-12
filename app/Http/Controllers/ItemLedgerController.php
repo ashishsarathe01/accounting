@@ -1563,7 +1563,8 @@ public function exportMainLedgerCsv(Request $request)
     $from = $request->from_date;
     $to = $request->to_date;
     $selected_series = $request->selected_series;
-
+    $show_type = $request->show_type;
+    $group_id = $request->group_id;
     $company = Companies::find(Session::get('user_company_id'));
 
     $companyData = Companies::where('id', Session::get('user_company_id'))->first();
@@ -1669,7 +1670,7 @@ public function exportMainLedgerCsv(Request $request)
         "Content-Disposition" => "attachment; filename=item_ledger_main.csv",
     ];
 
-    $callback = function () use ($company, $item_id, $finalItemMap) {
+    $callback = function () use ($company, $item_id, $show_type, $group_id, $finalItemMap) {
 
         $file = fopen('php://output', 'w');
 
@@ -1684,7 +1685,7 @@ public function exportMainLedgerCsv(Request $request)
         // ================= ALL GROUPS =================
          if ($item_id === 'all_groups') {
 
-            fputcsv($file, ["Group", "Type", "Qty", "Unit", "Amount"]);
+            fputcsv($file, ["Group", "Type", "Qty", "Unit", "Price", "Amount"]);
 
             $groupsRaw = DB::table('item_groups')
                ->where('company_id', Session::get('user_company_id'))
@@ -1726,21 +1727,28 @@ public function exportMainLedgerCsv(Request $request)
                }
 
                if (count($itemRows) == 0) continue;
-
+               $groupPrice = $groupQty != 0
+                  ? number_format($groupAmount / $groupQty, 2, '.', '')
+                  : '0.00';
                fputcsv($file, [
                      $grp->group_name,
                      "Group",
                      $groupQty,
                      "",
+                     $groupPrice,
                      $groupAmount
                ]);
 
                foreach ($itemRows as $item) {
+                  $itemPrice = $item['qty'] != 0
+                     ? number_format($item['amount'] / $item['qty'], 2, '.', '')
+                     : '0.00';
                      fputcsv($file, [
                         $item['name'],
                         "Item",
                         $item['qty'],
                         $item['unit'],
+                        $itemPrice,
                         $item['amount']
                      ]);
                }
@@ -1748,31 +1756,87 @@ public function exportMainLedgerCsv(Request $request)
                $total_qty += $groupQty;
                $total_amount += $groupAmount;
             }
-
+            $totalPrice = $total_qty != 0
+               ? number_format($total_amount / $total_qty, 2, '.', '')
+               : '0.00';
             fputcsv($file, [
                "Total",
                "",
                $total_qty,
                "",
+               $totalPrice,
                $total_amount
             ]);
          }
+         elseif ($show_type == 'group') {
 
+            fputcsv($file, ["Item", "Type", "Qty", "Unit", "Price", "Amount"]);
+
+            $total_qty = 0;
+            $total_amount = 0;
+
+            $groupItems = DB::table('manage_items')
+               ->where('g_name', $group_id)
+               ->where('delete', '0')
+               ->where('company_id', Session::get('user_company_id'))
+               ->get();
+
+            foreach ($groupItems as $it) {
+
+               if (!isset($finalItemMap[$it->id])) {
+                     continue;
+               }
+
+               $row = $finalItemMap[$it->id];
+
+               $price = $row['average_weight'] != 0
+                     ? number_format($row['amount'] / $row['average_weight'], 2, '.', '')
+                     : '0.00';
+
+               fputcsv($file, [
+                     $row['item_name'],
+                     'Item',
+                     $row['average_weight'],
+                     $row['unit_name'],
+                     $price,
+                     $row['amount']
+               ]);
+
+               $total_qty += $row['average_weight'];
+               $total_amount += $row['amount'];
+            }
+
+            $totalPrice = $total_qty != 0
+               ? number_format($total_amount / $total_qty, 2, '.', '')
+               : '0.00';
+
+            fputcsv($file, [
+               'Total',
+               '',
+               $total_qty,
+               '',
+               $totalPrice,
+               $total_amount
+            ]);
+         }
         // ================= ALL ITEMS =================
         elseif ($item_id === 'all') {
 
-            fputcsv($file, ["Item", "Type", "Qty", "Unit", "Amount"]);
+            fputcsv($file, ["Item", "Type", "Qty", "Unit", "Price", "Amount"]);
 
             $total_qty = 0;
             $total_amount = 0;
 
             foreach ($finalItemMap as $row) {
-
+$price = $row['average_weight'] != 0
+    ? number_format($row['amount'] / $row['average_weight'], 2, '.', '')
+    : '0.00';
                 fputcsv($file, [
                     $row['item_name'],
                     "Item",
                     $row['average_weight'],
                     $row['unit_name'],
+                    $price,
                     $row['amount']
                 ]);
 
@@ -1780,7 +1844,18 @@ public function exportMainLedgerCsv(Request $request)
                 $total_amount += $row['amount'];
             }
 
-            fputcsv($file, ["Total", "", $total_qty, "", $total_amount]);
+            $totalPrice = $total_qty != 0
+    ? number_format($total_amount / $total_qty, 2, '.', '')
+    : '0.00';
+
+fputcsv($file, [
+    "Total",
+    "",
+    $total_qty,
+    "",
+    $totalPrice,
+    $total_amount
+]);
         }
 
         fclose($file);
