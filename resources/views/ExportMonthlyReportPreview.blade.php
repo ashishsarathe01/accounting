@@ -92,7 +92,23 @@
         .btn-pdf:hover {
             background: #922b21;
         }
+        .btn-print {
+            background: #0d6efd;
+            color: #fff;
+            border: none;
+            padding: 9px 20px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
 
+        .btn-print:hover {
+            background: #0b5ed7;
+        }
         /* ===== EDIT NOTICE ===== */
 
         .edit-notice {
@@ -475,6 +491,67 @@
         }
 
         @endif
+        @media print {
+
+            .top-bar,
+            .tabs-bar,
+            .edit-notice,
+            .dp-formula-note {
+                display: none !important;
+            }
+
+            body {
+                background: #fff !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            .sheet-panel {
+                display: block !important;
+                page-break-after: always;
+                break-after: page;
+                padding: 0 !important;
+            }
+
+            .sheet-panel:last-child {
+                page-break-after: auto;
+                break-after: auto;
+            }
+
+            .report-page {
+                background: #fff !important;
+
+                /* SAME AS PREVIEW */
+                max-width: 980px !important;
+                margin: 0 auto !important;
+                padding: 30px 36px !important;
+
+                box-shadow: none !important;
+            }
+
+            .editable,
+            input {
+                border: none !important;
+                background: transparent !important;
+                outline: none !important;
+                box-shadow: none !important;
+            }
+
+            /* Creditors page */
+            #sheet2 {
+                page-break-before: always;
+            }
+
+            /* Debtors page */
+            #sheet3 {
+                page-break-before: always;
+            }
+
+            /* FOR BANK page */
+            #sheet4 {
+                page-break-before: always;
+            }
+        }
     </style>
 
 </head>
@@ -528,7 +605,12 @@
                 onclick="submitForm('{{ route('export.monthly.report.download.pdf') }}')">
                 &#x2B07; Download PDF
             </button>
-
+            <button
+                type="button"
+                class="btn-print"
+                onclick="printReport()">
+                🖨 Print
+            </button>
         </div>
 
     </div>
@@ -658,8 +740,8 @@
                         <th style="width:28%;">Particulars of Goods</th>
                         <th style="width:14%;">Where Lying</th>
                         <th style="width:14%;">Quantity In Kgs</th>
-                        <th style="width:14%;">Rate</th>
-                        <th style="width:14%;">Value</th>
+                        <th style="width:12%;">Rate</th>
+                        <th style="width:16%;">Value</th>
                         <th style="width:10%;">Remarks</th>
                     </tr>
                 </thead>
@@ -1376,8 +1458,8 @@
             @if(!$isPdf)
             {{-- DP FORMULA NOTE --}}
             <div
-                class="note-line"
-                style="margin-top:14px; color:#555;">
+    class="note-line dp-formula-note"
+    style="margin-top:14px; color:#555;">
                 D.P = Debtors Availability + Stock Availability
                 <br>
                 Debtors Availability = (Debtors upto 90 − Creditors) × 70%
@@ -1682,7 +1764,10 @@
         return parseFloat(num).toFixed(2)
             .replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     }
-
+function printReport()
+{
+    window.print();
+}
 </script>
 @endif
 </body>
