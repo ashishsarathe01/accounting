@@ -1,4 +1,6 @@
-
+@if((float)$grp['total_receivable'] <= 0)
+    @php return; @endphp
+@endif
 <tr class="group-row {{ $level > 0 ? 'child-of-'.$grp['parent_id'].' hidden' : '' }}"
     data-group="{{ $grp['group_id'] }}">
 
@@ -14,6 +16,9 @@
 
 {{-- DIRECT ACCOUNTS --}}
 @foreach($grp['accounts'] as $acc)
+@if((float)$acc['receivable'] <= 0)
+    @continue
+@endif
 <tr class="child-row child-of-{{ $grp['group_id'] }} hidden">
     <td></td>
     <td style="padding-left: {{ ($level + 1) * 25 }}px;">{{ $acc['party_name'] }} ({{ $acc['credit_days'] ?? '-' }}/{{ $acc['due_day'] ?? '-' }})<br>{{ $acc['mobile'] }}</td>
