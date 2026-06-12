@@ -2124,6 +2124,7 @@ public function sendGstr1ToGSTMaster(Request $request){
     $company_id = Session::get('user_company_id');
     $from_date = $request->from_date;
     $to_date = $request->to_date;
+   
     if (!$merchant_gst || !$company_id || !$from_date || !$to_date) {
         return response()->json(['error' => 'Missing required filters'], 400);
     }
@@ -3698,10 +3699,18 @@ if (!$b2cSmallIds->isEmpty()) {
         );
         
     }
-    
+    if($request->download_json_status==1){
+        $response = array(
+            'status' => true,
+            'message' => 'Json File',
+            'data' => $gstr1_request
+        );
+        return json_encode($response);
+        
+    }
     // echo "<pre>";
     // echo json_encode($gstr1_request);
-    //die;
+   // die;
     //Call retsave Api 
     
     $ret_period = date('mY',strtotime($from_date));

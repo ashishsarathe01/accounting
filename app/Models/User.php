@@ -57,7 +57,7 @@ class User extends Authenticatable
                 $comp_ids = \App\Models\Companies::where('user_id', $comp->user_id)
                                                 ->pluck('id');
                 
-                $user_data = User::whereIn('company_id',$comp_ids)
+                $user_data = User::whereIn('company_id',[Session()->get('user_company_id')])
                                 ->where('mobile_no',$this->mobile_no)
                                 ->first();
                 

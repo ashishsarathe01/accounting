@@ -708,13 +708,15 @@
                                     <input type="hidden" name="company_id" value="{{ $company_id }}">
                                     <input type="hidden" name="from_date" value="{{ $from_date }}">
                                     <input type="hidden" name="to_date" value="{{ $to_date }}">
-                                
+                                    <input type="hidden" name="download_json_status" id="download_json_status" value="0">
                                     <div class="d-flex justify-content-end gap-2 mt-3 mb-4">
                                 
                                         <button class="btn btn-primary" type="submit">
                                             Send to GST Portal
                                         </button>
-                                
+                                        <button type="button" class="btn btn-success" id="download_json">
+                                                Download Json
+                                            </button>
                                         @if($einvoice_status != 1)
                                             <button type="button" class="btn btn-danger" id="resetGstr1Btn">
                                                 Reset GSTR-1
@@ -1118,13 +1120,32 @@
             data: form.serialize(),
 
             success: function (response) {
-
+                $("#download_json_status").val(0);
                 if (response != "") {
-
+                    
                     let obj = JSON.parse(response);
+                    
                     if (obj.status === true && obj.message === 'TOKEN-OTP') {
                         $('#fgstin').val($("#merchant_gst").val());
                         $('#otpModal').modal('show');
+
+                    }else if(obj.status === true && obj.message === 'Json File'){
+                        let dataStr = JSON.stringify(obj.data, null, 2);
+                        let blob = new Blob([dataStr], {
+                            type: 'application/json'
+                        });
+
+                        let url = window.URL.createObjectURL(blob);
+
+                        let a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'gstr1.json';
+                        document.body.appendChild(a);
+                        a.click();
+
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+
                     }else if (obj.status == true) {
 
                         alert(obj.message);
@@ -1224,8 +1245,8 @@
                     'B2B_4A': '4A - Taxable outward supplies made to registered persons (other than reverse charge)',
                     'B2B_4B': '4B - Supplies attracting reverse charge',
                     'B2CL': '5A - B2CL (Large)',
-                    'B2CS': '7 - B2CS',
                     'EXP': '6A - Exports',
+                    'B2CS': '7 - B2CS',
                     'CDNR': '9B - Credit / Debit Notes (Registered)',
                     'CDNUR': '9B - Credit / Debit Notes (Unregistered)',
                     'HSN': '12 - HSN Summary',
@@ -1410,7 +1431,7 @@
         let savedSummary = localStorage.getItem(summaryKey);
 
         if (savedSummary) {
-
+            
             $('#gstr1-summary-container').html(savedSummary);
             $('#proceedToFilingBtn').show();
             $('#fill-tab-2').tab('show');
@@ -1468,6 +1489,11 @@ $(document).on('click', '#proceedToFilingBtn', function () {
                 alert("Error verifying OTP");
             }
         });
+    });
+
+    $("#download_json").click(function(){
+        $("#download_json_status").val(1);
+        $('#gst_portal_form').submit();
     });
 </script>
 

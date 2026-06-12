@@ -790,6 +790,7 @@ class AuthController extends Controller{
                                                 ->first();
         $user_data = User::where('id',$comp->user_id)
                         ->where('mobile_no',Session::get('user_mobile_no'))
+                        ->where('type','OWNER')
                         ->first();
         if($user_data){
             Companies::where('user_id',Session::get('user_id'))->update(['default_company'=>'1']);

@@ -5018,7 +5018,7 @@ class SalesController extends Controller
             }
          }else{
             if(isset($result->status_desc)){
-               $error = json_decode($result->status_desc);
+               $error = $result->status_desc;
                $response = [
                               'success' => false,
                               'data'    => "",
@@ -5275,12 +5275,21 @@ class SalesController extends Controller
                   return response()->json($response, 200);
                }            
             }else{
-               if(isset($result->status_desc)){
-                  $error = json_decode($result->status_desc);
+                // echo "<pre>";
+                // print_r($result);
+               if(isset($result->status_desc) && !empty($result->status_desc) && isset($result->status_desc[0]->ErrorMessage)){
+                  $error = $result->status_desc;
                   $response = [
                      'success' => false,
                      'data'    => "",
                      'message' => $error[0]->ErrorMessage,
+                  ];
+                  return response()->json($response, 200);
+               }else{
+                   $response = [
+                     'success' => false,
+                     'data'    => "",
+                     'message' => "Something Went Wrong",
                   ];
                   return response()->json($response, 200);
                }

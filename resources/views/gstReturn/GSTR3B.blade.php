@@ -102,19 +102,19 @@
                                                             
                                                             <tr>
                                                                 <td>Integrated Tax</td>
-                                                                <td>₹0.00</td>
+                                                                <td>₹ {{ formatIndianNumber($Data31['IGST'], 2) }}</td>
                                                                 <td>₹{{ formatIndianNumber($totalIamt, 2) }}</td>
                                                             </tr>
                                                             
                                                             <tr>
                                                                 <td>Central Tax</td>
-                                                                <td>₹0.00</td>
+                                                                <td>₹ {{ formatIndianNumber($Data31['CGST'], 2) }}</td>
                                                                 <td>₹{{ formatIndianNumber($totalCamt, 2) }}</td>
                                                             </tr>
                                                             
                                                             <tr>
                                                                 <td>State/UT Tax</td>
-                                                                <td>₹0.00</td>
+                                                                <td>₹ {{ formatIndianNumber($Data31['SGST'], 2) }}</td>
                                                                 <td>₹{{ formatIndianNumber($totalSamt, 2) }}</td>
                                                             </tr>
                                                             
@@ -206,6 +206,7 @@
                                                                         'to_date' => $to_date,
                                                                          'data'       => json_encode($data)
                                                                     ]);
+                                                                    $books_igst_amount = 0;$books_cgst_amount = 0;$books_sgst_amount = 0;
                                                                 @endphp
                                                             <td class="d-flex justify-content-between align-items-center">
                                                                 <span>Portal</span>

@@ -82,87 +82,133 @@ class GSTR3BController extends Controller
             return json_encode($response);
         }
         $state_code = substr(trim($request->series), 0, 2); // e.g., "07"
+        //Get 3.1 Data
+        $company_id = Session::get('user_company_id');
+        $type = "";
+        $b2cSaleIds = DB::table('sales')
+                        ->where('merchant_gst', $merchant_gst)
+                        ->where('company_id', $company_id)
+                        ->whereBetween('date', [$from_date, $to_date])
+                        ->where('delete', '0')
+                        ->where('status', '1')
+                        ->where(function($q) use ($type) {
+                            // if ($type === 'B2C') {
+                            //     $q->whereNull('billing_gst')->orWhere('billing_gst', '');
+                            // } else {
+                            //     $q->whereNotNull('billing_gst')->where('billing_gst', '!=', '');
+                            // }
+                        })
+                        ->pluck('id');
+        $sale_sundry = DB::table('sale_sundries')
+                            ->select('bill_sundry', DB::raw('SUM(amount) as total_amount'))
+                            ->whereIn('sale_id', $b2cSaleIds)
+                            ->groupBy('bill_sundry')
+                            ->get();
 
-        $gst_token = gstToken::select('txn','created_at')
-                                ->where('company_gstin',$request->series)
-                                ->where('company_id',Session::get('user_company_id'))
-                                ->where('status',1)
-                                ->orderBy('id','desc')
-                                ->first();
-        if($gst_token){
-            $token_expiry = date('d-m-Y H:i:s',strtotime('+6 hour',strtotime($gst_token->created_at)));
-            $current_time = date('d-m-Y H:i:s');
-            if(strtotime($token_expiry)<strtotime($current_time)){
-                $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
-                if($token_res==0){
-                    $response = array(
-                        'status' => false,
-                        'message' => 'Something Went Wrong In Token Generation'
-                    );
-                    return json_encode($response);
-                }
-                $response = array(
-                    'status' => true,
-                    'message' => 'TOKEN-OTP'
-                );
-                return json_encode($response);
+        $bill_sundry = DB::table('bill_sundrys')
+                            ->whereIn('nature_of_sundry',['CGST','SGST','IGST'])
+                            ->where('company_id', $company_id)
+                            ->where('status','1')
+                            ->where('delete','0')
+                            ->pluck('nature_of_sundry','id');
+        // echo "<pre>";
+        // print_r($sale_sundry->toArray());
+        // print_r($bill_sundry->toArray());
+        $arr3 = [];
+        foreach($sale_sundry as $sundry){
+            if(isset($bill_sundry[$sundry->bill_sundry])){
+                $arr3[$bill_sundry[$sundry->bill_sundry]] = $sundry->total_amount;
             }
-            $txn = $gst_token->txn;
-        }else{
-            $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
-            if($token_res==0){
-                    $response = array(
-                        'status' => false,
-                        'message' => 'Something Went Wrong In Token Generation'
-                    );
-                    return json_encode($response);
-                }
-            $response = array(
-                    'status' => true,
-                    'message' => 'TOKEN-OTP'
-            );
-            return json_encode($response);
         }
-        //Gst Credenatial
-        if(!$this->gstCredentials){
-            $response = [
-                            'success' => false,
-                            'data'    => "",
-                            'message' => "Api Credentails Not Found ",
-                        ];
-            return response()->json($response, 200);
-        }
-        if($this->gstCredentials->status != 1){
-            $response = [
-                            'success' => false,
-                            'data'    => "",
-                            'message' => "Api Credentails Not Found ",
-                        ];
-            return response()->json($response, 200);
-        }
-        $base_url = $this->gstCredentials->base_url;
-        $email_id = $this->gstCredentials->email_id;
-        $client_id = $this->gstCredentials->client_id;
-        $client_secret = $this->gstCredentials->client_secret;
-        $ip_address = $this->gstCredentials->ip_address;
+        // print_r($arr);
+        // die;
+        // $gst_token = gstToken::select('txn','created_at')
+        //                         ->where('company_gstin',$request->series)
+        //                         ->where('company_id',Session::get('user_company_id'))
+        //                         ->where('status',1)
+        //                         ->orderBy('id','desc')
+        //                         ->first();
+        // if($gst_token){
+        //     $token_expiry = date('d-m-Y H:i:s',strtotime('+6 hour',strtotime($gst_token->created_at)));
+        //     $current_time = date('d-m-Y H:i:s');
+        //     if(strtotime($token_expiry)<strtotime($current_time)){
+        //         $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
+        //         if($token_res==0){
+        //             $response = array(
+        //                 'status' => false,
+        //                 'message' => 'Something Went Wrong In Token Generation'
+        //             );
+        //             return json_encode($response);
+        //         }
+        //         $response = array(
+        //             'status' => true,
+        //             'message' => 'TOKEN-OTP'
+        //         );
+        //         return json_encode($response);
+        //     }
+        //     $txn = $gst_token->txn;
+        // }else{
+        //     $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
+        //     if($token_res==0){
+        //             $response = array(
+        //                 'status' => false,
+        //                 'message' => 'Something Went Wrong In Token Generation'
+        //             );
+        //             return json_encode($response);
+        //         }
+        //     $response = array(
+        //             'status' => true,
+        //             'message' => 'TOKEN-OTP'
+        //     );
+        //     return json_encode($response);
+        // }
+        // //Gst Credenatial
+        // if(!$this->gstCredentials){
+        //     $response = [
+        //                     'success' => false,
+        //                     'data'    => "",
+        //                     'message' => "Api Credentails Not Found ",
+        //                 ];
+        //     return response()->json($response, 200);
+        // }
+        // if($this->gstCredentials->status != 1){
+        //     $response = [
+        //                     'success' => false,
+        //                     'data'    => "",
+        //                     'message' => "Api Credentails Not Found ",
+        //                 ];
+        //     return response()->json($response, 200);
+        // }
+        // $base_url = $this->gstCredentials->base_url;
+        // $email_id = $this->gstCredentials->email_id;
+        // $client_id = $this->gstCredentials->client_id;
+        // $client_secret = $this->gstCredentials->client_secret;
+        // $ip_address = $this->gstCredentials->ip_address;
          
-        $url = $base_url."/gstr3b/retsum";
+        // $url = $base_url."/gstr3b/retsum";
     
-        $response = Http::withHeaders([
-            'Accept' => 'application/json',
-            'gst_username' => $gst_user_name,
-            'state_cd' => $state_code,
-            'ip_address: '.$ip_address,
-            'txn' => $txn,
-            'client_id: '.$client_id,
-            'client_secret: '.$client_secret
-        ])->get($url, [
-            'gstin' => $merchant_gst,
-            'retperiod' => $month,
-            'email' => $email_id,
-        ]);
-        $data = $response->json();
-        return view('gstReturn.GSTR3B', ['data' => $data['data'], 'merchant_gst' => $merchant_gst, 'from_date' =>  $from_date , 'to_date' =>  $to_date ]);
+        // $response = Http::withHeaders([
+        //     'Accept' => 'application/json',
+        //     // 'gst_username' => $gst_user_name,
+        //     // 'state_cd' => $state_code,
+        //     // 'ip_address: '.$ip_address,
+        //     // 'txn' => $txn,
+        //     'client_id: '.$client_id,
+        //     'client_secret: '.$client_secret
+        // ])->get($url, [
+        //     'gstin' => $merchant_gst,
+        //     'ret_period' => $month,
+        //     'email' => $email_id,
+        // ]);
+        // $data = $response->json();
+        $data['data'] = [];
+        return view('gstReturn.GSTR3B', [
+            'data' => $data['data'], 
+            'merchant_gst' => $merchant_gst, 
+            'from_date' =>  $from_date , 
+            'to_date' =>  $to_date ,
+            'Data31' => $arr3
+            ]);
     
     
     }
