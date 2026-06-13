@@ -310,11 +310,11 @@ class JournalController extends Controller
       $prefill_invoice_no = $request->query('invoice_no');
       $prefill_date       = $request->query('invoice_date');
       $prefill_data = $request->query('data');
-      $party_list = Accounts::select('id', 'account_name', 'company_id', 'under_group', 'under_group_type', 'print_name', 'dr_cr', 'address', 'address2', 'state', 'country', 'pin_code', 'gstin')
-                           ->whereIn('company_id', [$com_id,0])
-                                ->where('delete', '=', '0')
-                                ->orderBy('account_name')
-                                ->get();
+      // $party_list = Accounts::select('id', 'account_name', 'company_id', 'under_group', 'under_group_type', 'print_name', 'dr_cr', 'address', 'address2', 'state', 'country', 'pin_code', 'gstin')
+      //                      ->whereIn('company_id', [$com_id,0])
+      //                           ->where('delete', '=', '0')
+      //                           ->orderBy('account_name')
+      //                           ->get();
       $bill_date = date('Y-m-d');
       if(date('m')<=3){
          $current_year = (date('y')-1) . '-' . date('y');
@@ -535,7 +535,7 @@ class JournalController extends Controller
             'code' => 200,
             'message' => 'Data for add journal fetched successfully',
             'data' => [
-                'party_list' => $party_list,
+               //  'party_list' => $party_list,
                 'billsundry' => $billsundry,
                 'prefill_account_id' => $prefill_account_id,
                 'journal_type' => $journal_type,
@@ -564,13 +564,16 @@ class JournalController extends Controller
       public function store(Request $request){
       //dd($request->data);
       //dd($request->all());
+
+      try{
     //   Gate::authorize('action-module',80);
       $jobWorkId = $request->input('job_work_id');
       $spare_part_id  = $request->input('spare_part_id');
       $closePurchase  = (int) $request->input('close_purchase') === 1;
       $itemsJson      = $request->input('items');
       $receivedItems = json_decode($itemsJson, true) ?? [];
-      $financial_year = Session::get('default_fy');
+      $financial_year = $request->input('default_fy');
+      $company_id = $request->input('company_id');
 
       [$startYY, $endYY] = explode('-', $financial_year);
 
@@ -583,16 +586,14 @@ class JournalController extends Controller
          ||
          $request->input('date') > $fy_end_date
       ){
-         return redirect()
-            ->back()
-            ->withInput()
-            ->withErrors([
-               'date' =>
-               'Selected date is outside the current financial year.'
-            ]);
+         return response()->json([
+            'code' => 400,
+            'message' => 'Selected date is outside the current financial year.'
+         ], 400);
+        
       }
       $financial_year = CommonHelper::getFinancialYear($request->input('date'));
-      $series_configuration = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
+      $series_configuration = VoucherSeriesConfiguration::where('company_id', $company_id)
          ->where('series', $request->input('series_no'))
          ->where('configuration_for', 'JOURNAL')
          ->where('status', '1')
@@ -607,7 +608,7 @@ class JournalController extends Controller
          $voucher_no_prefix = $voucher_prefix_input;
       } else {
          $last_voucher_no = DB::table('journals')
-            ->where('company_id', Session::get('user_company_id'))
+            ->where('company_id', $company_id)
             ->where('series_no', $request->input('series_no'))
             ->where('financial_year', $financial_year)
             ->where('delete', '0')
@@ -677,11 +678,11 @@ class JournalController extends Controller
       $journal->voucher_no = $voucher_no;
       $journal->series_no = $request->input('series_no');
       $journal->long_narration = $request->input('long_narration');
-      $journal->company_id = Session::get('user_company_id');
+      $journal->company_id = $company_id;
       $journal->financial_year = $financial_year;
       $journal->claim_gst_status = $request->input('flexRadioDefault');
       $journal->merchant_gst = $request->input('merchant_gst');
-      $journal->created_by = Session::get('user_id');
+      $journal->created_by = $request->input('user_id');
       if($request->input('form_source') && !empty($request->input('form_source'))){
          $journal->form_source = $request->input('form_source');
       }  
@@ -786,9 +787,9 @@ class JournalController extends Controller
             $sundry->bill_sundry = $bill;
             $sundry->amount = $amount;
             $sundry->rate = 0; // optional (or pass from request)
-            $sundry->company_id = Session::get('user_company_id');
+            $sundry->company_id = $company_id;
             $sundry->status = '1';
-            $sundry->created_by = Session::get('user_id');
+            $sundry->created_by = $request->input('user_id');
             $sundry->save();
 
             $type = strtolower($bs->bill_sundry_type);
@@ -806,12 +807,12 @@ class JournalController extends Controller
 
                $ledger->txn_date = $request->input('date');
                $ledger->series_no = $request->input('series_no');
-               $ledger->company_id = Session::get('user_company_id');
+               $ledger->company_id = $company_id;
                $ledger->financial_year = $financial_year;
                $ledger->entry_type = 7;
                $ledger->entry_type_id = $journal->id;
                $ledger->map_account_id = $request->input('vendor');
-               $ledger->created_by = Session::get('user_id');
+               $ledger->created_by = $request->input('user_id');
                $ledger->created_at = date('Y-m-d H:i:s');
                $ledger->save();
             }
@@ -840,7 +841,7 @@ class JournalController extends Controller
             //Journal Entry
             $joundetail = new JournalDetails;
             $joundetail->journal_id = $journal->id;
-            $joundetail->company_id = Session::get('user_company_id');
+            $joundetail->company_id = $company_id;
             $joundetail->type = "Credit";
             $joundetail->account_name = $request->input('vendor');
             $joundetail->credit = $request->input('total_amount');
@@ -858,13 +859,13 @@ class JournalController extends Controller
             $ledger->series_no = $request->input('series_no');
             $ledger->credit = $request->input('total_amount');                       
             $ledger->txn_date = $request->input('date');
-            $ledger->company_id = Session::get('user_company_id');
+            $ledger->company_id = $company_id;
             $ledger->financial_year = $financial_year;
             $ledger->entry_type = 7;
             $ledger->map_account_id = $vendor_mapp_id;
             $ledger->entry_type_id = $journal->id;
             $ledger->entry_type_detail_id = $joundetail->id;
-            $ledger->created_by = Session::get('user_id');
+            $ledger->created_by = $request->input('user_id');
             $ledger->created_at = date('d-m-Y H:i:s');
             $ledger->save();
             //Round Off Caculation
@@ -879,7 +880,7 @@ class JournalController extends Controller
             }            
             $joundetail = new JournalDetails;
             $joundetail->journal_id = $journal->id;
-            $joundetail->company_id = Session::get('user_company_id');
+            $joundetail->company_id = $company_id;
             if($round_off<0){
                $joundetail->credit = abs($round_off);
                $joundetail->type = "Credit";               
@@ -899,13 +900,13 @@ class JournalController extends Controller
             $ledger->account_id = $billsundry->sale_amt_account;
             $ledger->series_no = $request->input('series_no');            
             $ledger->txn_date = $request->input('date');
-            $ledger->company_id = Session::get('user_company_id');
+            $ledger->company_id = $company_id;
             $ledger->financial_year = $financial_year;
             $ledger->entry_type = 7;
             $ledger->map_account_id = $request->input('vendor');
             $ledger->entry_type_id = $journal->id;
             $ledger->entry_type_detail_id = $joundetail->id;
-            $ledger->created_by = Session::get('user_id');
+            $ledger->created_by = $request->input('user_id');
             $ledger->created_at = date('d-m-Y H:i:s');
             $ledger->save();
             $items = $request->input('item');
@@ -927,7 +928,7 @@ class JournalController extends Controller
                // ================= JOURNAL DETAIL =================
                $joundetail = new JournalDetails;
                $joundetail->journal_id = $journal->id;
-               $joundetail->company_id = Session::get('user_company_id');
+               $joundetail->company_id = $company_id;
                $joundetail->type = "Debit";
                $joundetail->account_name = $item;
                $joundetail->debit = $original_amount;
@@ -941,13 +942,13 @@ class JournalController extends Controller
                $ledger->debit = $final_amount;                       
                $ledger->txn_date = $request->input('date');
                $ledger->series_no = $request->input('series_no');
-               $ledger->company_id = Session::get('user_company_id');
+               $ledger->company_id = $company_id;
                $ledger->financial_year = $financial_year;
                $ledger->entry_type = 7;
                $ledger->map_account_id = $request->input('vendor');
                $ledger->entry_type_id = $journal->id;
                $ledger->entry_type_detail_id = $joundetail->id;
-               $ledger->created_by = Session::get('user_id');
+               $ledger->created_by = $request->input('user_id');
                $ledger->created_at = date('d-m-Y H:i:s');
                $ledger->save();
             }
@@ -956,7 +957,7 @@ class JournalController extends Controller
                                        ->where('nature_of_sundry','IGST')
                                        ->where('delete','0')
                                        ->where('status','1')
-                                       ->where('company_id',Session::get('user_company_id'))
+                                       ->where('company_id',$company_id)
                                        ->first();
                $account_name = "";
                if($sundry){
@@ -964,7 +965,7 @@ class JournalController extends Controller
                }
                $joundetail = new JournalDetails;
                $joundetail->journal_id = $journal->id;
-               $joundetail->company_id = Session::get('user_company_id');
+               $joundetail->company_id = $company_id;
                $joundetail->type = "Debit";
                $joundetail->account_name = $account_name;
                $joundetail->debit = round($request->input('igst'), 2);
@@ -976,13 +977,13 @@ class JournalController extends Controller
                $ledger->series_no = $request->input('series_no');
                $ledger->debit = $request->input('igst');                       
                $ledger->txn_date = $request->input('date');
-               $ledger->company_id = Session::get('user_company_id');
+               $ledger->company_id = $company_id;
                $ledger->financial_year = $financial_year;
                $ledger->entry_type = 7;
                $ledger->map_account_id = $request->input('vendor');
                $ledger->entry_type_id = $journal->id;
                $ledger->entry_type_detail_id = $joundetail->id;
-               $ledger->created_by = Session::get('user_id');
+               $ledger->created_by = $request->input('user_id');
                $ledger->created_at = date('d-m-Y H:i:s');
                $ledger->save();
             }else{
@@ -991,7 +992,7 @@ class JournalController extends Controller
                         ->where('nature_of_sundry','CGST')
                         ->where('delete','0')
                         ->where('status','1')
-                        ->where('company_id',Session::get('user_company_id'))
+                        ->where('company_id',$company_id)
                         ->first();
                if($cgst_sundry){
                   $cgst_account_name = $cgst_sundry->purchase_amt_account;
@@ -1000,7 +1001,7 @@ class JournalController extends Controller
                            ->where('nature_of_sundry','SGST')
                            ->where('delete','0')
                            ->where('status','1')
-                           ->where('company_id',Session::get('user_company_id'))
+                           ->where('company_id',$company_id)
                            ->first();
                $sgst_account_name = "";
                if($sgst_sundry){
@@ -1008,7 +1009,7 @@ class JournalController extends Controller
                }
                $joundetail = new JournalDetails;
                $joundetail->journal_id = $journal->id;
-               $joundetail->company_id = Session::get('user_company_id');
+               $joundetail->company_id = $company_id;
                $joundetail->type = "Debit";
                $joundetail->account_name = $cgst_account_name;
                $joundetail->debit = $request->input('cgst');
@@ -1020,18 +1021,18 @@ class JournalController extends Controller
                $ledger->series_no = $request->input('series_no');
                $ledger->debit = $request->input('cgst');                       
                $ledger->txn_date = $request->input('date');
-               $ledger->company_id = Session::get('user_company_id');
+               $ledger->company_id = $company_id;
                $ledger->financial_year = $financial_year;
                $ledger->entry_type = 7;
                $ledger->map_account_id = $request->input('vendor');
                $ledger->entry_type_id = $journal->id;
                $ledger->entry_type_detail_id = $joundetail->id;
-               $ledger->created_by = Session::get('user_id');
+               $ledger->created_by = $request->input('user_id');
                $ledger->created_at = date('d-m-Y H:i:s');
                $ledger->save();
                $joundetail = new JournalDetails;
                $joundetail->journal_id = $journal->id;
-               $joundetail->company_id = Session::get('user_company_id');
+               $joundetail->company_id = $company_id;
                $joundetail->type = "Debit";
                $joundetail->account_name = $sgst_account_name;
                $joundetail->debit = $request->input('sgst');
@@ -1043,13 +1044,13 @@ class JournalController extends Controller
                $ledger->series_no = $request->input('series_no');
                $ledger->debit = $request->input('sgst');                       
                $ledger->txn_date = $request->input('date');
-               $ledger->company_id = Session::get('user_company_id');
+               $ledger->company_id = $company_id;
                $ledger->financial_year = $financial_year;
                $ledger->entry_type = 7;
                $ledger->map_account_id = $request->input('vendor');
                $ledger->entry_type_id = $journal->id;
                $ledger->entry_type_detail_id = $joundetail->id;
-               $ledger->created_by = Session::get('user_id');
+               $ledger->created_by = $request->input('user_id');
                $ledger->created_at = date('d-m-Y H:i:s');
                $ledger->save();
             }
@@ -1081,7 +1082,7 @@ class JournalController extends Controller
                }
                $joundetail = new JournalDetails;
                $joundetail->journal_id = $journal->id;
-               $joundetail->company_id = Session::get('user_company_id');;
+               $joundetail->company_id = $company_id;
                $joundetail->type = $type;
                $joundetail->account_name = $account_names[$key];
                $joundetail->debit = isset($debits[$key]) ? $debits[$key] : '0';
@@ -1101,13 +1102,13 @@ class JournalController extends Controller
                }
                $ledger->series_no = $request->input('series_no');
                $ledger->txn_date = $request->input('date');
-               $ledger->company_id = Session::get('user_company_id');
+               $ledger->company_id = $company_id;
                $ledger->financial_year = $financial_year;
                $ledger->entry_type = 7;
                $ledger->entry_type_id = $journal->id;
                $ledger->entry_narration = $narrations[$key];
                
-               $ledger->created_by = Session::get('user_id');
+               $ledger->created_by = $request->input('user_id');
                $ledger->created_at = date('d-m-Y H:i:s');
                $ledger->save();
             }
@@ -1185,17 +1186,25 @@ class JournalController extends Controller
                }
             }
          }
-         if($request->input('form_source') && !empty($request->input('form_source'))){
-            return redirect('profitloss')->withSuccess('Journal added successfully!');
-         }else{
-            return redirect('journal')->withSuccess('Journal added successfully!');
-         }
+       return response()->json([
+         'code' => 200,
+         'message' => 'Journal created successfully.',
+         'data' => [
+            'journal_id' => $journal->id
+         ]
+       ]);
          
       }else{
          $this->failedMessage();
       }
-   }
-
+   }catch(\Exception $e){
+      return response()->json([
+         'code' => 500,
+         'message' => 'An error occurred while creating the journal.' . $e->getMessage(),
+         'error' => $e->getMessage()
+      ], 500);
+      }
+      }
 
 
 
