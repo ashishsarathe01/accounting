@@ -908,6 +908,7 @@ function calculateAmountNew(id) {
    $(document).on('change', '.consume_item', function () {
       let rowId = $(this).data("id");
       // Set unit fields
+      console.log($('option:selected', this).attr('data-unit_name'));
       $('#consume_unit_tr_' + rowId).val($('option:selected', this).data('unit_name'));
       $('#consume_units_tr_' + rowId).val($('option:selected', this).data('unit_id'));
       // Reset when empty
@@ -1693,9 +1694,14 @@ $(document).on("click", ".remove-gsize-row", function() {
 });
 
 $(document).ready(function () {
-
+    $("#cover-spin").show();
+    
+     
     let params = new URLSearchParams(window.location.search);
-
+    if(params.size==0){
+        $("#cover-spin").hide();
+        return;
+    }
     let entryDate = params.get('entry_date');
     let items = params.get('items');
 
@@ -1706,17 +1712,17 @@ $(document).ready(function () {
     if (!items) return;
 
     items = JSON.parse(items);
-   
+  
     if (items.length === 0) return;
 
     // STEP 1: REMOVE DEFAULT FIRST ROW
     $("#tr_1").remove();
 
     let optionHtml = consumedItemsOptions;
-
+    
     let rowCount = 0;
-
-    items.forEach(function (item) {
+ 
+    items.forEach(function (item,index) {
 
         rowCount++;
 
@@ -1724,10 +1730,10 @@ $(document).ready(function () {
 
         // SELECT ITEM
         let options = optionHtml.replace(
-            'value="' + item.item_id + '"',
+            'value=""',
             'value="' + item.item_id + '" selected'
         );
-
+        
         let row = `
         <tr id="tr_${rowCount}" class="font-14 font-heading bg-white">
 
@@ -1793,20 +1799,30 @@ $(document).ready(function () {
         `;
 
         $("#consum_total").before(row);
+        if (index === items.length - 1) {
+        setTimeout(() => {
+            $(".consume_item").trigger('change');
+            $(".consume_weight").trigger('keyup');
+            $(".consume_price").trigger('keyup');
+            $("#cover-spin").hide();
+        }, 2000);
+    }
+        
     });
 
     // INIT SELECT2 AGAIN
-    $(".select2-single").select2();
+    //$(".select2-single").select2();
 
     // 🔥 IMPORTANT: TRIGGER CHANGE → THIS FILLS UNIT + PRICE LOGIC
     
-    setTimeout(() => {
-        $(".consume_item").trigger('change');
-
-        // 🔥 TRIGGER AMOUNT CALCULATION
-        $(".consume_weight").trigger('keyup');
-        $(".consume_price").trigger('keyup');
-    }, 300);
+    // setTimeout(() => {
+    //     $(".consume_item").trigger('change');
+        
+    //     // 🔥 TRIGGER AMOUNT CALCULATION
+    //     $(".consume_weight").trigger('keyup');
+    //     $(".consume_price").trigger('keyup');
+    //     $("#cover-spin").hide();
+    // }, 2000);
 
 });
 $("#date").change(function () {

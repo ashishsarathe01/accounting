@@ -82,10 +82,11 @@ class GSTR3BController extends Controller
             return json_encode($response);
         }
         $state_code = substr(trim($request->series), 0, 2); // e.g., "07"
-        //Get 3.1 Data
+        //Get 3.1 Data Start
         $company_id = Session::get('user_company_id');
         $type = "";
-        $b2cSaleIds = DB::table('sales')
+        //Sale Data
+        $sale_ids = DB::table('sales')
                         ->where('merchant_gst', $merchant_gst)
                         ->where('company_id', $company_id)
                         ->whereBetween('date', [$from_date, $to_date])
@@ -101,7 +102,7 @@ class GSTR3BController extends Controller
                         ->pluck('id');
         $sale_sundry = DB::table('sale_sundries')
                             ->select('bill_sundry', DB::raw('SUM(amount) as total_amount'))
-                            ->whereIn('sale_id', $b2cSaleIds)
+                            ->whereIn('sale_id', $sale_ids)
                             ->groupBy('bill_sundry')
                             ->get();
 
@@ -111,16 +112,296 @@ class GSTR3BController extends Controller
                             ->where('status','1')
                             ->where('delete','0')
                             ->pluck('nature_of_sundry','id');
-        // echo "<pre>";
-        // print_r($sale_sundry->toArray());
-        // print_r($bill_sundry->toArray());
-        $arr3 = [];
+        //Taxable Amount
+        $sale_taxable_amount = DB::table('sales')
+                        ->where('merchant_gst', $merchant_gst)
+                        ->where('company_id', $company_id)
+                        ->whereBetween('date', [$from_date, $to_date])
+                        ->where('delete', '0')
+                        ->where('status', '1')
+                        ->where(function($q) use ($type) {
+                            // if ($type === 'B2C') {
+                            //     $q->whereNull('billing_gst')->orWhere('billing_gst', '');
+                            // } else {
+                            //     $q->whereNotNull('billing_gst')->where('billing_gst', '!=', '');
+                            // }
+                        })
+                        ->sum('taxable_amt');
+        $sale_arr = [];
         foreach($sale_sundry as $sundry){
             if(isset($bill_sundry[$sundry->bill_sundry])){
-                $arr3[$bill_sundry[$sundry->bill_sundry]] = $sundry->total_amount;
+                $sale_arr[$bill_sundry[$sundry->bill_sundry]] = $sundry->total_amount;
             }
         }
-        // print_r($arr);
+        $sale_arr['TAXABLE'] = $sale_taxable_amount;
+        //Credit Note
+        $sale_return_ids = DB::table('sales_returns')
+                        ->where('merchant_gst', $merchant_gst)
+                        ->where('company_id', $company_id)
+                        ->whereBetween('date', [$from_date, $to_date])
+                        ->where('delete', '0')
+                        ->where('status', '1')
+                        ->where('voucher_type', 'SALE')
+                        ->where('sr_nature', 'WITH GST')
+                        ->where(function($q) use ($type) {
+                            // if ($type === 'B2C') {
+                            //     $q->whereNull('billing_gst')->orWhere('billing_gst', '');
+                            // } else {
+                            //     $q->whereNotNull('billing_gst')->where('billing_gst', '!=', '');
+                            // }
+                        })
+                        ->pluck('id');
+        $sale_return_sundry = DB::table('sale_return_sundries')
+                            ->select('bill_sundry', DB::raw('SUM(amount) as total_amount'))
+                            ->whereIn('sale_return_id', $sale_return_ids)
+                            ->groupBy('bill_sundry')
+                            ->get();
+        $sale_return_taxable_amount = DB::table('sales_returns')
+                        ->where('merchant_gst', $merchant_gst)
+                        ->where('company_id', $company_id)
+                        ->whereBetween('date', [$from_date, $to_date])
+                        ->where('delete', '0')
+                        ->where('status', '1')
+                        ->where('voucher_type', 'SALE')
+                        ->where('sr_nature', 'WITH GST')
+                        ->where(function($q) use ($type) {
+                            // if ($type === 'B2C') {
+                            //     $q->whereNull('billing_gst')->orWhere('billing_gst', '');
+                            // } else {
+                            //     $q->whereNotNull('billing_gst')->where('billing_gst', '!=', '');
+                            // }
+                        })                        
+                        ->sum('taxable_amt');
+        $sale_return_arr = [];
+        foreach($sale_return_sundry as $sundry){
+            if(isset($bill_sundry[$sundry->bill_sundry])){
+                $sale_return_arr[$bill_sundry[$sundry->bill_sundry]] = $sundry->total_amount;
+            }
+        }
+        $sale_return_arr['TAXABLE'] = $sale_return_taxable_amount;
+        //Debit Note
+        $purchase_return_ids = DB::table('purchase_returns')
+                        ->where('merchant_gst', $merchant_gst)
+                        ->where('company_id', $company_id)
+                        ->whereBetween('date', [$from_date, $to_date])
+                        ->where('delete', '0')
+                        ->where('status', '1')
+                        ->where('voucher_type', 'SALE')
+                        ->where('sr_nature', 'WITH GST')
+                        ->where(function($q) use ($type) {
+                            // if ($type === 'B2C') {
+                            //     $q->whereNull('billing_gst')->orWhere('billing_gst', '');
+                            // } else {
+                            //     $q->whereNotNull('billing_gst')->where('billing_gst', '!=', '');
+                            // }
+                        })
+                        ->pluck('id');
+        $purchase_return_sundry = DB::table('purchase_return_sundries')
+                            ->select('bill_sundry', DB::raw('SUM(amount) as total_amount'))
+                            ->whereIn('purchase_return_id', $purchase_return_ids)
+                            ->groupBy('bill_sundry')
+                            ->get();
+        $purchase_return_taxable_amount = DB::table('purchase_returns')
+                        ->where('merchant_gst', $merchant_gst)
+                        ->where('company_id', $company_id)
+                        ->whereBetween('date', [$from_date, $to_date])
+                        ->where('delete', '0')
+                        ->where('status', '1')
+                        ->where('voucher_type', 'SALE')
+                        ->where('sr_nature', 'WITH GST')
+                        ->where(function($q) use ($type) {
+                            // if ($type === 'B2C') {
+                            //     $q->whereNull('billing_gst')->orWhere('billing_gst', '');
+                            // } else {
+                            //     $q->whereNotNull('billing_gst')->where('billing_gst', '!=', '');
+                            // }
+                        })
+                        ->sum('taxable_amt');
+        $purchase_return_arr = [];
+        foreach($purchase_return_sundry as $sundry){
+            if(isset($bill_sundry[$sundry->bill_sundry])){
+                $purchase_return_arr[$bill_sundry[$sundry->bill_sundry]] = $sundry->total_amount;
+            }
+        }
+        $purchase_return_arr['TAXABLE'] = $purchase_return_taxable_amount;
+        $result31 = [];
+        foreach ($sale_arr as $key => $value) {
+            $result31[$key] =
+                ($sale_arr[$key] ?? 0) -
+                ($sale_return_arr[$key] ?? 0) +
+                ($purchase_return_arr[$key] ?? 0);
+        }
+        //         echo "<pre>";
+        // print_r($sale_arr);
+        // print_r($sale_return_arr);
+        // print_r($purchase_return_arr);
+        // print_r($result);
+        // die;
+        //Get 3.1 Data End
+        //Get 4 Data Start
+        //Purchase Data
+        $purchase_ids = DB::table('purchases')
+                        ->where('merchant_gst', $merchant_gst)
+                        ->where('company_id', $company_id)
+                        ->whereBetween('date', [$from_date, $to_date])
+                        ->where('delete', '0')
+                        ->where('status', '1')
+                        ->where(function($q) use ($type) {
+                            // if ($type === 'B2C') {
+                            //     $q->whereNull('billing_gst')->orWhere('billing_gst', '');
+                            // } else {
+                            //     $q->whereNotNull('billing_gst')->where('billing_gst', '!=', '');
+                            // }
+                        })
+                        ->pluck('id');
+        $purchase_sundry = DB::table('purchase_sundries')
+                            ->select('bill_sundry', DB::raw('SUM(amount) as total_amount'))
+                            ->whereIn('purchase_id', $purchase_ids)
+                            ->groupBy('bill_sundry')
+                            ->get();
+        //Taxable Amount
+        $purchase_taxable_amount = DB::table('purchases')
+                        ->where('merchant_gst', $merchant_gst)
+                        ->where('company_id', $company_id)
+                        ->whereBetween('date', [$from_date, $to_date])
+                        ->where('delete', '0')
+                        ->where('status', '1')
+                        ->where(function($q) use ($type) {
+                            // if ($type === 'B2C') {
+                            //     $q->whereNull('billing_gst')->orWhere('billing_gst', '');
+                            // } else {
+                            //     $q->whereNotNull('billing_gst')->where('billing_gst', '!=', '');
+                            // }
+                        })
+                        ->sum('taxable_amt');
+        $purchase_arr = [];
+        foreach($purchase_sundry as $sundry){
+            if(isset($bill_sundry[$sundry->bill_sundry])){
+                $purchase_arr[$bill_sundry[$sundry->bill_sundry]] = $sundry->total_amount;
+            }
+        }
+        $purchase_arr['TAXABLE'] = $purchase_taxable_amount;
+        //Credit Note
+        $sale_return_ids = DB::table('sales_returns')
+                        ->where('merchant_gst', $merchant_gst)
+                        ->where('company_id', $company_id)
+                        ->whereBetween('date', [$from_date, $to_date])
+                        ->where('delete', '0')
+                        ->where('status', '1')
+                        ->where('voucher_type', 'PURCHASE')
+                        ->where('sr_nature', 'WITH GST')
+                        ->where(function($q) use ($type) {
+                            // if ($type === 'B2C') {
+                            //     $q->whereNull('billing_gst')->orWhere('billing_gst', '');
+                            // } else {
+                            //     $q->whereNotNull('billing_gst')->where('billing_gst', '!=', '');
+                            // }
+                        })
+                        ->pluck('id');
+        $sale_return_sundry = DB::table('sale_return_sundries')
+                            ->select('bill_sundry', DB::raw('SUM(amount) as total_amount'))
+                            ->whereIn('sale_return_id', $sale_return_ids)
+                            ->groupBy('bill_sundry')
+                            ->get();
+        $sale_return_taxable_amount = DB::table('sales_returns')
+                        ->where('merchant_gst', $merchant_gst)
+                        ->where('company_id', $company_id)
+                        ->whereBetween('date', [$from_date, $to_date])
+                        ->where('delete', '0')
+                        ->where('status', '1')
+                        ->where('voucher_type', 'PURCHASE')
+                        ->where('sr_nature', 'WITH GST')
+                        ->where(function($q) use ($type) {
+                            // if ($type === 'B2C') {
+                            //     $q->whereNull('billing_gst')->orWhere('billing_gst', '');
+                            // } else {
+                            //     $q->whereNotNull('billing_gst')->where('billing_gst', '!=', '');
+                            // }
+                        })                        
+                        ->sum('taxable_amt');
+        $sale_return_arr = [];
+        foreach($sale_return_sundry as $sundry){
+            if(isset($bill_sundry[$sundry->bill_sundry])){
+                $sale_return_arr[$bill_sundry[$sundry->bill_sundry]] = $sundry->total_amount;
+            }
+        }
+        $sale_return_arr['TAXABLE'] = $sale_return_taxable_amount;
+        //Debit Note
+        $purchase_return_ids = DB::table('purchase_returns')
+                        ->where('merchant_gst', $merchant_gst)
+                        ->where('company_id', $company_id)
+                        ->whereBetween('date', [$from_date, $to_date])
+                        ->where('delete', '0')
+                        ->where('status', '1')
+                        ->where('voucher_type', 'PURCHASE')
+                        ->where('sr_nature', 'WITH GST')
+                        ->where(function($q) use ($type) {
+                            // if ($type === 'B2C') {
+                            //     $q->whereNull('billing_gst')->orWhere('billing_gst', '');
+                            // } else {
+                            //     $q->whereNotNull('billing_gst')->where('billing_gst', '!=', '');
+                            // }
+                        })
+                        ->pluck('id');
+        $purchase_return_sundry = DB::table('purchase_return_sundries')
+                            ->select('bill_sundry', DB::raw('SUM(amount) as total_amount'))
+                            ->whereIn('purchase_return_id', $purchase_return_ids)
+                            ->groupBy('bill_sundry')
+                            ->get();
+        $purchase_return_taxable_amount = DB::table('purchase_returns')
+                        ->where('merchant_gst', $merchant_gst)
+                        ->where('company_id', $company_id)
+                        ->whereBetween('date', [$from_date, $to_date])
+                        ->where('delete', '0')
+                        ->where('status', '1')
+                        ->where('voucher_type', 'PURCHASE')
+                        ->where('sr_nature', 'WITH GST')
+                        ->where(function($q) use ($type) {
+                            // if ($type === 'B2C') {
+                            //     $q->whereNull('billing_gst')->orWhere('billing_gst', '');
+                            // } else {
+                            //     $q->whereNotNull('billing_gst')->where('billing_gst', '!=', '');
+                            // }
+                        })
+                        ->sum('taxable_amt');
+        $purchase_return_arr = [];
+        foreach($purchase_return_sundry as $sundry){
+            if(isset($bill_sundry[$sundry->bill_sundry])){
+                $purchase_return_arr[$bill_sundry[$sundry->bill_sundry]] = $sundry->total_amount;
+            }
+        }
+        $purchase_return_arr['TAXABLE'] = $purchase_return_taxable_amount;
+        //Journal Data
+        $journal_ids = DB::table('journals')
+                        ->where('merchant_gst', $merchant_gst)
+                        ->where('company_id', $company_id)
+                        ->where('claim_gst_status','YES')
+                        ->whereBetween('date', [$from_date, $to_date])
+                        ->where('delete', '0')
+                        ->where('status', '1')
+                        ->pluck('id');
+        $journal_sundry = DB::table('journal_sundries')
+                            ->select('bill_sundry', DB::raw('SUM(amount) as total_amount'))
+                            ->whereIn('journal_id', $journal_ids)
+                            ->groupBy('bill_sundry')
+                            ->get();
+        $journal_arr = [];
+        foreach($journal_sundry as $sundry){
+            if(isset($bill_sundry[$sundry->bill_sundry])){
+                $journal_arr[$bill_sundry[$sundry->bill_sundry]] = $sundry->total_amount;
+            }
+        }
+        $journal_arr['TAXABLE'] = 0;
+        
+        $result4 = [];
+        foreach ($purchase_arr as $key => $value) {
+            $result4[$key] =
+                ($purchase_arr[$key] ?? 0) +
+                ($journal_arr[$key] ?? 0) +
+                ($sale_return_arr[$key] ?? 0) -
+                ($purchase_return_arr[$key] ?? 0);
+        }
+        // print_r($result4);
         // die;
         // $gst_token = gstToken::select('txn','created_at')
         //                         ->where('company_gstin',$request->series)
@@ -207,7 +488,8 @@ class GSTR3BController extends Controller
             'merchant_gst' => $merchant_gst, 
             'from_date' =>  $from_date , 
             'to_date' =>  $to_date ,
-            'Data31' => $arr3
+            'Data31' => $result31,
+            'Data4' => $result4
             ]);
     
     

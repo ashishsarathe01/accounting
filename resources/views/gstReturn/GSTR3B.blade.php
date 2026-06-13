@@ -96,7 +96,7 @@
                                                         </tr>
                                                        <tr>
                                                                 <td>Taxable</td>
-                                                                <td>₹00.00</td>
+                                                                <td>₹ {{ formatIndianNumber($Data31['TAXABLE'], 2) }}</td>
                                                                 <td>₹{{ formatIndianNumber($totalTxval, 2) }}</td>
                                                             </tr>
                                                             
@@ -217,17 +217,17 @@
                                                         </tr>
                                                         <tr>
                                                             <td>Integrated Tax</td>
-                                                            <td>₹{{formatIndianNumber($books_igst_amount,2)}}</td>
+                                                            <td>₹ {{ formatIndianNumber($Data4['IGST'], 2) }}</td>
                                                             <td>₹{{ formatIndianNumber($data['itc_elg']['itc_net']['iamt'] ?? 0, 2) }}</td>
                                                         </tr>
                                                         <tr>
                                                             <td>Central Tax</td>
-                                                            <td>₹{{formatIndianNumber($books_cgst_amount,2)}}</td>
+                                                            <td>₹ {{ formatIndianNumber($Data4['CGST'] ?? 0, 2) }}</td>
                                                             <td>₹{{ formatIndianNumber($data['itc_elg']['itc_net']['camt'] ?? 0, 2) }}</td>
                                                         </tr>
                                                         <tr>
                                                             <td>State/UT Tax</td>
-                                                            <td>₹{{formatIndianNumber($books_sgst_amount,2)}}</td>
+                                                            <td>₹ {{ formatIndianNumber($Data4['SGST'] ?? 0, 2) }}</td>
                                                             <td>₹{{ formatIndianNumber($data['itc_elg']['itc_net']['samt'] ?? 0, 2) }}</td>
                                                         </tr>
                                                         <tr>
