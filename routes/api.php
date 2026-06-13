@@ -306,6 +306,8 @@ Route::middleware('auth:api')->group(function(){
     |--------------------------------------------------------------------------
     */
     Route::post('journal-list', [JournalController::class, 'index']);
+    Route::post('create-journal-data', [JournalController::class, 'create']);
+        Route::post('calculate-gst-journal', [JournalController::class, 'calculateGst']);
     // Route::get('journals/{id}', [JournalController::class, 'show']);
     // Route::post('journals/store', [JournalController::class, 'store']);
     // Route::post('journals/update/{id}', [JournalController::class, 'update']);
