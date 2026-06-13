@@ -192,8 +192,9 @@ class GSTR2AController extends Controller
             $result = json_decode($response);
             if(isset($result->details)){
                 if($result->details=='Request failed with status code 403'){
+                    $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->gstin);
                     $response = array(
-                        'status' => false,
+                        'status' => true,
                         'message' => "TOKEN-OTP",
                         'data' => ""
                     );
