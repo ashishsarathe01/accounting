@@ -7,6 +7,10 @@ use App\Models\BillSundrys;
 use Illuminate\Http\Request;
 use App\Models\Accounts;
 use App\Models\Contra;
+use App\Models\Journal;
+use App\Models\JournalDetails;
+use App\Models\JournalSundries;
+use App\Models\AccountGroups;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\URL;
 use App\Models\ContraDetails;
@@ -561,11 +565,35 @@ class JournalController extends Controller
 
 
 
-      public function store(Request $request){
+
+public function store(Request $request){
       //dd($request->data);
       //dd($request->all());
 
       try{
+
+    $validator = Validator::make($request->all(), [
+         
+         'user_id' => 'required',
+         'company_id' => 'required',
+         'default_fy' => 'required',
+         'flexRadioDefault' => 'required',
+         'series_no' => 'required'
+      ], [
+          
+            'user_id.required' => 'User ID is required.',
+            'company_id.required' => 'Company ID is required.',
+            'default_fy.required' => 'Financial Year is required.',
+            'flexRadioDefault.required' => 'Claim GST status is required.',
+            'series_no.required' => 'Series number is required.'
+      ]);
+   if ($validator->fails()) {
+    return response()->json([
+        'code' => 400,
+        'message' => $validator->errors()->first()
+    ], 400);
+}
+
     //   Gate::authorize('action-module',80);
       $jobWorkId = $request->input('job_work_id');
       $spare_part_id  = $request->input('spare_part_id');
