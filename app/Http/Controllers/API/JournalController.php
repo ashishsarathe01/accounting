@@ -10,6 +10,7 @@ use App\Models\Contra;
 use App\Models\Journal;
 use App\Models\JournalDetails;
 use App\Models\JournalSundries;
+use App\Models\JournalSundry;
 use App\Models\AccountGroups;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\URL;
@@ -1233,6 +1234,793 @@ public function store(Request $request){
       ], 500);
       }
       }
+
+
+
+
+   public function edit(Request $request){
+      try
+   {
+      
+$validator = Validator::make($request->all(), [
+         'journal_id' => 'required',
+         'user_id' => 'required',
+         'company_id' => 'required',
+         'default_fy' => 'required',
+      ], [
+            'journal_id.required' => 'Journal ID is required.',
+            'user_id.required' => 'User ID is required.',
+            'company_id.required' => 'Company ID is required.',
+            'default_fy.required' => 'Financial Year is required.',
+      ]);
+   if ($validator->fails()) {
+    return response()->json([
+        'code' => 400,
+        'message' => $validator->errors()->first()
+    ], 400);
+}
+      $id = $request->input('journal_id');
+      // Gate::authorize('action-module',53);
+       $financial_year = request()->input('default_fy');
+       $user_id = $request->input('user_id');
+      [$startYY, $endYY] = explode('-', $financial_year);
+
+      $fy_start_date = '20' . $startYY . '-04-01'; 
+      $fy_end_date   = '20' . $endYY   . '-03-31';
+      $journal = Journal::find($id);
+      $com_id = $request->input('company_id');
+      $journal_detail = JournalDetails::where('journal_id', '=', $id)->where('delete', '=', '0')->get();
+      // $party_list = Accounts::whereIn('company_id', [$com_id,0])
+      //                           ->where('delete', '=', '0')
+      //                           ->orderBy('account_name')
+      //                           ->get();
+      // $companyData = Companies::where('id', $com_id)->first();
+      // $GstSettings = (object)NULL;
+      // $GstSettings->series = array();
+      // $mat_series = array();
+      // if($companyData->gst_config_type == "single_gst") {
+      //    $GstSettings = DB::table('gst_settings')->where(['company_id' => $com_id, 'gst_type' => "single_gst"])->first();
+      //    $mat_series = DB::table('gst_settings')
+      //                      ->where(['company_id' => $com_id, 'gst_type' => "single_gst"])
+      //                      ->get();
+      //    $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series','branch_invoice_start_from as invoice_start_from')
+      //                      ->where(['delete' => '0', 'company_id' => $com_id,'gst_setting_id'=>$mat_series[0]->id])
+      //                      ->get();
+      //    if(count($branch)>0){
+      //       $mat_series = $mat_series->merge($branch);
+      //    }
+      // }else if($companyData->gst_config_type == "multiple_gst") {
+      //    $GstSettings = DB::table('gst_settings_multiple')->where(['company_id' => $com_id, 'gst_type' => "multiple_gst"])->first();
+      //    $mat_series = DB::table('gst_settings_multiple')
+      //                      ->select('id','gst_no','mat_center','series','invoice_start_from')
+      //                      ->where(['company_id' => $com_id, 'gst_type' => "multiple_gst"])
+      //                      ->get();
+      //    foreach ($mat_series as $key => $value) {
+      //       $branch = GstBranch::select('id','gst_number as gst_no','branch_matcenter as mat_center','branch_series as series','branch_invoice_start_from as invoice_start_from')
+      //                   ->where(['delete' => '0', 'company_id' => $com_id,'gst_setting_multiple_id'=>$value->id])
+      //                   ->get();
+      //       if(count($branch)>0){
+      //          $mat_series = $mat_series->merge($branch);
+      //       }
+      //    }
+      // }
+      
+      // $mat_series = GstBranch::select('branch_series')->where(['delete' => '0', 'company_id' => Session::get('user_company_id')])->get()->toArray();
+      // if(!empty($GstSettings->series)) {
+      //    $mat_series[] = array("branch_series" => $GstSettings->series);
+      // }
+   //   $top_groups = [3, 11];
+
+      // Step 2: Get all child group IDs recursively
+      // $all_groups = [];
+      // foreach ($top_groups as $group_id) {
+      //    $all_groups[] = $group_id; // include the top group itself
+      //    $all_groups = array_merge($all_groups, CommonHelper::getAllChildGroupIds($group_id, Session::get('user_company_id')));
+      // }
+      // $groups = array_unique($all_groups);
+      // $vendors = Accounts::select('id','account_name','gstin')
+      //          ->whereIn('company_id',[$com_id,0])
+      //           ->whereIn('under_group',$groups)
+      //          ->where('status','1')
+      //          ->where('delete','0')
+      //          ->orderBy('account_name')
+      //          ->get();
+      // $fixed_asset_group = AccountGroups::where('heading','6')
+      //                                  ->whereIn('company_id',[Session::get('user_company_id'),0])
+      //                                  ->where('heading_type',null)
+      //                                  ->where('heading_type','')
+      //                                  ->pluck('id');
+      // $fixed_asset_group->push(12);
+      // $fixed_asset_group->push(15);
+      // $fixed_asset_group->push(6);
+      // $sub_group = AccountGroups::whereIn('heading',$fixed_asset_group)
+      //                                  ->where('heading_type',"group")
+      //                                  ->pluck('id');
+      // $fixed_asset_group->merge($sub_group);
+      // $fixed_asset_group = CommonHelper::getAllChildGroupIds(6,$com_id);
+      // array_push($fixed_asset_group, 6);
+      // array_push($fixed_asset_group, 12);
+      // array_push($fixed_asset_group, 15);
+      // array_push($fixed_asset_group, 13);
+      // array_push($fixed_asset_group, 14);
+      // array_push($fixed_asset_group, 23);
+      // $fixed_asset_group = array_merge($fixed_asset_group, CommonHelper::getAllChildGroupIds(12,$com_id));
+      // $fixed_asset_group = array_merge($fixed_asset_group, CommonHelper::getAllChildGroupIds(15,$com_id));
+      // $fixed_asset_group = array_merge($fixed_asset_group, CommonHelper::getAllChildGroupIds(13,$com_id));
+      // $fixed_asset_group = array_merge($fixed_asset_group, CommonHelper::getAllChildGroupIds(14,$com_id));
+      // $items = Accounts::select('id','account_name')
+      //          ->whereIn('company_id',[$com_id,0])
+      //          ->whereIn('under_group',$fixed_asset_group)
+      //          ->where('status','1')
+      //          ->where('delete','0')
+      //          ->orderBy('account_name')
+      //          ->get();
+
+      // $sundry = BillSundrys::select('purchase_amt_account')
+      //                      ->whereIn('nature_of_sundry',['IGST','CGST','SGST','ROUNDED OFF (+)','ROUNDED OFF (-)'])
+      //                      ->where('company_id',$com_id)
+      //                      ->where('delete','0')
+      //                      ->where('status','1')
+      //                      ->pluck('purchase_amt_account');  
+                           
+      // $sundry_arr = $sundry->toArray();
+      // $state_list = DB::table('states') ->orderBy('state_code') ->get();
+      // foreach ($mat_series as $key => $value) {
+
+      //    $series_configuration = VoucherSeriesConfiguration::where('company_id', $com_id)
+      //       ->where('series', $value->series)
+      //       ->where('configuration_for', 'JOURNAL') 
+      //       ->where('status', '1')
+      //       ->first();
+
+      //    if ($journal->series_no == $value->series) {
+
+      //       $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
+      //       $mat_series[$key]->invoice_start_from = sprintf("%0" . $number_digit . "d", (int)$journal->voucher_no);
+
+      //    } else {
+
+      //       $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
+      //       $lastNumber = DB::table('journals')
+      //          ->where('company_id', $com_id)
+      //          ->where('financial_year', $financial_year)
+      //          ->where('series_no', $value->series)
+      //          ->where('delete', '0')
+      //          ->max(DB::raw("cast(voucher_no as SIGNED)"));
+
+      //       if (!$lastNumber) {
+      //          if ($series_configuration && $series_configuration->manual_numbering == "NO" && $series_configuration->invoice_start != "") {
+      //             $next = (int)$series_configuration->invoice_start;
+      //          } else {
+      //             $next = 1;
+      //          }
+      //       } else {
+      //          $next = ((int)$lastNumber) + 1;
+      //       }
+
+      //       $mat_series[$key]->invoice_start_from = sprintf("%0" . $number_digit . "d", $next);
+      //    }
+
+      //    $invoice_prefix = "";
+      //    $manual_enter_invoice_no = "";
+
+      //    if ($series_configuration) {
+      //       $manual_enter_invoice_no = ($series_configuration->manual_numbering == "YES") ? "1" : "0";
+      //    }
+
+      //    if ($series_configuration && $series_configuration->manual_numbering == "NO") {
+
+      //       if ($series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
+      //          $invoice_prefix .= $series_configuration->prefix_value;
+      //       }
+
+      //       if ($series_configuration->prefix == "ENABLE" && $series_configuration->separator_1 != "") {
+      //          $invoice_prefix .= $series_configuration->separator_1;
+      //       }
+
+      //       if ($series_configuration->year == "PREFIX TO NUMBER") {
+
+      //          if ($series_configuration->year_format == "YY-YY") {
+      //             $invoice_prefix .= Session::get('default_fy');
+      //          } else {
+      //             $fy = explode('-', Session::get('default_fy'));
+      //             $invoice_prefix .= '20' . $fy[0] . '-' . $fy[1];
+      //          }
+
+      //          if ($series_configuration->separator_2 != "") {
+      //             $invoice_prefix .= $series_configuration->separator_2;
+      //          }
+      //       }
+      //       $invoice_prefix .= $mat_series[$key]->invoice_start_from;
+
+      //       if ($series_configuration->year == "SUFFIX TO NUMBER") {
+
+      //          if ($series_configuration->separator_2 != "") {
+      //             $invoice_prefix .= $series_configuration->separator_2;
+      //          }
+
+      //          if ($series_configuration->year_format == "YY-YY") {
+      //             $invoice_prefix .= Session::get('default_fy');
+      //          } else {
+      //             $fy = explode('-', Session::get('default_fy'));
+      //             $invoice_prefix .= '20' . $fy[0] . '-' . $fy[1];
+      //          }
+      //       }
+
+      //       if ($series_configuration->suffix == "ENABLE" && $series_configuration->separator_3 != "") {
+      //          $invoice_prefix .= $series_configuration->separator_3;
+      //       }
+
+      //       if ($series_configuration->suffix == "ENABLE" && $series_configuration->suffix_value != "") {
+      //          $invoice_prefix .= $series_configuration->suffix_value;
+      //       }
+      //    }
+
+      //    $mat_series[$key]->invoice_prefix = $invoice_prefix;
+      //    $mat_series[$key]->manual_enter_invoice_no = $manual_enter_invoice_no;
+      // }
+      // $billsundry = BillSundrys::where('delete', '=', '0')
+      //                            ->where('status', '=', '1')
+      //                            ->whereIn('company_id',[$com_id,0])
+      //                            ->where('nature_of_sundry', 'OTHER')
+      //                            //->OrwhereIn('id',[1,2,3,8,9])
+      //                            ->orderBy('name')
+      //                            ->get();
+      $bill_sundry_rows = DB::table('journal_sundries') // ← use your actual table name
+    ->where('journal_id', $journal->id)
+    ->get();
+      return response()->json([
+         'code' => 200,
+         'message' => 'Journal details fetched successfully.',
+         'data' => [
+            'journal' => $journal,
+            'journal_detail' => $journal_detail,
+            // 'party_list' => $party_list,
+            // 'mat_series' => $mat_series,
+            // 'vendors' => $vendors,
+            // 'companyData' => $companyData,
+            // 'items' => $items,
+            // 'company_gst' => $companyData->gst,
+            // 'sundry' => $sundry_arr,
+            // 'state_list' => $state_list,
+             'bill_sundry_rows' => $bill_sundry_rows,
+            // 'billsundry' => $billsundry
+         ]
+      ]);
+      // return view('journal/editJournal')->with('fy_start_date', $fy_start_date)->with('bill_sundry_rows', $bill_sundry_rows)->with('billsundry', $billsundry)->with('fy_end_date', $fy_end_date)->with('journal', $journal)->with('party_list', $party_list)->with('journal_detail', $journal_detail)->with('mat_series', $mat_series)->with('vendors', $vendors)->with('companyData',$companyData)->with('items', $items)->with('company_gst', $companyData->gst)->with('sundry', $sundry_arr)->with('state_list', $state_list);
+   }catch(\Exception $e){
+      return response()->json([
+         'code' => 500,
+         'message' => 'An error occurred while fetching the journal details.' . $e->getMessage(),
+         'error' => $e->getMessage()
+      ], 500);
+   }
+   }
+
+
+
+
+
+
+
+   public function update(Request $request){
+      //dd($request->all());
+      // Gate::authorize('action-module',53);
+      try{
+
+      $validator = Validator::make($request->all(), [
+         'date' => 'required|string',
+         'journal_id' => 'required',
+         'user_id' => 'required',
+         'company_id' => 'required',
+         'default_fy' => 'required',
+        ], [
+            'date.required' => 'Date is required.',
+            'journal_id.required' => 'Journal ID is required.',
+            'user_id.required' => 'User ID is required.',
+            'company_id.required' => 'Company ID is required.',
+            'default_fy.required' => 'Financial Year is required.',
+      ]);
+      if($validator->fails()){
+         return response()->json([
+            'code' => 400,
+            'message' => $validator->errors()->first()
+         ], 400);
+      }
+      $financial_year_session = $request->input('default_fy');
+       $company_id = $request->input('company_id');
+       $user_id = $request->input('user_id');
+
+      [$startYY, $endYY] = explode('-', $financial_year_session);
+
+      $fy_start_date = '20' . $startYY . '-04-01';
+
+      $fy_end_date   = '20' . $endYY   . '-03-31';
+
+      if(
+         $request->input('date') < $fy_start_date
+         ||
+         $request->input('date') > $fy_end_date
+      ){
+         return response()->json([
+            'code' => 400,
+            'message' => 'Selected date is outside the current financial year.'
+         ], 400);
+      
+      }
+      $financial_year = CommonHelper::getFinancialYear($request->input('date'));
+      $receipt =  Journal::find($request->journal_id);
+      JournalDetails::where('journal_id', $receipt->id)->delete();
+      JournalSundry::where('journal_id', $receipt->id)->delete();
+      AccountLedger::where('entry_type',7)
+         ->where('entry_type_id',$receipt->id)
+         ->delete();
+      $oldSnapshot = [
+         'journal' => $receipt->toArray(),
+         'details' => JournalDetails::where('journal_id', $receipt->id)
+                        ->where('delete', '0')
+                        ->get()
+                        ->toArray(),
+      ];
+      $series_configuration = VoucherSeriesConfiguration::where('company_id', $company_id)
+         ->where('series', $request->input('series_no'))
+         ->where('configuration_for', 'JOURNAL')
+         ->where('status', '1')
+         ->first();
+      $voucher_prefix_input = $request->input('voucher_prefix');
+      $voucher_no = $receipt->voucher_no;
+      $voucher_no_prefix = $receipt->voucher_no_prefix;
+      if ($voucher_prefix_input !== $receipt->voucher_no_prefix) {
+         if (!$series_configuration || $series_configuration->manual_numbering == "YES") {
+            $voucher_no = $voucher_prefix_input;
+            $voucher_no_prefix = $voucher_prefix_input;
+         } else {
+            $voucher_no_prefix = str_replace('{no}', $voucher_no, $voucher_prefix_input);
+         }
+      }
+      $receipt->voucher_no = $voucher_no;
+      $receipt->voucher_no_prefix = $voucher_no_prefix;
+      $receipt->series_no = $request->input('series_no');
+      $receipt->long_narration = $request->input('long_narration');
+      $receipt->date = $request->input('date');
+      $receipt->merchant_gst = $request->input('merchant_gst');
+      $receipt->claim_gst_status = $request->input('flexRadioDefault');
+      $receipt->updated_by = $user_id;
+      if($request->input('flexRadioDefault')=="YES"){
+         $receipt->invoice_no = $request->input('invoice_no');
+         
+         $receipt->remark = $request->input('remark');
+         $receipt->vendor = $request->input('vendor');
+         if(!empty($request->input('vendor'))){
+            $vendor = Accounts::select('id','gstin')->where('id',$request->input('vendor'))->first();
+            if($vendor){
+               $vendor_gstin = $vendor->gstin;
+               $receipt->vendor_gstin = $vendor_gstin;
+            }            
+         }
+      }else{
+         $receipt->invoice_no = "";
+
+         $receipt->remark = "";
+         $receipt->vendor = "";
+         $receipt->vendor_gstin = "";
+      }
+      $amounts = $request->input('amount') ?? [];
+      $percentages = $request->input('percentage') ?? [];
+      $bill_sundrys = $request->input('bill_sundry') ?? [];
+      $bill_sundry_amounts = $request->input('bill_sundry_amount') ?? [];
+
+      $total_item_amount = array_sum($amounts);
+
+      $billSundries = BillSundrys::whereIn('id', $bill_sundrys)
+         ->get()
+         ->keyBy('id');
+
+      $adjust_total = 0;
+      $non_adjust_total = 0;
+
+      foreach($bill_sundrys as $key => $bill){
+
+         if(empty($bill) || empty($bill_sundry_amounts[$key])) continue;
+
+         $amount = floatval($bill_sundry_amounts[$key]);
+         $bs = $billSundries[$bill] ?? null;
+
+         if(!$bs) continue;
+
+         $sign = strtolower($bs->bill_sundry_type) == 'additive' ? 1 : -1;
+
+         if(strtolower($bs->adjust_purchase_amt) == 'yes'){
+            $adjust_total += ($sign * $amount);
+         } else {
+            $non_adjust_total += ($sign * $amount);
+         }
+      }
+
+      $distributed_items = [];
+
+      foreach($amounts as $key => $amt){
+         $ratio = $total_item_amount > 0 ? ($amt / $total_item_amount) : 0;
+         $distributed_items[$key] = $amt + ($adjust_total * $ratio);
+      }
+
+      $vendor = Accounts::find($request->input('vendor'));
+      $vendor_state = substr($vendor->gstin ?? '', 0, 2);
+      $company_state = substr($request->input('merchant_gst'), 0, 2);
+
+      $cgst = 0;
+      $sgst = 0;
+      $igst = 0;
+
+      $adjusted_total = array_sum($distributed_items);
+
+      foreach($distributed_items as $key => $amt){
+
+         $pct = floatval($percentages[$key] ?? 0);
+         if($pct <= 0) continue;
+
+         $ratio = $adjusted_total > 0 ? ($amt / $adjusted_total) : 0;
+         $amt_for_gst = $amt + ($non_adjust_total * $ratio);
+
+         if($vendor_state == $company_state){
+            $cgst += round(($amt_for_gst * ($pct/2) / 100), 2);
+            $sgst += round(($amt_for_gst * ($pct/2) / 100), 2);
+         } else {
+            $igst += round(($amt_for_gst * $pct / 100), 2);
+         }
+      }
+
+      $final_net = $adjusted_total + $non_adjust_total;
+
+      $total = $final_net + $cgst + $sgst + $igst;
+      $rounded_total = round($total);
+      $round_off = round($rounded_total - $total, 2);
+      $receipt->net_total = $final_net;
+      $receipt->cgst = $cgst;
+      $receipt->sgst = $sgst;
+      $receipt->igst = $igst;
+      $receipt->total_amount = $rounded_total;
+      $receipt->remark = "";
+      $receipt->vendor = $request->input('vendor');
+      $receipt->vendor_gstin = $vendor->gstin ?? "";
+      foreach($bill_sundrys as $key => $bill){
+
+         if(empty($bill) || empty($bill_sundry_amounts[$key])) continue;
+
+         $amount = floatval($bill_sundry_amounts[$key]);
+
+         $bs = $billSundries[$bill] ?? null;
+         if(!$bs) continue;
+
+         $sundry = new JournalSundry();
+         $sundry->journal_id = $receipt->id;
+         $sundry->bill_sundry = $bill;
+         $sundry->amount = $amount;
+         $sundry->rate = 0;
+         $sundry->company_id = $company_id;
+         $sundry->status = '1';
+         $sundry->created_by = $user_id;
+         $sundry->save();
+
+         if(strtolower($bs->adjust_purchase_amt) == 'no'){
+
+            $type = strtolower($bs->bill_sundry_type);
+
+            $ledger = new AccountLedger();
+            $ledger->account_id = $bs->purchase_amt_account;
+
+            if($type == 'additive'){
+               $ledger->debit = $amount;
+            } else {
+               $ledger->credit = $amount;
+            }
+
+            $ledger->txn_date = $request->input('date');
+            $ledger->series_no = $request->input('series_no');
+            $ledger->company_id = $company_id;
+            $ledger->financial_year = $financial_year;
+            $ledger->entry_type = 7;
+            $ledger->entry_type_id = $receipt->id;
+            $ledger->map_account_id = $request->input('vendor');
+            $ledger->created_by = $user_id;
+            $ledger->created_at = now();
+            $ledger->save();
+         }
+      }
+      $receipt->save();
+
+      if($request->input('flexRadioDefault')=="YES"){
+         //Journal Entry
+         $joundetail = new JournalDetails;
+         $joundetail->journal_id = $request->journal_id;
+         $joundetail->company_id = $company_id;
+         $joundetail->type = "Credit";
+         $joundetail->account_name = $request->input('vendor');
+         $joundetail->credit = $request->input('total_amount');
+         $joundetail->status = '1';
+         $joundetail->save();
+         //Ledger Entry
+         $vendor_mapp_id = "";
+         foreach ($request->input('item') as $key => $item){
+            if($key==0){
+               $vendor_mapp_id = $item;
+            }
+         }
+         $ledger = new AccountLedger();
+         $ledger->account_id = $request->input('vendor');
+         $ledger->credit = $request->input('total_amount');  
+         $ledger->series_no = $request->input('series_no');                     
+         $ledger->txn_date = $request->input('date');
+         $ledger->company_id = $company_id;
+         $ledger->financial_year = $financial_year;
+         $ledger->entry_type = 7;
+         $ledger->map_account_id = $vendor_mapp_id;
+         $ledger->entry_type_id = $request->journal_id;
+         $ledger->created_by = $user_id;
+         $ledger->created_at = date('d-m-Y H:i:s');
+         $ledger->save();
+
+         //Round Off Caculation
+         $calculated_total = $request->input('net_amount') + floatval($request->input('cgst')) + floatval($request->input('sgst')) + floatval($request->input('igst'));
+         $round_off = round($request->input('total_amount') - $calculated_total, 2);
+
+         //Round Off Entry
+         if($round_off<0){               
+            $billsundry = BillSundrys::where('id',8)->first();
+         }else{               
+            $billsundry = BillSundrys::where('id',9)->first();
+         }
+         
+         $joundetail = new JournalDetails;
+         $joundetail->journal_id = $request->journal_id;
+         $joundetail->company_id = $company_id;
+         if($round_off<0){
+            $joundetail->credit = abs($round_off);
+            $joundetail->type = "Credit";               
+         }else{
+            $joundetail->debit = abs($round_off);
+            $joundetail->type = "Debit";
+         }            
+         $joundetail->account_name = $billsundry->sale_amt_account;
+         $joundetail->status = '1';
+         $joundetail->save();
+         $ledger = new AccountLedger();
+         if($round_off>=0){
+            $ledger->debit = abs($round_off);
+         }else{
+            $ledger->credit = abs($round_off);
+         }
+         $ledger->account_id = $billsundry->sale_amt_account;
+         $ledger->series_no = $request->input('series_no');            
+         $ledger->txn_date = $request->input('date');
+         $ledger->company_id = $company_id;
+         $ledger->financial_year = $financial_year;
+         $ledger->entry_type = 7;
+         $ledger->map_account_id = $request->input('vendor');
+         $ledger->entry_type_id = $request->journal_id;
+         $ledger->entry_type_detail_id = $joundetail->id;
+         $ledger->created_by = $user_id;
+         $ledger->created_at = date('d-m-Y H:i:s');
+         $ledger->save();
+         foreach ($request->input('item') as $key => $item){
+            $percentage = $request->input('percentage')[$key];
+            $amount = $request->input('amount')[$key];
+            $joundetail = new JournalDetails;
+            $joundetail->journal_id = $request->journal_id;
+            $joundetail->company_id = $company_id;
+            $joundetail->type = "Debit";
+            $joundetail->account_name = $item;
+            $joundetail->debit = $amount;
+            $joundetail->percentage = $percentage;   
+            $joundetail->status = '1';
+            $joundetail->save();
+            //Ledger Entry
+            $ledger = new AccountLedger();
+            $ledger->account_id = $item;
+            $ledger->debit = round($distributed_items[$key] ?? $amount, 2);                   
+            $ledger->txn_date = $request->input('date');
+            $ledger->series_no = $request->input('series_no');
+            $ledger->company_id = $company_id;
+            $ledger->financial_year = $financial_year;
+            $ledger->entry_type = 7;
+            $ledger->map_account_id = $request->input('vendor');
+            $ledger->entry_type_id = $request->journal_id;
+            $ledger->created_by = $user_id;
+            $ledger->created_at = date('d-m-Y H:i:s');
+            $ledger->save();
+         }
+         if(!empty($request->input('igst'))){
+            $sundry = BillSundrys::select('purchase_amt_account')
+                        ->where('nature_of_sundry','IGST')
+                        ->where('delete','0')
+                        ->where('status','1')
+                        ->where('company_id',$company_id)
+                        ->first();
+            
+            $account_name = "";
+            if($sundry){
+               $account_name = $sundry->purchase_amt_account;
+            }
+            $joundetail = new JournalDetails;
+            $joundetail->journal_id = $request->journal_id;
+            $joundetail->company_id = $company_id;
+            $joundetail->type = "Debit";
+            $joundetail->account_name = $account_name;
+            $joundetail->debit = $request->input('igst');
+            $joundetail->status = '1';
+            $joundetail->save();
+            //Ledger Entry
+            $ledger = new AccountLedger();
+            $ledger->account_id = $account_name;
+            $ledger->series_no = $request->input('series_no');
+            $ledger->debit = $request->input('igst');                       
+            $ledger->txn_date = $request->input('date');
+            $ledger->company_id = $company_id;
+            $ledger->financial_year = $financial_year;
+            $ledger->entry_type = 7;
+            $ledger->map_account_id = $request->input('vendor');
+            $ledger->entry_type_id = $request->journal_id;
+            $ledger->created_by = $user_id;
+            $ledger->created_at = date('d-m-Y H:i:s');
+            $ledger->save();
+         }else{
+            $cgst_sundry = BillSundrys::select('purchase_amt_account')
+                        ->where('nature_of_sundry','CGST')
+                        ->where('delete','0')
+                        ->where('status','1')
+                        ->where('company_id',$company_id)
+                        ->first();
+            $cgst_account_name = "";
+            if($cgst_sundry){
+               $cgst_account_name = $cgst_sundry->purchase_amt_account;
+            }
+            $sgst_sundry = BillSundrys::select('purchase_amt_account')
+                        ->where('nature_of_sundry','SGST')
+                        ->where('delete','0')
+                        ->where('status','1')
+                        ->where('company_id',$company_id)
+                        ->first();
+            $sgst_account_name = "";
+            if($sgst_sundry){
+               $sgst_account_name = $sgst_sundry->purchase_amt_account;
+            }
+            $joundetail = new JournalDetails;
+            $joundetail->journal_id = $request->journal_id;
+            $joundetail->company_id = $company_id;
+            $joundetail->type = "Debit";
+            $joundetail->account_name = $cgst_account_name;
+            $joundetail->debit = $request->input('cgst');
+            $joundetail->status = '1';
+            $joundetail->save();
+            //Ledger Entry
+            $ledger = new AccountLedger();
+            $ledger->account_id = $cgst_account_name;
+            $ledger->series_no = $request->input('series_no');
+            $ledger->debit = $request->input('cgst');                       
+            $ledger->txn_date = $request->input('date');
+            $ledger->company_id = $company_id;
+            $ledger->financial_year = $financial_year;
+            $ledger->entry_type = 7;
+            $ledger->map_account_id = $request->input('vendor');
+            $ledger->entry_type_id = $request->journal_id;
+            $ledger->created_by = $user_id;
+            $ledger->created_at = date('d-m-Y H:i:s');
+            $ledger->save();
+            $joundetail = new JournalDetails;
+            $joundetail->journal_id = $request->journal_id;
+            $joundetail->company_id = $company_id;
+            $joundetail->type = "Debit";
+            $joundetail->account_name = $sgst_account_name;
+            $joundetail->debit = $request->input('sgst');
+            $joundetail->status = '1';
+            $joundetail->save();
+            //Ledger Entry
+            $ledger = new AccountLedger();
+            $ledger->account_id = $sgst_account_name;
+            $ledger->series_no = $request->input('series_no');
+            $ledger->debit = $request->input('sgst');                       
+            $ledger->txn_date = $request->input('date');
+            $ledger->company_id = $company_id;
+            $ledger->financial_year = $financial_year;
+            $ledger->entry_type = 7;
+            $ledger->map_account_id = $request->input('vendor');
+            $ledger->entry_type_id = $request->journal_id;
+            $ledger->created_by = $user_id;
+            $ledger->created_at = date('d-m-Y H:i:s');
+            $ledger->save();
+         }
+      }else{
+         $types = $request->input('type');
+         $account_names = $request->input('account_name');
+         $debits = $request->input('debit');
+         $credits = $request->input('credit');        
+         $narrations = $request->input('narration');
+         $i = 0;
+         $debit_count = 0;$credit_count = 0;$debit_id = "";$credit_id = "";$entry_narration = "";
+         $credit_mapping_account = "";$debit_mapping_account = "";
+         foreach ($types as $key => $type){
+            if($type=="Credit" && $credit_mapping_account==""){
+               $credit_mapping_account = $request->input('account_name')[$key];
+            }else if($type=="Debit" && $debit_mapping_account==""){
+               $debit_mapping_account = $request->input('account_name')[$key];
+            }
+         }
+         foreach ($types as $key => $type){
+            if($type=="Credit"){
+               $credit_id = $request->input('account_name')[$key];
+               $entry_narration = $request->input('narration')[$key];
+               $credit_count++;
+            }else if($type=="Debit"){
+               $debit_id = $request->input('account_name')[$key];
+               $entry_narration = $request->input('narration')[$key];
+               $debit_count++;
+            }
+            $paytype = new JournalDetails;
+            $paytype->journal_id = $request->journal_id;
+            $paytype->company_id = $company_id;
+            $paytype->type = $type;
+            $paytype->account_name = $account_names[$key];
+            $paytype->debit = isset($debits[$key]) ? $debits[$key] : '0';
+            $paytype->credit = isset($credits[$key]) ? $credits[$key] : '0';            
+            $paytype->narration = $narrations[$key];
+            $paytype->status = '1';
+            $paytype->save();
+            //Account Ledger
+            $ledger = new AccountLedger();
+            $ledger->account_id = $account_names[$key];
+            if(isset($debits[$key]) && !empty($debits[$key]) && $debits[$key] != 0){
+               $ledger->debit = $debits[$key];
+               $ledger->map_account_id = $credit_mapping_account;
+            }else{
+               $ledger->credit = $credits[$key];
+               $ledger->map_account_id = $debit_mapping_account;
+            }
+            $ledger->series_no = $request->input('series_no');
+            $ledger->txn_date = $request->input('date');
+            $ledger->company_id = $company_id;
+            $ledger->financial_year = $financial_year;
+            $ledger->entry_type = 7;
+            $ledger->entry_type_id = $request->journal_id;
+            $ledger->entry_narration = $narrations[$key];            
+            $ledger->created_by = $user_id;
+            $ledger->created_at = date('d-m-Y H:i:s');
+            $ledger->save();
+         }
+         
+      }
+      $newSnapshot = [
+         'journal' => Journal::find($receipt->id)->toArray(),
+         'details' => JournalDetails::where('journal_id', $receipt->id)
+                        ->where('delete', '0')
+                        ->get()
+                        ->toArray(),
+      ];
+
+      ActivityLog::create([
+         'module_type' => 'journal',
+         'module_id'   => $receipt->id,
+         'action'      => 'edit',
+         'old_data'    => $oldSnapshot,
+         'new_data'    => $newSnapshot,
+         'action_by'   => $user_id,
+         'company_id'  => $company_id,
+         'action_at'   => now(),
+      ]);
+      return response()->json([
+         'code' => 200,
+         'message' => 'Journal detail updated successfully!',
+      ]);
+   
+   }catch(\Exception $e){
+      return response()->json([
+         'code' => 500,
+         'message' => 'An error occurred while updating the journal detail.' . $e->getMessage(),
+         'error' => $e->getMessage()
+      ], 500);
+   }
+}
+
+
 
 
 
