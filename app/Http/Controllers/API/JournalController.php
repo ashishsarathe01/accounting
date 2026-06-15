@@ -315,6 +315,7 @@ class JournalController extends Controller
       $prefill_invoice_no = $request->query('invoice_no');
       $prefill_date       = $request->query('invoice_date');
       $prefill_data = $request->query('data');
+
       $party_list = Accounts::select('id', 'account_name', 'company_id', 'under_group', 'under_group_type', 'print_name', 'dr_cr', 'address', 'address2', 'state', 'country', 'pin_code', 'gstin')
                            ->whereIn('company_id', [$com_id,0])
                                 ->where('delete', '=', '0')
@@ -540,7 +541,7 @@ class JournalController extends Controller
             'code' => 200,
             'message' => 'Data for add journal fetched successfully',
             'data' => [
-               //  'party_list' => $party_list,
+                'party_list' => $party_list,
                 'billsundry' => $billsundry,
                 'prefill_account_id' => $prefill_account_id,
                 'journal_type' => $journal_type,
@@ -1270,10 +1271,10 @@ $validator = Validator::make($request->all(), [
       $journal = Journal::find($id);
       $com_id = $request->input('company_id');
       $journal_detail = JournalDetails::where('journal_id', '=', $id)->where('delete', '=', '0')->get();
-      $party_list = Accounts::whereIn('company_id', [$com_id,0])
-                                ->where('delete', '=', '0')
-                                ->orderBy('account_name')
-                                ->get();
+      // $party_list = Accounts::whereIn('company_id', [$com_id,0])
+      //                           ->where('delete', '=', '0')
+      //                           ->orderBy('account_name')
+      //                           ->get();
       // $companyData = Companies::where('id', $com_id)->first();
       // $GstSettings = (object)NULL;
       // $GstSettings->series = array();
@@ -1475,7 +1476,7 @@ $validator = Validator::make($request->all(), [
          'data' => [
             'journal' => $journal,
             'journal_detail' => $journal_detail,
-            'party_list' => $party_list,
+            // 'party_list' => $party_list,
             // 'mat_series' => $mat_series,
             // 'vendors' => $vendors,
             // 'companyData' => $companyData,
