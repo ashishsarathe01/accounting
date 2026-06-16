@@ -503,6 +503,14 @@ Route::post('/purchase-return/export',[PurchaseReturnController::class, 'export'
    Route::Resource('manage-merchant-employee', MerchantEmployeeController::class);
    Route::get('merchant-employee-privileges/{id}',[MerchantEmployeeController::class,'employeePrivileges']);
    Route::post('set-employee-privileges',[MerchantEmployeeController::class,'setEmployeePrivileges'])->name('set-employee-privileges');
+   Route::post('manage-merchant-employee/send-otp',[MerchantEmployeeController::class, 'sendOtp'])->name('manage-merchant-employee.sendOtp');
+   Route::post('manage-merchant-employee/verify-otp',[MerchantEmployeeController::class, 'verifyOtp'])->name('manage-merchant-employee.verifyOtp');
+   Route::get('user-setup-password/{token}',[MerchantEmployeeController::class,'setupPassword'])->name('user.setup.password');
+   Route::post('user-setup-password',[MerchantEmployeeController::class,'savePassword'])->name('user.save.password');
+   Route::post('manage-merchant-employee/check-existing-user',[MerchantEmployeeController::class, 'checkExistingUser'])->name('manage-merchant-employee.checkExistingUser');
+   Route::post('manage-merchant-employee/check-email-mobile-match',[MerchantEmployeeController::class, 'checkEmailMobileMatch'])->name('manage-merchant-employee.checkEmailMobileMatch');
+   Route::post('manage-merchant-employee/check-user-exists',[MerchantEmployeeController::class, 'checkUserExists'])->name('manage-merchant-employee.checkUserExists');
+   Route::post('manage-merchant-employee/check-user-exists-for-edit',[MerchantEmployeeController::class, 'checkUserExistsForEdit'])->name('manage-merchant-employee.checkUserExistsForEdit');
    Route::get('parameterized-configuration',[ItemParameterizedController::class,'index'])->name('parameterized-configuration');
    Route::post('store-parameterized-configuration',[ItemParameterizedController::class,'storeParameterizedConfiguration'])->name('store-parameterized-configuration');
    Route::get('voucher-series-configuration',[VoucherSeriesConfigurationController::class,'index'])->name('voucher-series-configuration');
@@ -1583,4 +1591,8 @@ Route::post('service-sale/store', [SalesController::class, 'serviceSaleStore'])-
 Route::get('service-sale/edit/{id}',[SalesController::class, 'editServiceSale'])->name('service-sale.edit');
 
 Route::post('service-sale/update',[SalesController::class, 'serviceSaleUpdate'])->name('service-sale.update');
+Route::get('profit-loss-group-mapping',[ProfitLossController::class,'profitLossGroupMapping'])->name('profitloss.group.mapping');
+Route::post('profit-loss-group-mapping-save',[ProfitLossController::class,'saveProfitLossGroupMapping'])->name('profitloss.group.mapping.save');
+Route::get('balance-sheet-group-mapping',[BalanceSheetController::class,'balanceSheetGroupMapping'])->name('balancesheet.group.mapping');
+Route::post('balance-sheet-group-mapping-save',[BalanceSheetController::class,'saveBalanceSheetGroupMapping'])->name('balancesheet.group.mapping.save');
 });

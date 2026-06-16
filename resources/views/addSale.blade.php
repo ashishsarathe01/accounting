@@ -390,16 +390,10 @@
                               <tr class=" font-12 text-body bg-light-pink ">
                                  <th class="w-min-50 border-none bg-light-pink text-body">Tax Rate </th>
                                  <th class="w-min-50 border-none bg-light-pink text-body ">Taxable Amt.</th>
-                                 <th class="w-min-50 border-none bg-light-pink text-body ">Tax </th>
+                                 <th id="tax_heading" class="border-none bg-light-pink text-body">Tax</th>
                               </tr>
                            </thead>
-                           <tbody>
-                              <tr class="font-14 font-heading bg-white">
-                                 <td class=""><span></span></td>
-                                 <td class=""><span></span></td>
-                                 <td class=""><span></span></td>
-                              </tr>
-                           </tbody>
+                           <tbody id="gst_breakup_body"></tbody>
                         </table>
                      </div>
                   </div>
@@ -1740,6 +1734,97 @@ $(document).on(
             res[value.percent].amount += parseFloat(value.amount);
             return res;
          }, {});
+         let gstBreakupHtml = '';
+
+         if(customer_gstin == merchant_gstin.substring(0,2))
+         {
+            $('#tax_heading').html('Tax (CGST + SGST)');
+         }
+         else
+         {
+            $('#tax_heading').html('Tax (IGST)');
+         }
+
+         let bill_sundry_total = 0;
+         let item_total_amount = 0;
+
+         result.forEach(function(e){
+            item_total_amount += parseFloat(e.amount || 0);
+         });
+
+         billSundryArray.forEach(function(bs){
+
+            if(bs.nature_of_sundry == 'OTHER')
+            {
+               if(parseFloat(bs.value || 0) > 0)
+               {
+                     if(bs.type == 'additive')
+                     {
+                        bill_sundry_total += parseFloat(bs.value);
+                     }
+                     else if(bs.type == 'subtractive')
+                     {
+                        bill_sundry_total -= parseFloat(bs.value);
+                     }
+               }
+            }
+         });
+
+         result.forEach(function(e){
+
+            let gstRate = parseFloat(e.percent || 0);
+
+            let taxableShare = 0;
+
+            if(item_total_amount > 0)
+            {
+               taxableShare =
+                     (parseFloat(e.amount) / item_total_amount)
+                     * bill_sundry_total;
+            }
+
+            let taxableAmount =
+               parseFloat(e.amount)
+               + parseFloat(taxableShare);
+
+            if(customer_gstin == merchant_gstin.substring(0,2))
+            {
+               let cgstRate = gstRate / 2;
+               let sgstRate = gstRate / 2;
+
+               let cgstAmt =
+                     (Math.round(((taxableAmount * cgstRate) / 100) * 100) / 100)
+                     .toFixed(2);
+
+               let sgstAmt =
+                     (Math.round(((taxableAmount * sgstRate) / 100) * 100) / 100)
+                     .toFixed(2);
+
+               gstBreakupHtml += `
+                     <tr class="font-14 font-heading bg-white">
+                        <td>${cgstRate}% + ${sgstRate}%</td>
+                        <td style="text-align:right">${taxableAmount.toFixed(2)}</td>
+                        <td style="text-align:right">${cgstAmt} + ${sgstAmt}</td>
+                     </tr>
+               `;
+            }
+            else
+            {
+               let igstAmt =
+                     (Math.round(((taxableAmount * gstRate) / 100) * 100) / 100)
+                     .toFixed(2);
+
+               gstBreakupHtml += `
+                     <tr class="font-14 font-heading bg-white">
+                        <td>${gstRate}%</td>
+                        <td style="text-align:right">${taxableAmount.toFixed(2)}</td>
+                        <td style="text-align:right">${igstAmt}</td>
+                     </tr>
+               `;
+            }
+         });
+
+         $('#gst_breakup_body').html(gstBreakupHtml);
          $("#totalSum").html(total.toFixed(2));
          let taxable_amount = total;
          final_total = total;
@@ -1789,13 +1874,17 @@ $(document).on(
                   if(index==1){
                      if(enter_gst_status==0 && item_taxable_amount!=0 && auto_gst_calculation==1){
                         let sundry_amount = (taxable_amount_per_item*e.percent/2)/100; //New Changes By Ashish
-                        sundry_amount = sundry_amount.toFixed(2);
+                        sundry_amount = (
+                           Math.round((sundry_amount + Number.EPSILON) * 100) / 100
+                        ).toFixed(2);
                         taxSundryArray['cgst'] = sundry_amount;
                         taxSundryArray['sgst'] = sundry_amount;
                         enter_gst_status = 1;                        
                      }else{
                         let sundry_amount = (taxable_amount_per_item*e.percent/2)/100; //New Changes By Ashish
-                        sundry_amount = sundry_amount.toFixed(2);
+                        sundry_amount = (
+                           Math.round((sundry_amount + Number.EPSILON) * 100) / 100
+                        ).toFixed(2);
                         taxSundryArray['cgst'] = sundry_amount;
                         taxSundryArray['sgst'] = sundry_amount;
                      }
@@ -1821,13 +1910,17 @@ $(document).on(
                   }else{
                      if(enter_gst_status==0 && item_taxable_amount!=0){
                         let sundry_amount = (taxable_amount_per_item*e.percent/2)/100;//New Changes By Ashish
-                        sundry_amount = sundry_amount.toFixed(2);
+                        sundry_amount = (
+                           Math.round((sundry_amount + Number.EPSILON) * 100) / 100
+                        ).toFixed(2);
                         enter_gst_status = 1;
                         taxSundryArray['cgst'] = sundry_amount;
                         taxSundryArray['sgst'] = sundry_amount;
                      }else{
                         let sundry_amount = (taxable_amount_per_item*e.percent/2)/100;//New Changes By Ashish
-                        sundry_amount = sundry_amount.toFixed(2);
+                        sundry_amount = (
+                           Math.round((sundry_amount + Number.EPSILON) * 100) / 100
+                        ).toFixed(2);
                         taxSundryArray['cgst'] = sundry_amount;
                         taxSundryArray['sgst'] = sundry_amount;
                      }
@@ -1920,12 +2013,16 @@ $(document).on(
                      if(enter_gst_status==0 && item_taxable_amount!=0){
                         let sundry_amount = (taxable_amount_per_item*e.percent)/100; //New Changes By Ashish
                         
-                        sundry_amount = sundry_amount.toFixed(2);
+                        sundry_amount = (
+                           Math.round((sundry_amount + Number.EPSILON) * 100) / 100
+                        ).toFixed(2);
                         taxSundryArray['igst'] = sundry_amount;
                         enter_gst_status = 1;                        
                      }else{
                         let sundry_amount = (taxable_amount_per_item*e.percent)/100; //New Changes By Ashish
-                        sundry_amount = sundry_amount.toFixed(2);
+                        sundry_amount = (
+                           Math.round((sundry_amount + Number.EPSILON) * 100) / 100
+                        ).toFixed(2);
                         taxSundryArray['igst'] = sundry_amount;
                      }
                      $("#bill_sundry_amount_igst").val(taxSundryArray['igst']);
@@ -1940,12 +2037,16 @@ $(document).on(
                   }else{
                      if(enter_gst_status==0 && item_taxable_amount!=0){
                         let sundry_amount = (taxable_amount_per_item*e.percent)/100;//New Changes By Ashish
-                        sundry_amount = sundry_amount.toFixed(2);
+                        sundry_amount = (
+                           Math.round((sundry_amount + Number.EPSILON) * 100) / 100
+                        ).toFixed(2);
                         taxSundryArray['igst'] = sundry_amount;
                         enter_gst_status = 1;                        
                      }else{
                         let sundry_amount = (taxable_amount_per_item*e.percent)/100;//New Changes By Ashish
-                        sundry_amount = sundry_amount.toFixed(2);
+                        sundry_amount = (
+                           Math.round((sundry_amount + Number.EPSILON) * 100) / 100
+                        ).toFixed(2);
                         taxSundryArray['igst'] = sundry_amount;
                      }
                      

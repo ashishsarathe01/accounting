@@ -14,6 +14,28 @@ input[type=number]::-webkit-outer-spin-button {
     appearance: none;
     margin: 0; 
 }
+.vertical-pl-table td,
+.vertical-pl-table th{
+    vertical-align:middle;
+}
+
+.vertical-pl-table .level-0 td{
+    font-weight:700;
+    font-size:16px;
+    background:#f8f9fa;
+}
+
+.vertical-pl-table .level-1 td{
+    padding-left:35px !important;
+}
+
+.vertical-pl-table .total-row td{
+    font-weight:700;
+    border-top:2px solid #000 !important;
+}
+.vertical-pl-table .level-2 td{
+    padding-left:70px !important;
+}
 </style>
 <div class="list-of-view-company ">
    <section class="list-of-view-company-section container-fluid">
@@ -43,6 +65,12 @@ input[type=number]::-webkit-outer-spin-button {
                <form class="" id="frm" method="GET" action="{{ route('profitloss.filter') }}">
                   @csrf
                   <div class="d-xxl-flex d-block  align-items-center">
+                     <div class="ms-xxl-2">
+                       <select class="form-select" id="report_design" style="width: 250px;">
+                           <option value="horizontal" selected>Horizontal</option>
+                           <option value="vertical">Vertical</option>
+                       </select>
+                     </div>
                      <p class="text-nowrap m-0 font-14 fw-500 font-heading my-2 my-xxl-0">Series</p>
                      <select class="form-select w-min-120 ms-xxl-2" aria-label="Default select example" id="series" name="series" style="margin-right: 5px;">
                         <option value="">ALL</option>
@@ -66,6 +94,7 @@ input[type=number]::-webkit-outer-spin-button {
             </div>
             
             @if(!empty($from_date) && !empty($to_date))
+            <div id="horizontal_profit_loss">
             <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
                <h5 class="master-table-title m-0 py-2">Profit & Loss Account</h5>
             </div>
@@ -588,7 +617,227 @@ input[type=number]::-webkit-outer-spin-button {
                   </div>
                </div>
             </div>
-            
+            </div> <!-- horizontal_profit_loss -->
+
+            <div id="vertical_profit_loss" style="display:none;">
+
+               <div class="card border-0 shadow-sm">
+                  <div class="card-body p-0">
+                        <table class="table table-bordered mb-0 vertical-pl-table">
+                           <thead>
+                              <tr>
+                                    @php
+                                       [$startYear, $endYear] = explode('-', $data['financial_year']);
+                                       $currentFyEndYear = '20'.$endYear;
+                                       $previousFyEndYear = $currentFyEndYear - 1;
+                                    @endphp
+                                    <th width="60%">Particulars</th>
+                                    <th width="20%" class="text-end">
+                                       As at 31st March {{$currentFyEndYear}}
+                                    </th>
+                                    <th width="20%" class="text-end">
+                                       As at 31st March {{$previousFyEndYear}}
+                                    </th>
+
+                              </tr>
+                           </thead>
+
+                           <tbody>
+
+                              <tr class="level-0">
+                                 <td><strong>Revenue</strong></td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="level-1">
+                                 <td>Revenue from operations</td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="level-1">
+                                 <td>Other income</td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="total-row">
+                                 <td>Total Income</td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="level-0">
+                                 <td><strong>Expenses</strong></td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="level-1">
+                                 <td>Cost of material Consumed</td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="level-1">
+                                 <td>Purchase of stock-in-trade</td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="level-1">
+                                 <td>Changes in inventories</td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="level-1">
+                                 <td>Employee benefit expenses</td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="level-1">
+                                 <td>Finance costs</td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="level-1">
+                                 <td>Depreciation and amortization expenses</td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="level-1">
+                                 <td>Other expenses</td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="total-row">
+                                 <td>Total expenses</td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="level-0">
+                                 <td><strong>Profit before exceptional, extraordinary and prior period items and tax</strong></td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="level-1">
+                                 <td>Exceptional items</td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="level-0">
+                                 <td><strong>Profit before extraordinary and prior period items and tax</strong></td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="level-1">
+                                 <td>Extraordinary items</td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="level-1">
+                                 <td>Prior period item</td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="level-0">
+                                 <td><strong>Profit before tax</strong></td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="level-0">
+                                 <td><strong>Tax expenses</strong></td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="level-1">
+                                 <td>Current tax</td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="level-1">
+                                 <td>Deferred tax</td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="level-1">
+                                 <td>Excess/short provision relating earlier year tax</td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="total-row">
+                                 <td>Profit(Loss) for the period</td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="level-0">
+                                 <td><strong>Earning per share</strong></td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="level-1">
+                                 <td><strong>Basic</strong></td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="level-2">
+                                 <td>Before extraordinary Items</td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="level-2">
+                                 <td>After extraordinary Adjustment</td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="level-1">
+                                 <td><strong>Diluted</strong></td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="level-2">
+                                 <td>Before extraordinary Items</td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                              <tr class="level-2">
+                                 <td>After extraordinary Adjustment</td>
+                                 <td></td>
+                                 <td></td>
+                              </tr>
+
+                           </tbody>
+
+                        </table>
+
+                  </div>
+               </div>
+
+            </div>            
 @else
 
 <div class="alert alert-info mx-3">
@@ -949,6 +1198,20 @@ input[type=number]::-webkit-outer-spin-button {
       debitTotal();
       creditTotal();
    });
-   
+   $('#report_design').on('change', function () {
+
+      if ($(this).val() === 'vertical') {
+
+         $('#horizontal_profit_loss').hide();
+         $('#vertical_profit_loss').show();
+
+      } else {
+
+         $('#vertical_profit_loss').hide();
+         $('#horizontal_profit_loss').show();
+
+      }
+
+   });
 </script>
 @endsection

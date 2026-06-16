@@ -79,7 +79,7 @@
     <section class="list-of-view-company-section container-fluid">
         <div class="row vh-100">
             @include('layouts.leftnav')
-            <div class="col-md-12 ml-sm-auto  col-lg-9 px-md-4 bg-mint">
+            <div class="col-md-12 ml-sm-auto  col-lg-10 px-md-4 bg-mint">
                 <div class="d-md-flex justify-content-between py-4 px-2 align-items-center">
                     <div class="d-md-flex d-block ">
                         <div class="calender-administrator my-2 my-md-0  w-min-230 noprint">

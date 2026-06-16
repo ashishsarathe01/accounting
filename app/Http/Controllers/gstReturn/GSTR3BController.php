@@ -10,6 +10,7 @@ use DB;
 use App\Models\State;
 use App\Models\BillSundrys;
 use App\Models\Companies;
+use App\Models\GstBranch;
 use App\Models\gstToken;
 use App\Helpers\CommonHelper;
 
@@ -482,16 +483,23 @@ class GSTR3BController extends Controller
         //     'email' => $email_id,
         // ]);
         // $data = $response->json();
-        $data['data'] = [];
+        $itcData = $this->getITCData(
+            $merchant_gst,
+            $from_date,
+            $to_date
+        );
+        $data['data'] = []; 
         return view('gstReturn.GSTR3B', [
-            'data' => $data['data'], 
-            'merchant_gst' => $merchant_gst, 
-            'from_date' =>  $from_date , 
-            'to_date' =>  $to_date ,
-            'Data31' => $result31,
-            'Data4' => $result4
-            ]);
-    
+            'data' => $data['data'],
+            'merchant_gst' => $merchant_gst,
+            'from_date' => $from_date,
+            'to_date' => $to_date,
+            'Data31' => $arr3,
+            'books_igst_amount' => $itcData['igst'],
+            'books_cgst_amount' => $itcData['cgst'],
+            'books_sgst_amount' => $itcData['sgst'],
+        ]);
+
     
     }
     public function OutwardDetails(Request $request){   
@@ -608,6 +616,9 @@ class GSTR3BController extends Controller
             'email' => $email_id,
         ]);
         $data = $response->json();
+        if (!isset($data['data'])) {
+            $data['data'] = [];
+        }        
         $response1 = Http::withHeaders([
             'Accept'        => 'application/json',
             'gst_username'  => $gst_user_name,
@@ -1113,189 +1124,502 @@ class GSTR3BController extends Controller
 
 
 
-  public function itcDetails(Request $request){
-    //Gst Credenatial
-    if(!$this->gstCredentials){
-        $response = [
-                        'success' => false,
-                        'data'    => "",
-                        'message' => "Api Credentails Not Found ",
-                    ];
-        return response()->json($response, 200);
-    }
-    if($this->gstCredentials->status != 1){
-        $response = [
-                        'success' => false,
-                        'data'    => "",
-                        'message' => "Api Credentails Not Found ",
-                    ];
-        return response()->json($response, 200);
-    }
-    $base_url = $this->gstCredentials->base_url;
-    $email_id = $this->gstCredentials->email_id;
-    $client_id = $this->gstCredentials->client_id;
-    $client_secret = $this->gstCredentials->client_secret;
-    $ip_address = $this->gstCredentials->ip_address;
-    $response = Http::withHeaders([
-            'Accept'        => 'application/json',
-            'gst_username'  => 'KRAFTPAPER1991',
-            'state_cd'      => '07',
-            'ip_address: '.$ip_address,
-            'txn'           => '3396251fbb8446ac9ba89cca8a1ac862',
-            'client_id: '.$client_id,
-            'client_secret: '.$client_secret
-        ])->get($base_url.'/gstr3b/autoliab', [
-            'gstin'     => '07AAJCK4433F1ZM',
-            'retperiod' => '042025',
-            'email'     => $email_id,
-        ]);
-
-        if ($response->failed()) {
-            abort(500, 'GST API request failed.');
-        }
-
-        $json = $response->json(); // Parses response body as array :contentReference[oaicite:1]{index=1}
-
-        $data = $json['data']['r3bautopop']['liabitc'] ?? [];
-
-
-       $company_id = Session::get('user_company_id');
-       $merchant_gst = $request->series;
+    public function ITCDetails(Request $request)
+    {
+        $merchant_gst = $request->series;
         $from_date = $request->from_date;
         $to_date = $request->to_date;
 
-         $sundries = BillSundrys::where('company_id', $company_id)->get()->keyBy('id');
+        $data = collect();
 
-        $saleIds = DB::table('purchases')
-            ->where('merchant_gst', $merchant_gst)
-            ->where('company_id', $company_id)
-            ->whereBetween('date', [$from_date, $to_date])
-            ->where('delete', '0')
-            ->where('status', '1')
-            ->pluck('id');
+        $companyData = Companies::where(
+            'id',
+            Session::get('user_company_id')
+        )->first();
 
+        $allowedSeries = [];
 
-        if ($saleIds->isEmpty()) {
-            // No sales for this type, return early
-            $finalData = [];
-            return;
+        if ($companyData->gst_config_type == "single_gst") {
+
+            $gstSetting = DB::table('gst_settings')
+                ->where([
+                    'company_id' => Session::get('user_company_id'),
+                    'gst_type'   => 'single_gst'
+                ])
+                ->first();
+
+            if ($gstSetting) {
+
+                $allowedSeries[] = $gstSetting->series;
+
+                $branchSeries = GstBranch::where([
+                        'delete' => '0',
+                        'company_id' => Session::get('user_company_id'),
+                        'gst_setting_id' => $gstSetting->id
+                    ])
+                    ->pluck('branch_series')
+                    ->toArray();
+
+                $allowedSeries = array_merge(
+                    $allowedSeries,
+                    $branchSeries
+                );
+            }
+
+        } else {
+
+            $gstSetting = DB::table('gst_settings_multiple')
+                ->where([
+                    'company_id' => Session::get('user_company_id'),
+                    'gst_no'     => $merchant_gst
+                ])
+                ->first();
+
+            if ($gstSetting) {
+
+                $allowedSeries[] = $gstSetting->series;
+
+                $branchSeries = GstBranch::where([
+                        'delete' => '0',
+                        'company_id' => Session::get('user_company_id'),
+                        'gst_setting_multiple_id' => $gstSetting->id
+                    ])
+                    ->pluck('branch_series')
+                    ->toArray();
+
+                $allowedSeries = array_merge(
+                    $allowedSeries,
+                    $branchSeries
+                );
+            }
         }
-        
 
-        // ----- SALES ITEMS -----
-        $items_sale = DB::table('purchase_descriptions')
-            ->join('purchases', 'purchase_descriptions.purchase_id', '=', 'purchases.id')
-            ->join('accounts', 'purchases.party', '=', 'accounts.id')
-            ->join('states', 'accounts.state', '=', 'states.id')
-            ->join('manage_items', 'purchase_descriptions.goods_discription', '=', 'manage_items.id')
-            ->join('units', 'manage_items.u_name', '=', 'units.id')
-            ->where('purchase_descriptions.status', '1')
-            ->where('purchase_descriptions.delete', '0')
-            ->whereIn('purchase_id', $saleIds)
+        $allowedSeries = array_unique(array_filter($allowedSeries));
+
+        $purchases = DB::table('purchases')
+            ->where('merchant_gst', $merchant_gst)
+            ->whereIn('series_no', $allowedSeries)
+            ->whereBetween('date', [$from_date, $to_date])
+            ->where('status', '1')
+            ->where('delete', '0')
             ->select(
-                'purchase_descriptions.purchase_id',
-                'states.name as state_name',
-                'purchase_descriptions.qty',
-                'purchase_descriptions.amount',
-                'manage_items.gst_rate',
-                'units.unit_code',
-                'manage_items.hsn_code',
-                'manage_items.item_type'
+                'purchases.id as voucher_id',
+            DB::raw("'purchase' as voucher_source"),
+                'billing_gst as gstin',
+                'billing_name as party_name',
+                'voucher_no as invoice_no',
+                DB::raw('COALESCE(invoice_date,date) as invoice_date'),
+                DB::raw("'Purchase' as invoice_type"),
+                'total as invoice_value',
+                'taxable_amt as taxable_value'
             )
             ->get();
+        foreach ($purchases as $purchase) {
 
-        // Sundries and ledger adjustments for purchases
-        $sundryDetails_sales = DB::table('purchase_sundries')
-            ->whereIn('purchase_id', $saleIds)
-            ->select('purchase_id', 'bill_sundry', 'amount')
-            ->get()
-            ->groupBy('purchase_id');
+            $purchase->cgst = DB::table('purchase_sundries')
+                ->join('bill_sundrys', 'bill_sundrys.id', '=', 'purchase_sundries.bill_sundry')
+                ->where('purchase_sundries.purchase_id', $purchase->voucher_id)
+                ->where('bill_sundrys.nature_of_sundry', 'CGST')
+                ->sum('purchase_sundries.amount');
 
-        $ledgerAdjustments_sales = [];
-        foreach ($sundryDetails_sales as $saleId => $entries) {
-            foreach ($entries as $entry) {
-                $bs = $sundries[$entry->bill_sundry] ?? null;
-                if (!$bs) continue;
+            $purchase->sgst = DB::table('purchase_sundries')
+                ->join('bill_sundrys', 'bill_sundrys.id', '=', 'purchase_sundries.bill_sundry')
+                ->where('purchase_sundries.purchase_id', $purchase->voucher_id)
+                ->where('bill_sundrys.nature_of_sundry', 'SGST')
+                ->sum('purchase_sundries.amount');
 
-                if ($bs->adjust_sale_amt == 'No' && $bs->nature_of_sundry == 'OTHER') {
-                    $ledger_amount = DB::table('account_ledger')
-                        ->where('company_id', $user_company_id)
-                        ->where('entry_type', 1)
-                        ->where('entry_type_id', $saleId)
-                        ->where('account_id', $bs->sale_amt_account)
-                        ->sum($bs->bill_sundry_type == 'subtractive' ? 'credit' : 'debit');
+            $purchase->igst = DB::table('purchase_sundries')
+                ->join('bill_sundrys', 'bill_sundrys.id', '=', 'purchase_sundries.bill_sundry')
+                ->where('purchase_sundries.purchase_id', $purchase->voucher_id)
+                ->where('bill_sundrys.nature_of_sundry', 'IGST')
+                ->sum('purchase_sundries.amount');
 
-                    $ledgerAdjustments_sales[$saleId][] = [
-                        'amount' => $ledger_amount,
-                        'type' => $bs->bill_sundry_type
-                    ];
-                }
+        }
+        $data = $data->merge($purchases);
+
+        $debitNotes = DB::table('purchase_returns')
+            ->leftJoin('accounts', 'accounts.id', '=', 'purchase_returns.party')
+            ->where('merchant_gst', $merchant_gst)
+            ->whereIn('series_no', $allowedSeries)
+            ->whereBetween('date', [$from_date, $to_date])
+            ->where('voucher_type', 'PURCHASE')
+            ->where('purchase_returns.status', '1')
+            ->where('purchase_returns.delete', '0')
+            ->select(
+                'purchase_returns.id as purchase_return_id',
+            'purchase_returns.id as voucher_id',
+            DB::raw("'purchase_return' as voucher_source"),
+                'billing_gst as gstin',
+                'accounts.account_name as party_name',
+                'invoice_no',
+                'date as invoice_date',
+                DB::raw("'Purchase Debit Note' as invoice_type"),
+                'total as invoice_value',
+                'taxable_amt as taxable_value'
+                )
+            ->get();
+
+        foreach ($debitNotes as $row) {
+
+            $row->cgst = DB::table('purchase_return_sundries')
+                ->join('bill_sundrys', 'bill_sundrys.id', '=', 'purchase_return_sundries.bill_sundry')
+                ->where('purchase_return_sundries.purchase_return_id', $row->purchase_return_id)
+                ->where('bill_sundrys.nature_of_sundry', 'CGST')
+                ->sum('purchase_return_sundries.amount');
+
+            $row->sgst = DB::table('purchase_return_sundries')
+                ->join('bill_sundrys', 'bill_sundrys.id', '=', 'purchase_return_sundries.bill_sundry')
+                ->where('purchase_return_sundries.purchase_return_id', $row->purchase_return_id)
+                ->where('bill_sundrys.nature_of_sundry', 'SGST')
+                ->sum('purchase_return_sundries.amount');
+
+            $row->igst = DB::table('purchase_return_sundries')
+                ->join('bill_sundrys', 'bill_sundrys.id', '=', 'purchase_return_sundries.bill_sundry')
+                ->where('purchase_return_sundries.purchase_return_id', $row->purchase_return_id)
+                ->where('bill_sundrys.nature_of_sundry', 'IGST')
+                ->sum('purchase_return_sundries.amount');
+
+        }
+        $data = $data->merge($debitNotes);
+
+        $creditNotes = DB::table('sales_returns')
+            ->leftJoin('accounts', 'accounts.id', '=', 'sales_returns.party')
+            ->where('merchant_gst', $merchant_gst)
+            ->whereIn('series_no', $allowedSeries)
+            ->whereBetween('date', [$from_date, $to_date])
+            ->where('voucher_type', 'PURCHASE')
+            ->where('sales_returns.status', '1')
+            ->where('sales_returns.delete', '0')
+            ->select(
+                'sales_returns.id as sale_return_id',
+            'sales_returns.id as voucher_id',
+            DB::raw("'sale_return' as voucher_source"),
+                'billing_gst as gstin',
+                'accounts.account_name as party_name',
+                'invoice_no',
+                'date as invoice_date',
+                DB::raw("'Purchase Credit Note' as invoice_type"),
+                'total as invoice_value',
+                'taxable_amt as taxable_value'
+                )
+            ->get();
+
+        foreach ($creditNotes as $row) {
+
+            $row->cgst = DB::table('sale_return_sundries')
+                ->join('bill_sundrys', 'bill_sundrys.id', '=', 'sale_return_sundries.bill_sundry')
+                ->where('sale_return_sundries.sale_return_id', $row->sale_return_id)
+                ->where('bill_sundrys.nature_of_sundry', 'CGST')
+                ->sum('sale_return_sundries.amount');
+
+            $row->sgst = DB::table('sale_return_sundries')
+                ->join('bill_sundrys', 'bill_sundrys.id', '=', 'sale_return_sundries.bill_sundry')
+                ->where('sale_return_sundries.sale_return_id', $row->sale_return_id)
+                ->where('bill_sundrys.nature_of_sundry', 'SGST')
+                ->sum('sale_return_sundries.amount');
+
+            $row->igst = DB::table('sale_return_sundries')
+                ->join('bill_sundrys', 'bill_sundrys.id', '=', 'sale_return_sundries.bill_sundry')
+                ->where('sale_return_sundries.sale_return_id', $row->sale_return_id)
+                ->where('bill_sundrys.nature_of_sundry', 'IGST')
+                ->sum('sale_return_sundries.amount');
+
+        }
+        $data = $data->merge($creditNotes);
+
+        $journals = DB::table('journals')
+            ->leftJoin('accounts', 'accounts.id', '=', 'journals.vendor')
+            ->where('journals.merchant_gst', $merchant_gst)
+            ->whereBetween('journals.date', [$from_date, $to_date])
+            ->where('journals.claim_gst_status', 'YES')
+            ->where('journals.status', '1')
+            ->where('journals.delete', '0')
+            ->select(
+                'journals.id as voucher_id',
+                DB::raw("'journal' as voucher_source"),
+                'journals.vendor_gstin as gstin',
+                'accounts.account_name as party_name',
+                'journals.invoice_no as invoice_no',
+                'journals.date as invoice_date',
+                DB::raw("'Journal' as invoice_type"),
+                'journals.total_amount as invoice_value',
+                'journals.net_total as taxable_value',
+                'journals.igst',
+                'journals.cgst',
+                'journals.sgst'
+                )
+            ->get();
+
+        $data = $data->merge($journals);
+
+        $data = $data->sortBy('invoice_date')->values();
+
+        return view(
+            'gstReturn.gst3b_itc_table',
+            compact(
+                'data',
+                'merchant_gst',
+                'from_date',
+                'to_date',
+                'allowedSeries'
+            )
+        );
+
+    }
+    private function getITCData($merchant_gst, $from_date, $to_date)
+    {
+        $request = new Request([
+            'series' => $merchant_gst,
+            'from_date' => $from_date,
+            'to_date' => $to_date
+        ]);
+        $data = collect();
+        $companyData = Companies::where(
+            'id',
+            Session::get('user_company_id')
+        )->first();
+
+        $allowedSeries = [];
+
+        if ($companyData->gst_config_type == "single_gst") {
+
+            $gstSetting = DB::table('gst_settings')
+                ->where([
+                    'company_id' => Session::get('user_company_id'),
+                    'gst_type'   => 'single_gst'
+                ])
+                ->first();
+
+            if ($gstSetting) {
+
+                $allowedSeries[] = $gstSetting->series;
+
+                $branchSeries = GstBranch::where([
+                        'delete' => '0',
+                        'company_id' => Session::get('user_company_id'),
+                        'gst_setting_id' => $gstSetting->id
+                    ])
+                    ->pluck('branch_series')
+                    ->toArray();
+
+                $allowedSeries = array_merge(
+                    $allowedSeries,
+                    $branchSeries
+                );
+            }
+
+        } else {
+
+            $gstSetting = DB::table('gst_settings_multiple')
+                ->where([
+                    'company_id' => Session::get('user_company_id'),
+                    'gst_no'     => $merchant_gst
+                ])
+                ->first();
+
+            if ($gstSetting) {
+
+                $allowedSeries[] = $gstSetting->series;
+
+                $branchSeries = GstBranch::where([
+                        'delete' => '0',
+                        'company_id' => Session::get('user_company_id'),
+                        'gst_setting_multiple_id' => $gstSetting->id
+                    ])
+                    ->pluck('branch_series')
+                    ->toArray();
+
+                $allowedSeries = array_merge(
+                    $allowedSeries,
+                    $branchSeries
+                );
             }
         }
 
-        $grouped_sale = [];
-        $taxable_value_sale = 0; 
-        $cgst_sale = 0; 
-        $sgst_sale = 0;
-        $igst_sale =0;
-        foreach ($items_sale as $item) {
-            $sale_id = $item->purchase_id;
-            $state = $item->state_name;
-            $rate = $item->gst_rate;
-            $amount = $item->amount;
-            $qty = $item->qty;
-            $hsn = $item->hsn_code;
-            $unit_code = $item->unit_code;
-            // $item_type = $item->item_type; // Not used in final calculation
+        $allowedSeries = array_unique(array_filter($allowedSeries));
 
-            $total_sale_amount = $items_sale->where('sale_id', $sale_id)->sum('amount');
+        $purchases = DB::table('purchases')
+            ->where('merchant_gst', $merchant_gst)
+            ->whereIn('series_no', $allowedSeries)
+            ->whereBetween('date', [$from_date, $to_date])
+            ->where('status', '1')
+            ->where('delete', '0')
+            ->select(
+                'purchases.id as voucher_id',
+            DB::raw("'purchase' as voucher_source"),
+                'billing_gst as gstin',
+                'billing_name as party_name',
+                'voucher_no as invoice_no',
+                DB::raw('COALESCE(invoice_date,date) as invoice_date'),
+                DB::raw("'Purchase' as invoice_type"),
+                'total as invoice_value',
+                'taxable_amt as taxable_value'
+            )
+            ->get();
+        foreach ($purchases as $purchase) {
 
-            if ($total_sale_amount == 0) continue;
+            $purchase->cgst = DB::table('purchase_sundries')
+                ->join('bill_sundrys', 'bill_sundrys.id', '=', 'purchase_sundries.bill_sundry')
+                ->where('purchase_sundries.purchase_id', $purchase->voucher_id)
+                ->where('bill_sundrys.nature_of_sundry', 'CGST')
+                ->sum('purchase_sundries.amount');
 
-            $adjusted_value = 0;
+            $purchase->sgst = DB::table('purchase_sundries')
+                ->join('bill_sundrys', 'bill_sundrys.id', '=', 'purchase_sundries.bill_sundry')
+                ->where('purchase_sundries.purchase_id', $purchase->voucher_id)
+                ->where('bill_sundrys.nature_of_sundry', 'SGST')
+                ->sum('purchase_sundries.amount');
 
-            // Adjust sundry
-            if (isset($sundryDetails_sales[$sale_id])) {
-                foreach ($sundryDetails_sales[$sale_id] as $sundryEntry) {
-                    $bs = $sundries[$sundryEntry->bill_sundry] ?? null;
-                    if (!$bs || $bs->adjust_sale_amt != 'Yes' || $bs->nature_of_sundry != 'OTHER') continue;
-                    $share = ($amount / $total_sale_amount) * $sundryEntry->amount;
-                    $adjusted_value += ($bs->bill_sundry_type == 'subtractive') ? -$share : $share;
-                }
-            }
+            $purchase->igst = DB::table('purchase_sundries')
+                ->join('bill_sundrys', 'bill_sundrys.id', '=', 'purchase_sundries.bill_sundry')
+                ->where('purchase_sundries.purchase_id', $purchase->voucher_id)
+                ->where('bill_sundrys.nature_of_sundry', 'IGST')
+                ->sum('purchase_sundries.amount');
 
-            // Adjust ledger
-            if (isset($ledgerAdjustments_sales[$sale_id])) {
-                foreach ($ledgerAdjustments_sales[$sale_id] as $adj) {
-                    $share = ($amount / $total_sale_amount) * $adj['amount'];
-                    $adjusted_value += ($adj['type'] == 'subtractive') ? -$share : $share;
-                }
-            }
-            $taxable_value = $amount + $adjusted_value;
-            $taxable_value_sale += $taxable_value;
+        }
+        $data = $data->merge($purchases);
 
-            // Tax calculation
-            $igst = 0;
-            $cgst = 0;
-            $sgst = 0;
-            $merchant_state_code = substr($merchant_gst, 0, 2);
-            $customer_state_code = State::where('name', $state)->value('state_code');
+        $debitNotes = DB::table('purchase_returns')
+            ->leftJoin('accounts', 'accounts.id', '=', 'purchase_returns.party')
+            ->where('merchant_gst', $merchant_gst)
+            ->whereIn('series_no', $allowedSeries)
+            ->whereBetween('date', [$from_date, $to_date])
+            ->where('voucher_type', 'PURCHASE')
+            ->where('purchase_returns.status', '1')
+            ->where('purchase_returns.delete', '0')
+            ->select(
+                'purchase_returns.id as purchase_return_id',
+            'purchase_returns.id as voucher_id',
+            DB::raw("'purchase_return' as voucher_source"),
+                'billing_gst as gstin',
+                'accounts.account_name as party_name',
+                'invoice_no',
+                'date as invoice_date',
+                DB::raw("'Purchase Debit Note' as invoice_type"),
+                'total as invoice_value',
+                'taxable_amt as taxable_value'
+                )
+            ->get();
 
-            if ($merchant_state_code == $customer_state_code) {
-                $cgst = $sgst = ($rate / 2 / 100) * $taxable_value;
-                
-            } else {
-                $igst = ($rate / 100) * $taxable_value;
+        foreach ($debitNotes as $row) {
 
-            }
-            $cgst_sale += $cgst;
-            $sgst_sale += $sgst;
-            $igst_sale += $igst;
+            $row->cgst = DB::table('purchase_return_sundries')
+                ->join('bill_sundrys', 'bill_sundrys.id', '=', 'purchase_return_sundries.bill_sundry')
+                ->where('purchase_return_sundries.purchase_return_id', $row->purchase_return_id)
+                ->where('bill_sundrys.nature_of_sundry', 'CGST')
+                ->sum('purchase_return_sundries.amount');
+
+            $row->sgst = DB::table('purchase_return_sundries')
+                ->join('bill_sundrys', 'bill_sundrys.id', '=', 'purchase_return_sundries.bill_sundry')
+                ->where('purchase_return_sundries.purchase_return_id', $row->purchase_return_id)
+                ->where('bill_sundrys.nature_of_sundry', 'SGST')
+                ->sum('purchase_return_sundries.amount');
+
+            $row->igst = DB::table('purchase_return_sundries')
+                ->join('bill_sundrys', 'bill_sundrys.id', '=', 'purchase_return_sundries.bill_sundry')
+                ->where('purchase_return_sundries.purchase_return_id', $row->purchase_return_id)
+                ->where('bill_sundrys.nature_of_sundry', 'IGST')
+                ->sum('purchase_return_sundries.amount');
+
+        }
+        $data = $data->merge($debitNotes);
+
+        $creditNotes = DB::table('sales_returns')
+            ->leftJoin('accounts', 'accounts.id', '=', 'sales_returns.party')
+            ->where('merchant_gst', $merchant_gst)
+            ->whereIn('series_no', $allowedSeries)
+            ->whereBetween('date', [$from_date, $to_date])
+            ->where('voucher_type', 'PURCHASE')
+            ->where('sales_returns.status', '1')
+            ->where('sales_returns.delete', '0')
+            ->select(
+                'sales_returns.id as sale_return_id',
+            'sales_returns.id as voucher_id',
+            DB::raw("'sale_return' as voucher_source"),
+                'billing_gst as gstin',
+                'accounts.account_name as party_name',
+                'invoice_no',
+                'date as invoice_date',
+                DB::raw("'Purchase Credit Note' as invoice_type"),
+                'total as invoice_value',
+                'taxable_amt as taxable_value'
+                )
+            ->get();
+
+        foreach ($creditNotes as $row) {
+
+            $row->cgst = DB::table('sale_return_sundries')
+                ->join('bill_sundrys', 'bill_sundrys.id', '=', 'sale_return_sundries.bill_sundry')
+                ->where('sale_return_sundries.sale_return_id', $row->sale_return_id)
+                ->where('bill_sundrys.nature_of_sundry', 'CGST')
+                ->sum('sale_return_sundries.amount');
+
+            $row->sgst = DB::table('sale_return_sundries')
+                ->join('bill_sundrys', 'bill_sundrys.id', '=', 'sale_return_sundries.bill_sundry')
+                ->where('sale_return_sundries.sale_return_id', $row->sale_return_id)
+                ->where('bill_sundrys.nature_of_sundry', 'SGST')
+                ->sum('sale_return_sundries.amount');
+
+            $row->igst = DB::table('sale_return_sundries')
+                ->join('bill_sundrys', 'bill_sundrys.id', '=', 'sale_return_sundries.bill_sundry')
+                ->where('sale_return_sundries.sale_return_id', $row->sale_return_id)
+                ->where('bill_sundrys.nature_of_sundry', 'IGST')
+                ->sum('sale_return_sundries.amount');
+
+        }
+        $data = $data->merge($creditNotes);
+
+        $journals = DB::table('journals')
+            ->leftJoin('accounts', 'accounts.id', '=', 'journals.vendor')
+            ->where('journals.merchant_gst', $merchant_gst)
+            ->whereBetween('journals.date', [$from_date, $to_date])
+            ->where('journals.claim_gst_status', 'YES')
+            ->where('journals.status', '1')
+            ->where('journals.delete', '0')
+            ->select(
+                'journals.id as voucher_id',
+                DB::raw("'journal' as voucher_source"),
+                'journals.vendor_gstin as gstin',
+                'accounts.account_name as party_name',
+                'journals.invoice_no as invoice_no',
+                'journals.date as invoice_date',
+                DB::raw("'Journal' as invoice_type"),
+                'journals.total_amount as invoice_value',
+                'journals.net_total as taxable_value',
+                'journals.igst',
+                'journals.cgst',
+                'journals.sgst'
+                )
+            ->get();
+
+
+         $data = $data->merge($journals);
         
+        $igstTotal = 0;
+        $cgstTotal = 0;
+        $sgstTotal = 0;
+
+        foreach($data as $row){
+
+            if($row->invoice_type == 'Purchase Debit Note')
+            {
+                $igstTotal -= (float)($row->igst ?? 0);
+                $cgstTotal -= (float)($row->cgst ?? 0);
+                $sgstTotal -= (float)($row->sgst ?? 0);
+            }
+            else
+            {
+                $igstTotal += (float)($row->igst ?? 0);
+                $cgstTotal += (float)($row->cgst ?? 0);
+                $sgstTotal += (float)($row->sgst ?? 0);
+            }
         }
 
-    return  view('gstReturn.gst3b_itc_table' , ['portal' => $data , 'taxable_value_sale' => $taxable_value_sale , 'taxable_value_sale' => $taxable_value_sale  ]);
-
-  }
+        return [
+            'igst' => $igstTotal,
+            'cgst' => $cgstTotal,
+            'sgst' => $sgstTotal,
+        ];
+    }
     
 }

@@ -9,6 +9,8 @@ use App\Models\Accounts;
 use App\Models\AccountLedger;
 use App\Models\ItemLedger;
 use App\Models\ClosingStock;
+use App\Models\Companies;
+use App\Models\BalanceSheetGroupMapping;
 use App\Models\Journal;
 use App\Helpers\CommonHelper;
 ;
@@ -289,6 +291,7 @@ class BalanceSheetController extends Controller{
             $prev_year_profit_status = 1;
         }
         $prev_year_profitloss = abs($prev_year_profitloss) - $journal_amount;
+        $company_info = Companies::find(Session::get('user_company_id'));
         return view('display/balanceSheet',[
             'heads'=>$heads,
             'from_date'=>$fromDate,
@@ -296,6 +299,7 @@ class BalanceSheetController extends Controller{
             'current_journal_amount'=>$current_journal_amount,
             'profit_loss_amount'=>$profit_loss_amount,
             'prev_year_profitloss'=>$prev_year_profitloss,
+            'company_info'=>$company_info,
             'prev_year_profit_status'=>$prev_year_profit_status,
             'prevFy'=>$prevFy,
             'stock_in_hand'=>$stock_in_hand
@@ -1216,5 +1220,182 @@ class BalanceSheetController extends Controller{
          $account = $account->merge($inner_group);
       }
       return view('display/account_balance_by_group_bs')->with('data',$account)->with('group',$group)->with('financial_year',$financial_year)->with('type',$type)->with('from_date',$from_date)->with('to_date',$to_date);
+   }
+
+   public function balanceSheetGroupMapping()
+   {
+      $com_id = Session::get('user_company_id');
+
+      $company_info = Companies::find($com_id);
+
+      $groups = AccountGroups::whereIn(
+                     'company_id',
+                     [$com_id,0]
+                  )
+                  ->where('delete','0')
+                  ->get()
+                  ->map(function($item){
+
+                     $item->record_type = 'group';
+                     $item->unique_key = 'group_'.$item->id;
+
+                     return $item;
+                  });
+
+      $headings = AccountHeading::whereIn(
+                     'company_id',
+                     [$com_id,0]
+                  )
+                  ->where('delete','0')
+                  ->get()
+                  ->map(function($item){
+
+                     $item->record_type = 'heading';
+                     $item->unique_key = 'heading_'.$item->id;
+
+                     return $item;
+                  });
+
+      $groups = $groups->concat($headings)
+                     ->sortBy(function ($item) {
+                           return strtoupper(trim($item->name));
+                     })
+                     ->values();
+
+      $mappings = BalanceSheetGroupMapping::where(
+                     'company_id',
+                     $com_id
+                  )
+                  ->get()
+                  ->mapWithKeys(function($row){
+
+                     return [
+                           $row->record_type.'_'.$row->group_id
+                           => [
+                              'mapping_name' => $row->mapping_name,
+                              'trade_payable_type' => $row->trade_payable_type
+                           ]
+                     ];
+
+                  })
+                  ->toArray();
+
+      $balanceSheetOptions = [];
+
+      if($company_info->business_type == 3)
+      {
+         $balanceSheetOptions[] = 'Share capital';
+         $balanceSheetOptions[] = 'Reserves and surplus';
+      }
+      elseif($company_info->business_type == 2)
+      {
+         $balanceSheetOptions[] = "Partner's capital account";
+         $balanceSheetOptions[] = 'Profit and loss account';
+      }
+      elseif($company_info->business_type == 1)
+      {
+         $balanceSheetOptions[] = "Proprietor's capital account";
+         $balanceSheetOptions[] = 'Profit and loss account';
+      }
+
+      $balanceSheetOptions = array_merge(
+         $balanceSheetOptions,
+         [
+
+               'Long-term borrowings',
+               'Deferred tax liabilities (Net)',
+               'Other long term liabilities',
+               'Long-term provisions',
+
+               'Short-term borrowings',
+               'Trade payables',
+               'Other current liabilities',
+               'Short-term provisions',
+
+               'Property, Plant and Equipment',
+               'Intangible assets',
+               'Capital work-in-progress',
+               'Intangible assets under development',
+
+               'Non-current investments',
+               'Deferred tax assets (Net)',
+               'Long-term loans and advances',
+               'Other non-current assets',
+
+               'Current investments',
+               'Inventories',
+               'Trade receivables',
+               'Cash and cash equivalents',
+               'Short-term loans and advances',
+               'Other current assets'
+         ]
+      );
+
+      return view(
+         'display.balance_sheet_group_mapping',
+         compact(
+               'groups',
+               'mappings',
+               'balanceSheetOptions',
+               'company_info'
+         )
+      );
+   }
+   public function saveBalanceSheetGroupMapping(Request $request)
+   {
+      $companyId = Session::get('user_company_id');
+      foreach($request->mapping ?? [] as $key => $mappingName)
+      {
+         if(
+               $mappingName == 'Trade payables'
+               &&
+               empty($request->trade_payable_type[$key])
+         )
+         {
+               return redirect()
+                  ->back()
+                  ->withInput()
+                  ->withErrors([
+                     'trade_payable_type' =>
+                     'Please select Trade Payable Type for all Trade Payables mappings.'
+                  ]);
+         }
+      }
+      foreach($request->mapping ?? [] as $key => $mappingName)
+      {
+         $parts = explode('_', $key, 2);
+
+         $recordType = $parts[0];
+         $recordId   = $parts[1];
+
+         $tradeType = $request->trade_payable_type[$key] ?? null;
+
+         if(empty($mappingName))
+         {
+               BalanceSheetGroupMapping::where('company_id',$companyId)
+                  ->where('record_type',$recordType)
+                  ->where('group_id',$recordId)
+                  ->delete();
+
+               continue;
+         }
+
+         BalanceSheetGroupMapping::updateOrCreate(
+
+               [
+                  'company_id'  => $companyId,
+                  'record_type' => $recordType,
+                  'group_id'    => $recordId
+               ],
+
+               [
+                  'mapping_name'       => $mappingName,
+                  'trade_payable_type' => $tradeType
+               ]
+         );
+      }
+
+      return redirect()->back()
+               ->withSuccess('Mapping Saved Successfully');
    }
 }

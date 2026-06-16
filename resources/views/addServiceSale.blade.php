@@ -69,7 +69,7 @@
    <section class="list-of-view-company-section container-fluid">
       <div class="row vh-100">
          @include('layouts.leftnav')
-         <div class="col-md-12 ml-sm-auto  col-lg-9 px-md-4 bg-mint">
+         <div class="col-md-12 ml-sm-auto  col-lg-10 px-md-4 bg-mint">
              @if (session('error'))
              <div class="alert alert-danger" role="alert"> {{session('error')}}
              </div>
@@ -338,16 +338,10 @@
                               <tr class=" font-12 text-body bg-light-pink ">
                                  <th class="w-min-50 border-none bg-light-pink text-body">Tax Rate </th>
                                  <th class="w-min-50 border-none bg-light-pink text-body ">Taxable Amt.</th>
-                                 <th class="w-min-50 border-none bg-light-pink text-body ">Tax </th>
+                                 <th id="tax_heading" class="border-none bg-light-pink text-body">Tax</th>
                               </tr>
                            </thead>
-                           <tbody>
-                              <tr class="font-14 font-heading bg-white">
-                                 <td class=""><span></span></td>
-                                 <td class=""><span></span></td>
-                                 <td class=""><span></span></td>
-                              </tr>
-                           </tbody>
+                           <tbody id="gst_breakup_body"></tbody>
                         </table>
                      </div>
                   </div>
@@ -619,96 +613,6 @@
                     </div>
                </div>
             </form>
-         </div>
-         <div class="col-lg-1 d-none d-lg-flex justify-content-center px-1">
-            <div class="shortcut-key w-100">
-               <p class="font-14 fw-500 font-heading m-0">Shortcut Keys</p>
-               <button class="p-2 transaction-shortcut-btn my-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Help">F1
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Help</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Account">
-                  <span class="border-bottom-black">F1</span><span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Account</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Item">
-                  <span class="border-bottom-black">F2</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Item</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Master">F3
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Master</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Voucher">
-                  <span class="border-bottom-black">F3</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Voucher</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Payment">
-                  <span class="border-bottom-black">F5</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Payment</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Receipt">
-                  <span class="border-bottom-black">F6</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Receipt</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Journal">
-                  <span class="border-bottom-black">F7</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Journal</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Sales">
-                  <span class="border-bottom-black">F8</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Sales</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-4 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Purchase">
-                  <span class="border-bottom-black">F9</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Purchase</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Balance Sheet">
-                  <span class="border-bottom-black">B</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Balance Sheet</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Trial Balance">
-                  <span class="border-bottom-black">T</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Trial Balance</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Stock Status">
-                  <span class="border-bottom-black">S</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Stock Status</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Acc. Ledger">
-                  <span class="border-bottom-black">L</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Acc. Ledger</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Item Summary">
-                  <span class="border-bottom-black">I</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Item Summary</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Item Ledger">
-                  <span class="border-bottom-black">D</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Item Ledger</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="GST Summary">
-                  <span class="border-bottom-black">G</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">GST Summary</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Switch User">
-                  <span class="border-bottom-black">U</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Switch User</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Configuration">
-                  <span class="border-bottom-black">F</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Configuration</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Lock Program">
-                  <span class="border-bottom-black">K</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Lock Program</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Training Videos">
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Training Videos</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="GST Portal">
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">GST Portal</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-4 text-ellipsis d-inline-block" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Search Menu">Search Menu
-               </button>
-            </div>
          </div>
       </div>
    </section>
@@ -1508,6 +1412,97 @@ else
             res[value.percent].amount += parseFloat(value.amount);
             return res;
          }, {});
+         let gstBreakupHtml = '';
+
+         if(customer_gstin == merchant_gstin.substring(0,2))
+         {
+            $('#tax_heading').html('Tax (CGST + SGST)');
+         }
+         else
+         {
+            $('#tax_heading').html('Tax (IGST)');
+         }
+
+         let bill_sundry_total = 0;
+         let item_total_amount = 0;
+
+         result.forEach(function(e){
+            item_total_amount += parseFloat(e.amount || 0);
+         });
+
+         billSundryArray.forEach(function(bs){
+
+            if(bs.nature_of_sundry == 'OTHER')
+            {
+               if(parseFloat(bs.value || 0) > 0)
+               {
+                     if(bs.type == 'additive')
+                     {
+                        bill_sundry_total += parseFloat(bs.value);
+                     }
+                     else if(bs.type == 'subtractive')
+                     {
+                        bill_sundry_total -= parseFloat(bs.value);
+                     }
+               }
+            }
+         });
+
+         result.forEach(function(e){
+
+            let gstRate = parseFloat(e.percent || 0);
+
+            let taxableShare = 0;
+
+            if(item_total_amount > 0)
+            {
+               taxableShare =
+                     (parseFloat(e.amount) / item_total_amount)
+                     * bill_sundry_total;
+            }
+
+            let taxableAmount =
+               parseFloat(e.amount)
+               + parseFloat(taxableShare);
+
+            if(customer_gstin == merchant_gstin.substring(0,2))
+            {
+               let cgstRate = gstRate / 2;
+               let sgstRate = gstRate / 2;
+
+               let cgstAmt =
+                     (Math.round(((taxableAmount * cgstRate) / 100) * 100) / 100)
+                     .toFixed(2);
+
+               let sgstAmt =
+                     (Math.round(((taxableAmount * sgstRate) / 100) * 100) / 100)
+                     .toFixed(2);
+
+               gstBreakupHtml += `
+                     <tr class="font-14 font-heading bg-white">
+                        <td>${cgstRate}% + ${sgstRate}%</td>
+                        <td style="text-align:right">${taxableAmount.toFixed(2)}</td>
+                        <td style="text-align:right">${cgstAmt} + ${sgstAmt}</td>
+                     </tr>
+               `;
+            }
+            else
+            {
+               let igstAmt =
+                     (Math.round(((taxableAmount * gstRate) / 100) * 100) / 100)
+                     .toFixed(2);
+
+               gstBreakupHtml += `
+                     <tr class="font-14 font-heading bg-white">
+                        <td>${gstRate}%</td>
+                        <td style="text-align:right">${taxableAmount.toFixed(2)}</td>
+                        <td style="text-align:right">${igstAmt}</td>
+                     </tr>
+               `;
+            }
+         });
+
+         $('#gst_breakup_body').html(gstBreakupHtml);
          $("#totalSum").html(total.toFixed(2));
          let taxable_amount = total;
          final_total = total;
@@ -1558,13 +1553,17 @@ else
                   if(index==1){
                      if(enter_gst_status==0 && item_taxable_amount!=0 && auto_gst_calculation==1){
                         let sundry_amount = (taxable_amount_per_item*e.percent/2)/100; //New Changes By Ashish
-                        sundry_amount = sundry_amount.toFixed(2);
+                        sundry_amount = (
+                           Math.round((sundry_amount + Number.EPSILON) * 100) / 100
+                        ).toFixed(2);
                         taxSundryArray['cgst'] = sundry_amount;
                         taxSundryArray['sgst'] = sundry_amount;
                         enter_gst_status = 1;                        
                      }else{
                         let sundry_amount = (taxable_amount_per_item*e.percent/2)/100; //New Changes By Ashish
-                        sundry_amount = sundry_amount.toFixed(2);
+                        sundry_amount = (
+                           Math.round((sundry_amount + Number.EPSILON) * 100) / 100
+                        ).toFixed(2);
                         taxSundryArray['cgst'] = sundry_amount;
                         taxSundryArray['sgst'] = sundry_amount;
                      }
@@ -1590,13 +1589,17 @@ else
                   }else{
                      if(enter_gst_status==0 && item_taxable_amount!=0){
                         let sundry_amount = (taxable_amount_per_item*e.percent/2)/100;//New Changes By Ashish
-                        sundry_amount = sundry_amount.toFixed(2);
+                        sundry_amount = (
+                           Math.round((sundry_amount + Number.EPSILON) * 100) / 100
+                        ).toFixed(2);
                         enter_gst_status = 1;
                         taxSundryArray['cgst'] = sundry_amount;
                         taxSundryArray['sgst'] = sundry_amount;
                      }else{
                         let sundry_amount = (taxable_amount_per_item*e.percent/2)/100;//New Changes By Ashish
-                        sundry_amount = sundry_amount.toFixed(2);
+                        sundry_amount = (
+                           Math.round((sundry_amount + Number.EPSILON) * 100) / 100
+                        ).toFixed(2);
                         taxSundryArray['cgst'] = sundry_amount;
                         taxSundryArray['sgst'] = sundry_amount;
                      }
@@ -1689,12 +1692,16 @@ else
                      if(enter_gst_status==0 && item_taxable_amount!=0){
                         let sundry_amount = (taxable_amount_per_item*e.percent)/100; //New Changes By Ashish
                         
-                        sundry_amount = sundry_amount.toFixed(2);
+                        sundry_amount = (
+                           Math.round((sundry_amount + Number.EPSILON) * 100) / 100
+                        ).toFixed(2);
                         taxSundryArray['igst'] = sundry_amount;
                         enter_gst_status = 1;                        
                      }else{
                         let sundry_amount = (taxable_amount_per_item*e.percent)/100; //New Changes By Ashish
-                        sundry_amount = sundry_amount.toFixed(2);
+                        sundry_amount = (
+                           Math.round((sundry_amount + Number.EPSILON) * 100) / 100
+                        ).toFixed(2);
                         taxSundryArray['igst'] = sundry_amount;
                      }
                      $("#bill_sundry_amount_igst").val(taxSundryArray['igst']);
@@ -1709,12 +1716,16 @@ else
                   }else{
                      if(enter_gst_status==0 && item_taxable_amount!=0){
                         let sundry_amount = (taxable_amount_per_item*e.percent)/100;//New Changes By Ashish
-                        sundry_amount = sundry_amount.toFixed(2);
+                        sundry_amount = (
+                           Math.round((sundry_amount + Number.EPSILON) * 100) / 100
+                        ).toFixed(2);
                         taxSundryArray['igst'] = sundry_amount;
                         enter_gst_status = 1;                        
                      }else{
                         let sundry_amount = (taxable_amount_per_item*e.percent)/100;//New Changes By Ashish
-                        sundry_amount = sundry_amount.toFixed(2);
+                        sundry_amount = (
+                           Math.round((sundry_amount + Number.EPSILON) * 100) / 100
+                        ).toFixed(2);
                         taxSundryArray['igst'] = sundry_amount;
                      }
                      

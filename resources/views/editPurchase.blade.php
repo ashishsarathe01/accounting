@@ -58,7 +58,7 @@ foreach ($manageitems as $value) {
    <section class="list-of-view-company-section container-fluid">
       <div class="row vh-100">
          @include('layouts.leftnav')
-         <div class="col-md-12 ml-sm-auto  col-lg-9 px-md-4 bg-mint">
+         <div class="col-md-12 ml-sm-auto  col-lg-10 px-md-4 bg-mint">
              @if (session('error'))
              <div class="alert alert-danger" role="alert"> {{session('error')}}
              </div>
@@ -287,12 +287,7 @@ foreach ($manageitems as $value) {
                                  <th class="border-none bg-light-pink text-body ">Tax </th>
                               </tr>
                            </thead>
-                           <tbody>
-                              <tr class="font-14 font-heading bg-white">
-                                 <td class=""><span></span></td>
-                                 <td class=""><span></span></td>
-                                 <td class=""><span></span></td>
-                              </tr>
+                           <tbody id="gst_breakup_body">
                            </tbody>
                         </table>
                      </div>
@@ -443,39 +438,7 @@ foreach ($manageitems as $value) {
                                     <input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_igst" data-id="igst" <?php if(isset($return['IGST'])){?> value="<?php echo $return['IGST'][0]['amount'];?>" <?php } ?> style="text-align:right;"></td>
                                  <td></td>
                               </tr>
-                              <?php 
                               
-                              foreach($return as $key=>$value) {
-                                 
-                                 foreach ($value as $k1 => $v1) {
-                                    if(!in_array($v1['id'],$saleSundryArr)){ 
-                                       
-                                       ?>
-                                       <tr id="billtr_@php echo $index;@endphp" class="font-14 font-heading bg-white bill_taxes_row sundry_tr extra_gst db_gst">
-                                          <td class="w-min-50">
-                                             <select id="bill_sundry_@php echo $index;@endphp" class="w-95-parsent  bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="@php echo $index;@endphp">
-                                                <?php
-                                                foreach ($billsundry as $value) { 
-                                                   if($value->id==$v1['bill_sundry']){?>
-                                                      <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_@php echo $index;@endphp" id="sundry_option_@php echo $index;@endphp" data-sundry_percent="<?php echo $value->sundry_percent;?>" data-sundry_percent_date="<?php echo $value->sundry_percent_date;?>" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
-                                                      <?php 
-                                                   }
-                                                } ?>
-                                             </select>
-                                          </td>
-                                          <td class="w-min-50 ">
-                                             <span name="tax_amt[]" class="tax_amount" id="tax_amt_@php echo $index;@endphp">{{$v1['rate']}} %</span>
-                                             <input type="hidden" name="tax_rate[]" value="{{$v1['rate']}}" id="tax_rate_tr_@php echo $index;@endphp"></td>
-                                          <td class="w-min-50 ">
-                                             <input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_@php echo $index;@endphp" data-id="@php echo $index;@endphp" value="{{$v1['amount']}}" style="text-align:right;">
-                                          </td>
-                                          <td></td>
-                                       </tr>
-                                       <?php
-                                       $index++;
-                                    }
-                                 }
-                              }?>
                               <div class="plus-icon" >
                                  <tr class="font-14 font-heading bg-white" style="display: none;">
                                     <td class="w-min-120 " colspan="5" >
@@ -674,98 +637,6 @@ foreach ($manageitems as $value) {
                   </div>
                </div>
             </form>
-         </div>
-         <div class="col-lg-1 d-none d-lg-flex justify-content-center px-1">
-            <div class="shortcut-key w-100">
-               <p class="font-14 fw-500 font-heading m-0">Shortcut Keys</p>
-               <button class="p-2 transaction-shortcut-btn my-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Help">F1
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Help</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Account">
-                  <span class="border-bottom-black">F1</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Account</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Item">
-                  <span class="border-bottom-black">F2</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Item</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Master">F3
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Master</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Voucher">
-                  <span class="border-bottom-black">F3</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Voucher</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Payment">
-                  <span class="border-bottom-black">F5</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Payment</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Receipt">
-                  <span class="border-bottom-black">F6</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Receipt</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Journal">
-                  <span class="border-bottom-black">F7</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Journal</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Sales">
-                  <span class="border-bottom-black">F8</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Sales</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-4 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Add Purchase">
-                  <span class="border-bottom-black">F9</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Add Purchase</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Balance Sheet">
-                  <span class="border-bottom-black">B</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Balance Sheet</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Trial Balance">
-                  <span class="border-bottom-black">T</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Trial Balance</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Stock Status">
-                  <span class="border-bottom-black">S</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Stock Status</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Acc. Ledger">
-                  <span class="border-bottom-black">L</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Acc. Ledger</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Item Summary">
-                  <span class="border-bottom-black">I</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Item Summary</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Item Ledger">
-                  <span class="border-bottom-black">D</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Item Ledger</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="GST Summary">
-                  <span class="border-bottom-black">G</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">GST Summary</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Switch User">
-                  <span class="border-bottom-black">U</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Switch User</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center " data-bs-toggle="tooltip" data-bs-placement="bottom" title="Configuration">
-                  <span class="border-bottom-black">F</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Configuration</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Lock Program">
-                  <span class="border-bottom-black">K</span>
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Lock Program</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Training Videos">
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">Training Videos</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-2 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="bottom" title="GST Portal">
-                  <span class="ps-1 fw-normal text-body d-inline-block text-ellipsis">GST Portal</span>
-               </button>
-               <button class="p-2 transaction-shortcut-btn mb-4 text-ellipsis d-inline-block" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Search Menu">
-                  Search Menu
-               </button>
-            </div>
          </div>
       </div>
    </section>
@@ -1160,8 +1031,6 @@ foreach ($manageitems as $value) {
    var partyGSTData = {};
    let manualRoundOff = true;
    let manualGST = true;
-   let manualRoundOff = true;
-   let manualGST = true;
    var add_more_count = '<?php echo --$i;?>';
    var add_more_counts = 1;
    var add_more_bill_sundry_up_count = '<?php echo --$index;?>';
@@ -1437,526 +1306,503 @@ newRow = '<tr id="billtr_' + add_more_bill_sundry_up_count + '" class="font-14 f
          $("#max_sale_sundry").val(add_more_counts);
       });
       // Function to calculate amount and update total sum
-      function calculateAmount (key=null) {      
+      function calculateAmount(key = null) {
          customer_gstin = $('#party option:selected').attr('data-state_code');
          let bill_date = $("#date").val();
-   
-         if(customer_gstin==undefined){
+
+         if (customer_gstin == undefined) {
             return;
-         }       
-         if(gstApplicable && customer_gstin==merchant_gstin.substring(0,2)){
+         }
+         if(gst_disabled_for_party == 1)
+         {
+            $('#gst_breakup_body').html('');
+
+            $('#tax_heading').html('Tax');
+
+            return;
+         }
+         if (gstApplicable && customer_gstin == merchant_gstin.substring(0, 2)) {
             $("#billtr_cgst").show();
             $("#billtr_sgst").show();
-            if(manualGST == false){
-               $("#bill_sundry_amount_igst").val('');
-            }
-            if(manualGST == false){
-               $("#bill_sundry_amount_igst").val('');
+            if (manualGST == false) {
+                  $("#bill_sundry_amount_igst").val('');
             }
             $("#billtr_igst").hide();
             $("#tax_rate_tr_igst").val(0);
             $("#tax_amt_igst").html('');
-         }else if(gstApplicable){
+         } else if (gstApplicable) {
             $("#billtr_igst").show();
             $("#billtr_cgst").hide();
             $("#billtr_sgst").hide();
-            if(manualGST == false){
-               $("#bill_sundry_amount_cgst").val('');
-               $("#bill_sundry_amount_sgst").val('');
-            }
-            $("#billtr_sgst").hide();
-            if(manualGST == false){
-               $("#bill_sundry_amount_cgst").val('');
-               $("#bill_sundry_amount_sgst").val('');
+            if (manualGST == false) {
+                  $("#bill_sundry_amount_cgst").val('');
+                  $("#bill_sundry_amount_sgst").val('');
             }
             $("#tax_rate_tr_cgst").val(0);
-            $("#tax_rate_tr_sgst").val(0);
             $("#tax_rate_tr_sgst").val(0);
             $("#tax_amt_cgst").html('');
             $("#tax_amt_sgst").html('');
          }
 
-
-         if(!gstApplicable){
+         if (!gstApplicable) {
             $(".extra_gst").remove();
-
             $("#billtr_cgst").hide();
             $("#billtr_sgst").hide();
             $("#billtr_igst").hide();
-            if(manualGST == false){
-               $("#bill_sundry_amount_cgst").val('');
-               $("#bill_sundry_amount_sgst").val('');
-               $("#bill_sundry_amount_igst").val('');
+            if (manualGST == false) {
+                  $("#bill_sundry_amount_cgst").val('');
+                  $("#bill_sundry_amount_sgst").val('');
+                  $("#bill_sundry_amount_igst").val('');
             }
-            if(manualGST == false){
-               $("#bill_sundry_amount_cgst").val('');
-               $("#bill_sundry_amount_sgst").val('');
-               $("#bill_sundry_amount_igst").val('');
-            }
-
             $("#tax_rate_tr_cgst").val(0);
             $("#tax_rate_tr_sgst").val(0);
             $("#tax_rate_tr_igst").val(0);
          }
+
          percent_arr = [];
          var total = 0;
-         let count = 2;
          var tax_rate = 0;
          var tax_rate_display = "";
          var tax_amount = 0;
          var final_total = 0;
-         $('#example11 tbody tr').each(function() {
+
+         $('#example11 tbody tr').each(function () {
             var price = $(this).find('.price').val();
             var quantity = $(this).find('.quantity').val();
-            if(key=="A" || pageLoaded==1){
-               var amount = $(this).find('.amount').val();
-            }else{
-               var amount = (price && quantity) ? (price * quantity) : 0;
-               if(price==0 && quantity==0){
+            var amount;
+            if (key == "A" || pageLoaded == 1) {
                   amount = $(this).find('.amount').val();
-               }
-               if(amount!=0){
-                  $(this).find('.amount').val(parseFloat(amount).toFixed(2));
-                  $(this).find('.amount').keyup();
-               } 
+            } else {
+                  amount = (price && quantity) ? (price * quantity) : 0;
+                  if (price == 0 && quantity == 0) {
+                     amount = $(this).find('.amount').val();
+                  }
+                  if (amount != 0) {
+                     $(this).find('.amount').val(parseFloat(amount).toFixed(2));
+                     $(this).find('.amount').keyup();
+                  }
             }
-            if(amount!=undefined){
-               total += parseFloat(amount);
+            if (amount != undefined) {
+                  total += parseFloat(amount);
             }
          });
+
          let k = 1;
-         $('.goods_items').each(function(){   
-            let i = $(this).attr('data-id');          
-            if($("#amount_tr_"+i).val()!="" && $(this).val()!=''){
-               percent_arr.push({"percent":$('option:selected', this).attr('data-percent'),"amount":$("#amount_tr_"+i).val()});
+         $('.goods_items').each(function () {
+            let i = $(this).attr('data-id');
+            if ($("#amount_tr_" + i).val() != "" && $(this).val() != '') {
+                  percent_arr.push({
+                     "percent": $('option:selected', this).attr('data-percent'),
+                     "amount": $("#amount_tr_" + i).val()
+                  });
             }
-            $("#srn_"+i).html(k);  
-            k++;           
+            $("#srn_" + i).html(k);
+            k++;
          });
-         let freight_amount_arr = [];let discouint_amount_arr = [];
+
+         let freight_amount_arr = [];
+         let discouint_amount_arr = [];
          let billSundryArray = [];
-         let taxSundryArray = [];            
-         $(".bill_sundry_tax_type").each(function(){          
+         let taxSundryArray = [];
+
+         $(".bill_sundry_tax_type").each(function () {
             let id = $(this).attr('data-id');
-            if($("#bill_sundry_amount_"+id).val()!='' && ($('option:selected', this).attr('data-sundry_percent')==undefined || $('option:selected', this).attr('data-sundry_percent')=="")){
-               billSundryArray.push({'id':$(this).val(),'value':$("#bill_sundry_amount_"+id).val(),'type':$('option:selected', this).attr('data-type'),'adjust_sale_amt':$('option:selected', this).attr('data-adjust_sale_amt'),'effect_gst_calculation':$('option:selected', this).attr('data-effect_gst_calculation'),'sequence':$('option:selected', this).attr('data-sequence'),'nature_of_sundry':$('option:selected', this).attr('data-nature_of_sundry')});
-               taxSundryArray[id] = $("#bill_sundry_amount_"+id).val();
+            if (
+                  $("#bill_sundry_amount_" + id).val() != '' &&
+                  (
+                     $('option:selected', this).attr('data-sundry_percent') == undefined ||
+                     $('option:selected', this).attr('data-sundry_percent') == ""
+                  )
+            ) {
+                  billSundryArray.push({
+                     'id': $(this).val(),
+                     'value': $("#bill_sundry_amount_" + id).val(),
+                     'type': $('option:selected', this).attr('data-type'),
+                     'adjust_sale_amt': $('option:selected', this).attr('data-adjust_sale_amt'),
+                     'effect_gst_calculation': $('option:selected', this).attr('data-effect_gst_calculation'),
+                     'sequence': $('option:selected', this).attr('data-sequence'),
+                     'nature_of_sundry': $('option:selected', this).attr('data-nature_of_sundry')
+                  });
+                  taxSundryArray[id] = $("#bill_sundry_amount_" + id).val();
             }
-         });                   
-         var result = []; 
-         percent_arr.reduce(function(res, value){
+         });
+
+         var result = [];
+         percent_arr.reduce(function (res, value) {
             if (!res[value.percent]) {
-               res[value.percent] = { percent: value.percent, amount: 0 };
-               result.push(res[value.percent]);
+                  res[value.percent] = { percent: value.percent, amount: 0 };
+                  result.push(res[value.percent]);
             }
-            res[value.percent].amount += parseFloat(value.amount); 
+            res[value.percent].amount += parseFloat(value.amount);
             return res;
          }, {});
-         
+         let gstBreakupHtml = '';
+
+         if(customer_gstin == merchant_gstin.substring(0,2))
+         {
+            $('#tax_heading').html('Tax (CGST + SGST)');
+         }
+         else
+         {
+            $('#tax_heading').html('Tax (IGST)');
+         }
+
+         let bill_sundry_total = 0;
+         let item_total_amount = 0;
+
+         // Total item amount
+         result.forEach(function(e){
+            item_total_amount += parseFloat(e.amount || 0);
+         });
+
+         // Calculate GST applicable sundries
+         billSundryArray.forEach(function(bs){
+
+            if(bs.nature_of_sundry == 'OTHER')
+            {
+               if(parseFloat(bs.value || 0) > 0)
+               {
+                     if(bs.type == 'additive')
+                     {
+                        bill_sundry_total += parseFloat(bs.value);
+                     }
+                     else if(bs.type == 'subtractive')
+                     {
+                        bill_sundry_total -= parseFloat(bs.value);
+                     }
+               }
+            }
+         });
+
+         result.forEach(function(e){
+
+            let gstRate = parseFloat(e.percent || 0);
+
+            let taxableShare = 0;
+
+            if(item_total_amount > 0)
+            {
+               taxableShare =
+                     (parseFloat(e.amount) / item_total_amount)
+                     * bill_sundry_total;
+            }
+
+            let taxableAmount =
+               parseFloat(e.amount)
+               + parseFloat(taxableShare);
+
+            if(customer_gstin == merchant_gstin.substring(0,2))
+            {
+               let halfRate = gstRate / 2;
+
+               let cgstAmt =
+                     (Math.round(((taxableAmount * halfRate) / 100) * 100) / 100)
+            .toFixed(2);
+
+               let sgstAmt =
+                     (Math.round(((taxableAmount * halfRate) / 100) * 100) / 100)
+            .toFixed(2);
+
+               gstBreakupHtml += `
+                     <tr>
+                        <td>${halfRate}% + ${halfRate}%</td>
+                        <td style="text-align:right">${taxableAmount.toFixed(2)}</td>
+                        <td style="text-align:right">${cgstAmt} + ${sgstAmt}</td>
+                     </tr>
+               `;
+            }
+            else
+            {
+               let igstAmt =
+                     (Math.round(((taxableAmount * gstRate) / 100) * 100) / 100)
+            .toFixed(2);
+
+               gstBreakupHtml += `
+                     <tr>
+                        <td>${gstRate}%</td>
+                        <td style="text-align:right">${taxableAmount.toFixed(2)}</td>
+                        <td style="text-align:right">${igstAmt}</td>
+                     </tr>
+               `;
+            }
+         });
+
+         $('#gst_breakup_body').html(gstBreakupHtml);
          $("#totalSum").html(total.toFixed(2));
          let taxable_amount = total;
          final_total = total;
          let total_item_taxable_amount = 0;
          let on_tcs_amount = 0;
-         
 
-         if(customer_gstin==merchant_gstin.substring(0,2)){            
-            var maxPercent = Math.max.apply(null, result.map(function(item){
-            return item.percent;
-            }))
-            
-            if(result.length>0){
-               let index = 1;
-               if(!purchaseEditInit){
-   $(".auto_gst").remove();
-}
-               let bill_sundry_total = 0;
-               let item_total_amount = 0; //New Changes By Ashish
-               result.forEach(function(e){  //New Changes By Ashish
-                  item_total_amount = parseFloat(item_total_amount) + parseFloat(e.amount); //New Changes By Ashish
-               
-               }); //New Changes By Ashish
-               result.forEach(function(e,i){     
-                  let item_taxable_amount = e.amount;   
-                  if(i==0){ //New Changes By Ashish
-                     if(billSundryArray.length>0){
-                        billSundryArray.forEach(function(e){
-                           if(e.nature_of_sundry=='OTHER'){
-                              if(e.value>0){
-                                 if(e.type=='additive'){
-                                    bill_sundry_total = bill_sundry_total + parseFloat(e.value);
-                                    final_total = final_total + parseFloat(e.value);
-                                 }else if(e.type=='subtractive'){
-                                    bill_sundry_total = bill_sundry_total - parseFloat(e.value);
-                                    final_total = final_total - parseFloat(e.value);
-                                 }
-                              } 
-                           }else if(e.nature_of_sundry=='TCS'){
-                              final_total = final_total + parseFloat(e.value);
-                              on_tcs_amount = parseFloat(on_tcs_amount) + parseFloat(e.value);
-                           }
-                        });
-                     }
-                  } //New Changes By Ashish
-                  
-                  if(i==0){
-                     total_item_taxable_amount = total_item_taxable_amount + parseFloat(item_taxable_amount) + parseFloat(bill_sundry_total);
-                  }else{
-                     total_item_taxable_amount = total_item_taxable_amount + parseFloat(item_taxable_amount);
-                  }
-                  //on_tcs_amount = parseFloat(on_tcs_amount) + parseFloat(total_item_taxable_amount);
-                  //let a = e.amount/item_total_amount;
-                  let taxable_amount_per_item = (e.amount/item_total_amount)*(bill_sundry_total);//New Changes By Ashish
-                  taxable_amount_per_item = parseFloat(e.amount) + parseFloat(taxable_amount_per_item); //New Changes By Ashish
-                  if(index==1){
-                     if(manualGST == false){
-                     if(manualGST == false){
-                     if(enter_gst_status==0 && item_taxable_amount!=0 && auto_gst_calculation==1){
-                        let sundry_amount =
-                        (taxable_amount_per_item*e.percent/2)/100;
-                        sundry_amount =
-                        (
-                           Math.round(
-                              (sundry_amount + Number.EPSILON) * 100
-                           ) / 100
-                        ).toFixed(2);
-                        let sundry_amount =
-                        (taxable_amount_per_item*e.percent/2)/100;
-                        sundry_amount =
-                        (
-                           Math.round(
-                              (sundry_amount + Number.EPSILON) * 100
-                           ) / 100
-                        ).toFixed(2);
-                        taxSundryArray['cgst'] = sundry_amount;
-                        taxSundryArray['sgst'] = sundry_amount;
-                        enter_gst_status = 1;
-                        enter_gst_status = 1;
-                     }else{
-                        let sundry_amount =
-                        (taxable_amount_per_item*e.percent/2)/100;
-                        sundry_amount =
-                        (
-                           Math.round(
-                              (sundry_amount + Number.EPSILON) * 100
-                           ) / 100
-                        ).toFixed(2);
-                        let sundry_amount =
-                        (taxable_amount_per_item*e.percent/2)/100;
-                        sundry_amount =
-                        (
-                           Math.round(
-                              (sundry_amount + Number.EPSILON) * 100
-                           ) / 100
-                        ).toFixed(2);
-                        taxSundryArray['cgst'] = sundry_amount;
-                        taxSundryArray['sgst'] = sundry_amount;
-                     }
-                  }else{
-                     taxSundryArray['cgst'] =
-                        parseFloat(
-                           $("#bill_sundry_amount_cgst").val()
-                        ) || 0;
-                     taxSundryArray['sgst'] =
-                        parseFloat(
-                           $("#bill_sundry_amount_sgst").val()
-                        ) || 0;
-                  }
-                     }
-                  }else{
-                     taxSundryArray['cgst'] =
-                        parseFloat(
-                           $("#bill_sundry_amount_cgst").val()
-                        ) || 0;
-                     taxSundryArray['sgst'] =
-                        parseFloat(
-                           $("#bill_sundry_amount_sgst").val()
-                        ) || 0;
-                  }
-                     //CGST
-                     if(gstApplicable && manualGST == false){
-                     if(gstApplicable && manualGST == false){
-                        $("#bill_sundry_amount_cgst").val(taxSundryArray['cgst']);
-                     }
-                     //$("#bill_sundry_amount_cgst").prop('readonly',true);
-                     $("#tax_amt_cgst").html(e.percent/2+" %");
-                     $("#tax_rate_tr_cgst").val(e.percent/2);
-                     //SGST
-                     if(gstApplicable && manualGST == false){
-                     if(gstApplicable && manualGST == false){
-                        $("#bill_sundry_amount_sgst").val(taxSundryArray['sgst']);
-                     }
-                     //$("#bill_sundry_amount_sgst").prop('readonly',true);
-                     $("#tax_amt_sgst").html(e.percent/2+" %");
-                     $("#tax_rate_tr_sgst").val(e.percent/2);
-                     if(taxSundryArray['sgst']=="" || taxSundryArray['sgst']==undefined){                       
-                        taxSundryArray['sgst'] = 0;
-                     }
-                     if(taxSundryArray['cgst']=="" || taxSundryArray['cgst']==undefined){
-                        taxSundryArray['cgst'] = 0;
-                     }
-                     //on_tcs_amount = parseFloat(on_tcs_amount) + parseFloat(taxSundryArray['cgst']) + parseFloat(taxSundryArray['sgst']);
-                     if(gstApplicable){
-                        final_total = final_total + parseFloat(taxSundryArray['cgst']) + parseFloat(taxSundryArray['sgst']); 
-                     }
+         if (customer_gstin == merchant_gstin.substring(0, 2)) {
+            var maxPercent = Math.max.apply(null, result.map(function (item) {
+                  return item.percent;
+            }));
 
-                  }else{
-                     if(enter_gst_status==0 && item_taxable_amount!=0){
-                        let sundry_amount = (taxable_amount_per_item*e.percent/2)/100;//New Changes By Ashish
-                      sundry_amount = (Math.round((sundry_amount + Number.EPSILON) * 100) / 100).toFixed(2);
-                        enter_gst_status = 1;
-                        taxSundryArray['cgst'] = sundry_amount;
-                        taxSundryArray['sgst'] = sundry_amount;
-                     }else{
-                        let sundry_amount = (taxable_amount_per_item*e.percent/2)/100;//New Changes By Ashish
-                      sundry_amount = (Math.round((sundry_amount + Number.EPSILON) * 100) / 100).toFixed(2);
-                        taxSundryArray['cgst'] = sundry_amount;
-                        taxSundryArray['sgst'] = sundry_amount;
-                     }
-                     //CGST
-                     let cgst_sundry_value = "";
-                     if(bill_sundry_array.length>0){ //New Changes By Ashish
-                        bill_sundry_array.forEach(function(e){ //New Changes By Ashish
-                           if(e.nature_of_sundry=='CGST'){ 
-                              cgst_sundry_value = e.id;
-                           }
-                        });
-                     }
-                     if(!purchaseEditInit){
-                        $(".add_more_bill_sundry_gst").click();
-                     }
-                     if(gstApplicable && manualGST == false){
-                        $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(taxSundryArray['cgst']);
-                     }
-                     $("#bill_sundry_"+add_more_bill_sundry_up_count).val(cgst_sundry_value)
-                     //$("#bill_sundry_amount_"+add_more_bill_sundry_up_count).prop('readonly',true);
-                     $("#tax_amt_"+add_more_bill_sundry_up_count).html(e.percent/2+" %");
-                     $("#tax_rate_tr_"+add_more_bill_sundry_up_count).val(e.percent/2);
-                     //SGST
-                     let sgst_sundry_value = "";
-                     if(bill_sundry_array.length>0){ //New Changes By Ashish
-                        bill_sundry_array.forEach(function(e){ //New Changes By Ashish
-                           if(e.nature_of_sundry=='SGST'){ 
-                              sgst_sundry_value = e.id;
-                           }
-                        });
-                     }
-                     if(!purchaseEditInit){
-                        $(".add_more_bill_sundry_gst").click();
-                     }
-                     if(gstApplicable && manualGST == false){
-                        $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(taxSundryArray['sgst']);
-                     }
-                     $("#bill_sundry_"+add_more_bill_sundry_up_count).val(sgst_sundry_value)
-                     //$("#bill_sundry_amount_"+add_more_bill_sundry_up_count).prop('readonly',true);
-                     $("#tax_amt_"+add_more_bill_sundry_up_count).html(e.percent/2+" %");
-                     $("#tax_rate_tr_"+add_more_bill_sundry_up_count).val(e.percent/2);
-                     if(taxSundryArray['sgst']=="" || taxSundryArray['sgst']==undefined){                        
-                        taxSundryArray['sgst'] = 0;
-                     }
-                     if(taxSundryArray['cgst']=="" || taxSundryArray['cgst']==undefined){
-                        taxSundryArray['cgst'] = 0;
-                     }
-                     //on_tcs_amount = parseFloat(on_tcs_amount) + parseFloat(taxSundryArray['cgst']) + parseFloat(taxSundryArray['sgst']);
-                     if(gstApplicable){
-                        final_total = final_total + parseFloat(taxSundryArray['cgst']) + parseFloat(taxSundryArray['sgst']); 
-                     }
-                  }                  
-                  index++;                 
-               });
-            }            
-         }else{
-            var maxPercent = Math.max.apply(null, result.map(function(item) {
-            return item.percent;
-            }))    
-            
-            if(result.length>0){
-               let index = 1;
-               if(!purchaseEditInit){
+            if (result.length > 0) {
+                  let index = 1;
                   $(".auto_gst").remove();
-               }
-               let item_total_amount = 0;
-               let bill_sundry_total = 0;
-               
-               result.forEach(function(e){ //New Changes By Ashish
-                  item_total_amount = parseFloat(item_total_amount) + parseFloat(e.amount);//New Changes By Ashish
-               });//New Changes By Ashish
-               result.forEach(function(e,i){
-                  
-                  let item_taxable_amount = e.amount;   
-                  if(i==0){ //New Changes By Ashish
-                     if(billSundryArray.length>0){
-                        billSundryArray.forEach(function(e){
-                           if(e.nature_of_sundry=='OTHER'){ 
-                              if(e.value>0){
-                                 if(e.type=='additive'){
-                                    bill_sundry_total = bill_sundry_total + parseFloat(e.value);
+                  let bill_sundry_total = 0;
+                  let item_total_amount = 0;
+
+                  result.forEach(function (e) {
+                     item_total_amount = parseFloat(item_total_amount) + parseFloat(e.amount);
+                  });
+
+                  result.forEach(function (e, i) {
+                     let item_taxable_amount = e.amount;
+
+                     if (i == 0) {
+                        if (billSundryArray.length > 0) {
+                              billSundryArray.forEach(function (e) {
+                                 if (e.nature_of_sundry == 'OTHER') {
+                                    if (e.value > 0) {
+                                          if (e.type == 'additive') {
+                                             bill_sundry_total = bill_sundry_total + parseFloat(e.value);
+                                             final_total = final_total + parseFloat(e.value);
+                                          } else if (e.type == 'subtractive') {
+                                             bill_sundry_total = bill_sundry_total - parseFloat(e.value);
+                                             final_total = final_total - parseFloat(e.value);
+                                          }
+                                    }
+                                 } else if (e.nature_of_sundry == 'TCS') {
                                     final_total = final_total + parseFloat(e.value);
-                                 }else if(e.type=='subtractive'){
-                                    bill_sundry_total = bill_sundry_total - parseFloat(e.value);
-                                    final_total = final_total - parseFloat(e.value);
+                                    on_tcs_amount = parseFloat(on_tcs_amount) + parseFloat(e.value);
                                  }
+                              });
+                        }
+                     }
+
+                     if (i == 0) {
+                        total_item_taxable_amount = total_item_taxable_amount + parseFloat(item_taxable_amount) + parseFloat(bill_sundry_total);
+                     } else {
+                        total_item_taxable_amount = total_item_taxable_amount + parseFloat(item_taxable_amount);
+                     }
+
+                     let taxable_amount_per_item = (e.amount / item_total_amount) * (bill_sundry_total);
+                     taxable_amount_per_item = parseFloat(e.amount) + parseFloat(taxable_amount_per_item);
+
+                     if (index == 1) {
+                        if (manualGST == false) {
+                              if (enter_gst_status == 0 && item_taxable_amount != 0 && auto_gst_calculation == 1) {
+                                 var sundry_amount = (taxable_amount_per_item * e.percent / 2) / 100;
+                                 sundry_amount = (Math.round((sundry_amount + Number.EPSILON) * 100) / 100).toFixed(2);
+                                 taxSundryArray['cgst'] = sundry_amount;
+                                 taxSundryArray['sgst'] = sundry_amount;
+                                 enter_gst_status = 1;
+                              } else {
+                                 var sundry_amount = (taxable_amount_per_item * e.percent / 2) / 100;
+                                 sundry_amount = (Math.round((sundry_amount + Number.EPSILON) * 100) / 100).toFixed(2);
+                                 taxSundryArray['cgst'] = sundry_amount;
+                                 taxSundryArray['sgst'] = sundry_amount;
                               }
-                           }else if(e.nature_of_sundry=='TCS'){
-                              final_total = final_total + parseFloat(e.value);
-                              on_tcs_amount = parseFloat(on_tcs_amount) + parseFloat(e.value);
-                           }
-                        });
-                     }
-                  }  //New Changes By Ashish
-                  if(i==0){
-                     total_item_taxable_amount = total_item_taxable_amount + parseFloat(item_taxable_amount) + parseFloat(bill_sundry_total);
-                  }else{
-                     total_item_taxable_amount = total_item_taxable_amount + parseFloat(item_taxable_amount);
-                  }
-                  
-                  //on_tcs_amount = parseFloat(on_tcs_amount) + parseFloat(total_item_taxable_amount);                 
-
-                  let taxable_amount_per_item = (e.amount/item_total_amount)*(bill_sundry_total);//New Changes By Ashish
-                  taxable_amount_per_item = parseFloat(e.amount) + parseFloat(taxable_amount_per_item);//New Changes By Ashish
-                  if(index==1){
-                     if(manualGST == false){
-
-                        if(enter_gst_status==0 && item_taxable_amount!=0){
-
-                           let sundry_amount =
-                           (taxable_amount_per_item*e.percent)/100;
-
-                           sundry_amount =
-                           (
-                              Math.round(
-                                 (sundry_amount + Number.EPSILON) * 100
-                              ) / 100
-                           ).toFixed(2);
-
-                           taxSundryArray['igst'] = sundry_amount;
-
-                           enter_gst_status = 1;
-
-                        }else{
-
-                           let sundry_amount =
-                           (taxable_amount_per_item*e.percent)/100;
-
-                           sundry_amount =
-                           (
-                              Math.round(
-                                 (sundry_amount + Number.EPSILON) * 100
-                              ) / 100
-                           ).toFixed(2);
-
-                           taxSundryArray['igst'] = sundry_amount;
+                        } else {
+                              taxSundryArray['cgst'] = parseFloat($("#bill_sundry_amount_cgst").val()) || 0;
+                              taxSundryArray['sgst'] = parseFloat($("#bill_sundry_amount_sgst").val()) || 0;
                         }
 
-                     }else{
+                        if (gstApplicable && manualGST == false) {
+                              $("#bill_sundry_amount_cgst").val(taxSundryArray['cgst']);
+                        }
+                        $("#tax_amt_cgst").html(e.percent / 2 + " %");
+                        $("#tax_rate_tr_cgst").val(e.percent / 2);
 
-                        taxSundryArray['igst'] =
-                           parseFloat(
-                              $("#bill_sundry_amount_igst").val()
-                           ) || 0;
-                     }
-                     
-                     if(gstApplicable && manualGST == false){
-                     if(manualGST == false){
+                        if (gstApplicable && manualGST == false) {
+                              $("#bill_sundry_amount_sgst").val(taxSundryArray['sgst']);
+                        }
+                        $("#tax_amt_sgst").html(e.percent / 2 + " %");
+                        $("#tax_rate_tr_sgst").val(e.percent / 2);
 
-                        if(enter_gst_status==0 && item_taxable_amount!=0){
-
-                           let sundry_amount =
-                           (taxable_amount_per_item*e.percent)/100;
-
-                           sundry_amount =
-                           (
-                              Math.round(
-                                 (sundry_amount + Number.EPSILON) * 100
-                              ) / 100
-                           ).toFixed(2);
-
-                           taxSundryArray['igst'] = sundry_amount;
-
-                           enter_gst_status = 1;
-
-                        }else{
-
-                           let sundry_amount =
-                           (taxable_amount_per_item*e.percent)/100;
-
-                           sundry_amount =
-                           (
-                              Math.round(
-                                 (sundry_amount + Number.EPSILON) * 100
-                              ) / 100
-                           ).toFixed(2);
-
-                           taxSundryArray['igst'] = sundry_amount;
+                        if (taxSundryArray['sgst'] == "" || taxSundryArray['sgst'] == undefined) {
+                              taxSundryArray['sgst'] = 0;
+                        }
+                        if (taxSundryArray['cgst'] == "" || taxSundryArray['cgst'] == undefined) {
+                              taxSundryArray['cgst'] = 0;
+                        }
+                        if (gstApplicable) {
+                              final_total = final_total + parseFloat(taxSundryArray['cgst']) + parseFloat(taxSundryArray['sgst']);
+                        }
+                     } else {
+                        if (enter_gst_status == 0 && item_taxable_amount != 0) {
+                              var sundry_amount = (taxable_amount_per_item * e.percent / 2) / 100;
+                              sundry_amount = (Math.round((sundry_amount + Number.EPSILON) * 100) / 100).toFixed(2);
+                              enter_gst_status = 1;
+                              taxSundryArray['cgst'] = sundry_amount;
+                              taxSundryArray['sgst'] = sundry_amount;
+                        } else {
+                              var sundry_amount = (taxable_amount_per_item * e.percent / 2) / 100;
+                              sundry_amount = (Math.round((sundry_amount + Number.EPSILON) * 100) / 100).toFixed(2);
+                              taxSundryArray['cgst'] = sundry_amount;
+                              taxSundryArray['sgst'] = sundry_amount;
                         }
 
-                     }else{
+                        let cgst_sundry_value = "";
+                        if (bill_sundry_array.length > 0) {
+                              bill_sundry_array.forEach(function (e) {
+                                 if (e.nature_of_sundry == 'CGST') {
+                                    cgst_sundry_value = e.id;
+                                 }
+                              });
+                        }
+                              $(".add_more_bill_sundry_gst").click();
+                        if (gstApplicable && manualGST == false) {
+                              $("#bill_sundry_amount_" + add_more_bill_sundry_up_count).val(taxSundryArray['cgst']);
+                        }
+                        $("#bill_sundry_" + add_more_bill_sundry_up_count).val(cgst_sundry_value);
+                        $("#tax_amt_" + add_more_bill_sundry_up_count).html(e.percent / 2 + " %");
+                        $("#tax_rate_tr_" + add_more_bill_sundry_up_count).val(e.percent / 2);
 
-                        taxSundryArray['igst'] =
-                           parseFloat(
-                              $("#bill_sundry_amount_igst").val()
-                           ) || 0;
+                        let sgst_sundry_value = "";
+                        if (bill_sundry_array.length > 0) {
+                              bill_sundry_array.forEach(function (e) {
+                                 if (e.nature_of_sundry == 'SGST') {
+                                    sgst_sundry_value = e.id;
+                                 }
+                              });
+                        }
+                              $(".add_more_bill_sundry_gst").click();
+                        if (gstApplicable && manualGST == false) {
+                              $("#bill_sundry_amount_" + add_more_bill_sundry_up_count).val(taxSundryArray['sgst']);
+                        }
+                        $("#bill_sundry_" + add_more_bill_sundry_up_count).val(sgst_sundry_value);
+                        $("#tax_amt_" + add_more_bill_sundry_up_count).html(e.percent / 2 + " %");
+                        $("#tax_rate_tr_" + add_more_bill_sundry_up_count).val(e.percent / 2);
+
+                        if (taxSundryArray['sgst'] == "" || taxSundryArray['sgst'] == undefined) {
+                              taxSundryArray['sgst'] = 0;
+                        }
+                        if (taxSundryArray['cgst'] == "" || taxSundryArray['cgst'] == undefined) {
+                              taxSundryArray['cgst'] = 0;
+                        }
+                        if (gstApplicable) {
+                              final_total = final_total + parseFloat(taxSundryArray['cgst']) + parseFloat(taxSundryArray['sgst']);
+                        }
                      }
-                     
-                     if(gstApplicable && manualGST == false){
-                        $("#bill_sundry_amount_igst").val(taxSundryArray['igst']);
+
+                     index++;
+                  });
+            }
+         } else {
+            var maxPercent = Math.max.apply(null, result.map(function (item) {
+                  return item.percent;
+            }));
+
+            if (result.length > 0) {
+                  let index = 1;
+                     $(".auto_gst").remove();
+                  let item_total_amount = 0;
+                  let bill_sundry_total = 0;
+
+                  result.forEach(function (e) {
+                     item_total_amount = parseFloat(item_total_amount) + parseFloat(e.amount);
+                  });
+
+                  result.forEach(function (e, i) {
+                     let item_taxable_amount = e.amount;
+
+                     if (i == 0) {
+                        if (billSundryArray.length > 0) {
+                              billSundryArray.forEach(function (e) {
+                                 if (e.nature_of_sundry == 'OTHER') {
+                                    if (e.value > 0) {
+                                          if (e.type == 'additive') {
+                                             bill_sundry_total = bill_sundry_total + parseFloat(e.value);
+                                             final_total = final_total + parseFloat(e.value);
+                                          } else if (e.type == 'subtractive') {
+                                             bill_sundry_total = bill_sundry_total - parseFloat(e.value);
+                                             final_total = final_total - parseFloat(e.value);
+                                          }
+                                    }
+                                 } else if (e.nature_of_sundry == 'TCS') {
+                                    final_total = final_total + parseFloat(e.value);
+                                    on_tcs_amount = parseFloat(on_tcs_amount) + parseFloat(e.value);
+                                 }
+                              });
+                        }
                      }
-                     //$("#bill_sundry_amount_igst").prop('readonly',true);
-                     $("#tax_amt_igst").html(e.percent+" %");
-                     $("#tax_rate_tr_igst").val(e.percent); 
-                     if(taxSundryArray['igst']=="" || taxSundryArray['igst']==undefined){
-                        taxSundryArray['igst'] = 0;
+
+                     if (i == 0) {
+                        total_item_taxable_amount = total_item_taxable_amount + parseFloat(item_taxable_amount) + parseFloat(bill_sundry_total);
+                     } else {
+                        total_item_taxable_amount = total_item_taxable_amount + parseFloat(item_taxable_amount);
                      }
-                     //on_tcs_amount = parseFloat(on_tcs_amount) + parseFloat(taxSundryArray['igst']);
-                     if(gstApplicable){
-                        final_total = final_total + parseFloat(taxSundryArray['igst']); 
+
+                     let taxable_amount_per_item = (e.amount / item_total_amount) * (bill_sundry_total);
+                     taxable_amount_per_item = parseFloat(e.amount) + parseFloat(taxable_amount_per_item);
+
+                     if (index == 1) {
+                        if (manualGST == false) {
+                              if (enter_gst_status == 0 && item_taxable_amount != 0) {
+                                 var sundry_amount = (taxable_amount_per_item * e.percent) / 100;
+                                 sundry_amount = (Math.round((sundry_amount + Number.EPSILON) * 100) / 100).toFixed(2);
+                                 taxSundryArray['igst'] = sundry_amount;
+                                 enter_gst_status = 1;
+                              } else {
+                                 var sundry_amount = (taxable_amount_per_item * e.percent) / 100;
+                                 sundry_amount = (Math.round((sundry_amount + Number.EPSILON) * 100) / 100).toFixed(2);
+                                 taxSundryArray['igst'] = sundry_amount;
+                              }
+                              if (gstApplicable) {
+                                 $("#bill_sundry_amount_igst").val(taxSundryArray['igst']);
+                              }
+                        } else {
+                              taxSundryArray['igst'] = parseFloat($("#bill_sundry_amount_igst").val()) || 0;
+                        }
+
+                        $("#tax_amt_igst").html(e.percent + " %");
+                        $("#tax_rate_tr_igst").val(e.percent);
+
+                        if (taxSundryArray['igst'] == "" || taxSundryArray['igst'] == undefined) {
+                              taxSundryArray['igst'] = 0;
+                        }
+                        if (gstApplicable) {
+                              final_total = final_total + parseFloat(taxSundryArray['igst']);
+                        }
+                     } else {
+                        if (enter_gst_status == 0 && item_taxable_amount != 0) {
+                              var sundry_amount = (taxable_amount_per_item * e.percent) / 100;
+                              sundry_amount = (Math.round((sundry_amount + Number.EPSILON) * 100) / 100).toFixed(2);
+                              taxSundryArray['igst'] = sundry_amount;
+                              enter_gst_status = 1;
+                        } else {
+                              var sundry_amount = (taxable_amount_per_item * e.percent) / 100;
+                              sundry_amount = (Math.round((sundry_amount + Number.EPSILON) * 100) / 100).toFixed(2);
+                              taxSundryArray['igst'] = sundry_amount;
+                        }
+
+                        let sundry_value = "";
+                        if (bill_sundry_array.length > 0) {
+                              bill_sundry_array.forEach(function (e) {
+                                 if (e.nature_of_sundry == 'IGST') {
+                                    sundry_value = e.id;
+                                 }
+                              });
+                        }
+                              $(".add_more_bill_sundry_gst").click();
+                        if (gstApplicable && manualGST == false) {
+                              $("#bill_sundry_amount_" + add_more_bill_sundry_up_count).val(taxSundryArray['igst']);
+                        }
+                        $("#bill_sundry_" + add_more_bill_sundry_up_count).val(sundry_value);
+                        $("#tax_amt_" + add_more_bill_sundry_up_count).html(e.percent + " %");
+                        $("#tax_rate_tr_" + add_more_bill_sundry_up_count).val(e.percent);
+
+                        if (taxSundryArray['igst'] == "" || taxSundryArray['igst'] == undefined) {
+                              taxSundryArray['igst'] = 0;
+                        }
+                        if (gstApplicable) {
+                              final_total = final_total + parseFloat(taxSundryArray['igst']);
+                        }
                      }
-                  }else{
-                     if(enter_gst_status==0 && item_taxable_amount!=0){
-                        let sundry_amount = (taxable_amount_per_item*e.percent)/100;//New Changes By Ashish
-                      sundry_amount = (Math.round((sundry_amount + Number.EPSILON) * 100) / 100).toFixed(2);
-                        taxSundryArray['igst'] = sundry_amount;
-                        enter_gst_status = 1;                        
-                     }else{
-                        let sundry_amount = (taxable_amount_per_item*e.percent)/100;//New Changes By Ashish
-                      sundry_amount = (Math.round((sundry_amount + Number.EPSILON) * 100) / 100).toFixed(2);
-                        taxSundryArray['igst'] = sundry_amount;
-                     }
-                     
-                     let sundry_value = "";
-                     if(bill_sundry_array.length>0){ //New Changes By Ashish
-                        bill_sundry_array.forEach(function(e){ //New Changes By Ashish
-                           if(e.nature_of_sundry=='IGST'){
-                              sundry_value = e.id;
-                           }
-                        });
-                     }
-                     
-                     if(!purchaseEditInit){
-                        $(".add_more_bill_sundry_gst").click();
-                     }
-                     if(gstApplicable && manualGST == false){
-                        $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(taxSundryArray['igst']);
-                     }
-                     
-                     $("#bill_sundry_"+add_more_bill_sundry_up_count).val(sundry_value);
-                     $("#tax_amt_"+add_more_bill_sundry_up_count).html(e.percent+" %");
-                     $("#tax_rate_tr_"+add_more_bill_sundry_up_count).val(e.percent);
-                     if(taxSundryArray['igst']=="" || taxSundryArray['igst']==undefined){
-                        taxSundryArray['igst'] = 0;
-                     }
-                     //on_tcs_amount = parseFloat(on_tcs_amount) + parseFloat(taxSundryArray['igst']);
-                     if(gstApplicable){
-                        final_total = final_total + parseFloat(taxSundryArray['igst']); 
-                     }
-                  }                  
-                  index++;
-               });
-            } 
+
+                     index++;
+                  });
+            }
          }
+
          $('#total_taxable_amounts').val(total_item_taxable_amount.toFixed(2));
+
          let gstamount = 0;
-         $(".bill_sundry_tax_type").each(function(){
+         $(".bill_sundry_tax_type").each(function () {
             let id = $(this).attr('data-id');
             let sundry_percent = $('option:selected', this).attr('data-sundry_percent');
             let sundry_percent_date = $('option:selected', this).attr('data-sundry_percent_date');
@@ -1965,99 +1811,77 @@ newRow = '<tr id="billtr_' + add_more_bill_sundry_up_count + '" class="font-14 f
             let adjust_sale_amt = $('option:selected', this).attr('data-adjust_sale_amt');
             let effect_gst_calculation = $('option:selected', this).attr('data-effect_gst_calculation');
             let type = $('option:selected', this).attr('data-type');
-            if(sundry_percent!=undefined && sundry_percent_date!=undefined && sundry_percent!='' && sundry_percent_date!=''){
-               if(new Date(sundry_percent_date) <= new Date(bill_date)){
-                  
-                  $("#tax_amt_"+id).html(sundry_percent+" %");
-                  $("#tax_rate_tr_"+id).val(sundry_percent);
-                  // let tcs_amount = (on_tcs_amount*sundry_percent)/100;
-                  // tcs_amount = tcs_amount.toFixed(2);
-                  // $("#bill_sundry_amount_"+id).val(tcs_amount);
-                  // final_total = final_total + parseFloat(tcs_amount);
-               }
-            }else{
-               if(new Date(sundry_percent_date) <= new Date(bill_date)){
-                  if($("#bill_sundry_amount_"+id).val()!=""){
-                     if(type=="additive"){
-                        //final_total = final_total + parseFloat($("#bill_sundry_amount_"+id).val());
-                     }else if(type=="subtractive"){
-                        //final_total = final_total - parseFloat($("#bill_sundry_amount_"+id).val());
+
+            if (sundry_percent != undefined && sundry_percent_date != undefined && sundry_percent != '' && sundry_percent_date != '') {
+                  if (new Date(sundry_percent_date) <= new Date(bill_date)) {
+                     $("#tax_amt_" + id).html(sundry_percent + " %");
+                     $("#tax_rate_tr_" + id).val(sundry_percent);
+                  }
+            } else {
+                  if (new Date(sundry_percent_date) <= new Date(bill_date)) {
+                     if ($("#bill_sundry_amount_" + id).val() != "") {
+                        if (type == "additive") {
+                              //final_total = final_total + parseFloat($("#bill_sundry_amount_"+id).val());
+                        } else if (type == "subtractive") {
+                              //final_total = final_total - parseFloat($("#bill_sundry_amount_"+id).val());
+                        }
                      }
                   }
-               }
-            } 
-            
-            if($("#bill_sundry_amount_"+id).val()!='' && (nature_of_sundry=='CGST' || nature_of_sundry=='SGST' || nature_of_sundry=='IGST') && nature_of_sundry!='ROUNDED OFF (+)' && nature_of_sundry!='ROUNDED OFF (-)'){
-               if(type=="additive"){
-                  
-                  gstamount = parseFloat(gstamount) + parseFloat($("#bill_sundry_amount_"+id).val());
-               }else{
-                  gstamount = parseFloat(gstamount) - parseFloat($("#bill_sundry_amount_"+id).val());
-               }
             }
-         }); 
-         if(!gstApplicable){
+
+            if (
+                  $("#bill_sundry_amount_" + id).val() != '' &&
+                  (nature_of_sundry == 'CGST' || nature_of_sundry == 'SGST' || nature_of_sundry == 'IGST') &&
+                  nature_of_sundry != 'ROUNDED OFF (+)' &&
+                  nature_of_sundry != 'ROUNDED OFF (-)'
+            ) {
+                  if (type == "additive") {
+                     gstamount = parseFloat(gstamount) + parseFloat($("#bill_sundry_amount_" + id).val());
+                  } else {
+                     gstamount = parseFloat(gstamount) - parseFloat($("#bill_sundry_amount_" + id).val());
+                  }
+            }
+         });
+
+         if (!gstApplicable) {
             gstamount = 0;
          }
+
          let actualFinalTotal = parseFloat(final_total);
-         if(manualGST === true){
 
+         if (manualGST === true) {
             final_total =
-               parseFloat($("#total_taxable_amounts").val() || 0)
-               + parseFloat(gstamount || 0)
-               + parseFloat(on_tcs_amount || 0);
-
+                  parseFloat($("#total_taxable_amounts").val() || 0) +
+                  parseFloat(gstamount || 0) +
+                  parseFloat(on_tcs_amount || 0);
             actualFinalTotal = final_total;
          }
-         if(manualRoundOff == false){
 
+         if (manualRoundOff == false) {
             final_total = Math.round(final_total);
-
             let roundoff =
-               parseFloat(final_total)
-               - parseFloat($("#total_taxable_amounts").val())
-               - parseFloat(gstamount)
-               - on_tcs_amount;
-
+                  parseFloat(final_total) -
+                  parseFloat($("#total_taxable_amounts").val()) -
+                  parseFloat(gstamount) -
+                  on_tcs_amount;
             roundoff = roundoff.toFixed(2);
 
             $("#billtr_round_plus").hide();
             $("#billtr_round_minus").hide();
-
             $("#bill_sundry_amount_round_minus").val('');
             $("#bill_sundry_amount_round_plus").val('');
 
-            if(parseFloat(roundoff) < 0){
-
-               $("#bill_sundry_amount_round_minus")
-               .val(Math.abs(roundoff));
-
-               $("#billtr_round_minus").show();
-
-            }else if(parseFloat(roundoff) > 0){
-
-               $("#bill_sundry_amount_round_plus")
-               .val(Math.abs(roundoff));
-
-               $("#billtr_round_plus").show();
+            if (parseFloat(roundoff) < 0) {
+                  $("#bill_sundry_amount_round_minus").val(Math.abs(roundoff));
+                  $("#billtr_round_minus").show();
+            } else if (parseFloat(roundoff) > 0) {
+                  $("#bill_sundry_amount_round_plus").val(Math.abs(roundoff));
+                  $("#billtr_round_plus").show();
             }
-
-         }else{
-
-            let plusAmount =
-               parseFloat(
-                  $("#bill_sundry_amount_round_plus").val()
-               ) || 0;
-
-            let minusAmount =
-               parseFloat(
-                  $("#bill_sundry_amount_round_minus").val()
-               ) || 0;
-
-            final_total =
-               actualFinalTotal
-               + plusAmount
-               - minusAmount;
+         } else {
+            let plusAmount = parseFloat($("#bill_sundry_amount_round_plus").val()) || 0;
+            let minusAmount = parseFloat($("#bill_sundry_amount_round_minus").val()) || 0;
+            final_total = actualFinalTotal + plusAmount - minusAmount;
          }
 
          var formattedNumber = final_total.toLocaleString('en-IN', {
@@ -2067,12 +1891,9 @@ newRow = '<tr id="billtr_' + add_more_bill_sundry_up_count + '" class="font-14 f
          });
 
          $("#bill_sundry_amt").html(formattedNumber);
+         $("#total_amounts").val(parseFloat(final_total).toFixed(2));
 
-         $("#total_amounts").val(
-            parseFloat(final_total).toFixed(2)
-         );
-
-         return;        
+         return;
       }
       $(document).ready(function() {
          let si = "";
@@ -2081,17 +1902,19 @@ newRow = '<tr id="billtr_' + add_more_bill_sundry_up_count + '" class="font-14 f
          });
          let last_index = si;
          $("#add_sundry_btn_id_"+last_index).html('<svg style="cursor:pointer;float:right" xmlns="http://www.w3.org/2000/svg" tabindex="0" class="bg-primary rounded-circle add_more_bill_sundry_up" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"></path></svg>'); 
-         $("#party").change();
+        $("#party").change();
+
          selected_series = "{{$purchase->series_no}}";
          $(".goods_items").each(function(){
             call_fun('tr_'+$(this).attr('data-id'));
          });
-         
-         
-         
-         calculateAmount();
-         // Function to calculate amount and update total sum
          $("#series_no").change();
+         setTimeout(function(){
+            manualGST = false;
+            manualRoundOff = false;
+            $(".auto_gst").remove();
+            calculateAmount();
+         }, 1000);
          // Calculate amount on input change
          $(document).on('input', '.price',function(){
             

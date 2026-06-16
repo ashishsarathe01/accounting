@@ -3,7 +3,42 @@
 <!-- header-section -->
 @include('layouts.header')
 <!-- list-view-company-section -->
+<style>
 
+.vertical-bs-table td,
+.vertical-bs-table th{
+    vertical-align: middle;
+}
+
+.level-0 td{
+    font-weight:700;
+    font-size:16px;
+    background:#f8f9fa;
+}
+
+.level-1 td{
+    font-weight:600;
+    padding-left:25px !important;
+}
+
+.level-2 td{
+    padding-left:50px !important;
+}
+
+.level-3 td{
+    padding-left:75px !important;
+}
+
+.total-row td{
+    font-weight:700;
+    border-top:2px solid #000 !important;
+}
+
+.difference-row td{
+    font-weight:700;
+}
+
+</style>
 <div class="list-of-view-company ">
     <section class="list-of-view-company-section container-fluid">
         <div class="row vh-100">
@@ -28,6 +63,12 @@
                     <form class="" id="frm" method="GET" action="{{ route('balancesheet.index') }}">
                         @csrf
                         <div class="d-xxl-flex d-block  align-items-center">
+                            <div class="ms-xxl-2">
+                                <select class="form-select" id="report_design" style="width: 250px;">
+                                    <option value="horizontal" selected>Horizontal</option>
+                                    <option value="vertical">Vertical</option>
+                                </select>
+                            </div>
                             <p class="text-nowrap m-0 font-14 fw-500 font-heading my-2 my-xxl-0">FY</p>
                             <select class="form-select w-min-120 ms-xxl-2" aria-label="Default select example" id="financial_year" name="financial_year" required>
                                 <option value="{{Session::get('default_fy')}}">{{Session::get('default_fy')}}</option>
@@ -46,6 +87,7 @@
                 <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4">
                     <h5 class="master-table-title m-0 py-2">Balance Sheet</h5>
                 </div>
+                <div id="horizontal_balance_sheet">
                 <div class="row display-profit-loss  p-0 m-0 font-heading border-divider shadow-sm rounded-bottom-8">
                     <div class="col-md-6  font-14 p-0 border-bottom-divider">
                         <div class="row p-0 m-0">
@@ -231,6 +273,304 @@
                         </div>
                     </div>
                 </div>
+                </div>
+                <div id="vertical_balance_sheet" style="display:none;">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body p-0">
+                            <table class="table table-bordered mb-0 vertical-bs-table">
+                                @php
+                                [$startYear, $endYear] = explode('-', Session::get('default_fy'));
+                                $currentFyEndYear = '20' . $endYear;
+                                $previousFyEndYear = $currentFyEndYear - 1;
+                                @endphp
+                                <thead>
+                                    <tr>
+                                        <th width="60%">Particulars</th>
+                                        <th width="20%" class="text-end">
+                                            As at 31st March {{$currentFyEndYear}}
+                                        </th>
+
+                                        <th width="20%" class="text-end">
+                                            As at 31st March {{$previousFyEndYear}}
+                                        </th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+
+                                    <tr class="level-0">
+                                        <td><strong>EQUITY AND LIABILITIES</strong></td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    @if($company_info->business_type == 3)
+
+                                        <tr class="level-1">
+                                            <td><strong>Shareholder's funds</strong></td>
+                                            <td></td>
+                                            <td></td>
+                                        </tr>
+
+                                        <tr class="level-2">
+                                            <td>Share capital</td>
+                                            <td></td>
+                                            <td></td>
+                                        </tr>
+
+                                        <tr class="level-2">
+                                            <td>Reserves and surplus</td>
+                                            <td></td>
+                                            <td></td>
+                                        </tr>
+
+                                    @elseif($company_info->business_type == 2)
+
+                                        <tr class="level-1">
+                                            <td><strong>Partner's funds</strong></td>
+                                            <td></td>
+                                            <td></td>
+                                        </tr>
+
+                                        <tr class="level-2">
+                                            <td>Partner's capital account</td>
+                                            <td></td>
+                                            <td></td>
+                                        </tr>
+
+                                        <tr class="level-2">
+                                            <td>Profit and loss account</td>
+                                            <td></td>
+                                            <td></td>
+                                        </tr>
+
+                                    @elseif($company_info->business_type == 1)
+
+                                        <tr class="level-1">
+                                            <td><strong>Proprietor's funds</strong></td>
+                                            <td></td>
+                                            <td></td>
+                                        </tr>
+
+                                        <tr class="level-2">
+                                            <td>Proprietor's capital account</td>
+                                            <td></td>
+                                            <td></td>
+                                        </tr>
+
+                                        <tr class="level-2">
+                                            <td>Profit and loss account</td>
+                                            <td></td>
+                                            <td></td>
+                                        </tr>
+
+                                    @endif
+
+                                    <tr class="level-1">
+                                        <td><strong>Non-current liabilities</strong></td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-2">
+                                        <td>Long-term borrowings</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-2">
+                                        <td>Deferred tax liabilities (Net)</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-2">
+                                        <td>Other long term liabilities</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-2">
+                                        <td>Long-term provisions</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-1">
+                                        <td><strong>Current liabilities</strong></td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-2">
+                                        <td>Short-term borrowings</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-2">
+                                        <td>Trade payables</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-3">
+                                        <td>(A) Micro enterprises and small enterprises</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-3">
+                                        <td>(B) Others</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-2">
+                                        <td>Other current liabilities</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-2">
+                                        <td>Short-term provisions</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="total-row">
+                                        <td>TOTAL</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-0">
+                                        <td><strong>ASSETS</strong></td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-1">
+                                        <td><strong>Non-current assets</strong></td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-2">
+                                        <td>Property, Plant and Equipment and Intangible assets</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-3">
+                                        <td>Property, Plant and Equipment</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-3">
+                                        <td>Intangible assets</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-3">
+                                        <td>Capital work-in-progress</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-3">
+                                        <td>Intangible assets under development</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-2">
+                                        <td>Non-current investments</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-2">
+                                        <td>Deferred tax assets (Net)</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-2">
+                                        <td>Long-term loans and advances</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-2">
+                                        <td>Other non-current assets</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-1">
+                                        <td><strong>Current assets</strong></td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-2">
+                                        <td>Current investments</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-2">
+                                        <td>Inventories</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-2">
+                                        <td>Trade receivables</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-2">
+                                        <td>Cash and cash equivalents</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-2">
+                                        <td>Short-term loans and advances</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="level-2">
+                                        <td>Other current assets</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="total-row">
+                                        <td>TOTAL</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr class="difference-row">
+                                        <td>Difference</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+
+                                </tbody>
+                            </table>
+
+                        </div>
+                    </div>
+
+                </div>
             </div>
         </div>
     </section>
@@ -252,5 +592,15 @@
    $(".profitloss_redirect").click(function(){
       window.location = "{{url('profitloss-filter')}}?financial_year={{ Session::get('default_fy') }}&from_date={{$from_date}}&to_date={{$to_date}}";
    });
+   $('#report_design').on('change', function () {
+        if ($(this).val() === 'vertical') {
+            $('#horizontal_balance_sheet').hide();
+            $('#vertical_balance_sheet').show();
+        } else {
+            $('#vertical_balance_sheet').hide();
+            $('#horizontal_balance_sheet').show();
+        }
+
+    });
 </script>
 @endsection

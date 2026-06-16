@@ -21,6 +21,8 @@ use App\Models\PurchaseReturn;
 use App\Models\SalesReturn;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
+use App\Models\ProfitLossGroupMapping;
+use App\Models\AccountHeading;
 use Illuminate\Support\Collection;
 use App\Helpers\CommonHelper;
 use Gate;
@@ -1278,5 +1280,127 @@ class ProfitLossController extends Controller{
               }
 
               return $result;
+   }
+
+   public function profitLossGroupMapping()
+   {
+      $com_id = Session::get('user_company_id');
+
+      $groups = AccountGroups::whereIn(
+                     'company_id',
+                     [$com_id,0]
+                  )
+                  ->where('delete','0')
+                  ->get()
+                  ->map(function($item){
+
+                     $item->record_type = 'group';
+                     $item->unique_key = 'group_'.$item->id;
+
+                     return $item;
+                  });
+
+      $headings = AccountHeading::whereIn(
+                     'company_id',
+                     [$com_id,0]
+                  )
+                  ->where('delete','0')
+                  ->get()
+                  ->map(function($item){
+
+                     $item->record_type = 'heading';
+                     $item->unique_key = 'heading_'.$item->id;
+
+                     return $item;
+                  });
+
+      $groups = $groups->concat($headings)
+                     ->sortBy(function ($item) {
+                           return strtoupper(trim($item->name));
+                     })
+                     ->values();
+
+      $mappings = ProfitLossGroupMapping::where(
+                     'company_id',
+                     $com_id
+                  )
+                  ->get()
+                  ->mapWithKeys(function($row){
+
+                     return [
+                           $row->record_type.'_'.$row->group_id
+                           => $row->mapping_name
+                     ];
+
+                  })
+                  ->toArray();
+
+      $mappingOptions = [
+
+         'Revenue from operations',
+         'Other income',
+
+         'Purchase of stock-in-trade',
+         'Employee benefit expenses',
+         'Finance costs',
+         'Depreciation and amortization expenses',
+         'Other expenses',
+
+         'Exceptional items',
+         'Extraordinary items',
+         'Prior period item',
+
+         'Current tax',
+         'Deferred tax',
+         'Excess/short provision relating earlier year tax'
+
+      ];
+
+      return view(
+         'display.profit_loss_group_mapping',
+         compact(
+               'groups',
+               'mappings',
+               'mappingOptions'
+         )
+      );
+   }
+   public function saveProfitLossGroupMapping(Request $request)
+   {
+      $companyId = Session::get('user_company_id');
+
+      foreach($request->mapping ?? [] as $key => $mappingName)
+      {
+         $parts = explode('_', $key, 2);
+
+         $recordType = $parts[0];
+         $recordId   = $parts[1];
+
+         if(empty($mappingName))
+         {
+               ProfitLossGroupMapping::where('company_id',$companyId)
+                  ->where('record_type',$recordType)
+                  ->where('group_id',$recordId)
+                  ->delete();
+
+               continue;
+         }
+
+         ProfitLossGroupMapping::updateOrCreate(
+
+               [
+                  'company_id'  => $companyId,
+                  'record_type' => $recordType,
+                  'group_id'    => $recordId
+               ],
+
+               [
+                  'mapping_name' => $mappingName
+               ]
+         );
+      }
+
+      return redirect()->back()
+               ->withSuccess('Mapping Saved Successfully');
    }
 }
