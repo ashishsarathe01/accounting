@@ -300,9 +300,9 @@ class JournalController extends Controller
       ]);
    if ($validator->fails()) {
     return response()->json([
-        'code' => 400,
+        'code' => 201,
         'message' => $validator->errors()->first()
-    ], 400);
+    ], 201);
 }
 
       $financial_year = $request -> input('financial_year');
@@ -594,9 +594,9 @@ public function store(Request $request){
       ]);
    if ($validator->fails()) {
     return response()->json([
-        'code' => 400,
+        'code' => 201,
         'message' => $validator->errors()->first()
-    ], 400);
+    ], 201);
 }
 
     //   Gate::authorize('action-module',80);
@@ -620,9 +620,9 @@ public function store(Request $request){
          $request->input('date') > $fy_end_date
       ){
          return response()->json([
-            'code' => 400,
+            'code' => 201,
             'message' => 'Selected date is outside the current financial year.'
-         ], 400);
+         ], 201);
         
       }
       $financial_year = CommonHelper::getFinancialYear($request->input('date'));
@@ -1259,9 +1259,9 @@ $validator = Validator::make($request->all(), [
       ]);
    if ($validator->fails()) {
     return response()->json([
-        'code' => 400,
+        'code' => 201,
         'message' => $validator->errors()->first()
-    ], 400);
+    ], 201);
 }
       $id = $request->input('journal_id');
       // Gate::authorize('action-module',53);
@@ -1513,7 +1513,7 @@ $validator = Validator::make($request->all(), [
       try{
 
       $validator = Validator::make($request->all(), [
-         'date' => 'required|string',
+         'date' => 'required',
          'journal_id' => 'required',
          'user_id' => 'required',
          'company_id' => 'required',
@@ -1527,9 +1527,9 @@ $validator = Validator::make($request->all(), [
       ]);
       if($validator->fails()){
          return response()->json([
-            'code' => 400,
+            'code' => 201,
             'message' => $validator->errors()->first()
-         ], 400);
+         ], 201);
       }
       $financial_year_session = $request->input('default_fy');
        $company_id = $request->input('company_id');
@@ -1547,9 +1547,9 @@ $validator = Validator::make($request->all(), [
          $request->input('date') > $fy_end_date
       ){
          return response()->json([
-            'code' => 400,
+            'code' => 201,
             'message' => 'Selected date is outside the current financial year.'
-         ], 400);
+         ], 201);
       
       }
       $financial_year = CommonHelper::getFinancialYear($request->input('date'));
@@ -2049,7 +2049,7 @@ public function calculateGst(Request $request)
                 'success' => false,
                 'message' => 'Validation error',
                 'errors' => $validator->errors()
-            ], 400);
+            ], 201);
         }
 
         // 2. Extract Base Variables
