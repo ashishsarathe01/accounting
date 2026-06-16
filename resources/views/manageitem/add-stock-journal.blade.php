@@ -1605,7 +1605,7 @@ $(document).ready(function () {
     
      
     let params = new URLSearchParams(window.location.search);
-    if(params.size==0){
+    if(params.size==0 || params.size==undefined){
         $("#cover-spin").hide();
         return;
     }

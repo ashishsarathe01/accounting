@@ -1802,6 +1802,7 @@ if ($companyData->gst_config_type == "single_gst") {
       $purchase->self_vehicle = $request->input('self_vehicle');
       $purchase->vehicle_no = $request->input('vehicle_no');
       $purchase->invoice_date = $request->input('invoice_date');
+      $purchase->financial_year = $financial_year;
       if (($company->stock_entry_status ?? 0) == 1) {
          $purchase->stock_entry_date = $request->input('stock_entry_date');
       } 

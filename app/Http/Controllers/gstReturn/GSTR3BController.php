@@ -539,46 +539,46 @@ class GSTR3BController extends Controller
         }        
         $state_code = substr(trim($request->series), 0, 2); // e.g., "07"
 
-        $gst_token = gstToken::select('txn','created_at')
-                                ->where('company_gstin',$request->series)
-                                ->where('company_id',Session::get('user_company_id'))
-                                ->where('status',1)
-                                ->orderBy('id','desc')
-                                ->first();
-        if($gst_token){
-            $token_expiry = date('d-m-Y H:i:s',strtotime('+6 hour',strtotime($gst_token->created_at)));
-            $current_time = date('d-m-Y H:i:s');
-            if(strtotime($token_expiry)<strtotime($current_time)){
-                $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
-                if($token_res==0){
-                    $response = array(
-                        'status' => false,
-                        'message' => 'Something Went Wrong In Token Generation'
-                    );
-                    return json_encode($response);
-                }
-                $response = array(
-                    'status' => true,
-                    'message' => 'TOKEN-OTP'
-                );
-                return json_encode($response);
-            }
-            $txn = $gst_token->txn;
-        }else{
-            $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
-            if($token_res==0){
-                    $response = array(
-                        'status' => false,
-                        'message' => 'Something Went Wrong In Token Generation'
-                    );
-                    return json_encode($response);
-                }
-            $response = array(
-                    'status' => true,
-                    'message' => 'TOKEN-OTP'
-            );
-            return json_encode($response);
-        }
+        // $gst_token = gstToken::select('txn','created_at')
+        //                         ->where('company_gstin',$request->series)
+        //                         ->where('company_id',Session::get('user_company_id'))
+        //                         ->where('status',1)
+        //                         ->orderBy('id','desc')
+        //                         ->first();
+        // if($gst_token){
+        //     $token_expiry = date('d-m-Y H:i:s',strtotime('+6 hour',strtotime($gst_token->created_at)));
+        //     $current_time = date('d-m-Y H:i:s');
+        //     if(strtotime($token_expiry)<strtotime($current_time)){
+        //         $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
+        //         if($token_res==0){
+        //             $response = array(
+        //                 'status' => false,
+        //                 'message' => 'Something Went Wrong In Token Generation'
+        //             );
+        //             return json_encode($response);
+        //         }
+        //         $response = array(
+        //             'status' => true,
+        //             'message' => 'TOKEN-OTP'
+        //         );
+        //         return json_encode($response);
+        //     }
+        //     $txn = $gst_token->txn;
+        // }else{
+        //     $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
+        //     if($token_res==0){
+        //             $response = array(
+        //                 'status' => false,
+        //                 'message' => 'Something Went Wrong In Token Generation'
+        //             );
+        //             return json_encode($response);
+        //         }
+        //     $response = array(
+        //             'status' => true,
+        //             'message' => 'TOKEN-OTP'
+        //     );
+        //     return json_encode($response);
+        // }
         //Gst Credenatial
         if(!$this->gstCredentials){
             $response = [
@@ -596,51 +596,51 @@ class GSTR3BController extends Controller
                         ];
             return response()->json($response, 200);
         }
-        $base_url = $this->gstCredentials->base_url;
-        $email_id = $this->gstCredentials->email_id;
-        $client_id = $this->gstCredentials->client_id;
-        $client_secret = $this->gstCredentials->client_secret;
-        $ip_address = $this->gstCredentials->ip_address;
-        $url = $base_url."/gstr3b/retsum";
-        $response = Http::withHeaders([
-            'Accept' => 'application/json',
-            'gst_username' => $gst_user_name,
-            'state_cd' => $state_code,
-            'ip_address: '.$ip_address,
-            'txn' => $txn,
-            'client_id: '.$client_id,
-            'client_secret: '.$client_secret
-        ])->get($url, [
-            'gstin' => $merchant_gst,
-            'retperiod' => $month,
-            'email' => $email_id,
-        ]);
-        $data = $response->json();
-        if (!isset($data['data'])) {
-            $data['data'] = [];
-        }        
-        $response1 = Http::withHeaders([
-            'Accept'        => 'application/json',
-            'gst_username'  => $gst_user_name,
-            'state_cd'      => $state_code,
-            'ip_address: '.$ip_address,
-            'txn'           => $txn,
-            'client_id: '.$client_id,
-            'client_secret: '.$client_secret
-        ])->get($base_url.'/gstr3b/autoliab', [
-            'gstin'     => $merchant_gst,
-            'retperiod' => $month,
-            'email'     => $email_id,
-        ]);
 
-        if ($response1->failed()) {
-            abort(500, 'GST API request failed.');
-        }
+       
+        // $base_url = $this->gstCredentials->base_url;
+        // $email_id = $this->gstCredentials->email_id;
+        // $client_id = $this->gstCredentials->client_id;
+        // $client_secret = $this->gstCredentials->client_secret;
+        // $ip_address = $this->gstCredentials->ip_address;
+        // $url = $base_url."/gstr3b/retsum";
+        // $response = Http::withHeaders([
+        //     'Accept' => 'application/json',
+        //     'gst_username' => $gst_user_name,
+        //     'state_cd' => $state_code,
+        //     'ip_address: '.$ip_address,
+        //     'txn' => $txn,
+        //     'client_id: '.$client_id,
+        //     'client_secret: '.$client_secret
+        // ])->get($url, [
+        //     'gstin' => $merchant_gst,
+        //     'retperiod' => $month,
+        //     'email' => $email_id,
+        // ]);
+        // $data = $response->json();
+        // $response1 = Http::withHeaders([
+        //     'Accept'        => 'application/json',
+        //     'gst_username'  => $gst_user_name,
+        //     'state_cd'      => $state_code,
+        //     'ip_address: '.$ip_address,
+        //     'txn'           => $txn,
+        //     'client_id: '.$client_id,
+        //     'client_secret: '.$client_secret
+        // ])->get($base_url.'/gstr3b/autoliab', [
+        //     'gstin'     => $merchant_gst,
+        //     'retperiod' => $month,
+        //     'email'     => $email_id,
+        // ]);
 
-        $json = $response1->json(); // Parses response body as array :contentReference[oaicite:1]{index=1}
 
-        $data1 = $json['data']['r3bautopop']['liabitc'] ?? [];
+        // if ($response1->failed()) {
+        //     abort(500, 'GST API request failed.');
+        // }
 
+        //$json = $response1->json(); // Parses response body as array :contentReference[oaicite:1]{index=1}
+
+        //$data1 = $json['data']['r3bautopop']['liabitc'] ?? [];
+        $data1  = [];$data['data']  = [];
         $company_id = Session::get('user_company_id');
 
         $sundries = BillSundrys::where('company_id', $company_id)->get()->keyBy('id');
@@ -1124,12 +1124,57 @@ class GSTR3BController extends Controller
 
 
 
-    public function ITCDetails(Request $request)
-    {
-        $merchant_gst = $request->series;
+
+  public function itcDetails(Request $request){
+    //Gst Credenatial
+    if(!$this->gstCredentials){
+        $response = [
+                        'success' => false,
+                        'data'    => "",
+                        'message' => "Api Credentails Not Found ",
+                    ];
+        return response()->json($response, 200);
+    }
+    if($this->gstCredentials->status != 1){
+        $response = [
+                        'success' => false,
+                        'data'    => "",
+                        'message' => "Api Credentails Not Found ",
+                    ];
+        return response()->json($response, 200);
+    }
+    // $base_url = $this->gstCredentials->base_url;
+    // $email_id = $this->gstCredentials->email_id;
+    // $client_id = $this->gstCredentials->client_id;
+    // $client_secret = $this->gstCredentials->client_secret;
+    // $ip_address = $this->gstCredentials->ip_address;
+    // $response = Http::withHeaders([
+    //         'Accept'        => 'application/json',
+    //         'gst_username'  => 'KRAFTPAPER1991',
+    //         'state_cd'      => '07',
+    //         'ip_address: '.$ip_address,
+    //         'txn'           => '3396251fbb8446ac9ba89cca8a1ac862',
+    //         'client_id: '.$client_id,
+    //         'client_secret: '.$client_secret
+    //     ])->get($base_url.'/gstr3b/autoliab', [
+    //         'gstin'     => '07AAJCK4433F1ZM',
+    //         'retperiod' => '042025',
+    //         'email'     => $email_id,
+    //     ]);
+
+    //     if ($response->failed()) {
+    //         abort(500, 'GST API request failed.');
+    //     }
+
+    //     $json = $response->json(); // Parses response body as array :contentReference[oaicite:1]{index=1}
+
+    //     $data = $json['data']['r3bautopop']['liabitc'] ?? [];
+
+    $data = [];
+       $company_id = Session::get('user_company_id');
+       $merchant_gst = $request->series;
         $from_date = $request->from_date;
         $to_date = $request->to_date;
-
         $data = collect();
 
         $companyData = Companies::where(
