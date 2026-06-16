@@ -481,10 +481,15 @@ body {
                         @endphp
                      @endforeach
                      @php
-                        foreach($sale_sundry as $sundry){
-                           if($sundry->nature_of_sundry=="OTHER"){
-                              $displayLineCount++;
-                           }
+                         foreach($sale_sundry as $sundry){
+                            if($sundry->nature_of_sundry=="OTHER"){
+                               $i++;
+                            }
+                         }
+                        if($sale_detail->e_invoice_status==0){
+                           $tRows = 7 - $i; 
+                        }else{
+                           $tRows = 7 - $i; 
                         }
                         $minimumLines = 8;
                         $tRows = $minimumLines - $displayLineCount;

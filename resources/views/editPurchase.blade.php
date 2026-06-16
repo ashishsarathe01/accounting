@@ -1313,14 +1313,16 @@ newRow = '<tr id="billtr_' + add_more_bill_sundry_up_count + '" class="font-14 f
          if (customer_gstin == undefined) {
             return;
          }
+        
          if(gst_disabled_for_party == 1)
          {
             $('#gst_breakup_body').html('');
 
             $('#tax_heading').html('Tax');
-
+            
             return;
          }
+         
          if (gstApplicable && customer_gstin == merchant_gstin.substring(0, 2)) {
             $("#billtr_cgst").show();
             $("#billtr_sgst").show();
@@ -1927,6 +1929,7 @@ newRow = '<tr id="billtr_' + add_more_bill_sundry_up_count + '" class="font-14 f
             if(pageLoaded == 0){
                manualGST = false;
             }
+            
             calculateAmount();
          });
          $(document).on('input', '.quantity',function(){

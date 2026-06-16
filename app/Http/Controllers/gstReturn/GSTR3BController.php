@@ -483,21 +483,22 @@ class GSTR3BController extends Controller
         //     'email' => $email_id,
         // ]);
         // $data = $response->json();
-        $itcData = $this->getITCData(
-            $merchant_gst,
-            $from_date,
-            $to_date
-        );
+        // $itcData = $this->getITCData(
+        //     $merchant_gst,
+        //     $from_date,
+        //     $to_date
+        // );
         $data['data'] = []; 
         return view('gstReturn.GSTR3B', [
             'data' => $data['data'],
             'merchant_gst' => $merchant_gst,
             'from_date' => $from_date,
             'to_date' => $to_date,
-            'Data31' => $arr3,
-            'books_igst_amount' => $itcData['igst'],
-            'books_cgst_amount' => $itcData['cgst'],
-            'books_sgst_amount' => $itcData['sgst'],
+            'Data31' => $result31,
+            'Data4' => $result4,
+            // 'books_igst_amount' => $itcData['igst'],
+            // 'books_cgst_amount' => $itcData['cgst'],
+            // 'books_sgst_amount' => $itcData['sgst'],
         ]);
 
     
