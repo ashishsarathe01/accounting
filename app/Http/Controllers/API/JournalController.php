@@ -315,12 +315,15 @@ class JournalController extends Controller
       $prefill_invoice_no = $request->query('invoice_no');
       $prefill_date       = $request->query('invoice_date');
       $prefill_data = $request->query('data');
-
-      $party_list = Accounts::select('id', 'account_name', 'company_id', 'under_group', 'under_group_type', 'print_name', 'dr_cr', 'address', 'address2', 'state', 'country', 'pin_code', 'gstin')
-                           ->whereIn('company_id', [$com_id,0])
+$party_list = Accounts::whereIn('company_id', [$com_id,0])
                                 ->where('delete', '=', '0')
                                 ->orderBy('account_name')
                                 ->get();
+      // $party_list = Accounts::select('id', 'account_name', 'company_id', 'under_group', 'under_group_type', 'print_name', 'dr_cr', 'address', 'address2', 'state', 'country', 'pin_code', 'gstin')
+      //                      ->whereIn('company_id', [$com_id,0])
+      //                           ->where('delete', '=', '0')
+      //                           ->orderBy('account_name')
+      //                           ->get();
       $bill_date = date('Y-m-d');
       if(date('m')<=3){
          $current_year = (date('y')-1) . '-' . date('y');
@@ -1357,14 +1360,14 @@ $validator = Validator::make($request->all(), [
       //          ->orderBy('account_name')
       //          ->get();
 
-      // $sundry = BillSundrys::select('purchase_amt_account')
-      //                      ->whereIn('nature_of_sundry',['IGST','CGST','SGST','ROUNDED OFF (+)','ROUNDED OFF (-)'])
-      //                      ->where('company_id',$com_id)
-      //                      ->where('delete','0')
-      //                      ->where('status','1')
-      //                      ->pluck('purchase_amt_account');  
+      $sundry = BillSundrys::select('purchase_amt_account')
+                           ->whereIn('nature_of_sundry',['IGST','CGST','SGST','ROUNDED OFF (+)','ROUNDED OFF (-)'])
+                           ->where('company_id',$com_id)
+                           ->where('delete','0')
+                           ->where('status','1')
+                           ->pluck('purchase_amt_account');  
                            
-      // $sundry_arr = $sundry->toArray();
+      $sundry_arr = $sundry->toArray();
       // $state_list = DB::table('states') ->orderBy('state_code') ->get();
       // foreach ($mat_series as $key => $value) {
 
@@ -1482,7 +1485,7 @@ $validator = Validator::make($request->all(), [
             // 'companyData' => $companyData,
             // 'items' => $items,
             // 'company_gst' => $companyData->gst,
-            // 'sundry' => $sundry_arr,
+             'sundry' => $sundry_arr,
             // 'state_list' => $state_list,
              'bill_sundry_rows' => $bill_sundry_rows,
             // 'billsundry' => $billsundry
