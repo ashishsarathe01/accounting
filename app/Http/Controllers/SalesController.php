@@ -3882,32 +3882,38 @@ class SalesController extends Controller
          }         
       }else if($company_data->gst_config_type == "multiple_gst"){
          $gst_data = DB::table('gst_settings_multiple')
-                           ->select('id','gst_no','mat_center','series','invoice_start_from')
-                           ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst"])
-                           ->get();
-         foreach ($gst_data as $key => $value) {
-            $branch = collect([]);
-
-            if(isset($gst_data[0]) && isset($gst_data[0]->id)){
-
-               $branch = GstBranch::select(
-                           'id',
-                           'gst_number as gst_no',
-                           'branch_matcenter as mat_center',
-                           'branch_series as series',
-                           'branch_invoice_start_from as invoice_start_from'
+                        ->select(
+                              'id',
+                              'gst_no',
+                              'mat_center',
+                              'series',
+                              'invoice_start_from'
                         )
                         ->where([
-                           'delete' => '0',
-                           'company_id' => Session::get('user_company_id'),
-                           'gst_setting_id' => $gst_data[0]->id
+                              'company_id' => Session::get('user_company_id'),
+                              'gst_type'   => 'multiple_gst'
                         ])
                         ->get();
+
+         foreach ($gst_data as $value) {
+
+            $branch = GstBranch::select(
+                              'id',
+                              'gst_number as gst_no',
+                              'branch_matcenter as mat_center',
+                              'branch_series as series',
+                              'branch_invoice_start_from as invoice_start_from'
+                        )
+                        ->where([
+                              'delete' => '0',
+                              'company_id' => Session::get('user_company_id'),
+                              'gst_setting_multiple_id' => $value->id
+                        ])
+                        ->get();
+            if($branch->count() > 0){
+                  $gst_data = $gst_data->merge($branch);
             }
-            if(count($branch)>0){
-               $gst_data = $gst_data->merge($branch);
-            }
-         }         
+         }
       }
       foreach ($gst_data as $key => $value) {
          $series_arr[] = $value->series;
@@ -3925,6 +3931,7 @@ class SalesController extends Controller
          $total_row = $total_row - 1;
          $success_row = 0;
          $index = 1;
+         $skip_invoice = [];
          while (($data = fgetcsv($handle, 10000, ',')) !== false) {
             $data = array_map('trim', $data);
             $data = array_pad($data, 50, '');
@@ -3999,6 +4006,7 @@ class SalesController extends Controller
                    $account = Accounts::where('account_name',trim($party))
                         ->where('company_id',trim(Session::get('user_company_id')))
                         ->where('delete','0')
+                        ->where('status','1')
                         ->first();
                     if(!$account){
                         
@@ -4044,6 +4052,7 @@ class SalesController extends Controller
                if(!$series_configuration){
                   array_push($error_arr, 'Series No. '.$series_no.' not found in GST Configuration - Invoice No. '.$voucher_no_prefix); 
                }
+               \Log::info('GST Material Centers', $material_center_arr);
                $material_center_check = collect($gst_data)
                   ->where('mat_center',$material_center)
                   ->first();
@@ -4054,6 +4063,7 @@ class SalesController extends Controller
                $account = Accounts::where('account_name',trim($party))
                         ->where('company_id',trim(Session::get('user_company_id')))
                         ->where('delete','0')
+                        ->where('status','1')
                         ->first();
                if(!$account){
                   array_push($error_arr, 'Party Name '.$party.' not found - Invoice No. '.$voucher_no_prefix);
@@ -4111,9 +4121,12 @@ class SalesController extends Controller
                         ->where('name',trim($item_name))
                         ->where('company_id',trim(Session::get('user_company_id')))
                         ->where('delete','0')
+                        ->where('status','1')
                         ->first();
             if(!$item){
-               array_push($error_arr, 'Item Name '.$item_name.' not found - Invoice No. '.$voucher_no_prefix);
+               $skip_invoice[$voucher_no_prefix] =
+                  'Item '.$item_name.' is disabled or deleted - Invoice No. '.$voucher_no_prefix;
+               continue;
             }
             $item_weight = $data[15];
             $item_weight = str_replace(",","",$item_weight);
@@ -4160,6 +4173,14 @@ class SalesController extends Controller
          if(count($data_arr)>0){
             $override_average_data_arr = [];$new_average_data_arr = [];$smallestDate = null;
             foreach ($data_arr as $key => $value){
+               $voucher_no_prefix = $value['voucher_no_prefix'];
+               if(isset($skip_invoice[$voucher_no_prefix])){
+                  $all_error_arr[] = [
+                     $skip_invoice[$voucher_no_prefix]
+                  ];
+                  $failed_invoice_count++;
+                  continue;
+               }
                if(count($value['error_arr'])>0){
                   array_push($all_error_arr,$value['error_arr']);
                   $failed_invoice_count++;
@@ -4168,6 +4189,7 @@ class SalesController extends Controller
                $checkaccount = Accounts::where('account_name',trim($value['party']))
                         ->where('company_id',trim(Session::get('user_company_id')))
                         ->where('delete','0')
+                        ->where('status','1')
                         ->first();
                 if(!$checkaccount){
                     array_push($all_error_arr,array($value['party'].' Not Found'));
@@ -4241,11 +4263,21 @@ class SalesController extends Controller
                $account = Accounts::where('account_name',trim($party))
                         ->where('company_id',trim(Session::get('user_company_id')))
                         ->where('delete','0')
+                        ->where('status','1')
                         ->first();
                $shipp = Accounts::where('account_name',trim($shipping_name))
                         ->where('company_id',trim(Session::get('user_company_id')))
                         ->where('delete','0')
                         ->first();
+               if(!$account){
+                  array_push(
+                     $all_error_arr,
+                     ['Party '.$party.' is disabled or not found']
+                  );
+
+                  $failed_invoice_count++;
+                  continue;
+               }
                $sale = new Sales;
                $sale->series_no = $series_no;
                $sale->company_id = Session::get('user_company_id');
@@ -4289,6 +4321,7 @@ class SalesController extends Controller
                         ->where('manage_items.name',trim($v1['item_name']))
                         ->where('manage_items.company_id',trim(Session::get('user_company_id')))
                         ->where('manage_items.delete','0')
+                        ->where('manage_items.status','1')
                         ->first();
                      //TAX GST
                      if($v1['cgst']!="" && $v1['sgst']!=""){
@@ -4415,6 +4448,7 @@ class SalesController extends Controller
                            ->where('manage_items.name',trim($v1['item_name']))
                            ->where('manage_items.company_id',trim(Session::get('user_company_id')))
                            ->where('manage_items.delete','0')
+                           ->where('manage_items.status','1')
                            ->first();
                         $desc = new SaleDescription;
                         $desc->sale_id = $sale->id;
@@ -4518,6 +4552,7 @@ class SalesController extends Controller
                            ->where('manage_items.name',trim($v1['item_name']))
                            ->where('manage_items.company_id',trim(Session::get('user_company_id')))
                            ->where('manage_items.delete','0')
+                           ->where('manage_items.status','1')
                            ->first();                 
                            //Add Data In Average Details table
                            $average_detail = new ItemAverageDetail;
