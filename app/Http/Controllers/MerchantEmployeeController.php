@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Carbon\Carbon;
+use Illuminate\Support\Str;
 use DB;
 
 class MerchantEmployeeController extends Controller
@@ -100,10 +101,44 @@ return view('merchant_employee_add')
    public function store(Request $request)
 {
     Gate::authorize('action-module', 81);
+    $existingUser = User::where(function ($q) use ($request) {
 
-    // Check if email already exists
-    if (User::where('email', $request->email)->exists()) {
-        return redirect('manage-merchant-employee')->withError('Email already exists.');
+            $q->where('mobile_no', $request->mobile)
+            ->orWhere('email', $request->email);
+
+        })
+        ->where('password_created', 1)
+        ->first();
+
+    if (!$existingUser) {
+
+        if (
+            Session::get('manage_user_otp_verified') != 1
+            ||
+            Session::get('manage_user_verified_mobile') != $request->mobile
+        ) {
+
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withError('Please verify mobile number first.');
+        }
+    }
+    if ($existingUser) {
+
+        if (
+            $existingUser->mobile_no != $request->mobile
+            ||
+            strtolower($existingUser->email) != strtolower($request->email)
+        ) {
+
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withError(
+                    'Mobile number and email must match an existing user.'
+                );
+        }
     }
 
     // Handle file uploads
@@ -166,13 +201,58 @@ return view('merchant_employee_add')
         $this->compressImage($file->getPathname(), $destination);
         $other_id_file = 'uploads/other/'.$filename;
     }
+    $mobileUser = User::where('mobile_no', $request->mobile)
+        ->where('password_created', 1)
+        ->first();
 
+    if ($mobileUser) {
+
+        if (
+            strtolower(trim($mobileUser->email))
+            != strtolower(trim($request->email))
+        ) {
+
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withError(
+                    'This mobile number is already linked with '.$mobileUser->email
+                );
+        }
+    }
+    $emailUser = User::where('email', $request->email)
+        ->where('password_created', 1)
+        ->first();
+
+    if ($emailUser) {
+
+        if ($emailUser->mobile_no != $request->mobile) {
+
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withError(
+                    'This email is already linked with '.$emailUser->mobile_no
+                );
+        }
+    }
     // Create main user
     $user = new User;
     $user->name = $request->name;
     $user->email = $request->email;
     $user->mobile_no = $request->mobile;
-    $user->password = Hash::make($request->mobile);
+    if ($existingUser) {
+
+        $user->password = $existingUser->password;
+        $user->password_created = 1;
+        $user->activation_token = null;
+
+    } else {
+
+        $user->password = null;
+        $user->password_created = 0;
+        $user->activation_token = Str::random(64);
+    }
     $user->address = $request->address;
     $user->type = $request->type_of_user;
     $user->company_id = Session::get('user_company_id');
@@ -226,6 +306,34 @@ return view('merchant_employee_add')
     $user->save(); 
 
     $user_id = $user->id;
+    if (!$existingUser) {
+
+        $activationLink = url(
+            'user-setup-password/' .
+            $user->activation_token
+        );
+
+        $template = "employee_password_setup";
+
+        $mobile = $user->mobile_no;
+
+        $req = '{
+            "countryCode": "+91",
+            "phoneNumber": '.$mobile.',
+            "callbackData": "some text here",
+            "type": "Template",
+            "template": {
+                "name": "'.$template.'",
+                "languageCode": "en",
+                "bodyValues": [
+                    "'.$user->name.'",
+                    "'.$activationLink.'"
+                ]
+            }
+        }';
+
+        CommonHelper::sendWhatsappMessage($req);
+    }
     if ($request->type_of_user == "EMPLOYEE" && $request->filled('salary_heads')) {
 
         foreach ($request->salary_heads as $headId => $amount) {
@@ -284,7 +392,12 @@ return view('merchant_employee_add')
             ]);
         }
     }
-
+    Session::forget([
+        'manage_user_otp',
+        'manage_user_otp_verified',
+        'manage_user_mobile',
+        'manage_user_verified_mobile'
+    ]);
     return redirect('manage-merchant-employee')->withSuccess('User added successfully.');
 }
 
@@ -294,10 +407,46 @@ return view('merchant_employee_add')
 {
     Gate::authorize('action-module', 34); 
     $user = User::findOrFail($id);
+    $oldMobile = $user->mobile_no;
+    $oldEmail  = $user->email;
 
-    // Check if email already exists for other users
-    if (User::where('email', $request->email)->where('id', '!=', $id)->exists()) {
-        return redirect()->back()->withError('Email already exists.');
+    $identityChanged =
+        $oldMobile != $request->mobile
+        ||
+        strtolower($oldEmail) != strtolower($request->email);
+        
+    if ($identityChanged) {
+
+        if (
+            Session::get('manage_user_otp_verified') != 1
+            &&
+            $request->existing_user != 1
+        ) {
+
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withError('Please verify mobile number first.');
+        }
+
+        $matchedUser = User::where('id', '!=', $id)
+            ->where('mobile_no', $request->mobile)
+            ->where('email', $request->email)
+            ->where('password_created', 1)
+            ->first();
+
+        if ($matchedUser) {
+
+            $user->password = $matchedUser->password;
+            $user->password_created = 1;
+            $user->activation_token = null;
+
+        } else {
+
+            $user->password = null;
+            $user->password_created = 0;
+            $user->activation_token = Str::random(64);
+        }
     }
 
     // Handle file uploads
@@ -429,6 +578,38 @@ return view('merchant_employee_add')
                $user->updated_at = now();
 
                $user->save();
+                if (
+                    $identityChanged
+                    &&
+                    $user->password_created == 0
+                ) {
+
+                    $activationLink = url(
+                        'user-setup-password/' .
+                        $user->activation_token
+                    );
+
+                    $template = "employee_password_setup";
+
+                    $mobile = $user->mobile_no;
+
+                    $req = '{
+                        "countryCode": "+91",
+                        "phoneNumber": '.$mobile.',
+                        "callbackData": "some text here",
+                        "type": "Template",
+                        "template": {
+                            "name": "'.$template.'",
+                            "languageCode": "en",
+                            "bodyValues": [
+                                "'.$user->name.'",
+                                "'.$activationLink.'"
+                            ]
+                        }
+                    }';
+
+                    CommonHelper::sendWhatsappMessage($req);
+                }
                // ===== Update Salary Structure =====
 if ($request->type_of_user == "EMPLOYEE") {
 
@@ -563,7 +744,12 @@ if ($request->type_of_user == "EMPLOYEE") {
                         }
                   }
                }
-
+                Session::forget([
+                    'manage_user_otp',
+                    'manage_user_otp_verified',
+                    'manage_user_mobile',
+                    'manage_user_verified_mobile'
+                ]);
     return redirect('manage-merchant-employee')->withSuccess('User updated successfully.');
 }
 
@@ -828,5 +1014,306 @@ private function deleteOldFile($path)
         }
     }
 }
+    public function sendOtp(Request $request)
+    {
+        $request->validate([
+            'mobile_no' => 'required|string|min:10|max:10',
+            'email' => 'required|email',
+        ]);
 
+        $existingUser = User::where('mobile_no', $request->mobile_no)
+            ->where('email', $request->email)
+            ->where('password_created', 1)
+            ->first();
+
+        if ($existingUser) {
+
+            return response()->json([
+                'status' => 2
+            ]);
+        }
+
+        $mobileExists = User::where('mobile_no', $request->mobile_no)
+            ->where('password_created', 1)
+            ->exists();
+
+        $emailExists = User::where('email', $request->email)
+            ->where('password_created', 1)
+            ->exists();
+
+        if ($mobileExists || $emailExists) {
+
+            return response()->json([
+                'status' => 0,
+                'message' => 'Mobile number and Email ID do not match.'
+            ]);
+        }
+
+        $otp = rand(1234, 9999);
+
+        $template = "customer_otp_verify";
+
+        $mobile = $request->mobile_no;
+
+        $req = '{
+            "countryCode": "+91",
+            "phoneNumber": '.$mobile.',
+            "callbackData": "some text here",
+            "type": "Template",
+            "template": {
+                "name": "'.$template.'",
+                "languageCode": "en",
+                "bodyValues": [
+                    "'.$otp.'"
+                ]
+            }
+        }';
+
+        CommonHelper::sendWhatsappMessage($req);
+
+        Session::put('manage_user_otp', $otp);
+        Session::put('manage_user_otp_verified', 0);
+        Session::put('manage_user_mobile', $mobile);
+
+        return response()->json([
+            'status' => 1,
+            'message' => 'OTP sent successfully!'
+        ]);
+    }
+    public function verifyOtp(Request $request)
+    {
+        if (
+            $request->otp ==
+            Session::get('manage_user_otp')
+        ) {
+
+            Session::put(
+                'manage_user_otp_verified',
+                1
+            );
+
+            Session::put(
+                'manage_user_verified_mobile',
+                Session::get('manage_user_mobile')
+            );
+
+            return response()->json([
+                'status' => 1,
+                'message' => 'OTP verified successfully!'
+            ]);
+        }
+
+        return response()->json([
+            'status' => 0,
+            'message' => 'OTP not matched!'
+        ]);
+    }
+    public function setupPassword($token)
+    {
+        $user = User::where(
+            'activation_token',
+            $token
+        )->first();
+
+        if (!$user) {
+
+            abort(404);
+        }
+
+        if ($user->password_created == 1) {
+
+            return redirect('/')
+                ->withError(
+                    'Password already created.'
+                );
+        }
+
+        return view(
+            'user_setup_password',
+            [
+                'user' => $user,
+                'token' => $token
+            ]
+        );
+    }
+    public function savePassword(Request $request)
+    {
+        $request->validate([
+            'token' => 'required',
+            'password' => 'required|min:6|confirmed'
+        ]);
+
+        $user = User::where(
+            'activation_token',
+            $request->token
+        )->first();
+
+        if (!$user) {
+
+            return back()->withError(
+                'Invalid or expired link.'
+            );
+        }
+
+        if ($user->password_created == 1) {
+
+            return back()->withError(
+                'Password already created.'
+            );
+        }
+
+        $user->password = Hash::make(
+            $request->password
+        );
+
+        $user->password_created = 1;
+
+        $user->activation_token = null;
+
+        $user->save();
+
+        return redirect('password-login')
+            ->withSuccess(
+                'Password created successfully. Please login.'
+            );
+    }
+    public function checkExistingUser(Request $request)
+    {
+        $user = User::where('mobile_no', $request->mobile)
+            ->where('password_created', 1)
+            ->first();
+
+        if ($user) {
+
+            return response()->json([
+                'exists' => true,
+                'email' => $user->email
+            ]);
+        }
+
+        return response()->json([
+            'exists' => false
+        ]);
+    }
+    public function checkEmailMobileMatch(Request $request)
+    {
+        $mobileUser = User::where('mobile_no', $request->mobile)
+            ->where('password_created', 1)
+            ->first();
+
+        if ($mobileUser) {
+
+            if (
+                strtolower(trim($mobileUser->email))
+                != strtolower(trim($request->email))
+            ) {
+
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Mobile number and Email ID do not match.'
+                ]);
+            }
+        }
+
+        $emailUser = User::where('email', $request->email)
+            ->where('password_created', 1)
+            ->first();
+
+        if ($emailUser) {
+
+            if ($emailUser->mobile_no != $request->mobile) {
+
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Mobile number and Email ID do not match.'
+                ]);
+            }
+        }
+
+        return response()->json([
+            'status' => true
+        ]);
+    }
+    public function checkUserExists(Request $request)
+    {
+        $request->validate([
+            'mobile_no' => 'required',
+            'email' => 'required'
+        ]);
+
+        $existingUser = User::where('mobile_no', $request->mobile_no)
+            ->where('email', $request->email)
+            ->where('password_created', 1)
+            ->first();
+
+        if ($existingUser) {
+
+            return response()->json([
+                'status' => 2
+            ]);
+        }
+
+        $mobileExists = User::where('mobile_no', $request->mobile_no)
+            ->where('password_created', 1)
+            ->exists();
+
+        $emailExists = User::where('email', $request->email)
+            ->where('password_created', 1)
+            ->exists();
+
+        if ($mobileExists || $emailExists) {
+
+            return response()->json([
+                'status' => 0,
+                'message' => 'Mobile number and Email ID do not match.'
+            ]);
+        }
+
+        return response()->json([
+            'status' => 1
+        ]);
+    }
+    public function checkUserExistsForEdit(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required',
+            'mobile_no' => 'required',
+            'email' => 'required'
+        ]);
+
+        $existingUser = User::where('id', '!=', $request->user_id)
+            ->where('mobile_no', $request->mobile_no)
+            ->where('email', $request->email)
+            ->where('password_created', 1)
+            ->first();
+
+        if ($existingUser) {
+
+            return response()->json([
+                'status' => 2
+            ]);
+        }
+
+        $mobileExists = User::where('id', '!=', $request->user_id)
+            ->where('mobile_no', $request->mobile_no)
+            ->where('password_created', 1)
+            ->exists();
+
+        $emailExists = User::where('id', '!=', $request->user_id)
+            ->where('email', $request->email)
+            ->where('password_created', 1)
+            ->exists();
+
+        if ($mobileExists || $emailExists) {
+
+            return response()->json([
+                'status' => 0,
+                'message' => 'Mobile number and Email ID do not match.'
+            ]);
+        }
+
+        return response()->json([
+            'status' => 1
+        ]);
+    }
 }

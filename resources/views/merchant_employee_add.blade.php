@@ -148,10 +148,43 @@ h6.fw-bold {
                      <label class="form-label font-14 font-heading">Name</label>
                      <input type="text" class="form-control" name="name" id="name" placeholder="Enter Name" />
                   </div>
-                  <div class="mb-3 col-md-3">
-                     <label class="form-label font-14 font-heading">Mobile</label>
-                     <input type="text" class="form-control" name="mobile" id="mobile" placeholder="Enter Mobile" minlength="10" maxlength="10" oninput="this.value = this.value.replace(/[^0-9]/g, '')"/>
-                  </div>
+                  <div class="mb-3 col-md-4">
+                    <label class="form-label font-14 font-heading">
+                        Mobile
+                    </label>
+
+                    <div class="input-group">
+
+                        <input type="text"
+                            class="form-control"
+                            name="mobile"
+                            id="mobile"
+                            placeholder="Enter Mobile"
+                            minlength="10"
+                            maxlength="10"
+                            oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+
+                        <button type="button"
+                                class="btn btn-primary"
+                                id="verifyMobileBtn">
+                            Verify
+                        </button>
+
+                    </div>
+
+                    <small id="mobileVerifiedMsg"
+                        class="text-success"
+                        style="display:none;">
+                        ✓ Mobile Verified
+                    </small>
+
+                    <input type="hidden"
+                        id="mobile_verified"
+                        value="0">
+                    <input type="hidden"
+                        id="existing_user"
+                        value="0">
+                </div>
                   <div class="mb-4 col-md-4">
                      <label class="form-label font-14 font-heading">Email</label>
                      <input type="text" class="form-control" name="email" id="email" placeholder="Enter Email" />
@@ -597,11 +630,66 @@ h6.fw-bold {
         </div>
     </div>
 </div>
+<div class="modal fade"
+     id="otpVerifyModal"
+     tabindex="-1"
+     aria-hidden="true">
 
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    Verify Mobile Number
+                </h5>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal">
+                </button>
+            </div>
+
+            <div class="modal-body">
+
+                <div class="mb-3">
+
+                    <label>
+                        OTP
+                    </label>
+
+                    <input type="text"
+                           class="form-control"
+                           id="otp_code"
+                           maxlength="6"
+                           placeholder="Enter OTP">
+
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button type="button"
+                        class="btn btn-success"
+                        id="verifyOtpBtn">
+
+                    Verify OTP
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
 @include('layouts.footer')
 
 <script>
    let salaryDefined = false;
+   let verifiedMobile = '';
 $(document).ready(function(){
 
   
@@ -757,29 +845,49 @@ $(document).ready(function(){
    });
 
    // Form validation
-   $("#save_btn").click(function(){
-      if(confirm("Are you sure to submit?")==true){           
-         $("#employee_form").validate({
-            ignore: [], 
-            rules: {
-               name: "required",
-               mobile: { required:true, minlength:10, maxlength:10 },
-               email: { required:true, email:true },
-               address: "required",
-               status: "required",
-               type_of_user: "required"
-            },
-            messages: {
-               name: "Please enter name",
-               mobile: "Please enter valid mobile no",
-               email: "Please enter a valid email address",
-               address: "Please enter address",
-               status: "Please select status",
-               type_of_user: "Please select user type"
+    $("#save_btn").click(function(){
+
+            if(
+            $('#existing_user').val() == '0' &&
+            $('#mobile_verified').val() != '1'
+        ){
+            alert('Please verify mobile number first.');
+            return false;
+        }
+            if(confirm("Are you sure to submit?")==true){
+
+                $("#employee_form").validate({
+                    ignore: [],
+                    rules: {
+                        name: "required",
+                        mobile: {
+                            required:true,
+                            minlength:10,
+                            maxlength:10
+                        },
+                        email: {
+                            required:true,
+                            email:true
+                        },
+                        address: "required",
+                        status: "required",
+                        type_of_user: "required"
+                    },
+                    messages: {
+                        name: "Please enter name",
+                        mobile: "Please enter valid mobile no",
+                        email: "Please enter a valid email address",
+                        address: "Please enter address",
+                        status: "Please select status",
+                        type_of_user: "Please select user type"
+                    }
+                });
+
+            }else{
+
+                return false;
             }
-         });
-      }else return false;
-   });
+    });
 
       // Remove family member
    $(document).on('click', '.remove_family', function () {
@@ -802,6 +910,194 @@ $(document).ready(function(){
       }
    });
 
+    $('#mobile').on('input', function(){
+
+        if($(this).val() !== verifiedMobile){
+
+            $('#mobile_verified').val('0');
+
+            $('#existing_user').val('0');
+
+            $('#mobileVerifiedMsg').hide();
+
+            $('#verifyMobileBtn')
+                .show()
+                .removeClass('btn-success')
+                .addClass('btn-primary')
+                .text('Verify');
+        }
+    });
+
+    $('#email').blur(function(){
+
+        let mobile = $('#mobile').val();
+        let email  = $('#email').val();
+
+        if(mobile.length != 10 || email == ''){
+            return;
+        }
+
+        $.ajax({
+
+            url: "{{ route('manage-merchant-employee.checkUserExists') }}",
+
+            type: "POST",
+
+            data: {
+                _token: "{{ csrf_token() }}",
+                mobile_no: mobile,
+                email: email
+            },
+
+            success: function(res){
+
+                if(res.status == 2){
+
+                    verifiedMobile = mobile;
+
+                    $('#mobile_verified').val('1');
+
+                    $('#existing_user').val('1');
+
+                    $('#mobileVerifiedMsg')
+                        .show()
+                        .text('✓ Verified');
+
+                    $('#verifyMobileBtn').hide();
+                }
+                else if(res.status == 1){
+
+                    $('#existing_user').val('0');
+
+                    $('#mobile_verified').val('0');
+
+                    $('#mobileVerifiedMsg').hide();
+
+                    $('#verifyMobileBtn').show();
+                }
+                else{
+
+                    alert(res.message);
+
+                    $('#email').val('').focus();
+
+                    $('#existing_user').val('0');
+
+                    $('#mobile_verified').val('0');
+                }
+            }
+        });
+
+    });
+    $('#verifyMobileBtn').on('click', function(){
+
+        let mobile = $('#mobile').val();
+
+        if(mobile.length != 10){
+
+            alert(
+                'Please enter valid mobile number'
+            );
+
+            return false;
+        }
+
+        $.ajax({
+
+            url: "{{ route('manage-merchant-employee.sendOtp') }}",
+
+            type: "POST",
+
+            data: {
+                _token: "{{ csrf_token() }}",
+                mobile_no: mobile,
+                email: $('#email').val()
+            },
+
+            success: function(res){
+
+                if(res.status == 1){
+
+                    $('#otp_code').val('');
+
+                    $('#otpVerifyModal').modal('show');
+                }
+                else if(res.status == 2){
+
+                    $('#mobile_verified').val('1');
+
+                    $('#existing_user').val('1');
+
+                    $('#mobileVerifiedMsg')
+                        .show()
+                        .text('✓ Mobile Verified');
+
+                    $('#verifyMobileBtn')
+                        .removeClass('btn-primary')
+                        .addClass('btn-success')
+                        .text('Verified');
+                }
+                else{
+
+                    alert(res.message);
+                }
+            }
+
+        });
+
+    });
+    $('#verifyOtpBtn').on('click', function(){
+
+        let otp = $('#otp_code').val();
+
+        if(otp == ''){
+
+            alert('Please enter OTP');
+
+            return false;
+        }
+
+        $.ajax({
+
+            url: "{{ route('manage-merchant-employee.verifyOtp') }}",
+
+            type: "POST",
+
+            data: {
+                _token: "{{ csrf_token() }}",
+                otp: otp
+            },
+
+            success: function(res){
+
+                if(res.status == 1){
+
+                    verifiedMobile =
+                        $('#mobile').val();
+
+                    $('#mobile_verified')
+                        .val('1');
+
+                    $('#mobileVerifiedMsg')
+                        .show();
+
+                    $('#verifyMobileBtn')
+                        .removeClass('btn-primary')
+                        .addClass('btn-success')
+                        .text('Verified');
+
+                    $('#otpVerifyModal')
+                        .modal('hide');
+
+                }else{
+
+                    alert(res.message);
+                }
+            }
+
+        });
+
+    });
 });
 
 // Open Add Account modal

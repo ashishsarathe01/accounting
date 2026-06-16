@@ -92,11 +92,56 @@ h6.fw-bold {
                             <input type="text" class="form-control" name="name" id="name"
                                 value="{{ $employee->name }}" placeholder="Enter Name" />
                         </div>
-                        <div class="mb-3 col-md-3">
-                            <label class="form-label font-14 font-heading">Mobile</label>
-                            <input type="text" class="form-control" name="mobile" id="mobile"
-                                value="{{ $employee->mobile_no }}" placeholder="Enter Mobile" minlength="10"
-                                maxlength="10" oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
+                        <div class="mb-3 col-md-4">
+
+                            <label class="form-label font-14 font-heading">
+                                Mobile
+                            </label>
+
+                            <div class="input-group">
+
+                                <input type="text"
+                                    class="form-control"
+                                    name="mobile"
+                                    id="mobile"
+                                    value="{{ $employee->mobile_no }}"
+                                    placeholder="Enter Mobile"
+                                    minlength="10"
+                                    maxlength="10"
+                                    oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+
+                                <button type="button"
+                                        class="btn btn-primary"
+                                        id="verifyMobileBtn"
+                                        style="display:none;">
+                                    Verify
+                                </button>
+
+                            </div>
+
+                            <small id="mobileVerifiedMsg"
+                                class="text-success">
+                                ✓ Verified
+                            </small>
+
+                            <input type="hidden"
+                                name="mobile_verified"
+                                id="mobile_verified"
+                                value="1">
+
+                            <input type="hidden"
+                                name="existing_user"
+                                id="existing_user"
+                            value="1">
+
+                            <input type="hidden"
+                                id="original_mobile"
+                                value="{{ $employee->mobile_no }}">
+
+                            <input type="hidden"
+                                id="original_email"
+                                value="{{ $employee->email }}">
+
                         </div>
                         <div class="mb-4 col-md-4">
                             <label class="form-label font-14 font-heading">Email</label>
@@ -804,12 +849,67 @@ h6.fw-bold {
         </div>
     </div>
 </div>
+<div class="modal fade"
+     id="otpVerifyModal"
+     tabindex="-1"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    Verify Mobile Number
+                </h5>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal">
+                </button>
+            </div>
+
+            <div class="modal-body">
+
+                <div class="mb-3">
+
+                    <label>
+                        OTP
+                    </label>
+
+                    <input type="text"
+                           class="form-control"
+                           id="otp_code"
+                           maxlength="6"
+                           placeholder="Enter OTP">
+
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button type="button"
+                        class="btn btn-success"
+                        id="verifyOtpBtn">
+
+                    Verify OTP
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
 @include('layouts.footer')
 
 <script>
     let salaryDefined = true;
     $(document).ready(function () {
-
+    let verifiedMobile = $('#original_mobile').val();
         $('#pf_applicable, #esi_applicable, select[name="tds_applicable"]')
             .on('focus', function () {
 
@@ -1018,8 +1118,20 @@ h6.fw-bold {
 
         // === Validation before submit ===
         $('#employee_form').on('submit', function (e) {
-            if (!confirm("Are you sure you want to save changes?")) {
+
+            if($('#mobile_verified').val() != '1'){
+
+                alert('Please verify mobile number first.');
+
                 e.preventDefault();
+
+                return false;
+            }
+
+            if (!confirm("Are you sure you want to save changes?")) {
+
+                e.preventDefault();
+
                 return false;
             }
         });
@@ -1053,7 +1165,164 @@ h6.fw-bold {
             }
         });
 
-    });
+        $('#mobile, #email').on('input', function(){
+
+            let currentMobile = $('#mobile').val();
+            let currentEmail  = $('#email').val();
+
+            let originalMobile = $('#original_mobile').val();
+            let originalEmail  = $('#original_email').val();
+
+            if(
+                currentMobile == originalMobile &&
+                currentEmail == originalEmail
+            ){
+
+                $('#mobile_verified').val('1');
+                $('#existing_user').val('1');
+
+                $('#verifyMobileBtn').hide();
+
+                $('#mobileVerifiedMsg')
+                    .show()
+                    .text('✓ Verified');
+
+                return;
+            }
+
+            $('#mobile_verified').val('0');
+            $('#existing_user').val('0');
+
+            $('#mobileVerifiedMsg').hide();
+
+            if(
+                currentMobile.length == 10 &&
+                currentEmail != ''
+            ){
+                checkUserForEdit();
+            }
+        });
+
+        $('#verifyMobileBtn').on('click', function(){
+
+            $.ajax({
+
+                url: "{{ route('manage-merchant-employee.sendOtp') }}",
+
+                type: "POST",
+
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    mobile_no: $('#mobile').val(),
+                    email: $('#email').val()
+                },
+
+                success: function(res){
+
+                    if(res.status == 1){
+
+                        $('#otp_code').val('');
+
+                        $('#otpVerifyModal').modal('show');
+                    }
+                    else{
+
+                        alert(res.message);
+                    }
+                }
+            });
+        });
+
+        $('#verifyOtpBtn').on('click', function(){
+
+            $.ajax({
+
+                url: "{{ route('manage-merchant-employee.verifyOtp') }}",
+
+                type: "POST",
+
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    otp: $('#otp_code').val()
+                },
+
+                success: function(res){
+
+                    if(res.status == 1){
+
+                        verifiedMobile = $('#mobile').val();
+
+                        $('#mobile_verified').val('1');
+
+                        $('#mobileVerifiedMsg')
+                            .show()
+                            .text('✓ Verified');
+
+                        $('#verifyMobileBtn')
+                            .removeClass('btn-primary')
+                            .addClass('btn-success')
+                            .text('Verified');
+
+                        $('#otpVerifyModal').modal('hide');
+                    }
+                    else{
+
+                        alert(res.message);
+                    }
+                }
+            });
+        });
+            });
+        function checkUserForEdit()
+        {
+            $.ajax({
+
+                url: "{{ route('manage-merchant-employee.checkUserExistsForEdit') }}",
+
+                type: "POST",
+
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    user_id: "{{ $employee->id }}",
+                    mobile_no: $('#mobile').val(),
+                    email: $('#email').val()
+                },
+
+                success: function(res){
+
+                    if(res.status == 2){
+
+                        $('#mobile_verified').val('1');
+
+                        $('#existing_user').val('1');
+
+                        $('#mobileVerifiedMsg')
+                            .show()
+                            .text('✓ Verified');
+
+                        $('#verifyMobileBtn').hide();
+                    }
+                    else if(res.status == 1){
+
+                        $('#mobile_verified').val('0');
+
+                        $('#existing_user').val('0');
+
+                        $('#mobileVerifiedMsg').hide();
+
+                        $('#verifyMobileBtn').show();
+                    }
+                    else{
+
+                        alert(res.message);
+
+                        $('#mobile_verified').val('0');
+
+                        $('#existing_user').val('0');
+                    }
+                }
+            });
+        }
     $("#openAccountModal").on("click", function () {
     $("#accountModal").modal("show");
 });
