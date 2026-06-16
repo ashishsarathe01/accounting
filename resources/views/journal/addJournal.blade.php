@@ -321,7 +321,8 @@ border-radius:12px;
                                  @foreach($billsundry as $bs)
                                     <option value="{{$bs->id}}"
                                        data-type="{{$bs->bill_sundry_type}}"
-                                       data-adjust="{{$bs->adjust_purchase_amt}}">
+                                       data-adjust="{{$bs->adjust_purchase_amt}}"
+                                       data-nature="{{$bs->nature_of_sundry}}">
                                        {{$bs->name}}
                                     </option>
                                  @endforeach
@@ -877,7 +878,7 @@ border-radius:12px;
 
       let bs_adjust_total = 0;
       let bs_non_adjust_total = 0;
-
+      let bs_tcs_total = 0;
       $("#bill_sundry_section tr").each(function(){
 
          let select = $(this).find(".bill_sundry");
@@ -892,6 +893,15 @@ border-radius:12px;
 
          let type = selectedOption.attr("data-type");
          let rawAdjust = selectedOption.attr("data-adjust");
+         let nature = selectedOption.attr("data-nature");
+         if(nature === "TCS"){
+            if(type === "subtractive"){
+               bs_tcs_total -= val;
+            }else{
+               bs_tcs_total += val;
+            }
+            return;
+         }
 
          if(typeof type === "undefined" || typeof rawAdjust === "undefined"){
             return;
@@ -902,10 +912,10 @@ border-radius:12px;
          if(adjust === "1" || adjust === "yes"){
             if(type === "additive"){
                bs_adjust_total += val;
-            } else if(type === "subtractive"){
+            }else if(type === "subtractive"){
                bs_adjust_total -= val;
             }
-         } else {
+         }else{
             bs_non_adjust_total += val;
          }
 
@@ -1036,7 +1046,7 @@ border-radius:12px;
       let final_net_amount = adjusted_item_total + bs_non_adjust_total;
       $("#net_amount").val(final_net_amount.toFixed(2));
 
-      let calculated_total = final_net_amount + total_gst;
+      let calculated_total = final_net_amount + total_gst + bs_tcs_total;
 
       let rounded_total = Math.round(calculated_total);
       let round_off = parseFloat((rounded_total - calculated_total).toFixed(2));
@@ -1076,7 +1086,8 @@ border-radius:12px;
       @foreach($billsundry as $bs)
       options += `<option value="{{ $bs->id }}"
          data-type="{{ $bs->bill_sundry_type }}"
-         data-adjust="{{ $bs->adjust_purchase_amt }}">
+         data-adjust="{{ $bs->adjust_purchase_amt }}"
+         data-nature="{{ $bs->nature_of_sundry }}">
          {{ $bs->name }}
       </option>`;
       @endforeach

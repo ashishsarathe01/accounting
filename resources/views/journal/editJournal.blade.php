@@ -427,6 +427,7 @@ input[type=number] {
                                                         <option value="{{ $bs->id }}"
                                                             data-type="{{ $bs->bill_sundry_type }}"
                                                             data-adjust="{{ $bs->adjust_purchase_amt }}"
+                                                            data-nature="{{$bs->nature_of_sundry}}"
                                                             {{ $bs_row->bill_sundry == $bs->id ? 'selected' : '' }}>
                                                             {{ $bs->name }}
                                                         </option>
@@ -462,7 +463,8 @@ input[type=number] {
                                                 @foreach($billsundry as $bs)
                                                     <option value="{{ $bs->id }}"
                                                         data-type="{{ $bs->bill_sundry_type }}"
-                                                        data-adjust="{{ $bs->adjust_purchase_amt }}">
+                                                        data-adjust="{{ $bs->adjust_purchase_amt }}"
+                                                        data-nature="{{$bs->nature_of_sundry}}">
                                                         {{ $bs->name }}
                                                     </option>
                                                 @endforeach
@@ -1105,7 +1107,7 @@ input[type=number] {
 
         let bs_adjust_total = 0;
         let bs_non_adjust_total = 0;
-
+        let bs_tcs_total = 0;
         $("#bill_sundry_section tr").each(function(){
 
             let select = $(this).find(".bill_sundry");
@@ -1120,7 +1122,15 @@ input[type=number] {
 
             let type = selectedOption.attr("data-type");
             let rawAdjust = selectedOption.attr("data-adjust");
-
+            let nature = selectedOption.attr("data-nature");
+            if(nature === "TCS"){
+                if(type === "subtractive"){
+                    bs_tcs_total -= val;
+                }else{
+                    bs_tcs_total += val;
+                }
+                return;
+            }
             if(typeof type === "undefined" || typeof rawAdjust === "undefined"){
                 return;
             }
@@ -1130,14 +1140,13 @@ input[type=number] {
             if(adjust === "yes" || adjust === "1"){
                 if(type === "additive"){
                     bs_adjust_total += val;
-                } else {
+                }else{
                     bs_adjust_total -= val;
                 }
-            } else {
-                // IMPORTANT: keep sign for non-adjust too
+            }else{
                 if(type === "additive"){
                     bs_non_adjust_total += val;
-                } else {
+                }else{
                     bs_non_adjust_total -= val;
                 }
             }
@@ -1231,7 +1240,7 @@ input[type=number] {
         let net_amount = adjusted_total + bs_non_adjust_total;
         $("#net_amount").val(net_amount.toFixed(2));
 
-        let calculated_total = net_amount + total_gst;
+        let calculated_total = net_amount + total_gst + bs_tcs_total;
 
         let rounded_total = Math.round(calculated_total);
         let round_off = parseFloat((rounded_total - calculated_total).toFixed(2));
@@ -1616,7 +1625,8 @@ $(document).on("click", ".add_bs", function(){
    @foreach($billsundry as $bs)
    options += `<option value="{{ $bs->id }}"
       data-type="{{ $bs->bill_sundry_type }}"
-      data-adjust="{{ $bs->adjust_purchase_amt }}">
+      data-adjust="{{ $bs->adjust_purchase_amt }}"
+      data-nature="{{$bs->nature_of_sundry}}">
       {{ $bs->name }}
    </option>`;
    @endforeach
