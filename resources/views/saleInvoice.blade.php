@@ -443,7 +443,7 @@ body {
                         <th style="text-align:right; width:12%;">Price</th>
                         <th style="text-align:right; width:15%;">Amount (₹)</th>
                      </tr>
-                     @php $i=1;$item_total = 0;$qty_total = 0; @endphp
+                     @php $i=1;$displayLineCount = 0;$item_total = 0;$qty_total = 0; @endphp
                      @foreach($items_detail as $item)
                         <tr class="{{ ($configuration && $configuration->lines_in_item_status == 0) ? 'no-border' : '' }}">
                            <td style="text-align:center;">{{$i}}</td>
@@ -470,20 +470,25 @@ body {
                            <td style="text-align:right;">{{$item->price}}</td>
                            <td style="text-align:right;">{{formatIndianNumber($item->amount)}}</td>
                         </tr>
-                        @php $i++;$item_total = $item_total + $item->amount; $qty_total = $qty_total + $item->qty;  @endphp
+                        @php
+                           $i++;
+                           $displayLineCount++;
+                           if(isset($item->lines) && count($item->lines) > 0){
+                              $displayLineCount += count($item->lines);
+                           }
+                           $item_total += $item->amount;
+                           $qty_total += $item->qty;
+                        @endphp
                      @endforeach
-                     @php                       
-                         foreach($sale_sundry as $sundry){
-                            if($sundry->nature_of_sundry=="OTHER"){
-                               $i++;
-                            }
-                         }
-                        if($sale_detail->e_invoice_status==0){
-                           $tRows = 7 - $i; 
-                        }else{
-                           $tRows = 7 - $i; 
+                     @php
+                        foreach($sale_sundry as $sundry){
+                           if($sundry->nature_of_sundry=="OTHER"){
+                              $displayLineCount++;
+                           }
                         }
-                        while($tRows>=0){
+                        $minimumLines = 8;
+                        $tRows = $minimumLines - $displayLineCount;
+                        while($tRows > 0){
                             @endphp  
                                 <tr style="height: 21px;" class="{{ ($configuration && $configuration->lines_in_item_status == 0) ? 'no-border' : '' }}"><td></td><td colspan="2"></td><td></td><td></td><td></td><td></td><td></td></tr>
                             @php 

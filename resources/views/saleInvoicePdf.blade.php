@@ -292,7 +292,7 @@
                 <th style="text-align:right; width:12%;">Price</th>
                 <th style="text-align:right; width:15%;">Amount (₹)</th>
             </tr>
-            @php $i = 1; $item_total = 0; $qty_total = 0;@endphp
+            @php $i = 1; $displayLineCount = 0; $item_total = 0; $qty_total = 0;@endphp
             @foreach($items_detail as $item)
                 <tr>
                     <td style="text-align:center;">{{ $i }}</td>
@@ -318,21 +318,29 @@
                     <td style="text-align:right;">{{ $item->price }}</td>
                     <td style="text-align:right;">{{ formatIndianNumber($item->amount) }}</td>
                 </tr>
-                @php $i++; $item_total += $item->amount; $qty_total = $qty_total + $item->qty;@endphp
+                @php
+                    $i++;
+                    $displayLineCount++;
+                    if(isset($item->lines) && count($item->lines) > 0){
+                        $displayLineCount += count($item->lines);
+                    }
+                    $item_total += $item->amount;
+                    $qty_total += $item->qty;
+                @endphp
             @endforeach
-            @php                       
+            @php
                 foreach($sale_sundry as $sundry){
                     if($sundry->nature_of_sundry=="OTHER"){
-                        $i++;
+                        $displayLineCount++;
                     }
                 }
                 if($sale_detail->e_invoice_status==0){
-                    $tRows = 10 - $i; 
+                    $tRows = 10 - $displayLineCount;
                 }else{
-                    $tRows = 5 - $i; 
-                }                         
-                while($tRows>=0){                     
-                    $tRows--; 
+                    $tRows = 5 - $displayLineCount;
+                }
+                while($tRows > 0){
+                    $tRows--;
                     echo '<tr>
                         <td style="height:15px;">&nbsp;</td>
                         <td colspan="2">&nbsp;</td>
@@ -343,6 +351,7 @@
                         <td>&nbsp;</td>
                     </tr>';
                 }
+            @endphp
             @endphp 
             {{-- ================= TOTAL ================= --}}
             <tr>
