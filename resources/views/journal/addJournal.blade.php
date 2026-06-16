@@ -381,11 +381,10 @@ border-radius:12px;
                                  <td style="text-align: right;">Round Off</td>
                                  <td>
                                     <input type="text"
+                                          step="0.01"
                                           class="form-control"
                                           id="round_off"
-                                          name="round_off"
-                                          readonly
-                                          >
+                                          name="round_off">
                                  </td>
                               </tr>
                         <tr class="font-14 font-heading bg-white">
@@ -857,7 +856,22 @@ border-radius:12px;
     
         gstCalculation();
    }
+   $(document).on("input", "#round_off", function(){
 
+      let round_off = parseFloat($(this).val()) || 0;
+
+      let net_amount = parseFloat($("#net_amount").val()) || 0;
+      let cgst = parseFloat($("#cgst").val()) || 0;
+      let sgst = parseFloat($("#sgst").val()) || 0;
+      let igst = parseFloat($("#igst").val()) || 0;
+
+      let total = net_amount + cgst + sgst + igst;
+
+      $("#total_amount").val(
+         (total + round_off).toFixed(2)
+      );
+
+   });
    function gstCalculation(){
 
       let vendor_gstin_full = $("#vendor option:selected").attr("data-gstin") || "";
@@ -1049,18 +1063,14 @@ border-radius:12px;
       let calculated_total = final_net_amount + total_gst + bs_tcs_total;
 
       let rounded_total = Math.round(calculated_total);
-      let round_off = parseFloat((rounded_total - calculated_total).toFixed(2));
-
-      if(round_off === 0){
-         $("#round_off").val("");
-         $(".roundoff_tr").hide();
-      } else {
-         $("#round_off").val(round_off);
-         $(".roundoff_tr").show();
-      }
-
-      $("#total_amount").val(rounded_total);
-
+      let round_off = parseFloat(
+         (rounded_total - calculated_total).toFixed(2)
+      );
+      $("#round_off").val(round_off);
+      $(".roundoff_tr").show();
+      $("#total_amount").val(
+         (calculated_total + round_off).toFixed(2)
+      );
    }
    var bs_count = 1;
 

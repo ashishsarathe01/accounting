@@ -561,10 +561,8 @@ public function index(Request $request)
          $final_net = array_sum($distributed_items) + $non_adjust_total;
 
          $total = $final_net + $cgst + $sgst + $igst;
-
-         $rounded_total = round($total);
-         $round_off = $rounded_total - $total;
-
+         $round_off = floatval($request->round_off ?? 0);
+         $rounded_total = $total + $round_off;
          $journal->net_total = $final_net;
          $journal->total_amount = $rounded_total;
          $journal->remark = $request->input('remark');
@@ -690,8 +688,8 @@ public function index(Request $request)
             $ledger->save();
             //Round Off Caculation
             $calculated_total = $final_net + $cgst + $sgst + $igst;
-            $rounded_total = round($calculated_total);
-            $round_off = round($rounded_total - $calculated_total, 2);
+            $round_off = floatval($request->round_off ?? 0);
+            $rounded_total = $calculated_total + $round_off;
             //Round Off Entry
             if($round_off<0){               
                $billsundry = BillSundrys::where('id',8)->first();
@@ -1386,13 +1384,13 @@ public function index(Request $request)
       $final_net = $adjusted_total + $non_adjust_total;
 
       $total = $final_net + $cgst + $sgst + $igst;
-      $rounded_total = round($total);
-      $round_off = round($rounded_total - $total, 2);
+      $round_off = floatval($request->round_off ?? 0);
+      $receipt->net_total = $final_net;
       $receipt->net_total = $final_net;
       $receipt->cgst = $cgst;
       $receipt->sgst = $sgst;
       $receipt->igst = $igst;
-      $receipt->total_amount = $rounded_total;
+      $receipt->total_amount = $total + $round_off;
       $receipt->remark = "";
       $receipt->vendor = $request->input('vendor');
       $receipt->vendor_gstin = $vendor->gstin ?? "";

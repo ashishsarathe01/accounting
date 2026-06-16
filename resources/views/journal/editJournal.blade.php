@@ -352,6 +352,19 @@ input[type=number] {
                                </tr>
                             </div>
                         </table>
+                        @php
+                            $round_off_value = 0;
+                            foreach($journal_detail as $detail){
+                                if($detail->account_name == 11427){
+                                    if($detail->debit > 0){
+                                        $round_off_value = $detail->debit;
+                                    }else{
+                                        $round_off_value = -1 * $detail->credit;
+                                    }
+                                    break;
+                                }
+                            }
+                        @endphp
                         <table class="table-striped table m-0 shadow-sm table-bordered with_gst_section" style="display: none;">
                            <tbody>
                               <tr class="font-14 font-heading bg-white">
@@ -520,22 +533,11 @@ input[type=number] {
                                  <td style="text-align: right;">Round Off</td>
                                  <td>
                                     <input type="text"
+                                          step="0.01"
                                           class="form-control"
                                           id="round_off"
                                           name="round_off"
-                                          readonly
-                                          value="{{ 
-                                             round(
-                                             ($journal->total_amount ?? 0) -
-                                             (
-                                                ($journal->net_total ?? 0)
-                                                + ($journal->cgst ?? 0)
-                                                + ($journal->sgst ?? 0)
-                                                + ($journal->igst ?? 0)
-                                                + ($journal->tcs_amount ?? 0)
-                                             ),
-                                             2)
-                                          }}">
+                                          value="{{ $round_off_value }}">
                                  </td>
                               </tr>
                               <tr class="font-14 font-heading bg-white">
@@ -663,6 +665,8 @@ input[type=number] {
     let originalVendorId = $("#vendor").val(); 
     let pageLoaded = false;
     var company_gst = "{{$company_gst}}";
+    var roundOffLoaded = false;
+    var isInitialLoad = true;
     function onTypeChange(id){
         $("#debit_" + id).val('');
         $("#credit_" + id).val('');
@@ -1016,7 +1020,8 @@ input[type=number] {
       $("#series_no").change();
       setTimeout(() => {
          pageLoaded = true;
-      }, 0);
+         isInitialLoad = false;
+      }, 500);
         setTimeout(function(){
             let lastRow = $("#without_gst_section tr[id^='tr_']").last();
             if(lastRow.length){
@@ -1087,6 +1092,37 @@ input[type=number] {
         
         }
     }
+    $(document).on("input", "#round_off", function(){
+        let round_off = parseFloat($(this).val()) || 0;
+        let net_amount = parseFloat($("#net_amount").val()) || 0;
+        let cgst = parseFloat($("#cgst").val()) || 0;
+        let sgst = parseFloat($("#sgst").val()) || 0;
+        let igst = parseFloat($("#igst").val()) || 0;
+        let total_gst = cgst + sgst + igst;
+        let bs_tcs_total = 0;
+        $("#bill_sundry_section tr").each(function(){
+            let option = $(this).find(".bill_sundry option:selected");
+            let nature = option.attr("data-nature");
+            let type = option.attr("data-type");
+            let amount = parseFloat(
+                $(this).find(".bs_amount").val()
+            ) || 0;
+            if(nature === "TCS"){
+                if(type === "subtractive"){
+                    bs_tcs_total -= amount;
+                }else{
+                    bs_tcs_total += amount;
+                }
+            }
+        });
+        let total =
+            net_amount +
+            total_gst +
+            bs_tcs_total;
+        $("#total_amount").val(
+            (total + round_off).toFixed(2)
+        );
+    });
     function gstCalculation(){
 
         let vendor_gstin_full = $("#vendor option:selected").attr("data-gstin") || "";
@@ -1243,17 +1279,17 @@ input[type=number] {
         let calculated_total = net_amount + total_gst + bs_tcs_total;
 
         let rounded_total = Math.round(calculated_total);
-        let round_off = parseFloat((rounded_total - calculated_total).toFixed(2));
-
-        if(round_off === 0){
-            $("#round_off").val("");
-            $(".roundoff_tr").hide();
-        } else {
-            $("#round_off").val(round_off);
-            $(".roundoff_tr").show();
+        let auto_round_off = parseFloat(
+            (rounded_total - calculated_total).toFixed(2)
+        );
+        if(!isInitialLoad){
+            $("#round_off").val(auto_round_off);
         }
-
-        $("#total_amount").val(rounded_total);
+        let round_off = parseFloat($("#round_off").val()) || 0;
+        $(".roundoff_tr").show();
+        $("#total_amount").val(
+            (calculated_total + round_off).toFixed(2)
+        );
     }
     var add_more_count_withgst = "{{$j}}";
 
