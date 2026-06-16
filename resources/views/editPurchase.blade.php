@@ -464,21 +464,9 @@ foreach ($manageitems as $value) {
                                                    echo "selected";
                                                 }
                                                 ?> data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_round_plus" id="sundry_option_round_plus" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
-                                          if(
-                                             $value->nature_of_sundry=='ROUNDED OFF (+)'
-                                             ||
-                                             $value->nature_of_sundry=='ROUNDED OFF (-)'
-                                          ){?>
-                                             <option value="<?php echo $value->id;?>"
-
-                                                <?php
-                                                if($value->nature_of_sundry=='ROUNDED OFF (+)'){
-                                                   echo "selected";
-                                                }
-                                                ?> data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_round_plus" id="sundry_option_round_plus" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
-                                             <?php 
-                                          }
-                                       } ?>
+                                          <?php
+                                       } 
+                                       }?>
                                     </select>
                                  </td>
                                  <td class="w-min-50 ">
@@ -1377,7 +1365,6 @@ newRow = '<tr id="billtr_' + add_more_bill_sundry_up_count + '" class="font-14 f
       function calculateAmount(key = null) {
          customer_gstin = $('#party option:selected').attr('data-state_code');
          let bill_date = $("#date").val();
-
          if (customer_gstin == undefined) {
             return;
          }

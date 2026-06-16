@@ -5775,15 +5775,24 @@ class SalesController extends Controller
    public function addSaleInvoiceConfiguration(Request $request){ 
       $check_conf = SaleInvoiceConfiguration::where('company_id',Session::get('user_company_id'))->first();
       if(!$check_conf){
-         if($request->company_logo_status==1){
-            $logo = "logo_".time().'.'.$request->company_logo->extension();
-            $request->company_logo->move(public_path('images'), $logo);
+         if($request->company_logo_status==1 && $request->hasFile('company_logo')){
+            $file = $request->file('company_logo');
+
+            if ($file->isValid()) {
+               $logo = 'signature_' . time() . '.' . $file->extension();
+               $file->move(public_path('images'), $logo);
+            }
+            
          }else{
             $logo = "";
          }
-         if($request->signature_status == 1 && $request->signature){
-            $signature = "signature_".time().'.'.$request->signature->extension();
-            $request->signature->move(public_path('images'), $signature);
+         if($request->signature_status == 1 && $request->hasFile('signature')){
+            $file = $request->file('signature');
+
+            if ($file->isValid()) {
+               $signature = 'signature_' . time() . '.' . $file->extension();
+               $file->move(public_path('images'), $signature);
+            }
          }else{
             $signature = "";
          }
@@ -5832,21 +5841,25 @@ class SalesController extends Controller
             }            
          }
       }else{
+         
          $logo = $check_conf->company_logo;
          $signature = $check_conf->signature;
-         if($request->company_logo && !empty($request->company_logo)){
-            $logo = "logo_".time().'.'.$request->company_logo->extension();
-            $request->company_logo->move(public_path('images'), $logo);
+         if($request->hasFile('company_logo')){
+            $file = $request->file('company_logo');
+            if ($file->isValid()) {
+               $logo = 'logo_' . time() . '.' . $file->extension();
+               $file->move(public_path('images'), $logo);
+            }
          }
-         if($request->signature && !empty($request->signature)){
+         if($request->signature_status == 1 && $request->hasFile('signature')){
             $signature = "signature_".time().'.'.$request->signature->extension();
             $request->signature->move(public_path('images'), $signature);
          }
-         if($request->signature_status == 1 && $request->signature){
-            // upload new signature
-            $signature = "signature_".time().'.'.$request->signature->extension();
-            $request->signature->move(public_path('images'), $signature);
-        }
+      //    if($request->signature_status == 1 && $request->signature){
+      //       // upload new signature
+      //       $signature = "signature_".time().'.'.$request->signature->extension();
+      //       $request->signature->move(public_path('images'), $signature);
+      //   }
          if($request->company_logo_status==0){
             $logo = "";
          }

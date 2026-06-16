@@ -313,7 +313,7 @@ return view('merchant_employee_add')
             $user->activation_token
         );
 
-        $template = "employee_password_setup";
+        $template = "generate_password_9m";
 
         $mobile = $user->mobile_no;
 
@@ -327,6 +327,7 @@ return view('merchant_employee_add')
                 "languageCode": "en",
                 "bodyValues": [
                     "'.$user->name.'",
+                    "'.$user->email.'",
                     "'.$activationLink.'"
                 ]
             }
