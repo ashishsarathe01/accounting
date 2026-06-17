@@ -97,7 +97,7 @@ class gstR1Controller extends Controller
         if ($request->type != '3b' && $request->type != 'itcLedger') {
         $data_source = $request->data_source ?? 'books';
 
-            if($data_source == "books"){
+            if($data_source == "books" || $data_source == "portal"){
                 return response()->json([
                     'status' => true,
                     'message' => 'BOOK-DATA'
@@ -432,46 +432,46 @@ class gstR1Controller extends Controller
                 return json_encode($response);
             }
             $state_code = substr(trim($request->series), 0, 2); // e.g., "07"
-            $gst_token = gstToken::select('txn','created_at')
-                                    ->where('company_gstin',$request->series)
-                                    ->where('company_id',Session::get('user_company_id'))
-                                    ->where('status',1)
-                                    ->orderBy('id','desc')
-                                    ->first();
-            if($gst_token){
-                $token_expiry = date('d-m-Y H:i:s',strtotime('+6 hour',strtotime($gst_token->created_at)));
-                $current_time = date('d-m-Y H:i:s');
-                if(strtotime($token_expiry)<strtotime($current_time)){
-                    $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
-                    if($token_res==0){
-                        $response = array(
-                            'status' => false,
-                            'message' => 'Something Went Wrong In Token Generation'
-                        );
-                        return json_encode($response);
-                    }
-                    $response = array(
-                        'status' => true,
-                        'message' => 'TOKEN-OTP'
-                    );
-                    return json_encode($response);
-                }
-                $txn = $gst_token->txn;
-            }else{
-                $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
-                if($token_res==0){
-                        $response = array(
-                            'status' => false,
-                            'message' => 'Something Went Wrong In Token Generation'
-                        );
-                        return json_encode($response);
-                    }
-                $response = array(
-                        'status' => true,
-                        'message' => 'TOKEN-OTP'
-                );
-                return json_encode($response);
-            } 
+            // $gst_token = gstToken::select('txn','created_at')
+            //                         ->where('company_gstin',$request->series)
+            //                         ->where('company_id',Session::get('user_company_id'))
+            //                         ->where('status',1)
+            //                         ->orderBy('id','desc')
+            //                         ->first();
+            // if($gst_token){
+            //     $token_expiry = date('d-m-Y H:i:s',strtotime('+6 hour',strtotime($gst_token->created_at)));
+            //     $current_time = date('d-m-Y H:i:s');
+            //     if(strtotime($token_expiry)<strtotime($current_time)){
+            //         $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
+            //         if($token_res==0){
+            //             $response = array(
+            //                 'status' => false,
+            //                 'message' => 'Something Went Wrong In Token Generation'
+            //             );
+            //             return json_encode($response);
+            //         }
+            //         $response = array(
+            //             'status' => true,
+            //             'message' => 'TOKEN-OTP'
+            //         );
+            //         return json_encode($response);
+            //     }
+            //     $txn = $gst_token->txn;
+            // }else{
+            //     $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
+            //     if($token_res==0){
+            //             $response = array(
+            //                 'status' => false,
+            //                 'message' => 'Something Went Wrong In Token Generation'
+            //             );
+            //             return json_encode($response);
+            //         }
+            //     $response = array(
+            //             'status' => true,
+            //             'message' => 'TOKEN-OTP'
+            //     );
+            //     return json_encode($response);
+            // } 
             //Gst Credenatial
             if(!$this->gstCredentials){
                 $response = [
@@ -500,7 +500,7 @@ class gstR1Controller extends Controller
                 CURLOPT_URL => $base_url.'/gstr1/b2b?' . http_build_query([
                     'email'     => $email_id,
                     'gstin'     => $request->series,
-                    'retperiod' => $month,
+                    'ret_period' => $month,
                     // 'smrytyp' => 'L' // Optional for long summary
                 ]),
                 CURLOPT_RETURNTRANSFER => true,
@@ -512,10 +512,10 @@ class gstR1Controller extends Controller
                 CURLOPT_CUSTOMREQUEST  => 'GET',
                 CURLOPT_HTTPHEADER     => [
                     'Accept: application/json',
-                    'gst_username: ' . $gst_user_name,
-                    'state_cd: ' . $state_code,
-                    'ip_address: '.$ip_address, // Use your public server IP
-                    'txn: ' . $txn,
+                    // 'gst_username: ' . $gst_user_name,
+                    // 'state_cd: ' . $state_code,
+                    // 'ip_address: '.$ip_address, // Use your public server IP
+                    // 'txn: ' . $txn,
                     'client_id: '.$client_id,
                     'client_secret: '.$client_secret
                 ],
@@ -524,7 +524,9 @@ class gstR1Controller extends Controller
             curl_close($curl);
             $result = json_decode($response, true); // Convert to array
             // Debug response
-            
+            // echo $email_id."**".$request->series."**".$month."**".$client_id."**".$client_secret;
+            // echo "<pre>";
+            // print_r($result);die;
             if (isset($result['status_cd']) && $result['status_cd'] == 0 && $result['error']['error_cd']!='RET11416') {
                 return response()->json(["status" => 0, "message" => $result['error']['message']]);
             }
@@ -683,7 +685,7 @@ class gstR1Controller extends Controller
             CURLOPT_URL => $base_url.'/gstr1/cdnr?' . http_build_query([
                 'email'     => $email_id,
                 'gstin'     => $request->series,
-                'retperiod' => $month
+                'ret_period' => $month
             ]),
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_ENCODING       => '',
@@ -694,10 +696,10 @@ class gstR1Controller extends Controller
             CURLOPT_CUSTOMREQUEST  => 'GET',
             CURLOPT_HTTPHEADER     => [
                 'Accept: application/json',
-                'gst_username: ' . $gst_user_name,
-                'state_cd: ' . $state_code,
-                'ip_address: '.$ip_address,
-                'txn: ' . $txn,
+                // 'gst_username: ' . $gst_user_name,
+                // 'state_cd: ' . $state_code,
+                // 'ip_address: '.$ip_address,
+                // 'txn: ' . $txn,
                 'client_id: '.$client_id,
                 'client_secret: '.$client_secret
             ],

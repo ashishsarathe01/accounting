@@ -84,7 +84,11 @@
                </div>
             </form>
             <div id="gst_div" style="display: none">
-               <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">GSTR2B <button class="btn btn-info reconciliation">Reconciliation</button></h5> 
+                <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">GSTR2B 
+                    <button class="btn btn-info reconciliation">Reconciliation</button>
+                    <button class="btn btn-info verify_gstr2b" style="display:none;float: right;">Verify</button>
+                    <span id="verify_detail" style="float: right;color:green"></span>
+                </h5> 
                <table class="table table-ordered bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm gst_table">
                   <thead>
                      <tr>
@@ -301,6 +305,8 @@
       });
    });
    function getGSTR2BData(month,gstin){
+       $(".verify_gstr2b").hide();
+       $("#verify_detail").html('');
       $.ajax({
          url : "{{route('gstr2b-detail')}}",
          method : 'post',
@@ -332,26 +338,50 @@
                      obj.data.forEach(element => {
                         let baseUrl = "{{ url('/gstr2b-all-info') }}";
                         let fullUrl = `${baseUrl}/${month}/${gstin}/${element.ctin}`;
-                        let color = '';
-                        if(element.diff_amt!=0){
-                           color = 'style="color:red;"';
+                        let diffColor = '';
+                        if(parseFloat(element.diff_amt) != 0){
+                           diffColor = 'style="color:red;"';
                         }
-                        html+="<tr style='cursor:pointer;'><td><a href='"+fullUrl+"'>"+element.trdnm+" ("+element.ctin+")</a></td><td style='text-align:right'><a  href='"+fullUrl+"'>"+Number(element.b2b_portal).toLocaleString('en-IN', {
-                                       minimumFractionDigits: 2,
-                                       maximumFractionDigits: 2
-                                       })+"</a></td><td style='text-align:right'><a  href='"+fullUrl+"'>"+Number(element.b2b_books).toLocaleString('en-IN', {
-                                       minimumFractionDigits: 2,
-                                       maximumFractionDigits: 2
-                                       })+"</a></td><td style='text-align:right'><a  href='"+fullUrl+"'>"+Number(element.cdnr_portal).toLocaleString('en-IN', {
-                                       minimumFractionDigits: 2,
-                                       maximumFractionDigits: 2
-                                       })+"</a></td><td style='text-align:right'><a  href='"+fullUrl+"'>"+Number(element.cdnr_books).toLocaleString('en-IN', {
-                                       minimumFractionDigits: 2,
-                                       maximumFractionDigits: 2
-                                       })+"</a></td><td style='text-align:right'><a "+color+" href='"+fullUrl+"'>"+Number(element.diff_amt).toLocaleString('en-IN', {
-                                       minimumFractionDigits: 2,
-                                       maximumFractionDigits: 2
-                                       })+"</a></td></tr>";
+                        
+                        let b2bMatchColor = (
+                           parseFloat(element.b2b_portal) === parseFloat(element.b2b_books)
+                        ) ? 'style="color:green;font-weight:bold;"' : '';
+                        
+                        let cdnrMatchColor = (
+                           parseFloat(element.cdnr_portal) === parseFloat(element.cdnr_books)
+                        ) ? 'style="color:green;font-weight:bold;"' : '';
+                        html += "<tr style='cursor:pointer;'>"+
+                                "<td><a href='"+fullUrl+"'>"+element.trdnm+" ("+element.ctin+")</a></td>"+
+                                
+                                "<td style='text-align:right'><a "+b2bMatchColor+" href='"+fullUrl+"'>"+
+                                Number(element.b2b_portal).toLocaleString('en-IN', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                                })+"</a></td>"+
+                                
+                                "<td style='text-align:right'><a "+b2bMatchColor+" href='"+fullUrl+"'>"+
+                                Number(element.b2b_books).toLocaleString('en-IN', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                                })+"</a></td>"+
+                                
+                                "<td style='text-align:right'><a "+cdnrMatchColor+" href='"+fullUrl+"'>"+
+                                Number(element.cdnr_portal).toLocaleString('en-IN', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                                })+"</a></td>"+
+                                
+                                "<td style='text-align:right'><a "+cdnrMatchColor+" href='"+fullUrl+"'>"+
+                                Number(element.cdnr_books).toLocaleString('en-IN', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                                })+"</a></td>"+
+                                
+                                "<td style='text-align:right'><a "+diffColor+" href='"+fullUrl+"'>"+
+                                Number(element.diff_amt).toLocaleString('en-IN', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                                })+"</a></td></tr>";
                            total_b2b_portal += parseFloat(element.b2b_portal);
                            total_b2b_books  += parseFloat(element.b2b_books);
 
@@ -440,6 +470,12 @@
                         </tr>`;
                      }
                      $(".gst_table tbody").html(finalHtml);
+                     if(obj.verify_status==0){
+                         $(".verify_gstr2b").show();
+                     }else if(obj.verify_status==1){
+                         $("#verify_detail").html("Verified By : "+obj.verify_by+", Verify Date : "+obj.verify_date);
+                     }
+                     
                      $("#gst_div").show();
                   }
                }else{
@@ -452,7 +488,43 @@
       });
    }
    
-
+    $(document).on('click','.verify_gstr2b',function(){
+        if(confirm("Are you sure to verify?")==true){
+            let month = $("#month").val();
+            let gstin = $("#gstin").val();
+            if(gstin=="" || month==""){
+                alert("All Fields Required.");
+                return;
+            }
+            $("#cover-spin").show();
+            $.ajax({
+                 url : "{{route('verify-gst2b')}}",
+                 method : 'post',
+                 data : {
+                    _token : '{{ csrf_token() }}',
+                    month : month,
+                    gstin : gstin
+                 },
+                 success : function(res){
+                     if(res!=""){
+                       let obj = JSON.parse(res);
+                       if(obj.status==true){
+                           alert("Verified Successfully.");
+                           getGSTR2BData(month,gstin);
+                        }else{
+                            alert("Something Went Wrong.");
+                        }
+                        
+                     }else{
+                         alert("Something Went Wrong.");
+                     }
+                     $("#cover-spin").hide();
+                 }
+                 
+            });
+            
+        }
+    });
 
 
 </script>

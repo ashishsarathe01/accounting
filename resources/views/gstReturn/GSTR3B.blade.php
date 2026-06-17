@@ -38,8 +38,13 @@
                     <div class="container-fluid">
                         <ul class="nav nav-fill nav-tabs" role="tablist">
                             <li class="nav-item" role="presentation">
-                                <a class="nav-link active" id="fill-tab-0" data-bs-toggle="tab" href="#fill-tabpanel-0" role="tab" aria-controls="fill-tabpanel-0" aria-selected="true">
-                                    GSTR-3B (view)
+                                <a class="nav-link active" id="fill-tab-3" data-bs-toggle="tab" href="#fill-tabpanel-3" role="tab" aria-controls="fill-tabpanel-3" aria-selected="true">
+                                    GSTR-3B Book
+                                </a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link " id="fill-tab-0" data-bs-toggle="tab" href="#fill-tabpanel-0" role="tab" aria-controls="fill-tabpanel-0" aria-selected="true">
+                                    GSTR-3B Comparison
                                 </a>
                             </li>
                             <li class="nav-item" role="presentation">
@@ -51,7 +56,258 @@
                         <div class="w-100 mt-0">
                             <div class="tab-content mt-2">
                                 <!-- View Tab -->
-                                <div class="tab-pane active" id="fill-tabpanel-0" role="tabpanel" aria-labelledby="fill-tab-0">
+                                <div class="tab-pane active" id="fill-tabpanel-3" role="tabpanel" aria-labelledby="fill-tab-3">
+                                    <div id="view2" class="view-content" style="height:100vh;">
+                                      <div class=" min-vh-100 w-100 px-4 bg-light py-4 ">
+                                            <h2>GSTR-3B Summary</h2>
+                                                <table >
+                                                    <thead>
+                                                        <tr class=" bg-info">
+                                                            <th>Particular</th>
+                                                            <th>Books</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {{-- Section 3.1 --}}
+                                                        <tr>
+                                                                    <td colspan="3" style="border-left: none; border-right: none;  border-top:none; border-bottom:none;"></td>
+                                                                </tr>
+                                                        <tr class="section-header">
+                                                            <td >3.1 Tax on outward and reverse charge inward supplies </td>
+                                                            @php
+                                                             
+                                                              $url = route('OutwardDetails.view', [
+                                                                        'series' => $merchant_gst, 
+                                                                        'from_date' => $from_date, 
+                                                                        'to_date' => $to_date
+                                                                    ]);
+                                                                @endphp
+                                                             <td>Books
+                                                             <a class=" btn-primary" href="{{ $url }}">
+                                                                    <img src="{{ asset('public/assets/imgs/eye-icon.svg') }}" class="px-1" alt="">
+                                                                </a>
+                                                             </td>
+                                                             
+                                                        </tr>
+                                                       <tr>
+                                                                <td>Taxable</td>
+                                                                <td>₹ {{ formatIndianNumber($Data31['TAXABLE'], 2) }}</td>
+                                                            </tr>
+                                                            
+                                                            <tr>
+                                                                <td>Integrated Tax</td>
+                                                                <td>₹ {{ formatIndianNumber($Data31['IGST'] ?? 0, 2) }}</td>
+                                                            </tr>
+                                                            
+                                                            <tr>
+                                                                <td>Central Tax</td>
+                                                                <td>₹ {{ formatIndianNumber($Data31['CGST'] ?? 0, 2) }}</td>
+                                                            </tr>
+                                                            
+                                                            <tr>
+                                                                <td>State/UT Tax</td>
+                                                                <td>₹ {{ formatIndianNumber($Data31['SGST'] ?? 0, 2) }}</td>
+                                                            </tr>
+                                                            
+                                                            <tr>
+                                                                <td>CESS</td>
+                                                                <td>₹0.00</td>
+                                                            </tr>
+
+                                                                <tr>
+                                                                    <td colspan="3" style="border-left: none; border-right: none;  border-top:none; border-bottom:none;"></td>
+                                                                </tr>
+
+
+                                                                <tr>
+                                                                    <td colspan="3" style="border-left: none; border-right: none; border-top:none; border-bottom:none;"></td>
+                                                                </tr>
+                                                                
+                                                        {{-- Section 3.1.1 --}}
+                                                        <tr class="section-header">
+                                                            <td >3.1.1 Supplies notified under section 9(5)</td>
+                                                                <td>Books</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Integrated Tax</td>
+                                                            <td>₹0.00</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Central Tax</td>
+                                                            <td>₹0.00</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>State/UT Tax</td>
+                                                            <td>₹0.00</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>CESS</td>
+                                                            <td>₹0.00</td>
+                                                        </tr>
+
+                                                        <tr>
+                                                                    <td colspan="2" style="border-left: none; border-right: none;  border-top:none; border-bottom:none;"></td>
+                                                                </tr>
+
+
+                                                                <tr >
+                                                                    <td colspan="2" style="border-left: none; border-right: none; border-top:none; border-bottom:none;"></td>
+                                                                </tr>
+
+                                                        {{-- Section 3.2 --}}
+                                                        <tr class="section-header">
+                                                            <td >3.2 Inter-state supplies</td>
+                                                                <td>Books</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Taxable Value</td>
+                                                            <td>₹0.00</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Integrated Tax</td>
+                                                            <td>₹0.00</td>
+                                                        </tr>
+
+                                                                <tr>
+                                                                    <td colspan="2" style="border-left: none; border-right: none;  border-top:none; border-bottom:none;"></td>
+                                                                </tr>
+
+
+                                                                <tr >
+                                                                    <td colspan="2" style="border-left: none; border-right: none; border-top:none; border-bottom:none;"></td>
+                                                                </tr>
+
+                                                        {{-- Section 4 --}}
+                                                        <tr class="section-header">
+                                                            @php
+                                                                    $url_itc = route('itcDetails.view', [
+                                                                        'series' => $merchant_gst, 
+                                                                        'from_date' => $from_date, 
+                                                                        'to_date' => $to_date,
+                                                                         'data'       => json_encode($data)
+                                                                    ]);
+                                                                    $books_igst_amount = $books_igst_amount ?? 0;
+                                                                    $books_cgst_amount = $books_cgst_amount ?? 0;
+                                                                    $books_sgst_amount = $books_sgst_amount ?? 0;
+
+                                                                @endphp
+                                                            <td >4. Eligible ITC</td>
+                                                                <td>Books
+                                                                <a class="btn btn-primary" href="{{ $url_itc }}">
+                                                                    <img src="{{ asset('public/assets/imgs/eye-icon.svg') }}" class="px-1" alt="">
+                                                                </a>
+                                                                </td>
+                                                                
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Integrated Tax</td>
+                                                            <td>₹ {{ formatIndianNumber($Data4['IGST'] ?? 0, 2) }}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Central Tax</td>
+                                                            <td>₹ {{ formatIndianNumber($Data4['CGST'] ?? 0, 2) }}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>State/UT Tax</td>
+                                                            <td>₹ {{ formatIndianNumber($Data4['SGST'] ?? 0, 2) }}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>CESS</td>
+                                                            <td>₹0.00</td>
+                                                        </tr>
+
+                                                                <tr>
+                                                                    <td colspan="2" style="border-left: none; border-right: none;  border-top:none; border-bottom:none;"></td>
+                                                                </tr>
+
+
+                                                                <tr >
+                                                                    <td colspan="2" style="border-left: none; border-right: none; border-top:none; border-bottom:none;"></td>
+                                                                </tr>
+
+                                                        {{-- Section 5 --}}
+                                                        <tr class="section-header">
+                                                            <td >5. Exempt, nil and Non GST inward supplies</td>
+                                                                <td>Books</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Inter-state supplies</td>
+                                                            <td>₹0.00</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Intra-state supplies</td>
+                                                            <td>₹0.00</td>
+                                                        </tr>
+
+                                                        <tr>
+                                                                    <td colspan="2" style="border-left: none; border-right: none;  border-top:none; border-bottom:none;"></td>
+                                                                </tr>
+
+
+                                                                <tr >
+                                                                    <td colspan="2" style="border-left: none; border-right: none; border-top:none; border-bottom:none;"></td>
+                                                                </tr>
+
+                                                        {{-- Section 5.1 --}}
+                                                        <tr class="section-header">
+                                                                <td>5.1 Interest and Late fee for previous tax period</td>
+                                                                <td>Books</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Integrated Tax</td>
+                                                            <td>₹0.00</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Central Tax</td>
+                                                            <td>₹0.00</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>State/UT Tax</td>
+                                                            <td>₹0.00</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>CESS</td>
+                                                            <td>₹0.00</td>
+                                                        </tr>
+
+
+                                                        <tr>
+                                                                    <td colspan="2" style="border-left: none; border-right: none;  border-top:none; border-bottom:none;"></td>
+                                                                </tr>
+
+
+                                                                <tr >
+                                                                    <td colspan="2" style="border-left: none; border-right: none; border-top:none; border-bottom:none;"></td>
+                                                                </tr>
+
+                                                        {{-- Section 6.1 --}}
+                                                        <tr class="section-header">
+                                                            <td >6.1 Payment of tax</td>
+                                                                <td>Books</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Balance Liability</td>
+                                                            <td>₹0.00</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Paid through Cash</td>
+                                                            <td>₹0.00</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Paid through Credit</td>
+                                                            <td>₹0.00</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+
+                                                
+
+                                                <div style="height:20px;"></div>
+
+                                    </div>
+                                    </div>
+                                    </div>
+                                <div class="tab-pane" id="fill-tabpanel-0" role="tabpanel" aria-labelledby="fill-tab-0">
                                     <div id="view2" class="view-content" style="height:100vh;">
                                       <div class=" min-vh-100 w-100 px-4 bg-light py-4 ">
                                             <h2>GSTR-3B Summary</h2>
@@ -220,7 +476,7 @@
                                                         </tr>
                                                         <tr>
                                                             <td>Integrated Tax</td>
-                                                            <td>₹ {{ formatIndianNumber($Data4['IGST'], 2) }}</td>
+                                                            <td>₹ {{ formatIndianNumber($Data4['IGST'] ?? 0, 2) }}</td>
                                                             <td>₹{{ formatIndianNumber($data['itc_elg']['itc_net']['iamt'] ?? 0, 2) }}</td>
                                                         </tr>
                                                         <tr>
@@ -335,10 +591,10 @@
                                                     </tbody>
                                                 </table>
 
-                                                <div class="text-end mt-3">
-                                                    <button class="btn btn-danger">Cancel</button>
-                                                    <button class="btn btn-success">Continue</button>
-                                                </div>
+                                                <!--<div class="text-end mt-3">-->
+                                                <!--    <button class="btn btn-danger">Cancel</button>-->
+                                                <!--    <button class="btn btn-success">Continue</button>-->
+                                                <!--</div>-->
 
                                                 <div style="height:20px;"></div>
 
@@ -471,6 +727,13 @@
                                                     </div>
                                                 </div>
                                             </div> <!-- row -->
+                                            <div class="text-end mt-3">
+                                                    @if($check_2b_status)
+                                                        <button type="button" class="btn btn-success">File</button>
+                                                    @else
+                                                        <h5 style="color: red;">Verification Of  GSTR2B Pending</h5>
+                                                    @endif
+                                                </div>
                                         </div> <!-- inner content -->
                                     </div> <!-- tab view -->
                                 </div> <!-- tab pane -->

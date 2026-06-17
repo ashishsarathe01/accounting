@@ -51,7 +51,7 @@ class GSTR3BController extends Controller
         $to_date = $request->to_date;
         $from = \DateTime::createFromFormat('Y-m-d', $from_date);
         $month = $from->format('mY'); // MMYYYY => 042025
-
+        
 
         $company = Companies::select('gst_config_type')
                                 ->where('id', Session::get('user_company_id'))
@@ -226,6 +226,12 @@ class GSTR3BController extends Controller
         }
         $purchase_return_arr['TAXABLE'] = $purchase_return_taxable_amount;
         $result31 = [];
+        // echo "<pre>";
+        // print_r($sale_sundry);
+        // print_r($sale_arr);
+        // print_r($sale_return_arr);
+        // print_r($purchase_return_arr);
+        // die;
         foreach ($sale_arr as $key => $value) {
             $result31[$key] =
                 ($sale_arr[$key] ?? 0) -
@@ -402,93 +408,46 @@ class GSTR3BController extends Controller
                 ($sale_return_arr[$key] ?? 0) -
                 ($purchase_return_arr[$key] ?? 0);
         }
-        // print_r($result4);
-        // die;
-        // $gst_token = gstToken::select('txn','created_at')
-        //                         ->where('company_gstin',$request->series)
-        //                         ->where('company_id',Session::get('user_company_id'))
-        //                         ->where('status',1)
-        //                         ->orderBy('id','desc')
-        //                         ->first();
-        // if($gst_token){
-        //     $token_expiry = date('d-m-Y H:i:s',strtotime('+6 hour',strtotime($gst_token->created_at)));
-        //     $current_time = date('d-m-Y H:i:s');
-        //     if(strtotime($token_expiry)<strtotime($current_time)){
-        //         $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
-        //         if($token_res==0){
-        //             $response = array(
-        //                 'status' => false,
-        //                 'message' => 'Something Went Wrong In Token Generation'
-        //             );
-        //             return json_encode($response);
-        //         }
-        //         $response = array(
-        //             'status' => true,
-        //             'message' => 'TOKEN-OTP'
-        //         );
-        //         return json_encode($response);
-        //     }
-        //     $txn = $gst_token->txn;
-        // }else{
-        //     $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->series);
-        //     if($token_res==0){
-        //             $response = array(
-        //                 'status' => false,
-        //                 'message' => 'Something Went Wrong In Token Generation'
-        //             );
-        //             return json_encode($response);
-        //         }
-        //     $response = array(
-        //             'status' => true,
-        //             'message' => 'TOKEN-OTP'
-        //     );
-        //     return json_encode($response);
-        // }
-        // //Gst Credenatial
-        // if(!$this->gstCredentials){
-        //     $response = [
-        //                     'success' => false,
-        //                     'data'    => "",
-        //                     'message' => "Api Credentails Not Found ",
-        //                 ];
-        //     return response()->json($response, 200);
-        // }
-        // if($this->gstCredentials->status != 1){
-        //     $response = [
-        //                     'success' => false,
-        //                     'data'    => "",
-        //                     'message' => "Api Credentails Not Found ",
-        //                 ];
-        //     return response()->json($response, 200);
-        // }
-        // $base_url = $this->gstCredentials->base_url;
-        // $email_id = $this->gstCredentials->email_id;
-        // $client_id = $this->gstCredentials->client_id;
-        // $client_secret = $this->gstCredentials->client_secret;
-        // $ip_address = $this->gstCredentials->ip_address;
+        
+        $base_url = $this->gstCredentials->base_url;
+        $email_id = $this->gstCredentials->email_id;
+        $client_id = $this->gstCredentials->client_id;
+        $client_secret = $this->gstCredentials->client_secret;
+        $ip_address = $this->gstCredentials->ip_address;
          
-        // $url = $base_url."/gstr3b/retsum";
+        $url = $base_url."/gstr3b/retsum";
     
-        // $response = Http::withHeaders([
-        //     'Accept' => 'application/json',
-        //     // 'gst_username' => $gst_user_name,
-        //     // 'state_cd' => $state_code,
-        //     // 'ip_address: '.$ip_address,
-        //     // 'txn' => $txn,
-        //     'client_id: '.$client_id,
-        //     'client_secret: '.$client_secret
-        // ])->get($url, [
-        //     'gstin' => $merchant_gst,
-        //     'ret_period' => $month,
-        //     'email' => $email_id,
-        // ]);
-        // $data = $response->json();
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+            // 'gst_username' => $gst_user_name,
+            // 'state_cd' => $state_code,
+            // 'ip_address: '.$ip_address,
+            // 'txn' => $txn,
+            'client_id' => $client_id,
+            'client_secret' => $client_secret
+        ])->get($url, [
+            'gstin' => $merchant_gst,
+            'ret_period' => $month,
+            'email' => $email_id,
+        ]);
+        $data = $response->json();
         // $itcData = $this->getITCData(
         //     $merchant_gst,
         //     $from_date,
         //     $to_date
         // );
-        $data['data'] = []; 
+        if(!isset($data['data'])){
+            $data['data'] = [];
+        }
+        //$data['data'] = [];
+        $check_2b_status = DB::table('gstr2b')
+                ->select('id')
+                ->where('verify_by_status',1)
+                ->where('company_id',$company_id)
+                ->where('company_gstin',$merchant_gst)
+                ->where('res_month',$from->format('Y-m'))
+                ->first();
+                
         return view('gstReturn.GSTR3B', [
             'data' => $data['data'],
             'merchant_gst' => $merchant_gst,
@@ -496,6 +455,7 @@ class GSTR3BController extends Controller
             'to_date' => $to_date,
             'Data31' => $result31,
             'Data4' => $result4,
+            'check_2b_status' =>$check_2b_status
             // 'books_igst_amount' => $itcData['igst'],
             // 'books_cgst_amount' => $itcData['cgst'],
             // 'books_sgst_amount' => $itcData['sgst'],

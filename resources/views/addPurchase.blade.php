@@ -1079,15 +1079,29 @@
          if(customer_gstin==undefined){
             return;
          }
-         if(gst_disabled_for_party == 1)
-         {
-            $('#gst_breakup_body').html('');
+        //  if(gst_disabled_for_party == 1)
+        //  {
+        //     $('#gst_breakup_body').html('');
 
-            $('#tax_heading').html('Tax');
+        //     $('#tax_heading').html('Tax');
 
-            return;
-         }
-         if(gst_disabled_for_party == 0 && customer_gstin==merchant_gstin.substring(0,2)){
+        //     return;
+        //  }
+        if (gst_disabled_for_party == 1) {
+            $("#billtr_cgst").hide();
+            $("#billtr_sgst").hide();
+            $("#billtr_igst").hide();
+            $(".extra_gst").hide();
+            $("#bill_sundry_amount_cgst").val('');
+            $("#bill_sundry_amount_sgst").val('');
+            $("#bill_sundry_amount_igst").val('');
+            $("#tax_rate_tr_cgst").val(0);
+            $("#tax_rate_tr_sgst").val(0);
+            $("#tax_rate_tr_igst").val(0);
+            $("#tax_amt_cgst").html('');
+            $("#tax_amt_sgst").html('');
+            $("#tax_amt_igst").html('');
+         } else if(gst_disabled_for_party == 0 && customer_gstin==merchant_gstin.substring(0,2)){
             $("#billtr_cgst").show();
             $("#billtr_sgst").show();
             $(".extra_gst").show();

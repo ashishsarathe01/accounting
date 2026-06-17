@@ -225,7 +225,10 @@ class GSTR2BController extends Controller
                                 ->where('company_id',Session::get('user_company_id'))
                                 ->where('res_month',$request->month)
                                 ->first(); 
-            
+            $verify_by_status = $gstr2b->verify_by_status;
+            $verify_by = $gstr2b->verify_by;
+            $verify_date = $gstr2b->verify_date;
+
             $gstr2b = json_decode($gstr2b->res_data);
             $uniqueSuppliers = [];$supplier_amount = [];$supplier_crdr_amount = [];
             $sections = ['b2b', 'cdnr', 'b2ba', 'cdnra'];
@@ -404,7 +407,7 @@ class GSTR2BController extends Controller
             usort($suppliers, function ($a, $b) {
                 return strcasecmp($a->trdnm, $b->trdnm);
             });
-          foreach ($suppliers as $ctin => $row) {
+            foreach ($suppliers as $ctin => $row) {
 
                 $total_portal = $row->b2b_portal + $row->cdnr_portal;
                 $total_books  = $row->b2b_books  + $row->cdnr_books;
@@ -575,11 +578,28 @@ class GSTR2BController extends Controller
                     'cess' => 0
                 ];
             }
+            
+            if($verify_by!=""){
+                $user = DB::table('users')
+                        ->select('name')
+                        ->where('id',$verify_by)
+                        ->first();
+                if($user){
+                    $verify_by = $user->name;
+                }
+            }
+            if($verify_date!=""){
+                $verify_date = date('d-m-Y H:i:s',strtotime($verify_date));
+            }
+            
             $response = array(
                 'status' => true,
                 'message' => 'GSTR2B',
                 'pending_notes' => $pending_notes ?? [],
-                'data' => $suppliers
+                'data' => $suppliers,
+                'verify_status' => $verify_by_status,
+                'verify_date' => $verify_date,
+                'verify_by' => $verify_by,
             );
             return json_encode($response);
         }
@@ -3302,6 +3322,21 @@ if($total_book_value_only_in_book > 0){
             }
         }
         return json_encode(array("status"=>true,"only_in_portal"=>$b2b_invoices_on_portal_but_not_in_book,"only_in_book"=>$b2b_invoices_only_in_book));
+    }
+    public function verifyGst2b(Request $request){
+        //echo $request->month;die;
+        $update = GSTR2B::where('company_id',Session::get('user_company_id'))
+                ->where('company_gstin',$request->gstin)
+                ->where('res_month',$request->month)
+                ->update([
+                        'verify_by_status'=>1,
+                        'verify_by'=>Session::get('user_id'),
+                        'verify_date'=>date('Y-m-d H:i:s')
+                        ]);
+        if($update){
+             return json_encode(array("status"=>true));
+        }
+        return json_encode(array("status"=>false));
     }
     
 }

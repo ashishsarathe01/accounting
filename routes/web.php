@@ -1595,4 +1595,5 @@ Route::get('profit-loss-group-mapping',[ProfitLossController::class,'profitLossG
 Route::post('profit-loss-group-mapping-save',[ProfitLossController::class,'saveProfitLossGroupMapping'])->name('profitloss.group.mapping.save');
 Route::get('balance-sheet-group-mapping',[BalanceSheetController::class,'balanceSheetGroupMapping'])->name('balancesheet.group.mapping');
 Route::post('balance-sheet-group-mapping-save',[BalanceSheetController::class,'saveBalanceSheetGroupMapping'])->name('balancesheet.group.mapping.save');
+Route::post('verify-gst2b', [GSTR2BController::class, 'verifyGst2b'])->name('verify-gst2b'); 
 });

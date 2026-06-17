@@ -179,18 +179,11 @@ class GSTR2AController extends Controller
                     'client_id: ' . $client_id,
                     'client_secret: ' . $client_secret
                     ),
-                // CURLOPT_HTTPHEADER => array(
-                // 'gst_username:'.$gst_user_name,
-                // 'state_cd: '.$state_code,  
-                // 'ip_address: '.$ip_address,
-                // 'txn: '.$txn,
-                // 'client_id: '.$client_id,
-                // 'client_secret: '.$client_secret
-                // ),
             ));
             $response = curl_exec($curl);
             curl_close($curl);
             $result = json_decode($response);
+            //echo "<pre>";print_r($result);die;
             if(isset($result->details)){
                 if($result->details=='Request failed with status code 403'){
                     $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->gstin);
