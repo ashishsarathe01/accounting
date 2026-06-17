@@ -114,6 +114,7 @@
                                        <th style="text-align: right">CGST</th>
                                        <th style="text-align: right">SGST</th>
                                        <th style="text-align: right">Cess</th>
+                                       <th>Action</th>
                                     </tr>
                                  </thead>
                                  <tbody>
@@ -137,6 +138,7 @@
                                 <th style="text-align: right">CGST</th>
                                 <th style="text-align: right">SGST</th>
                                 <th style="text-align: right">Cess</th>
+                                <th>Action</th>
                              </tr>
                             </thead>
                             <tbody>{!!$b2b_debit_note!!}</tbody>
@@ -223,6 +225,7 @@
                                 <th style="text-align: right">CGST</th>
                                 <th style="text-align: right">SGST</th>
                                 <th style="text-align: right">Cess</th>
+                                <th>Action</th>
                              </tr>
                             </thead>
                             <tbody>{!!$b2ba_invoices!!}</tbody>
@@ -242,6 +245,7 @@
                                 <th style="text-align: right">CGST</th>
                                 <th style="text-align: right">SGST</th>
                                 <th style="text-align: right">Cess</th>
+                                <th>Action</th>
                              </tr>
                             </thead>
                             <tbody>{!!$b2ba_debit_note!!}</tbody>
@@ -261,6 +265,7 @@
                                 <th style="text-align: right">CGST</th>
                                 <th style="text-align: right">SGST</th>
                                 <th style="text-align: right">Cess</th>
+                                <th>Action</th>
                              </tr>
                             </thead>
                             <tbody>{!!$b2ba_credit_note!!}</tbody>

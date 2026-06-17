@@ -14,6 +14,7 @@ use App\Models\PurchaseReturn;
 use App\Models\Purchase;
 use App\Models\Journal;
 use App\Models\BillSundrys;
+use App\Models\PurchaseSundry;
 use Session;
 use DB;
 use Carbon\Carbon;
@@ -700,6 +701,22 @@ $book_vouchers = array_unique(
     array_merge($book_vouchers, $journal_vouchers)
 );
         $portal_vouchers = [];
+        $bill_sundry_igst = BillSundrys::where('company_id', Session::get('user_company_id'))
+                                                ->where('nature_of_sundry', 'IGST')
+                                                ->where('delete','0')
+                                                ->value('id');
+                                           
+
+                $bill_sundry_cgst = BillSundrys::where('company_id', Session::get('user_company_id'))
+                                                ->where('nature_of_sundry', 'CGST')
+                                                ->where('delete','0')
+                                                ->value('id');
+
+                $bill_sundry_sgst = BillSundrys::where('company_id', Session::get('user_company_id'))
+                                                ->where('nature_of_sundry', 'SGST')
+                                                ->where('delete','0')
+                                                ->value('id');
+
         foreach ($gstr2b->data->docdata->b2b as $record) {
             
             if($record->ctin === $request->ctin) {
@@ -710,7 +727,7 @@ $book_vouchers = array_unique(
                     }
                    
                     $invoice_match_with = "";$invoice_match_with_id = "";
-                    $book_data = Purchase::select('total','id')
+                    $book_data = Purchase::select('total','id','taxable_amt')
                                             ->where('billing_gst', $request->ctin)
                                             ->where('company_id', Session::get('user_company_id'))
                                             ->where('merchant_gst', $request->gstin)
@@ -724,12 +741,26 @@ $book_vouchers = array_unique(
                                             ->first();
 
                     $book_value = 0;
+                    $book_taxable = 0;
+                    $book_igst = 0;
+                    $book_cgst = 0;
+                    $book_sgst = 0;
                     if($book_data){
                         $invoice_match_with = "PURCHASE";
                         $invoice_match_with_id = $book_data->id;
                         $book_value = $book_data->total;
+                        $book_taxable = $book_data->taxable_amt;
+                        $book_igst += PurchaseSundry::where('purchase_id', $book_data->id)
+                                        ->where('bill_sundry', $bill_sundry_igst)
+                                        ->sum('amount');
+                        $book_cgst += PurchaseSundry::where('purchase_id', $book_data->id)
+                                        ->where('bill_sundry', $bill_sundry_cgst)
+                                        ->sum('amount');
+                        $book_sgst += PurchaseSundry::where('purchase_id', $book_data->id)
+                                        ->where('bill_sundry', $bill_sundry_sgst)
+                                        ->sum('amount');
                     }else{
-                        $journal_book_data = Journal::select('total_amount','id')
+                        $journal_book_data = Journal::select('total_amount','id','net_total','igst','cgst','sgst')
                                             ->where('vendor_gstin',$request->ctin)
                                             ->where('company_id',Session::get('user_company_id'))
                                             ->where('merchant_gst',$request->gstin)
@@ -742,7 +773,41 @@ $book_vouchers = array_unique(
                             $invoice_match_with = "JOURNAL";
                             $invoice_match_with_id = $journal_book_data->id;
                             $book_value = $journal_book_data->total_amount;
+                            $book_taxable = $journal_book_data->net_total;
+                            $book_igst = $journal_book_data->igst;
+                            $book_cgst = $journal_book_data->cgst;
+                            $book_sgst = $journal_book_data->sgst;
                         }
+                    }
+                    $edit_btn = '';
+                    if($invoice_match_with=="PURCHASE" && $invoice_match_with_id!=""){
+                        $edit_btn = "<a href='".url('purchase-edit/'.$invoice_match_with_id)."'
+                                        class='btn btn-warning btn-sm'
+                                        style='padding:0.2rem 0.4rem;font-size:0.75rem;line-height:1.2;border-radius:0.2rem;'>
+                                        Edit
+                                    </a>";
+                    } elseif($invoice_match_with=="JOURNAL" && $invoice_match_with_id!=""){
+                        $edit_btn = "<a href='".url('journal/'.$invoice_match_with_id.'/edit')."'
+                                        class='btn btn-warning btn-sm'
+                                        style='padding:0.2rem 0.4rem;font-size:0.75rem;line-height:1.2;border-radius:0.2rem;'>
+                                        Edit
+                                    </a>";
+                    }
+                    $taxableMatch = abs(round($book_taxable,2) - round($invoice->txval,2)) < 0.5;
+                    $igstMatch    = abs(round($book_igst,2) - round($invoice->igst,2)) < 0.5;
+                    $cgstMatch    = abs(round($book_cgst,2) - round($invoice->cgst,2)) < 0.5;
+                    $sgstMatch    = abs(round($book_sgst,2) - round($invoice->sgst,2)) < 0.5;
+                    $allMatched = $taxableMatch && $igstMatch && $cgstMatch && $sgstMatch;
+                    if ($allMatched) {
+                        $taxableStyle = "color:green;font-weight:bold;";
+                        $igstStyle    = "color:green;font-weight:bold;";
+                        $cgstStyle    = "color:green;font-weight:bold;";
+                        $sgstStyle    = "color:green;font-weight:bold;";
+                    } else {
+                        $taxableStyle = $taxableMatch ? "" : "color:red;font-weight:bold;";
+                        $igstStyle    = $igstMatch ? "" : "color:red;font-weight:bold;";
+                        $cgstStyle    = $cgstMatch ? "" : "color:red;font-weight:bold;";
+                        $sgstStyle    = $sgstMatch ? "" : "color:red;font-weight:bold;";
                     }
                     $style = "";
                     if(abs($book_value - $invoice->val) >= 1){
@@ -773,12 +838,13 @@ $book_vouchers = array_unique(
                             <td>".$invoice->dt."</td>
                             <td style='text-align: right;".$style."'>".formatIndianNumber($invoice->val)."</td>
                             <td style='text-align: right;".$style."'>".formatIndianNumber($book_value)."</td>
-                            <td style='text-align: right'>".formatIndianNumber($invoice->txval)."</td>
-                            <td style='text-align: right'>".formatIndianNumber($invoice->igst)."</td>
-                            <td style='text-align: right'>".formatIndianNumber($invoice->cgst)."</td>
-                            <td style='text-align: right'>".formatIndianNumber($invoice->sgst)."</td>
+                            <td style='text-align: right;{$taxableStyle}'>".formatIndianNumber($invoice->txval)."</td>
+                            <td style='text-align: right;{$igstStyle}'>".formatIndianNumber($invoice->igst)."</td>
+                            <td style='text-align: right;{$cgstStyle}'>".formatIndianNumber($invoice->cgst)."</td>
+                            <td style='text-align: right;{$sgstStyle}'>".formatIndianNumber($invoice->sgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->cess)."</td>
-                            <td><button class='btn btn-danger reject_btn' data-type='b2b_invoices' data-invoice='".$invoice->inum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='".$invoice->irn."' id='b2b_invoices_rej_btn_".$key."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;display:none'>Reject</button> <button class='btn btn-success link_invoice_btn b2b_invoices_rej_btn_".$key."' data-type='b2b_invoices' data-invoice='".$invoice->inum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-ctin='".$request->ctin."' data-gstin='".$request->gstin."' data-month='".$request->month."'  style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;display:none'>Link</button></td>
+                            <td>".$edit_btn."
+                            <button class='btn btn-danger reject_btn' data-type='b2b_invoices' data-invoice='".$invoice->inum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='".$invoice->irn."' id='b2b_invoices_rej_btn_".$key."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;display:none'>Reject</button> <button class='btn btn-success link_invoice_btn b2b_invoices_rej_btn_".$key."' data-type='b2b_invoices' data-invoice='".$invoice->inum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-ctin='".$request->ctin."' data-gstin='".$request->gstin."' data-month='".$request->month."'  style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;display:none'>Link</button></td>
                         </tr>";
                     }else{
                         if($invoice_match_with=="PURCHASE" && $invoice_match_with_id!=""){
@@ -792,12 +858,13 @@ $book_vouchers = array_unique(
                             <td>".$invoice->dt."</td>
                             <td style='text-align: right;".$style."'>".formatIndianNumber($invoice->val)."</td>
                             <td style='text-align: right;".$style."'>".formatIndianNumber($book_value)."</td>
-                            <td style='text-align: right'>".formatIndianNumber($invoice->txval)."</td>
-                            <td style='text-align: right'>".formatIndianNumber($invoice->igst)."</td>
-                            <td style='text-align: right'>".formatIndianNumber($invoice->cgst)."</td>
-                            <td style='text-align: right'>".formatIndianNumber($invoice->sgst)."</td>
+                            <td style='text-align: right;{$taxableStyle}'>".formatIndianNumber($invoice->txval)."</td>
+                            <td style='text-align: right;{$igstStyle}'>".formatIndianNumber($invoice->igst)."</td>
+                            <td style='text-align: right;{$cgstStyle}'>".formatIndianNumber($invoice->cgst)."</td>
+                            <td style='text-align: right;{$sgstStyle}'>".formatIndianNumber($invoice->sgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->cess)."</td>
-                            <td><button class='btn btn-danger reject_btn' data-type='b2b_invoices' data-invoice='".$invoice->inum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='".$invoice->irn."' id='b2b_invoices_rej_btn_".$key."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;display:none'>Reject</button></td>
+                            <td>".$edit_btn."
+                            <button class='btn btn-danger reject_btn' data-type='b2b_invoices' data-invoice='".$invoice->inum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='".$invoice->irn."' id='b2b_invoices_rej_btn_".$key."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;display:none'>Reject</button></td>
                         </tr>";
                     }                    
                 }
@@ -970,6 +1037,20 @@ foreach ($only_in_book_voucher as $key => $invoice_no) {
         }
     }
 
+    $edit_btn = '';
+    if ($is_journal) {
+        $edit_btn = "<a href='".url('journal/'.$book_data->id.'/edit')."'
+                        class='btn btn-warning btn-sm'
+                        style='padding:0.2rem 0.4rem;font-size:0.75rem;'>
+                        Edit
+                    </a>";
+    } else {
+        $edit_btn = "<a href='".url('purchase-edit/'.$book_data->id)."'
+                        class='btn btn-warning btn-sm'
+                        style='padding:0.2rem 0.4rem;font-size:0.75rem;'>
+                        Edit
+                    </a>";
+    }
     $b2b_invoices_only_in_book .= "
     <tr>
         <td></td>
@@ -982,7 +1063,7 @@ foreach ($only_in_book_voucher as $key => $invoice_no) {
         <td style='text-align: right'>".formatIndianNumber($cgst_amount)."</td>
         <td style='text-align: right'>".formatIndianNumber($sgst_amount)."</td>
         <td style='text-align: right'>0.00</td>
-        <td>".($is_journal ? 'Journal' : 'Purchase')."</td>
+        <td>".$edit_btn."</td>
     </tr>";
 }
 
@@ -1037,6 +1118,10 @@ if($total_book_value_only_in_book > 0){
                        continue; // Skip rejected invoices
                     }
                     if($invoice->typ == "C"){
+                        $purchaseReturn = PurchaseReturn::where('gstr2b_invoice_id',$invoice->ntnum)
+                                        ->where('company_id',Session::get('user_company_id'))
+                                        ->where('merchant_gst',$request->gstin)
+                                        ->first();
                         $bookData = PurchaseReturn::where('gstr2b_invoice_id',$invoice->ntnum)
                                         ->where('company_id',Session::get('user_company_id'))
                                         ->where('merchant_gst',$request->gstin)
@@ -1061,6 +1146,14 @@ if($total_book_value_only_in_book > 0){
                         if($bookData->count>0){
                             $link_btn = "<button class='btn btn-primary link_btn' data-type='credit_note' data-action_type='unlink' data-invoice_no='".$invoice->ntnum."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;'>UnLink</button>";
                         }
+                        $edit_btn = '';
+                        if($purchaseReturn){
+                            $edit_btn = "<a href='".url('purchase-return-edit/'.$purchaseReturn->id)."'
+                                            class='btn btn-warning'
+                                            style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;margin-right:2px;'>
+                                            Edit
+                                        </a>";
+                        }
                         $b2b_credit_note.="<tr>
                             <td><input type='checkbox' checked class='check_action' data-key='".$key."' data-type='b2b_credit_rej_btn_'></td>
                             <td>".$invoice->ntnum."</td>
@@ -1072,9 +1165,14 @@ if($total_book_value_only_in_book > 0){
                             <td style='text-align: right'>".formatIndianNumber($invoice->cgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->sgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->cess)."</td>
-                            <td><button class='btn btn-danger reject_btn' data-type='b2b_credit_note' data-invoice='".$invoice->ntnum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='' id='b2b_credit_rej_btn_".$key."'  style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;display:none'>Reject</button> ".$link_btn."</td>
+                            <td>".$edit_btn."
+                            <button class='btn btn-danger reject_btn' data-type='b2b_credit_note' data-invoice='".$invoice->ntnum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='' id='b2b_credit_rej_btn_".$key."'  style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;display:none'>Reject</button> ".$link_btn."</td>
                         </tr>";
                     }else if($invoice->typ == "D"){
+                        $salesReturn = SalesReturn::where('gstr2b_invoice_id',$invoice->ntnum)
+                                        ->where('company_id',Session::get('user_company_id'))
+                                        ->where('merchant_gst',$request->gstin)
+                                        ->first();
                         $bookData = SalesReturn::where('gstr2b_invoice_id',$invoice->ntnum)
                                         ->where('company_id',Session::get('user_company_id'))
                                         ->where('merchant_gst',$request->gstin)
@@ -1096,6 +1194,14 @@ if($total_book_value_only_in_book > 0){
                         if($bookData->count>0){
                             $link_btn = "<button class='btn btn-primary link_btn' data-type='debit_note' data-action_type='unlink' data-invoice_no='".$invoice->ntnum."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;'>UnLink</button>";
                         }
+                        $edit_btn = '';
+                        if($salesReturn){
+                            $edit_btn = "<a href='".url('sale-return-edit/'.$salesReturn->id)."'
+                                            class='btn btn-warning'
+                                            style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;margin-right:2px;'>
+                                            Edit
+                                        </a>";
+                        }
                         $b2b_debit_note.="<tr>
                             <td><input type='checkbox' checked class='check_action' data-key='".$key."' data-type='b2b_debit_rej_btn_' ></td>
                             <td>".$invoice->ntnum."</td>
@@ -1107,7 +1213,8 @@ if($total_book_value_only_in_book > 0){
                             <td style='text-align: right'>".formatIndianNumber($invoice->cgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->sgst)."</td>
                             <td style='text-align: right'>".formatIndianNumber($invoice->cess)."</td>
-                            <td><button class='btn btn-danger reject_btn' data-type='b2b_debit_note' data-invoice='".$invoice->ntnum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='' id='b2b_debit_rej_btn_".$key."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;display:none'>Reject</button> ".$link_btn."</td>
+                            <td>".$edit_btn."
+                            <button class='btn btn-danger reject_btn' data-type='b2b_debit_note' data-invoice='".$invoice->ntnum."' data-date='".$invoice->dt."' data-total_amount='".$invoice->val."' data-taxable_amount='".$invoice->txval."' data-igst='".$invoice->igst."' data-cgst='".$invoice->cgst."' data-sgst='".$invoice->sgst."' data-cess='".$invoice->cess."' data-irn='' id='b2b_debit_rej_btn_".$key."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;display:none'>Reject</button> ".$link_btn."</td>
                         </tr>";
                     }                    
                 }
@@ -1216,22 +1323,7 @@ if($total_book_value_only_in_book > 0){
         }
         
         
-        $bill_sundry_igst = BillSundrys::where('company_id', Session::get('user_company_id'))
-                                                ->where('nature_of_sundry', 'IGST')
-                                                ->where('delete','0')
-                                                ->value('id');
-                                           
-
-                $bill_sundry_cgst = BillSundrys::where('company_id', Session::get('user_company_id'))
-                                                ->where('nature_of_sundry', 'CGST')
-                                                ->where('delete','0')
-                                                ->value('id');
-
-                $bill_sundry_sgst = BillSundrys::where('company_id', Session::get('user_company_id'))
-                                                ->where('nature_of_sundry', 'SGST')
-                                                ->where('delete','0')
-                                                ->value('id');
-
+        
                $b2b_credit_note_unlinked_current_month = SalesReturn::whereNull('sales_returns.gstr2b_invoice_id')
                                                                     ->where('sales_returns.company_id', Session::get('user_company_id'))
                                                                     ->where('sales_returns.merchant_gst', $request->gstin)
@@ -1261,6 +1353,7 @@ if($total_book_value_only_in_book > 0){
                                                                     })
 
                                                                     ->select(
+                                                                        'sales_returns.id',
                                                                         'sales_returns.total',
                                                                         'sales_returns.sr_prefix',
                                                                         'sales_returns.taxable_amt',
@@ -1312,6 +1405,7 @@ if($total_book_value_only_in_book > 0){
                                                                         })
 
                                                                         ->select(
+                                                                            'purchase_returns.id',
                                                                             'purchase_returns.total',
                                                                             'purchase_returns.sr_prefix',
                                                                             'purchase_returns.taxable_amt',
@@ -1343,7 +1437,13 @@ if($total_book_value_only_in_book > 0){
                                                 <td style='text-align: right'>".formatIndianNumber($v->cgst_amount)."</td>
                                                 <td style='text-align: right'>".formatIndianNumber($v->sgst_amount)."</td>
                                                 <td style='text-align: right'>".formatIndianNumber(0)."</td>
-                                                <td></td>
+                                                <td>
+                                                    <a href='".url('purchase-return-edit/'.$v->id)."'
+                                                    class='btn btn-warning btn-sm'
+                                                    style='padding:0.2rem 0.4rem;font-size:0.75rem;'>
+                                                    Edit
+                                                    </a>
+                                                </td>
                                             </tr>";
                 }
                 
@@ -1376,7 +1476,13 @@ if($total_book_value_only_in_book > 0){
                                                 <td style='text-align: right'>".formatIndianNumber($v->cgst_amount)."</td>
                                                 <td style='text-align: right'>".formatIndianNumber($v->sgst_amount)."</td>
                                                 <td style='text-align: right'>".formatIndianNumber(0)."</td>
-                                                <td></td>
+                                                <td>
+                                                    <a href='".url('sale-return-edit/'.$v->id)."'
+                                                    class='btn btn-warning btn-sm'
+                                                    style='padding:0.2rem 0.4rem;font-size:0.75rem;'>
+                                                    Edit
+                                                    </a>
+                                                </td>
                                             </tr>";
                 }
                 $b2b_credit_note_unlinked = "<tr style='font-weight:bold;background:#f8f9fa'>

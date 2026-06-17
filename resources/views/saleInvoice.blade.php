@@ -500,9 +500,7 @@ body {
                             $tRows--; 
                         }
                      @endphp   
-                     <tr>
-                       <td colspan="8" style="height: {{ $tRows * 21 }}px; border:none;"></td>
-                    </tr>
+                     
                      <tr>
                         <td colspan="4" style="border-bottom:0; border-right:0"></td>
                         <td style="border-bottom:0; border-left:0;border-right:0;text-align: right;"><strong>{{$qty_total}}</strong></td>

@@ -12,6 +12,7 @@ use App\Models\Purchase;
 use App\Models\PurchaseReturn;
 use App\Models\SalesReturn;
 use App\Models\Journal;
+use App\Models\PurchaseSundry;
 use App\Models\BillSundrys;
 use Session;
 use DB;
@@ -812,6 +813,10 @@ class GSTR2AController extends Controller
                             }
                             //Book Value
                             $book_value = 0;
+                            $book_taxable = 0;
+                            $book_igst = 0;
+                            $book_cgst = 0;
+                            $book_sgst = 0;
 
                             // Purchase
                             $purchase_data = Purchase::where('billing_gst', $request->ctin)
@@ -823,7 +828,22 @@ class GSTR2AController extends Controller
                                 ->first();
 
                             if ($purchase_data) {
+
                                 $book_value += $purchase_data->total;
+
+                                $book_taxable += $purchase_data->taxable_amt;
+
+                                $book_igst += PurchaseSundry::where('purchase_id',$purchase_data->id)
+                                                ->where('bill_sundry',$bill_sundry_igst)
+                                                ->sum('amount');
+
+                                $book_cgst += PurchaseSundry::where('purchase_id',$purchase_data->id)
+                                                ->where('bill_sundry',$bill_sundry_cgst)
+                                                ->sum('amount');
+
+                                $book_sgst += PurchaseSundry::where('purchase_id',$purchase_data->id)
+                                                ->where('bill_sundry',$bill_sundry_sgst)
+                                                ->sum('amount');
                             }
 
                             // Journal
@@ -840,11 +860,41 @@ class GSTR2AController extends Controller
                                 ->first();
 
                             if ($journal_data) {
+
                                 $book_value += $journal_data->total_amount;
+
+                                $book_taxable += $journal_data->net_total;
+
+                                $book_igst += $journal_data->igst;
+
+                                $book_cgst += $journal_data->cgst;
+
+                                $book_sgst += $journal_data->sgst;
                             }
-                            $style = "";
-                            if($book_value!=$inv->val){
-                                $style = "color: red;";
+                                                        $invoiceStyle = ($book_value != $inv->val)
+                                ? "color:red;font-weight:bold;"
+                                : "";
+
+                            $taxableMatch = round($book_taxable,2) == round($inv->itms[0]->itm_det->txval,2);
+                            $igstMatch    = round($book_igst,2) == round($iamt,2);
+                            $cgstMatch    = round($book_cgst,2) == round($camt,2);
+                            $sgstMatch    = round($book_sgst,2) == round($samt,2);
+
+                            $allMatched = $taxableMatch && $igstMatch && $cgstMatch && $sgstMatch;
+
+                            if ($allMatched) {
+
+                                $taxableStyle = "color:green;font-weight:bold;";
+                                $igstStyle    = "color:green;font-weight:bold;";
+                                $cgstStyle    = "color:green;font-weight:bold;";
+                                $sgstStyle    = "color:green;font-weight:bold;";
+
+                            } else {
+
+                                $taxableStyle = $taxableMatch ? "" : "color:red;font-weight:bold;";
+                                $igstStyle    = $igstMatch ? "" : "color:red;font-weight:bold;";
+                                $cgstStyle    = $cgstMatch ? "" : "color:red;font-weight:bold;";
+                                $sgstStyle    = $sgstMatch ? "" : "color:red;font-weight:bold;";
                             }
                             $total_val += $inv->val;
                             $total_txval += $inv->itms[0]->itm_det->txval;
@@ -853,19 +903,52 @@ class GSTR2AController extends Controller
                             $total_sgst += $samt;
                             $total_cess += $csamt;
                             $total_book_value += $book_value;
+                            $editBtn = '';
+                            if ($purchase_data) {
+                                $editBtn = "<a href='".url('purchase-edit/'.$purchase_data->id)."'
+                                                class='btn btn-warning btn-sm'
+                                                style='padding:0.2rem 0.4rem;font-size:0.75rem;line-height:1.2;border-radius:0.2rem;'>
+                                                Edit
+                                            </a>";
+                            } elseif ($journal_data) {
+                                $editBtn = "<a href='".url('journal/'.$journal_data->id.'/edit')."'
+                                                class='btn btn-warning btn-sm'
+                                                style='padding:0.2rem 0.4rem;font-size:0.75rem;line-height:1.2;border-radius:0.2rem;'>
+                                                Edit
+                                            </a>";
+                            }
                             $irn = $inv->irn ?? '';
                             $b2b_invoices .= "<tr>
                                 <td><input type='checkbox' checked class='check_action' data-key='".$inv_key."' data-type='b2b_invoices_rej_btn_'></td>
                                 <td>{$inv->inum}</td>
                                 <td>{$inv->idt}</td>
-                                <td style='text-align: right;".$style."'>".formatIndianNumber($inv->val)."</td>
-                                <td style='text-align: right;".$style."'>".formatIndianNumber($book_value)."</td>
-                                <td style='text-align: right;'>".formatIndianNumber($inv->itms[0]->itm_det->txval)."</td>
-                                <td style='text-align: right;'>".formatIndianNumber($iamt)."</td>
-                                <td style='text-align: right;'>".formatIndianNumber($camt)."</td>
-                                <td style='text-align: right;'>".formatIndianNumber($samt)."</td>
+                                <td style='text-align:right;{$invoiceStyle}'>
+                                    ".formatIndianNumber($inv->val)."
+                                </td>
+
+                                <td style='text-align:right;{$invoiceStyle}'>
+                                    ".formatIndianNumber($book_value)."
+                                </td>
+
+                                <td style='text-align:right;{$taxableStyle}'>
+                                    ".formatIndianNumber($inv->itms[0]->itm_det->txval)."
+                                </td>
+
+                                <td style='text-align:right;{$igstStyle}'>
+                                    ".formatIndianNumber($iamt)."
+                                </td>
+
+                                <td style='text-align:right;{$cgstStyle}'>
+                                    ".formatIndianNumber($camt)."
+                                </td>
+
+                                <td style='text-align:right;{$sgstStyle}'>
+                                    ".formatIndianNumber($samt)."
+                                </td>
                                 <td style='text-align: right;'>".formatIndianNumber($csamt)."</td>
 <td>
+    ".$editBtn."
+
     <button class='btn btn-danger reject_btn'
         data-type='b2b_invoices'
         data-invoice='".$inv->inum."'
@@ -996,11 +1079,16 @@ class GSTR2AController extends Controller
                                 $csamt = $inv->itms[0]->itm_det->csamt;
                             }
                             if($inv->ntty=="D"){
+                                $salesReturn = SalesReturn::where('gstr2b_invoice_id',$inv->nt_num)
+                                                ->where('company_id',Session::get('user_company_id'))
+                                                ->where('merchant_gst',$request->gstin)
+                                                ->first();
+
                                 $bookData = SalesReturn::where('gstr2b_invoice_id',$inv->nt_num)
                                             ->where('company_id',Session::get('user_company_id'))
                                             ->where('merchant_gst',$request->gstin)
                                             ->selectRaw('COUNT(*) as count, SUM(total) as total')
-                                            ->first(); 
+                                            ->first();
                                 $book_value = 0;
                                 if($bookData->total!=''){
                                     $book_value = $bookData->total;
@@ -1020,6 +1108,15 @@ class GSTR2AController extends Controller
                                 if($bookData->count>0){
                                     $link_btn = "<button class='btn btn-primary link_btn' data-type='debit_note' data-action_type='unlink' data-invoice_no='".$inv->nt_num."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;'>UnLink</button>";
                                 }
+                                $edit_btn = '';
+
+                                if($salesReturn){
+                                    $edit_btn = "<a href='".url('sale-return-edit/'.$salesReturn->id)."'
+                                                    class='btn btn-warning'
+                                                    style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;margin-right:2px;'>
+                                                    Edit
+                                                </a>";
+                                }
                                 $b2b_debit_note .= "<tr>
                                     <td><input type='checkbox' checked class='check_action' data-key='".$cd_key."' data-type='b2b_debit_rej_btn_' ></td>
                                     <td>{$inv->nt_num}</td>
@@ -1031,9 +1128,34 @@ class GSTR2AController extends Controller
                                     <td style='text-align: right;'>".formatIndianNumber($camt)."</td>
                                     <td style='text-align: right;'>".formatIndianNumber($samt)."</td>
                                     <td style='text-align: right;'>".formatIndianNumber($csamt)."</td>
-                                    <td><button class='btn btn-danger reject_btn' data-type='b2b_debit_note' data-invoice='".$inv->nt_num."' data-date='".$inv->nt_dt."' data-total_amount='".$inv->val."' data-taxable_amount='".$inv->itms[0]->itm_det->txval."' data-igst='".$iamt."' data-cgst='".$camt."' data-sgst='".$samt."' data-cess='".$csamt."' data-irn='' id='b2b_debit_rej_btn_".$cd_key."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;display:none'>Reject</button> ".$link_btn."</td>
+                                    <td>
+                                        ".$edit_btn."
+
+                                        <button class='btn btn-danger reject_btn'
+                                            data-type='b2b_debit_note'
+                                            data-invoice='".$inv->nt_num."'
+                                            data-date='".$inv->nt_dt."'
+                                            data-total_amount='".$inv->val."'
+                                            data-taxable_amount='".$inv->itms[0]->itm_det->txval."'
+                                            data-igst='".$iamt."'
+                                            data-cgst='".$camt."'
+                                            data-sgst='".$samt."'
+                                            data-cess='".$csamt."'
+                                            data-irn=''
+                                            id='b2b_debit_rej_btn_".$cd_key."'
+                                            style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;display:none'>
+                                            Reject
+                                        </button>
+
+                                        ".$link_btn."
+                                    </td>
                                 </tr>";
                             }else if($inv->ntty=="C"){                            
+                                $purchaseReturn = PurchaseReturn::where('gstr2b_invoice_id',$inv->nt_num)
+                                                    ->where('company_id',Session::get('user_company_id'))
+                                                    ->where('merchant_gst',$request->gstin)
+                                                    ->first();
+
                                 $bookData = PurchaseReturn::where('gstr2b_invoice_id',$inv->nt_num)
                                             ->where('company_id',Session::get('user_company_id'))
                                             ->where('merchant_gst',$request->gstin)
@@ -1058,6 +1180,14 @@ class GSTR2AController extends Controller
                                 if($bookData->count>0){
                                     $link_btn = "<button class='btn btn-primary link_btn' data-type='credit_note' data-action_type='unlink' data-invoice_no='".$inv->nt_num."' style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;'>UnLink</button>";
                                 }
+                                $edit_btn = '';
+                                if($purchaseReturn){
+                                    $edit_btn = "<a href='".url('purchase-return-edit/'.$purchaseReturn->id)."'
+                                                    class='btn btn-warning'
+                                                    style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;margin-right:2px;'>
+                                                    Edit
+                                                </a>";
+                                }
                                 $b2b_credit_note .= "<tr>
                                     <td><input type='checkbox' checked class='check_action' data-key='".$cd_key."' data-type='b2b_credit_rej_btn_'></td>
                                     <td>{$inv->nt_num}</td>
@@ -1069,7 +1199,27 @@ class GSTR2AController extends Controller
                                     <td style='text-align: right;'>".formatIndianNumber($camt)."</td>
                                     <td style='text-align: right;'>".formatIndianNumber($samt)."</td>
                                     <td style='text-align: right;'>".formatIndianNumber($csamt)."</td>
-                                    <td><button class='btn btn-danger reject_btn' data-type='b2b_credit_note' data-invoice='".$inv->nt_num."' data-date='".$inv->nt_dt."' data-total_amount='".$inv->val."' data-taxable_amount='".$inv->itms[0]->itm_det->txval."' data-igst='".$iamt."' data-cgst='".$csamt."' data-sgst='".$samt."' data-cess='".$samt."' data-irn='' id='b2b_credit_rej_btn_".$cd_key."'  style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;display:none'>Reject</button> ".$link_btn."</td>
+                                    <td>
+                                        ".$edit_btn."
+
+                                        <button class='btn btn-danger reject_btn'
+                                            data-type='b2b_credit_note'
+                                            data-invoice='".$inv->nt_num."'
+                                            data-date='".$inv->nt_dt."'
+                                            data-total_amount='".$inv->val."'
+                                            data-taxable_amount='".$inv->itms[0]->itm_det->txval."'
+                                            data-igst='".$iamt."'
+                                            data-cgst='".$csamt."'
+                                            data-sgst='".$samt."'
+                                            data-cess='".$samt."'
+                                            data-irn=''
+                                            id='b2b_credit_rej_btn_".$cd_key."'
+                                            style='padding: 0.2rem 0.4rem;font-size: 0.75rem;line-height: 1.2;border-radius: 0.2rem;display:none'>
+                                            Reject
+                                        </button>
+
+                                        ".$link_btn."
+                                    </td>
                                 </tr>";
 
                             }                            
@@ -1301,6 +1451,13 @@ class GSTR2AController extends Controller
                 <td style='text-align:right'>".formatIndianNumber($p->cgst_amount)."</td>
                 <td style='text-align:right'>".formatIndianNumber($p->sgst_amount)."</td>
                 <td style='text-align:right'>".formatIndianNumber($p->cess_amount)."</td>
+                <td>
+                    <a href='".url('purchase-edit/'.$p->id)."'
+                    class='btn btn-warning btn-sm'
+                    style='padding:0.2rem 0.4rem;font-size:0.75rem;'>
+                    Edit
+                    </a>
+                </td>
             </tr>";
         }
  
@@ -1328,6 +1485,13 @@ class GSTR2AController extends Controller
                 <td style='text-align:right'>".formatIndianNumber($j->cgst_amount)."</td>
                 <td style='text-align:right'>".formatIndianNumber($j->sgst_amount)."</td>
                 <td style='text-align:right'>0.00</td>
+                <td>
+                    <a href='".url('journal/'.$j->id.'/edit')."'
+                    class='btn btn-warning btn-sm'
+                    style='padding:0.2rem 0.4rem;font-size:0.75rem;'>
+                    Edit
+                    </a>
+                </td>
             </tr>";
         }
  
@@ -1370,6 +1534,7 @@ class GSTR2AController extends Controller
                                                                     })
 
                                                                     ->select(
+                                                                        'sales_returns.id',
                                                                         'sales_returns.total',
                                                                         'sales_returns.sr_prefix',
                                                                         'sales_returns.taxable_amt',
@@ -1409,6 +1574,7 @@ class GSTR2AController extends Controller
                                                                         })
 
                                                                         ->select(
+                                                                            'purchase_returns.id',
                                                                             'purchase_returns.total',
                                                                             'purchase_returns.sr_prefix',
                                                                             'purchase_returns.taxable_amt',
@@ -1440,7 +1606,13 @@ class GSTR2AController extends Controller
                                                 <td style='text-align: right'>".formatIndianNumber($v->cgst_amount)."</td>
                                                 <td style='text-align: right'>".formatIndianNumber($v->sgst_amount)."</td>
                                                 <td style='text-align: right'>".formatIndianNumber(0)."</td>
-                                                <td></td>
+                                                <td>
+                                                    <a href='".url('purchase-return-edit/'.$v->id)."'
+                                                    class='btn btn-warning btn-sm'
+                                                    style='padding:0.2rem 0.4rem;font-size:0.75rem;'>
+                                                    Edit
+                                                    </a>
+                                                </td>
                                             </tr>";
                 }
                 
@@ -1475,7 +1647,13 @@ class GSTR2AController extends Controller
                                                 <td style='text-align: right'>".formatIndianNumber($v->cgst_amount)."</td>
                                                 <td style='text-align: right'>".formatIndianNumber($v->sgst_amount)."</td>
                                                 <td style='text-align: right'>".formatIndianNumber(0)."</td>
-                                                <td></td>
+                                                <td>
+                                                    <a href='".url('sale-return-edit/'.$v->id)."'
+                                                    class='btn btn-warning btn-sm'
+                                                    style='padding:0.2rem 0.4rem;font-size:0.75rem;'>
+                                                    Edit
+                                                    </a>
+                                                </td>
                                             </tr>";
                 }
                 $b2b_credit_note_unlinked = "<tr style='font-weight:bold;background:#f8f9fa'>

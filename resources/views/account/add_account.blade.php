@@ -186,7 +186,7 @@
                           id="address" 
                           name="address" 
                           placeholder="ENTER ADDRESS" 
-                          maxlength="100" 
+                          maxlength="250" 
                   rows="2">@if(isset($id)){{$account->address}}@endif</textarea>
                  </div>
                   <div class="mb-2 col-md-2 pincode_div common_div" style="display: none;">
@@ -216,7 +216,7 @@
                                 <input type="hidden"
                                     name="address_gst_group[]"
                                     value="primary">
-                                 <textarea class="form-control common_val" name="other_address[]" placeholder="ENTER ADDRESS" maxlength="100" rows="2">{{$address->address}}</textarea> 
+                                 <textarea class="form-control common_val" name="other_address[]" placeholder="ENTER ADDRESS" maxlength="250" rows="2">{{$address->address}}</textarea> 
                               </div>
                               <div class="mb-2 col-md-2 pincode_div common_div">
                                  <label class="form-label font-14 font-heading">PINCODE</label>
@@ -961,7 +961,7 @@ $(document).on('click', '.add_address', function() {
                 <textarea class="form-control common_val"
                           name="other_address[]"
                           placeholder="ENTER ADDRESS"
-                          maxlength="100"
+                          maxlength="250"
                           rows="2"></textarea>
             </div>
             <div class="mb-2 col-md-2 pincode_div common_div">
