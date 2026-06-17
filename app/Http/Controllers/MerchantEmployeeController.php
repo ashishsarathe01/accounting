@@ -313,7 +313,7 @@ return view('merchant_employee_add')
             $user->activation_token
         );
 
-        $template = "generate_password_9m";
+        $template = "set_account";
 
         $mobile = $user->mobile_no;
 
