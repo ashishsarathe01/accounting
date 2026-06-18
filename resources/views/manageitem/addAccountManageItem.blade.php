@@ -21,7 +21,7 @@
             <!-- view-table-Content -->
             <div class="col-md-12 ml-sm-auto  col-lg-10 px-md-4 bg-mint">                
                 <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Add Manage Item</h5>
-                <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="{{ route('account-manage-item.store') }}">
+                <form class="px-4 py-3 border-divider rounded-bottom-8 shadow-sm" style="background-color: #f3f3f3;" method="POST" action="{{ route('account-manage-item.store') }}">
                     @csrf
                     <div class="row">
                         <div class="col-md-8">
@@ -121,10 +121,10 @@
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <h5><input type="checkbox" name="partb" id="partb"> PART B</h5>
+                            <h5 name="partb" id="partb"> PART B</h5>
                             <hr>
                             <div class="row">                                
-                                <div class="mb-6 col-md-6 partb_div" style="display:none; margin-bottom:15px;">
+                                <div class="mb-6 col-md-6 partb_div" style=" margin-bottom:15px;">
                                     <label class="form-label font-14 font-heading">DUAL UNIT</label>
 
                                     <select class="form-select form-select-lg select2-single"
@@ -165,13 +165,17 @@
                                         placeholder="ENTER FIXED WEIGHT VALUE">
 
                                 </div>
+                                <div>
+                                    <div class="row">
                                 <div class="mb-6 col-md-12 partb_div" style="display:none"></div>
 
-                                <div class="mb-6 col-md-6 partb_div" style="display:none; padding-top:10px;">
-                                    <label for="name" class="form-label font-14 font-heading">
-                                        <input type="checkbox" name="tcs_applicable" id="tcs_applicable">
-                                        TCS APPLICABLE
-                                    </label>
+                                <div class="mb-6 col-md-6 partb_div" style="padding-top:10px;">
+                                    <label for="tcs_applicable" class="form-label font-14 font-heading d-block">TCS APPLICABLE</label>
+                                     <select name="tcs_applicable" id="tcs_applicable" class="form-select form-control">
+                                         <option value=""> Select Option </option>
+                                        <option value="yes">Yes</option>
+                                        <option value="no">No</option>
+                                    </select>
                                 </div>
                                 <div class="mb-6 col-md-12"></div>
                                 <div class="mb-6 col-md-6 partb_div tcs_applicable_div" style="display:none">
@@ -186,6 +190,7 @@
                                     <input type="text" class="form-control" name="rate_of_tcs" id="rate_of_tcs" readonly>
                                 </div>
                             </div>
+</div>
                         </div>
                     </div>
                     <div class="text-start">
@@ -220,14 +225,25 @@
                 toggleFixedWeightValue();
             }
         });
-        $("#tcs_applicable").click(function(){
-            $(".tcs_applicable_div").hide();
-            $("#section").val('').select2();
-            $("#rate_of_tcs").val('');
-            if($(this).prop('checked')==true){
-                $(".tcs_applicable_div").show();
-            }
-        });    
+        $("#tcs_applicable").change(function() {
+    if ($(this).val() == 'yes') {
+        // If "Yes" is selected, show the dependent fields
+        $(".tcs_applicable_div").show();
+    } else {
+        // If "No" or default is selected, hide the fields and clear their values
+        $(".tcs_applicable_div").hide();
+        $("#section").val('').select2(); // Resets your Select2 dropdown
+        $("#rate_of_tcs").val('');       // Clears the input field
+    }
+});
+        // $("#tcs_applicable").click(function(){
+        //     $(".tcs_applicable_div").hide();
+        //     $("#section").val('').select2();
+        //     $("#rate_of_tcs").val('');
+        //     if($(this).prop('checked')==true){
+        //         $(".tcs_applicable_div").show();
+        //     }
+        // });    
         function toggleFixedWeight()
         {
             if($('#dual_unit').val() == '1')
