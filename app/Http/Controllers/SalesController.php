@@ -3744,12 +3744,12 @@ class SalesController extends Controller
       return view('sale_import')->with('upload_log',0)->with('total_count',5)->with('success_count',3)->with('failed_count',2)->with('error_message',array(0 => array(0=>'Voucher A41 already exists - Invoice No. A41'),1 => array(0=>'Voucher A42 already exists - Invoice No. A42')));
       
    }
-   public function saleImportProcess(Request $request) { 
+   public function saleImportProcess(Request $request) {
       ini_set('max_execution_time', 0);
-      ini_set('memory_limit', '1024M'); 
+      ini_set('memory_limit', '1024M');
       $validator = Validator::make($request->all(), [
          'csv_file' => 'required|file|mimes:csv,txt|max:2048', // Max 2MB, CSV or TXT file
-      ]); 
+      ]);
       if ($validator->fails()) {
          return redirect()->back()->withErrors($validator)->withInput();
       }
@@ -3768,7 +3768,6 @@ class SalesController extends Controller
                                           ->where('configuration_for', 'SALE')
                                           ->where('status', '1')
                                           ->exists();
-
                   if (!$series_configuration) {
                      if (!in_array($series_no, $missing_series)) {
                         $missing_series[] = $series_no;
@@ -3804,12 +3803,12 @@ class SalesController extends Controller
       $from_date = date('Y-m-d', strtotime($from_date));
       $to_date = $to_year."-03-31";
       $to_date = date('Y-m-d', strtotime($to_date));
-      $company_data = Companies::where('id', Session::get('user_company_id'))->first(); 
+      $company_data = Companies::where('id', Session::get('user_company_id'))->first();
       $series_arr = [];$material_center_arr = [];$gst_no_arr = [];$all_error_arr = [];$error_arr = [];$item_arr = [];$data_arr = [];$voucher_arr = [];
       $already_exists_error_arr = [];$already_exists_voucher_arr = [];
       if($duplicate_voucher_status==0){
-         $file = $request->file('csv_file');  
-         $filePath = $file->getRealPath();      
+         $file = $request->file('csv_file');
+         $filePath = $file->getRealPath();
          $final_result = array();
          if(($handle = fopen($filePath, 'r')) !== false) {
             $header = fgetcsv($handle, 10000, ",");
@@ -3827,7 +3826,7 @@ class SalesController extends Controller
                   $series_no = $data[0];
                   $voucher_no = $this->getInvoiceVoucherNo($data[2],$series_no);
                   $voucher_no_prefix = $data[2];
-                 
+   
                   $check_invoice = Sales::select('id')
                                  ->where('company_id',Session::get('user_company_id'))
                                  ->where('voucher_no',$voucher_no)
@@ -3837,7 +3836,6 @@ class SalesController extends Controller
                                  ->first();
                   if($check_invoice){
                      array_push($already_exists_error_arr, 'Voucher '.$voucher_no_prefix.' already exists - Invoice No. '.$voucher_no_prefix);
-                     
                   }
                   if(in_array($series_no."_".$voucher_no_prefix, $already_exists_voucher_arr)){
                      array_push($already_exists_error_arr, 'Voucher '.$voucher_no_prefix.' already exists - Invoice No. '.$voucher_no_prefix);
@@ -3854,15 +3852,13 @@ class SalesController extends Controller
             );
             return json_encode($res);
          }
-      }      
+      }
       if($company_data->gst_config_type == "single_gst"){
          $gst_data = DB::table('gst_settings')
                            ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst"])
                            ->get();
          $branch = collect([]);
-
          if(isset($gst_data[0]) && isset($gst_data[0]->id)){
-
             $branch = GstBranch::select(
                         'id',
                         'gst_number as gst_no',
@@ -3879,7 +3875,7 @@ class SalesController extends Controller
          }
          if(count($branch)>0){
             $gst_data = $gst_data->merge($branch);
-         }         
+         }
       }else if($company_data->gst_config_type == "multiple_gst"){
          $gst_data = DB::table('gst_settings_multiple')
                         ->select(
@@ -3894,9 +3890,7 @@ class SalesController extends Controller
                               'gst_type'   => 'multiple_gst'
                         ])
                         ->get();
-
          foreach ($gst_data as $value) {
-
             $branch = GstBranch::select(
                               'id',
                               'gst_number as gst_no',
@@ -3919,10 +3913,10 @@ class SalesController extends Controller
          $series_arr[] = $value->series;
          $material_center_arr[] = $value->mat_center;
          $gst_no_arr[] = $value->gst_no;
-      }      
+      }
       $series_no = "";
-      $file = $request->file('csv_file');  
-      $filePath = $file->getRealPath();      
+      $file = $request->file('csv_file');
+      $filePath = $file->getRealPath();
       $final_result = array();
       if(($handle = fopen($filePath, 'r')) !== false) {
          $header = fgetcsv($handle, 10000, ",");
@@ -3932,255 +3926,218 @@ class SalesController extends Controller
          $success_row = 0;
          $index = 1;
          $skip_invoice = [];
+         $current_invoice = null;
          while (($data = fgetcsv($handle, 10000, ',')) !== false) {
             $data = array_map('trim', $data);
             $data = array_pad($data, 50, '');
-            if(
+            $is_header_row = (
                trim($data[0]) != "" ||
                trim($data[1]) != "" ||
                trim($data[2]) != ""
-            ){
-                             
-               $item_arr = [];
+            );
+            if ($is_header_row) {
+               if ($current_invoice !== null) {
+                  array_push($data_arr, $current_invoice);
+               }
+               $series_no          = $data[0];
+               $date                = $data[1];
+               $voucher_no          = $this->getInvoiceVoucherNo($data[2], $series_no);
+               $voucher_no_prefix   = $data[2];
+               $party               = $data[3];
+               $material_center     = $data[4];
+               $grand_total         = str_replace(",", "", $data[5]);
+               $self_vehicle        = $data[6];
+               $vehicle_no          = $data[7];
+               $transport_name      = $data[8];
+               $reverse_charge      = $data[9];
+               $gr_pr_no            = $data[10];
+               $station             = $data[11];
+               $ewaybill_no         = $data[12];
+               $shipping_name       = $data[13];
+               $current_voucher     = $voucher_no_prefix;
                $error_arr = [];
-               $slicedData = [];
-               $series_no = $data[0];
-               $date = $data[1];               
-               $voucher_no = $this->getInvoiceVoucherNo($data[2],$series_no);
-               $voucher_no_prefix = $data[2];
-               $party = $data[3];
-               $material_center = $data[4];
-               $grand_total = $data[5];
-               $grand_total = str_replace(",","",$grand_total);
-               $self_vehicle = $data[6];
-               $vehicle_no = $data[7];
-               $transport_name = $data[8];
-               $reverse_charge = $data[9];
-               $gr_pr_no = $data[10];
-               $station = $data[11];
-               $ewaybill_no = $data[12];            
-               $shipping_name = $data[13];
-               $current_voucher = isset($data[2]) ? trim($data[2]) : '';
-                if(
-                  !empty($series_no) ||
-                  !empty(isset($voucher_no_prefix) ? $voucher_no_prefix : '') ||
-                  !empty(isset($date) ? $date : '')
-               ){
-                        $merchant_gst = '';
-                       $akey = array_search($series_no, $series_arr);
-                       if($akey !== false && isset($gst_no_arr[$akey])){
-                          $merchant_gst = $gst_no_arr[$akey];
-                       }
-                   
-                  array_push($data_arr,array("series_no"=>$series_no,"date"=>$date,"voucher_no"=>$voucher_no,"voucher_no_prefix"=>$voucher_no_prefix,"party"=>$party,"material_center"=>$material_center,"grand_total"=>$grand_total,"self_vehicle"=>$self_vehicle,"vehicle_no"=>$vehicle_no,"transport_name"=>$transport_name,"reverse_charge"=>$reverse_charge,"gr_pr_no"=>$gr_pr_no,"station"=>$station,"ewaybill_no"=>$ewaybill_no,"shipping_name"=>$shipping_name,"merchant_gst"=>$merchant_gst,"item_arr"=>$item_arr,"slicedData"=>$slicedData,"error_arr"=>$error_arr));
-               } 
-               if(empty(trim($series_no))){
-                  array_push(
-                     $error_arr,
-                     'Series Cannot Be Empty - Invoice No. '.$current_voucher
-                  );
+               if (empty(trim($series_no))) {
+                  $error_arr[] = 'Series Cannot Be Empty - Invoice No. '.$current_voucher;
                }
-
-               if(empty(trim($date))){
-                  array_push(
-                     $error_arr,
-                     'Date Cannot Be Empty - Invoice No. '.$current_voucher
-                  );
+               if (empty(trim($date))) {
+                  $error_arr[] = 'Date Cannot Be Empty - Invoice No. '.$current_voucher;
                }
-
-               if(empty(trim($voucher_no_prefix))){
-                  array_push(
-                     $error_arr,
-                     'Voucher No Cannot Be Empty - Invoice No. '.$current_voucher
-                  );
+               if (empty(trim($voucher_no_prefix))) {
+                  $error_arr[] = 'Voucher No Cannot Be Empty - Invoice No. '.$current_voucher;
                }
-
-               if(empty(trim($party))){
-                   
-                  array_push(
-                     $error_arr,
-                     'Party Cannot Be Empty - Invoice No. '.$current_voucher
-                  );
+               if (empty(trim($party))) {
+                  $error_arr[] = 'Party Cannot Be Empty - Invoice No. '.$current_voucher;
                }
-               if(!empty(trim($party))){
-                   $account = Accounts::where('account_name',trim($party))
-                        ->where('company_id',trim(Session::get('user_company_id')))
-                        ->where('delete','0')
-                        ->where('status','1')
-                        ->first();
-                    if(!$account){
-                        
-                         array_push(
-                             $error_arr,
-                             'Account Not Found - Invoice No. '.$current_voucher
-                          );
-                    }
+                  if (!empty(trim($party))) {
+                  $account = Accounts::where('account_name', trim($party))
+                     ->where('company_id', trim(Session::get('user_company_id')))
+                     ->where('delete', '0')
+                     ->where('status', '1')
+                     ->first();
+                  if (!$account) {
+                     $error_arr[] = 'Account Not Found - Invoice No. '.$current_voucher;
+                  }
                }
-                
-               if(empty(trim($material_center))){
-                  array_push(
-                     $error_arr,
-                     'Material Center Cannot Be Empty - Invoice No. '.$current_voucher
-                  );
+               if (empty(trim($material_center))) {
+                  $error_arr[] = 'Material Center Cannot Be Empty - Invoice No. '.$current_voucher;
                }
-
-               if(empty(trim($grand_total))){
-                  array_push(
-                     $error_arr,
-                     'Grand Total Cannot Be Empty - Invoice No. '.$current_voucher
-                  );
+               if (empty(trim($grand_total))) {
+                  $error_arr[] = 'Grand Total Cannot Be Empty - Invoice No. '.$current_voucher;
                }
-
-               if(
-                  !empty(trim($date)) &&
-                  (
-                     strtotime($from_date) > strtotime(date('Y-m-d',strtotime($date))) ||
-                     strtotime($to_date) < strtotime(date('Y-m-d',strtotime($date)))
-                  )
-               ){
-                  array_push(
-                     $error_arr,
-                     'Date '.$date.' not in Financial Year - Invoice No. '.$current_voucher
-                  );
+                  if (!empty(trim($date))) {
+                  try {
+                     $normalized_date = str_replace('-', '/', trim($date));
+                     $parsedDate = Carbon::createFromFormat('d/m/Y', $normalized_date)->format('Y-m-d');
+   
+                     if (
+                        strtotime($from_date) > strtotime($parsedDate) ||
+                        strtotime($to_date) < strtotime($parsedDate)
+                     ) {
+                        $error_arr[] = 'Date '.$date.' not in Financial Year - Invoice No. '.$current_voucher;
+                     }
+                  } catch (\Exception $e) {
+                     $error_arr[] = 'Invalid Date Format '.$date.' - Invoice No. '.$current_voucher;
+                  }
                }
                $series_configuration = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
-                                 ->where('series', $series_no)
-                                 ->where('configuration_for', 'SALE')
-                                 ->where('status', '1')
-                                 ->first();
-
-               if(!$series_configuration){
-                  array_push($error_arr, 'Series No. '.$series_no.' not found in GST Configuration - Invoice No. '.$voucher_no_prefix); 
-               }
-               \Log::info('GST Material Centers', $material_center_arr);
-               $material_center_check = collect($gst_data)
-                  ->where('mat_center',$material_center)
+                  ->where('series', $series_no)
+                  ->where('configuration_for', 'SALE')
+                  ->where('status', '1')
                   ->first();
-
-               if(!$material_center_check){
-                  array_push($error_arr, 'Material Center '.$material_center.' not found in GST Configuration - Invoice No. '.$voucher_no_prefix);
+               if (!$series_configuration) {
+                  $error_arr[] = 'Series No. '.$series_no.' not found in GST Configuration - Invoice No. '.$voucher_no_prefix;
                }
-               $account = Accounts::where('account_name',trim($party))
-                        ->where('company_id',trim(Session::get('user_company_id')))
-                        ->where('delete','0')
-                        ->where('status','1')
-                        ->first();
-               if(!$account){
-                  array_push($error_arr, 'Party Name '.$party.' not found - Invoice No. '.$voucher_no_prefix);
-               } 
-               if($shipping_name!=""){
-                  $shipp = Accounts::where('account_name',trim($shipping_name))
-                           ->where('company_id',trim(Session::get('user_company_id')))
-                           ->where('delete','0')
-                           ->first();      
-                  if(!$shipp){
-                     array_push($error_arr, 'Shipping Name '.$shipping_name.' not found - Invoice No. '.$voucher_no_prefix);
-                  } 
+               $material_center_check = collect($gst_data)->where('mat_center', $material_center)->first();
+               if (!$material_center_check) {
+                  $error_arr[] = 'Material Center '.$material_center.' not found in GST Configuration - Invoice No. '.$voucher_no_prefix;
                }
-               $slicedData = array_slice($data,21,100);
-               if(count($slicedData)>0){
-                  foreach($slicedData as $key => $value){
-                     $value = trim($value);
-                     if($key%2==0){
-                        if($value!="" && $value!='0'){
-                           $bill_sundrys = BillSundrys::where('delete', '=', '0')
-                                    ->where('status', '=', '1')
-                                    ->whereIn('company_id',[Session::get('user_company_id'),0])
-                                    ->where('name',$value)
-                                    ->first();
-                           if(!$bill_sundrys){
-                              array_push($error_arr, 'Bill Sundry '.$value.' not found - Invoice No. '.$voucher_no_prefix);
-                           }
-                        }
-                        
-                     }                     
+                  if ($shipping_name != "") {
+                  $shipp = Accounts::where('account_name', trim($shipping_name))
+                     ->where('company_id', trim(Session::get('user_company_id')))
+                     ->where('delete', '0')
+                     ->first();
+                  if (!$shipp) {
+                     $error_arr[] = 'Shipping Name '.$shipping_name.' not found - Invoice No. '.$voucher_no_prefix;
                   }
                }
-               if($duplicate_voucher_status!=2){
+               if ($duplicate_voucher_status != 2) {
                   $check_invoice = Sales::select('id')
-                              ->where('company_id',Session::get('user_company_id'))
-                              ->where('voucher_no',$voucher_no)
-                              ->where('series_no',$series_no)
-                              ->where('financial_year','=',$financial_year)
-                              ->where('delete','0')
-                              ->first();
-                  if($check_invoice){
-                     array_push($error_arr, 'Voucher '.$voucher_no_prefix.' already exists - Invoice No. '.$voucher_no_prefix);
+                     ->where('company_id', Session::get('user_company_id'))
+                     ->where('voucher_no', $voucher_no)
+                     ->where('series_no', $series_no)
+                     ->where('financial_year', '=', $financial_year)
+                     ->where('delete', '0')
+                     ->first();
+                  if ($check_invoice) {
+                     $error_arr[] = 'Voucher '.$voucher_no_prefix.' already exists - Invoice No. '.$voucher_no_prefix;
                   }
-                  if(in_array($series_no."_".$voucher_no_prefix, $voucher_arr)){
-                     array_push($error_arr, 'Voucher '.$voucher_no_prefix.' already exists - Invoice No. '.$voucher_no_prefix);
+                  if (in_array($series_no."_".$voucher_no_prefix, $voucher_arr)) {
+                     $error_arr[] = 'Voucher '.$voucher_no_prefix.' already exists - Invoice No. '.$voucher_no_prefix;
                   }
-                  array_push($voucher_arr,$series_no."_".$voucher_no_prefix);
+                  array_push($voucher_arr, $series_no."_".$voucher_no_prefix);
                }
-            }
-            $item_name = $data[14]; 
-            if(empty(trim($item_name))){
-               array_push($error_arr, 'Item Name Cannot Be Empty - Invoice No. '.$voucher_no_prefix);
-            }
-            $item = ManageItems::select('id','hsn_code')
-                        ->where('name',trim($item_name))
-                        ->where('company_id',trim(Session::get('user_company_id')))
-                        ->where('delete','0')
-                        ->where('status','1')
-                        ->first();
-            if(!$item){
-               $skip_invoice[$voucher_no_prefix] =
-                  'Item '.$item_name.' is disabled or deleted - Invoice No. '.$voucher_no_prefix;
-               continue;
-            }
-            $item_weight = $data[15];
-            $item_weight = str_replace(",","",$item_weight);
-            $price = $data[16];
-            $price = trim(str_replace(",","",$price));
-            $amount = $data[17];
-            $amount = trim(str_replace(",","",$amount));
-            $cgst = $data[18];
-            $cgst = trim(str_replace(",","",$cgst));
-            $sgst = $data[19];
-            $sgst = trim(str_replace(",","",$sgst));
-            $igst = $data[20];
-            $igst = trim(str_replace(",","",$igst));   
-            if(empty(trim($item_weight))){
-               array_push($error_arr, 'Item Weight Cannot Be Empty - Invoice No. '.$voucher_no_prefix);
-            }
-
-            if(empty(trim($price))){
-               array_push($error_arr, 'Item Price Cannot Be Empty - Invoice No. '.$voucher_no_prefix);
-            }
-
-            if(empty(trim($amount))){
-               array_push($error_arr, 'Item Amount Cannot Be Empty - Invoice No. '.$voucher_no_prefix);
-            }      
-            array_push($item_arr,array("item_name"=>$item_name,"item_weight"=>$item_weight,"price"=>$price,"amount"=>$amount,"cgst"=>$cgst,"sgst"=>$sgst,"igst"=>$igst));
-            if($index==$total_row){
                $merchant_gst = '';
                $akey = array_search($series_no, $series_arr);
-               if($akey !== false && isset($gst_no_arr[$akey])){
+               if ($akey !== false && isset($gst_no_arr[$akey])) {
                   $merchant_gst = $gst_no_arr[$akey];
                }
-               array_push($data_arr,array("series_no"=>$series_no,"date"=>$date,"voucher_no"=>$voucher_no,"voucher_no_prefix"=>$voucher_no_prefix,"party"=>$party,"material_center"=>$material_center,"grand_total"=>$grand_total,"self_vehicle"=>$self_vehicle,"vehicle_no"=>$vehicle_no,"transport_name"=>$transport_name,"reverse_charge"=>$reverse_charge,"gr_pr_no"=>$gr_pr_no,"station"=>$station,"ewaybill_no"=>$ewaybill_no,"shipping_name"=>$shipping_name,"merchant_gst"=>$merchant_gst,"item_arr"=>$item_arr,"slicedData"=>$slicedData,"error_arr"=>$error_arr));
+
+               $current_invoice = [
+                  "series_no"         => $series_no,
+                  "date"              => $date,
+                  "voucher_no"        => $voucher_no,
+                  "voucher_no_prefix" => $voucher_no_prefix,
+                  "party"             => $party,
+                  "material_center"   => $material_center,
+                  "grand_total"       => $grand_total,
+                  "self_vehicle"      => $self_vehicle,
+                  "vehicle_no"        => $vehicle_no,
+                  "transport_name"    => $transport_name,
+                  "reverse_charge"    => $reverse_charge,
+                  "gr_pr_no"          => $gr_pr_no,
+                  "station"           => $station,
+                  "ewaybill_no"       => $ewaybill_no,
+                  "shipping_name"     => $shipping_name,
+                  "merchant_gst"      => $merchant_gst,
+                  "item_arr"          => [],
+                  "slicedData"        => [],
+                  "error_arr"         => $error_arr,
+               ];
+            }
+
+            if ($current_invoice !== null) {
+   
+               $item_name = $data[14];
+   
+               if (empty(trim($item_name))) {
+                  $current_invoice['error_arr'][] = 'Item Name Cannot Be Empty - Invoice No. '.$current_invoice['voucher_no_prefix'];
+               } else {
+                  $item_weight = str_replace(",", "", $data[15]);
+                  $price       = trim(str_replace(",", "", $data[16]));
+                  $amount      = trim(str_replace(",", "", $data[17]));
+                  $cgst        = trim(str_replace(",", "", $data[18]));
+                  $sgst        = trim(str_replace(",", "", $data[19]));
+                  $igst        = trim(str_replace(",", "", $data[20]));
+                  if (empty(trim($item_weight))) {
+                     $current_invoice['error_arr'][] = 'Item Weight Cannot Be Empty - Invoice No. '.$current_invoice['voucher_no_prefix'];
+                  }
+                  if (empty(trim($price))) {
+                     $current_invoice['error_arr'][] = 'Item Price Cannot Be Empty - Invoice No. '.$current_invoice['voucher_no_prefix'];
+                  }
+                  if (empty(trim($amount))) {
+                     $current_invoice['error_arr'][] = 'Item Amount Cannot Be Empty - Invoice No. '.$current_invoice['voucher_no_prefix'];
+                  }
+                     $item = ManageItems::select('id', 'hsn_code')
+                     ->where('name', trim($item_name))
+                     ->where('company_id', trim(Session::get('user_company_id')))
+                     ->where('delete', '0')
+                     ->where('status', '1')
+                     ->first();
+                  if (!$item) {
+                     $current_invoice['error_arr'][] = 'Item '.$item_name.' is disabled or deleted - Invoice No. '.$current_invoice['voucher_no_prefix'];
+                  }
+                  array_push($current_invoice['item_arr'], [
+                     "item_name"   => $item_name,
+                     "item_weight" => $item_weight,
+                     "price"       => $price,
+                     "amount"      => $amount,
+                     "cgst"        => $cgst,
+                     "sgst"        => $sgst,
+                     "igst"        => $igst,
+                  ]);
+               }
+                  $slicedData = array_slice($data, 21, 100);
+               if (count($slicedData) > 0) {
+                  foreach ($slicedData as $sk => $svalue) {
+                     $svalue = trim($svalue);
+                     if ($sk % 2 == 0 && $svalue != "" && $svalue != '0') {
+                        $bill_sundrys = BillSundrys::where('delete', '=', '0')
+                           ->where('status', '=', '1')
+                           ->whereIn('company_id', [Session::get('user_company_id'), 0])
+                           ->where('name', $svalue)
+                           ->first();
+                        if (!$bill_sundrys) {
+                           $current_invoice['error_arr'][] = 'Bill Sundry '.$svalue.' not found - Invoice No. '.$current_invoice['voucher_no_prefix'];
+                        }
+                     }
+                  }
+                  $current_invoice['slicedData'] = array_merge($current_invoice['slicedData'], $slicedData);
+               }
             }
             $index++;
-
-         } 
+         }
+            if ($current_invoice !== null) {
+            array_push($data_arr, $current_invoice);
+         }
+   
          fclose($handle);
          $total_invoice_count = count($data_arr);
-        //   echo "<pre>";
-        //   print_r($data_arr);
-        //   die;
          $success_invoice_count = 0;
          $failed_invoice_count = 0;
          if(count($data_arr)>0){
             $override_average_data_arr = [];$new_average_data_arr = [];$smallestDate = null;
             foreach ($data_arr as $key => $value){
                $voucher_no_prefix = $value['voucher_no_prefix'];
-               if(isset($skip_invoice[$voucher_no_prefix])){
-                  $all_error_arr[] = [
-                     $skip_invoice[$voucher_no_prefix]
-                  ];
-                  $failed_invoice_count++;
-                  continue;
-               }
                if(count($value['error_arr'])>0){
                   array_push($all_error_arr,$value['error_arr']);
                   $failed_invoice_count++;
@@ -4191,24 +4148,31 @@ class SalesController extends Controller
                         ->where('delete','0')
                         ->where('status','1')
                         ->first();
-                if(!$checkaccount){
-                    array_push($all_error_arr,array($value['party'].' Not Found'));
+               if(!$checkaccount){
+                  array_push($all_error_arr,array($value['party'].' Not Found'));
                   $failed_invoice_count++;
                   continue;
-                }
-               $date = date('Y-m-d',strtotime($value['date']));
+               }
+               try {
+                  $normalized_date = str_replace('-', '/', trim($value['date']));
+                  $date = Carbon::createFromFormat('d/m/Y', $normalized_date)->format('Y-m-d');
+               } catch (\Exception $e) {
+                  $all_error_arr[] = [
+                     'Invalid Date Format : '.$value['date'].' - Invoice No. '.$voucher_no_prefix
+                  ];
+                  $failed_invoice_count++;
+                  continue;
+               }
                if ($smallestDate === null || strtotime($date) < strtotime($smallestDate)) {
                   $smallestDate = $date;
                }
-               
                $series_no = $value['series_no'];
-               
                $voucher_no = $value['voucher_no'];
                $voucher_no_prefix = $value['voucher_no_prefix'];
                $party = $value['party'];
                $material_center = $value['material_center'];
                $grand_total = $value['grand_total'];
-               $grand_total = str_replace(",","",$grand_total); 
+               $grand_total = str_replace(",","",$grand_total);
                $self_vehicle = $value['self_vehicle'];
                $vehicle_no = $value['vehicle_no'];
                $transport_name = $value['transport_name'];
@@ -4220,392 +4184,385 @@ class SalesController extends Controller
                $item_arr = $value['item_arr'];
                $slicedData = $value['slicedData'];
                $merchant_gst = $value['merchant_gst'];
-               if($duplicate_voucher_status==2){
-                  $check_invoices = Sales::select('id')
-                           ->where('company_id',Session::get('user_company_id'))
-                           ->where('voucher_no',$voucher_no)
-                           ->where('series_no',$series_no)
-                           ->where('financial_year','=',$financial_year)
+               DB::beginTransaction();
+               try {
+                  if($duplicate_voucher_status==2){
+                     $check_invoices = Sales::select('id')
+                              ->where('company_id',Session::get('user_company_id'))
+                              ->where('voucher_no',$voucher_no)
+                              ->where('series_no',$series_no)
+                              ->where('financial_year','=',$financial_year)
+                              ->where('delete','0')
+                              ->where('status','1')
+                              ->get();
+                     foreach($check_invoices as $check_invoices_value){
+                        $updated_sale = Sales::find($check_invoices_value->id);
+                        $updated_sale->delete = '1';
+                        $updated_sale->deleted_at = Carbon::now();
+                        $updated_sale->deleted_by = Session::get('user_id');
+                        $updated_sale->update();
+                        if($updated_sale){
+                           SaleDescription::where('sale_id',$check_invoices_value->id)
+                                          ->update(['delete'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
+                           AccountLedger::where('entry_type',1)
+                                          ->where('entry_type_id',$check_invoices_value->id)
+                                          ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
+                           SaleSundry::where('sale_id',$check_invoices_value->id)
+                                          ->update(['delete'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
+                           ItemLedger::where('source',1)
+                                       ->where('source_id',$check_invoices_value->id)
+                                       ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
+                           ItemAverageDetail::where('sale_id',$check_invoices_value->id)
+                                             ->delete();
+                           $itemKiId =  SaleDescription::where('sale_id',$check_invoices_value->id)
+                                       ->select('sale_descriptions.goods_description as item_id');
+                           foreach($itemKiId as $k){
+                              array_push($override_average_data_arr,array("item_id"=>$k->item_id,"series"=>$series_no,"date"=>$check_invoices_value->date));
+                           }
+                        }
+                     }
+                  }
+                  $item_taxable_amount = 0;
+   
+                  $account = Accounts::where('account_name',trim($party))
+                           ->where('company_id',trim(Session::get('user_company_id')))
                            ->where('delete','0')
                            ->where('status','1')
-                           ->get();
-                  foreach($check_invoices as $check_invoices_value){
-                     $updated_sale = Sales::find($check_invoices_value->id);
-                     $updated_sale->delete = '1';
-                     $updated_sale->deleted_at = Carbon::now();
-                     $updated_sale->deleted_by = Session::get('user_id');
-                     $updated_sale->update();
-                     if($updated_sale){
-                        SaleDescription::where('sale_id',$check_invoices_value->id)
-                                       ->update(['delete'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
-                        AccountLedger::where('entry_type',1)
-                                       ->where('entry_type_id',$check_invoices_value->id)
-                                       ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
-                        SaleSundry::where('sale_id',$check_invoices_value->id)
-                                       ->update(['delete'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
-                        ItemLedger::where('source',1)
-                                    ->where('source_id',$check_invoices_value->id)
-                                    ->update(['delete_status'=>'1','deleted_at'=>Carbon::now(),'deleted_by'=>Session::get('user_id')]);
-                        ItemAverageDetail::where('sale_id',$check_invoices_value->id)
-                                          ->delete();
-                        $itemKiId =  SaleDescription::where('sale_id',$check_invoices_value->id)
-                                    ->select('sale_descriptions.goods_description as item_id');
-                        foreach($itemKiId as $k){
-                           //CommonHelper::RewriteItemAverageByItem($check_invoices_value->date,$k->item_id,$series_no);
-                           array_push($override_average_data_arr,array("item_id"=>$k->item_id,"series"=>$series_no,"date"=>$check_invoices_value->date));
-                        }
-                     }
+                           ->first();
+                  $shipp = Accounts::where('account_name',trim($shipping_name))
+                           ->where('company_id',trim(Session::get('user_company_id')))
+                           ->where('delete','0')
+                           ->first();
+                  if(!$account){
+                     DB::rollback();
+                     $all_error_arr[] = [
+                        'Party '.$party.' is disabled or not found'
+                     ];
+                     $failed_invoice_count++;
+                     continue;
                   }
-               }
-               $item_taxable_amount = 0;
-               //Insert Data In Sale Table
-               
-               $account = Accounts::where('account_name',trim($party))
-                        ->where('company_id',trim(Session::get('user_company_id')))
-                        ->where('delete','0')
-                        ->where('status','1')
-                        ->first();
-               $shipp = Accounts::where('account_name',trim($shipping_name))
-                        ->where('company_id',trim(Session::get('user_company_id')))
-                        ->where('delete','0')
-                        ->first();
-               if(!$account){
-                  array_push(
-                     $all_error_arr,
-                     ['Party '.$party.' is disabled or not found']
-                  );
-
-                  $failed_invoice_count++;
-                  continue;
-               }
-               $sale = new Sales;
-               $sale->series_no = $series_no;
-               $sale->company_id = Session::get('user_company_id');
-               $sale->date = $date;
-               $sale->voucher_no = $voucher_no;
-               $sale->voucher_no_prefix = $voucher_no_prefix;
-               $sale->party = $account->id;
-               $sale->material_center = $material_center;
-               $sale->merchant_gst = $merchant_gst; 
-               //$sale->taxable_amt = $request->input('taxable_amt');//
-               $sale->total = $grand_total;
-               $sale->self_vehicle = $self_vehicle;
-               $sale->vehicle_no = $vehicle_no;
-               $sale->transport_name = $transport_name;
-               $sale->reverse_charge = $reverse_charge;
-               $sale->gr_pr_no = $gr_pr_no;
-               $sale->station = $station;
-               $sale->ewaybill_no = $ewaybill_no;
-               $sale->billing_name = $account->account_name;
-               $sale->billing_address = $account->address;
-               $sale->billing_pincode = $account->pin_code;
-               $sale->billing_gst = $account->gstin;
-               $sale->billing_pan = $account->pan;
-               $sale->billing_state = $account->state; 
-               if($shipp){
-                  $sale->shipping_name = $shipp->account_name;;
-                  $sale->shipping_state = $shipp->state;
-                  $sale->shipping_address = $shipp->address;
-                  $sale->shipping_pincode = $shipp->pin_code;
-                  $sale->shipping_gst = $shipp->gstin;
-                  $sale->shipping_pan = $shipp->pan;
-               }
-               $sale->financial_year = $financial_year;
-               $sale->entry_source = 2; 
-               $sale->save();
-               if($sale->id){  
-                  //ITEM DATA INSERT
-                  $tax_arr = [];
-                  foreach ($item_arr as $k1 => $v1) {
-                     $item = ManageItems::select('manage_items.id','manage_items.gst_rate')
-                        ->where('manage_items.name',trim($v1['item_name']))
-                        ->where('manage_items.company_id',trim(Session::get('user_company_id')))
-                        ->where('manage_items.delete','0')
-                        ->where('manage_items.status','1')
-                        ->first();
-                     //TAX GST
-                     if($v1['cgst']!="" && $v1['sgst']!=""){
-                        array_push($tax_arr,array("gst_rate"=>$item->gst_rate,"cgst"=>$v1['cgst'],"sgst"=>$v1['sgst'],"igst"=>""));
-                     }else if($v1['igst']!=""){
-                        array_push($tax_arr,array("gst_rate"=>$item->gst_rate,"cgst"=>"","sgst"=>"","igst"=>$v1['igst']));
-                     } 
-                  }                  
-                  $return = array();
-                  foreach($tax_arr as $val) {
-                     $return[$val['gst_rate']][] = $val;
+                  $sale = new Sales;
+                  $sale->series_no = $series_no;
+                  $sale->company_id = Session::get('user_company_id');
+                  $sale->date = $date;
+                  $sale->voucher_no = $voucher_no;
+                  $sale->voucher_no_prefix = $voucher_no_prefix;
+                  $sale->party = $account->id;
+                  $sale->material_center = $material_center;
+                  $sale->merchant_gst = $merchant_gst;
+                  $sale->total = $grand_total;
+                  $sale->self_vehicle = $self_vehicle;
+                  $sale->vehicle_no = $vehicle_no;
+                  $sale->transport_name = $transport_name;
+                  $sale->reverse_charge = $reverse_charge;
+                  $sale->gr_pr_no = $gr_pr_no;
+                  $sale->station = $station;
+                  $sale->ewaybill_no = $ewaybill_no;
+                  $sale->billing_name = $account->account_name;
+                  $sale->billing_address = $account->address;
+                  $sale->billing_pincode = $account->pin_code;
+                  $sale->billing_gst = $account->gstin;
+                  $sale->billing_pan = $account->pan;
+                  $sale->billing_state = $account->state;
+                  if($shipp){
+                     $sale->shipping_name = $shipp->account_name;
+                     $sale->shipping_state = $shipp->state;
+                     $sale->shipping_address = $shipp->address;
+                     $sale->shipping_pincode = $shipp->pin_code;
+                     $sale->shipping_gst = $shipp->gstin;
+                     $sale->shipping_pan = $shipp->pan;
                   }
-                  foreach($return as $k5=>$v5) {
-                     $tx_rate = $k5;
-                     $cgst_rate = 0;$sgst_rate = 0;$igst_rate = 0;                     
-                     foreach($v5 as $k6=>$v6) {                        
-                        if(!empty($v6['cgst'])){
-                           $cgst_rate = $cgst_rate + $v6['cgst'];
-                        }
-                        if(!empty($v6['sgst'])){
-                           $sgst_rate = $sgst_rate + $v6['sgst'];
-                        }
-                        if(!empty($v6['igst'])){
-                           $igst_rate = $igst_rate + $v6['igst'];
-                        }
-                     }
-                     //TAX GST
-                     if($cgst_rate!="" && $cgst_rate!=0 && $sgst_rate!="" && $sgst_rate!=0){
-                        $bill_sundrys = BillSundrys::where('delete', '=', '0')
-                                          ->where('status', '=', '1')
-                                          ->where('nature_of_sundry', '=', 'CGST')
-                                          ->where('company_id',Session::get('user_company_id'))
-                                          ->first(); 
-                        $sundry = new SaleSundry;
-                        $sundry->sale_id = $sale->id;
-                        $sundry->bill_sundry = $bill_sundrys->id;
-                        $sundry->rate = $tx_rate/2;
-                        $sundry->amount = str_replace(",","",$cgst_rate);
-                        $sundry->company_id = Session::get('user_company_id');
-                        $sundry->status = '1';
-                        $sundry->save();
-                        //ADD DATA IN CGST ACCOUNT     
-                        if($bill_sundrys->adjust_sale_amt=='No'){
-                           $ledger = new AccountLedger();
-                           $ledger->account_id = $bill_sundrys->sale_amt_account;
-                           $ledger->credit = str_replace(",","",$cgst_rate);                                    
-                           $ledger->txn_date = $date;
-                           $ledger->series_no = $series_no;
-                           $ledger->company_id = Session::get('user_company_id');
-                           $ledger->financial_year = Session::get('default_fy');
-                           $ledger->entry_type = 1;
-                           $ledger->entry_type_id = $sale->id;
-                           $ledger->map_account_id = $account->id;
-                           $ledger->created_by = Session::get('user_id');
-                           $ledger->created_at = date('d-m-Y H:i:s');
-                           $ledger->save();
-                        }
-                        $bill_sundrys = BillSundrys::where('delete', '=', '0')
-                                          ->where('status', '=', '1')
-                                          ->where('nature_of_sundry', '=', 'SGST')
-                                          ->where('company_id',Session::get('user_company_id'))
-                                          ->first(); 
-                        $sundry = new SaleSundry;
-                        $sundry->sale_id = $sale->id;
-                        $sundry->bill_sundry = $bill_sundrys->id;
-                        $sundry->rate = $tx_rate/2;
-                        $sundry->company_id = Session::get('user_company_id');
-                        $sundry->amount = str_replace(",","",$sgst_rate);
-                        $sundry->status = '1';
-                        $sundry->save();
-                        //ADD DATA IN SCGST ACCOUNT     
-                        if($bill_sundrys->adjust_sale_amt=='No'){
-                           $ledger = new AccountLedger();
-                           $ledger->account_id = $bill_sundrys->sale_amt_account;
-                           $ledger->credit = str_replace(",","",$sgst_rate);                                    
-                           $ledger->txn_date = $date;
-                           $ledger->series_no = $series_no;
-                           $ledger->company_id = Session::get('user_company_id');
-                           $ledger->financial_year = Session::get('default_fy');
-                           $ledger->entry_type = 1;
-                           $ledger->entry_type_id = $sale->id;
-                           $ledger->map_account_id = $account->id;
-                           $ledger->created_by = Session::get('user_id');
-                           $ledger->created_at = date('d-m-Y H:i:s');
-                           $ledger->save();
-                        }
-                     }else if($igst_rate!="" && $igst_rate!=0){
-                        $bill_sundrys = BillSundrys::where('delete', '=', '0')
-                                          ->where('status', '=', '1')
-                                          ->where('nature_of_sundry', '=', 'IGST')
-                                          ->where('company_id',Session::get('user_company_id'))
-                                          ->first(); 
-                        $sundry = new SaleSundry;
-                        $sundry->sale_id = $sale->id;
-                        $sundry->bill_sundry = $bill_sundrys->id;
-                        $sundry->rate = $tx_rate;
-                        $sundry->company_id = Session::get('user_company_id');
-                        $sundry->amount = str_replace(",","",$igst_rate);
-                        $sundry->status = '1';
-                        $sundry->save();
-                        //ADD DATA IN IGST ACCOUNT     
-                        if($bill_sundrys->adjust_sale_amt=='No'){
-                           $ledger = new AccountLedger();
-                           $ledger->series_no = $series_no;
-                           $ledger->account_id = $bill_sundrys->sale_amt_account;
-                           $ledger->credit = str_replace(",","",$igst_rate);                                    
-                           $ledger->txn_date = $date;
-                           $ledger->company_id = Session::get('user_company_id');
-                           $ledger->financial_year = Session::get('default_fy');
-                           $ledger->entry_type = 1;
-                           $ledger->entry_type_id = $sale->id;
-                           $ledger->map_account_id = $account->id;
-                           $ledger->created_by = Session::get('user_id');
-                           $ledger->created_at = date('d-m-Y H:i:s');
-                           $ledger->save();
-                        }
-                     }
-                  }
-                  foreach ($item_arr as $k1 => $v1) {
-                     if(!empty($v1['amount'])){
-                        $item_taxable_amount = $item_taxable_amount + str_replace(",","",$v1['amount']);
-                        $item = ManageItems::join('units','manage_items.u_name','=','units.id')
-                           ->select('manage_items.id','manage_items.hsn_code','manage_items.gst_rate','units.s_name as unit','units.id as uid')
+                  $sale->financial_year = $financial_year;
+                  $sale->entry_source = 2;
+                  \Log::info('IMPORT DEBUG', [
+                     'voucher' => $voucher_no_prefix,
+                     'item_count' => count($item_arr),
+                     'item_arr' => $item_arr
+                  ]);
+                  $sale->save();
+                  if($sale->id){
+                     $tax_arr = [];
+                     foreach ($item_arr as $k1 => $v1) {
+                        $item = ManageItems::select('manage_items.id','manage_items.gst_rate')
                            ->where('manage_items.name',trim($v1['item_name']))
                            ->where('manage_items.company_id',trim(Session::get('user_company_id')))
                            ->where('manage_items.delete','0')
                            ->where('manage_items.status','1')
                            ->first();
-                        $desc = new SaleDescription;
-                        $desc->sale_id = $sale->id;
-                        $desc->goods_discription = $item->id;
-                        $desc->qty = $v1['item_weight'];
-                        $desc->unit = $item->uid;
-                        $desc->company_id = Session::get('user_company_id');
-                        $desc->price = $v1['price'];
-                        $desc->amount = str_replace(",","",$v1['amount']);
-                        $desc->status = '1';
-                        $desc->save();
-                        //ADD ITEM LEDGER
-                        $item_ledger = new ItemLedger();
-                        $item_ledger->item_id = $item->id;
-                        $item_ledger->out_weight = $v1['item_weight'];
-                        $item_ledger->txn_date = $date;
-                        $item_ledger->series_no = $series_no;
-                        $item_ledger->price = $v1['price'];
-                        $item_ledger->total_price = str_replace(",","",$v1['amount']);
-                        $item_ledger->company_id = Session::get('user_company_id');
-                        $item_ledger->source = 1;
-                        $item_ledger->source_id = $sale->id;
-                        $item_ledger->created_by = Session::get('user_id');
-                        $item_ledger->created_at = date('d-m-Y H:i:s');
-                        $item_ledger->save(); 
-                     }
-                                          
-                  }
-                  //Other Bill Sundry
-                  $sundry_id = "";
-                  $adjust_sale_amt = "";
-                  $bill_sundry_amounts = "";
-                  $sale_amt_account = "";
-                  $nature_of_sundry = "";
-                  $bill_sundry_type = "";
-                  foreach($slicedData as $k2 => $v2){
-                     $v2 = trim($v2);
-                     if($v2!="" && $v2!='0'){                      
-                        if($k2%2==0){
-                           $bill_sundrys = BillSundrys::where('delete', '=', '0')
-                                       ->where('status', '=', '1')
-                                       ->where('name', '=', $v2)
-                                       ->whereIn('company_id',[Session::get('user_company_id'),0])
-                                       ->first();  
-                           $sundry_id = $bill_sundrys->id;
-                           $adjust_sale_amt = $bill_sundrys->adjust_sale_amt;
-                           $nature_of_sundry = $bill_sundrys->nature_of_sundry;
-                           $sale_amt_account = $bill_sundrys->sale_amt_account;
-                           $bill_sundry_type = $bill_sundrys->bill_sundry_type;
-                        }else if($k2%2!=0){
-                           $v2 = trim(str_replace(",","",$v2));
-                           $v2 = trim(str_replace(" ","",$v2));                           
-                           if(!empty($v2)){
-                              $sundry = new SaleSundry;
-                              $sundry->sale_id = $sale->id;
-                              $sundry->bill_sundry = $sundry_id   ;
-                              $sundry->rate = 0;
-                              $sundry->company_id = Session::get('user_company_id');
-                              $sundry->amount = str_replace(",","",$v2);
-                              $sundry->status = '1';
-                              $sundry->save();
-                              //ADD DATA BILL SUNDRY ACCOUNT 
-                              if($adjust_sale_amt=='No'){
-                                 $ledger = new AccountLedger();
-                                 $ledger->account_id = $sale_amt_account;
-                                 if($nature_of_sundry=='ROUNDED OFF (-)'){
-                                    $ledger->debit = $v2;
-                                 }else{
-                                    $ledger->credit = $v2;
-                                 }               
-                                 $ledger->txn_date = $date;
-                                 $ledger->series_no = $series_no;
-                                 $ledger->company_id = Session::get('user_company_id');
-                                 $ledger->financial_year = Session::get('default_fy');
-                                 $ledger->entry_type = 1;
-                                 $ledger->entry_type_id = $sale->id;
-                                 $ledger->map_account_id = $account->id;
-                                 $ledger->created_by = Session::get('user_id');
-                                 $ledger->created_at = date('d-m-Y H:i:s');
-                                 $ledger->save();
-                              }
-                              if($nature_of_sundry=='OTHER'){
-                                 if($bill_sundry_type=='additive'){
-                                    $item_taxable_amount = $item_taxable_amount + str_replace(",","",$v2);
-                                 }else if($bill_sundry_type=='subtractive'){
-                                    $item_taxable_amount = $item_taxable_amount - str_replace(",","",$v2);
-                                 }
-                              }
-                              
-                              
-                           }
-                           
+                        if($v1['cgst']!="" && $v1['sgst']!=""){
+                           array_push($tax_arr,array("gst_rate"=>$item->gst_rate,"cgst"=>$v1['cgst'],"sgst"=>$v1['sgst'],"igst"=>""));
+                        }else if($v1['igst']!=""){
+                           array_push($tax_arr,array("gst_rate"=>$item->gst_rate,"cgst"=>"","sgst"=>"","igst"=>$v1['igst']));
                         }
                      }
-                  }
-                  foreach ($item_arr as $k1 => $v1) {
-                     if(!empty($v1['amount'])){
-                        //$item_taxable_amount = $item_taxable_amount + str_replace(",","",$v1['amount']);
-                        $item = ManageItems::join('units','manage_items.u_name','=','units.id')
-                           ->select('manage_items.id','manage_items.hsn_code','manage_items.gst_rate','units.s_name as unit','units.id as uid')
-                           ->where('manage_items.name',trim($v1['item_name']))
-                           ->where('manage_items.company_id',trim(Session::get('user_company_id')))
-                           ->where('manage_items.delete','0')
-                           ->where('manage_items.status','1')
-                           ->first();                 
-                           //Add Data In Average Details table
-                           $average_detail = new ItemAverageDetail;
-                           $average_detail->entry_date = $sale->date;
-                           $average_detail->series_no = $series_no;
-                           $average_detail->item_id = $item->id;
-                           $average_detail->type = 'SALE';
-                           $average_detail->sale_id = $sale->id;
-                           $average_detail->sale_weight = $v1['item_weight'];
-                           $average_detail->company_id = Session::get('user_company_id');
-                           $average_detail->created_at = Carbon::now();
-                           $average_detail->save();
-                           //CommonHelper::RewriteItemAverageByItem($sale->date,$item->id,$series_no);
-                           array_push($new_average_data_arr,array("item_id"=>$item->id,"series"=>$series_no,"date"=>$sale->date));
-                           
-            
+                     $return = array();
+                     foreach($tax_arr as $val) {
+                        $return[$val['gst_rate']][] = $val;
                      }
+                     foreach($return as $k5=>$v5) {
+                        $tx_rate = $k5;
+                        $cgst_rate = 0;$sgst_rate = 0;$igst_rate = 0;
+                        foreach($v5 as $k6=>$v6) {
+                           if(!empty($v6['cgst'])){
+                              $cgst_rate = $cgst_rate + $v6['cgst'];
+                           }
+                           if(!empty($v6['sgst'])){
+                              $sgst_rate = $sgst_rate + $v6['sgst'];
+                           }
+                           if(!empty($v6['igst'])){
+                              $igst_rate = $igst_rate + $v6['igst'];
+                           }
+                        }
+                        if($cgst_rate!="" && $cgst_rate!=0 && $sgst_rate!="" && $sgst_rate!=0){
+                           $bill_sundrys = BillSundrys::where('delete', '=', '0')
+                                             ->where('status', '=', '1')
+                                             ->where('nature_of_sundry', '=', 'CGST')
+                                             ->where('company_id',Session::get('user_company_id'))
+                                             ->first();
+                           $sundry = new SaleSundry;
+                           $sundry->sale_id = $sale->id;
+                           $sundry->bill_sundry = $bill_sundrys->id;
+                           $sundry->rate = $tx_rate/2;
+                           $sundry->amount = str_replace(",","",$cgst_rate);
+                           $sundry->company_id = Session::get('user_company_id');
+                           $sundry->status = '1';
+                           $sundry->save();
+                           if($bill_sundrys->adjust_sale_amt=='No'){
+                              $ledger = new AccountLedger();
+                              $ledger->account_id = $bill_sundrys->sale_amt_account;
+                              $ledger->credit = str_replace(",","",$cgst_rate);
+                              $ledger->txn_date = $date;
+                              $ledger->series_no = $series_no;
+                              $ledger->company_id = Session::get('user_company_id');
+                              $ledger->financial_year = Session::get('default_fy');
+                              $ledger->entry_type = 1;
+                              $ledger->entry_type_id = $sale->id;
+                              $ledger->map_account_id = $account->id;
+                              $ledger->created_by = Session::get('user_id');
+                              $ledger->created_at = date('d-m-Y H:i:s');
+                              $ledger->save();
+                           }
+                           $bill_sundrys = BillSundrys::where('delete', '=', '0')
+                                             ->where('status', '=', '1')
+                                             ->where('nature_of_sundry', '=', 'SGST')
+                                             ->where('company_id',Session::get('user_company_id'))
+                                             ->first();
+                           $sundry = new SaleSundry;
+                           $sundry->sale_id = $sale->id;
+                           $sundry->bill_sundry = $bill_sundrys->id;
+                           $sundry->rate = $tx_rate/2;
+                           $sundry->company_id = Session::get('user_company_id');
+                           $sundry->amount = str_replace(",","",$sgst_rate);
+                           $sundry->status = '1';
+                           $sundry->save();
+                           if($bill_sundrys->adjust_sale_amt=='No'){
+                              $ledger = new AccountLedger();
+                              $ledger->account_id = $bill_sundrys->sale_amt_account;
+                              $ledger->credit = str_replace(",","",$sgst_rate);
+                              $ledger->txn_date = $date;
+                              $ledger->series_no = $series_no;
+                              $ledger->company_id = Session::get('user_company_id');
+                              $ledger->financial_year = Session::get('default_fy');
+                              $ledger->entry_type = 1;
+                              $ledger->entry_type_id = $sale->id;
+                              $ledger->map_account_id = $account->id;
+                              $ledger->created_by = Session::get('user_id');
+                              $ledger->created_at = date('d-m-Y H:i:s');
+                              $ledger->save();
+                           }
+                        }else if($igst_rate!="" && $igst_rate!=0){
+                           $bill_sundrys = BillSundrys::where('delete', '=', '0')
+                                             ->where('status', '=', '1')
+                                             ->where('nature_of_sundry', '=', 'IGST')
+                                             ->where('company_id',Session::get('user_company_id'))
+                                             ->first();
+                           $sundry = new SaleSundry;
+                           $sundry->sale_id = $sale->id;
+                           $sundry->bill_sundry = $bill_sundrys->id;
+                           $sundry->rate = $tx_rate;
+                           $sundry->company_id = Session::get('user_company_id');
+                           $sundry->amount = str_replace(",","",$igst_rate);
+                           $sundry->status = '1';
+                           $sundry->save();
+                           if($bill_sundrys->adjust_sale_amt=='No'){
+                              $ledger = new AccountLedger();
+                              $ledger->series_no = $series_no;
+                              $ledger->account_id = $bill_sundrys->sale_amt_account;
+                              $ledger->credit = str_replace(",","",$igst_rate);
+                              $ledger->txn_date = $date;
+                              $ledger->company_id = Session::get('user_company_id');
+                              $ledger->financial_year = Session::get('default_fy');
+                              $ledger->entry_type = 1;
+                              $ledger->entry_type_id = $sale->id;
+                              $ledger->map_account_id = $account->id;
+                              $ledger->created_by = Session::get('user_id');
+                              $ledger->created_at = date('d-m-Y H:i:s');
+                              $ledger->save();
+                           }
+                        }
+                     }
+                     foreach ($item_arr as $k1 => $v1) {
+                        if(!empty($v1['amount'])){
+                           $item_taxable_amount = $item_taxable_amount + str_replace(",","",$v1['amount']);
+                           $item = ManageItems::join('units','manage_items.u_name','=','units.id')
+                              ->select('manage_items.id','manage_items.hsn_code','manage_items.gst_rate','units.s_name as unit','units.id as uid')
+                              ->where('manage_items.name',trim($v1['item_name']))
+                              ->where('manage_items.company_id',trim(Session::get('user_company_id')))
+                              ->where('manage_items.delete','0')
+                              ->where('manage_items.status','1')
+                              ->first();
+                           $desc = new SaleDescription;
+                           $desc->sale_id = $sale->id;
+                           $desc->goods_discription = $item->id;
+                           $desc->qty = $v1['item_weight'];
+                           $desc->unit = $item->uid;
+                           $desc->company_id = Session::get('user_company_id');
+                           $desc->price = $v1['price'];
+                           $desc->amount = str_replace(",","",$v1['amount']);
+                           $desc->status = '1';
+                           $desc->save();
+                           $item_ledger = new ItemLedger();
+                           $item_ledger->item_id = $item->id;
+                           $item_ledger->out_weight = $v1['item_weight'];
+                           $item_ledger->txn_date = $date;
+                           $item_ledger->series_no = $series_no;
+                           $item_ledger->price = $v1['price'];
+                           $item_ledger->total_price = str_replace(",","",$v1['amount']);
+                           $item_ledger->company_id = Session::get('user_company_id');
+                           $item_ledger->source = 1;
+                           $item_ledger->source_id = $sale->id;
+                           $item_ledger->created_by = Session::get('user_id');
+                           $item_ledger->created_at = date('d-m-Y H:i:s');
+                           $item_ledger->save();
+                        }
+                     }
+                     $sundry_id = "";
+                     $adjust_sale_amt = "";
+                     $bill_sundry_amounts = "";
+                     $sale_amt_account = "";
+                     $nature_of_sundry = "";
+                     $bill_sundry_type = "";
+                     foreach($slicedData as $k2 => $v2){
+                        $v2 = trim($v2);
+                        if($v2!="" && $v2!='0'){
+                           if($k2%2==0){
+                              $bill_sundrys = BillSundrys::where('delete', '=', '0')
+                                          ->where('status', '=', '1')
+                                          ->where('name', '=', $v2)
+                                          ->whereIn('company_id',[Session::get('user_company_id'),0])
+                                          ->first();
+                              $sundry_id = $bill_sundrys->id;
+                              $adjust_sale_amt = $bill_sundrys->adjust_sale_amt;
+                              $nature_of_sundry = $bill_sundrys->nature_of_sundry;
+                              $sale_amt_account = $bill_sundrys->sale_amt_account;
+                              $bill_sundry_type = $bill_sundrys->bill_sundry_type;
+                           }else if($k2%2!=0){
+                              $v2 = trim(str_replace(",","",$v2));
+                              $v2 = trim(str_replace(" ","",$v2));
+                              if(!empty($v2)){
+                                 $sundry = new SaleSundry;
+                                 $sundry->sale_id = $sale->id;
+                                 $sundry->bill_sundry = $sundry_id;
+                                 $sundry->rate = 0;
+                                 $sundry->company_id = Session::get('user_company_id');
+                                 $sundry->amount = str_replace(",","",$v2);
+                                 $sundry->status = '1';
+                                 $sundry->save();
+                                 if($adjust_sale_amt=='No'){
+                                    $ledger = new AccountLedger();
+                                    $ledger->account_id = $sale_amt_account;
+                                    if($nature_of_sundry=='ROUNDED OFF (-)'){
+                                       $ledger->debit = $v2;
+                                    }else{
+                                       $ledger->credit = $v2;
+                                    }
+                                    $ledger->txn_date = $date;
+                                    $ledger->series_no = $series_no;
+                                    $ledger->company_id = Session::get('user_company_id');
+                                    $ledger->financial_year = Session::get('default_fy');
+                                    $ledger->entry_type = 1;
+                                    $ledger->entry_type_id = $sale->id;
+                                    $ledger->map_account_id = $account->id;
+                                    $ledger->created_by = Session::get('user_id');
+                                    $ledger->created_at = date('d-m-Y H:i:s');
+                                    $ledger->save();
+                                 }
+                                 if($nature_of_sundry=='OTHER'){
+                                    if($bill_sundry_type=='additive'){
+                                       $item_taxable_amount = $item_taxable_amount + str_replace(",","",$v2);
+                                    }else if($bill_sundry_type=='subtractive'){
+                                       $item_taxable_amount = $item_taxable_amount - str_replace(",","",$v2);
+                                    }
+                                 }
+                              }
+                           }
+                        }
+                     }
+                     foreach ($item_arr as $k1 => $v1) {
+                        if(!empty($v1['amount'])){
+                           $item = ManageItems::join('units','manage_items.u_name','=','units.id')
+                              ->select('manage_items.id','manage_items.hsn_code','manage_items.gst_rate','units.s_name as unit','units.id as uid')
+                              ->where('manage_items.name',trim($v1['item_name']))
+                              ->where('manage_items.company_id',trim(Session::get('user_company_id')))
+                              ->where('manage_items.delete','0')
+                              ->where('manage_items.status','1')
+                              ->first();
+                              $average_detail = new ItemAverageDetail;
+                              $average_detail->entry_date = $sale->date;
+                              $average_detail->series_no = $series_no;
+                              $average_detail->item_id = $item->id;
+                              $average_detail->type = 'SALE';
+                              $average_detail->sale_id = $sale->id;
+                              $average_detail->sale_weight = $v1['item_weight'];
+                              $average_detail->company_id = Session::get('user_company_id');
+                              $average_detail->created_at = Carbon::now();
+                              $average_detail->save();
+                              array_push($new_average_data_arr,array("item_id"=>$item->id,"series"=>$series_no,"date"=>$sale->date));
+                        }
+                     }
+   
+                     $ledger = new AccountLedger();
+                     $ledger->account_id = $account->id;
+                     $ledger->debit = $grand_total;
+                     $ledger->series_no = $series_no;
+                     $ledger->txn_date = $date;
+                     $ledger->company_id = Session::get('user_company_id');
+                     $ledger->financial_year = Session::get('default_fy');
+                     $ledger->entry_type = 1;
+                     $ledger->entry_type_id = $sale->id;
+                     $ledger->map_account_id = 35;//Sales Account
+                     $ledger->created_by = Session::get('user_id');
+                     $ledger->created_at = date('d-m-Y H:i:s');
+                     $ledger->save();
+   
+                     $ledger = new AccountLedger();
+                     $ledger->account_id = 35;//Sales Account
+                     $ledger->credit = $item_taxable_amount;
+                     $ledger->series_no = $series_no;
+                     $ledger->txn_date = $date;
+                     $ledger->company_id = Session::get('user_company_id');
+                     $ledger->financial_year = Session::get('default_fy');
+                     $ledger->entry_type = 1;
+                     $ledger->entry_type_id = $sale->id;
+                     $ledger->map_account_id = $account->id;
+                     $ledger->created_by = Session::get('user_id');
+                     $ledger->created_at = date('d-m-Y H:i:s');
+                     $ledger->save();
+   
+                     $update_sale = Sales::find($sale->id);
+                     $update_sale->taxable_amt = $item_taxable_amount;
+                     $update_sale->status = '1';
+                     $update_sale->update();
+                     $success_invoice_count++;
+                     DB::commit();
                   }
-                  
-                  //ADD DATA IN Customer ACCOUNT
-                  $ledger = new AccountLedger();
-                  $ledger->account_id = $account->id;
-                  $ledger->debit = $grand_total;
-                  $ledger->series_no = $series_no;
-                  $ledger->txn_date = $date;
-                  $ledger->company_id = Session::get('user_company_id');
-                  $ledger->financial_year = Session::get('default_fy');
-                  $ledger->entry_type = 1;
-                  $ledger->entry_type_id = $sale->id;
-                  $ledger->map_account_id = 35;//Sales Account
-                  $ledger->created_by = Session::get('user_id');
-                  $ledger->created_at = date('d-m-Y H:i:s');
-                  $ledger->save();
-                  //ADD DATA IN Sale ACCOUNT
-                  $ledger = new AccountLedger();
-                  $ledger->account_id = 35;//Sales Account
-                  $ledger->credit = $item_taxable_amount;
-                  $ledger->series_no = $series_no;
-                  $ledger->txn_date = $date;
-                  $ledger->company_id = Session::get('user_company_id');
-                  $ledger->financial_year = Session::get('default_fy');
-                  $ledger->entry_type = 1;
-                  $ledger->entry_type_id = $sale->id;
-                  $ledger->map_account_id = $account->id;
-                  $ledger->created_by = Session::get('user_id');
-                  $ledger->created_at = date('d-m-Y H:i:s');
-                  $ledger->save();
-
-                  $update_sale = Sales::find($sale->id);
-                  $update_sale->taxable_amt = $item_taxable_amount;
-                  $update_sale->status = '1';
-                  $update_sale->update();
-                  $success_invoice_count++;
+               } catch (\Exception $e) {
+                  DB::rollback();
+                  $all_error_arr[] = [
+                     'Invoice No. '.$voucher_no_prefix.' Failed : '.$e->getMessage()
+                  ];
+                  $failed_invoice_count++;
+                  continue;
                }
             }
             if($duplicate_voucher_status==2){
@@ -4631,7 +4588,6 @@ class SalesController extends Controller
          "message"=>"Uploaded Successfully."
       );
       return json_encode($res);
-      //return view('sale_import')->with('upload_log',1)->with('total_count',$total_invoice_count)->with('success_count',$success_invoice_count)->with('failed_count',$failed_invoice_count)->with('error_message',$all_error_arr);
    }
    public function generateEinvoice(Request $request){      
       $einvoice_username = ""; $einvoice_password = "";
