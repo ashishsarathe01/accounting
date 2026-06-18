@@ -12,27 +12,29 @@
       height: 50px !important;
    }
    .select2-container{
-          width: 335.519px !important;
+      width: 100% !important;
+          /* width: 335.519px !important; */
    }
    ..select2-container--default .select2-selection--single{
       border-radius: 12px !important;
    }
 </style>
 <div class="list-of-view-company ">
-   <section class="list-of-view-company-section container-fluid">
+   <section class="list-of-view-company-section container-fluid" >
       <div class="row vh-100">
          @include('layouts.leftnav')
-         <div class="col-md-12 ml-sm-auto  col-lg-10 px-md-4 bg-mint">
+         <div class="col-md-12 ml-sm-auto  col-lg-10 px-md-4 bg-mint" >
             
             <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">Add Account</h5>
-            <form class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" action="@if(isset($id)){{ route('account.update') }}@else{{ route('account.store') }} @endif">
+            <form class="px-4 py-3 border-divider rounded-bottom-8 shadow-sm" method="POST" style="background-color:  #f7f9fb;" action="@if(isset($id)){{ route('account.update') }}@else{{ route('account.store') }} @endif">
                @csrf
                <div class="row">  
-                <h3 class="mb-3" style="text-align: center">PART A</h3>
+                <div class="col-md-6">
+                <h3 class="mb-2" style="text-align: center">PART A</h3>
                   @if(isset($id))   
                      <input type="hidden" value="{{ $account->id }}" id="account_id" name="account_id" />  
                   @endif           
-                  <div class="mb-4 col-md-4">
+                  <div class="mb-4 col-md-6">
                      <label for="account_name" class="form-label font-14 font-heading">ACCOUNT NAME</label>
                      <input type="text" class="form-control" id="account_name" name="account_name" placeholder="ENTER ACCOUNT NAME" required value="@if(isset($id)){{$account->account_name}}@endif"  @if(isset($account) && $account->company_id==0) readonly @endif/>
                      <input type="hidden" name="company_id" id="company_id" value="{{$formCompanyId}}"/>
@@ -41,14 +43,15 @@
                      </ul>
                   </div>
                   <div class="clearfix"></div>
-                  <div class="mb-4 col-md-4">
+                  <div class="mb-4 col-md-6">
                      <label for="print_name" class="form-label font-14 font-heading">PRINT NAME</label>
                      <input type="text" class="form-control" id="print_name" name="print_name" placeholder="ENTER PRINT NAME" required value="@if(isset($id)){{$account->print_name}}@endif" @if(isset($account) && $account->company_id==0) readonly @endif>
                   </div>
+        
                   <div class="clearfix"></div>
-                  <div class="mb-4 col-md-4" @if(isset($account) && $account->company_id==0) style="display:none" @endif>
+                  <div class="mb-4 col-md-6" @if(isset($account) && $account->company_id==0) style="display:none" @endif>
                      <label for="under_group" class="form-label font-14 font-heading">UNDER GROUP</label>
-                     <select class="form-select form-select-lg select2-single" name="under_group" id="under_group" aria-label="form-select-lg example" required>
+                     <select class="form-select select2-single" name="under_group" id="under_group" aria-label="form-select example" required>
                         <option value="">SELECT GROUP</option>
                         @foreach($accountgroup as $value)
                            @php $under_debtor_status = 0;$under_creditors_status = 0; $under_dutytaxes_status = 0;$bank_account_status = 0;$capital_account_status = 0;$loan_status = 0; $under_expense_status=0;@endphp
@@ -88,50 +91,44 @@
                      </select>
                      <input type="hidden" value="@if(isset($id)){{ $account->under_group_type }}@endif" id="under_group_type" name="under_group_type" /> 
                   </div>
-                  <div class="clearfix"></div>
-                  <div class="mb-4 col-md-4">
-                     <label for="opening_balance" class="form-label font-14 font-heading">OPENING BALANCE</label>
-                     <input type="text" class="form-control" id="opening_balance" name="opening_balance" placeholder="ENTER OPENING BALANCE" value="@if(isset($id)){{$account->opening_balance}}@endif">
-                  </div>
-                  <div class="mb-4 col-md-4">
-                     <label for="opening_balance_type" class="form-label font-14 font-heading">BALANCE TYPE</label>
-                     <select class="form-select form-select-lg" name="opening_balance_type" id="opening_balance_type" aria-label="form-select-lg example">
-                        <option value="">SELECT BALANCE TYPE</option>
-                        <option value="debit" @if(isset($id) && $account->dr_cr=='debit') selected  @endif>Debit</option>
-                        <option value="credit" @if(isset($id) && $account->dr_cr=='credit') selected  @endif>Credit</option>
-                     </select>
-                  </div>
+                 <div class="row">
+
+    <div class="mb-4 col-md-5">
+        <label for="opening_balance" class="form-label font-14 font-heading">
+            OPENING BALANCE
+        </label>
+        <input type="text"
+               class="form-control"
+               id="opening_balance"
+               name="opening_balance"
+               placeholder="ENTER OPENING BALANCE"
+               value="@if(isset($id)){{$account->opening_balance}}@endif">
+    </div>
+
+    <div class="mb-4 col-md-4">
+        <label for="opening_balance_type" class="form-label font-14 font-heading">
+            BALANCE TYPE
+        </label>
+        <select class="form-select form-select-lg"
+                name="opening_balance_type"
+                id="opening_balance_type">
+            <option value="">SELECT</option>
+            <option value="debit" @if(isset($id) && $account->dr_cr=='debit') selected @endif>
+                Debit
+            </option>
+            <option value="credit" @if(isset($id) && $account->dr_cr=='credit') selected @endif>
+                Credit
+            </option>
+        </select>
+    </div>
+
+</div>
                   <div class="clearfix"></div>
                   
-                    <div id="rcmDiv" class="rcm_div row" style="display:none;">
-
-                  <!-- RCM Yes / No -->
-                     <div class="mb-4 col-md-4">
-                        <label class="form-label fw-semibold">Reverse Charge (RCM)</label>
-                        <select name="rcm" class="form-select">
-                              <option value="">-- Select RCM --</option>
-                              <option value="1" @if(isset($id) && $account->rcm==1) selected  @endif>Yes</option>
-                              <option value="0" @if(isset($id) && $account->rcm ==0) selected @endif>No</option>
-                        </select>
-                     </div>
-
-                     <!-- RCM Rate -->
-                     <div class="mb-4 col-md-4 rcm-rate-div" style="display:none;">
-                        <label class="form-label fw-semibold">RCM Rate</label>
-                        <select name="rcm_rate" class="form-select">
-                           <option value="">Select RCM Rate</option>
-                           <option value="5"  @if(isset($id) && $account->rcm_rate == 5) selected @endif>5%</option>
-                           <option value="18" @if(isset($id) && $account->rcm_rate == 18) selected @endif>18%</option>
-                           <option value="28" @if(isset($id) && $account->rcm_rate == 28) selected @endif>28%</option>
-                        </select>
-                     </div>
+                   
 
 
-
-                  </div>
-
-
-                  <div class="mb-4 col-md-4 tax_type_div common_div" style="display: none;">
+                  <div class="mb-4 col-md-6 tax_type_div common_div" style="display: none;">
                      <label for="tax_type" class="form-label font-14 font-heading">TAX TYPE</label>
                      <select class="form-select form-select-lg common_val" name="tax_type" id="tax_type" aria-label="form-select-lg example">
                         <option value="">SELECT TAX TYPE</option>
@@ -144,7 +141,7 @@
                   </div>
                   <div class="clearfix"></div>
                   <div id="primary_gst_section" class="gstin-parent">
-                    <div class="mb-4 col-md-4 gstin_div common_div" style="display: none;">
+                    <div class="mb-4 col-md-6 gstin_div common_div" style="display: none;">
                         <label for="gstin" class="form-label font-14 font-heading">GST NO.</label>
                         <div class="input-group">
                         <input type="text" class="form-control common_val" id="gstin" name="gstin" placeholder="ENTER GST NO."  value="@if(isset($id)){{$account->gstin}}@endif"/>
@@ -158,6 +155,75 @@
                   @php
                      $hasGstin = isset($account) && !empty($account->gstin);
                   @endphp
+                
+
+                  <div class="clearfix"></div>
+                  <div class="row">
+                  <div class="mb-4 col-md-7 address_div common_div" style="display: none;">
+                     <label for="address" class="form-label font-14 font-heading">ADDRESS</label>
+                     <textarea class="form-control common_val" 
+                          id="address" 
+                          name="address" 
+                          placeholder="ENTER ADDRESS" 
+                          maxlength="250" 
+                  rows="2">@if(isset($id)){{$account->address}}@endif</textarea>
+                 </div>
+                  <div class="mb-2 col-md-1 pincode_div common_div" style="display: none;">
+                     <svg style="color: green;cursor: pointer;margin-top: 42px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"tabindex="0" class="bg-primary rounded-circle add_address" data-id="" viewBox="0 0 24 24">
+                        <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/>
+                      </svg>
+                  </div>
+</div>
+                 <div class="row">
+
+                  <div class="mb-2 col-md-4 pincode_div common_div" style="display: none;">
+                     <label for="pincode" class="form-label font-14 font-heading">PINCODE</label>
+                     <input type="number" class="form-control common_val" id="pincode" name="pincode" placeholder="ENTER PINCODE" value="@if(isset($id)){{$account->pin_code}}@endif"/>
+                  </div>
+                  <div class="mb-2 col-md-4 pincode_div common_div" style="display: none;">
+                     <label for="location" class="form-label font-14 font-heading">LOCATION/STATION</label>
+                     <input type="text" class="form-control common_val" id="location" name="location" placeholder="ENTER STATION" value="@if(isset($id)){{$account->location}}@endif"/>
+                  </div>
+</div>
+                 
+                  <div class="clearfix"></div>
+                  <div class="address-wrapper">
+                     @if(isset($other_address) && count($other_address)>0)
+                        @foreach($other_address as $address)
+                           <div class="clearfix added-address row">
+                              <div class="mb-4 col-md-7 address_div common_div">
+                                 <label class="form-label font-14 font-heading">ADDRESS</label>
+                                 <input type="hidden"
+                                    name="other_address_id[]"
+                                    value="{{ $address->id }}">
+
+                                <input type="hidden"
+                                    name="address_gst_group[]"
+                                    value="primary">
+                                 <textarea class="form-control common_val" name="other_address[]" placeholder="ENTER ADDRESS" maxlength="250" rows="2">{{$address->address}}</textarea> 
+                              </div>
+                              <div class="row">
+                              <div class="mb-2 col-md-2 pincode_div common_div">
+                                 <label class="form-label font-14 font-heading">PINCODE</label>
+                                 <input type="number" class="form-control common_val" name="other_pincode[]" placeholder="ENTER PINCODE" value="{{$address->pincode}}"/> 
+                              </div>
+                              <div class="mb-2 col-md-2 pincode_div common_div">
+                                 <label class="form-label font-14 font-heading">LOCATION/STATION</label>
+                                 <input type="text" class="form-control common_val" name="other_location[]" placeholder="ENTER STATION" value="{{$address->location}}"/> 
+                              </div>
+</div>
+                              <div class="mb-2 col-md-1 pincode_div common_div">
+                                 <svg style="color: red;cursor: pointer;margin-top: 42px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bg-danger rounded-circle remove_address" viewBox="0 0 24 24">
+                                    <path d="M19 13H5V11H19V13Z" fill="white"/>
+                                 </svg>
+                              </div>
+                           </div>
+                           @endforeach
+                           @endif
+
+                  </div>
+                </div>
+                <div class="row">
                  <div class="mb-4 col-md-4 state_div common_div" style="display: none;">
                            <label for="state" class="form-label font-14 font-heading">STATE</label>
 
@@ -178,65 +244,11 @@
                            <!-- Hidden field to store actual submitted value -->
                            <input type="hidden" name="state" id="state_hidden" value="@if(isset($id)){{ $account->state }}@endif">
                  </div>
-
-                  <div class="clearfix"></div>
-                  <div class="mb-4 col-md-7 address_div common_div" style="display: none;">
-                     <label for="address" class="form-label font-14 font-heading">ADDRESS</label>
-                     <textarea class="form-control common_val" 
-                          id="address" 
-                          name="address" 
-                          placeholder="ENTER ADDRESS" 
-                          maxlength="250" 
-                  rows="2">@if(isset($id)){{$account->address}}@endif</textarea>
-                 </div>
-                  <div class="mb-2 col-md-2 pincode_div common_div" style="display: none;">
-                     <label for="pincode" class="form-label font-14 font-heading">PINCODE</label>
-                     <input type="number" class="form-control common_val" id="pincode" name="pincode" placeholder="ENTER PINCODE" value="@if(isset($id)){{$account->pin_code}}@endif"/>
+                  <div class="mb-4 col-md-4 pan_div common_div" style="display: none;">
+                     <label for="pan" class="form-label font-14 font-heading">PAN</label>
+                     <input type="text" class="form-control common_val" id="pan" name="pan" placeholder="Enter PAN" value="@if(isset($id)){{$account->pan}}@endif"/>
                   </div>
-                  <div class="mb-2 col-md-2 pincode_div common_div" style="display: none;">
-                     <label for="location" class="form-label font-14 font-heading">LOCATION/STATION</label>
-                     <input type="text" class="form-control common_val" id="location" name="location" placeholder="ENTER STATION" value="@if(isset($id)){{$account->location}}@endif"/>
-                  </div>
-                  <div class="mb-2 col-md-1 pincode_div common_div" style="display: none;">
-                     <svg style="color: green;cursor: pointer;margin-top: 42px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"tabindex="0" class="bg-primary rounded-circle add_address" data-id="" viewBox="0 0 24 24">
-                        <path d="M11 19V13H5V11H11V5H13V11H19V13H13V19H11Z" fill="white"/>
-                      </svg>
-                  </div>
-                  <div class="clearfix"></div>
-                  <div class="address-wrapper">
-                     @if(isset($other_address) && count($other_address)>0)
-                        @foreach($other_address as $address)
-                           <div class="clearfix added-address row">
-                              <div class="mb-4 col-md-7 address_div common_div">
-                                 <label class="form-label font-14 font-heading">ADDRESS</label>
-                                 <input type="hidden"
-                                    name="other_address_id[]"
-                                    value="{{ $address->id }}">
-
-                                <input type="hidden"
-                                    name="address_gst_group[]"
-                                    value="primary">
-                                 <textarea class="form-control common_val" name="other_address[]" placeholder="ENTER ADDRESS" maxlength="250" rows="2">{{$address->address}}</textarea> 
-                              </div>
-                              <div class="mb-2 col-md-2 pincode_div common_div">
-                                 <label class="form-label font-14 font-heading">PINCODE</label>
-                                 <input type="number" class="form-control common_val" name="other_pincode[]" placeholder="ENTER PINCODE" value="{{$address->pincode}}"/> 
-                              </div>
-                              <div class="mb-2 col-md-2 pincode_div common_div">
-                                 <label class="form-label font-14 font-heading">LOCATION/STATION</label>
-                                 <input type="text" class="form-control common_val" name="other_location[]" placeholder="ENTER STATION" value="{{$address->location}}"/> 
-                              </div>
-                              <div class="mb-2 col-md-1 pincode_div common_div">
-                                 <svg style="color: red;cursor: pointer;margin-top: 42px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bg-danger rounded-circle remove_address" viewBox="0 0 24 24">
-                                    <path d="M19 13H5V11H19V13Z" fill="white"/>
-                                 </svg>
-                              </div>
-                           </div>
-                           @endforeach
-                           @endif
-
-                  </div>
-                </div>
+</div>
                 <div class="gstin_div common_div" style="display:none;">
 
                     <div id="primary_add_gst_btn">
@@ -436,92 +448,18 @@
 
                 </div>
                   <div class="clearfix"></div>
-                  <div class="mb-4 col-md-4 pan_div common_div" style="display: none;">
-                     <label for="pan" class="form-label font-14 font-heading">PAN</label>
-                     <input type="text" class="form-control common_val" id="pan" name="pan" placeholder="Enter PAN" value="@if(isset($id)){{$account->pan}}@endif"/>
-                  </div>
+                 
                    <!-- SMS Send Status -->
-                  <div class="mb-4 col-md-4 sms_status_div common_div" style="display:none;">
-                     <label class="form-label">SMS Send Status</label>
-                     <select class="form-select" name="sms_status" id="sms_status">
-                        <option value="">Select</option>
-                        <option value="Yes" @if(isset($id) && $account->sms_status=="1") selected  @endif>Yes</option>
-                        <option value="No" @if(isset($id) && $account->sms_status=="0") selected  @endif>No</option>
-                     </select>
-                  </div>
+                
 
-                  <div class="mb-4 col-md-4 credit_day_select_div common_div" style="display:none;">
-                     <label class="form-label">Credit Days</label>
-                     <select class="form-select" name="credit_days" id="credit_days">
-                        <option value="">Select</option>
-                        @foreach($credit_days as $cd)
-                              <option value="{{ $cd->days }}" @if(isset($id) && $account->credit_days==$cd->days) selected  @endif>{{ $cd->days }} Days</option>
-                        @endforeach
-                     </select>
-                  </div>
-                  <div class="clearfix"></div>
-                  <div class="mb-4 col-md-4 due_day_div common_div" style="display: none;">
-                     <label for="due_day" class="form-label font-14 font-heading">DUE DAYS</label>
-                     <input type="number" class="form-control common_val" id="due_day" name="due_day" placeholder="ENTER DUE DAYS" value="@if(isset($id)){{$account->due_day}}@endif"/>
-                  </div>
-                  <div class="mb-4 col-md-4 credit_limit_div common_div" style="display: none;">
-                     <label for="credit_limit" class="form-label font-14 font-heading">CREDIT LIMIT</label>
-                     <input type="number" class="form-control common_val" id="credit_limit" name="credit_limit" placeholder="ENTER CREDIT LIMIT" value="@if(isset($id)){{$account->credit_limit}}@endif"/>
-                  </div>
-                  <div class="clearfix"></div>
-                  <div class="mb-4 col-md-4 contact_person_div common_div" style="display: none;">
-                     <label for="contact_person" class="form-label font-14 font-heading">CONTACT PERSON</label>
-                     <input type="text" class="form-control common_val" id="contact_person" name="contact_person" placeholder="ENTER CONTACT PERSON" value="@if(isset($id)){{$account->contact_person}}@endif"/>
-                  </div>
-                  <div class="mb-4 col-md-4 mobile_no_div common_div" style="display: none;">
-                     <label for="mobile_no" class="form-label font-14 font-heading">MOBILE NO.</label>
-                     <input type="number" class="form-control common_val" id="mobile_no" name="mobile_no" placeholder="ENTER MOBILE NO." value="@if(isset($id)){{$account->mobile}}@endif"/>
-                  </div>
-                  <div class="clearfix"></div>
-                  <div class="mb-4 col-md-4 whatsapp_no_div common_div" style="display: none;">
-                     <label for="whatsapp_no" class="form-label font-14 font-heading">WHATSAPP NO.</label>
-                     <input type="number" class="form-control common_val" id="whatsapp_no" name="whatsapp_no" placeholder="ENTER WHATSAPP NO." value="@if(isset($id)){{$account->whatsup_number}}@endif"/>
-                  </div>
-                  <div class="mb-4 col-md-4 email_div common_div" style="display: none;">
-                     <label for="email" class="form-label font-14 font-heading">E-MAIL ID</label>
-                     <input type="email" class="form-control common_val" id="email" name="email" placeholder="ENTER E-MAIL ID" value="@if(isset($id)){{$account->email}}@endif"/>
-                  </div>
-                  <div class="clearfix"></div>
-                  <div class="mb-4 col-md-4 account_no_div common_div" style="display: none;">
-                     <label for="account_no" class="form-label font-14 font-heading">BANK ACCOUNT NO.</label>
-                     <input type="number" class="form-control common_val" id="account_no" name="account_no" placeholder="ENTER BANK ACCOUNT NO." value="@if(isset($id)){{$account->bank_account_no}}@endif"/>
-                  </div>
-                  <div class="mb-4 col-md-4 ifsc_code_div common_div" style="display: none;">
-                     <label for="ifsc_code" class="form-label font-14 font-heading">BANK IFSC CODE</label>
-                     <input type="text" class="form-control common_val" id="ifsc_code" name="ifsc_code" placeholder="ENTER BANK IFSC CODE" value="@if(isset($id)){{$account->ifsc_code}}@endif"/>
-                  </div>
-                  <div class="clearfix"></div>
-                  <div class="mb-4 col-md-4 bank_name_div common_div" style="display: none;">
-                     <label for="bank_name" class="form-label font-14 font-heading">BANK NAME</label>
-                     <input type="text" class="form-control common_val" id="bank_name" name="bank_name" placeholder="ENTER BANK NAME" value="@if(isset($id)){{$account->bank_name}}@endif"/>
-                  </div>
-                  <div class="mb-4 col-md-4 bank_name_div common_div" style="display: none;">
-                     <label for="invoice_name" class="form-label font-14 font-heading">
-                        NAME TO SHOW IN INVOICE
-                     </label>
+                  
 
-                     <input type="text"
-                           class="form-control common_val"
-                           id="invoice_name"
-                           name="invoice_name"
-                           placeholder="ENTER NAME TO SHOW IN INVOICE"
-                           value="@if(isset($id) && isset($bank) && $bank->name != $account->account_name){{$bank->name}}@endif"/>
-                  </div>
-                  <div class="mb-4 col-md-4 bank_name_div common_div" style="display: none;">
-                     <label for="branch" class="form-label font-14 font-heading">BRANCH</label>
-                     <input type="text" class="form-control common_val" id="branch" name="branch" placeholder="ENTER BRANCH" value="@if(isset($id)){{$account->branch}}@endif"/>
-                  </div>
-                  <div class="mb-4 col-md-4 nature_of_account_div common_div" style="display: none;">
-                     <label for="nature_of_account" class="form-label font-14 font-heading">NATURE OF ACCOUNT</label>
-                     <input type="text" class="form-control common_val" id="nature_of_account" name="nature_of_account" placeholder="ENTER NATURE OF ACCOUNT" value="@if(isset($id)){{$account->nature_of_account}}@endif"/>
-                  </div>
                   <div class="clearfix"></div>
-                  <div class="mb-4 col-md-4 income_tax_class_div common_div" style="display: none;">
+                 
+                  <div class="clearfix"></div>
+                  
+                  <div class="clearfix"></div>
+                  <div class="mb-4 col-md-6 income_tax_class_div common_div" style="display: none;">
                      <label for="income_tax_class" class="form-label font-14 font-heading">INCOME TAX CLASS</label>
                      <select class="form-select form-select-lg common_val" id="income_tax_class" name="income_tax_class" aria-label="form-select-lg example">
                         <option value="">SELECT INCOME TAX CLASS</option>
@@ -534,7 +472,7 @@
                         <option value="SHIP" @if(isset($id) && $account->income_tax_class=='SHIP') selected  @endif>SHIP</option>
                      </select>
                   </div>
-                  <div class="mb-4 col-md-4 income_tax_dep_method_div common_div" style="display: none;">
+                  <div class="mb-4 col-md-6 income_tax_dep_method_div common_div" style="display: none;">
                      <label for="income_tax_dep_method" class="form-label font-14 font-heading">INCOME TAX DEP METHOD</label>
                      <select class="form-select form-select-lg common_val" id="income_tax_dep_method" name="income_tax_dep_method" aria-label="form-select-lg example">
                         <option value="">SELECT INCOME TAX DEP METHOD</option>
@@ -543,7 +481,7 @@
                      </select>
                   </div>
                   <div class="clearfix"></div>
-                  <div class="mb-4 col-md-4 income_tax_dep_rate_div common_div" style="display: none;">
+                  <div class="mb-4 col-md-6 income_tax_dep_rate_div common_div" style="display: none;">
                      <label for="income_tax_dep_rate" class="form-label font-14 font-heading">INCOME TAX DEP RATE</label>
                      <select class="form-select form-select-lg common_val" id="income_tax_dep_rate" name="income_tax_dep_rate" aria-label="form-select-lg example">
                         <option value="">SELECT INCOME TAX DEP RATE</option>
@@ -557,41 +495,154 @@
                      </select>
                   </div>                
                   <div class="clearfix"></div>
-                  <div class="mb-4 col-md-4" @if(isset($account) && $account->company_id==0) style="display:none" @endif>
-                     <label for="status" class="form-label font-14 font-heading">STATUS</label>
-                     <select class="form-select form-select-lg" name="status" id="status" aria-label="form-select-lg example" required>
-                        <option value="1" @if(isset($id) && $account->status=='1') selected  @endif>Enable</option>
-                        <option value="0" @if(isset($id) && $account->status=='0') selected  @endif>Disable</option>
+                
+               </div>
+<!-- </div> -->
+            <div class="col-md-4">
+               <h3 class="mb-4" style="text-align: center">PART B</h3>
+
+<div class="mb-4 col-md-4 credit_day_select_div common_div" style="display:none;">
+                     <label class="form-label">Credit Days</label>
+                     <select class="form-select" name="credit_days" id="credit_days">
+                        <option value="">Select</option>
+                        @foreach($credit_days as $cd)
+                              <option value="{{ $cd->days }}" @if(isset($id) && $account->credit_days==$cd->days) selected  @endif>{{ $cd->days }} Days</option>
+                        @endforeach
                      </select>
                   </div>
-               </div>
-               <h3 class="mb-3" style="text-align: center">PART B</h3>
-               <div class="col-md-4">                    
+
+
+                                 <!-- RCM Yes / No -->
+                 <div id="rcmDiv" class="rcm_div row" style="display:none;">
+
+                  <!-- RCM Yes / No -->
+                     <div class="mb-4 col-md-7">
+                        <label class="form-label fw-semibold">Reverse Charge (RCM)</label>
+                        <select name="rcm" class="form-select">
+                              <option value="">-- Select RCM --</option>
+                              <option value="1" @if(isset($id) && $account->rcm==1) selected  @endif>Yes</option>
+                              <option value="0" @if(isset($id) && $account->rcm ==0) selected @endif>No</option>
+                        </select>
+                     </div>
+
+                     <!-- RCM Rate -->
+                     <div class="mb-4 col-md-5 rcm-rate-div" style="display:none;">
+                        <label class="form-label fw-semibold">GST Rate(RCM)</label>
+                        <select name="rcm_rate" class="form-select">
+                           <option value="">Select RCM Rate</option>
+                           <option value="5"  @if(isset($id) && $account->rcm_rate == 5) selected @endif>5%</option>
+                           <option value="18" @if(isset($id) && $account->rcm_rate == 18) selected @endif>18%</option>
+                           <option value="28" @if(isset($id) && $account->rcm_rate == 28) selected @endif>28%</option>
+                        </select>
+                     </div>
+                  </div>
+ <div class="row">
+                  <div class="mb-4 col-md-6 due_day_div common_div" style="display: none;">
+                     <label for="due_day" class="form-label font-14 font-heading">DUE DAYS</label>
+                     <input type="number" class="form-control common_val" id="due_day" name="due_day" placeholder="ENTER DUE DAYS" value="@if(isset($id)){{$account->due_day}}@endif"/>
+                  </div>
+                  <div class="mb-4 col-md-6 credit_limit_div common_div" style="display: none;">
+                     <label for="credit_limit" class="form-label font-14 font-heading">CREDIT LIMIT</label>
+                     <input type="number" class="form-control common_val" id="credit_limit" name="credit_limit" placeholder="ENTER CREDIT LIMIT" value="@if(isset($id)){{$account->credit_limit}}@endif"/>
+                  </div>
+</div>
+                <div class="row">
+                  <div class="clearfix"></div>
+                  <div class="mb-4 col-md-6 contact_person_div common_div" style="display: none;">
+                     <label for="contact_person" class="form-label font-14 font-heading">CONTACT PERSON</label>
+                     <input type="text" class="form-control common_val" id="contact_person" name="contact_person" placeholder="ENTER CONTACT PERSON" value="@if(isset($id)){{$account->contact_person}}@endif"/>
+                  </div>
+                  <div class="mb-4 col-md-6 mobile_no_div common_div" style="display: none;">
+                     <label for="mobile_no" class="form-label font-14 font-heading">MOBILE NO.</label>
+                     <input type="number" class="form-control common_val" id="mobile_no" name="mobile_no" placeholder="ENTER MOBILE NO." value="@if(isset($id)){{$account->mobile}}@endif"/>
+                  </div>
+</div>
+<div class="row">
+                  <div class="clearfix"></div>
+                  <div class="mb-4 col-md-6 whatsapp_no_div common_div" style="display: none;">
+                     <label for="whatsapp_no" class="form-label font-14 font-heading">WHATSAPP NO.</label>
+                     <input type="number" class="form-control common_val" id="whatsapp_no" name="whatsapp_no" placeholder="ENTER WHATSAPP NO." value="@if(isset($id)){{$account->whatsup_number}}@endif"/>
+                  </div>
+                  <div class="mb-4 col-md-6 email_div common_div" style="display: none;">
+                     <label for="email" class="form-label font-14 font-heading">E-MAIL ID</label>
+                     <input type="email" class="form-control common_val" id="email" name="email" placeholder="ENTER E-MAIL ID" value="@if(isset($id)){{$account->email}}@endif"/>
+                  </div>
+</div>
+<div class="row">
+      <div class="mb-4 col-md-6 sms_status_div common_div" style="display:none;">
+                     <label class="form-label">SMS Send Status</label>
+                     <select class="form-select" name="sms_status" id="sms_status">
+                        <option value="">Select</option>
+                        <option value="Yes" @if(isset($id) && $account->sms_status=="1") selected  @endif>Yes</option>
+                        <option value="No" @if(isset($id) && $account->sms_status=="0") selected  @endif>No</option>
+                     </select>
+                  </div>
+</div>
+
+<div class="mb-4 col-md-8 bank_name_div common_div" style="display: none;">
+                     <label for="bank_name" class="form-label font-14 font-heading">BANK NAME</label>
+                     <input type="text" class="form-control common_val" id="bank_name" name="bank_name" placeholder="ENTER BANK NAME" value="@if(isset($id)){{$account->bank_name}}@endif"/>
+                  </div>
+                  <div class="mb-4 col-md-8 bank_name_div common_div" style="display: none;">
+                     <label for="invoice_name" class="form-label font-14 font-heading">
+                        NAME TO SHOW IN INVOICE
+                     </label>
+
+                     <input type="text"
+                           class="form-control common_val"
+                           id="invoice_name"
+                           name="invoice_name"
+                           placeholder="ENTER NAME TO SHOW IN INVOICE"
+                           value="@if(isset($id) && isset($bank) && $bank->name != $account->account_name){{$bank->name}}@endif"/>
+                  </div>
+                  <div class="row">
+                  <div class="mb-4 col-md-6 bank_name_div common_div" style="display: none;">
+                     <label for="branch" class="form-label font-14 font-heading">BRANCH</label>
+                     <input type="text" class="form-control common_val" id="branch" name="branch" placeholder="ENTER BRANCH" value="@if(isset($id)){{$account->branch}}@endif"/>
+                  </div>
+                  <div class="mb-4 col-md-6 nature_of_account_div common_div" style="display: none;">
+                     <label for="nature_of_account" class="form-label font-14 font-heading">NATURE OF ACCOUNT</label>
+                     <input type="text" class="form-control common_val" id="nature_of_account" name="nature_of_account" placeholder="ENTER NATURE OF ACCOUNT" value="@if(isset($id)){{$account->nature_of_account}}@endif"/>
+                  </div>
+</div>
+<div class="row">
+                  <div class="clearfix"></div>
+                  <div class="mb-4 col-md-6 account_no_div common_div" style="display: none;">
+                     <label for="account_no" class="form-label font-14 font-heading">BANK ACCOUNT NO.</label>
+                     <input type="number" class="form-control common_val" id="account_no" name="account_no" placeholder="ENTER BANK ACCOUNT NO." value="@if(isset($id)){{$account->bank_account_no}}@endif"/>
+                  </div>
+                  <div class="mb-4 col-md-6 ifsc_code_div common_div" style="display: none;">
+                     <label for="ifsc_code" class="form-label font-14 font-heading">BANK IFSC CODE</label>
+                     <input type="text" class="form-control common_val" id="ifsc_code" name="ifsc_code" placeholder="ENTER BANK IFSC CODE" value="@if(isset($id)){{$account->ifsc_code}}@endif"/>
+                  </div>
+</div>
+               <div class="col-md-7">                    
                     <div id="tds_part_b" style="display:none;">
-                        <div class="mb-3 row">
-                            <label class="col-5 col-form-label">TDS/TCS</label>
-                            <div class="col-7">
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">TDS APPLICABLE</label>
+                            
                                 <select name="tds_tcs" id="tds_tcs" class="form-select">
                                     <option value="">Select</option>
                                     <option value="yes" @if(isset($account) && $account->tds_tcs=='yes') selected @endif>YES</option>
                                     <option value="no" @if(isset($account) && $account->tds_tcs=='no') selected @endif>NO</option>
                                 </select>
-                            </div>
+                          
                         </div>
-                        <div class="mb-3 row" id="tds_type_row" style="display:none;">
-                            <label class="col-5 col-form-label">TYPE</label>
-                            <div class="col-7">
+                        <div class="mb-4" id="tds_type_row" style="display:none;">
+                            <label class="form-label fw-semibold">TYPE</label>
+                            
                                 <select name="tds_type" id="tds_type" class="form-select">
                                     <option value="">Select</option>
                                     <option value="salary" @if(isset($account) && $account->tds_type=='salary') selected @endif>Salary</option>
                                     <option value="non_salary" @if(isset($account) && $account->tds_type=='non_salary') selected @endif>Non Salary</option>
                                 </select>
-                            </div>
+                          
                         </div>
                         <div id="non_salary_section" style="display:none;">
-                            <div class="mb-3 row">
-                                <label class="col-5 col-form-label">Section</label>
-                                <div class="col-7">
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold">Section</label>
+                               
                                     <select name="tds_section" id="tds_section" class="form-select">
                                         <option value="">Select</option>
                                         @foreach($tds_sections as $sec)
@@ -606,30 +657,40 @@
                                             </option>
                                         @endforeach
                                     </select>
-                                </div>
+                                
                             </div>
-                            <div class="mb-3 row">
+                            <div class="mb-4 ">
                                 <label class="col-5 col-form-label">Description</label>
-                                <div class="col-7">
+                              
                                     <input type="text" id="tds_description" name="tds_description" value="@if(isset($account)){{$account->tds_description}}@endif" class="form-control" readonly>
-                                </div>
+                                
                             </div>
-                            <div class="mb-3 row">
+                            <div class="mb-4">
                                 <label class="col-5 col-form-label">Rate</label>
-                                <div class="col-7">
+                               
                                     <input type="text" id="tds_rate" name="tds_rate" value="@if(isset($account)){{$account->tds_rate}}@endif" class="form-control" readonly>
-                                </div>
+                                
                             </div>
-                            <div class="mb-3 row">
+                            <div class="mb-4">
                                 <label class="col-5 col-form-label">Threshold</label>
-                                <div class="col-7">
+                                
                                     <input type="text" id="tds_threshold" name="tds_threshold" value="@if(isset($account)){{$account->tds_threshold}}@endif" class="form-control" readonly>
-                                </div>
+                                
                             </div>
                         </div>
+
+                        
+</div>
+<div class="mb-4 col-md-6" @if(isset($account) && $account->company_id==0) style="display:none" @endif>
+                     <label for="status" class="form-label font-14 font-heading">STATUS</label>
+                     <select class="form-select form-select-lg" name="status" id="status" aria-label="form-select-lg example" required>
+                        <option value="1" @if(isset($id) && $account->status=='1') selected  @endif>Enable</option>
+                        <option value="0" @if(isset($id) && $account->status=='0') selected  @endif>Disable</option>
+                     </select>
+                  </div>
                     </div>
                 </div>
-               <div class="text-start">
+               <div class="text-end pe-4">
                   <button type="submit" class="btn btn-xs-primary save_btn">SUBMIT</button>
                </div>
             </form>
@@ -901,11 +962,18 @@ function checkGSTIN(inputvalues){
          $(".rcm_div").show(); 
          $(".rcm_div").find('select, input').prop('required', true); 
      }
+    
          
         $("#under_group_type").val($('option:selected', this).attr('data-type'));
-        if($(this).val() !== ""){
-        $("#tds_part_b").show();
-        }else{
+       if (
+    $(this).val() == 12 ||
+    $(this).val() == 13 ||
+    $(this).val() == 14 ||
+    $(this).val() == 15 ||
+    $(this).val() == 23
+) {
+    $("#tds_part_b").show();
+}else{
             $("#tds_part_b").hide();
         }
       
@@ -949,7 +1017,8 @@ $(document).on('click', '.add_address', function() {
             .val();
     }
     let newAddressBlock = `
-        <div class="clearfix added-address row">
+        <div class="clearfix added-address ">
+        <div class="row">
             <div class="mb-4 col-md-7 address_div common_div">
                 <label class="form-label font-14 font-heading">ADDRESS</label>
                 <input type="hidden"
@@ -964,14 +1033,16 @@ $(document).on('click', '.add_address', function() {
                           maxlength="250"
                           rows="2"></textarea>
             </div>
-            <div class="mb-2 col-md-2 pincode_div common_div">
+        </div>
+        <div class="row">
+            <div class="mb-2 col-md-4 pincode_div common_div">
                 <label class="form-label font-14 font-heading">PINCODE</label>
                 <input type="number"
                        class="form-control common_val"
                        name="other_pincode[]"
                        placeholder="ENTER PINCODE" />
             </div>
-            <div class="mb-2 col-md-2 pincode_div common_div">
+            <div class="mb-2 col-md-4 pincode_div common_div">
                 <label class="form-label font-14 font-heading">STATION/LOCATION</label>
                 <input type="text"
                        class="form-control common_val"
@@ -988,6 +1059,7 @@ $(document).on('click', '.add_address', function() {
                      viewBox="0 0 24 24">
                     <path d="M19 13H5V11H19V13Z" fill="white"/>
                 </svg>
+            </div>
             </div>
         </div>
     `;
