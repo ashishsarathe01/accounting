@@ -4,6 +4,7 @@ namespace App\Http\Controllers\gstReturn;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use App\Models\GSTR2B;
 use App\Models\Companies;
 use App\Models\gstToken;
@@ -95,47 +96,7 @@ class GSTR2BController extends Controller
                     ->where('res_month',$request->month)
                     ->first();
         if(!$GSTR2B){
-            //Check and generate token
-            // $gst_token = gstToken::select('txn','created_at')
-            //                     ->where('company_gstin',$request->gstin)
-            //                     ->where('company_id',Session::get('user_company_id'))
-            //                     ->where('status',1)
-            //                     ->orderBy('id','desc')
-            //                     ->first();
-            // if($gst_token){
-            //     $token_expiry = date('d-m-Y H:i:s',strtotime('+6 hour',strtotime($gst_token->created_at)));
-            //     $current_time = date('d-m-Y H:i:s');
-            //     if(strtotime($token_expiry)<strtotime($current_time)){
-            //         $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->gstin);
-            //         if($token_res==0){
-            //             $response = array(
-            //                 'status' => false,
-            //                 'message' => 'Something Went Wrong In Token Generation'
-            //             );
-            //             return json_encode($response);
-            //         }
-            //         $response = array(
-            //             'status' => true,
-            //             'message' => 'TOKEN-OTP'
-            //         );
-            //         return json_encode($response);
-            //     }
-            //     $txn = $gst_token->txn;
-            // }else{
-            //     $token_res = CommonHelper::gstTokenOtpRequest($state_code,$gst_user_name,$request->gstin);
-            //     if($token_res==0){
-            //             $response = array(
-            //                 'status' => false,
-            //                 'message' => 'Something Went Wrong In Token Generation'
-            //             );
-            //             return json_encode($response);
-            //         }
-            //     $response = array(
-            //             'status' => true,
-            //             'message' => 'TOKEN-OTP'
-            //     );
-            //     return json_encode($response);
-            // }
+           
             //Gst Credenatial
             if(!$this->gstCredentials){
                 $response = [
@@ -591,7 +552,133 @@ class GSTR2BController extends Controller
             if($verify_date!=""){
                 $verify_date = date('d-m-Y H:i:s',strtotime($verify_date));
             }
+            //Tax Summary Book Data
+            //Purchase Data
+            $bill_sundry = DB::table('bill_sundrys')
+                            ->whereIn('nature_of_sundry',['CGST','SGST','IGST'])
+                            ->where('company_id', Session::get('user_company_id'))
+                            ->where('status','1')
+                            ->where('delete','0')
+                            ->pluck('nature_of_sundry','id');
+            $purchase_ids = DB::table('purchases')
+                            ->where('merchant_gst', $request->gstin)
+                            ->where('company_id', Session::get('user_company_id'))
+                            ->where('date', 'like', $request->month.'%')
+                            ->where('delete', '0')
+                            ->where('status', '1')
+                            ->pluck('id');
+            $purchase_sundry = DB::table('purchase_sundries')
+                                ->select('bill_sundry', DB::raw('SUM(amount) as total_amount'))
+                                ->whereIn('purchase_id', $purchase_ids)
+                                ->groupBy('bill_sundry')
+                                ->get();
             
+            $purchase_arr = [];
+            foreach($purchase_sundry as $sundry){
+                if(isset($bill_sundry[$sundry->bill_sundry])){
+                    $purchase_arr[$bill_sundry[$sundry->bill_sundry]] = $sundry->total_amount;
+                }
+            }
+            //Credit Note
+            $sale_return_ids = DB::table('sales_returns')
+                            ->where('merchant_gst', $request->gstin)
+                            ->where('company_id', Session::get('user_company_id'))
+                            ->where('date', 'like', $request->month.'%')
+                            ->where('delete', '0')
+                            ->where('status', '1')
+                            ->where('voucher_type', 'PURCHASE')
+                            ->where('sr_nature', 'WITH GST')                            
+                            ->pluck('id');
+            $sale_return_sundry = DB::table('sale_return_sundries')
+                                ->select('bill_sundry', DB::raw('SUM(amount) as total_amount'))
+                                ->whereIn('sale_return_id', $sale_return_ids)
+                                ->groupBy('bill_sundry')
+                                ->get();
+            
+            $sale_return_arr = [];
+            foreach($sale_return_sundry as $sundry){
+                if(isset($bill_sundry[$sundry->bill_sundry])){
+                    $sale_return_arr[$bill_sundry[$sundry->bill_sundry]] = $sundry->total_amount;
+                }
+            }
+            
+            //Debit Note
+            $purchase_return_ids = DB::table('purchase_returns')
+                            ->where('merchant_gst', $request->gstin)
+                            ->where('company_id', Session::get('user_company_id'))
+                            ->where('date', 'like', $request->month.'%')
+                            ->where('delete', '0')
+                            ->where('status', '1')
+                            ->where('voucher_type', 'PURCHASE')
+                            ->where('sr_nature', 'WITH GST')
+                            
+                            ->pluck('id');
+            $purchase_return_sundry = DB::table('purchase_return_sundries')
+                                ->select('bill_sundry', DB::raw('SUM(amount) as total_amount'))
+                                ->whereIn('purchase_return_id', $purchase_return_ids)
+                                ->groupBy('bill_sundry')
+                                ->get();
+            
+            $purchase_return_arr = [];
+            foreach($purchase_return_sundry as $sundry){
+                if(isset($bill_sundry[$sundry->bill_sundry])){
+                    $purchase_return_arr[$bill_sundry[$sundry->bill_sundry]] = $sundry->total_amount;
+                }
+            }
+            //Journal Data
+            $journal_ids = DB::table('journals')
+                                ->where('merchant_gst', $request->gstin)
+                                ->where('company_id', Session::get('user_company_id'))
+                                ->where('claim_gst_status', 'YES')
+                                ->where('date', 'like', $request->month.'%')
+                                ->where('delete', '0')
+                                ->where('status', '1')
+                                ->selectRaw('
+                                    SUM(cgst) as total_cgst,
+                                    SUM(sgst) as total_sgst,
+                                    SUM(igst) as total_igst
+                                ')
+                                ->first();
+                                
+            $journal_arr = [];
+            foreach ($bill_sundry as $key => $value) {
+                if ($value == 'CGST') {
+                    $journal_arr[$value] = $journal_ids->total_cgst;
+                } elseif ($value == 'SGST') {
+                    $journal_arr[$value] = $journal_ids->total_sgst;
+                } elseif ($value == 'IGST') {
+                    $journal_arr[$value] = $journal_ids->total_igst;
+                }
+            }
+            $itcBookData = [];
+            $tax_arr = ['CGST','SGST','IGST'];
+            foreach ($tax_arr as $key => $value) {
+                $itcBookData[$value] =
+                    ($purchase_arr[$value] ?? 0) +
+                    ($journal_arr[$value] ?? 0) +
+                    ($sale_return_arr[$value] ?? 0) -
+                    ($purchase_return_arr[$value] ?? 0);
+            }
+            
+            $base_url = $this->gstCredentials->base_url;
+            $email_id = $this->gstCredentials->email_id;
+            $client_id = $this->gstCredentials->client_id;
+            $client_secret = $this->gstCredentials->client_secret;
+            $ip_address = $this->gstCredentials->ip_address;
+            $url = $base_url."/gstr3b/retsum";
+            $response = Http::withHeaders([
+                'Accept' => 'application/json',
+                'client_id' => $client_id,
+                'client_secret' => $client_secret
+            ])->get($url, [
+                'gstin' => $request->gstin,
+                'ret_period' => $month,
+                'email' => $email_id,
+            ]);
+            $data = $response->json();
+            if(!isset($data['data'])){
+                $data['data'] = [];
+            }
             $response = array(
                 'status' => true,
                 'message' => 'GSTR2B',
@@ -600,6 +687,8 @@ class GSTR2BController extends Controller
                 'verify_status' => $verify_by_status,
                 'verify_date' => $verify_date,
                 'verify_by' => $verify_by,
+                'itcApiData' => $data['data'],
+                'itcBookData' => $itcBookData,
             );
             return json_encode($response);
         }
@@ -684,42 +773,42 @@ class GSTR2BController extends Controller
         $b2b_invoices_on_portal_but_not_in_book = "";$total_val_on_portal_but_not_in_book = 0; $total_txval_on_portal_but_not_in_book = 0; $total_igst_on_portal_but_not_in_book = 0; $total_cgst_on_portal_but_not_in_book = 0; $total_sgst_on_portal_but_not_in_book = 0; $total_cess_on_portal_but_not_in_book = 0; $total_book_value_on_portal_but_not_in_book = 0;
 
         //Only in books but not portal code
-$book_vouchers = Purchase::select('voucher_no')
-    ->where('billing_gst', $request->ctin)
-    ->where('company_id', Session::get('user_company_id'))
-    ->where('merchant_gst', $request->gstin)
-    ->where('status', '1')
-    ->where('date', 'like', $request->month.'%')
-    ->where('delete', '0')
-    ->where(function($q) {
-        $q->whereNull('gstr2b_invoice_id')
-          ->orWhere('gstr2b_invoice_id', '');
-    })
-    ->pluck('voucher_no')
-    ->toArray();
+        $book_vouchers = Purchase::select('voucher_no')
+            ->where('billing_gst', $request->ctin)
+            ->where('company_id', Session::get('user_company_id'))
+            ->where('merchant_gst', $request->gstin)
+            ->where('status', '1')
+            ->where('date', 'like', $request->month.'%')
+            ->where('delete', '0')
+            ->where(function($q) {
+                $q->whereNull('gstr2b_invoice_id')
+                ->orWhere('gstr2b_invoice_id', '');
+            })
+            ->pluck('voucher_no')
+            ->toArray();
 
 
 
-$journal_vouchers = Journal::select('voucher_no')
-    ->where('vendor_gstin', $request->ctin)
-    ->where('company_id', Session::get('user_company_id'))
-    ->where('merchant_gst', $request->gstin)
-    ->where('claim_gst_status', 'YES')
-    ->where('status', '1')
-    ->where('delete', '0')
-    ->where('date', 'like', $request->month.'%')
-    ->where(function($q) {
-        $q->whereNull('gstr2b_invoice_id')
-          ->orWhere('gstr2b_invoice_id', '');
-    })
-    ->pluck('voucher_no')
-    ->toArray();
+        $journal_vouchers = Journal::select('voucher_no')
+            ->where('vendor_gstin', $request->ctin)
+            ->where('company_id', Session::get('user_company_id'))
+            ->where('merchant_gst', $request->gstin)
+            ->where('claim_gst_status', 'YES')
+            ->where('status', '1')
+            ->where('delete', '0')
+            ->where('date', 'like', $request->month.'%')
+            ->where(function($q) {
+                $q->whereNull('gstr2b_invoice_id')
+                ->orWhere('gstr2b_invoice_id', '');
+            })
+            ->pluck('voucher_no')
+            ->toArray();
 
 
 
-$book_vouchers = array_unique(
-    array_merge($book_vouchers, $journal_vouchers)
-);
+        $book_vouchers = array_unique(
+            array_merge($book_vouchers, $journal_vouchers)
+        );
         $portal_vouchers = [];
         $bill_sundry_igst = BillSundrys::where('company_id', Session::get('user_company_id'))
                                                 ->where('nature_of_sundry', 'IGST')
@@ -968,164 +1057,164 @@ $book_vouchers = array_unique(
         $total_book_value_only_in_book = 0; $total_val_only_in_book = 0; $total_txval_only_in_book = 0; $total_igst_only_in_book = 0; $total_cgst_only_in_book = 0; $total_sgst_only_in_book = 0; $total_cess_only_in_book = 0;
         $b2b_invoices_only_in_book = "";
 
-foreach ($only_in_book_voucher as $key => $invoice_no) {
+        foreach ($only_in_book_voucher as $key => $invoice_no) {
 
-    $book_data = Purchase::with(['purchaseSundry'])
-        ->where('voucher_no', $invoice_no)
-        ->where('billing_gst', $request->ctin)
-        ->where('company_id', Session::get('user_company_id'))
-        ->where('merchant_gst', $request->gstin)
-        ->where('status', '1')
-        ->where('delete', '0')
-        ->first();
+            $book_data = Purchase::with(['purchaseSundry'])
+                ->where('voucher_no', $invoice_no)
+                ->where('billing_gst', $request->ctin)
+                ->where('company_id', Session::get('user_company_id'))
+                ->where('merchant_gst', $request->gstin)
+                ->where('status', '1')
+                ->where('delete', '0')
+                ->first();
 
-    $is_journal = false;
+            $is_journal = false;
 
-    // IF NOT FOUND IN PURCHASE THEN SEARCH IN JOURNAL
-    if (!$book_data) {
+            // IF NOT FOUND IN PURCHASE THEN SEARCH IN JOURNAL
+            if (!$book_data) {
 
-        
-             $book_data = Journal::where('vendor_gstin', $request->ctin)
-            ->where('company_id', Session::get('user_company_id'))
-            ->where('merchant_gst', $request->gstin)
-            ->where('claim_gst_status', 'YES')
-            ->where('status', '1')
-            ->where('delete', '0')
-            ->first();   
-            
+                
+                    $book_data = Journal::where('vendor_gstin', $request->ctin)
+                    ->where('company_id', Session::get('user_company_id'))
+                    ->where('merchant_gst', $request->gstin)
+                    ->where('claim_gst_status', 'YES')
+                    ->where('status', '1')
+                    ->where('delete', '0')
+                    ->first();   
+                    
 
-        $is_journal = true;
-    }
+                $is_journal = true;
+            }
 
-    // SKIP IF STILL NOT FOUND
-    if (!$book_data) {
-        continue;
-    }
+            // SKIP IF STILL NOT FOUND
+            if (!$book_data) {
+                continue;
+            }
 
-    $book_value  = 0;
-    $igst_amount = 0;
-    $cgst_amount = 0;
-    $sgst_amount = 0;
-    $taxable_amt = 0;
+            $book_value  = 0;
+            $igst_amount = 0;
+            $cgst_amount = 0;
+            $sgst_amount = 0;
+            $taxable_amt = 0;
 
-    if ($is_journal) {
+            if ($is_journal) {
 
-        $book_value  = (float)$book_data->total_amount;
-        $taxable_amt = (float)$book_data->net_total;
+                $book_value  = (float)$book_data->total_amount;
+                $taxable_amt = (float)$book_data->net_total;
 
-        $total_book_value_only_in_book += $book_value;
-        $total_val_only_in_book += $book_value;
-        $total_txval_only_in_book += $taxable_amt;
+                $total_book_value_only_in_book += $book_value;
+                $total_val_only_in_book += $book_value;
+                $total_txval_only_in_book += $taxable_amt;
 
-        $igst_amount = (float)$book_data->igst;
-        $cgst_amount = (float)$book_data->cgst;
-        $sgst_amount = (float)$book_data->sgst;
+                $igst_amount = (float)$book_data->igst;
+                $cgst_amount = (float)$book_data->cgst;
+                $sgst_amount = (float)$book_data->sgst;
 
-        $total_igst_only_in_book += $igst_amount;
-        $total_cgst_only_in_book += $cgst_amount;
-        $total_sgst_only_in_book += $sgst_amount;
+                $total_igst_only_in_book += $igst_amount;
+                $total_cgst_only_in_book += $cgst_amount;
+                $total_sgst_only_in_book += $sgst_amount;
 
-    } else {
+            } else {
 
-        $book_value = (float)$book_data->total;
-        $taxable_amt = (float)$book_data->taxable_amt;
+                $book_value = (float)$book_data->total;
+                $taxable_amt = (float)$book_data->taxable_amt;
 
-        $total_book_value_only_in_book += $book_value;
-        $total_val_only_in_book += $book_value;
-        $total_txval_only_in_book += $taxable_amt;
+                $total_book_value_only_in_book += $book_value;
+                $total_val_only_in_book += $book_value;
+                $total_txval_only_in_book += $taxable_amt;
 
-        if ($book_data->purchaseSundry && count($book_data->purchaseSundry) > 0) {
+                if ($book_data->purchaseSundry && count($book_data->purchaseSundry) > 0) {
 
-            foreach ($book_data->purchaseSundry as $sundry) {
+                    foreach ($book_data->purchaseSundry as $sundry) {
 
-                if ($sundry->nature_of_sundry == "CGST") {
+                        if ($sundry->nature_of_sundry == "CGST") {
 
-                    $cgst_amount = (float)$sundry->amount;
-                    $total_cgst_only_in_book += $cgst_amount;
+                            $cgst_amount = (float)$sundry->amount;
+                            $total_cgst_only_in_book += $cgst_amount;
 
-                } else if ($sundry->nature_of_sundry == "SGST") {
+                        } else if ($sundry->nature_of_sundry == "SGST") {
 
-                    $sgst_amount = (float)$sundry->amount;
-                    $total_sgst_only_in_book += $sgst_amount;
+                            $sgst_amount = (float)$sundry->amount;
+                            $total_sgst_only_in_book += $sgst_amount;
 
-                } else if ($sundry->nature_of_sundry == "IGST") {
+                        } else if ($sundry->nature_of_sundry == "IGST") {
 
-                    $igst_amount = (float)$sundry->amount;
-                    $total_igst_only_in_book += $igst_amount;
+                            $igst_amount = (float)$sundry->amount;
+                            $total_igst_only_in_book += $igst_amount;
+                        }
+                    }
                 }
             }
+
+            $edit_btn = '';
+            if ($is_journal) {
+                $edit_btn = "<a href='".url('journal/'.$book_data->id.'/edit')."'
+                                class='btn btn-warning btn-sm'
+                                style='padding:0.2rem 0.4rem;font-size:0.75rem;'>
+                                Edit
+                            </a>";
+            } else {
+                $edit_btn = "<a href='".url('purchase-edit/'.$book_data->id)."'
+                                class='btn btn-warning btn-sm'
+                                style='padding:0.2rem 0.4rem;font-size:0.75rem;'>
+                                Edit
+                            </a>";
+            }
+            $b2b_invoices_only_in_book .= "
+            <tr>
+                <td></td>
+                <td>".$invoice_no."</td>
+                <td>".(!empty($book_data->date) ? date('d-m-Y', strtotime($book_data->date)) : '')."</td>
+                <td style='text-align: right;".$style."'>0</td>
+                <td style='text-align: right;".$style."'>".formatIndianNumber($book_value)."</td>
+                <td style='text-align: right'>".formatIndianNumber($taxable_amt)."</td>
+                <td style='text-align: right'>".formatIndianNumber($igst_amount)."</td>
+                <td style='text-align: right'>".formatIndianNumber($cgst_amount)."</td>
+                <td style='text-align: right'>".formatIndianNumber($sgst_amount)."</td>
+                <td style='text-align: right'>0.00</td>
+                <td>".$edit_btn."</td>
+            </tr>";
         }
-    }
 
-    $edit_btn = '';
-    if ($is_journal) {
-        $edit_btn = "<a href='".url('journal/'.$book_data->id.'/edit')."'
-                        class='btn btn-warning btn-sm'
-                        style='padding:0.2rem 0.4rem;font-size:0.75rem;'>
-                        Edit
-                    </a>";
-    } else {
-        $edit_btn = "<a href='".url('purchase-edit/'.$book_data->id)."'
-                        class='btn btn-warning btn-sm'
-                        style='padding:0.2rem 0.4rem;font-size:0.75rem;'>
-                        Edit
-                    </a>";
-    }
-    $b2b_invoices_only_in_book .= "
-    <tr>
-        <td></td>
-        <td>".$invoice_no."</td>
-        <td>".(!empty($book_data->date) ? date('d-m-Y', strtotime($book_data->date)) : '')."</td>
-        <td style='text-align: right;".$style."'>0</td>
-        <td style='text-align: right;".$style."'>".formatIndianNumber($book_value)."</td>
-        <td style='text-align: right'>".formatIndianNumber($taxable_amt)."</td>
-        <td style='text-align: right'>".formatIndianNumber($igst_amount)."</td>
-        <td style='text-align: right'>".formatIndianNumber($cgst_amount)."</td>
-        <td style='text-align: right'>".formatIndianNumber($sgst_amount)."</td>
-        <td style='text-align: right'>0.00</td>
-        <td>".$edit_btn."</td>
-    </tr>";
-}
+        if($total_book_value_only_in_book > 0){
 
-if($total_book_value_only_in_book > 0){
+            $b2b_invoices_only_in_book .= "
+            <tr>
+                <td></td>
+                <td></td>
+                <th style='text-align: right'>Total</th>
 
-    $b2b_invoices_only_in_book .= "
-    <tr>
-        <td></td>
-        <td></td>
-        <th style='text-align: right'>Total</th>
+                <th style='text-align: right'>
+                0 
+                </th>
 
-        <th style='text-align: right'>
-           0 
-        </th>
+                <th style='text-align: right'>
+                ".formatIndianNumber($total_val_only_in_book)."
+                </th>
 
-        <th style='text-align: right'>
-           ".formatIndianNumber($total_val_only_in_book)."
-        </th>
+                <th style='text-align: right'>
+                    ".formatIndianNumber($total_txval_only_in_book)."
+                </th>
 
-        <th style='text-align: right'>
-            ".formatIndianNumber($total_txval_only_in_book)."
-        </th>
+                <th style='text-align: right'>
+                    ".formatIndianNumber($total_igst_only_in_book)."
+                </th>
 
-        <th style='text-align: right'>
-            ".formatIndianNumber($total_igst_only_in_book)."
-        </th>
+                <th style='text-align: right'>
+                    ".formatIndianNumber($total_cgst_only_in_book)."
+                </th>
 
-        <th style='text-align: right'>
-            ".formatIndianNumber($total_cgst_only_in_book)."
-        </th>
+                <th style='text-align: right'>
+                    ".formatIndianNumber($total_sgst_only_in_book)."
+                </th>
 
-        <th style='text-align: right'>
-            ".formatIndianNumber($total_sgst_only_in_book)."
-        </th>
+                <th style='text-align: right'>
+                    ".formatIndianNumber($total_cess_only_in_book)."
+                </th>
 
-        <th style='text-align: right'>
-            ".formatIndianNumber($total_cess_only_in_book)."
-        </th>
-
-        <td></td>
-    </tr>";
-}
+                <td></td>
+            </tr>";
+        }
 
         $b2b_debit_note = "";$b2b_credit_note = "";
         $total_val = 0; $total_txval = 0; $total_igst = 0; $total_cgst = 0; $total_sgst = 0; $total_cess = 0;$total_book_value = 0;
@@ -2451,6 +2540,68 @@ if($total_book_value_only_in_book > 0){
         $only_on_book_debit_note_cgst_amount = $purchase_return_only_on_book->cgst_sum ?? 0;
         $only_on_book_debit_note_sgst_amount = $purchase_return_only_on_book->sgst_sum ?? 0;
         $only_on_book_debit_note_igst_amount = $purchase_return_only_on_book->igst_sum ?? 0;
+        $res = array(
+            "month"=>$month,
+            "gstin"=>$gstin,
+            "portal_cgst_amount"=>$portal_cgst_amount,
+            "portal_sgst_amount"=>$portal_sgst_amount,
+            "portal_igst_amount"=>$portal_igst_amount,
+            "portal_invoice_amount"=>$portal_invoice_amount,
+
+            "previous_month_invoice_amount"=>$previous_month_invoice_amount,
+            "previous_month_invoice_cgst_amount"=>$previous_month_invoice_cgst_amount,
+            "previous_month_invoice_sgst_amount"=>$previous_month_invoice_sgst_amount,
+            "previous_month_invoice_igst_amount"=>$previous_month_invoice_igst_amount,
+
+            "previous_month_journal_amount"=>$previous_month_journal_amount,
+            "previous_month_journal_cgst_amount"=>$previous_month_journal_cgst_amount,
+            "previous_month_journal_sgst_amount"=>$previous_month_journal_sgst_amount,
+            "previous_month_journal_igst_amount"=>$previous_month_journal_igst_amount,
+
+            "previous_month_credit_note_amount"=>$previous_month_credit_note_amount,
+            "previous_month_credit_note_cgst_amount"=>$previous_month_credit_note_cgst_amount,
+            "previous_month_credit_note_sgst_amount"=>$previous_month_credit_note_sgst_amount,
+            "previous_month_credit_note_igst_amount"=>$previous_month_credit_note_igst_amount,
+
+            "previous_month_debit_note_amount"=>$previous_month_debit_note_amount,
+            "previous_month_debit_note_cgst_amount"=>$previous_month_debit_note_cgst_amount,
+            "previous_month_debit_note_sgst_amount"=>$previous_month_debit_note_sgst_amount,
+            "previous_month_debit_note_igst_amount"=>$previous_month_debit_note_igst_amount,
+
+            "only_on_portal_purchase_amount"=>$only_on_portal_purchase_amount,
+            "only_on_portal_purchase_cgst_amount"=>$only_on_portal_purchase_cgst_amount,
+            "only_on_portal_purchase_sgst_amount"=>$only_on_portal_purchase_sgst_amount,
+            "only_on_portal_purchase_igst_amount"=>$only_on_portal_purchase_igst_amount,
+
+            "only_on_portal_credit_note_amount"=>$only_on_portal_credit_note_amount,
+            "only_on_portal_credit_note_cgst_amount"=>$only_on_portal_credit_note_cgst_amount,
+            "only_on_portal_credit_note_sgst_amount"=>$only_on_portal_credit_note_sgst_amount,
+            "only_on_portal_credit_note_igst_amount"=>$only_on_portal_credit_note_igst_amount,
+
+            "only_on_portal_debit_note_amount"=>$only_on_portal_debit_note_amount,
+            "only_on_portal_debit_note_cgst_amount"=>$only_on_portal_debit_note_cgst_amount,
+            "only_on_portal_debit_note_sgst_amount"=>$only_on_portal_debit_note_sgst_amount,
+            "only_on_portal_debit_note_igst_amount"=>$only_on_portal_debit_note_igst_amount,
+
+            "only_on_book_purchase_amount"=>$only_on_book_purchase_amount,
+            "only_on_book_purchase_cgst_amount"=>$only_on_book_purchase_cgst_amount,
+            "only_on_book_purchase_sgst_amount"=>$only_on_book_purchase_sgst_amount,
+            "only_on_book_purchase_igst_amount"=>$only_on_book_purchase_igst_amount,
+
+            "only_on_book_credit_note_amount"=>$only_on_book_credit_note_amount,
+            "only_on_book_credit_note_cgst_amount"=>$only_on_book_credit_note_cgst_amount,
+            "only_on_book_credit_note_sgst_amount"=>$only_on_book_credit_note_sgst_amount,
+            "only_on_book_credit_note_igst_amount"=>$only_on_book_credit_note_igst_amount,
+
+            "only_on_book_debit_note_amount"=>$only_on_book_debit_note_amount,
+            "only_on_book_debit_note_cgst_amount"=>$only_on_book_debit_note_cgst_amount,
+            "only_on_book_debit_note_sgst_amount"=>$only_on_book_debit_note_sgst_amount,
+            "only_on_book_debit_note_igst_amount"=>$only_on_book_debit_note_igst_amount,
+
+            "purchase_only_on_book_detail"=>$purchase_only_on_book_detail,
+            "journal_only_on_book_detail"=>$journal_only_on_book_detail
+        );
+        return json_encode($res);
         return view('gstReturn/gstr2b_reconcilation',[
             "month"=>$month,
             "gstin"=>$gstin,

@@ -1588,7 +1588,7 @@ class GSTR2AController extends Controller
                     $total_cgst_unlink  += $v->cgst_amount;
                     $total_sgst_unlink  += $v->sgst_amount;
                     $total_book_value_unlink += $v->total;
-                    
+                    $style = "";
                 $b2b_debit_note_unlinked.="<tr>
                                                 <td><input type='checkbox' checked class='check_action' data-key='".$key."' data-type='b2b_debit_rej_btn_' ></td>
                                                 <td>".$v->sr_prefix."</td>

@@ -84,30 +84,192 @@
                </div>
             </form>
             <div id="gst_div" style="display: none">
-                <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">GSTR2B 
-                    <button class="btn btn-info reconciliation">Reconciliation</button>
-                    <button class="btn btn-info verify_gstr2b" style="display:none;float: right;">Verify</button>
-                    <span id="verify_detail" style="float: right;color:green"></span>
-                </h5> 
-               <table class="table table-ordered bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm gst_table">
-                  <thead>
-                     <tr>
-                        <th rowspan="2">Account Name</th>
-                        <th colspan="2" style="text-align:center">B2B-INVOICE</th>
-                        <th colspan="2" style="text-align:center">B2B-CDNR</th>
-                        <th rowspan="2" style="text-align:right">Difference</th>
-                     </tr>
-                     <tr>
-                        <th style="text-align:right">Portal</th>
-                        <th style="text-align:right">Books</th>
-                        <th style="text-align:right">Portal</th>
-                        <th style="text-align:right">Books</th>
-                     </tr>
-                  </thead>
-                  <tbody style="font-size: 15px;">
-                     
-                  </tbody>
-               </table>
+               <div class="col-md-12 col-sm-12 px-0">
+                  <div class="container-fluid table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">
+                     <ul class="nav nav-fill nav-tabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                           <a class="nav-link active" id="fill-tab-0" data-bs-toggle="tab" href="#fill-tabpanel-0" role="tab" aria-controls="fill-tabpanel-0" aria-selected="true">
+                              GSTR-2B
+                           </a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                           <a class="nav-link" id="fill-tab-1" data-bs-toggle="tab" href="#fill-tabpanel-1" role="tab" aria-controls="fill-tabpanel-1" aria-selected="false">
+                              GSTR-2B RECONCILIATION
+                           </a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                           <a class="nav-link " id="fill-tab-2" data-bs-toggle="tab" href="#fill-tabpanel-2" role="tab" aria-controls="fill-tabpanel-2" aria-selected="true">
+                              GSTR-2B BOOK
+                           </a>
+                        </li>
+                     </ul>
+                     <div class="w-100 mt-0">
+                        <div class="tab-content mt-2">
+                           <!-- View Tab -->
+                           <div class="tab-pane active" id="fill-tabpanel-0" role="tabpanel" aria-labelledby="fill-tab-0">
+                              <table class="table table-ordered bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm gst_table">
+                                 <thead>
+                                    <tr>
+                                       <th rowspan="2">Account Name</th>
+                                       <th colspan="2" style="text-align:center">B2B-INVOICE</th>
+                                       <th colspan="2" style="text-align:center">B2B-CDNR</th>
+                                       <th rowspan="2" style="text-align:right">Difference</th>
+                                    </tr>
+                                    <tr>
+                                       <th style="text-align:right">Portal</th>
+                                       <th style="text-align:right">Books</th>
+                                       <th style="text-align:right">Portal</th>
+                                       <th style="text-align:right">Books</th>
+                                    </tr>
+                                 </thead>
+                                 <tbody style="font-size: 15px;">
+                                    
+                                 </tbody>
+                              </table>
+                           </div>
+                           <div class="tab-pane" id="fill-tabpanel-1" role="tabpanel" aria-labelledby="fill-tab-1">
+                                 <table class="table table-bordered bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm">
+                                    <thead>
+                                       <tr>
+                                          <th style='text-align:left'>Particular</th>
+                                          <th style='text-align:right'>Amount</th>
+                                          <th style='text-align:right'>IGST</th>
+                                          <th style='text-align:right'>CGST</th>
+                                          <th style='text-align:right'>SGST</th>
+                                       </tr>
+                                    </thead>
+                                    <tbody style="font-size: 15px;">
+                                       <tr>
+                                          <td style='text-align:left'>GST Portal</td>
+                                          <td style='text-align:right' id="portal_invoice_amount"></td>
+                                          <td style='text-align:right' id="portal_igst_amount"></td>
+                                          <td style='text-align:right' id="portal_cgst_amount"></td>
+                                          <td style='text-align:right' id="portal_sgst_amount"></td>
+                                       </tr>
+                                       <tr><th colspan="4">Previous Month</th></tr>
+                                       <tr>
+                                          <td style='text-align:left'>Previous Month Invoice (Portal)</td>
+                                          <td style='text-align:right' id="previous_month_invoice_amount"></td>
+                                          <td style='text-align:right' id="previous_month_invoice_igst_amount"></td>
+                                          <td style='text-align:right' id="previous_month_invoice_cgst_amount"></td>
+                                          <td style='text-align:right' id="previous_month_invoice_sgst_amount"></td>
+                                       </tr>
+                                       <tr>
+                                          <td style='text-align:left'>Previous Debit Note (Portal)</td>
+                                          <td style='text-align:right' id="previous_month_debit_note_amount"></td>
+                                          <td style='text-align:right' id="previous_month_debit_note_igst_amount"></td>
+                                          <td style='text-align:right' id="previous_month_debit_note_cgst_amount"></td>
+                                          <td style='text-align:right' id="previous_month_debit_note_sgst_amount"></td>
+                                       </tr>
+                                       <tr>
+                                          <td style='text-align:left'>Previous Credit Note (Portal)</td>
+                                          <td style='text-align:right' id="previous_month_credit_note_amount"></td>
+                                          <td style='text-align:right' id="previous_month_credit_note_igst_amount"></td>
+                                          <td style='text-align:right' id="previous_month_credit_note_cgst_amount"></td>
+                                          <td style='text-align:right' id="previous_month_credit_note_sgst_amount"></td>
+                                       </tr>
+                                       <tr><th colspan="4">Only In Book</th></tr>
+                                       <tr>
+                                          <td style='text-align:left'>Invoice (Only In Book)</td>
+                                          <td style='text-align:right;cursor:pointer;color:#0000FF' data-detail="" data-journal-detail="" class="purchase_only_on_book_detail" id="only_on_book_purchase_amount"></td>
+                                          <td style='text-align:right' id="only_on_book_purchase_igst_amount"></td>
+                                          <td style='text-align:right' id="only_on_book_purchase_cgst_amount"></td>
+                                          <td style='text-align:right' id="only_on_book_purchase_sgst_amount"></td>
+                                       </tr>
+                                       <tr>
+                                          <td style='text-align:left'>Debit Note (Only In Book)</td>
+                                          <td style='text-align:right' id="only_on_book_debit_note_amount"></td>
+                                          <td style='text-align:right' id="only_on_book_debit_note_igst_amount"></td>
+                                          <td style='text-align:right' id="only_on_book_debit_note_cgst_amount"></td>
+                                          <td style='text-align:right' id="only_on_book_debit_note_sgst_amount"></td>
+                                       </tr>
+                                       <tr>
+                                          <td style='text-align:left'>Credit Note (Only In Book)</td>
+                                          <td style='text-align:right' id="only_on_book_credit_note_amount"></td>
+                                          <td style='text-align:right' id="only_on_book_credit_note_igst_amount"></td>
+                                          <td style='text-align:right' id="only_on_book_credit_note_cgst_amount"></td>
+                                          <td style='text-align:right' id="only_on_book_credit_note_sgst_amount"></td>
+                                       </tr>
+                                       <tr><th colspan="4">Only On Portal</th></tr>
+                                       <tr>
+                                          <td style='text-align:left'>Invoice (Only On Portal)</td>
+                                          <td style='text-align:right' id="only_on_portal_purchase_amount"></td>
+                                          <td style='text-align:right' id="only_on_portal_purchase_igst_amount"></td>
+                                          <td style='text-align:right' id="only_on_portal_purchase_cgst_amount"></td>
+                                          <td style='text-align:right' id="only_on_portal_purchase_sgst_amount"></td>
+                                       </tr>
+                                       <tr>
+                                          <td style='text-align:left'>Debit Note (Only On Portal)</td>
+                                          <td style='text-align:right' id="only_on_portal_debit_note_amount"></td>
+                                          <td style='text-align:right' id="only_on_portal_debit_note_igst_amount"></td>
+                                          <td style='text-align:right' id="only_on_portal_debit_note_cgst_amount"></td>
+                                          <td style='text-align:right' id="only_on_portal_debit_note_sgst_amount"></td>
+                                       </tr>
+                                       <tr>
+                                          <td style='text-align:left'>Credit Note (Only On Portal)</td>
+                                          <td style='text-align:right' id="only_on_portal_credit_note_amount"></td>
+                                          <td style='text-align:right' id="only_on_portal_credit_note_igst_amount"></td>
+                                          <td style='text-align:right' id="only_on_portal_credit_note_cgst_amount"></td>
+                                          <td style='text-align:right' id="only_on_portal_credit_note_sgst_amount"></td>
+                                       </tr>
+                                       <tr>
+                                          <th style='text-align:left'>Book Total</th>
+                                          <th style='text-align:right' id="portal_after_above_affect_invoice">
+                                          </th>
+                                          <th style='text-align:right' id="portal_after_above_affect_igst">
+                                          </th>
+                                          <th style='text-align:right' id="portal_after_above_affect_cgst">
+                                          </th>
+                                          <th style='text-align:right' id="portal_after_above_affect_sgst">
+                                          </th>
+                                       </tr>
+                                       {{-- <tr>
+                                          <th style='text-align:left'>Book Total</th>
+                                          <th style='text-align:right' id="book_total_invoice">
+                                          </th>
+                                          <th style='text-align:right' id="book_total_igst">
+                                          </th>
+                                          <th style='text-align:right' id="book_total_cgst">
+                                          </th>
+                                          <th style='text-align:right' id="book_total_sgst">
+                                          </th>
+                                       </tr> --}}
+                                    </tbody>
+                                 </table>
+                           </div>
+                           <div class="tab-pane" id="fill-tabpanel-2" role="tabpanel" aria-labelledby="fill-tab-2">
+                              <div class="table-responsive">
+                                 <table class="table table-bordered gstr2b_book">
+                                    <thead>
+                                       <tr>
+                                          <th>S.No.</th>
+                                          <th>GSTIN</th>
+                                          <th>Party Name</th>
+                                          <th>Invoice No.</th>
+                                          <th>Invoice Date</th>
+                                          <th>Invoice Type</th>
+                                          <th>Invoice Value</th>
+                                          <th>Taxable Value</th>
+                                          <th>IGST</th>
+                                          <th>CGST</th>
+                                          <th>SGST</th>
+                                       </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                    <tfoot></tfoot>
+                                 </table>
+                              </div>
+                           </div>
+                        </div> <!-- tab content -->
+                     </div> 
+                  </div> 
+               </div>
+               {{-- <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">GSTR2B 
+                  <button class="btn btn-info reconciliation">Reconciliation</button>
+                  <button class="btn btn-info verify_gstr2b" style="display:none;float: right;">Verify</button>
+                  <span id="verify_detail" style="float: right;color:green"></span>
+               </h5>  --}}
+               
             </div>
             
          </div>
@@ -247,10 +409,36 @@
      </div>
    </div>
  </div>
- 
+<div class="modal fade" id="purchase_only_on_book_detailModal" tabindex="-1" aria-labelledby="remarkModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Purchase Only On Book Detail</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table table-bordered table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Account</th>
+                        <th>Invoice No.</th>
+                        <th>Invoice Date</th>
+                        <th style="text-align: right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="purchase_only_on_book_body">
+                  <!-- Content will be populated via AJAX -->
+                </tbody>
+            </table> 
+         </div>
+      </div>
+   </div>
+</div>
 </body>
 @include('layouts.footer')
 <script>
+   var reconciliation_click = 0;
+   var book_click = 0;
    $(document).ready(function(){
      
          let month = $("#month").val();
@@ -305,8 +493,9 @@
       });
    });
    function getGSTR2BData(month,gstin){
-       $(".verify_gstr2b").hide();
-       $("#verify_detail").html('');
+      $(".verify_gstr2b").hide();
+      $("#verify_detail").html('');
+      $("#cover-spin").show();
       $.ajax({
          url : "{{route('gstr2b-detail')}}",
          method : 'post',
@@ -322,12 +511,16 @@
                   if(obj.message=="TOKEN-OTP"){
                      $("#fgstin").val(gstin);
                      $("#otpModal").modal('toggle');
+                     $("#cover-spin").hide();
                   }else if(obj.message=="SUCCESS"){
                      // $("#otpModal").modal('toggle');
                      alert("OTP Verified Successfully");
                      getGSTR2BData(month,gstin);
+                     $("#cover-spin").hide();
                   }else if(obj.message=="GSTR2B"){
                      $(".gst_head").html('GSTR2B');
+                     reconciliation_click = 0;
+                     book_click = 0;
                      let html = "";let total_amount = 0;let total_book_amount = 0;
                      let total_b2b_portal = 0;
                      let total_b2b_books = 0;
@@ -400,6 +593,50 @@
                         <th style='text-align:right'>${Number(total_diff).toLocaleString('en-IN',{minimumFractionDigits:2})}</th>
                         </tr>`;
                      let finalHtml = html;
+
+                        
+
+
+                     if(obj.itcBookData){
+                        finalHtml += `
+                        <tr>
+                           <td colspan="6">
+                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;">
+
+                                    <h6 style="margin:0;">
+                                       Tax Summary
+                                    </h6>
+                                 </div>
+                                 <table class="table table-bordered ">
+                                    <tr class="section-header">
+                                       <th>4. Eligible ITC</th>
+                                       <th>Books</th>
+                                       <th class="d-flex justify-content-between align-items-center">
+                                       <span>Portal</span> </th>
+                                    </tr>
+                                    <tr>
+                                       <td>Integrated Tax</td>
+                                       <td>₹ ${formatIndianNumber(obj?.itcBookData?.IGST ?? 0)}</td>
+                                       <td>₹ ${formatIndianNumber(obj?.itcApiData?.itc_elg?.itc_net?.iamt ?? 0)}</td>
+                                    </tr>
+                                    <tr>
+                                       <td>Central Tax</td>
+                                       <td>₹ ${formatIndianNumber(obj?.itcBookData?.CGST ?? 0)}</td>
+                                       <td>₹ ${formatIndianNumber(obj?.itcApiData?.itc_elg?.itc_net?.camt ?? 0)}</td>
+                                    </tr>
+                                    <tr>
+                                       <td>State/UT Tax</td>
+                                       <td>₹ ${formatIndianNumber(obj?.itcBookData?.SGST ?? 0)}</td>
+                                       <td>₹ ${formatIndianNumber(obj?.itcApiData?.itc_elg?.itc_net?.samt ?? 0)}</td>
+                                    </tr>
+                                    <tr>
+                                       <td>CESS</td>
+                                       <td>₹ 0.00</td>
+                                       <td>₹ ${formatIndianNumber(obj?.itcApiData?.itc_elg?.itc_net?.csamt ?? 0)}</td>
+                                    </tr>
+                                 </table>`;
+
+                     }
                      if(obj.pending_notes && obj.pending_notes.length){
                         finalHtml += `
                         <tr>
@@ -423,10 +660,13 @@
                                           style="cursor:pointer;">
                                           📥
                                        </span>
-
+                                       <span class="pending_toggle_btn" title="Show/Hide Table" style="cursor:pointer;">
+                                          👁️
+                                       </span>
                                     </div>
 
                                  </div>
+                                 <div class="pending_table_wrapper" style="display:none;">
                                  <table class="table table-bordered pending_notes_table">
                                     <thead>
                                        <tr>
@@ -466,6 +706,7 @@
                         finalHtml += `
                                     </tbody>
                                  </table>
+                                 </div>
                            </td>
                         </tr>`;
                      }
@@ -475,57 +716,369 @@
                      }else if(obj.verify_status==1){
                          $("#verify_detail").html("Verified By : "+obj.verify_by+", Verify Date : "+obj.verify_date);
                      }
-                     
                      $("#gst_div").show();
+                     $("#cover-spin").hide();
                   }
                }else{
                   alert(obj.message);
+                  $("#cover-spin").hide();
                }
             }else{
                alert("Something Went Wrong.Please Try Again.");
+               $("#cover-spin").hide();
             }
          }
       });
    }
    
-    $(document).on('click','.verify_gstr2b',function(){
-        if(confirm("Are you sure to verify?")==true){
-            let month = $("#month").val();
-            let gstin = $("#gstin").val();
-            if(gstin=="" || month==""){
-                alert("All Fields Required.");
-                return;
-            }
-            $("#cover-spin").show();
-            $.ajax({
-                 url : "{{route('verify-gst2b')}}",
-                 method : 'post',
-                 data : {
-                    _token : '{{ csrf_token() }}',
-                    month : month,
-                    gstin : gstin
-                 },
-                 success : function(res){
-                     if(res!=""){
-                       let obj = JSON.parse(res);
-                       if(obj.status==true){
-                           alert("Verified Successfully.");
-                           getGSTR2BData(month,gstin);
-                        }else{
-                            alert("Something Went Wrong.");
-                        }
-                        
+   $(document).on('click','.verify_gstr2b',function(){
+      if(confirm("Are you sure to verify?")==true){
+         let month = $("#month").val();
+         let gstin = $("#gstin").val();
+         if(gstin=="" || month==""){
+               alert("All Fields Required.");
+               return;
+         }
+         $("#cover-spin").show();
+         $.ajax({
+               url : "{{route('verify-gst2b')}}",
+               method : 'post',
+               data : {
+                  _token : '{{ csrf_token() }}',
+                  month : month,
+                  gstin : gstin
+               },
+               success : function(res){
+                  if(res!=""){
+                     let obj = JSON.parse(res);
+                     if(obj.status==true){
+                        alert("Verified Successfully.");
+                        getGSTR2BData(month,gstin);
                      }else{
-                         alert("Something Went Wrong.");
+                           alert("Something Went Wrong.");
                      }
-                     $("#cover-spin").hide();
-                 }
-                 
-            });
+                     
+                  }else{
+                        alert("Something Went Wrong.");
+                  }
+                  $("#cover-spin").hide();
+               }
+               
+         });
+      }
+   });
+   $(document).on('click','#fill-tab-1',function(){
+      let month = $("#month").val();
+      let gstin = $("#gstin").val();
+      let url = "{{url('gstr2b-reconciliation-data')}}/month/gstin";
+      url = url.replace('month',month);
+      url = url.replace('gstin',gstin);
+      if(reconciliation_click==1){
+         return;
+      }
+      $("#cover-spin").show();
+      $.ajax({
+            url : url,
+            method : 'GET',
+            data : {
+               _token : '{{ csrf_token() }}'
+            },
+            success : function(res){
+               if(res!=""){
+                  let obj = JSON.parse(res);
+                  reconciliation_click = 1;
+                  
+                  $("#portal_invoice_amount").html(formatIndianNumber(obj.portal_invoice_amount));
+                  $("#portal_igst_amount").html(formatIndianNumber(obj.portal_igst_amount));
+                  $("#portal_cgst_amount").html(formatIndianNumber(obj.portal_cgst_amount));
+                  $("#portal_sgst_amount").html(formatIndianNumber(obj.portal_sgst_amount));
+                  $("#previous_month_invoice_amount").html(formatIndianNumber(parseFloat(obj.previous_month_invoice_amount) + parseFloat(obj.previous_month_journal_amount)));
+                  $("#previous_month_invoice_igst_amount").html(parseFloat(obj.previous_month_invoice_igst_amount) + parseFloat(obj.previous_month_journal_igst_amount));
+                  $("#previous_month_invoice_cgst_amount").html(formatIndianNumber(parseFloat(obj.previous_month_invoice_cgst_amount) + parseFloat(obj.previous_month_journal_cgst_amount)));
+                  $("#previous_month_invoice_sgst_amount").html(formatIndianNumber(parseFloat(obj.previous_month_invoice_sgst_amount) + parseFloat(obj.previous_month_journal_sgst_amount)));
+                  $("#previous_month_debit_note_amount").html(formatIndianNumber(obj.previous_month_debit_note_amount));
+                  $("#previous_month_debit_note_igst_amount").html(formatIndianNumber(obj.previous_month_debit_note_igst_amount));
+                  $("#previous_month_debit_note_cgst_amount").html(formatIndianNumber(obj.previous_month_debit_note_cgst_amount));
+                  $("#previous_month_debit_note_sgst_amount").html(formatIndianNumber(obj.previous_month_debit_note_sgst_amount));
+                  $("#previous_month_credit_note_amount").html(formatIndianNumber(obj.previous_month_credit_note_amount));
+                  $("#previous_month_credit_note_igst_amount").html(formatIndianNumber(obj.previous_month_credit_note_igst_amount));
+                  $("#previous_month_credit_note_cgst_amount").html(formatIndianNumber(obj.previous_month_credit_note_cgst_amount));
+                  $("#previous_month_credit_note_sgst_amount").html(formatIndianNumber(obj.previous_month_credit_note_sgst_amount));
+                  $("#only_on_book_purchase_amount").html(formatIndianNumber(obj.only_on_book_purchase_amount));
+                  $("#only_on_book_purchase_igst_amount").html(formatIndianNumber(obj.only_on_book_purchase_igst_amount));
+                  $("#only_on_book_purchase_cgst_amount").html(formatIndianNumber(obj.only_on_book_purchase_cgst_amount));
+                  $("#only_on_book_purchase_sgst_amount").html(formatIndianNumber(obj.only_on_book_purchase_sgst_amount));
+                  $("#only_on_book_debit_note_amount").html(formatIndianNumber(obj.only_on_book_debit_note_amount));
+                  $("#only_on_book_debit_note_igst_amount").html(formatIndianNumber(obj.only_on_book_debit_note_igst_amount));
+                  $("#only_on_book_debit_note_cgst_amount").html(formatIndianNumber(obj.only_on_book_debit_note_cgst_amount));
+                  $("#only_on_book_debit_note_sgst_amount").html(formatIndianNumber(obj.only_on_book_debit_note_sgst_amount));
+                  $("#only_on_book_credit_note_amount").html(formatIndianNumber(obj.only_on_book_credit_note_amount));
+                  $("#only_on_book_credit_note_igst_amount").html(formatIndianNumber(obj.only_on_book_credit_note_igst_amount));
+                  $("#only_on_book_credit_note_cgst_amount").html(formatIndianNumber(obj.only_on_book_credit_note_cgst_amount));
+                  $("#only_on_book_credit_note_sgst_amount").html(formatIndianNumber(obj.only_on_book_credit_note_sgst_amount));
+                  $("#only_on_portal_purchase_amount").html(formatIndianNumber(obj.only_on_portal_purchase_amount));
+                  $("#only_on_portal_purchase_igst_amount").html(formatIndianNumber(obj.only_on_portal_purchase_igst_amount));
+                  $("#only_on_portal_purchase_cgst_amount").html(formatIndianNumber(obj.only_on_portal_purchase_cgst_amount));
+                  $("#only_on_portal_purchase_sgst_amount").html(formatIndianNumber(obj.only_on_portal_purchase_sgst_amount));
+                  $("#only_on_portal_debit_note_amount").html(formatIndianNumber(obj.only_on_portal_debit_note_amount));
+                  $("#only_on_portal_debit_note_igst_amount").html(formatIndianNumber(obj.only_on_portal_debit_note_igst_amount));
+                  $("#only_on_portal_debit_note_cgst_amount").html(formatIndianNumber(obj.only_on_portal_debit_note_cgst_amount));
+                  $("#only_on_portal_debit_note_sgst_amount").html(formatIndianNumber(obj.only_on_portal_debit_note_sgst_amount));
+                  $("#only_on_portal_credit_note_amount").html(formatIndianNumber(obj.only_on_portal_credit_note_amount));
+                  $("#only_on_portal_credit_note_igst_amount").html(formatIndianNumber(obj.only_on_portal_credit_note_igst_amount));
+                  $("#only_on_portal_credit_note_cgst_amount").html(formatIndianNumber(obj.only_on_portal_credit_note_cgst_amount));
+                  $("#only_on_portal_credit_note_sgst_amount").html(formatIndianNumber(obj.only_on_portal_credit_note_sgst_amount));
+                  $("#book_total_invoice").html(formatIndianNumber(obj.book_total_invoice));
+                  $("#book_total_igst").html(formatIndianNumber(obj.book_total_igst));
+                  $("#book_total_cgst").html(formatIndianNumber(obj.book_total_cgst));
+                  $("#book_total_sgst").html(formatIndianNumber(obj.book_total_sgst));
+                  $("#only_on_book_purchase_amount").attr('data-detail',JSON.stringify(obj.purchase_only_on_book_detail));
+                  $("#only_on_book_purchase_amount").attr('data-journal-detail',JSON.stringify(obj.journal_only_on_book_detail));
+                  let portal_after_above_affect_invoice = parseFloat(obj.portal_invoice_amount)
+                           - parseFloat(obj.previous_month_invoice_amount)
+                           - parseFloat(obj.previous_month_debit_note_amount)
+                           + parseFloat(obj.previous_month_credit_note_amount) 
+                           + parseFloat(obj.only_on_book_purchase_amount)
+                           - parseFloat(obj.only_on_book_debit_note_amount)
+                           + parseFloat(obj.only_on_book_credit_note_amount)
+                           - parseFloat(obj.only_on_portal_purchase_amount)
+                           - parseFloat(obj.only_on_portal_debit_note_amount)
+                           + parseFloat(obj.only_on_portal_credit_note_amount);
+                  $("#portal_after_above_affect_invoice").html(formatIndianNumber(portal_after_above_affect_invoice));
+                  let portal_after_above_affect_igst = parseFloat(obj.portal_igst_amount)
+                           - parseFloat(obj.previous_month_invoice_igst_amount)
+                           + parseFloat(obj.previous_month_journal_igst_amount)
+                           - parseFloat(obj.previous_month_debit_note_igst_amount)
+                           + parseFloat(obj.previous_month_credit_note_igst_amount)
+                           + parseFloat(obj.only_on_book_purchase_igst_amount)
+                           - parseFloat(obj.only_on_book_debit_note_igst_amount)
+                           + parseFloat(obj.only_on_book_credit_note_igst_amount)
+                           - parseFloat(obj.only_on_portal_purchase_igst_amount)
+                           - parseFloat(obj.only_on_portal_debit_note_igst_amount)
+                           + parseFloat(obj.only_on_portal_credit_note_igst_amount);
+                  $("#portal_after_above_affect_igst").html(formatIndianNumber(portal_after_above_affect_igst));
+                  let portal_after_above_affect_cgst = parseFloat(obj.portal_cgst_amount)
+                           - parseFloat(obj.previous_month_invoice_cgst_amount)
+                           + parseFloat(obj.previous_month_journal_cgst_amount)
+                           - parseFloat(obj.previous_month_debit_note_cgst_amount)
+                           + parseFloat(obj.previous_month_credit_note_cgst_amount)
+                           + parseFloat(obj.only_on_book_purchase_cgst_amount)
+                           - parseFloat(obj.only_on_book_debit_note_cgst_amount)
+                           + parseFloat(obj.only_on_book_credit_note_cgst_amount)
+                           - parseFloat(obj.only_on_portal_purchase_cgst_amount)
+                           - parseFloat(obj.only_on_portal_debit_note_cgst_amount)
+                           + parseFloat(obj.only_on_portal_credit_note_cgst_amount);
+                  $("#portal_after_above_affect_cgst").html(formatIndianNumber(portal_after_above_affect_cgst));
+                  let portal_after_above_affect_sgst = parseFloat(obj.portal_sgst_amount)
+                           - parseFloat(obj.previous_month_invoice_sgst_amount) 
+                           + parseFloat(obj.previous_month_journal_sgst_amount)
+                           - parseFloat(obj.previous_month_debit_note_sgst_amount)
+                           + parseFloat(obj.previous_month_credit_note_sgst_amount)
+                           + parseFloat(obj.only_on_book_purchase_sgst_amount)
+                           - parseFloat(obj.only_on_book_debit_note_sgst_amount)
+                           + parseFloat(obj.only_on_book_credit_note_sgst_amount)
+                           - parseFloat(obj.only_on_portal_purchase_sgst_amount)
+                           - parseFloat(obj.only_on_portal_debit_note_sgst_amount)
+                           + parseFloat(obj.only_on_portal_credit_note_sgst_amount);
+                  $("#portal_after_above_affect_sgst").html(formatIndianNumber(portal_after_above_affect_sgst));
+
+               }else{
+                     alert("Something Went Wrong.");
+               }
+               $("#cover-spin").hide();
+            }
             
-        }
-    });
+      });
+   });
+   $(".purchase_only_on_book_detail").click(function(){
+      let details = $(this).data('detail');
+      let journal_details = $(this).data('journal-detail');
+      details = details.concat(journal_details);
+      let tbody = "";
+      const formatDate = (dateStr) => {
+         if (!dateStr) return '';
+         let d = new Date(dateStr);
+         let dd = String(d.getDate()).padStart(2, '0');
+         let mm = String(d.getMonth() + 1).padStart(2, '0');
+         let yyyy = d.getFullYear();
+         return `${dd}-${mm}-${yyyy}`;
+      };
+      const formatAmount = (amount) => {
+         return Number(amount).toLocaleString('en-IN', {
+               minimumFractionDigits: 2,
+               maximumFractionDigits: 2
+         });
+      };
+      details.forEach(function(item){
+         let account_name = item.account_name;
+         if(item.claim_gst_status){
+            account_name += " (JOURNAL)";
+         }
+         tbody += `<tr>
+            <td>${account_name} </td>
+            <td>${item.voucher_no}</td>
+            <td>${formatDate(item.date)}</td>
+            <td style="text-align: right;">${formatAmount(item.amount)}</td>
+         </tr>`;
+      });
 
+      tbody += `<tr>
+         <th colspan="3" style="text-align: right;">Total</th>
+         <th style="text-align: right;">${formatAmount(
+            details.reduce((sum, item) => sum + Number(item.amount), 0)
+      )}</th>
+      </tr>`;
+      $("#purchase_only_on_book_body").html(tbody);
+      $("#purchase_only_on_book_detailModal").modal('show');
+   });
+   function formatIndianNumber(num) {
+      return new Intl.NumberFormat('en-IN', {
+         minimumFractionDigits: 2,
+         maximumFractionDigits: 2
+      }).format(num || 0);
+   }
+   $(document).on('click','#fill-tab-2',function(){
+      let month = $("#month").val();
+      let gstin = $("#gstin").val();
+      let url = "{{url('gstr3b/view/itcdetails')}}";
+      let [year, mon] = month.split("-");
+      // First date
+      let from_date = `${year}-${mon}-01`;
+      if(book_click==1){
+         return;
+      }
+      // Last date
+      let lastDateObj = new Date(year, mon, 0); 
+      // JS months are 0-based, so passing mon gives last day of selected month
 
+      let to_date = `${year}-${mon}-${String(lastDateObj.getDate()).padStart(2, '0')}`;
+      $("#cover-spin").show();
+      $.ajax({
+            url : url,
+            method : 'GET',
+            data : {
+               _token : '{{ csrf_token() }}',
+               series : gstin,
+               source : 'GSTR2B',
+               from_date : from_date,
+               to_date : to_date
+            },
+            success : function(res){
+               if(res!=""){
+                  book_click = 1;
+                  let obj = JSON.parse(res);
+                  let body_data = ""; let tfoot_data = "";
+                  let sr = 1;
+                  let invoiceTotal = 0;
+                  let taxableTotal = 0;
+                  let igstTotal = 0;
+                  let cgstTotal = 0;
+                  let sgstTotal = 0;
+                  if(obj.data && obj.data.length>0){
+                     obj.data.forEach(function(e){
+                        let inv_url = '#';
+                        if(e.voucher_source == 'purchase'){
+                           inv_url = 'purchase-edit/'+e.voucher_id;
+                        }else if(e.voucher_source == 'purchase_return'){
+                           inv_url = 'purchase-return-edit/'+e.voucher_id;
+                        }
+                        else if(e.voucher_source == 'sale_return'){
+                           inv_url = 'sale-return-edit/'+e.voucher_id;
+                        }
+                        else if(e.voucher_source == 'journal'){
+                           inv_url = 'journal/'+e.voucher_id+'/edit';
+                        }
+
+                        if(e.invoice_type == 'Purchase Debit Note')
+                        {
+                           invoiceTotal -= parseFloat(e.invoice_value);
+                           taxableTotal -= parseFloat(e.taxable_value);
+                           igstTotal -= parseFloat(e.igst);
+                           cgstTotal -= parseFloat(e.cgst);
+                           sgstTotal -= parseFloat(e.sgst);
+                        }
+                        else
+                        {
+                           invoiceTotal += parseFloat(e.invoice_value);
+                           taxableTotal += parseFloat(e.taxable_value);
+                           igstTotal += parseFloat(e.igst);
+                           cgstTotal += parseFloat(e.cgst);
+                           sgstTotal += parseFloat(e.sgst);
+                        }
+                        body_data+=`<tr>
+                              <td>${sr++}</td>
+                              <td>${e.gstin}</td>
+                              <td>${e.party_name}</td>
+                              <td>
+                                 <a href="${inv_url}" target="_blank">
+                                       ${e.invoice_no}
+                                 </a>
+                              </td>
+                              <td>
+                                 ${e.invoice_date}
+                              </td>
+                              <td>${e.invoice_type}</td>
+                              <td class="text-right">
+                                 ${formatIndianNumber(e.invoice_value)}
+                              </td>
+                              <td class="text-right">
+                                 ${formatIndianNumber(e.taxable_value)}
+                              </td>
+                              <td class="text-right">
+                                 ${formatIndianNumber(e.igst)}
+                              </td>
+                              <td class="text-right">
+                                 ${formatIndianNumber(e.cgst)}
+                              </td>
+                              <td class="text-right">
+                                 ${formatIndianNumber(e.sgst)}
+                              </td>
+                           </tr>`;
+                     });
+                  }
+                  tfoot_data = `
+                  <tr style="font-weight:bold;background:#f8f9fa;">
+                     <td colspan="6" style="text-align:right;font-weight:bold;">
+                        Total
+                     </td>
+                     <td class="text-right">
+                        ${formatIndianNumber(invoiceTotal)}
+                     </td>
+                     <td class="text-right">
+                        ${formatIndianNumber(taxableTotal)}
+                     </td>
+                     <td class="text-right">
+                        ${formatIndianNumber(igstTotal)}
+                     </td>
+                     <td class="text-right">
+                        ${formatIndianNumber(cgstTotal)}
+                     </td>
+                     <td class="text-right">
+                        ${formatIndianNumber(sgstTotal)}
+                     </td>
+                  </tr>`;
+                  $(".gstr2b_book tbody").html(body_data);
+                  $(".gstr2b_book tfoot").html(tfoot_data);
+               }else{
+                  alert("Something Went Wrong.");
+               }
+               $("#cover-spin").hide();
+            }
+      });
+   });
+   $(document).on("click", ".pending_toggle_btn", function () {
+    let wrapper = $(this)
+        .closest("td")
+        .find(".pending_table_wrapper");
+
+    wrapper.slideToggle(200);
+
+    // Optional icon change
+    if ($(this).text() === "👁️") {
+        $(this).text("🙈");
+    } else {
+        $(this).text("👁️");
+    }
+});
 </script>
 @endsection

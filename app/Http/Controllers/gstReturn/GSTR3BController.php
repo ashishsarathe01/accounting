@@ -380,33 +380,41 @@ class GSTR3BController extends Controller
         $purchase_return_arr['TAXABLE'] = $purchase_return_taxable_amount;
         //Journal Data
         $journal_ids = DB::table('journals')
-                        ->where('merchant_gst', $merchant_gst)
-                        ->where('company_id', $company_id)
-                        ->where('claim_gst_status','YES')
-                        ->whereBetween('date', [$from_date, $to_date])
-                        ->where('delete', '0')
-                        ->where('status', '1')
-                        ->pluck('id');
-        $journal_sundry = DB::table('journal_sundries')
-                            ->select('bill_sundry', DB::raw('SUM(amount) as total_amount'))
-                            ->whereIn('journal_id', $journal_ids)
-                            ->groupBy('bill_sundry')
-                            ->get();
+                            ->where('merchant_gst', $merchant_gst)
+                            ->where('company_id', $company_id)
+                            ->where('claim_gst_status', 'YES')
+                            ->whereBetween('date', [$from_date, $to_date])
+                            ->where('delete', '0')
+                            ->where('status', '1')
+                            ->selectRaw('
+                                SUM(cgst) as total_cgst,
+                                SUM(sgst) as total_sgst,
+                                SUM(igst) as total_igst
+                            ')
+                            ->first();
+                            
         $journal_arr = [];
-        foreach($journal_sundry as $sundry){
-            if(isset($bill_sundry[$sundry->bill_sundry])){
-                $journal_arr[$bill_sundry[$sundry->bill_sundry]] = $sundry->total_amount;
+        foreach ($bill_sundry as $key => $value) {
+            if ($value == 'CGST') {
+                $journal_arr[$value] = $journal_ids->total_cgst;
+            } elseif ($value == 'SGST') {
+                $journal_arr[$value] = $journal_ids->total_sgst;
+            } elseif ($value == 'IGST') {
+                $journal_arr[$value] = $journal_ids->total_igst;
             }
         }
+       
         $journal_arr['TAXABLE'] = 0;
+        //  print_r($journal_arr);
         
         $result4 = [];
-        foreach ($purchase_arr as $key => $value) {
-            $result4[$key] =
-                ($purchase_arr[$key] ?? 0) +
-                ($journal_arr[$key] ?? 0) +
-                ($sale_return_arr[$key] ?? 0) -
-                ($purchase_return_arr[$key] ?? 0);
+        $tax_arr = ['CGST','SGST','IGST'];
+        foreach ($tax_arr as $key => $value) {
+            $result4[$value] =
+                ($purchase_arr[$value] ?? 0) +
+                ($journal_arr[$value] ?? 0) +
+                ($sale_return_arr[$value] ?? 0) -
+                ($purchase_return_arr[$value] ?? 0);
         }
         
         $base_url = $this->gstCredentials->base_url;
@@ -1359,7 +1367,9 @@ class GSTR3BController extends Controller
         $data = $data->merge($journals);
 
         $data = $data->sortBy('invoice_date')->values();
-
+        if(isset($request->source) && $request->source=="GSTR2B"){
+            return json_encode(array('data'=>$data));
+        }
         return view(
             'gstReturn.gst3b_itc_table',
             compact(

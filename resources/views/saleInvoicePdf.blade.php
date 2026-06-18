@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+    <meta charset="UTF-8">
 <head>
     <meta charset="UTF-8">
     <title>Sales Bill</title>
@@ -247,20 +248,7 @@
                                         <span class="width25">PO Date</span> : {{ $sale_detail->po_date ? date('d-m-Y', strtotime($sale_detail->po_date)) : '' }}
                                     </p>
                                 @endif
-                                @if($company_sale_type=="BOX")
-                                <p>
-                                    <span class="width25">PO No. </span>:
-                                    <span class="lft_mar15">
-                                        {{ $box_po_numbers ?? '' }}
-                                    </span>
-                                </p>
-                                <p>
-                                    <span class="width25">PO Date </span>:
-                                    <span class="lft_mar15">
-                                        {{ $box_po_dates ?? '' }}
-                                    </span>
-                                </p>
-                                @endif
+                                
                             </td>
                         </tr>
                         <tr>

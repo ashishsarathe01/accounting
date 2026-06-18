@@ -166,7 +166,7 @@
                           name="address" 
                           placeholder="ENTER ADDRESS" 
                           maxlength="250" 
-                  rows="2">@if(isset($id)){{$account->address}}@endif</textarea>
+                  rows="2" style="height: 100px;">@if(isset($id)){{$account->address}}@endif</textarea>
                  </div>
                   <div class="mb-2 col-md-1 pincode_div common_div" style="display: none;">
                      <svg style="color: green;cursor: pointer;margin-top: 42px;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"tabindex="0" class="bg-primary rounded-circle add_address" data-id="" viewBox="0 0 24 24">
@@ -200,7 +200,7 @@
                                 <input type="hidden"
                                     name="address_gst_group[]"
                                     value="primary">
-                                 <textarea class="form-control common_val" name="other_address[]" placeholder="ENTER ADDRESS" maxlength="250" rows="2">{{$address->address}}</textarea> 
+                                 <textarea class="form-control common_val" name="other_address[]" placeholder="ENTER ADDRESS" maxlength="250" rows="2" style="height: 100px;">{{$address->address}}</textarea> 
                               </div>
                               <div class="row">
                               <div class="mb-2 col-md-2 pincode_div common_div">
@@ -321,7 +321,7 @@
 
                                     <textarea class="form-control"
                                             name="additional_address[]"
-                                            rows="2">{{ $gst->address }}</textarea>
+                                            rows="2" style="height: 100px;">{{ $gst->address }}</textarea>
 
                                 </div>
 
@@ -381,7 +381,7 @@
 
                                                     <textarea class="form-control"
                                                             name="other_address[]"
-                                                            rows="2">{{ $address->address }}</textarea>
+                                                            rows="2" style="height: 100px;">{{ $address->address }}</textarea>
 
                                                 </div>
 
@@ -1031,7 +1031,7 @@ $(document).on('click', '.add_address', function() {
                           name="other_address[]"
                           placeholder="ENTER ADDRESS"
                           maxlength="250"
-                          rows="2"></textarea>
+                          rows="2" style="height: 100px;"></textarea>
             </div>
         </div>
         <div class="row">
