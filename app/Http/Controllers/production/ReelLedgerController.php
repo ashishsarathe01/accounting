@@ -32,488 +32,903 @@ class ReelLedgerController extends Controller
 {
     
     
-     public function filter(Request $request){   
-        $company_id = Session::get('user_company_id');
-        $item_id    = $request->item_id;
-        $f_date = $request->f_date ?? Carbon::today()->format('Y-m-d');
-        $fr_date = Carbon::parse($f_date)->startOfDay();   // 00:00:00        
-        $t_date = $request->t_date ?? Carbon::today()->format('Y-m-d');
-        $tr_date = Carbon::parse($t_date)->endOfDay();     // 23:59:59
-        /* --------------------------------------------
-            1️⃣ GET ITEM LIST (for dropdown)
-        ---------------------------------------------*/
-        $items = ProductionItem::join('manage_items','production_items.item_id','=','manage_items.id')
-                                ->select('production_items.id','name','bf','gsm','speed','manage_items.id as item_id')
-                                ->where('production_items.company_id',$company_id)
-                                ->where('production_items.status','1')
-                                ->orderBy('name')
-                                ->get();
-        if($item_id){
-            $itemName = ManageItems::where('id',$item_id)
-                                ->value('name');
-        }else{
-            $itemName=null;  
-        }
-        /* ============================================================
-            🔵 PART 1 — OPENING BALANCE  (before from_date)
-        ============================================================*/
+    //  public function filter(Request $request){   
+    //     $company_id = Session::get('user_company_id');
+    //     $item_id    = $request->item_id;
+    //     $f_date = $request->f_date ?? Carbon::today()->format('Y-m-d');
+    //     $fr_date = Carbon::parse($f_date)->startOfDay();   // 00:00:00        
+    //     $t_date = $request->t_date ?? Carbon::today()->format('Y-m-d');
+    //     $tr_date = Carbon::parse($t_date)->endOfDay();     // 23:59:59
+    //     /* --------------------------------------------
+    //         1️⃣ GET ITEM LIST (for dropdown)
+    //     ---------------------------------------------*/
+    //     $items = ProductionItem::join('manage_items','production_items.item_id','=','manage_items.id')
+    //                             ->select('production_items.id','name','bf','gsm','speed','manage_items.id as item_id')
+    //                             ->where('production_items.company_id',$company_id)
+    //                             ->where('production_items.status','1')
+    //                             ->orderBy('name')
+    //                             ->get();
+    //     if($item_id){
+    //         $itemName = ManageItems::where('id',$item_id)
+    //                             ->value('name');
+    //     }else{
+    //         $itemName=null;  
+    //     }
+    //     /* ============================================================
+    //         🔵 PART 1 — OPENING BALANCE  (before from_date)
+    //     ============================================================*/
 
-        /** 1. Opening Reels */
-        $openingReels = ItemSizeStock::where('item_size_stocks.company_id', $company_id)
-                                        ->join('manage_items', 'item_size_stocks.item_id', '=', 'manage_items.id')
-                                        ->leftJoin('production_items', 'manage_items.id', '=', 'production_items.item_id')
-                                        ->where('item_size_stocks.item_id', $item_id)
-                                        ->where('item_size_stocks.deckle_id', 0)
-                                        ->select(
-                                            'item_size_stocks.*',
-                                            'production_items.id as production_id'
-                                        )
-                                        ->get();
+    //     /** 1. Opening Reels */
+    //     $openingReels = ItemSizeStock::where('item_size_stocks.company_id', $company_id)
+    //                                     ->join('manage_items', 'item_size_stocks.item_id', '=', 'manage_items.id')
+    //                                     ->leftJoin('production_items', 'manage_items.id', '=', 'production_items.item_id')
+    //                                     ->where('item_size_stocks.item_id', $item_id)
+    //                                     ->where('item_size_stocks.deckle_id', 0)
+    //                                     ->select(
+    //                                         'item_size_stocks.*',
+    //                                         'production_items.id as production_id'
+    //                                     )
+    //                                     ->get();
 
         
-        $CreatedReels = ItemSizeStock::join('deckle_processes', 'item_size_stocks.deckle_id', '=', 'deckle_processes.id')
-                                        ->where('item_size_stocks.company_id', $company_id)
-                                        ->where('item_size_stocks.item_id', $item_id)
-                                        ->whereNotNull('item_size_stocks.deckle_id')
-                                        ->where('item_size_stocks.deckle_id', '>', 0)
-                                        ->where('deckle_processes.end_time_stamp', '<', $fr_date) // ✅ IMPORTANT CHANGE
-                                        ->select('item_size_stocks.*')
-                                        ->get();
+    //     $CreatedReels = ItemSizeStock::join('deckle_processes', 'item_size_stocks.deckle_id', '=', 'deckle_processes.id')
+    //                                     ->where('item_size_stocks.company_id', $company_id)
+    //                                     ->where('item_size_stocks.item_id', $item_id)
+    //                                     ->whereNotNull('item_size_stocks.deckle_id')
+    //                                     ->where('item_size_stocks.deckle_id', '>', 0)
+    //                                     ->where('deckle_processes.end_time_stamp', '<', $fr_date) // ✅ IMPORTANT CHANGE
+    //                                     ->select('item_size_stocks.*')
+    //                                     ->get();
 
-        /** 3. Purchased Reels */
-        $PurchasedReels = ItemSizeStock::where('item_size_stocks.company_id', $company_id)
-                                        ->join('purchases','item_size_stocks.purchase_id','purchases.id')
-                                        ->where('item_size_stocks.item_id', $item_id)
-                                        ->whereNull('item_size_stocks.deckle_id')
-                                        ->where('purchases.date', '<', $f_date)
-                                        ->select('item_size_stocks.*')
-                                        ->get();
+    //     /** 3. Purchased Reels */
+    //     $PurchasedReels = ItemSizeStock::where('item_size_stocks.company_id', $company_id)
+    //                                     ->join('purchases','item_size_stocks.purchase_id','purchases.id')
+    //                                     ->where('item_size_stocks.item_id', $item_id)
+    //                                     ->whereNull('item_size_stocks.deckle_id')
+    //                                     ->where('purchases.date', '<', $f_date)
+    //                                     ->select('item_size_stocks.*')
+    //                                     ->get();
 
-        /** 4. Generated Reels */
-        $GeneratedReels = ItemSizeStock::join('stock_journal', 'item_size_stocks.sj_generated_id', 'stock_journal.id')
-                                        ->where('item_size_stocks.company_id', $company_id)
-                                        ->where('item_size_stocks.item_id', $item_id)
-                                        ->whereNull('deckle_id')
-                                        ->whereNotNull('sj_generated_id')
-                                        ->where('stock_journal.jdate', '<', $f_date)
-                                        ->select('item_size_stocks.*')
-                                        ->get();
+    //     /** 4. Generated Reels */
+    //     $GeneratedReels = ItemSizeStock::join('stock_journal', 'item_size_stocks.sj_generated_id', 'stock_journal.id')
+    //                                     ->where('item_size_stocks.company_id', $company_id)
+    //                                     ->where('item_size_stocks.item_id', $item_id)
+    //                                     ->whereNull('deckle_id')
+    //                                     ->whereNotNull('sj_generated_id')
+    //                                     ->where('stock_journal.jdate', '<', $f_date)
+    //                                     ->select('item_size_stocks.*')
+    //                                     ->get();
 
-        /** 5. Sale Return Reels */
-        $SaleReturnReels = ItemSizeStock::join('sales_returns', 'item_size_stocks.sale_return_id', 'sales_returns.id')
+    //     /** 5. Sale Return Reels */
+    //     $SaleReturnReels = ItemSizeStock::join('sales_returns', 'item_size_stocks.sale_return_id', 'sales_returns.id')
+    //                                     ->where('item_size_stocks.company_id', $company_id)
+    //                                     ->where('item_size_stocks.item_id', $item_id)
+    //                                     ->whereNull('deckle_id')
+    //                                     ->whereNotNull('sale_return_id')
+    //                                     ->where('sales_returns.date', '<', $f_date)
+    //                                     ->select('item_size_stocks.*')
+    //                                     ->get();
+
+    //     /** 6. Purchase Return Reels */
+    //     $PurchaseReturnReels = ItemSizeStock::join('purchase_returns', 'item_size_stocks.purchase_return_id', 'purchase_returns.id')
+    //                                     ->where('item_size_stocks.company_id', $company_id)
+    //                                     ->where('item_size_stocks.item_id', $item_id)
+    //                                     ->whereNull('deckle_id')
+    //                                     ->whereNotNull('purchase_return_id')
+    //                                     ->where('purchase_returns.date', '<', $f_date)
+    //                                     ->select('item_size_stocks.*')
+    //                                     ->get();
+
+    //     /** 7. Sold Reels */
+    //     $SoldReels = ItemSizeStock::join('sales', 'item_size_stocks.sale_id', 'sales.id')
+    //                                 ->where('item_size_stocks.company_id', $company_id)
+    //                                 ->where('item_size_stocks.item_id', $item_id)
+    //                                 ->whereNotNull('sale_id')
+    //                                 ->where('sales.date', '<', $f_date)
+    //                                 ->select('item_size_stocks.*')
+    //                                 ->get();
+
+    //     /** 8. Consumed Reels */
+    //     $ConsumedReels = ItemSizeStock::join('stock_journal', 'item_size_stocks.sj_consumption_id', 'stock_journal.id')
+    //                                     ->where('item_size_stocks.company_id', $company_id)
+    //                                     ->where('item_size_stocks.item_id', $item_id)
+    //                                     ->whereNotNull('sj_consumption_id')
+    //                                     ->where('stock_journal.jdate', '<', $f_date)
+    //                                     ->select('item_size_stocks.*')
+    //                                     ->get();
+
+
+    //     $OpeningStock = collect();
+    //     $OpeningNegative = collect();
+
+    //     /* ---- PROCESS ALL ADDITIONS FIRST ---- */
+    //     $AllOpeningAdds = $openingReels
+    //                         ->merge($CreatedReels)
+    //                         ->merge($GeneratedReels)
+    //                         ->merge($SaleReturnReels)
+    //                         ->merge($PurchasedReels)
+    //                         ->unique('id');
+
+    //     /* ---- PROCESS ALL REMOVALS ---- */
+    //     $AllOpeningRemovals = $SoldReels
+    //                             ->merge($ConsumedReels)
+    //                             ->merge($PurchaseReturnReels)
+    //                             ->unique('id');
+
+    //     /* ---- APPLY MOVEMENT LIKE LEDGER ---- */
+    //     foreach ($AllOpeningAdds as $reel) {
+    //         $OpeningStock->push($reel);
+    //     }
+    //     foreach ($AllOpeningRemovals as $reel) {
+    //         $exists = $OpeningStock->firstWhere('id', $reel->id);
+    //         if ($exists) {
+    //             $OpeningStock = $OpeningStock->reject(function ($r) use ($reel) {
+    //                 return $r->id == $reel->id;
+    //             });
+    //         } else {
+    //             // Sold before creation → negative opening
+    //             $OpeningNegative->push($reel);
+    //         }
+    //     }
+
+    //     /* ---- FINAL OPENING ---- */
+    //     $OpeningReelCount = $OpeningStock->count() - $OpeningNegative->count();
+    //     $OpeningTotalWeight = $OpeningStock->sum('weight')
+    //                             - $OpeningNegative->sum('weight');
+    //     $ActualOpeningReels = $OpeningStock;
+        
+    
+    //     /* ============================================================
+    //         🔵 PART 2 — DATE WISE REEL LEDGER (In / Out / Closing)
+    //     ============================================================*/
+    //     $datePeriod = CarbonPeriod::create($f_date, $t_date);
+    //     $ledger = [];
+    //     $RunningOpening = $ActualOpeningReels->values();   // keep opening for next day closing
+    //     $NegativeReels = collect();
+    //     $date_index = 0;
+    //     foreach ($datePeriod as $dt) {
+    //         // $day = $dt->format('Y-m-d');
+    //         // $dayStart = $day . ' 08:00:00';
+    //         // $dayE = Carbon::parse($day)->addDay()->format('Y-m-d');
+    //         // $dayEnd   = $dayE . ' 07:59:59';        
+    //         $day = $dt->format('Y-m-d');
+    //         $dayStart = $day . ' 00:00:00';
+    //         $dayEnd   = $day . ' 23:59:59';
+
+    //         $InCreated = ItemSizeStock::join('deckle_processes', 'item_size_stocks.deckle_id', '=', 'deckle_processes.id')
+    //                                     ->where('item_size_stocks.company_id', $company_id)
+    //                                     ->where('item_size_stocks.item_id', $item_id)
+    //                                     ->whereNotNull('item_size_stocks.deckle_id')
+    //                                     ->where('item_size_stocks.deckle_id', '>', 0)
+    //                                     ->whereBetween('deckle_processes.end_time_stamp', [$dayStart, $dayEnd]) // ✅ IMPORTANT CHANGE
+    //                                     ->select('item_size_stocks.*')
+    //                                     ->get();
+        
+    //         $InPurchased = ItemSizeStock::join('purchases','item_size_stocks.purchase_id','purchases.id')
+    //                         ->where('item_size_stocks.company_id', $company_id)
+    //                         ->where('item_size_stocks.item_id', $item_id)
+    //                         ->whereNull('deckle_id')
+    //                         ->where('purchases.date', $day)
+    //                         ->select('item_size_stocks.*')
+    //                         ->get();
+
+    //         $InGenerated = ItemSizeStock::join('stock_journal','item_size_stocks.sj_generated_id','stock_journal.id')
+    //                         ->where('item_size_stocks.company_id',$company_id)
+    //                         ->where('item_size_stocks.item_id',$item_id)
+    //                         ->where('stock_journal.jdate', $day)
+    //                         ->select('item_size_stocks.*')
+    //                         ->get();
+
+    //         $InSaleReturn = ItemSizeStock::join('sales_returns','item_size_stocks.sale_return_id','sales_returns.id')
+    //                         ->where('item_size_stocks.company_id',$company_id)
+    //                         ->where('item_size_stocks.item_id',$item_id)
+    //                         ->where('sales_returns.date', $day)
+    //                         ->select('item_size_stocks.*')
+    //                         ->get();
+
+    //         $InPurchaseReturn = ItemSizeStock::join('purchase_returns','item_size_stocks.purchase_return_id','purchase_returns.id')
+    //                         ->where('item_size_stocks.company_id',$company_id)
+    //                         ->where('item_size_stocks.item_id',$item_id)
+    //                         ->where('purchase_returns.date', $day)
+    //                         ->select('item_size_stocks.*')
+    //                         ->get();
+
+
+    //         $InReels = collect()
+    //                         ->merge($InCreated)
+    //                         ->merge($InPurchased)
+    //                         ->merge($InGenerated)
+    //                         ->merge($InSaleReturn)
+    //                         ->unique('id');
+
+
+    //         /* ---- OUTWARD REELS (Removal on this day) ---- */
+    //         $OutSold = ItemSizeStock::join('sales','item_size_stocks.sale_id','sales.id')
+    //                         ->where('item_size_stocks.company_id',$company_id)
+    //                         ->where('item_size_stocks.item_id',$item_id)
+    //                         ->where('sales.date', $day)
+    //                         ->select('item_size_stocks.*')
+    //                         ->get();
+
+    //         $OutConsumed = ItemSizeStock::join('stock_journal','item_size_stocks.sj_consumption_id','stock_journal.id')
+    //                         ->where('item_size_stocks.company_id',$company_id)
+    //                         ->where('item_size_stocks.item_id',$item_id)
+    //                         ->where('stock_journal.jdate', $day)
+    //                         ->select('item_size_stocks.*')
+    //                         ->get();
+
+
+    //         $OutReels = collect()
+    //                         ->merge($OutSold)
+    //                         ->merge($OutConsumed)
+    //                         ->merge($InPurchaseReturn)
+    //                         ->unique('id');
+
+    
+    //         // BEFORE MOVEMENT — store opening snapshot
+    //         $OpeningSnapshot = $RunningOpening->values();
+    //         $OpeningWeightSnapshot = $OpeningSnapshot->sum('weight');
+
+    //         /* -----------------------------
+    //         PROCESS OUT FIRST
+    //         ------------------------------*/
+    //         foreach ($OutReels as $outReel) {
+
+    //             $exists = $RunningOpening->firstWhere('id', $outReel->id);
+
+    //             if ($exists) {
+
+    //                 $RunningOpening = $RunningOpening->reject(function ($r) use ($outReel) {
+    //                     return $r->id == $outReel->id;
+    //                 });
+
+    //             } else {
+
+    //                 // Sold before creation → negative
+    //                 $NegativeReels->push($outReel);
+    //             }
+    //         }
+
+    //         /* -----------------------------
+    //         PROCESS IN
+    //         ------------------------------*/
+    //         foreach ($InReels as $inReel) {
+
+    //             $negativeMatch = $NegativeReels->firstWhere('id', $inReel->id);
+
+    //             if ($negativeMatch) {
+
+    //                 // Adjust negative stock
+    //                 $NegativeReels = $NegativeReels->reject(function ($r) use ($inReel) {
+    //                     return $r->id == $inReel->id;
+    //                 });
+
+    //             } else {
+
+    //                 $RunningOpening->push($inReel);
+    //             }
+    //         }
+
+    //         /* -----------------------------
+    //         FINAL CALCULATION
+    //         ------------------------------*/
+    //         $PositiveStock = $RunningOpening->count();
+    //         $NegativeStock = $NegativeReels->count();
+    //         if($date_index==0){
+    //             $opening_count = $OpeningReelCount;
+    //             $ClosingCount = $OpeningReelCount + $InReels->count() - $OutReels->count();
+    //             $date_opening_weight = $OpeningTotalWeight;
+    //             $ClosingWeight = $OpeningTotalWeight + $InReels->sum('weight') - $OutReels->sum('weight');
+    //         }else{
+    //             $opening_count = $ClosingCount;
+    //             $ClosingCount = $PositiveStock - $NegativeStock;
+                
+    //             $date_opening_weight = $ClosingWeight;
+    //             $ClosingWeight = $RunningOpening->sum('weight')
+    //                         - $NegativeReels->sum('weight');
+    //         }
+    //         /* -----------------------------
+    //         STORE LEDGER ROW
+    //         ------------------------------*/
+            
+    //         $date_index++;
+    //         // echo "<pre>";
+    //         //         print_r($OpeningSnapshot->toArray());die;
+    //         $ledger[] = [
+    //             'date' => $day,
+
+    //             'opening_count' => $opening_count,
+    //             'opening_weight' => $date_opening_weight,
+
+    //             'in_count' => $InReels->count(),
+    //             'in_weight' => $InReels->sum('weight'),
+
+    //             'out_count' => $OutReels->count(),
+    //             'out_weight' => $OutReels->sum('weight'),
+
+    //             'closing_count' => $ClosingCount,
+    //             'closing_weight' => $ClosingWeight,
+
+    //             'opening' => [
+    //                 'reels' => $OpeningSnapshot,
+    //                 'weight'=> $date_opening_weight,
+    //             ],
+
+    //             'in' => [
+    //                 'reels' => $InReels,
+    //                 'weight'=> $InReels->sum('weight'),
+    //             ],
+
+    //             'out' => [
+    //                 'reels' => $OutReels,
+    //                 'weight'=> $OutReels->sum('weight'),
+    //             ],
+
+    //             'closing' => [
+    //                 'reels' => $RunningOpening,
+    //                 'weight'=> $ClosingWeight,
+    //             ],
+    //         ];
+    //     }
+    //     $openingReelsC = ItemSizeStock::where('company_id', $company_id)
+    //                             ->where('item_id', $item_id)
+    //                             ->where('deckle_id', 0)
+    //                             ->get();                                    
+    //     $CreatedReelsC = ItemSizeStock::join('deckle_processes', 'item_size_stocks.deckle_id', '=', 'deckle_processes.id')
+    //                                     ->where('item_size_stocks.company_id', $company_id)
+    //                                     ->where('item_size_stocks.item_id', $item_id)
+    //                                     ->whereNotNull('item_size_stocks.deckle_id')
+    //                                     ->where('item_size_stocks.deckle_id', '>', 0)
+    //                                     ->where('deckle_processes.end_time_stamp', '<=', $tr_date) // ✅ IMPORTANT CHANGE
+    //                                     ->select('item_size_stocks.*')
+    //                                     ->get();
+
+    //     /** 3. Purchased Reels */
+    //     $PurchasedReelsC = ItemSizeStock::where('item_size_stocks.company_id', $company_id)
+    //                                     ->join('purchases','item_size_stocks.purchase_id','purchases.id')
+    //                                     ->where('item_size_stocks.item_id', $item_id)
+    //                                     ->whereNull('item_size_stocks.deckle_id')
+    //                                     ->where('purchases.date', '<=', $t_date)
+    //                                     ->select('item_size_stocks.*')
+    //                                     ->get();
+
+    //     /** 4. Generated ReelsC */
+    //     $GeneratedReelsC = ItemSizeStock::join('stock_journal', 'item_size_stocks.sj_generated_id', 'stock_journal.id')
+    //                                     ->where('item_size_stocks.company_id', $company_id)
+    //                                     ->where('item_size_stocks.item_id', $item_id)
+    //                                     ->whereNull('deckle_id')
+    //                                     ->whereNotNull('sj_generated_id')
+    //                                     ->where('stock_journal.jdate', '<=', $t_date)
+    //                                     ->select('item_size_stocks.*')
+    //                                     ->get();
+
+    //     /** 5. Sale Return ReelsC */
+    //     $SaleReturnReelsC = ItemSizeStock::join('sales_returns', 'item_size_stocks.sale_return_id', 'sales_returns.id')
+    //                                         ->where('item_size_stocks.company_id', $company_id)
+    //                                         ->where('item_size_stocks.item_id', $item_id)
+    //                                         ->whereNull('deckle_id')
+    //                                         ->whereNotNull('sale_return_id')
+    //                                         ->where('sales_returns.date', '<=', $t_date)
+    //                                         ->select('item_size_stocks.*')
+    //                                         ->get();
+
+    //     /** 6. Purchase Return ReelsC */
+    //     $PurchaseReturnReelsC = ItemSizeStock::join('purchase_returns', 'item_size_stocks.purchase_return_id', 'purchase_returns.id')
+    //                                     ->where('item_size_stocks.company_id', $company_id)
+    //                                     ->where('item_size_stocks.item_id', $item_id)
+    //                                     ->whereNull('deckle_id')
+    //                                     ->whereNotNull('purchase_return_id')
+    //                                     ->where('purchase_returns.date', '<=', $t_date)
+    //                                     ->select('item_size_stocks.*')
+    //                                     ->get();
+
+    //     /** 7. Sold ReelsC */
+    //     $SoldReelsC = ItemSizeStock::join('sales', 'item_size_stocks.sale_id', 'sales.id')
+    //                                 ->where('item_size_stocks.company_id', $company_id)
+    //                                 ->where('item_size_stocks.item_id', $item_id)
+    //                                 ->whereNotNull('sale_id')
+    //                                 ->where('sales.date', '<=', $t_date)
+    //                                 ->select('item_size_stocks.*')
+    //                                 ->get();
+
+    //     /** 8. Consumed ReelsC */
+    //     $ConsumedReelsC = ItemSizeStock::join('stock_journal', 'item_size_stocks.sj_consumption_id', 'stock_journal.id')
+    //                                     ->where('item_size_stocks.company_id', $company_id)
+    //                                     ->where('item_size_stocks.item_id', $item_id)
+    //                                     ->whereNotNull('sj_consumption_id')
+    //                                     ->where('stock_journal.jdate', '<=', $t_date)
+    //                                     ->select('item_size_stocks.*')
+    //                                     ->get();
+
+
+    //         /* ============================================================
+    //     🔵 FINAL CLOSING WITH NEGATIVE SUPPORT
+    //     ============================================================ */
+
+    //     $ClosingStock = collect();
+    //     $ClosingNegative = collect();
+
+    //     /* ---- ALL ADDITIONS TILL TO_DATE ---- */
+    //     $AllClosingAdds = $openingReelsC
+    //                         ->merge($CreatedReelsC)
+    //                         ->merge($GeneratedReelsC)
+    //                         ->merge($SaleReturnReelsC)
+    //                         ->merge($PurchasedReelsC)
+    //                         ->unique('id');
+
+    //     /* ---- ALL REMOVALS TILL TO_DATE ---- */
+    //     $AllClosingRemovals = $SoldReelsC
+    //                             ->merge($ConsumedReelsC)
+    //                             ->merge($PurchaseReturnReelsC)
+    //                             ->unique('id');
+
+    //     /* ---- PROCESS ADDITIONS ---- */
+    //     foreach ($AllClosingAdds as $reel) {
+    //         $ClosingStock->push($reel);
+    //     }
+
+    //     /* ---- PROCESS REMOVALS ---- */
+    //     foreach ($AllClosingRemovals as $reel) {
+
+    //         $exists = $ClosingStock->firstWhere('id', $reel->id);
+
+    //         if ($exists) {
+
+    //             $ClosingStock = $ClosingStock->reject(function ($r) use ($reel) {
+    //                 return $r->id == $reel->id;
+    //             });
+
+    //         } else {
+
+    //             // Sold before creation → negative
+    //             $ClosingNegative->push($reel);
+    //         }
+    //     }
+
+    //     /* ---- FINAL CALCULATION ---- */
+    //     $ClosingReelCount  = $ClosingStock->count() - $ClosingNegative->count();
+
+    //     $ClosingTotalWeight = $ClosingStock->sum('weight')
+    //                             - $ClosingNegative->sum('weight');
+
+    //     $ActualClosingReels = $ClosingStock;
+
+    //     /* --------------------------------------------
+    //         RETURN TO BLADE
+    //     ---------------------------------------------*/
+    //     // echo $OpeningTotalWeight;
+    //     // die();
+    //     return view('ReelLedger.reel_ledger', [
+    //         'items' => $items,
+    //         'item_id' => $item_id,
+    //         'itemName' => $itemName,
+
+    //         'OpeningReels' => $ActualOpeningReels,
+    //         'opening_count' => $OpeningReelCount,
+    //         'opening_weight' => $OpeningTotalWeight,
+    //         'closing_count' => $ClosingReelCount,
+    //         'closing_weight' => $ClosingTotalWeight,
+
+    //         'ledgerRows' => $ledger,
+    //         'f_date' => $f_date,
+    //         't_date' => $t_date,
+    //     ]);
+    // }
+
+
+public function filter(Request $request) 
+ {   
+    $company_id = Session::get('user_company_id');
+    $item_id    = $request->item_id;
+    $f_date = $request->f_date ?? Carbon::today()->format('Y-m-d');
+    $fr_date = Carbon::parse($f_date)->startOfDay();
+    $t_date = $request->t_date ?? Carbon::today()->format('Y-m-d');
+    $tr_date = Carbon::parse($t_date)->endOfDay();
+
+    /* --------------------------------------------
+        1️⃣ GET ITEM LIST (for dropdown)
+    ---------------------------------------------*/
+    $items = ProductionItem::join('manage_items','production_items.item_id','=','manage_items.id')
+                            ->select('production_items.id','name','bf','gsm','speed','manage_items.id as item_id')
+                            ->where('production_items.company_id',$company_id)
+                            ->where('production_items.status','1')
+                            ->orderBy('name')
+                            ->get();
+
+    if($item_id){
+        $itemName = ManageItems::where('id',$item_id)->value('name');
+    }else{
+        $itemName=null;  
+    }
+
+    // High performance early exit if no item is specified
+    if (!$item_id) {
+        return view('ReelLedger.reel_ledger', [
+            'items' => $items,
+            'item_id' => $item_id,
+            'itemName' => $itemName,
+            'OpeningReels' => collect(),
+            'opening_count' => 0,
+            'opening_weight' => 0,
+            'closing_count' => 0,
+            'closing_weight' => 0,
+            'ledgerRows' => [],
+            'f_date' => $f_date,
+            't_date' => $t_date,
+        ]);
+    }
+
+    /* --------------------------------------------
+        Bulk Fetch Data up to End Date (Eliminating N+1)
+    ---------------------------------------------*/
+    $openingReels = ItemSizeStock::where('item_size_stocks.company_id', $company_id)
+                                    ->join('manage_items', 'item_size_stocks.item_id', '=', 'manage_items.id')
+                                    ->leftJoin('production_items', 'manage_items.id', '=', 'production_items.item_id')
+                                    ->where('item_size_stocks.item_id', $item_id)
+                                    ->where('item_size_stocks.deckle_id', 0)
+                                    ->select('item_size_stocks.*', 'production_items.id as production_id')
+                                    ->get();
+
+    $allCreatedReels = ItemSizeStock::join('deckle_processes', 'item_size_stocks.deckle_id', '=', 'deckle_processes.id')
+                                    ->where('item_size_stocks.company_id', $company_id)
+                                    ->where('item_size_stocks.item_id', $item_id)
+                                    ->whereNotNull('item_size_stocks.deckle_id')
+                                    ->where('item_size_stocks.deckle_id', '>', 0)
+                                    ->where('deckle_processes.end_time_stamp', '<=', $tr_date)
+                                    ->select('item_size_stocks.*', 'deckle_processes.end_time_stamp as process_date')
+                                    ->get();
+
+    $allPurchasedReels = ItemSizeStock::where('item_size_stocks.company_id', $company_id)
+                                    ->join('purchases','item_size_stocks.purchase_id','purchases.id')
+                                    ->where('item_size_stocks.item_id', $item_id)
+                                    ->whereNull('item_size_stocks.deckle_id')
+                                    ->where('purchases.date', '<=', $t_date)
+                                    ->select('item_size_stocks.*', 'purchases.date as process_date')
+                                    ->get();
+
+    $allGeneratedReels = ItemSizeStock::join('stock_journal', 'item_size_stocks.sj_generated_id', 'stock_journal.id')
+                                    ->where('item_size_stocks.company_id', $company_id)
+                                    ->where('item_size_stocks.item_id', $item_id)
+                                    ->whereNull('deckle_id')
+                                    ->whereNotNull('sj_generated_id')
+                                    ->where('stock_journal.jdate', '<=', $t_date)
+                                    ->select('item_size_stocks.*', 'stock_journal.jdate as process_date')
+                                    ->get();
+
+    $allSaleReturnReels = ItemSizeStock::join('sales_returns', 'item_size_stocks.sale_return_id', 'sales_returns.id')
                                         ->where('item_size_stocks.company_id', $company_id)
                                         ->where('item_size_stocks.item_id', $item_id)
                                         ->whereNull('deckle_id')
                                         ->whereNotNull('sale_return_id')
-                                        ->where('sales_returns.date', '<', $f_date)
-                                        ->select('item_size_stocks.*')
+                                        ->where('sales_returns.date', '<=', $t_date)
+                                        ->select('item_size_stocks.*', 'sales_returns.date as process_date')
                                         ->get();
 
-        /** 6. Purchase Return Reels */
-        $PurchaseReturnReels = ItemSizeStock::join('purchase_returns', 'item_size_stocks.purchase_return_id', 'purchase_returns.id')
-                                        ->where('item_size_stocks.company_id', $company_id)
-                                        ->where('item_size_stocks.item_id', $item_id)
-                                        ->whereNull('deckle_id')
-                                        ->whereNotNull('purchase_return_id')
-                                        ->where('purchase_returns.date', '<', $f_date)
-                                        ->select('item_size_stocks.*')
-                                        ->get();
-
-        /** 7. Sold Reels */
-        $SoldReels = ItemSizeStock::join('sales', 'item_size_stocks.sale_id', 'sales.id')
-                                    ->where('item_size_stocks.company_id', $company_id)
-                                    ->where('item_size_stocks.item_id', $item_id)
-                                    ->whereNotNull('sale_id')
-                                    ->where('sales.date', '<', $f_date)
-                                    ->select('item_size_stocks.*')
-                                    ->get();
-
-        /** 8. Consumed Reels */
-        $ConsumedReels = ItemSizeStock::join('stock_journal', 'item_size_stocks.sj_consumption_id', 'stock_journal.id')
-                                        ->where('item_size_stocks.company_id', $company_id)
-                                        ->where('item_size_stocks.item_id', $item_id)
-                                        ->whereNotNull('sj_consumption_id')
-                                        ->where('stock_journal.jdate', '<', $f_date)
-                                        ->select('item_size_stocks.*')
-                                        ->get();
-
-
-        $OpeningStock = collect();
-        $OpeningNegative = collect();
-
-        /* ---- PROCESS ALL ADDITIONS FIRST ---- */
-        $AllOpeningAdds = $openingReels
-                            ->merge($CreatedReels)
-                            ->merge($GeneratedReels)
-                            ->merge($SaleReturnReels)
-                            ->merge($PurchasedReels)
-                            ->unique('id');
-
-        /* ---- PROCESS ALL REMOVALS ---- */
-        $AllOpeningRemovals = $SoldReels
-                                ->merge($ConsumedReels)
-                                ->merge($PurchaseReturnReels)
-                                ->unique('id');
-
-        /* ---- APPLY MOVEMENT LIKE LEDGER ---- */
-        foreach ($AllOpeningAdds as $reel) {
-            $OpeningStock->push($reel);
-        }
-        foreach ($AllOpeningRemovals as $reel) {
-            $exists = $OpeningStock->firstWhere('id', $reel->id);
-            if ($exists) {
-                $OpeningStock = $OpeningStock->reject(function ($r) use ($reel) {
-                    return $r->id == $reel->id;
-                });
-            } else {
-                // Sold before creation → negative opening
-                $OpeningNegative->push($reel);
-            }
-        }
-
-        /* ---- FINAL OPENING ---- */
-        $OpeningReelCount = $OpeningStock->count() - $OpeningNegative->count();
-        $OpeningTotalWeight = $OpeningStock->sum('weight')
-                                - $OpeningNegative->sum('weight');
-        $ActualOpeningReels = $OpeningStock;
-        
-    
-        /* ============================================================
-            🔵 PART 2 — DATE WISE REEL LEDGER (In / Out / Closing)
-        ============================================================*/
-        $datePeriod = CarbonPeriod::create($f_date, $t_date);
-        $ledger = [];
-        $RunningOpening = $ActualOpeningReels->values();   // keep opening for next day closing
-        $NegativeReels = collect();
-        $date_index = 0;
-        foreach ($datePeriod as $dt) {
-            // $day = $dt->format('Y-m-d');
-            // $dayStart = $day . ' 08:00:00';
-            // $dayE = Carbon::parse($day)->addDay()->format('Y-m-d');
-            // $dayEnd   = $dayE . ' 07:59:59';        
-            $day = $dt->format('Y-m-d');
-            $dayStart = $day . ' 00:00:00';
-            $dayEnd   = $day . ' 23:59:59';
-
-            $InCreated = ItemSizeStock::join('deckle_processes', 'item_size_stocks.deckle_id', '=', 'deckle_processes.id')
-                                        ->where('item_size_stocks.company_id', $company_id)
-                                        ->where('item_size_stocks.item_id', $item_id)
-                                        ->whereNotNull('item_size_stocks.deckle_id')
-                                        ->where('item_size_stocks.deckle_id', '>', 0)
-                                        ->whereBetween('deckle_processes.end_time_stamp', [$dayStart, $dayEnd]) // ✅ IMPORTANT CHANGE
-                                        ->select('item_size_stocks.*')
-                                        ->get();
-        
-            $InPurchased = ItemSizeStock::join('purchases','item_size_stocks.purchase_id','purchases.id')
-                            ->where('item_size_stocks.company_id', $company_id)
-                            ->where('item_size_stocks.item_id', $item_id)
-                            ->whereNull('deckle_id')
-                            ->where('purchases.date', $day)
-                            ->select('item_size_stocks.*')
-                            ->get();
-
-            $InGenerated = ItemSizeStock::join('stock_journal','item_size_stocks.sj_generated_id','stock_journal.id')
-                            ->where('item_size_stocks.company_id',$company_id)
-                            ->where('item_size_stocks.item_id',$item_id)
-                            ->where('stock_journal.jdate', $day)
-                            ->select('item_size_stocks.*')
-                            ->get();
-
-            $InSaleReturn = ItemSizeStock::join('sales_returns','item_size_stocks.sale_return_id','sales_returns.id')
-                            ->where('item_size_stocks.company_id',$company_id)
-                            ->where('item_size_stocks.item_id',$item_id)
-                            ->where('sales_returns.date', $day)
-                            ->select('item_size_stocks.*')
-                            ->get();
-
-            $InPurchaseReturn = ItemSizeStock::join('purchase_returns','item_size_stocks.purchase_return_id','purchase_returns.id')
-                            ->where('item_size_stocks.company_id',$company_id)
-                            ->where('item_size_stocks.item_id',$item_id)
-                            ->where('purchase_returns.date', $day)
-                            ->select('item_size_stocks.*')
-                            ->get();
-
-
-            $InReels = collect()
-                            ->merge($InCreated)
-                            ->merge($InPurchased)
-                            ->merge($InGenerated)
-                            ->merge($InSaleReturn)
-                            ->unique('id');
-
-
-            /* ---- OUTWARD REELS (Removal on this day) ---- */
-            $OutSold = ItemSizeStock::join('sales','item_size_stocks.sale_id','sales.id')
-                            ->where('item_size_stocks.company_id',$company_id)
-                            ->where('item_size_stocks.item_id',$item_id)
-                            ->where('sales.date', $day)
-                            ->select('item_size_stocks.*')
-                            ->get();
-
-            $OutConsumed = ItemSizeStock::join('stock_journal','item_size_stocks.sj_consumption_id','stock_journal.id')
-                            ->where('item_size_stocks.company_id',$company_id)
-                            ->where('item_size_stocks.item_id',$item_id)
-                            ->where('stock_journal.jdate', $day)
-                            ->select('item_size_stocks.*')
-                            ->get();
-
-
-            $OutReels = collect()
-                            ->merge($OutSold)
-                            ->merge($OutConsumed)
-                            ->merge($InPurchaseReturn)
-                            ->unique('id');
-
-    
-            // BEFORE MOVEMENT — store opening snapshot
-            $OpeningSnapshot = $RunningOpening->values();
-            $OpeningWeightSnapshot = $OpeningSnapshot->sum('weight');
-
-            /* -----------------------------
-            PROCESS OUT FIRST
-            ------------------------------*/
-            foreach ($OutReels as $outReel) {
-
-                $exists = $RunningOpening->firstWhere('id', $outReel->id);
-
-                if ($exists) {
-
-                    $RunningOpening = $RunningOpening->reject(function ($r) use ($outReel) {
-                        return $r->id == $outReel->id;
-                    });
-
-                } else {
-
-                    // Sold before creation → negative
-                    $NegativeReels->push($outReel);
-                }
-            }
-
-            /* -----------------------------
-            PROCESS IN
-            ------------------------------*/
-            foreach ($InReels as $inReel) {
-
-                $negativeMatch = $NegativeReels->firstWhere('id', $inReel->id);
-
-                if ($negativeMatch) {
-
-                    // Adjust negative stock
-                    $NegativeReels = $NegativeReels->reject(function ($r) use ($inReel) {
-                        return $r->id == $inReel->id;
-                    });
-
-                } else {
-
-                    $RunningOpening->push($inReel);
-                }
-            }
-
-            /* -----------------------------
-            FINAL CALCULATION
-            ------------------------------*/
-            $PositiveStock = $RunningOpening->count();
-            $NegativeStock = $NegativeReels->count();
-            if($date_index==0){
-                $opening_count = $OpeningReelCount;
-                $ClosingCount = $OpeningReelCount + $InReels->count() - $OutReels->count();
-                $date_opening_weight = $OpeningTotalWeight;
-                $ClosingWeight = $OpeningTotalWeight + $InReels->sum('weight') - $OutReels->sum('weight');
-            }else{
-                $opening_count = $ClosingCount;
-                $ClosingCount = $PositiveStock - $NegativeStock;
-                
-                $date_opening_weight = $ClosingWeight;
-                $ClosingWeight = $RunningOpening->sum('weight')
-                            - $NegativeReels->sum('weight');
-            }
-            /* -----------------------------
-            STORE LEDGER ROW
-            ------------------------------*/
-            
-            $date_index++;
-            // echo "<pre>";
-            //         print_r($OpeningSnapshot->toArray());die;
-            $ledger[] = [
-                'date' => $day,
-
-                'opening_count' => $opening_count,
-                'opening_weight' => $date_opening_weight,
-
-                'in_count' => $InReels->count(),
-                'in_weight' => $InReels->sum('weight'),
-
-                'out_count' => $OutReels->count(),
-                'out_weight' => $OutReels->sum('weight'),
-
-                'closing_count' => $ClosingCount,
-                'closing_weight' => $ClosingWeight,
-
-                'opening' => [
-                    'reels' => $OpeningSnapshot,
-                    'weight'=> $date_opening_weight,
-                ],
-
-                'in' => [
-                    'reels' => $InReels,
-                    'weight'=> $InReels->sum('weight'),
-                ],
-
-                'out' => [
-                    'reels' => $OutReels,
-                    'weight'=> $OutReels->sum('weight'),
-                ],
-
-                'closing' => [
-                    'reels' => $RunningOpening,
-                    'weight'=> $ClosingWeight,
-                ],
-            ];
-        }
-        $openingReelsC = ItemSizeStock::where('company_id', $company_id)
-                                ->where('item_id', $item_id)
-                                ->where('deckle_id', 0)
-                                ->get();                                    
-        $CreatedReelsC = ItemSizeStock::join('deckle_processes', 'item_size_stocks.deckle_id', '=', 'deckle_processes.id')
-                                        ->where('item_size_stocks.company_id', $company_id)
-                                        ->where('item_size_stocks.item_id', $item_id)
-                                        ->whereNotNull('item_size_stocks.deckle_id')
-                                        ->where('item_size_stocks.deckle_id', '>', 0)
-                                        ->where('deckle_processes.end_time_stamp', '<=', $tr_date) // ✅ IMPORTANT CHANGE
-                                        ->select('item_size_stocks.*')
-                                        ->get();
-
-        /** 3. Purchased Reels */
-        $PurchasedReelsC = ItemSizeStock::where('item_size_stocks.company_id', $company_id)
-                                        ->join('purchases','item_size_stocks.purchase_id','purchases.id')
-                                        ->where('item_size_stocks.item_id', $item_id)
-                                        ->whereNull('item_size_stocks.deckle_id')
-                                        ->where('purchases.date', '<=', $t_date)
-                                        ->select('item_size_stocks.*')
-                                        ->get();
-
-        /** 4. Generated ReelsC */
-        $GeneratedReelsC = ItemSizeStock::join('stock_journal', 'item_size_stocks.sj_generated_id', 'stock_journal.id')
-                                        ->where('item_size_stocks.company_id', $company_id)
-                                        ->where('item_size_stocks.item_id', $item_id)
-                                        ->whereNull('deckle_id')
-                                        ->whereNotNull('sj_generated_id')
-                                        ->where('stock_journal.jdate', '<=', $t_date)
-                                        ->select('item_size_stocks.*')
-                                        ->get();
-
-        /** 5. Sale Return ReelsC */
-        $SaleReturnReelsC = ItemSizeStock::join('sales_returns', 'item_size_stocks.sale_return_id', 'sales_returns.id')
-                                            ->where('item_size_stocks.company_id', $company_id)
-                                            ->where('item_size_stocks.item_id', $item_id)
-                                            ->whereNull('deckle_id')
-                                            ->whereNotNull('sale_return_id')
-                                            ->where('sales_returns.date', '<=', $t_date)
-                                            ->select('item_size_stocks.*')
-                                            ->get();
-
-        /** 6. Purchase Return ReelsC */
-        $PurchaseReturnReelsC = ItemSizeStock::join('purchase_returns', 'item_size_stocks.purchase_return_id', 'purchase_returns.id')
+    $allPurchaseReturnReels = ItemSizeStock::join('purchase_returns', 'item_size_stocks.purchase_return_id', 'purchase_returns.id')
                                         ->where('item_size_stocks.company_id', $company_id)
                                         ->where('item_size_stocks.item_id', $item_id)
                                         ->whereNull('deckle_id')
                                         ->whereNotNull('purchase_return_id')
                                         ->where('purchase_returns.date', '<=', $t_date)
-                                        ->select('item_size_stocks.*')
+                                        ->select('item_size_stocks.*', 'purchase_returns.date as process_date')
                                         ->get();
 
-        /** 7. Sold ReelsC */
-        $SoldReelsC = ItemSizeStock::join('sales', 'item_size_stocks.sale_id', 'sales.id')
+    $allSoldReels = ItemSizeStock::join('sales', 'item_size_stocks.sale_id', 'sales.id')
+                                ->where('item_size_stocks.company_id', $company_id)
+                                ->where('item_size_stocks.item_id', $item_id)
+                                ->whereNotNull('sale_id')
+                                ->where('sales.date', '<=', $t_date)
+                                ->select('item_size_stocks.*', 'sales.date as process_date')
+                                ->get();
+
+    $allConsumedReels = ItemSizeStock::join('stock_journal', 'item_size_stocks.sj_consumption_id', 'stock_journal.id')
                                     ->where('item_size_stocks.company_id', $company_id)
                                     ->where('item_size_stocks.item_id', $item_id)
-                                    ->whereNotNull('sale_id')
-                                    ->where('sales.date', '<=', $t_date)
-                                    ->select('item_size_stocks.*')
+                                    ->whereNotNull('sj_consumption_id')
+                                    ->where('stock_journal.jdate', '<=', $t_date)
+                                    ->select('item_size_stocks.*', 'stock_journal.jdate as process_date')
                                     ->get();
 
-        /** 8. Consumed ReelsC */
-        $ConsumedReelsC = ItemSizeStock::join('stock_journal', 'item_size_stocks.sj_consumption_id', 'stock_journal.id')
-                                        ->where('item_size_stocks.company_id', $company_id)
-                                        ->where('item_size_stocks.item_id', $item_id)
-                                        ->whereNotNull('sj_consumption_id')
-                                        ->where('stock_journal.jdate', '<=', $t_date)
-                                        ->select('item_size_stocks.*')
-                                        ->get();
-
-
-            /* ============================================================
-        🔵 FINAL CLOSING WITH NEGATIVE SUPPORT
-        ============================================================ */
-
-        $ClosingStock = collect();
-        $ClosingNegative = collect();
-
-        /* ---- ALL ADDITIONS TILL TO_DATE ---- */
-        $AllClosingAdds = $openingReelsC
-                            ->merge($CreatedReelsC)
-                            ->merge($GeneratedReelsC)
-                            ->merge($SaleReturnReelsC)
-                            ->merge($PurchasedReelsC)
-                            ->unique('id');
-
-        /* ---- ALL REMOVALS TILL TO_DATE ---- */
-        $AllClosingRemovals = $SoldReelsC
-                                ->merge($ConsumedReelsC)
-                                ->merge($PurchaseReturnReelsC)
-                                ->unique('id');
-
-        /* ---- PROCESS ADDITIONS ---- */
-        foreach ($AllClosingAdds as $reel) {
-            $ClosingStock->push($reel);
+    /* ============================================================
+        🔵 PART 1 — OPENING BALANCE  (before from_date)
+    ============================================================*/
+    $AllOpeningAddsMap = [];
+    foreach ($openingReels as $reel) {
+        if (!isset($AllOpeningAddsMap[$reel->id])) {
+            $AllOpeningAddsMap[$reel->id] = $reel;
         }
+    }
+    foreach ($allCreatedReels as $reel) {
+        if (Carbon::parse($reel->process_date)->lt($fr_date)) {
+            if (!isset($AllOpeningAddsMap[$reel->id])) {
+                $AllOpeningAddsMap[$reel->id] = $reel;
+            }
+        }
+    }
+    foreach ($allGeneratedReels as $reel) {
+        if ($reel->process_date < $f_date) {
+            if (!isset($AllOpeningAddsMap[$reel->id])) {
+                $AllOpeningAddsMap[$reel->id] = $reel;
+            }
+        }
+    }
+    foreach ($allSaleReturnReels as $reel) {
+        if ($reel->process_date < $f_date) {
+            if (!isset($AllOpeningAddsMap[$reel->id])) {
+                $AllOpeningAddsMap[$reel->id] = $reel;
+            }
+        }
+    }
+    foreach ($allPurchasedReels as $reel) {
+        if ($reel->process_date < $f_date) {
+            if (!isset($AllOpeningAddsMap[$reel->id])) {
+                $AllOpeningAddsMap[$reel->id] = $reel;
+            }
+        }
+    }
 
-        /* ---- PROCESS REMOVALS ---- */
-        foreach ($AllClosingRemovals as $reel) {
+    $AllOpeningRemovalsMap = [];
+    foreach ($allSoldReels as $reel) {
+        if ($reel->process_date < $f_date) {
+            if (!isset($AllOpeningRemovalsMap[$reel->id])) {
+                $AllOpeningRemovalsMap[$reel->id] = $reel;
+            }
+        }
+    }
+    foreach ($allConsumedReels as $reel) {
+        if ($reel->process_date < $f_date) {
+            if (!isset($AllOpeningRemovalsMap[$reel->id])) {
+                $AllOpeningRemovalsMap[$reel->id] = $reel;
+            }
+        }
+    }
+    foreach ($allPurchaseReturnReels as $reel) {
+        if ($reel->process_date < $f_date) {
+            if (!isset($AllOpeningRemovalsMap[$reel->id])) {
+                $AllOpeningRemovalsMap[$reel->id] = $reel;
+            }
+        }
+    }
 
-            $exists = $ClosingStock->firstWhere('id', $reel->id);
+    $OpeningStockMap = $AllOpeningAddsMap;
+    $OpeningNegativeMap = [];
 
-            if ($exists) {
+    foreach ($AllOpeningRemovalsMap as $id => $reel) {
+        if (isset($OpeningStockMap[$id])) {
+            unset($OpeningStockMap[$id]);
+        } else {
+            $OpeningNegativeMap[$id] = $reel;
+        }
+    }
 
-                $ClosingStock = $ClosingStock->reject(function ($r) use ($reel) {
-                    return $r->id == $reel->id;
-                });
+    $OpeningReelCount = count($OpeningStockMap) - count($OpeningNegativeMap);
+    $OpeningTotalWeight = 0;
+    foreach ($OpeningStockMap as $r) { $OpeningTotalWeight += $r->weight; }
+    foreach ($OpeningNegativeMap as $r) { $OpeningTotalWeight -= $r->weight; }
+    $ActualOpeningReels = collect(array_values($OpeningStockMap));
 
-            } else {
+    /* ============================================================
+        🔵 PART 2 — DATE WISE REEL LEDGER (In / Out / Closing)
+    ============================================================*/
+    $createdGrouped = [];
+    foreach ($allCreatedReels as $reel) {
+        $d = substr($reel->process_date, 0, 10);
+        $createdGrouped[$d][] = $reel;
+    }
+    $purchasedGrouped = [];
+    foreach ($allPurchasedReels as $reel) {
+        $purchasedGrouped[$reel->process_date][] = $reel;
+    }
+    $generatedGrouped = [];
+    foreach ($allGeneratedReels as $reel) {
+        $generatedGrouped[$reel->process_date][] = $reel;
+    }
+    $saleReturnGrouped = [];
+    foreach ($allSaleReturnReels as $reel) {
+        $saleReturnGrouped[$reel->process_date][] = $reel;
+    }
+    $purchaseReturnGrouped = [];
+    foreach ($allPurchaseReturnReels as $reel) {
+        $purchaseReturnGrouped[$reel->process_date][] = $reel;
+    }
+    $soldGrouped = [];
+    foreach ($allSoldReels as $reel) {
+        $soldGrouped[$reel->process_date][] = $reel;
+    }
+    $consumedGrouped = [];
+    foreach ($allConsumedReels as $reel) {
+        $consumedGrouped[$reel->process_date][] = $reel;
+    }
 
-                // Sold before creation → negative
-                $ClosingNegative->push($reel);
+    $datePeriod = CarbonPeriod::create($f_date, $t_date);
+    $ledger = [];
+    $RunningOpeningMap = $OpeningStockMap;
+    $NegativeReelsMap = [];
+    $date_index = 0;
+
+    $ClosingCount = 0;
+    $ClosingWeight = 0;
+
+    foreach ($datePeriod as $dt) {
+        $day = $dt->format('Y-m-d');
+
+        $OpeningSnapshot = collect(array_values($RunningOpeningMap));
+
+        // Replicate exactly the daily priority order collection merge -> unique sequence
+        $dayInReelsMap = [];
+        if (isset($createdGrouped[$day])) {
+            foreach ($createdGrouped[$day] as $reel) {
+                if (!isset($dayInReelsMap[$reel->id])) $dayInReelsMap[$reel->id] = $reel;
+            }
+        }
+        if (isset($purchasedGrouped[$day])) {
+            foreach ($purchasedGrouped[$day] as $reel) {
+                if (!isset($dayInReelsMap[$reel->id])) $dayInReelsMap[$reel->id] = $reel;
+            }
+        }
+        if (isset($generatedGrouped[$day])) {
+            foreach ($generatedGrouped[$day] as $reel) {
+                if (!isset($dayInReelsMap[$reel->id])) $dayInReelsMap[$reel->id] = $reel;
+            }
+        }
+        if (isset($saleReturnGrouped[$day])) {
+            foreach ($saleReturnGrouped[$day] as $reel) {
+                if (!isset($dayInReelsMap[$reel->id])) $dayInReelsMap[$reel->id] = $reel;
             }
         }
 
-        /* ---- FINAL CALCULATION ---- */
-        $ClosingReelCount  = $ClosingStock->count() - $ClosingNegative->count();
+        $dayOutReelsMap = [];
+        if (isset($soldGrouped[$day])) {
+            foreach ($soldGrouped[$day] as $reel) {
+                if (!isset($dayOutReelsMap[$reel->id])) $dayOutReelsMap[$reel->id] = $reel;
+            }
+        }
+        if (isset($consumedGrouped[$day])) {
+            foreach ($consumedGrouped[$day] as $reel) {
+                if (!isset($dayOutReelsMap[$reel->id])) $dayOutReelsMap[$reel->id] = $reel;
+            }
+        }
+        if (isset($purchaseReturnGrouped[$day])) {
+            foreach ($purchaseReturnGrouped[$day] as $reel) {
+                if (!isset($dayOutReelsMap[$reel->id])) $dayOutReelsMap[$reel->id] = $reel;
+            }
+        }
 
-        $ClosingTotalWeight = $ClosingStock->sum('weight')
-                                - $ClosingNegative->sum('weight');
+        foreach ($dayOutReelsMap as $id => $outReel) {
+            if (isset($RunningOpeningMap[$id])) {
+                unset($RunningOpeningMap[$id]);
+            } else {
+                $NegativeReelsMap[$id] = $outReel;
+            }
+        }
 
-        $ActualClosingReels = $ClosingStock;
+        foreach ($dayInReelsMap as $id => $inReel) {
+            if (isset($NegativeReelsMap[$id])) {
+                unset($NegativeReelsMap[$id]);
+            } else {
+                $RunningOpeningMap[$id] = $inReel;
+            }
+        }
 
-        /* --------------------------------------------
-            RETURN TO BLADE
-        ---------------------------------------------*/
-        // echo $OpeningTotalWeight;
-        // die();
-        return view('ReelLedger.reel_ledger', [
-            'items' => $items,
-            'item_id' => $item_id,
-            'itemName' => $itemName,
+        $PositiveStock = count($RunningOpeningMap);
+        $NegativeStock = count($NegativeReelsMap);
 
-            'OpeningReels' => $ActualOpeningReels,
-            'opening_count' => $OpeningReelCount,
-            'opening_weight' => $OpeningTotalWeight,
-            'closing_count' => $ClosingReelCount,
-            'closing_weight' => $ClosingTotalWeight,
+        $InReelsCount = count($dayInReelsMap);
+        $OutReelsCount = count($dayOutReelsMap);
 
-            'ledgerRows' => $ledger,
-            'f_date' => $f_date,
-            't_date' => $t_date,
-        ]);
+        $InReelsSumWeight = 0; foreach($dayInReelsMap as $r) $InReelsSumWeight += $r->weight;
+        $OutReelsSumWeight = 0; foreach($dayOutReelsMap as $r) $OutReelsSumWeight += $r->weight;
+
+        if ($date_index == 0) {
+            $opening_count = $OpeningReelCount;
+            $ClosingCount = $OpeningReelCount + $InReelsCount - $OutReelsCount;
+            $date_opening_weight = $OpeningTotalWeight;
+            $ClosingWeight = $OpeningTotalWeight + $InReelsSumWeight - $OutReelsSumWeight;
+        } else {
+            $opening_count = $ClosingCount;
+            $ClosingCount = $PositiveStock - $NegativeStock;
+            $date_opening_weight = $ClosingWeight;
+
+            $pos_weight = 0; foreach($RunningOpeningMap as $r) $pos_weight += $r->weight;
+            $neg_weight = 0; foreach($NegativeReelsMap as $r) $neg_weight += $r->weight;
+            $ClosingWeight = $pos_weight - $neg_weight;
+        }
+
+        $ledger[] = [
+            'date' => $day,
+            'opening_count' => $opening_count,
+            'opening_weight' => $date_opening_weight,
+            'in_count' => $InReelsCount,
+            'in_weight' => $InReelsSumWeight,
+            'out_count' => $OutReelsCount,
+            'out_weight' => $OutReelsSumWeight,
+            'closing_count' => $ClosingCount,
+            'closing_weight' => $ClosingWeight,
+            'opening' => [
+                'reels' => $OpeningSnapshot,
+                'weight'=> $date_opening_weight,
+            ],
+            'in' => [
+                'reels' => collect(array_values($dayInReelsMap)),
+                'weight'=> $InReelsSumWeight,
+            ],
+            'out' => [
+                'reels' => collect(array_values($dayOutReelsMap)),
+                'weight'=> $OutReelsSumWeight,
+            ],
+            'closing' => [
+                'reels' => collect(array_values($RunningOpeningMap)),
+                'weight'=> $ClosingWeight,
+            ],
+        ];
+
+        $date_index++;
     }
+
+    /* ============================================================
+        🔵 FINAL CLOSING WITH NEGATIVE SUPPORT
+    ============================================================ */
+    $AllClosingAddsMap = [];
+    foreach ($openingReels as $reel) {
+        if (!isset($AllClosingAddsMap[$reel->id])) $AllClosingAddsMap[$reel->id] = $reel;
+    }
+    foreach ($allCreatedReels as $reel) {
+        if (!isset($AllClosingAddsMap[$reel->id])) $AllClosingAddsMap[$reel->id] = $reel;
+    }
+    foreach ($allGeneratedReels as $reel) {
+        if (!isset($AllClosingAddsMap[$reel->id])) $AllClosingAddsMap[$reel->id] = $reel;
+    }
+    foreach ($allSaleReturnReels as $reel) {
+        if (!isset($AllClosingAddsMap[$reel->id])) $AllClosingAddsMap[$reel->id] = $reel;
+    }
+    foreach ($allPurchasedReels as $reel) {
+        if (!isset($AllClosingAddsMap[$reel->id])) $AllClosingAddsMap[$reel->id] = $reel;
+    }
+
+    $AllClosingRemovalsMap = [];
+    foreach ($allSoldReels as $reel) {
+        if (!isset($AllClosingRemovalsMap[$reel->id])) $AllClosingRemovalsMap[$reel->id] = $reel;
+    }
+    foreach ($allConsumedReels as $reel) {
+        if (!isset($AllClosingRemovalsMap[$reel->id])) $AllClosingRemovalsMap[$reel->id] = $reel;
+    }
+    foreach ($allPurchaseReturnReels as $reel) {
+        if (!isset($AllClosingRemovalsMap[$reel->id])) $AllClosingRemovalsMap[$reel->id] = $reel;
+    }
+
+    $ClosingStockMap = $AllClosingAddsMap;
+    $ClosingNegativeMap = [];
+
+    foreach ($AllClosingRemovalsMap as $id => $reel) {
+        if (isset($ClosingStockMap[$id])) {
+            unset($ClosingStockMap[$id]);
+        } else {
+            $ClosingNegativeMap[$id] = $reel;
+        }
+    }
+
+    $ClosingReelCount  = count($ClosingStockMap) - count($ClosingNegativeMap);
+    $ClosingTotalWeight = 0;
+    foreach ($ClosingStockMap as $r) { $ClosingTotalWeight += $r->weight; }
+    foreach ($ClosingNegativeMap as $r) { $ClosingTotalWeight -= $r->weight; }
+    $ActualClosingReels = collect(array_values($ClosingStockMap));
+
+    return view('ReelLedger.reel_ledger', [
+        'items' => $items,
+        'item_id' => $item_id,
+        'itemName' => $itemName,
+        'OpeningReels' => $ActualOpeningReels,
+        'opening_count' => $OpeningReelCount,
+        'opening_weight' => $OpeningTotalWeight,
+        'closing_count' => $ClosingReelCount,
+        'closing_weight' => $ClosingTotalWeight,
+        'ledgerRows' => $ledger,
+        'f_date' => $f_date,
+        't_date' => $t_date,
+    ]);
+}
+
+
 
 
 

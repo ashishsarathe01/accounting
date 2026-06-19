@@ -4130,13 +4130,34 @@ public function calculateGst(Request $request)
         /* ===============================
            1️⃣ BASIC VALIDATION
         ===============================*/
+            $validator = Validator::make($request->all(), [
+         
+         'partyId' => 'required',
+         'company_id' => 'required',
+         'series' => 'required',
+         'merchant_gst' => 'required',
+         
+      ], [
+          
+            
+            'company_id.required' => 'Company ID is required.',
+            'partyId.required' => 'party is required',
+            'series.required' => 'series is required',
+            'merchant_gst.required' => 'party is reqired'
+      ]);
+   if ($validator->fails()) {
+    return response()->json([
+        'code' => 201,
+        'message' => $validator->errors()->first()
+    ], 201);
+}
 
-        if(empty($request->partyId) || empty($request->merchant_gst) || empty($request->items)){
-            return response()->json([
-                'code' => 400,
-                'message' => 'Required fields missing'
-            ],400);
-        }
+        // if(empty($request->partyId) || empty($request->merchant_gst) || empty($request->items)){
+        //     return response()->json([
+        //         'code' => 400,
+        //         'message' => 'Required fields missing'
+        //     ],201);
+        // }
 
         /* ===============================
            2️⃣ STATE CHECK
@@ -4148,9 +4169,9 @@ public function calculateGst(Request $request)
 
         if(!$party){
             return response()->json([
-                'code' => 404,
+                'code' => 201,
                 'message' => 'Invalid Party'
-            ],404);
+            ],201);
         }
 
         $customerStateCode = DB::table('states')
@@ -4336,7 +4357,7 @@ public function calculateGst(Request $request)
         return response()->json([
             "code" => 500,
             "message" => $e->getMessage()
-        ],500);
+        ]);
     }
 }
 
