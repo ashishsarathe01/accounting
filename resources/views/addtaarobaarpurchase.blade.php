@@ -301,7 +301,7 @@
                                     </select>
                                  </td>
                                  <td class="w-min-50 "><span name="tax_amt[]" class="tax_amount" id="tax_amt_cgst"></span><input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_cgst"></td>
-                                 <td class="w-min-50 "><input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_cgst" data-id="cgst" readonly style="text-align: right;"></td>
+                                 <td class="w-min-50 "><input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_cgst" data-id="cgst" style="text-align: right;"></td>
                                  <td></td>
                               </tr>
                               <tr id="billtr_sgst" class="font-14 font-heading bg-white bill_taxes_row sundry_tr" style="display:none">
@@ -318,7 +318,7 @@
                                     </select>
                                  </td>
                                  <td class="w-min-50 "><span name="tax_amt[]" class="tax_amount" id="tax_amt_sgst"></span><input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_sgst"></td>
-                                 <td class="w-min-50 "><input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_sgst" data-id="sgst" readonly style="text-align: right;" ></td>
+                                 <td class="w-min-50 "><input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_sgst" data-id="sgst" style="text-align: right;" ></td>
                                  <td></td>
                               </tr>
                               <tr id="billtr_igst" class="font-14 font-heading bg-white bill_taxes_row sundry_tr" style="display:none">
@@ -334,7 +334,7 @@
                                     </select>
                                  </td>
                                  <td class="w-min-50 "><span name="tax_amt[]" class="tax_amount" id="tax_amt_igst"></span><input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_igst"></td>
-                                 <td class="w-min-50 "><input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_igst" data-id="igst" readonly style="text-align: right;"></td>
+                                 <td class="w-min-50 "><input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_igst" data-id="igst" style="text-align: right;"></td>
                                  <td></td>
                               </tr>
                               <div class="plus-icon" >
@@ -374,32 +374,54 @@
                                  <td class="w-min-50">
                                     <select id="bill_sundry_round_plus" class=" w-95-parsent  bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="round_plus">
                                        <?php
-                                       foreach ($billsundry as $value) { 
-                                          if($value->nature_of_sundry=='ROUNDED OFF (+)'){?>
-                                             <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_round_plus" id="sundry_option_round_plus" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
+                                       foreach ($billsundry as $value) {
+
+                                             if(
+                                                $value->nature_of_sundry=='ROUNDED OFF (+)'
+                                                ||
+                                                $value->nature_of_sundry=='ROUNDED OFF (-)'
+                                             ){?>
+                                             <option value="<?php echo $value->id;?>"
+
+                                                <?php
+                                                if($value->nature_of_sundry=='ROUNDED OFF (+)'){
+                                                   echo "selected";
+                                                }
+                                                ?> data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_round_plus" id="sundry_option_round_plus" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
                                              <?php 
                                           }
                                        } ?>
                                     </select>
                                  </td>
                                  <td class="w-min-50 "><span name="tax_amt[]" class="tax_amount" id="tax_amt_round_plus"></span><input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_round_plus"></td>
-                                 <td class="w-min-50 "><input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_round_plus" data-id="round_plus" readonly style="text-align: right;"></td>
+                                 <td class="w-min-50 "><input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_round_plus" data-id="round_plus" style="text-align: right;"></td>
                                  <td></td>
                               </tr>
                               <tr id="billtr_round_minus" class="font-14 font-heading bg-white bill_taxes_row sundry_tr" style="display:none">
                                  <td class="w-min-50">
                                     <select id="bill_sundry_round_minus" class="w-95-parsent  bill_sundry_tax_type form-select" name="bill_sundry[]" data-id="round_minus">
                                        <?php
-                                       foreach ($billsundry as $value) { 
-                                          if($value->nature_of_sundry=='ROUNDED OFF (-)'){?>
-                                             <option value="<?php echo $value->id;?>" data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_round_minus" id="sundry_option_round_minus" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
+                                       foreach ($billsundry as $value) {
+
+                                             if(
+                                                $value->nature_of_sundry=='ROUNDED OFF (+)'
+                                                ||
+                                                $value->nature_of_sundry=='ROUNDED OFF (-)'
+                                             ){?>
+                                             <option value="<?php echo $value->id;?>"
+
+                                                <?php
+                                                if($value->nature_of_sundry=='ROUNDED OFF (-)'){
+                                                   echo "selected";
+                                                }
+                                                ?> data-type="<?php echo $value->bill_sundry_type;?>" data-adjust_sale_amt="<?php echo $value->adjust_sale_amt;?>" data-effect_gst_calculation="<?php echo $value->effect_gst_calculation;?>" data-sequence="<?php echo $value->sequence;?>" class="sundry_option_round_minus" id="sundry_option_round_minus" data-nature_of_sundry="<?php echo $value->nature_of_sundry;?>"><?php echo $value->name; ?></option>
                                              <?php 
                                           }
                                        } ?>
                                     </select>
                                  </td>
                                  <td class="w-min-50 "><span name="tax_amt[]" class="tax_amount" id="tax_amt_round_minus"></span><input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_round_minus"></td>
-                                 <td class="w-min-50 "><input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_round_minus" data-id="round_minus" readonly style="text-align: right;"></td>
+                                 <td class="w-min-50 "><input class="bill_amt w-100 form-control" type="number" name="bill_sundry_amount[]" id="bill_sundry_amount_round_minus" data-id="round_minus" style="text-align: right;"></td>
                                  <td></td>
                               </tr>
                               <tr class="font-14 font-heading bg-white">
@@ -959,6 +981,8 @@
    var gst_disabled_for_party = 0;
    var noGSTGroups = @json($no_gst_group_ids);
    var partyGSTData = {};
+   let manualRoundOff = false;
+   let manualGST = false;
    function addMoreItem() {
       let empty_status = 0;
       $('.item_id').each(function(){   
@@ -1126,6 +1150,8 @@
 
       }
 
+      manualGST = false;
+      manualRoundOff = false;
       calculateAmount();
 
    });
@@ -1138,8 +1164,21 @@
          if(customer_gstin==undefined){
             return;
          }
-         
-         if(gst_disabled_for_party == 0 && customer_gstin==merchant_gstin.substring(0,2)){
+        if (gst_disabled_for_party == 1) {
+            $("#billtr_cgst").hide();
+            $("#billtr_sgst").hide();
+            $("#billtr_igst").hide();
+            $(".extra_gst").hide();
+            $("#bill_sundry_amount_cgst").val('');
+            $("#bill_sundry_amount_sgst").val('');
+            $("#bill_sundry_amount_igst").val('');
+            $("#tax_rate_tr_cgst").val(0);
+            $("#tax_rate_tr_sgst").val(0);
+            $("#tax_rate_tr_igst").val(0);
+            $("#tax_amt_cgst").html('');
+            $("#tax_amt_sgst").html('');
+            $("#tax_amt_igst").html('');
+         } else if(gst_disabled_for_party == 0 && customer_gstin==merchant_gstin.substring(0,2)){
             $("#billtr_cgst").show();
             $("#billtr_sgst").show();
             $(".extra_gst").show();
@@ -1342,9 +1381,19 @@
               return item.percent;
             }))
             if(result.length>0){
-               let index = 1;
-               $(".extra_gst").remove();
-               let bill_sundry_total = 0;
+   let index = 1;
+   let preserved_gst_values = {};
+   $(".extra_gst").each(function(){
+      let sel = $(this).find('select.bill_sundry_tax_type');
+      let nat = sel.find('option:selected').attr('data-nature_of_sundry');
+      let dataId = sel.attr('data-id');
+      let val = $("#bill_sundry_amount_"+dataId).val();
+      if(nat){
+         preserved_gst_values[nat] = val;
+      }
+   });
+   $(".extra_gst").remove();
+   let bill_sundry_total = 0;
                let item_total_amount = 0; //New Changes By Ashish
                result.forEach(function(e){  //New Changes By Ashish
                   item_total_amount = parseFloat(item_total_amount) + parseFloat(e.amount); //New Changes By Ashish
@@ -1400,15 +1449,25 @@
                         taxSundryArray['sgst'] = sundry_amount;
                      }
                      //CGST
-                     if(gst_disabled_for_party == 0){
-                        $("#bill_sundry_amount_cgst").val(taxSundryArray['cgst']);
+                     if(
+                        gst_disabled_for_party == 0
+                        &&
+                        manualGST == false
+                     ){
+                        $("#bill_sundry_amount_cgst")
+                        .val(taxSundryArray['cgst']);
                      }
                      //$("#bill_sundry_amount_cgst").prop('readonly',true);
                      $("#tax_amt_cgst").html(e.percent/2+" %");
                      $("#tax_rate_tr_cgst").val(e.percent/2);
                      //SGST
-                     if(gst_disabled_for_party == 0){
-                        $("#bill_sundry_amount_sgst").val(taxSundryArray['sgst']);
+                     if(
+                        gst_disabled_for_party == 0
+                        &&
+                        manualGST == false
+                     ){
+                        $("#bill_sundry_amount_sgst")
+                        .val(taxSundryArray['sgst']);
                      }
                      //$("#bill_sundry_amount_sgst").prop('readonly',true);
                      $("#tax_amt_sgst").html(e.percent/2+" %");
@@ -1452,10 +1511,14 @@
                         });
                      }
                      $(".add_more_bill_sundry_gst").click();
-                     if(gst_disabled_for_party == 0){
-                        $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(taxSundryArray['cgst']);
-                     }
-                     $("#bill_sundry_"+add_more_bill_sundry_up_count).val(cgst_sundry_value)
+if(gst_disabled_for_party == 0){
+   if(manualGST == true && preserved_gst_values['CGST']!=undefined){
+      $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(preserved_gst_values['CGST']);
+   }else if(manualGST == false){
+      $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(taxSundryArray['cgst']);
+   }
+}
+$("#bill_sundry_"+add_more_bill_sundry_up_count).val(cgst_sundry_value)
                      //$("#bill_sundry_amount_"+add_more_bill_sundry_up_count).prop('readonly',true);
                      $("#tax_amt_"+add_more_bill_sundry_up_count).html(e.percent/2+" %");
                      $("#tax_rate_tr_"+add_more_bill_sundry_up_count).val(e.percent/2);
@@ -1469,10 +1532,14 @@
                         });
                      }
                      $(".add_more_bill_sundry_gst").click();
-                     if(gst_disabled_for_party == 0){
-                        $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(taxSundryArray['sgst']);
-                     }
-                     $("#bill_sundry_"+add_more_bill_sundry_up_count).val(sgst_sundry_value)
+if(gst_disabled_for_party == 0){
+   if(manualGST == true && preserved_gst_values['SGST']!=undefined){
+      $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(preserved_gst_values['SGST']);
+   }else if(manualGST == false){
+      $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(taxSundryArray['sgst']);
+   }
+}
+$("#bill_sundry_"+add_more_bill_sundry_up_count).val(sgst_sundry_value)
                      //$("#bill_sundry_amount_"+add_more_bill_sundry_up_count).prop('readonly',true);
                      $("#tax_amt_"+add_more_bill_sundry_up_count).html(e.percent/2+" %");
                      $("#tax_rate_tr_"+add_more_bill_sundry_up_count).val(e.percent/2);
@@ -1484,8 +1551,12 @@
                      }
                      //on_tcs_amount = parseFloat(on_tcs_amount) + parseFloat(taxSundryArray['cgst']) + parseFloat(taxSundryArray['sgst']);
                      if(gst_disabled_for_party == 0){
-                        final_total = final_total + parseFloat(taxSundryArray['cgst']) + parseFloat(taxSundryArray['sgst']); 
-                     }
+   if(manualGST == true){
+      final_total = final_total + (parseFloat($("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val()) || 0) + (parseFloat($("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val()) || 0);
+   }else{
+      final_total = final_total + parseFloat(taxSundryArray['cgst']) + parseFloat(taxSundryArray['sgst']); 
+   }
+}
                   }
                   index++;
                });
@@ -1496,10 +1567,20 @@
             }))    
 
             if(result.length>0){
-               let index = 1;
-               let item_total_amount = 0;
-               let bill_sundry_total = 0;
-               $(".extra_gst").remove();  
+   let index = 1;
+   let item_total_amount = 0;
+   let bill_sundry_total = 0;
+   let preserved_gst_values = {};
+   $(".extra_gst").each(function(){
+      let sel = $(this).find('select.bill_sundry_tax_type');
+      let nat = sel.find('option:selected').attr('data-nature_of_sundry');
+      let dataId = sel.attr('data-id');
+      let val = $("#bill_sundry_amount_"+dataId).val();
+      if(nat){
+         preserved_gst_values[nat] = val;
+      }
+   });
+   $(".extra_gst").remove(); 
                result.forEach(function(e){ //New Changes By Ashish
                   item_total_amount = parseFloat(item_total_amount) + parseFloat(e.amount);//New Changes By Ashish
                });//New Changes By Ashish
@@ -1552,8 +1633,13 @@
                         ).toFixed(2);
                         taxSundryArray['igst'] = sundry_amount;
                      }
-                     if(gst_disabled_for_party == 0){
-                        $("#bill_sundry_amount_igst").val(taxSundryArray['igst']);
+                     if(
+                        gst_disabled_for_party == 0
+                        &&
+                        manualGST == false
+                     ){
+                        $("#bill_sundry_amount_igst")
+                        .val(taxSundryArray['igst']);
                      }
                      //$("#bill_sundry_amount_igst").prop('readonly',true);
                      $("#tax_amt_igst").html(e.percent+" %");
@@ -1590,11 +1676,15 @@
                         });
                      }
                      $(".add_more_bill_sundry_gst").click();
-                     if(gst_disabled_for_party == 0){
-                        $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(taxSundryArray['igst']);
-                     }
-                     
-                     $("#bill_sundry_"+add_more_bill_sundry_up_count).val(sundry_value);
+if(gst_disabled_for_party == 0){
+   if(manualGST == true && preserved_gst_values['IGST']!=undefined){
+      $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(preserved_gst_values['IGST']);
+   }else if(manualGST == false){
+      $("#bill_sundry_amount_"+add_more_bill_sundry_up_count).val(taxSundryArray['igst']);
+   }
+}
+
+$("#bill_sundry_"+add_more_bill_sundry_up_count).val(sundry_value);
                      $("#tax_amt_"+add_more_bill_sundry_up_count).html(e.percent+" %");
                      $("#tax_rate_tr_"+add_more_bill_sundry_up_count).val(e.percent);
                      if(taxSundryArray['igst']=="" || taxSundryArray['igst']==undefined){
@@ -1652,37 +1742,76 @@
          if(gst_disabled_for_party == 1){
             gstamount = 0;
          }
+         final_total = parseFloat($("#total_taxable_amounts").val()) + parseFloat(gstamount) + parseFloat(on_tcs_amount);
         // console.log(gstamount);
          if (isNaN(final_total)) {
             final_total = 0;
          }
-         final_total = Math.round(final_total);
+         let actualFinalTotal = parseFloat(final_total);
+
+         if(manualRoundOff == false){
+
+            final_total = Math.round(final_total);
+
+            let roundoff =
+               parseFloat(final_total)
+               - parseFloat($("#total_taxable_amounts").val())
+               - parseFloat(gstamount)
+               - on_tcs_amount;
+
+            roundoff = roundoff.toFixed(2);
+
+            $("#billtr_round_plus").hide();
+            $("#billtr_round_minus").hide();
+
+            $("#bill_sundry_amount_round_minus").val('');
+            $("#bill_sundry_amount_round_plus").val('');
+
+            if(parseFloat(roundoff) < 0){
+
+               $("#bill_sundry_amount_round_minus")
+               .val(Math.abs(roundoff));
+
+               $("#billtr_round_minus").show();
+
+            }else if(parseFloat(roundoff) > 0){
+
+               $("#bill_sundry_amount_round_plus")
+               .val(Math.abs(roundoff));
+
+               $("#billtr_round_plus").show();
+            }
+
+         }else{
+
+            let plusAmount =
+               parseFloat(
+                  $("#bill_sundry_amount_round_plus").val()
+               ) || 0;
+
+            let minusAmount =
+               parseFloat(
+                  $("#bill_sundry_amount_round_minus").val()
+               ) || 0;
+
+            final_total =
+               actualFinalTotal
+               + plusAmount
+               - minusAmount;
+         }
+
          var formattedNumber = final_total.toLocaleString('en-IN', {
             style: 'currency',
             currency: 'INR',
             minimumFractionDigits: 2
          });
 
-         
-
          $("#bill_sundry_amt").html(formattedNumber);
-         $("#total_amounts").val(final_total);
-         
-         let roundoff = parseFloat(final_total) - parseFloat($("#total_taxable_amounts").val()) - parseFloat(gstamount) - on_tcs_amount;
-         roundoff = roundoff.toFixed(2);
-         $("#billtr_round_plus").hide();
-         $("#billtr_round_minus").hide();
-         $("#bill_sundry_amount_round_minus").val('');
-         $("#bill_sundry_amount_round_plus").val('');
-         if(parseFloat(roundoff)<0){
-            $("#bill_sundry_amount_round_minus").val(Math.abs(roundoff));
-            $("#bill_sundry_amount_round_minus").attr('readonly',true); 
-            $("#billtr_round_minus").show();           
-         }else if(parseFloat(roundoff)>0){
-            $("#bill_sundry_amount_round_plus").val(Math.abs(roundoff));
-            $("#bill_sundry_amount_round_plus").attr('readonly',true); 
-            $("#billtr_round_plus").show(); 
-         }
+
+         $("#total_amounts").val(
+            parseFloat(final_total).toFixed(2)
+         );
+
          return;         
       }
       $("#party_id").trigger('change');
@@ -1692,6 +1821,8 @@
          if($(this).val()==""){
             $("#quantity_tr_"+id).focus();
          }
+         manualGST = false;
+         manualRoundOff = false;
          calculateAmount();
       });
       $(document).on('input', '.quantity',function(){
@@ -1699,6 +1830,8 @@
          if($(this).val()==""){
             $("#item_id_"+id).focus();
          }
+         manualGST = false;
+         manualRoundOff = false;
          calculateAmount();
       });
       $(document).on('input', '.amount',function(){
@@ -1713,6 +1846,8 @@
          if($(this).val()==""){
             $("#price_tr_"+id).focus();
          }
+         manualGST = false;
+         manualRoundOff = false;
          calculateAmount('A');
       });
       $(document).on('change', '.bill_sundry_tax_type',function(){
@@ -1734,14 +1869,134 @@
          }         
          $("#billtr_"+id).attr('data-sequence',sequence);
          $("#bill_sundry_amount_"+id).addClass('sundry_amt_'+$(this).val());
+         manualGST = false;
          calculateAmount();
       });      
       $(document).on('input', '.bill_amt',function(){
+
+         let currentId = $(this).attr('id');
+let currentDataId = $(this).attr('data-id');
+let currentNature = $('#bill_sundry_' + currentDataId + ' option:selected').attr('data-nature_of_sundry');
+
+if(
+   currentId == 'bill_sundry_amount_cgst'
+   ||
+   currentId == 'bill_sundry_amount_sgst'
+   ||
+   currentId == 'bill_sundry_amount_igst'
+   ||
+   currentNature == 'CGST'
+   ||
+   currentNature == 'SGST'
+   ||
+   currentNature == 'IGST'
+){
+
+   manualGST = true;
+
+   calculateAmount();
+
+   return;
+}
+         if(
+            currentId == 'bill_sundry_amount_round_plus'
+            ||
+            currentId == 'bill_sundry_amount_round_minus'
+         ){
+
+            manualRoundOff = true;
+
+            if(currentId == 'bill_sundry_amount_round_plus'){
+
+               $("#bill_sundry_amount_round_minus").val('');
+               $("#billtr_round_minus").hide();
+               $("#billtr_round_plus").show();
+
+            }else{
+
+               $("#bill_sundry_amount_round_plus").val('');
+               $("#billtr_round_plus").hide();
+               $("#billtr_round_minus").show();
+            }
+
+            calculateAmount();
+
+            return;
+         }
+
          if($(this).val()==""){
             $("#bill_sundry_"+$(this).attr('data-id')).focus();
          }
-         calculateAmount($("#bill_sundry_"+$(this).attr('data-id')).val());
+
+         manualRoundOff = false;
+         manualRoundOff = false;
+         calculateAmount(
+            $("#bill_sundry_"+$(this).attr('data-id')).val()
+         );
       });
+      $(document).on(
+         'input',
+         '#bill_sundry_amount_round_plus, #bill_sundry_amount_round_minus',
+         function(){
+
+            manualRoundOff = true;
+
+            if($(this).attr('id') == 'bill_sundry_amount_round_plus'){
+
+               $("#bill_sundry_amount_round_minus").val('');
+               $("#billtr_round_minus").hide();
+               $("#billtr_round_plus").show();
+
+            }else{
+
+               $("#bill_sundry_amount_round_plus").val('');
+               $("#billtr_round_plus").hide();
+               $("#billtr_round_minus").show();
+            }
+
+            calculateAmount();
+         }
+      );
+      $(document).on(
+         'change',
+         '#bill_sundry_round_plus, #bill_sundry_round_minus',
+         function(){
+
+            manualRoundOff = true;
+
+            let selectedText =
+            $(this).find('option:selected').attr('data-nature_of_sundry');
+
+            if(selectedText == 'ROUNDED OFF (+)'){
+
+               let val =
+               $("#bill_sundry_amount_round_minus").val();
+
+               $("#bill_sundry_amount_round_plus").val(val);
+
+               $("#bill_sundry_amount_round_minus").val('');
+
+               $("#billtr_round_minus").hide();
+
+               $("#billtr_round_plus").show();
+
+            }else{
+
+               let val =
+               $("#bill_sundry_amount_round_plus").val();
+
+               $("#bill_sundry_amount_round_minus").val(val);
+
+               $("#bill_sundry_amount_round_plus").val('');
+
+               $("#billtr_round_plus").hide();
+
+               $("#billtr_round_minus").show();
+            }
+
+            calculateAmount();
+         }
+      );
       $("#purchaseBtn").click(function(){
          if(confirm("Are you sure to submit?")==true){            
             $("#purchaseForm").validate({
@@ -1991,7 +2246,7 @@ $( ".select2-single, .select2-multiple" ).select2();
       } ?>
       newRow = '<tr id="billtr_' + add_more_bill_sundry_up_count + '" class="font-14 font-heading bg-white extra_taxes_row sundry_tr extra_gst"><td class="w-min-50"><select class="w-95-parsent bill_sundry_tax_type form-select w-100"  id="bill_sundry_' + add_more_bill_sundry_up_count + '" name="bill_sundry[]" data-id="'+add_more_bill_sundry_up_count+'">';
       newRow += optionElements;
-      newRow += '</select></td><td class="w-min-50 "><span name="tax_amt[]" id="tax_amt_' + add_more_bill_sundry_up_count + '"></span><input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_' + add_more_bill_sundry_up_count + '"></td><td class="w-min-50 "><input type="number" step="any" class="bill_amt w-100 form-control" id="bill_sundry_amount_' + add_more_bill_sundry_up_count + '" name="bill_sundry_amount[]" data-id="'+add_more_bill_sundry_up_count+'" readonly style="text-align: right;" ></td><td class="w-min-50"></td></tr>';
+      newRow += '</select></td><td class="w-min-50 "><span name="tax_amt[]" id="tax_amt_' + add_more_bill_sundry_up_count + '"></span><input type="hidden" name="tax_rate[]" value="0" id="tax_rate_tr_' + add_more_bill_sundry_up_count + '"></td><td class="w-min-50 "><input type="number" step="any" class="bill_amt w-100 form-control" id="bill_sundry_amount_' + add_more_bill_sundry_up_count + '" name="bill_sundry_amount[]" data-id="'+add_more_bill_sundry_up_count+'" style="text-align: right;" ></td><td class="w-min-50"></td></tr>';
       $curRow.before(newRow);
    });
    $('#party').keydown(function(e) {
@@ -2129,6 +2384,7 @@ $( ".select2-single, .select2-multiple" ).select2();
         "<br>Address : "+ selected.attr('data-address')
     );
 
+   manualGST = false;
     calculateAmount();
 });
    $('body').on('keydown', 'input, select', function(e){
@@ -2390,6 +2646,7 @@ $( ".select2-single, .select2-multiple" ).select2();
             $("#purchase_type").val('CENTER');
          }
       }
+      manualGST = false;
       calculateAmount();
           
    });
@@ -3482,6 +3739,8 @@ $('#modal_gstin').on('change', function () {
 
    });
    $(document).on('keyup change', '.weight', function () {
+      manualGST = false;
+      manualRoundOff = false;
       calculateAmount();
    });
    $(document).on('wheel', 'input[type=number]', function (e) {
