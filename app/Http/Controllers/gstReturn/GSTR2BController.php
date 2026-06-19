@@ -165,7 +165,10 @@ class GSTR2BController extends Controller
                 echo json_encode(array("status"=>0,"message"=>$result->error->message));
                 exit();
             }
-            
+           
+
+            // echo "<pre>";
+            // print_r($result);die;
             if(isset($result->data)){
                 $GSTR2B = new GSTR2B;
                 $GSTR2B->res_month = $request->month;
@@ -173,14 +176,22 @@ class GSTR2BController extends Controller
                 $GSTR2B->company_gstin = $request->gstin;
                 $GSTR2B->company_id = Session::get('user_company_id');
                 $GSTR2B->created_at = Carbon::now(); 
-                $GSTR2B->save();                                       
-            }                  
-            $response = array(
-                'status' => true,
-                'message' => 'SUCCESS',
-                'data' => ""
-            );
-            return json_encode($response);                
+                $GSTR2B->save();   
+                $response = array(
+                    'status' => true,
+                    'message' => 'SUCCESS',
+                    'data' => ""
+                );
+                return json_encode($response);
+            }else{
+                $response = array(
+                    'status' => false,
+                    'message' => 'Data Not Found',
+                    'data' => ""
+                );
+                return json_encode($response); 
+            }                 
+                            
         }else{
             $gstr2b = GSTR2B::where('company_gstin',$request->gstin)
                                 ->where('company_id',Session::get('user_company_id'))
@@ -401,15 +412,11 @@ class GSTR2BController extends Controller
                 ->where('date', 'like', $request->month.'%')
                 ->groupBy('billing_gst')
                 ->get();
-            
             foreach($bookParties as $party){
-            
-                if(!in_array(strtoupper(trim($party->ctin)), $existingCtins)){
-            
+                if(!in_array(strtoupper(trim($party->ctin)), $existingCtins)){            
                     $account = Accounts::where('gstin', $party->ctin)
                                 ->where('company_id', Session::get('user_company_id'))
                                 ->first();
-            
                     $suppliers[] = (object)[
                         'ctin'         => $party->ctin,
                         'trdnm'        => $account ? $account->account_name : $party->ctin,
@@ -423,8 +430,36 @@ class GSTR2BController extends Controller
                     ];
                 }
             }
-            
-            
+            $bookJournals = Journal::select(
+                    'vendor_gstin as ctin',
+                    DB::raw('SUM(total_amount) as b2b_books')
+                )
+                ->where('company_id', Session::get('user_company_id'))
+                ->where('merchant_gst', $request->gstin)
+                ->where('status', '1')
+                ->where('delete', '0')
+                ->where('claim_gst_status','YES')
+                ->where('date', 'like', $request->month.'%')
+                ->groupBy('vendor_gstin')
+                ->get();
+            foreach($bookJournals as $party){
+                if(!in_array(strtoupper(trim($party->ctin)), $existingCtins)){
+                    $account = Accounts::where('gstin', $party->ctin)
+                                ->where('company_id', Session::get('user_company_id'))
+                                ->first();
+                    $suppliers[] = (object)[
+                        'ctin'         => $party->ctin,
+                        'trdnm'        => $account ? $account->account_name : $party->ctin,
+                        'amount'       => 0,
+                        'book_value'   => (float)$party->b2b_books,
+                        'b2b_books'    => (float)$party->b2b_books,
+                        'b2b_portal'   => 0,
+                        'cdnr_books'   => 0,
+                        'cdnr_portal'  => 0,
+                        'diff_amt'     => -(float)$party->b2b_books,
+                    ];
+                }
+            }
             //Pending Notes
             $pending_notes = [];
             $bill_sundry_igst = BillSundrys::where('company_id', Session::get('user_company_id'))
@@ -539,7 +574,84 @@ class GSTR2BController extends Controller
                     'cess' => 0
                 ];
             }
-            
+            //Pending Invoice
+            $sr_inv = 1;
+            $pending_invoice = [];
+            $purchase_invoices = Purchase::whereNull('purchases.gstr2b_invoice_id')
+                                    ->leftJoin('accounts', 'accounts.id', '=', 'purchases.party')
+                                    ->leftJoin('purchase_sundries  as igst', function ($join) use ($bill_sundry_igst) {
+                                        $join->on('purchases.id', '=', 'igst.purchase_id')
+                                            ->where('igst.bill_sundry', $bill_sundry_igst);
+                                    })
+
+                                    ->leftJoin('purchase_sundries as cgst', function ($join) use ($bill_sundry_cgst) {
+                                        $join->on('purchases.id', '=', 'cgst.purchase_id')
+                                            ->where('cgst.bill_sundry', $bill_sundry_cgst);
+                                    })
+
+                                    ->leftJoin('purchase_sundries as sgst', function ($join) use ($bill_sundry_sgst) {
+                                        $join->on('purchases.id', '=', 'sgst.purchase_id')
+                                            ->where('sgst.bill_sundry', $bill_sundry_sgst);
+                                    })
+                                    ->where('purchases.company_id', Session::get('user_company_id'))
+                                    ->where('purchases.merchant_gst', $request->gstin)
+                                    ->whereBetween('purchases.date', [$fy_start, $month_end])
+                                    ->where('purchases.delete','0')
+                                    ->where('purchases.status','1')
+                                    ->select(
+                                        'purchases.*',
+                                        'accounts.account_name as party_name',
+                                        DB::raw('IFNULL(igst.amount,0) as igst_amount'),
+                                        DB::raw('IFNULL(cgst.amount,0) as cgst_amount'),
+                                        DB::raw('IFNULL(sgst.amount,0) as sgst_amount')
+                                    )
+                                    ->get();
+            foreach($purchase_invoices as $d){
+                $pending_invoice[] = [
+                    'sr_no' => $sr_inv++,
+                    'party' => $d->party_name ?? '',
+                    'type' => 'PURCHASE',
+                    'invoice_no' => $d->voucher_no ?? '-',
+                    'date' => date('d-m-Y', strtotime($d->date)),
+                    'book_value' => $d->total,
+                    'taxable' => $d->taxable_amt,
+                    'igst' => $d->igst_amount,
+                    'cgst' => $d->cgst_amount,
+                    'sgst' => $d->sgst_amount,
+                    'cess' => 0
+                ];
+            }
+            $journal_invoices = Journal::whereNull('journals.gstr2b_invoice_id')
+                                    ->leftJoin('accounts', 'accounts.id', '=', 'journals.vendor')
+                                    ->where('journals.company_id', Session::get('user_company_id'))
+                                    ->where('journals.merchant_gst', $request->gstin)
+                                    ->whereBetween('journals.date', [$fy_start, $month_end])
+                                    ->where('journals.delete','0')
+                                    ->where('journals.status','1')
+                                    ->where('journals.claim_gst_status','YES')
+                                    ->select(
+                                        'journals.*',
+                                        'accounts.account_name as party_name',
+                                        DB::raw('IFNULL(journals.igst,0) as igst_amount'),
+                                        DB::raw('IFNULL(journals.cgst,0) as cgst_amount'),
+                                        DB::raw('IFNULL(journals.sgst,0) as sgst_amount')
+                                    )
+                                    ->get();
+            foreach($journal_invoices as $d){
+                $pending_invoice[] = [
+                    'sr_no' => $sr_inv++,
+                    'party' => $d->party_name ?? '',
+                    'type' => 'JOURNAL',
+                    'invoice_no' => $d->voucher_no_prefix ?? '-',
+                    'date' => date('d-m-Y', strtotime($d->date)),
+                    'book_value' => $d->total_amount,
+                    'taxable' => $d->net_total,
+                    'igst' => $d->igst_amount,
+                    'cgst' => $d->cgst_amount,
+                    'sgst' => $d->sgst_amount,
+                    'cess' => 0
+                ];
+            }
             if($verify_by!=""){
                 $user = DB::table('users')
                         ->select('name')
@@ -683,6 +795,7 @@ class GSTR2BController extends Controller
                 'status' => true,
                 'message' => 'GSTR2B',
                 'pending_notes' => $pending_notes ?? [],
+                'pending_invoice' => $pending_invoice ?? [],
                 'data' => $suppliers,
                 'verify_status' => $verify_by_status,
                 'verify_date' => $verify_date,
@@ -1160,6 +1273,7 @@ class GSTR2BController extends Controller
                                 Edit
                             </a>";
             }
+            $style = "";
             $b2b_invoices_only_in_book .= "
             <tr>
                 <td></td>

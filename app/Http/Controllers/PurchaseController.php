@@ -566,16 +566,16 @@ if ($companyData->gst_config_type == "single_gst") {
       $purchase->billing_address = $account->address;
       $purchase->billing_pincode = $account->pin_code;
       $purchase->created_by = Session::get('user_id');
-      $applyGST = false;
-      if ($account->gstin) {
-         if (!$account->gst_effective_from) {
-            $applyGST = true;
-         } 
-         elseif ($request->input('date') >= $account->gst_effective_from) {
-            $applyGST = true;
-         }
-      }
-
+      // $applyGST = false;
+      // if ($account->gstin) {
+      //    if (!$account->gst_effective_from) {
+      //       $applyGST = true;
+      //    } 
+      //    elseif ($request->input('date') >= $account->gst_effective_from) {
+      //       $applyGST = true;
+      //    }
+      // }
+      $applyGST = true;
       $purchase->billing_gst = $applyGST ? $account->gstin : null;
       $purchase->merchant_gst =  $request->input('merchant_gst');
       $purchase->billing_state = $account->state;
@@ -1809,16 +1809,17 @@ if ($companyData->gst_config_type == "single_gst") {
       $purchase->billing_name = $account->account_name;
       $purchase->billing_address = $account->address;
       $purchase->billing_pincode = $account->pin_code;
-      $applyGST = false;
-      if ($account->gstin) {
-
-         if (!$account->gst_effective_from) {
-            $applyGST = true;
-         } 
-         elseif ($request->input('date') >= $account->gst_effective_from) {
-            $applyGST = true;
-         }
-      }
+      // $applyGST = false;
+      // if ($account->gstin){
+      //    if (!$account->gst_effective_from) {
+      //       $applyGST = true;
+      //    }else if ($account->gst_effective_from=="") {
+      //       $applyGST = true;
+      //    }elseif ($request->input('date') >= $account->gst_effective_from) {
+      //       $applyGST = true;
+      //    }
+      // }
+      $applyGST = true;
       $purchase->billing_gst = $applyGST ? $account->gstin : null;
       $purchase->billing_state = $account->state;
       $purchase->shipping_name = $request->input('shipping_name');

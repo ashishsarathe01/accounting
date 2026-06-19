@@ -266,8 +266,8 @@
                </div>
                {{-- <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">GSTR2B 
                   <button class="btn btn-info reconciliation">Reconciliation</button>
-                  <button class="btn btn-info verify_gstr2b" style="display:none;float: right;">Verify</button>
-                  <span id="verify_detail" style="float: right;color:green"></span>
+                  
+                  
                </h5>  --}}
                
             </div>
@@ -598,6 +598,15 @@
 
 
                      if(obj.itcBookData){
+                        let igst_amt_book = obj?.itcBookData?.IGST ?? 0;
+                        let igst_amt_portal = obj?.itcApiData?.itc_elg?.itc_net?.iamt ?? 0;
+
+                        let cgst_amt_book = obj?.itcBookData?.CGST ?? 0;
+                        let cgst_amt_portal = obj?.itcApiData?.itc_elg?.itc_net?.camt ?? 0;
+
+                        let sgst_amt_book = obj?.itcBookData?.SGST ?? 0;
+                        let sgst_amt_portal = obj?.itcApiData?.itc_elg?.itc_net?.samt ?? 0;
+
                         finalHtml += `
                         <tr>
                            <td colspan="6">
@@ -606,33 +615,41 @@
                                     <h6 style="margin:0;">
                                        Tax Summary
                                     </h6>
-                                 </div>
+                                    
+                                    <span id="verify_detail" style="float: right;color:green"></span>
+                                    <button class="btn btn-info verify_gstr2b" style="display:none;float: right;">Verify</button>
+                                 </div><br>
                                  <table class="table table-bordered ">
                                     <tr class="section-header">
                                        <th>4. Eligible ITC</th>
                                        <th>Books</th>
                                        <th class="d-flex justify-content-between align-items-center">
                                        <span>Portal</span> </th>
+                                        <th>Difference</th>
                                     </tr>
                                     <tr>
                                        <td>Integrated Tax</td>
                                        <td>₹ ${formatIndianNumber(obj?.itcBookData?.IGST ?? 0)}</td>
                                        <td>₹ ${formatIndianNumber(obj?.itcApiData?.itc_elg?.itc_net?.iamt ?? 0)}</td>
+                                       <td>₹ ${formatIndianNumber(Math.abs(igst_amt_book -igst_amt_portal))}</td>
                                     </tr>
                                     <tr>
                                        <td>Central Tax</td>
                                        <td>₹ ${formatIndianNumber(obj?.itcBookData?.CGST ?? 0)}</td>
                                        <td>₹ ${formatIndianNumber(obj?.itcApiData?.itc_elg?.itc_net?.camt ?? 0)}</td>
+                                       <td>₹ ${formatIndianNumber(Math.abs(cgst_amt_book - cgst_amt_portal))}</td>
                                     </tr>
                                     <tr>
                                        <td>State/UT Tax</td>
                                        <td>₹ ${formatIndianNumber(obj?.itcBookData?.SGST ?? 0)}</td>
                                        <td>₹ ${formatIndianNumber(obj?.itcApiData?.itc_elg?.itc_net?.samt ?? 0)}</td>
+                                       <td>₹ ${formatIndianNumber(Math.abs(sgst_amt_book - sgst_amt_portal))}</td>
                                     </tr>
                                     <tr>
                                        <td>CESS</td>
                                        <td>₹ 0.00</td>
                                        <td>₹ ${formatIndianNumber(obj?.itcApiData?.itc_elg?.itc_net?.csamt ?? 0)}</td>
+                                       <td>₹ 0.00</td>
                                     </tr>
                                  </table>`;
 
@@ -687,6 +704,79 @@
                         `;
 
                         obj.pending_notes.forEach(r => {
+                           finalHtml += `
+                           <tr>
+                                 <td>${r.sr_no}</td>
+                                 <td>${r.party}</td>
+                                 <td>${r.type}</td>
+                                 <td>${r.invoice_no}</td>
+                                 <td>${r.date}</td>
+                                 <td style="text-align:right">${Number(r.book_value).toLocaleString('en-IN')}</td>
+                                 <td style="text-align:right">${Number(r.taxable).toLocaleString('en-IN')}</td>
+                                 <td style="text-align:right">${Number(r.igst).toLocaleString('en-IN')}</td>
+                                 <td style="text-align:right">${Number(r.cgst).toLocaleString('en-IN')}</td>
+                                 <td style="text-align:right">${Number(r.sgst).toLocaleString('en-IN')}</td>
+                                 <td style="text-align:right">${Number(r.cess).toLocaleString('en-IN')}</td>
+                           </tr>`;
+                        });
+
+                        finalHtml += `
+                                    </tbody>
+                                 </table>
+                                 </div>
+                           </td>
+                        </tr>`;
+                     }
+                     if(obj.pending_invoice && obj.pending_invoice.length){
+                        finalHtml += `
+                        <tr>
+                           <td colspan="6">
+                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;">
+
+                                    <h6 style="margin:0;">
+                                       Pending Invoices (Unlinked)
+                                    </h6>
+
+                                    <div style="display:flex; align-items:center; gap:12px; font-size:20px;">
+
+                                       <span class="pending_invoice_print_btn"
+                                          title="Print"
+                                          style="cursor:pointer;">
+                                          🖨️
+                                       </span>
+
+                                       <span class="pending_invoice_excel_btn"
+                                          title="Export Excel"
+                                          style="cursor:pointer;">
+                                          📥
+                                       </span>
+                                       <span class="pending_invoice_toggle_btn" title="Show/Hide Table" style="cursor:pointer;">
+                                          👁️
+                                       </span>
+                                    </div>
+
+                                 </div>
+                                 <div class="pending_invoice_table_wrapper" style="display:none;">
+                                 <table class="table table-bordered pending_invoice_table">
+                                    <thead>
+                                       <tr>
+                                             <th>Sr No</th>
+                                             <th>Party</th>
+                                             <th>Type</th>
+                                             <th>Invoice No</th>
+                                             <th>Date</th>
+                                             <th>Book Value</th>
+                                             <th>Taxable</th>
+                                             <th>IGST</th>
+                                             <th>CGST</th>
+                                             <th>SGST</th>
+                                             <th>Cess</th>
+                                       </tr>
+                                    </thead>
+                                    <tbody>
+                        `;
+
+                        obj.pending_invoice.forEach(r => {
                            finalHtml += `
                            <tr>
                                  <td>${r.sr_no}</td>
@@ -1007,11 +1097,11 @@
                         }
                         body_data+=`<tr>
                               <td>${sr++}</td>
-                              <td>${e.gstin}</td>
+                              <td>${e.gstin ?? e.account_gst}</td>
                               <td>${e.party_name}</td>
                               <td>
                                  <a href="${inv_url}" target="_blank">
-                                       ${e.invoice_no}
+                                       ${e.invoice_no ?? '-'}
                                  </a>
                               </td>
                               <td>
@@ -1067,18 +1157,107 @@
       });
    });
    $(document).on("click", ".pending_toggle_btn", function () {
-    let wrapper = $(this)
-        .closest("td")
-        .find(".pending_table_wrapper");
+      let wrapper = $(this)
+         .closest("td")
+         .find(".pending_table_wrapper");
 
-    wrapper.slideToggle(200);
+      wrapper.slideToggle(200);
 
-    // Optional icon change
-    if ($(this).text() === "👁️") {
-        $(this).text("🙈");
-    } else {
-        $(this).text("👁️");
-    }
+      // Optional icon change
+      if ($(this).text() === "👁️") {
+         $(this).text("🙈");
+      } else {
+         $(this).text("👁️");
+      }
+   });
+   $(document).on("click", ".pending_invoice_toggle_btn", function () {
+      let wrapper = $(this)
+         .closest("td")
+         .find(".pending_invoice_table_wrapper");
+
+      wrapper.slideToggle(200);
+
+      // Optional icon change
+      if ($(this).text() === "👁️") {
+         $(this).text("🙈");
+      } else {
+         $(this).text("👁️");
+      }
+   });
+   $(document).on('click', '.pending_print_btn', function () {
+    let tableHtml = $(this)
+        .closest('td')
+        .find('.pending_notes_table')[0].outerHTML;
+
+    let w = window.open('', '', 'width=1200,height=700');
+    w.document.write(`
+        <html>
+        <head>
+            <title>Pending Notes</title>
+            <style>
+                table{border-collapse:collapse;width:100%;}
+                th,td{border:1px solid #000;padding:6px;text-align:left;}
+            </style>
+        </head>
+        <body>${tableHtml}</body>
+        </html>
+    `);
+    w.document.close();
+    w.print();
+});
+$(document).on('click', '.pending_invoice_print_btn', function () {
+    let tableHtml = $(this)
+        .closest('td')
+        .find('.pending_invoice_table')[0].outerHTML;
+
+    let w = window.open('', '', 'width=1200,height=700');
+    w.document.write(`
+        <html>
+        <head>
+            <title>Pending Invoice</title>
+            <style>
+                table{border-collapse:collapse;width:100%;}
+                th,td{border:1px solid #000;padding:6px;text-align:left;}
+            </style>
+        </head>
+        <body>${tableHtml}</body>
+        </html>
+    `);
+    w.document.close();
+    w.print();
+});
+
+function downloadTableAsCSV(tableSelector, filename) {
+    let csv = [];
+    let rows = document.querySelectorAll(tableSelector + " tr");
+
+    rows.forEach(row => {
+        let cols = row.querySelectorAll("td, th");
+        let rowData = [];
+
+        cols.forEach(col => {
+            rowData.push('"' + col.innerText.replace(/"/g, '""') + '"');
+        });
+
+        csv.push(rowData.join(","));
+    });
+
+    let csvFile = new Blob([csv.join("\n")], { type: "text/csv" });
+    let downloadLink = document.createElement("a");
+
+    downloadLink.download = filename;
+    downloadLink.href = window.URL.createObjectURL(csvFile);
+    downloadLink.style.display = "none";
+
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+}
+$(document).on('click', '.pending_excel_btn', function () {
+    downloadTableAsCSV('.pending_notes_table', 'pending_notes.csv');
+});
+$(document).on('click', '.pending_invoice_excel_btn', function () {
+    downloadTableAsCSV('.pending_invoice_table', 'pending_invoice.csv');
 });
 </script>
 @endsection

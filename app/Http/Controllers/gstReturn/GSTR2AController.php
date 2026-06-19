@@ -516,17 +516,77 @@ class GSTR2AController extends Controller
         return strcmp($a['name'], $b['name']);
     });
 
-    $last_created_date = Carbon::parse($last_created_date)->format('d-m-Y H:i:s');
-        foreach ($gstr2a_arr as $ctin => $row) {
+            $last_created_date = Carbon::parse($last_created_date)->format('d-m-Y H:i:s');
+            foreach ($gstr2a_arr as $ctin => $row) {
 
-            $total_portal = $row['b2b_portal'] + $row['cdnr_portal'];
-            $total_books  = $row['b2b_books']  + $row['cdnr_books'];
+                $total_portal = $row['b2b_portal'] + $row['cdnr_portal'];
+                $total_books  = $row['b2b_books']  + $row['cdnr_books'];
 
-            $gstr2a_arr[$ctin]['diff_amt'] = round(
-                $total_portal - $total_books,
-                2
-            );
-        }
+                $gstr2a_arr[$ctin]['diff_amt'] = round(
+                    $total_portal - $total_books,
+                    2
+                );
+            }
+            $existingCtins = collect(array_keys($gstr2a_arr))
+            ->map(function ($v) {
+                return strtoupper(trim($v));
+            })
+            ->toArray();
+            $accounts = Accounts::where('company_id', Session::get('user_company_id'))
+                        ->pluck('account_name', 'gstin');
+            $bookParties = Purchase::select(
+                    'billing_gst as ctin',
+                    DB::raw('SUM(total) as b2b_books')
+                )
+                ->where('company_id', Session::get('user_company_id'))
+                ->where('merchant_gst', $request->gstin)
+                ->where('status', '1')
+                ->where('delete', '0')
+                ->where('date', 'like', $request->month.'%')
+                ->groupBy('billing_gst')
+                ->get();
+            foreach($bookParties as $party){
+                if(!in_array(strtoupper(trim($party->ctin)), $existingCtins)){            
+                    $name = $accounts[$party->ctin] ?? $party->ctin;
+                    $gstr2a_arr[$party->ctin] = [
+                        'name'        => $name,
+                        'b2b_portal'  => 0,
+                        'b2b_books'   => (float)$party->b2b_books,
+                        'cdnr_books'  => 0,
+                        'cdnr_portal' => 0,
+                        'diff_amt'    => -(float)$party->b2b_books,
+                    ];
+                }
+            }
+            //print_r($existingCtins);die;
+            $bookJournals = Journal::select(
+                    'vendor_gstin as ctin',
+                    DB::raw('SUM(total_amount) as b2b_books')
+                )
+                ->where('company_id', Session::get('user_company_id'))
+                ->where('merchant_gst', $request->gstin)
+                ->where('status', '1')
+                ->where('delete', '0')
+                ->where('claim_gst_status','YES')
+                ->where('date', 'like', $request->month.'%')
+                ->groupBy('vendor_gstin')
+                ->get();
+            
+            foreach($bookJournals as $party){
+                if(!in_array(strtoupper(trim($party->ctin)), $existingCtins)){
+                    $name = $accounts[$party->ctin] ?? $party->ctin;
+                    $gstr2a_arr[$party->ctin] = [
+                        'name'        => $name,
+                        'b2b_portal'  => 0,
+                        'b2b_books'   => (float)$party->b2b_books,
+                        'cdnr_books'  => 0,
+                        'cdnr_portal' => 0,
+                        'diff_amt'    => -(float)$party->b2b_books,
+                    ];
+                }
+            }
+
+
         $pending_notes = [];
         $bill_sundry_igst = BillSundrys::where('company_id', Session::get('user_company_id'))
                                         ->where('nature_of_sundry', 'IGST')

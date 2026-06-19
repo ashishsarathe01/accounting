@@ -1211,17 +1211,20 @@ class GSTR3BController extends Controller
         $allowedSeries = array_unique(array_filter($allowedSeries));
 
         $purchases = DB::table('purchases')
+            ->join('accounts','purchases.party','=','accounts.id')
             ->where('merchant_gst', $merchant_gst)
             ->whereIn('series_no', $allowedSeries)
             ->whereBetween('date', [$from_date, $to_date])
-            ->where('status', '1')
-            ->where('delete', '0')
+            ->where('purchases.status', '1')
+            ->where('purchases.delete', '0')
             ->select(
                 'purchases.id as voucher_id',
-            DB::raw("'purchase' as voucher_source"),
+                DB::raw("'purchase' as voucher_source"),
                 'billing_gst as gstin',
                 'billing_name as party_name',
                 'voucher_no as invoice_no',
+                'accounts.gstin as account_gst',
+                'accounts.account_name',
                 DB::raw('COALESCE(invoice_date,date) as invoice_date'),
                 DB::raw("'Purchase' as invoice_type"),
                 'total as invoice_value',

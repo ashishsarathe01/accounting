@@ -88,7 +88,7 @@
                   <div class="mb-3 col-md-3">
                      {{-- <button id="submit" type="button" class="btn btn-primary px-4">Generate Report</button>
                      <button id="real-submit" type="submit" style="display: none;"></button> --}}
-                     <button id="real-submit" type="submit">Generate Report</button>
+                     <button id="real-submit" type="submit" class="btn btn-primary px-4" style="margin-top:18px">Generate Report</button>
                   </div>
                </div>
             </form>
