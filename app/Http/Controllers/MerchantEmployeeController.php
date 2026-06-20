@@ -1285,6 +1285,8 @@ private function deleteOldFile($path)
         $existingUser = User::where('id', '!=', $request->user_id)
             ->where('mobile_no', $request->mobile_no)
             ->where('email', $request->email)
+            ->where('status', '1')
+            ->where('delete_status', '0')
             ->where('password_created', 1)
             ->first();
 
@@ -1298,11 +1300,15 @@ private function deleteOldFile($path)
         $mobileExists = User::where('id', '!=', $request->user_id)
             ->where('mobile_no', $request->mobile_no)
             ->where('password_created', 1)
+            ->where('status', '1')
+            ->where('delete_status', '0')
             ->exists();
 
         $emailExists = User::where('id', '!=', $request->user_id)
             ->where('email', $request->email)
             ->where('password_created', 1)
+            ->where('status', '1')
+            ->where('delete_status', '0')
             ->exists();
 
         if ($mobileExists || $emailExists) {

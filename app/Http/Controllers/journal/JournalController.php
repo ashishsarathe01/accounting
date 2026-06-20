@@ -586,9 +586,9 @@ public function index(Request $request)
       }
       $bill_sundrys = $request->input('bill_sundry');
       $bill_sundry_amounts = $request->input('bill_sundry_amount');
-
+        $calculate_tcs = 0;
       if(!empty($bill_sundrys)){
-
+        
          foreach($bill_sundrys as $key => $bill){
 
             if(empty($bill) || empty($bill_sundry_amounts[$key])){
@@ -633,6 +633,9 @@ public function index(Request $request)
                $ledger->created_by = Session::get('user_id');
                $ledger->created_at = date('Y-m-d H:i:s');
                $ledger->save();
+            }
+            if($bs->nature_of_sundry=="TCS"){
+             $calculate_tcs = $calculate_tcs + $amount;
             }
             
          }
@@ -1394,6 +1397,7 @@ public function index(Request $request)
       $receipt->remark = "";
       $receipt->vendor = $request->input('vendor');
       $receipt->vendor_gstin = $vendor->gstin ?? "";
+      $calculate_tcs = 0;
       foreach($bill_sundrys as $key => $bill){
 
          if(empty($bill) || empty($bill_sundry_amounts[$key])) continue;
@@ -1437,6 +1441,10 @@ public function index(Request $request)
             $ledger->created_at = now();
             $ledger->save();
          }
+         if($bs->nature_of_sundry=="TCS"){
+             $calculate_tcs = $calculate_tcs + $amount;
+         }
+         
       }
       $receipt->save();
 
@@ -1472,7 +1480,7 @@ public function index(Request $request)
          $ledger->save();
 
          //Round Off Caculation
-         $calculated_total = $request->input('net_amount') + floatval($request->input('cgst')) + floatval($request->input('sgst')) + floatval($request->input('igst'));
+         $calculated_total = $request->input('net_amount') + floatval($request->input('cgst')) + floatval($request->input('sgst')) + floatval($request->input('igst')) + floatval($calculate_tcs);
          $round_off = round($request->input('total_amount') - $calculated_total, 2);
 
          //Round Off Entry

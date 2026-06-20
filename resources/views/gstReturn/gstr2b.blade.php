@@ -178,14 +178,14 @@
                                        </tr>
                                        <tr>
                                           <td style='text-align:left'>Debit Note (Only In Book)</td>
-                                          <td style='text-align:right' id="only_on_book_debit_note_amount"></td>
+                                          <td style='text-align:right;cursor:pointer;color:#0000FF' id="only_on_book_debit_note_amount"></td>
                                           <td style='text-align:right' id="only_on_book_debit_note_igst_amount"></td>
                                           <td style='text-align:right' id="only_on_book_debit_note_cgst_amount"></td>
                                           <td style='text-align:right' id="only_on_book_debit_note_sgst_amount"></td>
                                        </tr>
                                        <tr>
                                           <td style='text-align:left'>Credit Note (Only In Book)</td>
-                                          <td style='text-align:right' id="only_on_book_credit_note_amount"></td>
+                                          <td style='text-align:right;cursor:pointer;color:#0000FF' id="only_on_book_credit_note_amount"></td>
                                           <td style='text-align:right' id="only_on_book_credit_note_igst_amount"></td>
                                           <td style='text-align:right' id="only_on_book_credit_note_cgst_amount"></td>
                                           <td style='text-align:right' id="only_on_book_credit_note_sgst_amount"></td>
@@ -427,6 +427,56 @@
                     </tr>
                 </thead>
                 <tbody id="purchase_only_on_book_body">
+                  <!-- Content will be populated via AJAX -->
+                </tbody>
+            </table> 
+         </div>
+      </div>
+   </div>
+</div>
+<div class="modal fade" id="debit_note_only_on_book_detailModal" tabindex="-1" aria-labelledby="remarkModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Debit Note Only On Book Detail</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table table-bordered table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Account</th>
+                        <th>Invoice No.</th>
+                        <th>Invoice Date</th>
+                        <th style="text-align: right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="debit_note_only_on_book_body">
+                  <!-- Content will be populated via AJAX -->
+                </tbody>
+            </table> 
+         </div>
+      </div>
+   </div>
+</div>
+<div class="modal fade" id="credit_note_only_on_book_detailModal" tabindex="-1" aria-labelledby="remarkModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Credit Note Only On Book Detail</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table table-bordered table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Account</th>
+                        <th>Invoice No.</th>
+                        <th>Invoice Date</th>
+                        <th style="text-align: right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="credit_note_only_on_book_body">
                   <!-- Content will be populated via AJAX -->
                 </tbody>
             </table> 
@@ -924,6 +974,9 @@
                   $("#book_total_sgst").html(formatIndianNumber(obj.book_total_sgst));
                   $("#only_on_book_purchase_amount").attr('data-detail',JSON.stringify(obj.purchase_only_on_book_detail));
                   $("#only_on_book_purchase_amount").attr('data-journal-detail',JSON.stringify(obj.journal_only_on_book_detail));
+
+                  $("#only_on_book_debit_note_amount").attr('data-debit_note_detail',JSON.stringify(obj.debit_note_only_on_book_detail));
+                  $("#only_on_book_credit_note_amount").attr('data-credit_note_detail',JSON.stringify(obj.credit_note_only_on_book_detail));
                   let portal_after_above_affect_invoice = parseFloat(obj.portal_invoice_amount)
                            - parseFloat(obj.previous_month_invoice_amount)
                            - parseFloat(obj.previous_month_debit_note_amount)
@@ -937,7 +990,7 @@
                   $("#portal_after_above_affect_invoice").html(formatIndianNumber(portal_after_above_affect_invoice));
                   let portal_after_above_affect_igst = parseFloat(obj.portal_igst_amount)
                            - parseFloat(obj.previous_month_invoice_igst_amount)
-                           + parseFloat(obj.previous_month_journal_igst_amount)
+                           - parseFloat(obj.previous_month_journal_igst_amount)
                            - parseFloat(obj.previous_month_debit_note_igst_amount)
                            + parseFloat(obj.previous_month_credit_note_igst_amount)
                            + parseFloat(obj.only_on_book_purchase_igst_amount)
@@ -1020,6 +1073,84 @@
       </tr>`;
       $("#purchase_only_on_book_body").html(tbody);
       $("#purchase_only_on_book_detailModal").modal('show');
+   });
+   $("#only_on_book_debit_note_amount").click(function(){
+      let details = $(this).attr('data-debit_note_detail');
+      
+      details = JSON.parse(details);
+       
+      let tbody = "";
+      const formatDate = (dateStr) => {
+         if (!dateStr) return '';
+         let d = new Date(dateStr);
+         let dd = String(d.getDate()).padStart(2, '0');
+         let mm = String(d.getMonth() + 1).padStart(2, '0');
+         let yyyy = d.getFullYear();
+         return `${dd}-${mm}-${yyyy}`;
+      };
+      const formatAmount = (amount) => {
+         return Number(amount).toLocaleString('en-IN', {
+               minimumFractionDigits: 2,
+               maximumFractionDigits: 2
+         });
+      };
+      details.forEach(function(item){
+         let account_name = item.account_name;
+         
+         tbody += `<tr>
+            <td>${account_name} </td>
+            <td>${item.voucher_no}</td>
+            <td>${formatDate(item.date)}</td>
+            <td style="text-align: right;">${formatAmount(item.amount)}</td>
+         </tr>`;
+      });
+
+      tbody += `<tr>
+         <th colspan="3" style="text-align: right;">Total</th>
+         <th style="text-align: right;">${formatAmount(
+            details.reduce((sum, item) => sum + Number(item.amount), 0)
+      )}</th>
+      </tr>`;
+      $("#debit_note_only_on_book_body").html(tbody);
+      $("#debit_note_only_on_book_detailModal").modal('show');
+   });
+   $("#only_on_book_credit_note_amount").click(function(){
+      let details = $(this).attr('data-credit_note_detail');
+      details = JSON.parse(details);
+      let tbody = "";
+      const formatDate = (dateStr) => {
+         if (!dateStr) return '';
+         let d = new Date(dateStr);
+         let dd = String(d.getDate()).padStart(2, '0');
+         let mm = String(d.getMonth() + 1).padStart(2, '0');
+         let yyyy = d.getFullYear();
+         return `${dd}-${mm}-${yyyy}`;
+      };
+      const formatAmount = (amount) => {
+         return Number(amount).toLocaleString('en-IN', {
+               minimumFractionDigits: 2,
+               maximumFractionDigits: 2
+         });
+      };
+      details.forEach(function(item){
+         let account_name = item.account_name;
+         
+         tbody += `<tr>
+            <td>${account_name} </td>
+            <td>${item.voucher_no}</td>
+            <td>${formatDate(item.date)}</td>
+            <td style="text-align: right;">${formatAmount(item.amount)}</td>
+         </tr>`;
+      });
+
+      tbody += `<tr>
+         <th colspan="3" style="text-align: right;">Total</th>
+         <th style="text-align: right;">${formatAmount(
+            details.reduce((sum, item) => sum + Number(item.amount), 0)
+      )}</th>
+      </tr>`;
+      $("#credit_note_only_on_book_body").html(tbody);
+      $("#credit_note_only_on_book_detailModal").modal('show');
    });
    function formatIndianNumber(num) {
       return new Intl.NumberFormat('en-IN', {

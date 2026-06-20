@@ -2176,16 +2176,27 @@ class GSTR2BController extends Controller
     }
     
     public function getUnlinkInvoiceEntry(Request $request){
+        $selectedDate = $request->month . '-01'; // 2026-05-01
+        $year = date('Y', strtotime($selectedDate));
+        $month = date('m', strtotime($selectedDate));
+
+        if ($month >= 4) {
+            $fyStart = $year . '-04-01';
+            $fyEnd   = ($year + 1) . '-03-31';
+        } else {
+            $fyStart = ($year - 1) . '-04-01';
+            $fyEnd   = $year . '-03-31';
+        }
         $purchase = Purchase::select('voucher_no','date','total','id','gstr2b_invoice_id')
                                 ->where('billing_gst',$request->ctin)
                                 ->where('company_id',Session::get('user_company_id'))
                                 ->where('merchant_gst',$request->gstin)
                                 ->where('status','1')
-                                ->where('date', 'like', $request->month.'%')
+                                ->whereBetween('date', [$fyStart, $fyEnd])
                                 ->where(function($query) use ($request) {
                                     $query->whereNull('gstr2b_invoice_id')
                                           ->orWhere('gstr2b_invoice_id', $request->invoice);
-                                })                                
+                                })
                                 ->where('delete','0')
                                 ->orderBy('date')
                                 ->get();
@@ -2195,7 +2206,7 @@ class GSTR2BController extends Controller
                                 ->where('company_id',Session::get('user_company_id'))
                                 ->where('merchant_gst',$request->gstin)
                                 ->where('status','1')
-                                ->where('date', 'like', $request->month.'%')
+                                ->whereBetween('date', [$fyStart, $fyEnd])
                                 ->where(function($query) use ($request) {
                                     $query->whereNull('gstr2b_invoice_id')
                                           ->orWhere('gstr2b_invoice_id', $request->invoice);
@@ -2356,6 +2367,7 @@ class GSTR2BController extends Controller
                     $previous_month_invoice_sgst_amount += $invoice->sgst;
                     $previous_month_invoice_igst_amount += $invoice->igst;
                 }else{
+                    $idate = date('Y-m',strtotime($invoice->dt));
                     $journal = Journal::select('id')
                         ->where('company_id',Session::get('user_company_id'))
                         ->where('merchant_gst',$request->gstin)
@@ -2372,6 +2384,7 @@ class GSTR2BController extends Controller
                         $previous_month_journal_cgst_amount += $invoice->cgst;
                         $previous_month_journal_sgst_amount += $invoice->sgst;
                         $previous_month_journal_igst_amount += $invoice->igst;
+                        
                     }
                 }
                 //Only On Portal Invoice
@@ -2414,6 +2427,51 @@ class GSTR2BController extends Controller
                     $portal_sgst_amount -= $invoice->sgst;
                     $portal_igst_amount -= $invoice->igst;
                     $portal_invoice_amount -= $invoice->val;
+                    
+                    //Previous Month Debit Note
+                    $purchase_return = PurchaseReturn::select('id')
+                        ->where('company_id',Session::get('user_company_id'))
+                        ->where('merchant_gst',$request->gstin)
+                        ->where('billing_gst',$record->ctin)
+                        ->where('status','1')
+                        ->where('delete','0')
+                        ->where('gstr2b_invoice_id',$invoice->ntnum)
+                        // ->where('linked_month','!=',$request->month)
+                        ->where(function ($q) use ($request) {
+                            $q->where('linked_month', '!=', $request->month)
+                            ->orwhere('date', 'not like', $request->month.'%');
+                        })
+
+                        ->first();
+                    if($purchase_return){
+                        $previous_month_debit_note_amount += $invoice->val;
+                        $previous_month_debit_note_cgst_amount += $invoice->cgst;
+                        $previous_month_debit_note_sgst_amount += $invoice->sgst;
+                        $previous_month_debit_note_igst_amount += $invoice->igst;
+                    }
+                     //Only On Portal Debit Note
+                    $purchase_return = PurchaseReturn::select('id')
+                                    ->where('company_id',Session::get('user_company_id'))
+                                    ->where('merchant_gst',$request->gstin)
+                                    ->where('billing_gst',$record->ctin)
+                                    ->where('status','1')
+                                    ->where('delete','0')
+                                    ->where('gstr2b_invoice_id',$invoice->ntnum)
+                                    ->where('linked_month',$request->month)
+                                    ->first();
+                    if(!$purchase_return){
+                        $only_on_portal_debit_note_amount += $invoice->val;
+                        $only_on_portal_debit_note_cgst_amount += $invoice->cgst;
+                        $only_on_portal_debit_note_sgst_amount += $invoice->sgst;
+                        $only_on_portal_debit_note_igst_amount += $invoice->igst;                                        
+                    }
+                    
+                }else if($invoice->typ == "D"){
+                    //Portal  
+                    $portal_cgst_amount += $invoice->cgst;
+                    $portal_sgst_amount += $invoice->sgst;
+                    $portal_igst_amount += $invoice->igst;
+                    $portal_invoice_amount += $invoice->val;
                     //Previous Month Credit Note
                     $sales_return = SalesReturn::select('id')
                         ->where('company_id',Session::get('user_company_id'))
@@ -2422,7 +2480,11 @@ class GSTR2BController extends Controller
                         ->where('status','1')
                         ->where('delete','0')
                         ->where('gstr2b_invoice_id',$invoice->ntnum)
-                        ->where('linked_month','!=',$request->month)
+                        // ->where('linked_month','!=',$request->month)
+                        ->where(function ($q) use ($request) {
+                            $q->where('linked_month', '!=', $request->month)
+                            ->orwhere('date', 'not like', $request->month.'%');
+                        })
                         ->first();
                     if($sales_return){
                         $previous_month_credit_note_amount += $invoice->val;
@@ -2440,49 +2502,11 @@ class GSTR2BController extends Controller
                                     ->where('gstr2b_invoice_id',$invoice->ntnum)
                                     ->where('linked_month',$request->month)
                                     ->first();
-                    if(!$sales_return){                     
+                    if(!$sales_return){
                         $only_on_portal_credit_note_amount += $invoice->val;
                         $only_on_portal_credit_note_cgst_amount += $invoice->cgst;
                         $only_on_portal_credit_note_sgst_amount += $invoice->sgst;
-                        $only_on_portal_credit_note_igst_amount += $invoice->igst;                                        
-                    }
-                }else if($invoice->typ == "D"){
-                    //Portal  
-                    $portal_cgst_amount += $invoice->cgst;
-                    $portal_sgst_amount += $invoice->sgst;
-                    $portal_igst_amount += $invoice->igst;
-                    $portal_invoice_amount += $invoice->val;
-                    //Previous Month Debit Note
-                    $purchase_return = PurchaseReturn::select('id')
-                        ->where('company_id',Session::get('user_company_id'))
-                        ->where('merchant_gst',$request->gstin)
-                        ->where('billing_gst',$record->ctin)
-                        ->where('status','1')
-                        ->where('delete','0')
-                        ->where('gstr2b_invoice_id',$invoice->ntnum)
-                        ->where('linked_month','!=',$request->month)
-                        ->first();
-                    if($purchase_return){
-                        $previous_month_debit_note_amount += $invoice->val;
-                        $previous_month_debit_note_cgst_amount += $invoice->cgst;
-                        $previous_month_debit_note_sgst_amount += $invoice->sgst;
-                        $previous_month_debit_note_igst_amount += $invoice->igst;
-                    }
-                    //Only On Portal Debit Note
-                    $purchase_return = PurchaseReturn::select('id')
-                                    ->where('company_id',Session::get('user_company_id'))
-                                    ->where('merchant_gst',$request->gstin)
-                                    ->where('billing_gst',$record->ctin)
-                                    ->where('status','1')
-                                    ->where('delete','0')
-                                    ->where('gstr2b_invoice_id',$invoice->ntnum)
-                                    ->where('linked_month',$request->month)
-                                    ->first();
-                    if(!$purchase_return){
-                        $only_on_portal_debit_note_amount += $invoice->val;
-                        $only_on_portal_debit_note_cgst_amount += $invoice->cgst;
-                        $only_on_portal_debit_note_sgst_amount += $invoice->sgst;
-                        $only_on_portal_debit_note_igst_amount += $invoice->igst;                                        
+                        $only_on_portal_credit_note_igst_amount += $invoice->igst;
                     }
                 }
             }
@@ -2571,6 +2595,44 @@ class GSTR2BController extends Controller
                         ->whereNull('gstr2b_invoice_id')
                         ->where('journals.date', 'like', $request->month . '%')                        
                         ->get();
+        $debit_note_only_on_book_detail = PurchaseReturn::join('purchase_return_sundries as ps', 'ps.purchase_return_id', '=', 'purchase_returns.id')
+                                    ->join('bill_sundrys as bs', 'bs.id', '=', 'ps.bill_sundry')
+                                    ->join('accounts', 'purchase_returns.party', '=', 'accounts.id')
+                                    ->where('voucher_type','PURCHASE')
+                                    ->where('purchase_returns.company_id', Session::get('user_company_id'))
+                                    ->where('purchase_returns.merchant_gst', $request->gstin)
+                                    ->where('purchase_returns.status', '1')
+                                    ->where('purchase_returns.delete', '0')
+                                    ->whereNull('purchase_returns.gstr2b_invoice_id')
+                                    ->where('purchase_returns.date', 'like', $request->month . '%')
+                                    ->whereIn('bs.nature_of_sundry', ['CGST','SGST','IGST'])
+                                    ->select([
+                                        'purchase_returns.sr_prefix as voucher_no',
+                                        'purchase_returns.date',
+                                        'accounts.account_name',
+                                        'purchase_returns.total as amount'
+                                    ])
+                                    ->orderBy('purchase_returns.date')
+                                    ->get();
+        $credit_note_only_on_book_detail = SalesReturn::join('sale_return_sundries as ps', 'ps.sale_return_id', '=', 'sales_returns.id')
+                                    ->join('bill_sundrys as bs', 'bs.id', '=', 'ps.bill_sundry')
+                                    ->join('accounts', 'sales_returns.party', '=', 'accounts.id')
+                                    ->where('voucher_type','PURCHASE')
+                                    ->where('sales_returns.company_id', Session::get('user_company_id'))
+                                    ->where('sales_returns.merchant_gst', $request->gstin)
+                                    ->where('sales_returns.status', '1')
+                                    ->where('sales_returns.delete', '0')
+                                    ->whereNull('sales_returns.gstr2b_invoice_id')
+                                    ->where('sales_returns.date', 'like', $request->month . '%')
+                                    ->whereIn('bs.nature_of_sundry', ['CGST','SGST','IGST'])
+                                    ->select([
+                                        'sales_returns.sr_prefix as voucher_no',
+                                        'sales_returns.date',
+                                        'accounts.account_name',
+                                        'sales_returns.total as amount'
+                                    ])
+                                    ->orderBy('sales_returns.date')
+                                    ->get();
         $only_on_book_purchase_amount = $purchase_only_on_book->total_sum + $journal->total_sum;
         $only_on_book_purchase_cgst_amount = $purchase_only_on_book->cgst_sum + $journal->cgst_sum;
         $only_on_book_purchase_sgst_amount = $purchase_only_on_book->sgst_sum + $journal->sgst_sum;
@@ -2713,7 +2775,9 @@ class GSTR2BController extends Controller
             "only_on_book_debit_note_igst_amount"=>$only_on_book_debit_note_igst_amount,
 
             "purchase_only_on_book_detail"=>$purchase_only_on_book_detail,
-            "journal_only_on_book_detail"=>$journal_only_on_book_detail
+            "journal_only_on_book_detail"=>$journal_only_on_book_detail,
+            "debit_note_only_on_book_detail" => $debit_note_only_on_book_detail,
+            "credit_note_only_on_book_detail" => $credit_note_only_on_book_detail
         );
         return json_encode($res);
         return view('gstReturn/gstr2b_reconcilation',[

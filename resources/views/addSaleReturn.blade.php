@@ -3126,10 +3126,11 @@ calculateAmount();
    });
 
    function checkTotalItemQty(currentRowId) {
-
       let currentItem = $("#goods_discription_tr_" + currentRowId).val();
+      
       if (!currentItem) return;
       let totalQty = 0;
+      totalQty = $('#goods_discription_tr_'+currentRowId+' option:selected').attr('data-qty');
       let maxQty = 0;
 
       // Get max qty from selected item text
@@ -3147,18 +3148,16 @@ calculateAmount();
             maxQty = parseFloat(qtyMatch[1]);
          }
       }
-
-      $(".goods_items").each(function () {
-         let rowId = $(this).attr("data-id");
-
-         if ($(this).val() == currentItem) {
-
-            let qty = parseFloat($("#quantity_tr_" + rowId).val()) || 0;
-            totalQty += qty;
-         }
-      });
+    
+    //   $(".goods_items").each(function () {
+    //      let rowId = $(this).attr("data-id");
+    //      if ($(this).val() == currentItem) {
+    //         let qty = parseFloat($("#quantity_tr_" + rowId).val()) || 0;
+    //         totalQty += qty;
+    //      }
+    //   });
       if (maxQty > 0 && totalQty > maxQty) {
-
+        console.log(totalQty+"***"+maxQty);
          alert("Max allowed quantity is " + maxQty);
 
          let currentQty = parseFloat($("#quantity_tr_" + currentRowId).val()) || 0;
