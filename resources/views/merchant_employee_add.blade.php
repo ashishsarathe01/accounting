@@ -166,7 +166,8 @@ h6.fw-bold {
 
                         <button type="button"
                                 class="btn btn-primary"
-                                id="verifyMobileBtn">
+                                id="verifyMobileBtn"
+                                style="display:none;">
                             Verify
                         </button>
 
@@ -909,25 +910,45 @@ $(document).ready(function(){
          parent.find('input[name="family_nominee_percent[]"]').val('');
       }
    });
-
-    $('#mobile').on('input', function(){
-
-        if($(this).val() !== verifiedMobile){
-
-            $('#mobile_verified').val('0');
-
-            $('#existing_user').val('0');
-
-            $('#mobileVerifiedMsg').hide();
-
-            $('#verifyMobileBtn')
-                .show()
-                .removeClass('btn-success')
-                .addClass('btn-primary')
-                .text('Verify');
+    $('#mobile').blur(function(){
+        let mobile = $(this).val();
+        let email  = $('#email').val();
+        if(mobile.length != 10){
+            return;
         }
-    });
+        $.ajax({
+            url: "{{ route('manage-merchant-employee.checkUserExists') }}",
+            type: "POST",
+            data: {
+                _token: "{{ csrf_token() }}",
+                mobile_no: mobile,
+                email: email
+            },
+            success: function(res){
+                $('#mobileVerifiedMsg').hide();
+                $('#verifyMobileBtn').hide();
+                if(res.status == 2){
+                    $('#existing_user').val('1');
+                    $('#mobile_verified').val('1');
+                    $('#mobileVerifiedMsg')
+                        .show()
+                        .text('✓ Mobile Verified');
+                }
+                else if(res.status == 1){
+                    $('#existing_user').val('0');
+                    $('#mobile_verified').val('0');
 
+                    $('#verifyMobileBtn').show();
+                }
+                else{
+                    alert(res.message);
+                    $('#mobile').val('').focus();
+                    $('#existing_user').val('0');
+                    $('#mobile_verified').val('0');
+                }
+            }
+        });
+    });
     $('#email').blur(function(){
 
         let mobile = $('#mobile').val();

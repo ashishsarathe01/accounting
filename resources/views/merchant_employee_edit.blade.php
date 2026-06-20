@@ -1166,41 +1166,33 @@ h6.fw-bold {
         });
 
         $('#mobile, #email').on('input', function(){
-
-            let currentMobile = $('#mobile').val();
-            let currentEmail  = $('#email').val();
-
-            let originalMobile = $('#original_mobile').val();
-            let originalEmail  = $('#original_email').val();
-
-            if(
-                currentMobile == originalMobile &&
-                currentEmail == originalEmail
-            ){
-
-                $('#mobile_verified').val('1');
-                $('#existing_user').val('1');
-
-                $('#verifyMobileBtn').hide();
-
-                $('#mobileVerifiedMsg')
-                    .show()
-                    .text('✓ Verified');
-
-                return;
-            }
-
             $('#mobile_verified').val('0');
             $('#existing_user').val('0');
-
             $('#mobileVerifiedMsg').hide();
-
-            if(
-                currentMobile.length == 10 &&
-                currentEmail != ''
-            ){
-                checkUserForEdit();
+            $('#verifyMobileBtn').hide();
+        });
+        $('#mobile').blur(function(){
+            let mobile = $('#mobile').val();
+            let email  = $('#email').val();
+            if(mobile.length != 10){
+                return;
             }
+            if(email == ''){
+                return;
+            }
+            checkUserForEdit();
+        });
+        $('#email').blur(function(){
+            let mobile = $('#mobile').val();
+            let email  = $('#email').val();
+
+            if(mobile.length != 10){
+                return;
+            }
+            if(email == ''){
+                return;
+            }
+            checkUserForEdit();
         });
 
         $('#verifyMobileBtn').on('click', function(){
@@ -1317,8 +1309,15 @@ h6.fw-bold {
                         alert(res.message);
 
                         $('#mobile_verified').val('0');
-
                         $('#existing_user').val('0');
+                        $('#mobileVerifiedMsg').hide();
+                        $('#verifyMobileBtn').hide();
+                        if(res.clear_field == 'email'){
+                            $('#email').val('').focus();
+                        }
+                        if(res.clear_field == 'mobile'){
+                            $('#mobile').val('').focus();
+                        }
                     }
                 }
             });
