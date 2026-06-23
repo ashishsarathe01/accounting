@@ -109,8 +109,14 @@ class SalesReturnController extends Controller
             $query->where('sales_returns.sr_nature', $input['sr_nature']);
          }
   
-      // Apply date filter if dates are set by user
-      if (!empty($input['from_date']) && !empty($input['to_date'])) {
+      if ($request->today == 1) {
+
+         $query->whereDate('sales_returns.date', date('Y-m-d'));
+
+         $query->orderBy('sales_returns.date', 'ASC')
+               ->orderBy(DB::raw("CAST(sale_return_no AS SIGNED)"), 'ASC');
+
+      } elseif (!empty($input['from_date']) && !empty($input['to_date'])) {
           $query->whereRaw("
               STR_TO_DATE(sales_returns.date, '%Y-%m-%d') >= STR_TO_DATE('" . date('Y-m-d', strtotime($from_date)) . "', '%Y-%m-%d')
               AND STR_TO_DATE(sales_returns.date, '%Y-%m-%d') <= STR_TO_DATE('" . date('Y-m-d', strtotime($to_date)) . "', '%Y-%m-%d')

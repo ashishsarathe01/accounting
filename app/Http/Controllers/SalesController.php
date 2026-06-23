@@ -137,7 +137,14 @@ class SalesController extends Controller
         ->where('sales.company_id', Session::get('user_company_id'))
         ->where('sales.delete', '0');
          // Date filtering and sorting logic
-      if ($from_date && $to_date) {
+      if ($request->today == 1) {
+
+         $query->whereDate('sales.date', date('Y-m-d'));
+
+         $query->orderBy('sales.date', 'ASC')
+               ->orderBy(DB::raw("CAST(voucher_no AS SIGNED)"), 'ASC');
+
+      } elseif ($from_date && $to_date) {
          // If date range provided
          $query->whereBetween(DB::raw("STR_TO_DATE(sales.date, '%Y-%m-%d')"), [
                date('Y-m-d', strtotime($from_date)),

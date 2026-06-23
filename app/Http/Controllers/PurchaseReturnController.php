@@ -101,7 +101,14 @@ class PurchaseReturnController extends Controller
             $query->where('purchase_returns.sr_nature', $input['sr_nature']);
          }
       // Apply date filter only if user selected a range
-      if($from_date && $to_date)  {
+      if ($request->today == 1) {
+
+         $query->whereDate('purchase_returns.date', date('Y-m-d'));
+
+         $query->orderBy('purchase_returns.date', 'ASC')
+               ->orderBy(DB::raw("CAST(purchase_return_no AS SIGNED)"), 'ASC');
+
+      } elseif ($from_date && $to_date)  {
             $query->whereRaw("
                STR_TO_DATE(purchase_returns.date, '%Y-%m-%d') >= STR_TO_DATE('" . date('Y-m-d', strtotime($from_date)) . "', '%Y-%m-%d')
                AND STR_TO_DATE(purchase_returns.date, '%Y-%m-%d') <= STR_TO_DATE('" . date('Y-m-d', strtotime($to_date)) . "', '%Y-%m-%d')

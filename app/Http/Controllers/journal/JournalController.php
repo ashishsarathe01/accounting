@@ -84,7 +84,14 @@ public function index(Request $request)
         ->where('journal_details.company_id', $com_id)
         ->where('journals.delete', '0');
     // Apply date filter if set
-    if ($from_date && $to_date) {
+    if ($request->today == 1) {
+
+         $query->whereDate('journals.date', date('Y-m-d'));
+
+         $query->orderBy('journals.date', 'ASC')
+               ->orderBy(DB::raw("CAST(voucher_no AS SIGNED)"), 'ASC');
+
+      } elseif ($from_date && $to_date) {
         $query->whereRaw("
             STR_TO_DATE(journals.date,'%Y-%m-%d') >= STR_TO_DATE(?, '%Y-%m-%d')
             AND STR_TO_DATE(journals.date,'%Y-%m-%d') <= STR_TO_DATE(?, '%Y-%m-%d')

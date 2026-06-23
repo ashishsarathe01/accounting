@@ -65,7 +65,7 @@
                                         <!-- VIEW -->
                                         @if($salesShowView)
                                         @can('view-module', 85)
-                                        <a href="{{ route('sale.index') }}" title="View" class="icon-action">
+                                        <a href="{{ route('sale.index', ['today' => 1]) }}" title="View" class="icon-action">
                                             <img src="{{ asset('public/assets/imgs/eye-icon.svg') }}"
                                                 width="18" alt="View">
                                         </a>
@@ -141,7 +141,7 @@
                                         <!-- VIEW -->
                                          @if($purchaseShowView)
                                         @can('view-module', 11)
-                                        <a href="{{ route('purchase.index') }}" title="View" class="icon-action">
+                                        <a href="{{ route('purchase.index', ['today' => 1]) }}" title="View" class="icon-action">
                                             <img src="{{ asset('public/assets/imgs/eye-icon.svg') }}"
                                                 width="18" alt="View">
                                         </a>
@@ -218,7 +218,7 @@
                                         <!-- VIEW -->
                                          @if($saleReturnShowView)
                                         @can('view-module', 12)
-                                        <a href="{{ route('sale-return.index') }}" title="View" class="icon-action">
+                                        <a href="{{ route('sale-return.index', ['today' => 1]) }}" title="View" class="icon-action">
                                             <img src="{{ asset('public/assets/imgs/eye-icon.svg') }}"
                                                 width="18" alt="View">
                                         </a>
@@ -293,7 +293,7 @@
                                         <!-- VIEW -->
                                          @if($purchaseReturnShowView)
                                         @can('action-module',13)
-                                        <a href="{{ route('purchase-return.index') }}" title="View" class="icon-action">
+                                        <a href="{{ route('purchase-return.index', ['today' => 1]) }}" title="View" class="icon-action">
                                             <img src="{{ asset('public/assets/imgs/eye-icon.svg') }}"
                                                 width="18" alt="View">
                                         </a>
@@ -369,7 +369,7 @@
                                         <!-- VIEW -->
                                          @if($paymentShowView)
                                         @can('action-module',15)
-                                        <a href="{{ route('payment.index') }}" title="View" class="icon-action">
+                                        <a href="{{ route('payment.index', ['today' => 1]) }}" title="View" class="icon-action">
                                             <img src="{{ asset('public/assets/imgs/eye-icon.svg') }}"
                                                 width="18" alt="View">
                                         </a>
@@ -438,7 +438,7 @@
                                         <!-- VIEW -->
                                          @if($receiptShowView)
                                         @can('action-module',16)
-                                        <a href="{{ route('receipt.index') }}" title="View" class="icon-action">
+                                        <a href="{{ route('receipt.index', ['today' => 1]) }}" title="View" class="icon-action">
                                             <img src="{{ asset('public/assets/imgs/eye-icon.svg') }}"
                                                 width="18" alt="View">
                                         </a>
@@ -504,7 +504,7 @@
                                         @endif
                                         @if($journalShowView)
                                         @can('view-module', 14)
-                                        <a href="{{ route('journal.index') }}" title="View">
+                                        <a href="{{ route('journal.index', ['today' => 1]) }}" title="View">
                                             <img src="{{ asset('public/assets/imgs/eye-icon.svg') }}"
                                                 width="18" alt="View">
                                         </a>
@@ -541,7 +541,7 @@
                                         @endif
                                         @if($contraShowView)
                                         @can('view-module', 29)
-                                        <a href="{{ route('contra.index') }}" title="View">
+                                        <a href="{{ route('contra.index', ['today' => 1]) }}" title="View">
                                             <img src="{{ asset('public/assets/imgs/eye-icon.svg') }}"
                                                 width="18" alt="View">
                                         </a>
@@ -578,7 +578,7 @@
                                         @endif
                                         @if($stockJournalShowView)
                                         @can('view-module', 30)
-                                        <a href="{{ route('stock-journal') }}" title="View">
+                                        <a href="{{ route('stock-journal', ['today' => 1]) }}" title="View">
                                             <img src="{{ asset('public/assets/imgs/eye-icon.svg') }}"
                                                 width="18" alt="View">
                                         </a>
@@ -615,7 +615,7 @@
                                         @endif
                                         @if($stockTransferShowView)
                                         @can('view-module', 31)
-                                        <a href="{{ route('stock-transfer.index') }}" title="View">
+                                        <a href="{{ route('stock-transfer.index', ['today' => 1]) }}" title="View">
                                             <img src="{{ asset('public/assets/imgs/eye-icon.svg') }}"
                                                 width="18" alt="View">
                                         </a>

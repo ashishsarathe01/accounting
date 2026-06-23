@@ -115,7 +115,14 @@ class PurchaseController extends Controller{
             ->where('company_id', Session::get('user_company_id'))
             ->where('delete', '0');
     
-        if ($from_date && $to_date) {
+        if ($request->today == 1) {
+
+            $query->whereDate('purchases.date', date('Y-m-d'));
+
+            $query->orderBy('purchases.date', 'ASC')
+                  ->orderBy(DB::raw("CAST(voucher_no AS SIGNED)"), 'ASC');
+
+         } elseif ($from_date && $to_date) {
             $query->whereBetween(DB::raw("STR_TO_DATE(purchases.date, '%Y-%m-%d')"), [
                 date('Y-m-d', strtotime($from_date)),
                 date('Y-m-d', strtotime($to_date))

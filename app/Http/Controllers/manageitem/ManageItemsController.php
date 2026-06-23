@@ -688,7 +688,14 @@ class ManageItemsController extends Controller
          ->where('stock_journal_detail.company_id', $company_id);
 
       // Apply date filter or limit to 10
-      if ($from_date && $to_date) {
+      if ($request->today == 1) {
+
+         $query->whereDate('stock_journal.jdate', date('Y-m-d'));
+
+         $query->orderBy('stock_journal.jdate', 'ASC')
+               ->orderBy(DB::raw("CAST(voucher_no AS SIGNED)"), 'ASC');
+
+      } elseif ($from_date && $to_date) {
          $query->whereRaw(
             "STR_TO_DATE(stock_journal_detail.journal_date, '%Y-%m-%d') BETWEEN ? AND ?",
             [$from_date, $to_date]

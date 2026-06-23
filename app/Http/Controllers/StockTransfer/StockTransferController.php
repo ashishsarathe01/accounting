@@ -74,7 +74,14 @@ class StockTransferController extends Controller
                 ->where('status', '1')
                 ->where('delete_status', '0');
     
-    if ($from_date && $to_date) {
+    if ($request->today == 1) {
+
+         $query->whereDate('stock_transfers.transfer_date', date('Y-m-d'));
+
+         $query->orderBy('stock_transfers.transfer_date', 'ASC')
+               ->orderBy(DB::raw("CAST(voucher_no AS SIGNED)"), 'ASC');
+
+      } elseif ($from_date && $to_date) {
         $query->whereRaw("STR_TO_DATE(transfer_date,'%Y-%m-%d') >= STR_TO_DATE('" . date('Y-m-d', strtotime($from_date)) . "', '%Y-%m-%d')")
               ->whereRaw("STR_TO_DATE(transfer_date,'%Y-%m-%d') <= STR_TO_DATE('" . date('Y-m-d', strtotime($to_date)) . "', '%Y-%m-%d')")
               ->orderBy('transfer_date', 'asc')

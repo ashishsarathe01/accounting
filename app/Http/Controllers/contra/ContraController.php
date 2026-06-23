@@ -85,7 +85,14 @@ class ContraController extends Controller
         ->where('contras.delete', '0');
 
     // If filtered by date
-    if ($from_date && $to_date) {
+    if ($request->today == 1) {
+
+         $query->whereDate('contras.date', date('Y-m-d'));
+
+         $query->orderBy('contras.date', 'ASC')
+               ->orderBy(DB::raw("CAST(voucher_no AS SIGNED)"), 'ASC');
+
+      } elseif ($from_date && $to_date) {
         $query->whereRaw("
             STR_TO_DATE(contras.date,'%Y-%m-%d') >= STR_TO_DATE('" . date('Y-m-d', strtotime($from_date)) . "','%Y-%m-%d')
             AND STR_TO_DATE(contras.date,'%Y-%m-%d') <= STR_TO_DATE('" . date('Y-m-d', strtotime($to_date)) . "','%Y-%m-%d')
