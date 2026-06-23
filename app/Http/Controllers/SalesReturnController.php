@@ -93,6 +93,8 @@ class SalesReturnController extends Controller
                'sale_return_no',
                'sales_returns.total',
                'sales_returns.status',
+               'sales_returns.voucher_type',
+               'sales_returns.linked_month',
                'sales_returns.approved_by',
                'sales_returns.approved_at',
                'sales_returns.approved_status',
@@ -133,6 +135,29 @@ class SalesReturnController extends Controller
       }
   
       $sale = $query->get()->reverse()->values(); // Optional reverse if needed for ascending display
+      foreach ($sale as $row) {
+         $row->gst_locked = false;
+         if (
+            $row->voucher_type == 'PURCHASE'
+            && !empty($row->linked_month)
+         ) {
+            $row->gst_locked = DB::table('gst_return_compliances')
+                  ->where('company_id', Session::get('user_company_id'))
+                  ->where('month_year', $row->linked_month)
+                  ->where('return_type', 'GSTR-3B')
+                  ->where('is_locked', 1)
+                  ->exists();
+         }
+         elseif ($row->voucher_type == 'SALE') {
+            $returnMonth = date('Y-m', strtotime($row->date));
+            $row->gst_locked = DB::table('gst_return_compliances')
+                  ->where('company_id', Session::get('user_company_id'))
+                  ->where('month_year', $returnMonth)
+                  ->where('return_type', 'GSTR-1')
+                  ->where('is_locked', 1)
+                  ->exists();
+         }
+      }
   
       return view('saleReturn')
           ->with('sale', $sale)
@@ -1742,6 +1767,51 @@ class SalesReturnController extends Controller
    public function edit($id){
       Gate::authorize('action-module',69);
       $sale_return =  SalesReturn::find($id);
+      if (
+         $sale_return->voucher_type == 'PURCHASE'
+         && !empty($sale_return->linked_month)
+      ) {
+
+         $gstLocked = DB::table('gst_return_compliances')
+            ->where('company_id', Session::get('user_company_id'))
+            ->where('month_year', $sale_return->linked_month)
+            ->where('return_type', 'GSTR-3B')
+            ->where('is_locked', 1)
+            ->exists();
+
+         if ($gstLocked) {
+
+            return redirect()
+                  ->to('sale-return')
+                  ->with(
+                     'error',
+                     'This Sales Return cannot be edited because GSTR-3B is locked for month '
+                     . $sale_return->linked_month
+                  );
+         }
+      }
+      elseif ($sale_return->voucher_type == 'SALE') {
+
+         $returnMonth = date('Y-m', strtotime($sale_return->date));
+
+         $gstLocked = DB::table('gst_return_compliances')
+            ->where('company_id', Session::get('user_company_id'))
+            ->where('month_year', $returnMonth)
+            ->where('return_type', 'GSTR-1')
+            ->where('is_locked', 1)
+            ->exists();
+
+         if ($gstLocked) {
+
+            return redirect()
+                  ->to('sale-return')
+                  ->with(
+                     'error',
+                     'This Sales Return cannot be edited because GSTR-1 is locked for month '
+                     . $returnMonth
+                  );
+         }
+      }
       if($sale_return->e_invoice_status==1){
           return redirect()->back();
       }

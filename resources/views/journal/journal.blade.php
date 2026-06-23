@@ -114,7 +114,7 @@
                                        $isLast = !isset($journal[$key+1]) || $journal[$key+1]->jon_id != $value->jon_id;
                                        if($is_first){
                                            
-                                           if(in_array(date('Y-m',strtotime($value->date)),$month_arr) && ($value->approved_status != 1 || auth()->user()->can('action-module',256))){?>
+                                           if(in_array(date('Y-m',strtotime($value->date)),$month_arr)&& ($value->approved_status != 1 || auth()->user()->can('action-module',256))&& !$value->gst_locked){?>
                                               <a href="{{ URL::to('journal/' . $value->jon_id . '/edit') }}"><img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt=""></a>
                                               @can('action-module',54)
                                               <button type="button" class="border-0 bg-transparent delete" data-id="<?php echo $value->jon_id; ?>">

@@ -125,7 +125,7 @@
                            <td class="w-min-120 text-center">
                               
                               <?php
-                              if(in_array(date('Y-m',strtotime($value->date)),$month_arr)){                                 
+                              if(in_array(date('Y-m',strtotime($value->date)),$month_arr)&& !$value->gst_locked){                               
                                     if($value->e_invoice_status==0 && $value->e_waybill_status==0 && $value->status=='1'){?>
                                        @can('action-module',61)
                                           @if($value->sale_order_id=="")

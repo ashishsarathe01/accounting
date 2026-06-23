@@ -102,6 +102,7 @@ class PurchaseController extends Controller{
             'party',
             'approved_status',
             'approved_by',
+            'gstr2b_invoice_month',
             'approved_at',
             'created_by',
             DB::raw("(SELECT name FROM users WHERE users.id = purchases.approved_by LIMIT 1) as approved_by_name"),
@@ -139,7 +140,17 @@ class PurchaseController extends Controller{
     
         // Get data
         $purchase = $query->get();
-    
+         foreach ($purchase as $row) {
+            $row->gst_locked = false;
+            if (!empty($row->gstr2b_invoice_month)) {
+               $row->gst_locked = DB::table('gst_return_compliances')
+                     ->where('company_id', Session::get('user_company_id'))
+                     ->where('month_year', $row->gstr2b_invoice_month)
+                     ->where('return_type', 'GSTR-3B')
+                     ->where('is_locked', 1)
+                     ->exists();
+            }
+         }    
         // ⬆️ Reverse only when showing the latest 10 (no date filter)
         if (!$from_date && !$to_date) {
             $purchase = $purchase->reverse()->values();
@@ -1375,6 +1386,25 @@ if ($companyData->gst_config_type == "single_gst") {
       Gate::authorize('action-module',57);
       $rowId     = $request->query('row_id'); 
       $purchase = Purchase::where('id',$id)->first();
+      if (
+         !empty($purchase->gstr2b_invoice_month)
+      ) {
+         $gstLocked = DB::table('gst_return_compliances')
+            ->where('company_id', Session::get('user_company_id'))
+            ->where('month_year', $purchase->gstr2b_invoice_month)
+            ->where('return_type', 'GSTR-3B')
+            ->where('is_locked', 1)
+            ->exists();
+         if ($gstLocked) {
+            return redirect()
+                  ->route('purchase.index')
+                  ->with(
+                     'error',
+                     'This Purchase Voucher cannot be edited because GSTR-3B is locked for month ' .
+                     $purchase->gstr2b_invoice_month
+                  );
+         }
+      }
       $party = Accounts::find($purchase->party);
 
       $gstApplicable = true;

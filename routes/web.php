@@ -119,6 +119,8 @@ use App\Http\Controllers\BoxSaleOrderController;
 use App\Http\Controllers\CompanySaleType\CompanySaleTypeController;
 use App\Http\Controllers\ExportMonthlyReportController;
 use App\Http\Controllers\ConsumptionReport\ConsumptionReportController;
+use App\Http\Controllers\DutiesCompliance\GstReturnComplianceController;
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -1597,5 +1599,32 @@ Route::post('profit-loss-group-mapping-save',[ProfitLossController::class,'saveP
 Route::get('balance-sheet-group-mapping',[BalanceSheetController::class,'balanceSheetGroupMapping'])->name('balancesheet.group.mapping');
 Route::post('balance-sheet-group-mapping-save',[BalanceSheetController::class,'saveBalanceSheetGroupMapping'])->name('balancesheet.group.mapping.save');
 Route::post('verify-gst2b', [GSTR2BController::class, 'verifyGst2b'])->name('verify-gst2b'); 
+Route::get(
+    '/gst-return-compliance',
+    [GstReturnComplianceController::class, 'index']
+)->name('gst-return-compliance.index');
 
+Route::get(
+    '/gst-return-compliance/add',
+    [GstReturnComplianceController::class, 'create']
+)->name('gst-return-compliance.create');
+
+Route::post(
+    '/gst-return-compliance/store',
+    [GstReturnComplianceController::class, 'store']
+)->name('gst-return-compliance.store');
+
+Route::get(
+    '/gst-return-compliance/edit/{id}',
+    [GstReturnComplianceController::class, 'edit']
+)->name('gst-return-compliance.edit');
+
+Route::post(
+    '/gst-return-compliance/update/{id}',
+    [GstReturnComplianceController::class, 'update']
+)->name('gst-return-compliance.update');
+Route::post(
+    '/gst-return-compliance/check-arn',
+    [GstReturnComplianceController::class, 'checkArn']
+)->name('gst-return-compliance.check-arn');
 });

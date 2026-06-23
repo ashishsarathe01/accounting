@@ -73,7 +73,7 @@ public function index(Request $request)
 
     // Base query
     $query = DB::table('journal_details')
-        ->select('journals.series_no','journals.voucher_no', 'journals.id as jon_id', 'journals.date', 'accounts.account_name as acc_name', 'journal_details.*', 'journals.created_by','journals.approved_by','journals.approved_at','journals.approved_status',
+        ->select('journals.series_no','journals.voucher_no', 'journals.claim_gst_status', 'journals.gstr2b_invoice_month', 'journals.id as jon_id', 'journals.date', 'accounts.account_name as acc_name', 'journal_details.*', 'journals.created_by','journals.approved_by','journals.approved_at','journals.approved_status',
 
     'created_user.name as created_by_name',
     'approved_user.name as approved_by_name')
@@ -113,7 +113,20 @@ public function index(Request $request)
         ->orderBy('journal_details.journal_id', 'asc')
         
         ->get();
-
+      foreach ($journal as $row) {
+         $row->gst_locked = false;
+         if (
+            $row->claim_gst_status == 'YES'
+            && !empty($row->gstr2b_invoice_month)
+         ) {
+            $row->gst_locked = DB::table('gst_return_compliances')
+                  ->where('company_id', Session::get('user_company_id'))
+                  ->where('month_year', $row->gstr2b_invoice_month)
+                  ->where('return_type', 'GSTR-3B')
+                  ->where('is_locked', 1)
+                  ->exists();
+         }
+      }
       $journal_ids = $journal->pluck('jon_id')->unique()->toArray();
 
       $sundries = DB::table('journal_sundries as js')
@@ -1032,6 +1045,27 @@ public function index(Request $request)
       $fy_start_date = '20' . $startYY . '-04-01'; 
       $fy_end_date   = '20' . $endYY   . '-03-31';
       $journal = Journal::find($id);
+      $journal = Journal::find($id);
+      if (
+         $journal->claim_gst_status == 'YES'
+         && !empty($journal->gstr2b_invoice_month)
+      ) {
+         $gstLocked = DB::table('gst_return_compliances')
+            ->where('company_id', Session::get('user_company_id'))
+            ->where('month_year', $journal->gstr2b_invoice_month)
+            ->where('return_type', 'GSTR-3B')
+            ->where('is_locked', 1)
+            ->exists();
+         if ($gstLocked) {
+            return redirect()
+                  ->route('journal.index')
+                  ->with(
+                     'error',
+                     'This Journal Voucher cannot be edited because GSTR-3B is locked for month '
+                     . $journal->gstr2b_invoice_month
+                  );
+         }
+      }
       $com_id = Session::get('user_company_id');
       $journal_detail = JournalDetails::where('journal_id', '=', $id)->where('delete', '=', '0')->get();
       $party_list = Accounts::whereIn('company_id', [$com_id,0])

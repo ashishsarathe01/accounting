@@ -158,7 +158,7 @@
                               </td>
                               <td class="w-min-120  text-center">
                                  <?php 
-                                 if(in_array(date('Y-m',strtotime($value->date)),$month_arr)){?>
+                                 if(in_array(date('Y-m',strtotime($value->date)),$month_arr) && !$value->gst_locked){?>
                                     @can('action-module',57)
                                         <a href="{{ URL::to('purchase-edit/'.$value->id) }}">  <img src="{{ URL::asset('public/assets/imgs/edit-icon.svg')}}" class="px-1" alt="">
                                         </a>

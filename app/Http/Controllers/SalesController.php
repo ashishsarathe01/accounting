@@ -160,6 +160,16 @@ class SalesController extends Controller
       }
       // Fetch results
       $sale = $query->get();
+      foreach ($sale as $row) {
+         $row->gst_locked = false;
+         $invoiceMonth = date('Y-m', strtotime($row->date));
+         $row->gst_locked = DB::table('gst_return_compliances')
+            ->where('company_id', Session::get('user_company_id'))
+            ->where('month_year', $invoiceMonth)
+            ->where('return_type', 'GSTR-1')
+            ->where('is_locked', 1)
+            ->exists();
+      }
       if (!$from_date && !$to_date) {
          $sale = $sale->reverse()->values();
       }
@@ -1645,6 +1655,22 @@ class SalesController extends Controller
          $sale_enter_data = $request->query('sale_enter_data');
       }
       $sale = Sales::find($id);
+      $invoiceMonth = date('Y-m', strtotime($sale->date));
+      $gstLocked = DB::table('gst_return_compliances')
+         ->where('company_id', Session::get('user_company_id'))
+         ->where('month_year', $invoiceMonth)
+         ->where('return_type', 'GSTR-1')
+         ->where('is_locked', 1)
+         ->exists();
+      if ($gstLocked) {
+         return redirect()
+            ->to('sale')
+            ->with(
+                  'error',
+                  'This Sale Invoice cannot be edited because GSTR-1 is locked for month '
+                  . $invoiceMonth
+            );
+      }
       $boxSaleOrders = DB::table('box_sale_orders')
                      ->where('company_id', Session::get('user_company_id'))
                      ->where('party_id', $sale->party)

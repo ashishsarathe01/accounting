@@ -99,7 +99,7 @@
                                        $tot_amt = $tot_amt + $value->total; ?></td>
                                     <td class="w-min-120  text-center">
                                        <?php 
-                                        if((in_array(date('Y-m',strtotime($value->date)),$month_arr) && $value->status == '1') && ($value->approved_status != 1 || auth()->user()->can('action-module',256))){?>
+                                        if((in_array(date('Y-m',strtotime($value->date)),$month_arr) && $value->status == '1')&& ($value->approved_status != 1 || auth()->user()->can('action-module',256))&& !$value->gst_locked){?>
                                            
                                             @can('action-module',47)
                                             @if($value->e_invoice_status==0)
