@@ -600,6 +600,7 @@ Route::post('/purchase-return/export',[PurchaseReturnController::class, 'export'
         Route::get('/report/filter/3b', [GSTR3BController::class, 'filterform'])->name('report.filter.data.3b');
         Route::get('/gstr3b/view/outwarddetails', [GSTR3BController::class, 'OutwardDetails'])->name('OutwardDetails.view');
         Route::get('/gstr3b/view/itcdetails', [GSTR3BController::class, 'itcDetails'])->name('itcDetails.view');
+        Route::get('/gstr3b/view/paymentoftax', [GSTR3BController::class, 'paymentOfTax'])->name('paymentOfTax.view');
         Route::get('/settings', [SettingsController::class, 'index'])->name('viewSettings');
         Route::post('/gstr1/send-to-gstmaster', [Gstr1Controller::class, 'sendGstr1ToGSTMaster'])->name('gstr1.send');
         Route::get('debit-note-import-view', [PurchaseReturnController::class, 'debitNoteImportView'])->name('debit-note-import-view');

@@ -1640,5 +1640,18 @@ class GSTR3BController extends Controller
             'sgst' => $sgstTotal,
         ];
     }
-    
+    public function paymentOfTax(Request $request)
+    {
+        $series    = $request->series;
+        $from_date = $request->from_date;
+        $to_date   = $request->to_date;
+        $data      = json_decode($request->data, true);
+
+        return view('gstReturn.payment_of_tax', compact(
+            'series',
+            'from_date',
+            'to_date',
+            'data'
+        ));
+    }
 }

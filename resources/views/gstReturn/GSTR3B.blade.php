@@ -280,10 +280,23 @@
                                                                     <td colspan="2" style="border-left: none; border-right: none; border-top:none; border-bottom:none;"></td>
                                                                 </tr>
 
-                                                        {{-- Section 6.1 --}}
+                                                        @php
+                                                            $url_payment_tax = route('paymentOfTax.view', [
+                                                                'series'    => $merchant_gst,
+                                                                'from_date' => $from_date,
+                                                                'to_date'   => $to_date,
+                                                                'data'      => json_encode($data)
+                                                            ]);
+                                                        @endphp
+
                                                         <tr class="section-header">
-                                                            <td >6.1 Payment of tax</td>
-                                                                <td>Books</td>
+                                                            <td>6.1 Payment of tax</td>
+                                                            <td>
+                                                                Books
+                                                                <a class="btn btn-primary" href="{{ $url_payment_tax }}">
+                                                                    <img src="{{ asset('public/assets/imgs/eye-icon.svg') }}" class="px-1" alt="">
+                                                                </a>
+                                                            </td>
                                                         </tr>
                                                         <tr>
                                                             <td>Balance Liability</td>
@@ -567,13 +580,16 @@
                                                                     <td colspan="3" style="border-left: none; border-right: none; border-top:none; border-bottom:none;"></td>
                                                                 </tr>
 
-                                                        {{-- Section 6.1 --}}
                                                         <tr class="section-header">
-                                                            <td >6.1 Payment of tax</td>
-                                                                <td>Books</td>
-                                                            <td>Portal </td>
+                                                            <td>6.1 Payment of tax</td>
+                                                            <td>Books</td>
+                                                            <td class="d-flex justify-content-between align-items-center">
+                                                                <span>Portal</span>
+                                                                <a class="btn btn-primary" href="{{ $url_payment_tax }}">
+                                                                    <img src="{{ asset('public/assets/imgs/eye-icon.svg') }}" class="px-1" alt="">
+                                                                </a>
+                                                            </td>
                                                         </tr>
-                                                        <tr>
                                                             <td>Balance Liability</td>
                                                             <td>₹0.00</td>
                                                             <td>₹{{ formatIndianNumber($data['tax_pay']['bal_liab'] ?? 0, 2) }}</td>
@@ -719,12 +735,17 @@
 
                                                 <!-- 6.1 Payment of Tax -->
                                                 <div class="col-md-12">
-                                                    <div class="bg-primary text-white p-2 fw-bold rounded-top fs-6 " >6.1 Payment of tax</div>
-                                                    <div class="bg-white border p-3 rounded-bottom">
-                                                        <p>Balance Liability: ₹0.00</p>
-                                                        <p>Paid through Cash: ₹0.00</p>
-                                                        <p>Paid through Credit: ₹0.00</p>
-                                                    </div>
+                                                    <a href="{{ $url_payment_tax }}" style="text-decoration:none;color:inherit;">
+                                                        <div class="bg-primary text-white p-2 fw-bold rounded-top fs-6">
+                                                            6.1 Payment of tax
+                                                        </div>
+
+                                                        <div class="bg-white border p-3 rounded-bottom">
+                                                            <p>Balance Liability: ₹0.00</p>
+                                                            <p>Paid through Cash: ₹0.00</p>
+                                                            <p>Paid through Credit: ₹0.00</p>
+                                                        </div>
+                                                    </a>
                                                 </div>
                                             </div> <!-- row -->
                                             <div class="text-end mt-3">
