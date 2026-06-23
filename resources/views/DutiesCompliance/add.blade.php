@@ -14,21 +14,18 @@
 
 <div class="col-md-12 ml-sm-auto col-lg-10 px-md-4 bg-mint">
 
-    {{-- SUCCESS MESSAGE --}}
     @if(session('success'))
         <div class="alert alert-success mt-3">
             {{ session('success') }}
         </div>
     @endif
 
-    {{-- ERROR MESSAGE --}}
     @if(session('error'))
         <div class="alert alert-danger mt-3">
             {{ session('error') }}
         </div>
     @endif
 
-    {{-- VALIDATION ERRORS --}}
     @if ($errors->any())
         <div class="alert alert-danger mt-3">
             <ul class="mb-0">
@@ -39,8 +36,6 @@
         </div>
     @endif
 
-
-    {{-- PAGE TITLE --}}
     <div class="table-title-bottom-line bg-plum-viloet shadow-sm py-2 px-3 d-flex justify-content-between align-items-center mt-3">
 
         <h5 class="transaction-table-title m-0">
@@ -49,8 +44,6 @@
 
     </div>
 
-
-    {{-- FORM CARD --}}
     <div class="bg-white shadow-sm p-4">
 
         <form method="POST"
@@ -88,8 +81,6 @@
 
                 </div>
 
-
-                {{-- MONTH --}}
                 <div class="col-md-6 mb-4">
 
                     <label class="form-label fw-bold">
@@ -106,8 +97,6 @@
 
                 </div>
 
-
-                {{-- RETURN TYPE --}}
                 <div class="col-md-6 mb-4">
 
                     <label class="form-label fw-bold">
@@ -134,8 +123,6 @@
 
                 </div>
 
-
-                {{-- ARN NUMBER --}}
                 <div class="col-md-6 mb-4">
 
                     <label class="form-label fw-bold">
@@ -153,8 +140,6 @@
 
                 </div>
 
-
-                {{-- LOCK STATUS --}}
                 <div class="col-md-6 mb-4">
 
                     <label class="form-label fw-bold">
@@ -178,7 +163,6 @@
                 </div>
 
             </div>
-
 
             <div class="mt-3">
 
