@@ -66,11 +66,26 @@ $return_url = request()->get('return_url');
    .bil_logo img{
       max-width:100%;
    }
-   @media print{
+   .screen-layout{
+      display:block;
+   }
+
+.print-layout{
+    display:none;
+}
+@media print{
       .noprint{
          display:none;
       }
-   }
+
+      .screen-layout{
+         display:none !important;
+      }
+
+      .print-layout{
+         display:block !important;
+      }
+}
    @media print {
 
     
@@ -105,9 +120,10 @@ p {
    margin: 0.5px !important;  /* Almost zero vertical space between paragraphs */
 }
 .invoice-total{
-    font-size:18px;
+    font-size:16px;
     font-weight:800;
     margin:0;
+    white-space:nowrap;
 }
 
 /* @page {
@@ -141,44 +157,139 @@ body {
     vertical-align: top;
 }
 @media print {
-   tr, td, th {
-        page-break-inside: avoid;
-    }
-
     table {
         page-break-after: auto;
     }
-    .print-wrapper {
-        /* width: 210mm; */
-        min-height: 300mm;
-        display: block;
-        page-break-after: always;
-        break-after: page;
-    }
+
+   .print-wrapper {
+      display: block;
+      page-break-after: always;
+      break-after: page;
+      box-sizing: border-box;
+      min-height: 1084px;   /* was height */
+      overflow: visible;    /* was hidden */
+      position: relative;
+   }
+
+   .print-wrapper:last-child {
+      page-break-after: auto;
+      break-after: auto;
+   }
 
     .print-wrapper:last-child {
         page-break-after: auto;
         break-after: auto;
     }
 
+   .print-wrapper > table.invoice-copy {
+      width: 100%;
+      table-layout: auto;
+   }
+
+   .print-content-spacer td{
+      border-top:none !important;
+      border-bottom:none !important;
+      padding:0 !important;
+   }
+
     .invoice-copy {
         width: 100%;
     }
-}
-@page {
-    size: A4;
-    margin: 5mm;
-}
-.no-border td {
-     border-top: none;
-    border-bottom: none;
-    border-left: 1px solid #000;
-    border-right: 1px solid #000;
-}
 
+    .print-financial-block {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    .print-financial-block tr {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+.print-item-row {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+}
+    .print-indivisible-block {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+   .print-page-footer {
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+   }
+
+    .print-compact-row td,
+    .print-compact-row th {
+        padding-top: 1px !important;
+        padding-bottom: 1px !important;
+        line-height: 1.15 !important;
+    }
+
+    .print-compact-row p {
+        margin: 0 !important;
+        line-height: 1.15 !important;
+    }
+
+    .print-summary-page .invoice-company-header {
+        height: 110px !important;
+        min-height: 110px !important;
+        max-height: 110px !important;
+    }
+}
+   @page {
+      size: A4 portrait;
+      margin: 5mm;
+   }
+   .no-border td {
+      border-top: none;
+      border-bottom: none;
+      border-left: 1px solid #000;
+      border-right: 1px solid #000;
+   }
+   .invoice-company-header{
+      height:130px;
+      min-height:130px;
+      max-height:130px;
+      overflow:hidden;
+      position:relative;
+   }
+   .invoice-logo-left,
+   .invoice-logo-right{
+      position:absolute;
+      top:50px;          /* was 35px */
+      width:90px;
+      height:70px;       /* was 80px */
+      overflow:hidden;
+   }
+
+   .invoice-logo-left{
+      left:10px;
+   }
+
+   .invoice-logo-right{
+      right:10px;
+   }
+
+   .invoice-logo-left img,
+   .invoice-logo-right img{
+      width:100%;
+      height:100%;
+      object-fit:contain;
+   }
+   .gst-summary-table{
+      width:45% !important;
+      display:inline-table !important;
+   }
+
+   .gst-summary-table td,
+   .gst-summary-table th{
+      border:none !important;
+   }
 </style>
 
 <div class="list-of-view-company ">
+   <div class="screen-layout">
    <section class="list-of-view-company-section container-fluid">
       <div class="row vh-100">
          @include('layouts.leftnav')
@@ -220,11 +331,11 @@ body {
             </div>  
             <br>          
             
-            <table style="font-family: 'Source Sans Pro', sans-serif;letter-spacing: 0.05em;color: #404040;font-size: 12px;font-weight: 500;padding: 10px;" class="invoice-copy">
+            <table style="font-family: 'Source Sans Pro', sans-serif;letter-spacing: 0.05em;color: #404040;font-size: 12px;font-weight: 500;padding: 10px;" class="invoice-copy invoice-copy-screen">
                <tbody>
                   <tr>
                     <th colspan="8" style="padding: 0;">
-                        <div style="min-height: 130px; position: relative;">
+                        <div class="invoice-company-header">
                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
                               <!-- LEFT -->
                               <div style="flex:1; text-align:left;margin-left: 5px;">
@@ -266,10 +377,9 @@ body {
                             @if($configuration && $configuration->company_logo_status==1 
                                && $configuration->logo_position_left==1 
                                && !empty($configuration->company_logo))
-                                <div style="position:absolute; left:10px; top:45px;">
-                                   <img src="{{ URL::asset('public/images') }}/{{ $configuration->company_logo }}"
-                                         style="height:80px;">
-                                </div>
+                                 <div class="invoice-logo-left">
+                                    <img src="{{ URL::asset('public/images') }}/{{ $configuration->company_logo }}">
+                                 </div>
 
                             @endif
 
@@ -277,10 +387,9 @@ body {
                             @if($configuration && $configuration->company_logo_status==1 
                                && $configuration->logo_position_right==1 
                                && !empty($configuration->company_logo))
-                                <div style="position:absolute; right:10px; top:45px;">
-                                   <img src="{{ URL::asset('public/images') }}/{{ $configuration->company_logo }}"
-                                         style="height:80px;">
-                                </div>
+                                 <div class="invoice-logo-right">
+                                    <img src="{{ URL::asset('public/images') }}/{{ $configuration->company_logo }}">
+                                 </div>
                             @endif
 
                            
@@ -455,7 +564,9 @@ body {
                            <td style="text-align:right">{{$item->qty}}</td>
                            <td style="text-align:center">{{$item->unit}}</td>
                            <td style="text-align:right;">{{$item->price}}</td>
-                           <td style="text-align:right;">{{formatIndianNumber($item->amount)}}</td>
+                           <td style="text-align:right; white-space:nowrap;">
+                              {{formatIndianNumber($item->amount)}}
+                           </td>
                         </tr>
                         @php
                            $i++;
@@ -495,93 +606,226 @@ body {
                         <td style="border-bottom:0; border-left:0"><strong>Total</strong></td>
                         <td style="text-align:right; border-bottom:0;">{{formatIndianNumber($item_total)}} </td>
                      </tr>
-                     <tr>
-                        <td style="border-right:0; border-top:0;" colspan="2"></td>
-                        <td colspan="4" style="border-left:0; border-right:0; border-top:0;">
-                            @php
-                                $addTypes = ['CGST', 'SGST', 'IGST','TCS', 'ROUNDED OFF (+)'];
-                                $lessTypes = ['ROUNDED OFF (-)'];
-                            @endphp
-                            
-                            @foreach($sale_sundry as $sundry)
-                                @php
-                                    $billsundry = \App\Models\BillSundrys::find($sundry->bill_sundry);  
-                                @endphp
-                            
-                                @if($sundry->nature_of_sundry === 'OTHER')
-                                    @if($sundry->bill_sundry_type === 'additive')
-                                        <p>Add : {{ $sundry->name }}</p>
-                                    @elseif($sundry->bill_sundry_type === 'subtractive')
-                                        <p>Less : {{ $sundry->name }}</p>
-                                    @endif
-                                @elseif(in_array($sundry->nature_of_sundry, $addTypes))
-                                    <p>Add : {{ $sundry->name }}</p>
-                                @elseif(in_array($sundry->nature_of_sundry, $lessTypes))
-                                    <p>Less : {{ $sundry->name }}</p>
-                                @endif
-                            @endforeach
-                        </td>
-                        <td style="border-left:0; border-top:0;">
-                           <!-- <p style="white-space: nowrap;">&nbsp;</p> -->
-                           @foreach($sale_sundry as $sundry)
-                           <p>@if($sundry->rate!=0) {{$sundry->rate}} % @else &nbsp; @endif</p>
-                           @endforeach
-                        </td>
-                        <td style="text-align:right; border-top:0;">
-                           @foreach($sale_sundry as $sundry)
-                           <p>{{formatIndianNumber($sundry->amount)}}</p>
-                           @endforeach
-                        </td>
-                     </tr>
-                     <tr>
-                        <td colspan="7" style="text-align:right; border-right: 0; border-bottom: 0;">
-                           <p><strong>Grand Total ₹</strong></p>
-                        </td> 
-                        <!--<td  style="text-align:right; border-right: 0; border-bottom: 0;border-left: 0;">-->
-                        <!--   <p><strong>{{$qty_total}}</strong></p>-->
-                        <!--</td> -->
-                        <!--<td  style="text-align:right; border-right: 0; border-bottom: 0;border-left: 0;">-->
-                        <!--   <p><strong></strong></p>-->
-                        <!--</td> -->
-                        <!--<td  style="text-align:right; border-right: 0; border-bottom: 0;border-left: 0;">-->
-                        <!--   <p><strong></strong></p>-->
-                        <!--</td> -->
-                        <td style="text-align:right">
-                           <p><strong class="invoice-total">{{formatIndianNumber($sale_detail->total)}}</strong></p>
-                        </td>
-                     </tr>
-                     <tr>
-                     <td colspan="8" style="border-top:0; border-bottom:0;">
-                        
-                        @foreach($gst_detail as $val)
-                           <span><u><small>Tax Rate</small></u><br>
-                              <small>{{$val->rate}}%</small>
-                           </span>
-                           <span class="mar_lft10"><u><small>Taxable Amount</small></u><br>
-                              <small>{{formatIndianNumber($val->taxable_amount)}}</small>
-                           </span>
-                           @if(Str::limit($seller_info->gst_no,2,'')==Str::limit($sale_detail->billing_gst,2,''))
-                              <span class="mar_lft10"><u><small>CGST</small></u><br>
-                                 <small>{{formatIndianNumber($val->amount)}}</small>
-                              </span>
-                              <span class="mar_lft10"><u><small>SGST</small></u><br>
-                                 <small>{{formatIndianNumber($val->amount)}}</small>
-                              </span>
+                     @php
+
+            $totalCGST = 0;
+            $totalSGST = 0;
+            $totalIGST = 0;
+
+            $displaySundries = [];
+
+            foreach($sale_sundry as $printSundry){
+
+               if(strtoupper($printSundry->nature_of_sundry) == 'CGST'){
+                  $totalCGST += $printSundry->amount;
+               }
+               elseif(strtoupper($printSundry->nature_of_sundry) == 'SGST'){
+                  $totalSGST += $printSundry->amount;
+               }
+               elseif(strtoupper($printSundry->nature_of_sundry) == 'IGST'){
+                  $totalIGST += $printSundry->amount;
+               }
+               else{
+                  $displaySundries[] = $printSundry;
+               }
+            }
+
+            @endphp
+
+            <tr>
+
+               <td style="border-right:0; border-top:0;" colspan="2"></td>
+
+               <td colspan="4" style="border-left:0; border-right:0; border-top:0;">
+
+                  {{-- Other sundries first --}}
+                  @foreach($displaySundries as $printSundry)
+                        @if(stripos($printSundry->name, 'round') === false)
+                           @if($printSundry->bill_sundry_type == 'additive')
+                              <p>Add : {{ $printSundry->name }}</p>
                            @else
-                              <span class="mar_lft10"><u><small>IGST</small></u><br>
-                                 <small>{{formatIndianNumber($val->amount)}}</small>
-                              </span>
-                           @endif                        
-                           <span class="mar_lft10"><u><small>Total Tax</small></u><br>
-                              @if(Str::limit($seller_info->gst_no,2,'')==Str::limit($sale_detail->billing_gst,2,''))
-                                 <small>{{formatIndianNumber($val->amount+$val->amount)}}</small>
-                              @else
-                                 <small>{{formatIndianNumber($val->amount)}}</small>
-                              @endif
-                           </span><br>
-                        @endforeach
-                     </td>
-                  </tr>
+                              <p>Less : {{ $printSundry->name }}</p>
+                           @endif
+                        @endif
+                  @endforeach
+
+                  @if($totalCGST > 0)
+                        <p>Add : CGST</p>
+                  @endif
+
+                  @if($totalSGST > 0)
+                        <p>Add : SGST</p>
+                  @endif
+
+                  @if($totalIGST > 0)
+                        <p>Add : IGST</p>
+                  @endif
+
+                  {{-- Rounded Off last --}}
+                  @foreach($displaySundries as $printSundry)
+                        @if(stripos($printSundry->name, 'round') !== false)
+                           @if($printSundry->bill_sundry_type == 'additive')
+                              <p>Add : {{ $printSundry->name }}</p>
+                           @else
+                              <p>Less : {{ $printSundry->name }}</p>
+                           @endif
+                        @endif
+                  @endforeach
+
+               </td>
+
+               <td style="border-left:0; border-top:0;">
+
+                  @foreach($displaySundries as $printSundry)
+                        @if(stripos($printSundry->name, 'round') === false)
+                           <p>&nbsp;</p>
+                        @endif
+                  @endforeach
+
+                  @if($totalCGST > 0)
+                        <p>&nbsp;</p>
+                  @endif
+
+                  @if($totalSGST > 0)
+                        <p>&nbsp;</p>
+                  @endif
+
+                  @if($totalIGST > 0)
+                        <p>&nbsp;</p>
+                  @endif
+
+                  @foreach($displaySundries as $printSundry)
+                        @if(stripos($printSundry->name, 'round') !== false)
+                           <p>&nbsp;</p>
+                        @endif
+                  @endforeach
+
+               </td>
+
+               <td style="text-align:right; border-top:0;">
+
+                  @foreach($displaySundries as $printSundry)
+                        @if(stripos($printSundry->name, 'round') === false)
+                           <p>{{ formatIndianNumber($printSundry->amount) }}</p>
+                        @endif
+                  @endforeach
+
+                  @if($totalCGST > 0)
+                        <p>{{ formatIndianNumber($totalCGST) }}</p>
+                  @endif
+
+                  @if($totalSGST > 0)
+                        <p>{{ formatIndianNumber($totalSGST) }}</p>
+                  @endif
+
+                  @if($totalIGST > 0)
+                        <p>{{ formatIndianNumber($totalIGST) }}</p>
+                  @endif
+
+                  @foreach($displaySundries as $printSundry)
+                        @if(stripos($printSundry->name, 'round') !== false)
+                           <p>{{ formatIndianNumber($printSundry->amount) }}</p>
+                        @endif
+                  @endforeach
+
+               </td>
+
+            </tr>
+ 
+            <tr>
+               <td colspan="7" style="text-align:right; border-right: 0; border-bottom: 0;">
+                  <p><strong>Grand Total ₹</strong></p>
+               </td>
+               <td style="text-align:right">
+                  <p><strong class="invoice-total">{{formatIndianNumber($sale_detail->total)}}</strong></p>
+               </td>
+            </tr>
+ 
+            <tr>
+               <td colspan="8" style="border-top:0;border-bottom:0;padding:2px 4px;">
+
+                  <table class="gst-summary-table" style="width:45% !important;border:none;border-collapse:collapse;font-size:10px;display:inline-table;">
+
+                     <tr>
+                        <td style="border:none;padding:1px;font-weight:bold;">Tax Rate</td>
+                        <td style="border:none;padding:1px;text-align:right;font-weight:bold;">Taxable Amt.</td>
+                        <td style="border:none;padding:1px;text-align:right;font-weight:bold;">CGST</td>
+                        <td style="border:none;padding:1px;text-align:right;font-weight:bold;">SGST</td>
+                        <td style="border:none;padding:1px;text-align:right;font-weight:bold;">Total Tax</td>
+                     </tr>
+
+                     @php
+                        $totalTaxable = 0;
+                        $totalCGST = 0;
+                        $totalSGST = 0;
+                     @endphp
+
+                     @foreach($gst_detail as $printVal)
+
+                        @php
+                           $totalTaxable += $printVal->taxable_amount;
+                           $totalCGST += $printVal->amount;
+                           $totalSGST += $printVal->amount;
+                        @endphp
+
+                        <tr>
+                           <td style="border:none;padding:1px;">
+                              {{$printVal->rate}}%
+                           </td>
+
+                           <td style="border:none;padding:1px;text-align:right;">
+                              {{formatIndianNumber($printVal->taxable_amount)}}
+                           </td>
+
+                           <td style="border:none;padding:1px;text-align:right;">
+                              {{formatIndianNumber($printVal->amount)}}
+                           </td>
+
+                           <td style="border:none;padding:1px;text-align:right;">
+                              {{formatIndianNumber($printVal->amount)}}
+                           </td>
+
+                           <td style="border:none;padding:1px;text-align:right;">
+                              {{formatIndianNumber($printVal->amount * 2)}}
+                           </td>
+                        </tr>
+
+                     @endforeach
+
+                     <tr>
+                        <td colspan="5" style="padding:0;border:none;">
+                           <hr style="margin:2px 0;border:none;border-top:1px solid #000;">
+                        </td>
+                     </tr>
+
+                     <tr>
+
+                        <td style="border:none;padding:1px;font-weight:bold;">
+                           Total
+                        </td>
+
+                        <td style="border:none;padding:1px;text-align:right;font-weight:bold;">
+                           {{formatIndianNumber($totalTaxable)}}
+                        </td>
+
+                        <td style="border:none;padding:1px;text-align:right;font-weight:bold;">
+                           {{formatIndianNumber($totalCGST)}}
+                        </td>
+
+                        <td style="border:none;padding:1px;text-align:right;font-weight:bold;">
+                           {{formatIndianNumber($totalSGST)}}
+                        </td>
+
+                        <td style="border:none;padding:1px;text-align:right;font-weight:bold;">
+                           {{formatIndianNumber($totalCGST + $totalSGST)}}
+                        </td>
+
+                     </tr>
+
+                  </table>
+
+               </td>
+            </tr>
                   <tr>
                      <td colspan="8" style="border-top:0">
                         <strong>
@@ -632,7 +876,11 @@ body {
                         </strong>
                      </td>
                   </tr>
-                  @if($bank_detail)
+                  @if(
+    $configuration &&
+    $configuration->bank_detail_status == 1 &&
+    $bank_detail
+)
                      <tr>
                         <td colspan="8">   
                            @if($configuration && $configuration->banks)                     
@@ -660,7 +908,11 @@ body {
                         <p style="height:40px; margin:0; padding:0;"><small>Receiver's Signature :</small></p>
                         <p style="text-align:right; padding:0; margin:0;"><strong>for {{$company_data->company_name}}</strong></p>
 
-                        @if($configuration && !empty($configuration->signature))
+                        @if(
+    $configuration &&
+    $configuration->signature_status == 1 &&
+    !empty($configuration->signature)
+)
                            <p style="text-align:right; margin:0; padding:0;">
                               <img src="{{ URL::asset('public/images')}}/{{$configuration->signature}}" style="max-width:145px; max-height:120px; object-fit:contain;">
                            </p>
@@ -675,6 +927,7 @@ body {
                   </tr>
                </tbody>
             </table>
+            
             <span class="append_invoice"></span>
             
            
@@ -702,6 +955,843 @@ body {
          </div>                     
       </div>
    </section>
+</div>
+</div>
+   @php
+      $PX_LINE            = 21;
+      $PX_PAGE            = 1084;
+      $PX_HEADER_NO_IRN   = 420;
+      $PX_HEADER_IRN      = 504;
+      $PX_BF_ROW          = 21;
+      $PX_CF_ROW          = 21;
+
+      $printHasIrn      = ($sale_detail->e_invoice_status == 1 && !empty($sale_detail->einvoice_response));
+      $px_header_actual = $printHasIrn ? $PX_HEADER_IRN : $PX_HEADER_NO_IRN;
+
+      $PX_TERM_LINE     = 12;
+      $PX_TERM_HEADER    = 24;
+      $PX_SIGNATURE_MIN  = 80;
+      $PX_FOOTER_PAD    = 8;
+
+      $termCount = 0;
+      if ($configuration && $configuration->term_status == 1 && $configuration->terms) {
+         $termCount = count($configuration->terms);
+      }
+      $effectiveTerms = max(9, $termCount);
+      $px_terms_content = $PX_TERM_HEADER + ($effectiveTerms * $PX_TERM_LINE);
+      $PX_FOOTER = max($px_terms_content, $PX_SIGNATURE_MIN) + $PX_FOOTER_PAD;
+
+      $printTotalCGST = 0;
+      $printTotalSGST = 0;
+      $printTotalIGST = 0;
+      $printDisplaySundries = [];
+
+      foreach ($sale_sundry as $s) {
+         $nat = strtoupper($s->nature_of_sundry);
+         if ($nat === 'CGST') {
+            $printTotalCGST += $s->amount;
+         } elseif ($nat === 'SGST') {
+            $printTotalSGST += $s->amount;
+         } elseif ($nat === 'IGST') {
+            $printTotalIGST += $s->amount;
+         } else {
+            $printDisplaySundries[] = $s;
+         }
+      }
+
+      $sundryRows = count($printDisplaySundries);
+      if ($printTotalCGST > 0) $sundryRows++;
+      if ($printTotalSGST > 0) $sundryRows++;
+      if ($printTotalIGST > 0) $sundryRows++;
+      $sundryRows = max(1, $sundryRows);
+
+      $bankRow = ($configuration && $configuration->bank_detail_status == 1 && $bank_detail) ? 1 : 0;
+      $gstRows = count($gst_detail);
+
+      $PX_FINANCIAL =
+            $PX_LINE
+         + ($sundryRows * $PX_LINE)
+         + $PX_LINE
+         + ((2 + $gstRows + 1) * 14)
+         + $PX_LINE
+         + ($bankRow * $PX_LINE);
+
+      $fnItemPx = function ($item) use ($PX_LINE) {
+         $sub = 0;
+         if (isset($item->lines) && (is_array($item->lines) || is_countable($item->lines))) {
+            $sub = count($item->lines);
+         }
+         return (1 + $sub) * $PX_LINE;
+      };
+
+      $items = $items_detail->values()->all();
+      $totalItems = count($items);
+
+      $printPages = [];
+      $idx = 0;
+      $runningQty = 0;
+      $runningAmt = 0;
+
+      $middleArea = $PX_PAGE - $px_header_actual - $PX_CF_ROW - $PX_FOOTER;
+      $finalAreaFirst = $PX_PAGE - $px_header_actual - $PX_FINANCIAL - $PX_FOOTER;
+      $finalAreaOther = $PX_PAGE - $px_header_actual - $PX_BF_ROW - $PX_FINANCIAL - $PX_FOOTER;
+
+      while ($idx < $totalItems) {
+         $isFirst = count($printPages) === 0;
+         $remaining = array_slice($items, $idx);
+
+         $remainPx = 0;
+         foreach ($remaining as $r) {
+            $remainPx += $fnItemPx($r);
+         }
+
+         $finalArea = $isFirst ? $finalAreaFirst : $finalAreaOther;
+
+         /* If all remaining items fit with final block, place them and finish */
+         if ($remainPx <= $finalArea) {
+            $sumQty = 0;
+            $sumAmt = 0;
+            foreach ($remaining as $r) {
+                  $sumQty += $r->qty ?? 0;
+                  $sumAmt += $r->amount ?? 0;
+            }
+
+            $printPages[] = [
+                  'items' => $remaining,
+                  'bf_qty' => $isFirst ? 0 : $runningQty,
+                  'bf_amount' => $isFirst ? 0 : $runningAmt,
+                  'cf_qty' => $runningQty + $sumQty,
+                  'cf_amount' => $runningAmt + $sumAmt,
+                  'show_final_block' => true,
+                  'is_first' => $isFirst,
+            ];
+            break;
+         }
+
+         $packItems = [];
+         $packPx = 0;
+
+         foreach ($remaining as $r) {
+            $rPx = $fnItemPx($r);
+
+            if (!empty($packItems) && ($packPx + $rPx) > $middleArea) {
+                  break;
+            }
+
+            $packItems[] = $r;
+            $packPx += $rPx;
+         }
+
+         if (empty($packItems) && !empty($remaining)) {
+            $packItems[] = $remaining[0];
+            $packPx = $fnItemPx($remaining[0]);
+         }
+
+         $packQty = 0;
+         $packAmt = 0;
+         foreach ($packItems as $pi) {
+            $packQty += $pi->qty ?? 0;
+            $packAmt += $pi->amount ?? 0;
+         }
+
+         $printPages[] = [
+            'items' => $packItems,
+            'bf_qty' => $isFirst ? 0 : $runningQty,
+            'bf_amount' => $isFirst ? 0 : $runningAmt,
+            'cf_qty' => $runningQty + $packQty,
+            'cf_amount' => $runningAmt + $packAmt,
+            'show_final_block' => false,
+            'is_first' => $isFirst,
+         ];
+
+         $runningQty += $packQty;
+         $runningAmt += $packAmt;
+         $idx += count($packItems);
+      }
+
+      if ($totalItems === 0) {
+         $printPages[] = [
+            'items' => [],
+            'bf_qty' => 0,
+            'bf_amount' => 0,
+            'cf_qty' => 0,
+            'cf_amount' => 0,
+            'show_final_block' => true,
+            'is_first' => true,
+         ];
+      }
+
+      $lastIdx = count($printPages) - 1;
+      if ($lastIdx >= 0 && empty($printPages[$lastIdx]['show_final_block'])) {
+         $lp = $printPages[$lastIdx];
+         $printPages[] = [
+            'items' => [],
+            'bf_qty' => $lp['cf_qty'],
+            'bf_amount' => $lp['cf_amount'],
+            'cf_qty' => $lp['cf_qty'],
+            'cf_amount' => $lp['cf_amount'],
+            'show_final_block' => true,
+            'is_first' => false,
+         ];
+      }
+
+      for ($i = 0; $i < count($printPages) - 1; $i++) {
+         while (!empty($printPages[$i + 1]['items'])) {
+            $moved = $printPages[$i + 1]['items'][0];
+            $movedPx = $fnItemPx($moved);
+
+            $currentUsed = 0;
+            foreach ($printPages[$i]['items'] as $it) {
+                  $currentUsed += $fnItemPx($it);
+            }
+
+            if (!$printPages[$i]['is_first']) {
+                  $currentUsed += $PX_BF_ROW;
+            }
+
+            $currentLimit = $printPages[$i]['show_final_block']
+                  ? ($printPages[$i]['is_first'] ? $finalAreaFirst : $finalAreaOther)
+                  : $middleArea;
+
+            if (($currentUsed + $movedPx) > $currentLimit) {
+                  break;
+            }
+
+            array_shift($printPages[$i + 1]['items']);
+            $printPages[$i]['items'][] = $moved;
+
+            $mQty = $moved->qty ?? 0;
+            $mAmt = $moved->amount ?? 0;
+
+            $printPages[$i]['cf_qty'] += $mQty;
+            $printPages[$i]['cf_amount'] += $mAmt;
+
+            $printPages[$i + 1]['bf_qty'] = $printPages[$i]['cf_qty'];
+            $printPages[$i + 1]['bf_amount'] = $printPages[$i]['cf_amount'];
+
+            $printPages[$i + 1]['cf_qty'] -= $mQty;
+            $printPages[$i + 1]['cf_amount'] -= $mAmt;
+         }
+      }
+   @endphp
+   <div class="print-layout">
+   @php
+      $printSerial = 1;
+   @endphp
+   @foreach ($printPages as $printPageIndex => $printPage)
+      @php
+      $printIsFirstPage    = ($printPageIndex === 0);
+      $printShowFinalBlock = !empty($printPage['show_final_block']);
+      $printHasItems       = count($printPage['items']) > 0;
+      $printShowBfRow      = (!$printIsFirstPage); // show B/F on every non-first page
+
+      $usedPx = $px_header_actual;
+      if ($printShowBfRow)      $usedPx += $PX_BF_ROW;
+      foreach ($printPage['items'] as $pi) $usedPx += $fnItemPx($pi);
+      if ($printShowFinalBlock) $usedPx += $PX_FINANCIAL;
+      else                      $usedPx += $PX_CF_ROW;
+      $usedPx += $PX_FOOTER;
+
+      $printSpacerPx = max(0, $PX_PAGE - $usedPx);
+   @endphp
+   <div class="print-wrapper{{ ($printShowFinalBlock && !$printHasItems) ? ' print-summary-page' : '' }}">
+   <table style="font-family: 'Source Sans Pro', sans-serif;letter-spacing: 0.05em;color: #404040;font-size: 12px;font-weight: 500;padding: 10px;width:100%;height:100%;border-collapse:collapse;" class="invoice-copy">
+      <tbody>
+          <tr>
+            <th colspan="8" style="padding: 0;">
+               <div class="invoice-company-header">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                     <div style="flex:1; text-align:left;margin-left: 5px;">
+                        <strong style="color: {{ $configuration->address_color ?? 'black' }};">
+                           GSTIN: {{ $seller_info->gst_no }}
+                        </strong>
+                     </div>
+                     <div style="flex:1; text-align:center;">
+                        @if($configuration && !empty($configuration->invoice_header_text))
+                           <strong style="font-size:13px; font-weight:700; letter-spacing:1px; color: {{ $configuration->address_color ?? 'black' }};">
+                              {{ $configuration->invoice_header_text }}
+                           </strong>
+                        @endif
+                     </div>
+                     <div style="flex:1; text-align:right;margin-top: 7px;margin-right: 5px;">
+                        <strong style="color: {{ $configuration->address_color ?? 'black' }};">
+                           PAN: {{ substr($seller_info->gst_no, 2, 10) }}
+                        </strong><br>
+                        <small style="color: {{ $configuration->address_color ?? 'black' }};">
+                           O/D/T
+                        </small>
+                     </div>
+                  </div>
+                  @php
+                     $printCompanyName = $company_data->company_name;
+                     $printFontSize = strlen($printCompanyName) > 30 ? '18px' : '24px';
+                     if ($configuration && $configuration->company_name_font_size != "") {
+                        $printFontSize = $configuration->company_name_font_size;
+                     }
+                  @endphp
+                  @if($configuration && $configuration->company_logo_status==1
+                     && $configuration->logo_position_left==1
+                     && !empty($configuration->company_logo))
+                     <div class="invoice-logo-left">
+                        <img src="{{ URL::asset('public/images') }}/{{ $configuration->company_logo }}">
+                     </div>
+                  @endif
+                  @if($configuration && $configuration->company_logo_status==1
+                     && $configuration->logo_position_right==1
+                     && !empty($configuration->company_logo))
+                     <div class="invoice-logo-right">
+                        <img src="{{ URL::asset('public/images') }}/{{ $configuration->company_logo }}">
+                     </div>
+                  @endif
+                  <div style="clear:both;"></div>
+                  <div style="text-align:center; line-height:1; margin:0; padding:0;">
+                     <p style="margin:0;color: {{ $configuration->address_color ?? 'black' }};"><u>TAX INVOICE</u></p>
+                     <p style="margin:0; font-size: {{ $printFontSize }}; font-weight: bold; color: {{ $configuration->company_name_color ?? 'black' }};">
+                        {{ $printCompanyName }}
+                     </p>
+                     <p style="margin:0;">
+                        <small style="font-size: 12px; display:inline-block; max-width:50%; word-break:break-word;color: {{ $configuration->address_color ?? 'black' }};">
+                           {{ $seller_info->address }}
+                        </small>
+                     </p>
+                     <p style="margin:0;">
+                        <small style="font-size: 12px; color: {{ $configuration->address_color ?? 'black' }};">Phone: {{ $company_data->mobile_no }} &nbsp; Email: {{ $company_data->email_id }}</small>
+                     </p>
+                  </div>
+               </div>
+            </th>
+         </tr>
+          @if($sale_detail->e_invoice_status==1 && !empty($sale_detail->einvoice_response))
+            <?php
+               $printEinvoiceData = json_decode($sale_detail->einvoice_response);
+               $printQrContent = $printEinvoiceData->SignedQRCode;
+            ?>
+            <tr>
+               <td colspan="8">
+                  <span style="float: right;width: 90px;height: 90px;position: relative;">
+                     {!! QrCode::size(90)->generate($printQrContent) !!}
+                  </span>
+                  <p>IRN NO. : <?php echo $printEinvoiceData->Irn; ?></p>
+                  <p>ACK.NO. : <?php echo $printEinvoiceData->AckNo; ?></p>
+                  <p>ACK.DATE : <?php echo $printEinvoiceData->AckDt; ?></p>
+               </td>
+            </tr>
+         @endif
+          <tr>
+            <td colspan="4">
+               <p><span class="width25">Invoice No. </span>:  <span class="lft_mar15" style="font-weight:800">{{$sale_detail->voucher_no_prefix}}</span></p>
+               <p><span class="width25">Date of Invoice </span>: <span class="lft_mar15">{{date('d-m-Y',strtotime($sale_detail->date))}}</span></p>
+               <p><span class="width25">Place of Supply </span>: <span class="lft_mar15">{{$sale_detail->sname}}</span></p>
+               <p><span class="width25">Reverse Charge </span>: <span class="lft_mar15">{{$sale_detail->reverse_charge}}</span></p>
+               <p><span class="width25">GR/RR No. </span>: <span class="lft_mar15">{{$sale_detail->gr_pr_no}}</span></p>
+            </td>
+            <td colspan="4">
+               <p><span class="width25">Transport </span>: <span class="lft_mar15 wrap-text">{{$sale_detail->transport_name}}</span> </p>
+               <p><span class="width25">Vehicle No. </span>: <span class="lft_mar15">{{$sale_detail->vehicle_no}}</span> </p>
+               <p><span class="width25">Station </span>: <span class="lft_mar15">{{$sale_detail->station}}</span> </p>
+               <p><span class="width25">E-Way Bill No. </span>: <span class="lft_mar15">
+                  <?php
+                  if ($sale_detail->e_waybill_status==1 && $sale_detail->eway_bill_response && !empty($sale_detail->eway_bill_response)) {
+                     $printEwaybillData = json_decode($sale_detail->eway_bill_response);
+                     echo $printEwaybillData->ewayBillNo;
+                  }
+                  ?>
+               </span> </p>
+               <p>&nbsp;</p>
+               @if($configuration && $configuration->purchase_order_status == 1)
+                  <p><span class="width25">PO No. </span>: <span class="lft_mar15">{{ $sale_detail->po_no }}</span></p>
+                  <p><span class="width25">PO Date </span>: <span class="lft_mar15">{{ $sale_detail->po_date ? date('d-m-Y', strtotime($sale_detail->po_date)) : '' }}</span></p>
+               @endif
+               @if($company_sale_type=="BOX")
+                  <p><span class="width25">PO No. </span>: <span class="lft_mar15">{{ $box_po_numbers ?? '' }}</span></p>
+                  <p><span class="width25">PO Date </span>: <span class="lft_mar15">{{ $box_po_dates ?? '' }}</span></p>
+               @endif
+            </td>
+         </tr>
+          <tr>
+            <td colspan="4" style="position: relative; vertical-align: top; padding: 0;">
+               <p style="margin: 0; position: absolute; top: 0; left: 5px; font-style: italic;"><strong>Billed to :</strong></p>
+               <div style="padding-top: 16px; margin-left:10px; margin-right:5px; padding-bottom:30px; max-height:80px; overflow:hidden;">
+                  <p style="margin: 2px 0 0 0; line-height: 13px;font-weight:800;">{{$sale_detail->billing_name}}</p>
+                  <p style="margin: 2px 0 0 0; line-height: 13px;">{{$sale_detail->billing_address}}</p>
+               </div>
+               <div style="position: absolute; bottom: 0; left: 5px; right: 4px;">
+                  <p style="margin: 2px 0 0 0;font-weight:800">
+                     GSTIN/UIN : {{$sale_detail->billing_gst}}
+                     <span style="float: right;">PAN:{{$sale_detail->billing_pan}}</span>
+                  </p>
+               </div>
+            </td>
+            <td colspan="4" style="position: relative; vertical-align: top; padding: 0; height:120px;">
+               <p style="margin: 0; position: absolute; top: 0; left: 5px; font-style: italic;"><strong>Shipped to :</strong></p>
+               <div style="padding-top: 16px; margin-left:10px; margin-right:5px; padding-bottom:30px; max-height:80px; overflow:hidden;">
+                  <p style="margin: 2px 0 0 0; line-height: 13px;font-weight:800;">
+                     @if($sale_detail->shipping_name)
+                        {{$sale_detail->shipp_name}}
+                     @else
+                        {{$sale_detail->billing_name}}
+                     @endif
+                  </p>
+                  <p style="margin: 2px 0 0 0; line-height: 13px;">
+                     @if($sale_detail->shipping_name)
+                        {{$sale_detail->shipping_address}}
+                     @else
+                        {{$sale_detail->billing_address}}
+                     @endif
+                  </p>
+               </div>
+               <div style="position: absolute; bottom: 0; left: 5px; right: 4px;">
+                  <p style="margin: 2px 0 0 0;font-weight:800">
+                     @if($sale_detail->shipping_name)
+                        GSTIN/UIN : {{$sale_detail->shipping_gst}}
+                        <span style="float: right;">PAN:{{$sale_detail->shipping_pan}}</span>
+                     @else
+                        GSTIN/UIN : {{$sale_detail->billing_gst}}
+                        <span style="float: right;">PAN:{{$sale_detail->billing_pan}}</span>
+                     @endif
+                  </p>
+               </div>
+            </td>
+         </tr>
+          <tr>
+            <th style="width:2%;padding: 0px 3px;">S. No.</th>
+            <th colspan="2" style="text-align:left; width:30%;">Description of Goods</th>
+            <th style="text-align:center; width:3%;">HSN/SAC Code</th>
+            <th style="text-align:right; width:11%;">Qty.</th>
+            <th style="text-align:center; width:2%;">Unit</th>
+            <th style="text-align:right; width:12%;">Price</th>
+            <th style="text-align:right; width:15%;">Amount (₹)</th>
+         </tr>
+         @if($printShowBfRow)
+            <tr class="print-compact-row" style="font-weight:700;">
+               <td colspan="4" style="text-align:right; padding:1px 5px;">B/F (Brought Forward)</td>
+               <td style="text-align:right; padding:1px 5px;">{{$printPage['bf_qty']}}</td>
+               <td></td>
+               <td></td>
+               <td style="text-align:right; padding:1px 5px;">{{formatIndianNumber($printPage['bf_amount'])}}</td>
+            </tr>
+         @endif
+          @foreach($printPage['items'] as $printItem)
+            <tr class="print-item-row {{ ($configuration && $configuration->lines_in_item_status == 0) ? 'no-border' : '' }}">
+               <td style="text-align:center;">{{$printSerial}}</td>
+               <td colspan="2" style="text-align:left;">
+                  <strong>{{ $printItem->p_name }}</strong>
+                  @if($configuration && $configuration->show_item_name == 1)
+                     <span style="font-size:9px; color:#777; margin-left:4px;">
+                        ({{ $printItem->name }})
+                     </span>
+                  @endif
+                  @if(isset($printItem->lines) && count($printItem->lines) > 0)
+                     @foreach($printItem->lines as $printLine)
+                        <small style="display:block; font-size:10px; font-style: italic; color:#555; margin-left:10px;">
+                           {{ $printLine->line_text }}
+                        </small>
+                     @endforeach
+                  @endif
+               </td>
+               <td style="text-align:center;">{{$printItem->hsn_code}}</td>
+               <td style="text-align:right">{{$printItem->qty}}</td>
+               <td style="text-align:center">{{$printItem->unit}}</td>
+               <td style="text-align:right;">{{$printItem->price}}</td>
+               <td style="text-align:right; white-space:nowrap;">
+                  {{formatIndianNumber($printItem->amount)}}
+               </td>
+            </tr>
+            @php $printSerial++; @endphp
+         @endforeach
+         
+        @if(!$printShowFinalBlock)
+            <tr class="print-content-spacer">
+               <td style="height:{{ $printSpacerPx }}px;padding:0;">&nbsp;</td>
+               <td colspan="2" style="padding:0;">&nbsp;</td>
+               <td style="padding:0;">&nbsp;</td>
+               <td style="padding:0;">&nbsp;</td>
+               <td style="padding:0;">&nbsp;</td>
+               <td style="padding:0;">&nbsp;</td>
+               <td style="padding:0;">&nbsp;</td>
+            </tr>
+         @endif
+         @if(!$printShowFinalBlock)
+            <tr class="print-compact-row" style="font-weight:700;">
+               <td colspan="4" style="text-align:right; padding:1px 5px;">Carry Forward</td>
+               <td style="text-align:right; padding:1px 5px;">{{$printPage['cf_qty']}}</td>
+               <td></td>
+               <td></td>
+               <td style="text-align:right; padding:1px 5px;">{{formatIndianNumber($printPage['cf_amount'])}}</td>
+            </tr>
+         @endif
+      </tbody>
+      @if($printShowFinalBlock)
+         <tbody>
+            <tr class="print-content-spacer">
+               <td style="height:{{ $printSpacerPx }}px;padding:0;">&nbsp;</td>
+               <td colspan="2" style="padding:0;">&nbsp;</td>
+               <td style="padding:0;">&nbsp;</td>
+               <td style="padding:0;">&nbsp;</td>
+               <td style="padding:0;">&nbsp;</td>
+               <td style="padding:0;">&nbsp;</td>
+               <td style="padding:0;">&nbsp;</td>
+            </tr>
+         </tbody>
+      @endif
+      @if($printShowFinalBlock)
+      <tbody class="print-financial-block print-indivisible-block">
+            <tr class="print-compact-row">
+               <td colspan="4" style="border-bottom:0; border-right:0; padding:1px 5px;"></td>
+               <td style="border-bottom:0; border-left:0;border-right:0;text-align:right; padding:1px 5px;"><strong>{{$printPage['cf_qty']}}</strong></td>
+               <td style="border-bottom:0; border-left:0;border-right:0; padding:1px 5px;"><strong></strong></td>
+               <td style="border-bottom:0; border-left:0; padding:1px 5px;"><strong>Total</strong></td>
+               <td style="text-align:right; border-bottom:0; padding:1px 5px;">{{formatIndianNumber($printPage['cf_amount'])}}</td>
+            </tr>
+            
+            <tr class="print-compact-row">
+               <td style="border-right:0; border-top:0;" colspan="2"></td>
+
+               <td colspan="4" style="border-left:0; border-right:0; border-top:0;">
+
+                  @foreach($printDisplaySundries as $printSundry)
+                        @if(stripos($printSundry->name, 'round') === false)
+                           @if($printSundry->bill_sundry_type == 'additive')
+                              <p>Add : {{ $printSundry->name }}</p>
+                           @else
+                              <p>Less : {{ $printSundry->name }}</p>
+                           @endif
+                        @endif
+                  @endforeach
+
+                  @if($printTotalCGST > 0)
+                        <p>Add : CGST</p>
+                  @endif
+
+                  @if($printTotalSGST > 0)
+                        <p>Add : SGST</p>
+                  @endif
+
+                  @if($printTotalIGST > 0)
+                        <p>Add : IGST</p>
+                  @endif
+
+                  @foreach($printDisplaySundries as $printSundry)
+                        @if(stripos($printSundry->name, 'round') !== false)
+                           @if($printSundry->bill_sundry_type == 'additive')
+                              <p>Add : {{ $printSundry->name }}</p>
+                           @else
+                              <p>Less : {{ $printSundry->name }}</p>
+                           @endif
+                        @endif
+                  @endforeach
+
+               </td>
+
+               <td style="border-left:0; border-top:0;">
+
+                  @foreach($printDisplaySundries as $printSundry)
+                        @if(stripos($printSundry->name, 'round') === false)
+                           <p>&nbsp;</p>
+                        @endif
+                  @endforeach
+
+                  @if($printTotalCGST > 0)
+                        <p>&nbsp;</p>
+                  @endif
+
+                  @if($printTotalSGST > 0)
+                        <p>&nbsp;</p>
+                  @endif
+
+                  @if($printTotalIGST > 0)
+                        <p>&nbsp;</p>
+                  @endif
+
+                  @foreach($printDisplaySundries as $printSundry)
+                        @if(stripos($printSundry->name, 'round') !== false)
+                           <p>&nbsp;</p>
+                        @endif
+                  @endforeach
+
+               </td>
+
+               <td style="text-align:right; border-top:0;">
+
+                  @foreach($printDisplaySundries as $printSundry)
+                        @if(stripos($printSundry->name, 'round') === false)
+                           <p>{{ formatIndianNumber($printSundry->amount) }}</p>
+                        @endif
+                  @endforeach
+
+                  @if($printTotalCGST > 0)
+                        <p>{{ formatIndianNumber($printTotalCGST) }}</p>
+                  @endif
+
+                  @if($printTotalSGST > 0)
+                        <p>{{ formatIndianNumber($printTotalSGST) }}</p>
+                  @endif
+
+                  @if($printTotalIGST > 0)
+                        <p>{{ formatIndianNumber($printTotalIGST) }}</p>
+                  @endif
+
+                  @foreach($printDisplaySundries as $printSundry)
+                        @if(stripos($printSundry->name, 'round') !== false)
+                           <p>{{ formatIndianNumber($printSundry->amount) }}</p>
+                        @endif
+                  @endforeach
+
+               </td>
+            </tr>
+            <tr class="print-compact-row">
+               <td colspan="7" style="text-align:right; border-right: 0; border-bottom: 0; padding:1px 5px;">
+                  <p style="margin:0;"><strong>Grand Total ₹</strong></p>
+               </td>
+               <td style="text-align:right; padding:1px 5px; white-space:nowrap;">
+                  <p style="margin:0;"><strong class="invoice-total">{{formatIndianNumber($sale_detail->total)}}</strong></p>
+               </td>
+            </tr>
+            <tr class="print-compact-row">
+            <td colspan="8" style="border-top:0;border-bottom:0;padding:1px 4px;">
+               <table class="gst-summary-table" style="width:45% !important;border:none;border-collapse:collapse;font-size:10px;display:inline-table;">
+                  <tr>
+                     <td style="border:none;padding:1px;font-weight:bold;">Tax Rate</td>
+                     <td style="border:none;padding:1px;text-align:right;font-weight:bold;">Taxable Amt.</td>
+                     <td style="border:none;padding:1px;text-align:right;font-weight:bold;">CGST</td>
+                     <td style="border:none;padding:1px;text-align:right;font-weight:bold;">SGST</td>
+                     <td style="border:none;padding:1px;text-align:right;font-weight:bold;">Total Tax</td>
+                  </tr>
+                  @php
+                     $totalTaxable = 0;
+                     $totalCGST = 0;
+                     $totalSGST = 0;
+                  @endphp
+                  @foreach($gst_detail as $printVal)
+                     @php
+                        $totalTaxable += $printVal->taxable_amount;
+                        $totalCGST += $printVal->amount;
+                        $totalSGST += $printVal->amount;
+                     @endphp
+                     <tr>
+                        <td style="border:none;padding:1px;">
+                           {{$printVal->rate}}%
+                        </td>
+                        <td style="border:none;padding:1px;text-align:right;">
+                           {{formatIndianNumber($printVal->taxable_amount)}}
+                        </td>
+                        <td style="border:none;padding:1px;text-align:right;">
+                           {{formatIndianNumber($printVal->amount)}}
+                        </td>
+                        <td style="border:none;padding:1px;text-align:right;">
+                           {{formatIndianNumber($printVal->amount)}}
+                        </td>
+                        <td style="border:none;padding:1px;text-align:right;">
+                           {{formatIndianNumber($printVal->amount * 2)}}
+                        </td>
+                     </tr>
+                  @endforeach
+                  <tr>
+                     <td colspan="5" style="padding:0;border:none;">
+                        <hr style="margin:2px 0;border:none;border-top:1px solid #000;">
+                     </td>
+                  </tr>
+                  <tr>
+                     <td style="border:none;padding:1px;font-weight:bold;">
+                        Total
+                     </td>
+                     <td style="border:none;padding:1px;text-align:right;font-weight:bold;">
+                        {{formatIndianNumber($totalTaxable)}}
+                     </td>
+                     <td style="border:none;padding:1px;text-align:right;font-weight:bold;">
+                        {{formatIndianNumber($totalCGST)}}
+                     </td>
+                     <td style="border:none;padding:1px;text-align:right;font-weight:bold;">
+                        {{formatIndianNumber($totalSGST)}}
+                     </td>
+                     <td style="border:none;padding:1px;text-align:right;font-weight:bold;">
+                        {{formatIndianNumber($totalCGST + $totalSGST)}}
+                     </td>
+                  </tr>
+               </table>
+            </td>
+         </tr>
+            <tr class="print-compact-row">
+               <td colspan="8" style="border-top:0; padding:1px 5px;">
+                  <strong>
+                     <?php
+                     $printNumber = $sale_detail->total;
+                     $printNo = floor($printNumber);
+                     $printPoint = round($printNumber - $printNo, 2) * 100;
+                     $printHundred = null;
+                     $printDigits1 = strlen($printNo);
+                     $printI = 0;
+                     $printStr = array();
+                     $printWords = array(
+                        '0' => '', '1' => 'one', '2' => 'two',
+                        '3' => 'three', '4' => 'four', '5' => 'five', '6' => 'six',
+                        '7' => 'seven', '8' => 'eight', '9' => 'nine',
+                        '10' => 'ten', '11' => 'eleven', '12' => 'twelve',
+                        '13' => 'thirteen', '14' => 'fourteen',
+                        '15' => 'fifteen', '16' => 'sixteen', '17' => 'seventeen',
+                        '18' => 'eighteen', '19' => 'nineteen', '20' => 'twenty',
+                        '30' => 'thirty', '40' => 'forty', '50' => 'fifty',
+                        '60' => 'sixty', '70' => 'seventy',
+                        '80' => 'eighty', '90' => 'ninety'
+                     );
+                     $printDigits = array('', 'hundred', 'thousand', 'lakh', 'crore');
+                     while ($printI < $printDigits1) {
+                        $printDivider = ($printI == 2) ? 10 : 100;
+                        $printNumber = floor($printNo % $printDivider);
+                        $printNo = floor($printNo / $printDivider);
+                        $printI += ($printDivider == 10) ? 1 : 2;
+                        if ($printNumber) {
+                           $printPlural = (($printCounter = count($printStr)) && $printNumber > 9) ? 's' : null;
+                           $printHundred = ($printCounter == 1 && $printStr[0]) ? ' and ' : null;
+                           $printStr[] = ($printNumber < 21) ? $printWords[$printNumber] .
+                              " " . $printDigits[$printCounter] . $printPlural . " " . $printHundred
+                              :
+                              $printWords[floor($printNumber / 10) * 10]
+                              . " " . $printWords[$printNumber % 10] . " "
+                              . $printDigits[$printCounter] . $printPlural . " " . $printHundred;
+                        } else {
+                           $printStr[] = null;
+                        }
+                     }
+                     $printStr = array_reverse($printStr);
+                     $printResult = implode('', $printStr);
+                     echo ucfirst($printResult) . "Rupees  only";
+                     ?>
+                  </strong>
+               </td>
+            </tr>
+            @if(
+               $configuration &&
+               $configuration->bank_detail_status == 1 &&
+               $bank_detail
+            )
+               <tr class="print-compact-row">
+                  <td colspan="8" style="padding:1px 5px;">
+                     @if($configuration && $configuration->banks)
+                        <p>
+                           <strong>Bank Details : </strong> <strong>ACCOUNT NAME-</strong>{{$configuration->banks->name}} <br><strong>ACCOUNT NO:</strong>{{$configuration->banks->account_no}} ,<strong>IFSC CODE:</strong>{{$configuration->banks->ifsc}} ,<strong>BANK NAME:</strong>{{$configuration->banks->bank_name}},{{$configuration->banks->branch}}
+                        </p>
+                     @endif
+                  </td>
+               </tr>
+            @endif
+      </tbody>
+      @endif
+      
+      <tbody class="print-page-footer">
+      <tr>
+
+         <td colspan="4"
+            style="
+                  vertical-align:top;
+                  padding:2px 5px;
+                  height:{{ $PX_FOOTER }}px;
+                  min-height:{{ $PX_FOOTER }}px;
+            ">
+
+            @if($configuration && $configuration->term_status==1 && $configuration->terms && count($configuration->terms)>0)
+
+                  <p style="margin:0;line-height:1.1;">
+                     <small><b>Terms &amp; Conditions</b></small>
+                  </p>
+
+                  <p style="margin:0;line-height:1.1;">
+                     <small>E.&amp; O.E.</small>
+                  </p>
+
+                  @php $printTermNo = 1; @endphp
+
+                  @foreach($configuration->terms as $printTerm)
+                     <p style="margin:0;line-height:1.1;font-size:9px;">
+                        {{$printTermNo}}. {{$printTerm->term}}
+                     </p>
+                     @php $printTermNo++; @endphp
+                  @endforeach
+                     <p style="margin:0;line-height:1.1;font-size:9px;">
+                        &nbsp;
+                     </p>
+            @endif
+
+         </td>
+         <td colspan="4"
+            style="
+               vertical-align:top;
+               padding:2px 5px;
+               height:{{ $PX_FOOTER }}px;
+               min-height:{{ $PX_FOOTER }}px;
+               position:relative;
+            ">
+
+            <div style="
+               height:{{ $PX_FOOTER - 10 }}px;
+               position:relative;
+            ">
+
+               <p style="
+                     margin:0;
+                     line-height:1.1;
+               ">
+                     <small>Receiver's Signature :</small>
+               </p>
+
+               <div style="height:20px;"></div>
+
+               <p style="
+                     text-align:right;
+                     margin:0;
+                     font-weight:bold;
+               ">
+                     for {{$company_data->company_name}}
+               </p>
+
+               @if(
+                  $configuration &&
+                  $configuration->signature_status == 1 &&
+                  !empty($configuration->signature)
+               )
+
+                  <div style="
+                     position:absolute;
+                     top:50%;
+                     right:2px;
+                     width:170px;
+                     text-align:right;
+                     height:150px;
+                     margin-left:-75px;
+                     margin-top:-75px;
+                     text-align:center;
+                     z-index:10;
+                  ">
+                     <img
+                        src="{{ URL::asset('public/images')}}/{{$configuration->signature}}"
+                        style="
+                              width:150px;
+                              height:150px;
+                              object-fit:contain;
+                        "
+                     >
+                  </div>
+
+               @endif
+
+               <p style="
+                     position:absolute;
+                     right:0;
+                     bottom:0;
+                     margin:0;
+                     font-weight:bold;
+               ">
+                     Authorised Signatory
+               </p>
+
+            </div>
+
+         </td>
+      </tr>
+      </tbody>
+   </table>
+   </div>
+@endforeach
 </div>
 <div class="modal fade" id="ewayBillModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
    <div class="modal-dialog w-360  modal-dialog-centered">
@@ -1354,31 +2444,30 @@ if(configuration==null || configuration==undefined || configuration==""){
       });
    });
   function printpage() {
+    const billCopies = Math.max(1, parseInt(configuration, 10) || 1);
+    const $printLayout = $('.print-layout');
 
-    let invoiceHtml = $('.invoice-copy').first().prop('outerHTML');
-
-    
-
-    $('.append_invoice').html('');
-
-    for (let i = 1; i < configuration; i++) {
-
-        $('.append_invoice').append(`
-            <div class="print-wrapper">
-                ${invoiceHtml}
-            </div>
-        `);
+    if (!$printLayout.length) {
+        window.print();
+        return;
     }
 
-    setTimeout(() => {
+    const $originalWrappers = $printLayout.children('.print-wrapper').detach();
 
+    for (let copy = 0; copy < billCopies; copy++) {
+        $originalWrappers.each(function () {
+            $printLayout.append($(this).clone());
+        });
+    }
+
+    setTimeout(function () {
         window.print();
 
-        setTimeout(() => {
-            $('.append_invoice').html('');
-        }, 1000);
-
-    }, 400);
+        setTimeout(function () {
+            $printLayout.empty();
+            $printLayout.append($originalWrappers);
+        }, 500);
+    }, 200);
 }
 
    $(document).on('click', '#printChallanBtn', function () {
