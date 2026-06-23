@@ -1150,7 +1150,7 @@ public function GetSalesVoucherbyId(Request $request)
         |--------------------------------------------------------------------------
         */
 
-        $companyId = Session::get('user_company_id');
+        $companyId = $request->input("company_id");
 
         if (!$companyId) {
             $companyId = $sale->company_id ?? null;
@@ -1422,6 +1422,7 @@ public function GetSalesVoucherbyId(Request $request)
          'total' => 'required',
          'goods_discription' => 'required|array|min:1',
       ]); 
+
         $company_id = $request->input('company_id');
       $userId = $request->input('user_id');
       //Check Item Empty or not
@@ -1444,7 +1445,7 @@ public function GetSalesVoucherbyId(Request $request)
         return response()->json([
             'code' => 422,
             'message' => 'Selected date is outside current financial year.'
-        ], 422);
+        ]);
         
       }
       $financial_year = CommonHelper::getFinancialYear($request->input('date'));
@@ -1523,22 +1524,22 @@ if (empty($account->pin_code)) {
 
 if (!$billing_pincode) {
     return response()->json([
-        'code' => 404,
+        'code' => 201,
         'message' => 'Billing pincoed not found'
-    ], 404);
+    ],);
 }
 
 if (empty($billing_pincode)) {
     return response()->json([
-        'code' => 200,
+        'code' => 201,
         'message' => 'Pincode is null or empty'
     ]);
 }
-    //   if($request->input('address') && !empty($request->input('address'))){
-    //      $add = AccountOtherAddress::find($request->input('address'));
-    //      $billing_address = $add->address.",".$add->pincode;
-    //      $billing_pincode = $add->pincode;
-    //   } 
+      if($request->input('address') && !empty($request->input('address'))){
+         $add = AccountOtherAddress::find($request->input('address'));
+         $billing_address = $add->address.",".$add->pincode;
+         $billing_pincode = $add->pincode;
+      } 
       $sale->party = $request->input('party');
       $sale->material_center = $request->input('material_center');
       $sale->taxable_amt = $request->input('taxable_amt');
@@ -2053,25 +2054,14 @@ if (empty($billing_pincode)) {
             $average_detail->type = 'SALE';
             $average_detail->sale_id = $sale->id;
             $average_detail->sale_weight = $value;
-//     return response()->json([
-//     'code' => 200,
-//     'message' => 'Debug Company ID',
-//     'line' => '2059',
-//     'company_id' => $company_id,
-//     'type' => gettype($company_id),
-// ]);
+
             $average_detail->company_id = $company_id;
             $average_detail->created_at = Carbon::now();
             $average_detail->save();
             $lower_date = (strtotime($last_date) < strtotime($request->date)) ? $last_date : $request->date;
             CommonHelper::RewriteItemAverageByItem($lower_date,$key,$request->input('series_no'));               
          }
-           return response()->json([
-            'code' => 200,
-            'message' => 'line 2061',
-            'sale_id' => $sale->id
-         ]);
-         
+    
          foreach ($desc_item_arr as $key => $value) {
             if(!array_key_exists($value, $sale_item_array)){
                CommonHelper::RewriteItemAverageByItem($last_date,$value,$request->input('series_no'));
@@ -2105,11 +2095,7 @@ if (empty($billing_pincode)) {
          $ledger->created_by = $userId;
          $ledger->created_at = date('d-m-Y H:i:s');
          $ledger->save();
-         return response()->json([
-            'code' => 200,
-            'message' => 'ledger passed successfully',
-            'sale_id' => $sale->id
-         ]);
+     
          //Update Sale Order Id Code ...................
          if($request->sale_order_id!=""){
             SaleOrderItemWeight::where('sale_order_id',$request->sale_order_id)->delete();
@@ -2512,13 +2498,13 @@ if (empty($billing_pincode)) {
                 'sale_id'    => $sale->id,
                 'voucher_no' => $sale->voucher_no
             ]
-        ], 200);
+        ]);
          
       }else{
        return response()->json([
-            'status'  => false,
+            'code'  => 201,
             'message' => 'Something went wrong processing your request'
-        ], 500);
+        ]);
       }
       
    }
