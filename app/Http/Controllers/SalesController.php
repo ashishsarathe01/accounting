@@ -5879,9 +5879,15 @@ class SalesController extends Controller
                            ->where(['company_id' => $sale->company_id, 'gst_type' => 'multiple_gst'])
                            ->get();
          foreach ($gst_info as $key => $value) {
-            if($value->series==$sale->series_no){               
-               $einvoice_username = $value->einvoice_username; 
-               $einvoice_password = $value->einvoice_password;
+            if($value->series==$sale->series_no){     
+                if($value->einvoice==1){
+                    $einvoice_username = $value->einvoice_username; 
+                    $einvoice_password = $value->einvoice_password;
+                }else if($value->ewaybill==1){
+                    $einvoice_username = $value->ewaybill_username; 
+                    $einvoice_password = $value->ewaybill_password;
+                }
+               
                $einvoice_gst = $value->gst_no;
                $einvoice_company = $value->id;
                break;
@@ -5890,8 +5896,13 @@ class SalesController extends Controller
                            ->where(['delete' => '0', 'company_id' => $sale->company_id,'gst_setting_id'=>$value->id,'branch_series'=>$sale->series_no])
                            ->first();
                if($branch){
-                  $einvoice_username = $value->einvoice_username; 
-                  $einvoice_password = $value->einvoice_password;
+                if($value->einvoice==1){
+                    $einvoice_username = $value->einvoice_username; 
+                    $einvoice_password = $value->einvoice_password;
+                }else if($value->ewaybill==1){
+                    $einvoice_username = $value->ewaybill_username; 
+                    $einvoice_password = $value->ewaybill_password;
+                }
                   $einvoice_gst = $branch->gst_number;
                   $einvoice_company = $value->id;
                   break;
@@ -5903,8 +5914,14 @@ class SalesController extends Controller
                            ->where(['company_id' => $sale->company_id, 'gst_type' => 'single_gst'])
                            ->first();
          $einvoice_company = $gst_info->id;
-         $einvoice_username = $gst_info->einvoice_username; 
-         $einvoice_password = $gst_info->einvoice_password;
+         if($gst_info->einvoice==1){
+            $einvoice_username = $gst_info->einvoice_username; 
+            $einvoice_password = $gst_info->einvoice_password;
+         }else if($gst_info->ewaybill==1){
+            $einvoice_username = $gst_info->ewaybill_username; 
+            $einvoice_password = $gst_info->ewaybill_password;
+         }
+         
          $einvoice_gst = $gst_info->gst_no;
       }
       if($einvoice_username=="" || $einvoice_password==""){
