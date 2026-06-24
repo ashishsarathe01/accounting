@@ -201,58 +201,37 @@ input[type=number]::-webkit-outer-spin-button {
                            </a>
                         </span>
                      </div>
-                     <?php
-                     $gross_profit = 0;$gross_loss = 0;
-                     $total_net_sale =
-                        $data['total_closing_stock']
-                        + $data['tot_sale_amt']
-                        + $data['direct_income']
-                        - $debit_direct_income;
-                     $total_net_purchase = $data['total_opening_stock'] + $data['tot_purchase_amt'] - $data['tot_purchase_return_amt'] + $data['tot_sale_return_amt_purchase'] + $data['direct_expenses'] - $direct_expenses_credit;
-                     $balance = $total_net_purchase - $total_net_sale;
-                     if($balance < 0) {
-                        $gross_profit = str_replace("-","",$balance);
-                        ?>
+                     @if($data['gross_profit'] > 0)
                         <div class="col-md-12 fw-500 font-14 d-flex px-3 py-12 border-bottom-divider">
                            Gross Profit
                            <span class="ms-auto">
-                              @php
-                                 echo formatIndianNumber(round((float)str_replace("-", "", $gross_profit), 2));
-                              @endphp
+                              {{ formatIndianNumber(round($data['gross_profit'], 2)) }}
                            </span>
                         </div>
-                        <?php 
-                     }else{
-                        $gross_loss = $balance;
-                        ?>
+                     @else
                         <div class="col-md-12 fw-500 font-14 d-flex px-3 py-12 border-bottom-divider" style="height: 46px;"></div>
-                        <?php 
-                     } ?>
+                     @endif
+                     @php
+                        $gross_profit = $data['gross_profit'];
+                        $gross_loss   = $data['gross_loss'];
+                        $first_total  = $data['trading_total'];
+                     @endphp
                      <div class="col-md-12 fw-500 font-14 d-flex px-3 py-12 border-bottom-divider">
                         <span class="ms-auto">--------------</span>
                      </div>
                      <div class="col-md-12 fw-500 font-14 d-flex px-3 py-12 border-bottom-divider">Total
                         <span class="ms-auto">
-                           @php
-                              if($total_net_purchase>$total_net_sale){
-                                 $first_total = $total_net_purchase;
-                              }else if($total_net_purchase<$total_net_sale){
-                                 $first_total = $total_net_sale;
-                              }else{
-                                 $first_total = $total_net_purchase;
-                              }
-                              echo formatIndianNumber(round($first_total,2));
-                           @endphp                           
+                           {{ formatIndianNumber(round($data['trading_total'], 2)) }}
                         </span>
                      </div>
                      <div class="col-md-12 fw-500 font-14 d-flex px-3 py-12 border-bottom-divider h-46"></div>
                      <div class="col-md-12 fw-500 font-14 d-flex px-3 py-12 border-bottom-divider">
-                        
-                        <?php if($gross_loss>0){
-                           echo 'Gross Loss B/D<span class="ms-auto">'.formatIndianNumber($gross_loss).'</span>';
-                        }else{
-                           echo '<span class="ms-auto">&nbsp;</span>';
-                        } ?>
+                        @if($data['gross_loss'] > 0)
+                           Gross Loss B/D
+                           <span class="ms-auto">{{ formatIndianNumber($data['gross_loss']) }}</span>
+                        @else
+                           <span class="ms-auto">&nbsp;</span>
+                        @endif
                      </div>
                      <div class="col-md-12 fw-500 font-14 d-flex px-3 py-12 border-bottom-divider">
                         <a href="{{url('account-balance-by-group/15')}}/{{$data['financial_year']}}/{{$from_date}}/{{$to_date}}">
@@ -265,26 +244,11 @@ input[type=number]::-webkit-outer-spin-button {
                            </a>
                         </span>
                      </div>
-                     <?php 
-                     $nett_loss = 0;$nett_profit = 0;
-                     $nett_expenses_total = $data['indirect_expenses'] - $indirect_expenses_credit + $gross_loss;
-                     $nett_income_total = $data['indirect_income'] - $debit_indirect_income + $gross_profit;
-                     $nett_income_total = str_replace("-","",$nett_income_total);
-                     $nett_diff = $nett_expenses_total - $nett_income_total;
-                     if($nett_diff>0){
-                        $nett_loss = $nett_diff;
-                     }
-                     if($nett_diff<0){
-                        $nett_profit = str_replace("-","",$nett_diff);
-                     }
-                     if($nett_expenses_total>$nett_income_total){
-                        $nett_final_amount = $nett_expenses_total;
-                     }else if($nett_expenses_total<$nett_income_total){
-                        $nett_final_amount = $nett_income_total;
-                     }else{
-                        $nett_final_amount = $nett_expenses_total;
-                     }             
-                     ?>
+                     @php
+                        $nett_profit = $data['net_profit'];
+                        $nett_loss   = $data['net_loss'];
+                        $nett_final_amount = $data['pnl_total'];
+                     @endphp
                      <div class="col-md-12 fw-500 font-14 d-flex px-3 py-12 border-bottom-divider">
                         <?php 
                         if($nett_profit>0){?>
