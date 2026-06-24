@@ -217,12 +217,13 @@
             <div class="col-md-10 col-sm-12 px-4">
                 <div class="container-fluid">
                     <ul class="nav nav-fill nav-tabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link active" id="fill-tab-0" data-bs-toggle="tab" href="#fill-tabpanel-0" role="tab" aria-controls="fill-tabpanel-0" aria-selected="true"> GSTR-1 Matching with Portal</a>
+                         <li class="nav-item" role="presentation">
+                            <a class="nav-link active" id="fill-tab-1" data-bs-toggle="tab" href="#fill-tabpanel-1" role="tab" aria-controls="fill-tabpanel-1" aria-selected="false">GSTR-1 Books</a>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link" id="fill-tab-1" data-bs-toggle="tab" href="#fill-tabpanel-1" role="tab" aria-controls="fill-tabpanel-1" aria-selected="false">GSTR-1 Books</a>
+                            <a class="nav-link " id="fill-tab-0" data-bs-toggle="tab" href="#fill-tabpanel-0" role="tab" aria-controls="fill-tabpanel-0" aria-selected="true"> GSTR-1 Matching with Portal</a>
                         </li>
+                       
                         <li class="nav-item" role="presentation">
                             <a class="nav-link" id="fill-tab-2" data-bs-toggle="tab" href="#fill-tabpanel-2" role="tab" aria-controls="fill-tabpanel-2" aria-selected="false">Generated Summary </a>
                         </li>
@@ -233,12 +234,134 @@
                     <!-- Header section -->
                     <div class="container mt-4">
                         <div class="tab-content mt-4">
-                            <div class="tab-pane active" id="fill-tabpanel-0" role="tabpanel" aria-labelledby="fill-tab-0">
+                            @php  use Carbon\Carbon; @endphp
+                            <div class="tab-pane mb-4 active" id="fill-tabpanel-1" role="tabpanel" aria-labelledby="fill-tab-1">
+                                <div class="card mb-3 shadow-sm border-0">
+                                    <div class="card-body p-0">
+                                        <!-- Header Banner -->
+                                        <div class="gstr-header d-flex justify-content-between align-items-center px-3 py-2">
+                                            <h5 class="mb-0 text-white fw-bold">GSTR-1 - Details of outward supplies of goods or services</h5>
+                                            <div class="d-flex gap-2">
+                                                <button class="btn btn-sm btn-primary">E-INVOICE ADVISORY</button>
+                                                <button class="btn btn-sm btn-primary">
+                                                    HELP <i class="fas fa-question-circle ms-1"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-sync-alt"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- White Info Row -->
+                                        <div class="bg-white px-3 py-3">
+                                            <div class="row g-2">
+                                                <div class="col-md-4"><strong>GSTIN -</strong> {{$merchant_gst}}</div>
+                                                <div class="col-md-4"><strong>Legal Name -</strong> {{$comp_details->legal_name}}</div>
+                                                <div class="col-md-4"><strong>Trade Name -</strong>  {{$comp_details->company_name}}</div>
+                                                <div class="col-md-4"><strong>FY -</strong> 20{{$fy}}</div>
+                                                @php
+                                                    
+                                                    $from = Carbon::parse($from_date);
+                                                    $to = Carbon::parse($to_date);
+                                                @endphp
+                                                <div class="col-md-4">
+                                                    <strong>Tax Period -</strong>
+                                                    @if($from->format('F Y') === $to->format('F Y'))
+                                                        {{ $from->format('F Y') }}
+                                                    @else
+                                                        {{ $from->format('F Y') }} to {{ $to->format('F Y') }}
+                                                    @endif
+                                                </div>
+                                                <div class="col-md-4"><strong>Status -</strong> Not Filed</div>
+                                                <div class="col-md-4 text-danger">
+                                                    <i class="fas fa-circle text-danger me-1" style="font-size: 8px;"></i> * Indicates Mandatory Fields
+                                                </div>
+                                                @php
+                                                    $from = Carbon::parse($from_date);
+                                                    $dueDate = $from->copy()->addMonth()->day(11); // 11th of next month
+                                                @endphp
+                                                <div class="col-md-4">
+                                                    <strong>Due Date -</strong> {{ $dueDate->format('d/m/Y') }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Toggle buttons -->
+                                <div class="bg-white py-2 px-3 border mb-3">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="fileNil">
+                                        <label class="form-check-label fw-semibold" for="fileNil">File Nil GSTR-1</label>
+                                    </div>
+                                </div>
+
+                                <!-- First view (Detailed) -->
+                                <div id="view1" class="view-content active">
+                                    <div class="bg-primary text-white px-3 py-2 fw-bold rounded-top">
+                                        ADD RECORD DETAILS
+                                    </div>
+                                    <!-- Cards -->
+                                    <div class="row bg-white py-3 px-2 rounded-bottom justify-content-start">
+                                        @foreach ($cards as $card)
+                                            <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                                                <a href="{{ $card['route'] }}" class="text-decoration-none">
+                                                    <div class="card gst-dashboard-card shadow-sm border-0 h-100 text-center">
+                                                        <div class="gst-dashboard-header d-flex align-items-center justify-content-center">
+                                                            <h6 class="gst-dashboard-title m-0">{{ $card['title'] }}</h6>
+                                                        </div>
+                                                        <div class="gst-dashboard-body d-flex flex-column justify-content-center align-items-center py-3">
+                                                            <div class="gst-dashboard-count d-flex align-items-center">
+                                                                <img src="//static.gst.gov.in/uiassets/images/processed.png" class="check-icon me-2" alt="check icon">
+                                                                <span class="count-value">{{ $card['count'] ?? '0' }}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </a>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                                    <strong id="show_to">Gross Turnover : {{formatIndianNumber($turnover_amount)}}  (FY : @php echo $fy; @endphp)</strong>
+                                    <button class="btn btn-info add_turnover" type="button" >@empty($turnover_amount) Add Gross Turnover (@php echo $fy; @endphp) @else Update Gross Turnover  @endempty</button>
+                                    
+                                
+                                <br><br>
+                                <form method="POST" action="{{ route('gstr1.send') }}" id="gst_portal_form">
+                                    @csrf
+                                
+                                    <input type="hidden" name="merchant_gst" id="merchant_gst" value="{{ $merchant_gst }}">
+                                    <input type="hidden" name="company_id" value="{{ $company_id }}">
+                                    <input type="hidden" name="from_date" value="{{ $from_date }}">
+                                    <input type="hidden" name="to_date" value="{{ $to_date }}">
+                                    <input type="hidden" name="download_json_status" id="download_json_status" value="0">
+                                    <div class="d-flex justify-content-end gap-2 mt-3 mb-4">
+                                
+                                        <button class="btn btn-primary" type="submit">
+                                            Send to GST Portal
+                                        </button>
+                                        <button type="button" class="btn btn-success" id="download_json">
+                                                Download Json
+                                            </button>
+                                        @if($einvoice_status != 1)
+                                            <button type="button" class="btn btn-danger" id="resetGstr1Btn">
+                                                Reset GSTR-1
+                                            </button>
+                                        @endif
+                                
+                                        <button type="button" class="btn btn-success" id="generateSummaryBtn">
+                                            Generate Summary
+                                        </button>
+                                
+                                    </div>
+                                </form>
+                                
+                            </div>
+                            <div class="tab-pane " id="fill-tabpanel-0" role="tabpanel" aria-labelledby="fill-tab-0">
                                 <div id="view2" class="view-content" style="height:100vh;">
                                     <div class="bg-primary text-white px-3 py-2 mb-3 fw-bold rounded-top">
                                         GSTR-1 Portal
                                             @php
-                                                    use Carbon\Carbon;
+                                                   
                                                     $from = Carbon::parse($from_date);
                                                     $to = Carbon::parse($to_date);
                                                 @endphp
@@ -610,127 +733,7 @@
                                 </div>
                             </div>
                             <!-- second view -->
-                            <div class="tab-pane mb-4" id="fill-tabpanel-1" role="tabpanel" aria-labelledby="fill-tab-1">
-                                <div class="card mb-3 shadow-sm border-0">
-                                    <div class="card-body p-0">
-                                        <!-- Header Banner -->
-                                        <div class="gstr-header d-flex justify-content-between align-items-center px-3 py-2">
-                                            <h5 class="mb-0 text-white fw-bold">GSTR-1 - Details of outward supplies of goods or services</h5>
-                                            <div class="d-flex gap-2">
-                                                <button class="btn btn-sm btn-primary">E-INVOICE ADVISORY</button>
-                                                <button class="btn btn-sm btn-primary">
-                                                    HELP <i class="fas fa-question-circle ms-1"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-primary">
-                                                    <i class="fas fa-sync-alt"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <!-- White Info Row -->
-                                        <div class="bg-white px-3 py-3">
-                                            <div class="row g-2">
-                                                <div class="col-md-4"><strong>GSTIN -</strong> {{$merchant_gst}}</div>
-                                                <div class="col-md-4"><strong>Legal Name -</strong> {{$comp_details->legal_name}}</div>
-                                                <div class="col-md-4"><strong>Trade Name -</strong>  {{$comp_details->company_name}}</div>
-                                                <div class="col-md-4"><strong>FY -</strong> 20{{$fy}}</div>
-                                                @php
-                                                    
-                                                    $from = Carbon::parse($from_date);
-                                                    $to = Carbon::parse($to_date);
-                                                @endphp
-                                                <div class="col-md-4">
-                                                    <strong>Tax Period -</strong>
-                                                    @if($from->format('F Y') === $to->format('F Y'))
-                                                        {{ $from->format('F Y') }}
-                                                    @else
-                                                        {{ $from->format('F Y') }} to {{ $to->format('F Y') }}
-                                                    @endif
-                                                </div>
-                                                <div class="col-md-4"><strong>Status -</strong> Not Filed</div>
-                                                <div class="col-md-4 text-danger">
-                                                    <i class="fas fa-circle text-danger me-1" style="font-size: 8px;"></i> * Indicates Mandatory Fields
-                                                </div>
-                                                @php
-                                                    $from = Carbon::parse($from_date);
-                                                    $dueDate = $from->copy()->addMonth()->day(11); // 11th of next month
-                                                @endphp
-                                                <div class="col-md-4">
-                                                    <strong>Due Date -</strong> {{ $dueDate->format('d/m/Y') }}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- Toggle buttons -->
-                                <div class="bg-white py-2 px-3 border mb-3">
-                                    <div class="form-check">
-                                        <input type="checkbox" class="form-check-input" id="fileNil">
-                                        <label class="form-check-label fw-semibold" for="fileNil">File Nil GSTR-1</label>
-                                    </div>
-                                </div>
-
-                                <!-- First view (Detailed) -->
-                                <div id="view1" class="view-content active">
-                                    <div class="bg-primary text-white px-3 py-2 fw-bold rounded-top">
-                                        ADD RECORD DETAILS
-                                    </div>
-                                    <!-- Cards -->
-                                    <div class="row bg-white py-3 px-2 rounded-bottom justify-content-start">
-                                        @foreach ($cards as $card)
-                                            <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
-                                                <a href="{{ $card['route'] }}" class="text-decoration-none">
-                                                    <div class="card gst-dashboard-card shadow-sm border-0 h-100 text-center">
-                                                        <div class="gst-dashboard-header d-flex align-items-center justify-content-center">
-                                                            <h6 class="gst-dashboard-title m-0">{{ $card['title'] }}</h6>
-                                                        </div>
-                                                        <div class="gst-dashboard-body d-flex flex-column justify-content-center align-items-center py-3">
-                                                            <div class="gst-dashboard-count d-flex align-items-center">
-                                                                <img src="//static.gst.gov.in/uiassets/images/processed.png" class="check-icon me-2" alt="check icon">
-                                                                <span class="count-value">{{ $card['count'] ?? '0' }}</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </a>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                </div>
-                                    <strong id="show_to">Gross Turnover : {{formatIndianNumber($turnover_amount)}}  (FY : @php echo $fy; @endphp)</strong>
-                                    <button class="btn btn-info add_turnover" type="button" >@empty($turnover_amount) Add Gross Turnover (@php echo $fy; @endphp) @else Update Gross Turnover  @endempty</button>
-                                    
-                                
-                                <br><br>
-                                <form method="POST" action="{{ route('gstr1.send') }}" id="gst_portal_form">
-                                    @csrf
-                                
-                                    <input type="hidden" name="merchant_gst" id="merchant_gst" value="{{ $merchant_gst }}">
-                                    <input type="hidden" name="company_id" value="{{ $company_id }}">
-                                    <input type="hidden" name="from_date" value="{{ $from_date }}">
-                                    <input type="hidden" name="to_date" value="{{ $to_date }}">
-                                    <input type="hidden" name="download_json_status" id="download_json_status" value="0">
-                                    <div class="d-flex justify-content-end gap-2 mt-3 mb-4">
-                                
-                                        <button class="btn btn-primary" type="submit">
-                                            Send to GST Portal
-                                        </button>
-                                        <button type="button" class="btn btn-success" id="download_json">
-                                                Download Json
-                                            </button>
-                                        @if($einvoice_status != 1)
-                                            <button type="button" class="btn btn-danger" id="resetGstr1Btn">
-                                                Reset GSTR-1
-                                            </button>
-                                        @endif
-                                
-                                        <button type="button" class="btn btn-success" id="generateSummaryBtn">
-                                            Generate Summary
-                                        </button>
-                                
-                                    </div>
-                                </form>
-                                
-                            </div>
+                            
                             <!-- view third -->
                             <div class="tab-pane" id="fill-tabpanel-2" role="tabpanel" aria-labelledby="fill-tab-2">
                                 <div id="view2" class="view-content" style="height:100vh;">
@@ -1245,8 +1248,8 @@
                     'B2B_4A': '4A - Taxable outward supplies made to registered persons (other than reverse charge)',
                     'B2B_4B': '4B - Supplies attracting reverse charge',
                     'B2CL': '5A - B2CL (Large)',
-                    'EXP': '6A - Exports',
                     'B2CS': '7 - B2CS',
+                    'EXP': '6A - Exports',
                     'CDNR': '9B - Credit / Debit Notes (Registered)',
                     'CDNUR': '9B - Credit / Debit Notes (Unregistered)',
                     'HSN': '12 - HSN Summary',
@@ -1431,7 +1434,7 @@
         let savedSummary = localStorage.getItem(summaryKey);
 
         if (savedSummary) {
-            
+
             $('#gstr1-summary-container').html(savedSummary);
             $('#proceedToFilingBtn').show();
             $('#fill-tab-2').tab('show');

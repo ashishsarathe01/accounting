@@ -38,59 +38,22 @@ class gstR1Controller extends Controller
         $companyId = Session::get('user_company_id');
         $companyData = Companies::where('id', $companyId)->first();
         $fy = Session::get('default_fy');
-        $seriesList = [];
+        $gst = [];
 
-        if ($companyData->gst_config_type == "single_gst") {
-            // Fetch single GST setting
-            $setting = DB::table('gst_settings')
-                ->where(['company_id' => $companyId, 'gst_type' => "single_gst"])
-                ->first();
-
-            if ($setting) {
-                // Add gst_settings main record to seriesList
-                $seriesList[] = [
-                    'series_name' => $setting->series ?? 'Default Series',
-                    'gst_no' => $setting->gst_no ?? ''
-                ];
-
-                // Fetch all branches under the same setting
-                $branches = GstBranch::select('branch_series as series_name', 'gst_number as gst_no')
-                    ->where([
-                        'delete' => '0',
-                        'company_id' => $companyId,
-                        'gst_setting_id' => $setting->id
-                    ])->get();
-
-                $seriesList = array_merge($seriesList, $branches->toArray());
-            }
-
-        } elseif ($companyData->gst_config_type == "multiple_gst") {
-            // Fetch all multiple GST settings
-            $settings = DB::table('gst_settings_multiple')
-                ->select('id', 'series', 'gst_no')
-                ->where(['company_id' => $companyId, 'gst_type' => "multiple_gst"])
-                ->get();
-
-            foreach ($settings as $setting) {
-                // Add gst_settings_multiple main record to seriesList
-                $seriesList[] = [
-                    'series_name' => $setting->series ?? 'Default Series',
-                    'gst_no' => $setting->gst_no ?? ''
-                ];
-
-                // Fetch all branches under this multiple setting
-                $branches = GstBranch::select('branch_series as series_name', 'gst_number as gst_no')
-                    ->where([
-                        'delete' => '0',
-                        'company_id' => $companyId,
-                        'gst_setting_multiple_id' => $setting->id
-                    ])->get();
-
-                $seriesList = array_merge($seriesList, $branches->toArray());
-            }
+        if($companyData->gst_config_type == "single_gst"){
+            $gst = DB::table('gst_settings')
+                            ->select('gst_no')
+                            ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "single_gst",'delete'=>'0','status'=>'1'])
+                            ->get();
+        }else if($companyData->gst_config_type == "multiple_gst"){
+            
+            $gst = DB::table('gst_settings_multiple')
+                            ->select('gst_no')
+                            ->where(['company_id' => Session::get('user_company_id'), 'gst_type' => "multiple_gst",'delete'=>'0','status'=>'1'])
+                            ->get();
         }
 
-        return view('gstReturn.filterIndex', compact('seriesList','fy'));
+        return view('gstReturn.filterIndex', compact('gst','fy'));
     }
     public function gstr1Detail(Request $request)
     {

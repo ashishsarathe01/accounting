@@ -4,126 +4,113 @@
 @include('layouts.header')
 <!-- list-view-company-section -->
 <div class="list-of-view-company ">
-   <section class="list-of-view-company-section container-fluid">
-      <div class="row vh-100">
-         @include('layouts.leftnav')
-         <!-- view-table-Content -->
-         <div class="col-md-12 ml-sm-auto  col-lg-10 px-md-4 bg-mint">
-            @if (session('error'))
-               <div class="alert alert-danger" role="alert"> {{session('error')}}</div>
-            @endif
-            @if (session('success'))
-               <div class="alert alert-success" role="alert">
-                  {{ session('success') }}
-               </div>
-            @endif
-            <div class="table-title-bottom-line position-relative d-flex justify-content-between align-items-center bg-plum-viloet title-border-redius border-divider shadow-sm py-2 px-4 mb-4">
-               <h5 class="master-table-title m-0 py-2">GSTR-1</h5> 
-                </div>
-
-    <form id="gstr1-form" action="{{ route('gstr1') }}" method="get">
-        @csrf
-        <div class="mb-3 col-md-2">
-        <label for="series" class="form-label" style="font-size: 1.05rem">Series</label>
-       <select name="series" id="series" class="form-select form-select-lg select2-single" aria-label="form-select-lg example" required autofocus>
-    <option value="">Select Series</option>
-    @foreach($seriesList as $series)
-        <option value="{{ $series['gst_no'] }}">
-            {{ $series['series_name'] }}
-        </option>
-    @endforeach
-</select>
-
-    </div>
-
-    <!-- From Date -->
-  @php
-    $fy = Session::get('from_date'); // Format: Y-m-d
-    $fyYear = \Carbon\Carbon::parse($fy)->format('Y'); // Start year
-    $fyNextYear = \Carbon\Carbon::parse($fy)->addYear()->format('Y'); // Next year
-@endphp
-
-<!-- Month Selector -->
-<div class="mb-3 col-md-3">
-    <label for="month_select" class="form-label" style="font-size: 1.05rem">Select Month</label>
-    <select id="month_select" name="month" class="form-select" required>
-    <option value="">-- Select Month --</option>
-
-    @php
-        $fy = Session::get('from_date');
-        $fyStartYear = \Carbon\Carbon::parse($fy)->format('Y');
-        $fyEndYear = \Carbon\Carbon::parse($fy)->addYear()->format('Y');
-
-        // Month list in financial year order (Apr -> Mar)
-        $months = [
-            '04' => 'April',
-            '05' => 'May',
-            '06' => 'June',
-            '07' => 'July',
-            '08' => 'August',
-            '09' => 'September',
-            '10' => 'October',
-            '11' => 'November',
-            '12' => 'December',
-            '01' => 'January',
-            '02' => 'February',
-            '03' => 'March',
-        ];
-    @endphp
-
-    @foreach($months as $num => $name)
-         @php
-        // Decide year exactly as your JS logic does
-        $year = (intval($num) >= 4) ? $fyStartYear : $fyEndYear;
-
-        // Create value like 042026 or 032027
-        $monthValue = $num . $year;
-    @endphp
-
-        <option value="{{ $monthValue }}">{{ $name }} {{ $year }}</option>
-    @endforeach
-</select>
-
+    <section class="list-of-view-company-section container-fluid">
+        <div class="row vh-100">
+            @include('layouts.leftnav')
+            <!-- view-table-Content -->
+            <div class="col-md-12 ml-sm-auto  col-lg-10 px-md-4 bg-mint">
+                @if (session('error'))
+                   <div class="alert alert-danger" role="alert"> {{session('error')}}</div>
+                @endif
+                @if (session('success'))
+                   <div class="alert alert-success" role="alert">
+                      {{ session('success') }}
+                   </div>
+                @endif
+                <h5 class="table-title-bottom-line px-4 py-3 m-0 bg-plum-viloet position-relative title-border-redius border-divider shadow-sm">GSTR-1</h5>
+                <form id="gstr1-form" action="{{ route('gstr1') }}" method="get" class="bg-white px-4 py-3 border-divider rounded-bottom-8 shadow-sm">
+                    @csrf
+                    <div class="row">
+                        <div class="mb-3 col-md-3">
+                            <label for="month_select" class="form-label font-14 font-heading">Month</label>
+                            @php
+                                $fy = Session::get('from_date'); // Format: Y-m-d
+                                $fyYear = \Carbon\Carbon::parse($fy)->format('Y'); // Start year
+                                $fyNextYear = \Carbon\Carbon::parse($fy)->addYear()->format('Y'); // Next year
+                            @endphp
+                            <select id="month_select" name="month" class="form-select" required>
+                                <option value="">-- Select Month --</option>
+                                @php
+                                    $fy = Session::get('from_date');
+                                    $fyStartYear = \Carbon\Carbon::parse($fy)->format('Y');
+                                    $fyEndYear = \Carbon\Carbon::parse($fy)->addYear()->format('Y');
+                            
+                                    // Month list in financial year order (Apr -> Mar)
+                                    $months = [
+                                        '04' => 'April',
+                                        '05' => 'May',
+                                        '06' => 'June',
+                                        '07' => 'July',
+                                        '08' => 'August',
+                                        '09' => 'September',
+                                        '10' => 'October',
+                                        '11' => 'November',
+                                        '12' => 'December',
+                                        '01' => 'January',
+                                        '02' => 'February',
+                                        '03' => 'March',
+                                    ];
+                                @endphp
+    
+                                @foreach($months as $num => $name)
+                                     @php
+                                        // Decide year exactly as your JS logic does
+                                        $year = (intval($num) >= 4) ? $fyStartYear : $fyEndYear;
+                                
+                                        // Create value like 042026 or 032027
+                                        $monthValue = $num . $year;
+                                    @endphp
+                                    <option value="{{ $monthValue }}" @php if(date('mY', strtotime('-1 month'))==$monthValue){ echo "selected"; } @endphp>{{ $name }} {{ $year }}</option>
+                                @endforeach
+                            </select>
+                    </div>
+                        <div class="mb-3 col-md-2">
+                            <label for="series" class="form-label" style="font-size: 1.05rem">GSTIN</label>
+                            <select name="series" id="series" class="form-select form-select-lg select2-single" aria-label="form-select-lg example" required autofocus>
+                                <option value="">Select GSTIN</option>
+                                @foreach ($gst as $value)
+                                   <option value="{{$value->gst_no}}">{{$value->gst_no}}</option>
+                                @endforeach
+                            </select>
+                    </div>
+                        <!-- Hidden Inputs to submit -->
+                        <input type="hidden" name="from_date" id="from_date">
+                        <input type="hidden" name="to_date" id="to_date">
+                        <!-- Data Source -->
+                        <div class="mb-3 col-md-3">
+                            <label for="data_source" class="form-label" style="font-size: 1.05rem">
+                                Data Source
+                            </label>
+                        
+                            <select 
+                                name="data_source" 
+                                id="data_source" 
+                                class="form-select form-select-lg"
+                            >
+                                <option value="books" selected>
+                                    Books Only
+                                </option>
+                        
+                                <option value="portal">
+                                    Books + GST Portal
+                                </option>
+                            </select>
+                        
+                            <small class="text-muted">
+                                Choose whether to load only books data or include GST portal data.
+                            </small>
+                    </div>
+                        <div class="mb-3 col-md-3">
+                            <button id="submit" type="button" class="btn btn-xs-primary submit_btn" style="margin-top: 20px;">Generate Report</button>
+                            <button id="real-submit" type="submit" style="display: none;"></button>
+                    </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
 </div>
-
-<!-- Hidden Inputs to submit -->
-<input type="hidden" name="from_date" id="from_date">
-<input type="hidden" name="to_date" id="to_date">
-
-<!-- Data Source -->
-<div class="mb-3 col-md-3">
-    <label for="data_source" class="form-label" style="font-size: 1.05rem">
-        Data Source
-    </label>
-
-    <select 
-        name="data_source" 
-        id="data_source" 
-        class="form-select form-select-lg"
-    >
-        <option value="books" selected>
-            Books Only
-        </option>
-
-        <option value="portal">
-            Books + GST Portal
-        </option>
-    </select>
-
-    <small class="text-muted">
-        Choose whether to load only books data or include GST portal data.
-    </small>
-</div>
-
-    <!-- Button -->
-   <div class="mb-3 text-start">
-       <!-- Existing submit button (type=button) -->
-<button id="submit" type="button" class="btn btn-primary px-4">Generate Report</button>
-
-<!-- Hidden real submit button -->
-<button id="real-submit" type="submit" style="display: none;"></button>
-
-    </div>
+                
 
 
 <div class="modal fade" id="otpModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
@@ -176,8 +163,8 @@ $(document).ready(function () {
 
     const focusMap = {
         '#series': '#month_select',
-    '#month_select': '#data_source',
-    '#data_source': '#submit'
+        '#month_select': '#data_source',
+        '#data_source': '#submit'
         
     };
 
@@ -226,46 +213,28 @@ $(document).ready(function () {
 
 });
 
-document.addEventListener("DOMContentLoaded", function () {
-    const monthSelect = document.getElementById("month_select");
-    const fromDateInput = document.getElementById("from_date");
-    const toDateInput = document.getElementById("to_date");
 
-    const fyStartYear = {{ \Carbon\Carbon::parse($fy)->format('Y') }};
-    const fyEndYear = {{ \Carbon\Carbon::parse($fy)->addYear()->format('Y') }};
-
-    monthSelect.addEventListener("change", function () {
-        const value = this.value;
-
-        if (!value) {
-            fromDateInput.value = '';
-            toDateInput.value = '';
-            return;
-        }
-        
-        // Extract month and year
-        const month = value.substring(0, 2);
-        const year = value.substring(2, 6);
-
-        if (!month) {
-            fromDateInput.value = '';
-            toDateInput.value = '';
-            return;
-        }
-
-        // Determine last day of month (handle leap year for Feb)
-        const lastDay = new Date(year, month, 0).getDate(); // 0th day of next month = last day of selected month
-
-        // Format YYYY-MM-DD
-        const from_date = `${year}-${month}-01`;
-        const to_date = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
-
-        fromDateInput.value = from_date;
-        toDateInput.value = to_date;
-    });
-});
 
 $(document).ready(function() {
+    $("#month_select").on("change", function () {
+        let value = $(this).val();
+
+        if (!value) {
+            $("#from_date").val('');
+            $("#to_date").val('');
+            return;
+        }
+
+        let month = value.substring(0, 2);
+        let year = value.substring(2, 6);
+
+        let lastDay = new Date(year, month, 0).getDate();
+
+        $("#from_date").val(`${year}-${month}-01`);
+        $("#to_date").val(`${year}-${month}-${String(lastDay).padStart(2,'0')}`);
+    });
+
+    $("#month_select").trigger('change');
    $('#submit').on('click', function(e) {
    
     let form = $('#gstr1-form');
@@ -333,6 +302,7 @@ $(document).ready(function() {
                 gstin: fgstin
             },
             success: function(res) {
+                alert('TXN = ' + res.txn);
             //    if (res.status === true) {
             //         // $('#real-submit').click();
             //         $('#otpModal').modal('hide');

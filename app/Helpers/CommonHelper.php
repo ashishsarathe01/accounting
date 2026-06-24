@@ -734,19 +734,13 @@ class CommonHelper
             CURLOPT_CUSTOMREQUEST => 'POST',
             CURLOPT_POSTFIELDS => json_encode($gst_request),
             CURLOPT_HTTPHEADER => array(
-                'accept: */*',
+                'accept: */*', 
                 'Content-Type: application/json',
                 'env: production',
                 'client_id: ' . $client_id,
-                'client_secret: ' . $client_secret
+                'client_secret: ' . $client_secret,
             ),
-            // CURLOPT_HTTPHEADER => array(
-            //     'gst_username:'.$gst_username,
-            //     'state_cd: '.$state_code,
-            //     'ip_address: '.$ip_address,
-            //     'client_id: '.$client_id,
-            //     'client_secret: '.$client_secret
-            // ),
+            
         ));
         $response = curl_exec($curl);
         curl_close($curl);
@@ -768,7 +762,10 @@ class CommonHelper
             //     return 0;
             // }         
         }else{
-            
+            echo "<pre>";
+            echo "....";
+            echo $base_url.'/authentication/otprequest?email='.urlencode($email_id);
+        print_r($result);die;
                 return 0;
             
         }       
