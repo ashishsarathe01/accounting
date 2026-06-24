@@ -337,7 +337,20 @@ class GSTR2AController extends Controller
         }else {
             $last_created_date = "";
             $gstr2a_arr = [];
-        
+            $bill_sundry_igst = BillSundrys::where('company_id', Session::get('user_company_id'))
+                                            ->where('nature_of_sundry', 'IGST')
+                                            ->where('delete','0')
+                                            ->value('id');
+
+            $bill_sundry_cgst = BillSundrys::where('company_id', Session::get('user_company_id'))
+                                            ->where('nature_of_sundry', 'CGST')
+                                            ->where('delete','0')
+                                            ->value('id');
+
+            $bill_sundry_sgst = BillSundrys::where('company_id', Session::get('user_company_id'))
+                                            ->where('nature_of_sundry', 'SGST')
+                                            ->where('delete','0')
+                                            ->value('id');        
             $gstr2a = GSTR2A::where('company_gstin', $request->gstin)
                 ->where('company_id', Session::get('user_company_id'))
                 ->where('res_month', $request->month)
@@ -443,25 +456,73 @@ class GSTR2AController extends Controller
                             - $purchase_return_data;
                         $b2b_books = $purchase_book_data + $journal_book_data;
                         $cdnr_books = $sale_return_book_data - $purchase_return_data;
-        
+                        $supplier_all_matched = true;
+                        foreach ($b2b->inv as $inv_check) {
+                            $inv_iamt  = 0;
+                            $inv_camt  = 0;
+                            $inv_samt  = 0;
+                            $inv_txval = 0;
+                            foreach(($inv_check->itms ?? []) as $item){
+                                $inv_iamt  += $item->itm_det->iamt  ?? 0;
+                                $inv_camt  += $item->itm_det->camt  ?? 0;
+                                $inv_samt  += $item->itm_det->samt  ?? 0;
+                                $inv_txval += $item->itm_det->txval ?? 0;
+                            }
+                            $b_taxable = 0; $b_igst = 0; $b_cgst = 0; $b_sgst = 0;
+                            $p = Purchase::where('billing_gst', $b2b->ctin)
+                                ->where('company_id', Session::get('user_company_id'))
+                                ->where('merchant_gst', $request->gstin)
+                                ->where('voucher_no', $inv_check->inum)
+                                ->where('status','1')->where('delete','0')
+                                ->first();
+                            if ($p) {
+                                $b_taxable += $p->taxable_amt;
+                                $b_igst    += PurchaseSundry::where('purchase_id',$p->id)->where('bill_sundry',$bill_sundry_igst)->sum('amount');
+                                $b_cgst    += PurchaseSundry::where('purchase_id',$p->id)->where('bill_sundry',$bill_sundry_cgst)->sum('amount');
+                                $b_sgst    += PurchaseSundry::where('purchase_id',$p->id)->where('bill_sundry',$bill_sundry_sgst)->sum('amount');
+                            }
+                            $j = Journal::where('vendor_gstin', $b2b->ctin)
+                                ->where('company_id', Session::get('user_company_id'))
+                                ->where('merchant_gst', $request->gstin)
+                                ->where(function($q) use ($inv_check) {
+                                    $q->where('invoice_no', $inv_check->inum)
+                                    ->orWhere('gstr2b_invoice_id', $inv_check->inum);
+                                })
+                                ->where('claim_gst_status','YES')
+                                ->where('status','1')->where('delete','0')
+                                ->first();
+                            if ($j) {
+                                $b_taxable += $j->net_total;
+                                $b_igst    += $j->igst;
+                                $b_cgst    += $j->cgst;
+                                $b_sgst    += $j->sgst;
+                            }
+                            $taxableMatch = round($b_taxable,2) == round($inv_txval,2);
+                            $igstMatch    = round($b_igst,2)    == round($inv_iamt,2);
+                            $cgstMatch    = round($b_cgst,2)    == round($inv_camt,2);
+                            $sgstMatch    = round($b_sgst,2)    == round($inv_samt,2);
+                            if (!($taxableMatch && $igstMatch && $cgstMatch && $sgstMatch)) {
+                                $supplier_all_matched = false;
+                                break; 
+                            }
+                        }        
                         /* ---------------- MERGE ---------------- */
-        
                         if (isset($gstr2a_arr[$b2b->ctin])) {
                             $gstr2a_arr[$b2b->ctin]['b2b_portal'] += $portal_amt;
-
                             $gstr2a_arr[$b2b->ctin]['b2b_books']  += $b2b_books;
                             $gstr2a_arr[$b2b->ctin]['cdnr_books'] += $cdnr_books;
+                            if (!$supplier_all_matched) {
+                                $gstr2a_arr[$b2b->ctin]['all_matched'] = false;
+                            }
                         } else {
                             $gstr2a_arr[$b2b->ctin] = [
-                                'name' => $account_name,
-
-                                'b2b_portal' => round($portal_amt, 2),
-                                'b2b_books'  => round($b2b_books, 2),
-
+                                'name'        => $account_name,
+                                'b2b_portal'  => round($portal_amt, 2),
+                                'b2b_books'   => round($b2b_books, 2),
                                 'cdnr_portal' => 0,
                                 'cdnr_books'  => round($cdnr_books, 2),
-
-                                'diff_amt' => 0
+                                'diff_amt'    => 0,
+                                'all_matched' => $supplier_all_matched,
                             ];
                         }
 
@@ -546,7 +607,7 @@ class GSTR2AController extends Controller
                 ->groupBy('billing_gst')
                 ->get();
             foreach($bookParties as $party){
-                if(!in_array(strtoupper(trim($party->ctin)), $existingCtins)){            
+                if(!in_array(strtoupper(trim($party->ctin)), $existingCtins)){
                     $name = $accounts[$party->ctin] ?? $party->ctin;
                     $gstr2a_arr[$party->ctin] = [
                         'name'        => $name,
@@ -555,6 +616,7 @@ class GSTR2AController extends Controller
                         'cdnr_books'  => 0,
                         'cdnr_portal' => 0,
                         'diff_amt'    => -(float)$party->b2b_books,
+                        'all_matched' => false,  // ← NEW: portal=0, so never matched
                     ];
                 }
             }
@@ -588,20 +650,6 @@ class GSTR2AController extends Controller
 
 
         $pending_notes = [];
-        $bill_sundry_igst = BillSundrys::where('company_id', Session::get('user_company_id'))
-                                        ->where('nature_of_sundry', 'IGST')
-                                        ->where('delete','0')
-                                        ->value('id');
- 
-        $bill_sundry_cgst = BillSundrys::where('company_id', Session::get('user_company_id'))
-                                        ->where('nature_of_sundry', 'CGST')
-                                        ->where('delete','0')
-                                        ->value('id');
- 
-        $bill_sundry_sgst = BillSundrys::where('company_id', Session::get('user_company_id'))
-                                        ->where('nature_of_sundry', 'SGST')
-                                        ->where('delete','0')
-                                        ->value('id');
         $sr = 1;
 
         $financial_year = Session::get('default_fy');

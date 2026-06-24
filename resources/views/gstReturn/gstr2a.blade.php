@@ -316,24 +316,24 @@
                         html += `
                             <tr>
                                 <td>
-                                    <a href="${fullUrl}">
-                                        ${row.name} (${key})
+                                    <a href="${fullUrl}" style="color:#000 !important;">
+                                       ${row.name} (${key})
                                     </a>
-                                </td>
-                                 <td style="text-align:right; color:${parseFloat(row.b2b_portal) === parseFloat(row.b2b_books) ? 'blue' : ''}">
+                                 </td>
+                                 <td style="text-align:right; color:${row.all_matched ? 'green' : 'red'}">
                                     ${Number(row.b2b_portal).toLocaleString('en-IN',{minimumFractionDigits:2})}
                                  </td>
-                                 <td style="text-align:right; color:${parseFloat(row.b2b_portal) === parseFloat(row.b2b_books) ? 'blue' : ''}">
+                                 <td style="text-align:right; color:${row.all_matched ? 'green' : 'red'}">
                                     ${Number(row.b2b_books).toLocaleString('en-IN',{minimumFractionDigits:2})}
                                  </td>
 
-                                 <td style="text-align:right">
+                                 <td style="text-align:right; color:${parseFloat(row.cdnr_portal) === parseFloat(row.cdnr_books) ? 'green' : 'red'};">
                                     ${Number(row.cdnr_portal).toLocaleString('en-IN',{minimumFractionDigits:2})}
                                  </td>
-                                 <td style="text-align:right">
+                                 <td style="text-align:right; color:${parseFloat(row.cdnr_portal) === parseFloat(row.cdnr_books) ? 'green' : 'red'};">
                                     ${Number(row.cdnr_books).toLocaleString('en-IN',{minimumFractionDigits:2})}
                                  </td>
-                                <td style="text-align:right; color:${row.diff_amt!=0 ? 'red' : 'green'}">
+                                <td style="text-align:right; color:${parseFloat(row.diff_amt) != 0 ? 'red' : 'black'}">
                                     ${Number(row.diff_amt).toLocaleString('en-IN',{minimumFractionDigits:2})}
                                 </td>
                             </tr>

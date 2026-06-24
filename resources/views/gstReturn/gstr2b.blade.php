@@ -583,18 +583,21 @@
                         let fullUrl = `${baseUrl}/${month}/${gstin}/${element.ctin}`;
                         let diffColor = '';
                         if(parseFloat(element.diff_amt) != 0){
-                           diffColor = 'style="color:red;"';
+                           diffColor = 'style="color:red;font-weight:bold;"';
                         }
                         
-                        let b2bMatchColor = (
-                           parseFloat(element.b2b_portal) === parseFloat(element.b2b_books)
-                        ) ? 'style="color:green;font-weight:bold;"' : '';
-                        
+                        // B2B is green only if amounts match AND every invoice's taxes matched
+                        let b2bAmountMatch = parseFloat(element.b2b_portal) === parseFloat(element.b2b_books);
+                        let b2bFullyMatched = element.b2b_fully_matched === true;
+                        let b2bMatchColor = (b2bAmountMatch && b2bFullyMatched)
+                           ? 'style="color:green;font-weight:bold;"'
+                           : 'style="color:red;font-weight:bold;"';
+
                         let cdnrMatchColor = (
                            parseFloat(element.cdnr_portal) === parseFloat(element.cdnr_books)
-                        ) ? 'style="color:green;font-weight:bold;"' : '';
+                        ) ? 'style="color:green;font-weight:bold;"' : 'style="color:red;font-weight:bold;"';
                         html += "<tr style='cursor:pointer;'>"+
-                                "<td><a href='"+fullUrl+"'>"+element.trdnm+" ("+element.ctin+")</a></td>"+
+                                "<td><a href='"+fullUrl+"' style='color:black;'>"+element.trdnm+" ("+element.ctin+")</a></td>"+
                                 
                                 "<td style='text-align:right'><a "+b2bMatchColor+" href='"+fullUrl+"'>"+
                                 Number(element.b2b_portal).toLocaleString('en-IN', {
@@ -620,7 +623,7 @@
                                 maximumFractionDigits: 2
                                 })+"</a></td>"+
                                 
-                                "<td style='text-align:right'><a "+diffColor+" href='"+fullUrl+"'>"+
+                                "<td style='text-align:right'><a href='"+fullUrl+"' "+(parseFloat(element.diff_amt) != 0 ? "style='color:red;font-weight:bold;'" : "style='color:black;'")+" >"+
                                 Number(element.diff_amt).toLocaleString('en-IN', {
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2

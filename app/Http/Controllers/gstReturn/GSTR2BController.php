@@ -204,6 +204,7 @@ class GSTR2BController extends Controller
             $gstr2b = json_decode($gstr2b->res_data);
             $uniqueSuppliers = [];$supplier_amount = [];$supplier_crdr_amount = [];
             $sections = ['b2b', 'cdnr', 'b2ba', 'cdnra'];
+            $supplierFullyMatched = [];
             foreach ($sections as $section) {
                 if (!empty($gstr2b->data->docdata->$section)) {
                     foreach ($gstr2b->data->docdata->$section as $record) {
@@ -257,10 +258,38 @@ class GSTR2BController extends Controller
                                         }else if($invoice_match_with=="JOURNAL" && $invoice_match_with_id!=""){
                                             Journal::where('id',$invoice_match_with_id)->update(["gstr2b_invoice_id"=>$invoice->inum,"gstr2b_invoice_month"=>$request->month]);
                                         }
-                                        // echo $record->ctin."**".$invoice_match_with."***".$invoice_match_with_id;
-                                        // echo "--------------------";
                                     }
-                                    //New Code End
+                                    $book_igst_sum = 0; $book_cgst_sum = 0; $book_sgst_sum = 0; $book_taxable_val = 0;
+                                    if($invoice_match_with == "PURCHASE" && $invoice_match_with_id != ""){
+                                        $bill_sundry_igst_id = BillSundrys::where('company_id', Session::get('user_company_id'))->where('nature_of_sundry','IGST')->where('delete','0')->value('id');
+                                        $bill_sundry_cgst_id = BillSundrys::where('company_id', Session::get('user_company_id'))->where('nature_of_sundry','CGST')->where('delete','0')->value('id');
+                                        $bill_sundry_sgst_id = BillSundrys::where('company_id', Session::get('user_company_id'))->where('nature_of_sundry','SGST')->where('delete','0')->value('id');
+                                        $book_igst_sum = PurchaseSundry::where('purchase_id',$invoice_match_with_id)->where('bill_sundry',$bill_sundry_igst_id)->sum('amount');
+                                        $book_cgst_sum = PurchaseSundry::where('purchase_id',$invoice_match_with_id)->where('bill_sundry',$bill_sundry_cgst_id)->sum('amount');
+                                        $book_sgst_sum = PurchaseSundry::where('purchase_id',$invoice_match_with_id)->where('bill_sundry',$bill_sundry_sgst_id)->sum('amount');
+                                        $purch = Purchase::select('taxable_amt')->find($invoice_match_with_id);
+                                        $book_taxable_val = $purch ? $purch->taxable_amt : 0;
+                                    } else if($invoice_match_with == "JOURNAL" && $invoice_match_with_id != ""){
+                                        $jrn = Journal::select('net_total','igst','cgst','sgst')->find($invoice_match_with_id);
+                                        if($jrn){
+                                            $book_taxable_val = $jrn->net_total;
+                                            $book_igst_sum    = $jrn->igst;
+                                            $book_cgst_sum    = $jrn->cgst;
+                                            $book_sgst_sum    = $jrn->sgst;
+                                        }
+                                    }
+                                    $taxableMatch = abs(round($book_taxable_val,2) - round($invoice->txval,2)) < 0.5;
+                                    $igstMatch    = abs(round($book_igst_sum,2)    - round($invoice->igst,2))  < 0.5;
+                                    $cgstMatch    = abs(round($book_cgst_sum,2)    - round($invoice->cgst,2))  < 0.5;
+                                    $sgstMatch    = abs(round($book_sgst_sum,2)    - round($invoice->sgst,2))  < 0.5;
+                                    $invoiceAllMatched = $taxableMatch && $igstMatch && $cgstMatch && $sgstMatch;
+                                    if(!$invoiceAllMatched){
+                                        $supplierFullyMatched[$record->ctin] = false;
+                                    } else {
+                                        if(!isset($supplierFullyMatched[$record->ctin])){
+                                            $supplierFullyMatched[$record->ctin] = true;
+                                        }
+                                    }
                                 }
                             }else if($section=="cdnr"){
                                 foreach ($record->nt as $invoice) {
@@ -373,6 +402,7 @@ class GSTR2BController extends Controller
                     'b2b_portal'=>isset($supplier_amount[$ctin]) ? $supplier_amount[$ctin] : 0,
                     'cdnr_books'=>$sale_return_book_data - $purchase_return_data,
                     'cdnr_portal'=>isset($supplier_crdr_amount[$ctin]) ? $supplier_crdr_amount[$ctin] : 0,
+                    'b2b_fully_matched' => isset($supplierFullyMatched[$ctin]) ? $supplierFullyMatched[$ctin] : false, // NEW
                 ];
             }
             // Sort by trdnm (case-insensitive)
@@ -418,15 +448,16 @@ class GSTR2BController extends Controller
                                 ->where('company_id', Session::get('user_company_id'))
                                 ->first();
                     $suppliers[] = (object)[
-                        'ctin'         => $party->ctin,
-                        'trdnm'        => $account ? $account->account_name : $party->ctin,
-                        'amount'       => 0,
-                        'book_value'   => (float)$party->b2b_books,
-                        'b2b_books'    => (float)$party->b2b_books,
-                        'b2b_portal'   => 0,
-                        'cdnr_books'   => 0,
-                        'cdnr_portal'  => 0,
-                        'diff_amt'     => -(float)$party->b2b_books,
+                        'ctin'             => $party->ctin,
+                        'trdnm'            => $account ? $account->account_name : $party->ctin,
+                        'amount'           => 0,
+                        'book_value'       => (float)$party->b2b_books,
+                        'b2b_books'        => (float)$party->b2b_books,
+                        'b2b_portal'       => 0,
+                        'cdnr_books'       => 0,
+                        'cdnr_portal'      => 0,
+                        'diff_amt'         => -(float)$party->b2b_books,
+                        'b2b_fully_matched'=> false, 
                     ];
                 }
             }
@@ -448,15 +479,16 @@ class GSTR2BController extends Controller
                                 ->where('company_id', Session::get('user_company_id'))
                                 ->first();
                     $suppliers[] = (object)[
-                        'ctin'         => $party->ctin,
-                        'trdnm'        => $account ? $account->account_name : $party->ctin,
-                        'amount'       => 0,
-                        'book_value'   => (float)$party->b2b_books,
-                        'b2b_books'    => (float)$party->b2b_books,
-                        'b2b_portal'   => 0,
-                        'cdnr_books'   => 0,
-                        'cdnr_portal'  => 0,
-                        'diff_amt'     => -(float)$party->b2b_books,
+                        'ctin'             => $party->ctin,
+                        'trdnm'            => $account ? $account->account_name : $party->ctin,
+                        'amount'           => 0,
+                        'book_value'       => (float)$party->b2b_books,
+                        'b2b_books'        => (float)$party->b2b_books,
+                        'b2b_portal'       => 0,
+                        'cdnr_books'       => 0,
+                        'cdnr_portal'      => 0,
+                        'diff_amt'         => -(float)$party->b2b_books,
+                        'b2b_fully_matched'=> false, // NEW: only in book = never fully matched
                     ];
                 }
             }
