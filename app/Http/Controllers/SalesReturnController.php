@@ -144,7 +144,7 @@ class SalesReturnController extends Controller
             $row->gst_locked = DB::table('gst_return_compliances')
                   ->where('company_id', Session::get('user_company_id'))
                   ->where('month_year', $row->linked_month)
-                  ->where('return_type', 'GSTR-3B')
+                  ->where('return_type', 'GSTR3B')
                   ->where('is_locked', 1)
                   ->exists();
          }
@@ -153,7 +153,7 @@ class SalesReturnController extends Controller
             $row->gst_locked = DB::table('gst_return_compliances')
                   ->where('company_id', Session::get('user_company_id'))
                   ->where('month_year', $returnMonth)
-                  ->where('return_type', 'GSTR-1')
+                  ->where('return_type', 'GSTR1')
                   ->where('is_locked', 1)
                   ->exists();
          }
@@ -1775,7 +1775,7 @@ class SalesReturnController extends Controller
          $gstLocked = DB::table('gst_return_compliances')
             ->where('company_id', Session::get('user_company_id'))
             ->where('month_year', $sale_return->linked_month)
-            ->where('return_type', 'GSTR-3B')
+            ->where('return_type', 'GSTR3B')
             ->where('is_locked', 1)
             ->exists();
 
@@ -1797,7 +1797,7 @@ class SalesReturnController extends Controller
          $gstLocked = DB::table('gst_return_compliances')
             ->where('company_id', Session::get('user_company_id'))
             ->where('month_year', $returnMonth)
-            ->where('return_type', 'GSTR-1')
+            ->where('return_type', 'GSTR1')
             ->where('is_locked', 1)
             ->exists();
 

@@ -166,7 +166,7 @@ class SalesController extends Controller
          $row->gst_locked = DB::table('gst_return_compliances')
             ->where('company_id', Session::get('user_company_id'))
             ->where('month_year', $invoiceMonth)
-            ->where('return_type', 'GSTR-1')
+            ->where('return_type', 'GSTR1')
             ->where('is_locked', 1)
             ->exists();
       }
@@ -1659,7 +1659,7 @@ class SalesController extends Controller
       $gstLocked = DB::table('gst_return_compliances')
          ->where('company_id', Session::get('user_company_id'))
          ->where('month_year', $invoiceMonth)
-         ->where('return_type', 'GSTR-1')
+         ->where('return_type', 'GSTR1')
          ->where('is_locked', 1)
          ->exists();
       if ($gstLocked) {
