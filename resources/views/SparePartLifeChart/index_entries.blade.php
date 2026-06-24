@@ -84,13 +84,14 @@
                         <table class="table table-bordered table-striped m-0">
                             <thead>
                                 <tr class="bg-light-pink text-body">
-                                    <th>Date</th>
+                                    <th style="width:85px">Date</th>
                                     <th>Required By</th>
                                     <th>Part</th>
                                     <th>Brand</th>
                                     <th>Location</th>
                                     <th style="text-align:right;">Qty</th>
                                     <th style="text-align:right;">Rate</th>
+                                    <th style="text-align:right;">Amount</th>
                                     <th>Replace Date</th>
                                     <th style="text-align:right;">Duration</th>
                                     <th>Reason</th>
@@ -100,7 +101,7 @@
 
                             <tbody>
 
-                                @php $group_arr = []; @endphp
+                                @php $group_arr = []; $total_amount = 0;@endphp
 
                                 @foreach($entries as $row)
 
@@ -135,7 +136,16 @@
                                         <td style="text-align:right;">
                                             {{ number_format($row->rate,2) }}
                                         </td>
-
+                                        <td style="text-align:right;">
+                                            {{ number_format($row->qty*$row->rate,2) }}
+                                            
+                                            @php 
+                                                if($row->qty!="" && $row->rate!=""){
+                                                    $total_amount = $total_amount + ($row->qty*$row->rate);
+                                                }
+                                                
+                                            @endphp
+                                        </td>
                                         {{-- REPLACE DATE --}}
                                         <td>
                                             {{ $row->replace_date ? date('d-m-Y', strtotime($row->replace_date)) : '-' }}
@@ -181,7 +191,11 @@
                                     @endphp
 
                                 @endforeach
-
+                                <tr>
+                                    <th colspan="7" style="text-align:right;">Total</th>
+                                    <th style="text-align:right;">{{number_format($total_amount,2)}}</th>
+                                    <th colspan="4" style="text-align:right;"></th>
+                                </tr>
                                 @if(count($entries) == 0)
                                     <tr>
                                         <td colspan="11" class="text-center">No entries found</td>

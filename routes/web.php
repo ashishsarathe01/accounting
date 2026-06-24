@@ -51,6 +51,7 @@ use App\Http\Controllers\gstReturn\ITCLedgerController;
 use App\Http\Controllers\gstReturn\GSTR2BController;
 use App\Http\Controllers\gstReturn\GSTR2AController;
 use App\Http\Controllers\gstReturn\GSTR3BController;
+use App\Http\Controllers\gstReturn\RcmController;
 use App\Http\Controllers\ParameterizedStockController;
 use App\Http\Controllers\saleOrder\SaleOrderController;
 use App\Http\Controllers\Supplier\SupplierController;
@@ -925,6 +926,8 @@ Route::post('/payroll/register/store',[PayrollRegisterController::class, 'store'
       '/deckle-quality-production/{deckle_id}',
       [ProductionController::class, 'getDeckleQualityProduction']
     )->name('deckle.quality.production');
+    Route::get('/rcmIndex', [RcmController::class, 'rcmIndex'])->name('rcm-index');
+    
     Route::get('/RcmReport', [RcmController::class, 'RcmReport'])->name('RcmReport');
     Route::post('/RcmReport/store', [RcmController::class, 'storeRCM'])->name('rcm.store');
     Route::put('/rcm/update/{journal_id}', [RCMController::class, 'updateRCM'])

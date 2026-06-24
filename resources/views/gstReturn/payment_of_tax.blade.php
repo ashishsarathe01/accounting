@@ -38,35 +38,83 @@
                                     <thead class="table-light text-center">
                                         <tr>
                                             <th style="width:30%;">Particulars</th>
-                                            <th>IGST</th>
-                                            <th>CGST</th>
-                                            <th>SGST</th>
-                                            <th>CESS</th>
-                                            <th>TOTAL</th>
+                                            <th style="text-align:right">IGST</th>
+                                            <th style="text-align:right">CGST</th>
+                                            <th style="text-align:right">SGST</th>
+                                            <th style="text-align:right">CESS</th>
+                                            <th style="text-align:right">TOTAL</th>
                                         </tr>
                                     </thead>
-
                                     <tbody>
                                         <tr>
                                             <td>
-                                                <strong>Credit Ledger Balance</strong>
+                                                <strong>Credit Ledger Opening Balance</strong>
                                             </td>
-                                            <td></td>
-                                            <td></td>
-                                            <td></td>
-                                            <td></td>
-                                            <td></td>
+                                            @php $transactions = []; @endphp
+                                            @if(isset($credit_ledger_balance['itcLdgDtls']))
+                                                @php
+                                                    $details = $credit_ledger_balance['itcLdgDtls'];
+                                                    $opening = $details['op_bal'] ?? [];
+                                                   
+                                                @endphp
+                                            @endif
+                                            <td style="text-align:right">{{formatIndianNumber($opening['igstTaxBal'] ?? 0)}}</td>
+                                            <td style="text-align:right">{{formatIndianNumber($opening['cgstTaxBal'] ?? 0)}}</td>
+                                            <td style="text-align:right">{{formatIndianNumber($opening['sgstTaxBal'] ?? 0)}}</td>
+                                            <td style="text-align:right">{{formatIndianNumber($opening['cessTaxBal'] ?? 0)}}</td>
+                                            <td style="text-align:right">{{formatIndianNumber(($opening['igstTaxBal'] ?? 0) + ($opening['cgstTaxBal'] ?? 0) + ($opening['sgstTaxBal'] ?? 0) + ($opening['cessTaxBal'] ?? 0))}}</td>
+                                        </tr>
+                                         <tr>
+                                            <td>
+                                                <strong>Table 4 ITC</strong>
+                                            </td>
+                                            <td style="text-align:right">{{formatIndianNumber($table4_igst ?? 0)}}</td>
+                                            <td style="text-align:right">{{formatIndianNumber($table4_cgst ?? 0)}}</td>
+                                            <td style="text-align:right">{{formatIndianNumber($table4_sgst ?? 0)}}</td>
+                                            <td style="text-align:right">{{formatIndianNumber($table4_cess ?? 0)}}</td>
+                                            <td style="text-align:right">{{formatIndianNumber(($table4_igst ?? 0) + ($table4_cgst ?? 0) + ($table4_sgst ?? 0) + ($table4_cess ?? 0))}}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <strong>Credit Ledger Total Balance</strong>
+                                            </td>
+                                            <td style="text-align:right">
+                                                {{ formatIndianNumber(($opening['igstTaxBal'] ?? 0) + ($table4_igst ?? 0)) }}
+                                            </td>
+                                            
+                                            <td style="text-align:right">
+                                                {{ formatIndianNumber(($opening['cgstTaxBal'] ?? 0) + ($table4_cgst ?? 0)) }}
+                                            </td>
+                                            
+                                            <td style="text-align:right">
+                                                {{ formatIndianNumber(($opening['sgstTaxBal'] ?? 0) + ($table4_sgst ?? 0)) }}
+                                            </td>
+                                            
+                                            <td style="text-align:right">
+                                                {{ formatIndianNumber(($opening['cessTaxBal'] ?? 0) + ($table4_cess ?? 0)) }}
+                                            </td>
+                                            
+                                            <td style="text-align:right">
+                                                {{ formatIndianNumber(($opening['igstTaxBal'] ?? 0) + ($opening['cgstTaxBal'] ?? 0) + ($opening['sgstTaxBal'] ?? 0) + ($opening['cessTaxBal'] ?? 0) + ($table4_igst ?? 0) + ($table4_cgst ?? 0) + ($table4_sgst ?? 0) + ($table4_cess ?? 0)) }}
+                                            </td>
                                         </tr>
 
                                         <tr>
                                             <td>
                                                 <strong>Cash Ledger Balance</strong>
                                             </td>
-                                            <td></td>
-                                            <td></td>
-                                            <td></td>
-                                            <td></td>
-                                            <td></td>
+                                            
+                                            @php $transactions = []; @endphp
+                                            @if(isset($cash_ledger_balance['cl_bal']))
+                                                @php
+                                                    $transactions = $cash_ledger_balance['cl_bal'];
+                                                @endphp
+                                            @endif
+                                            <td style="text-align:right">{{formatIndianNumber($transactions['igstbal']['tot'] ?? 0)}}</td>
+                                            <td style="text-align:right">{{formatIndianNumber($transactions['cgstbal']['tot'] ?? 0)}}</td>
+                                            <td style="text-align:right">{{formatIndianNumber($transactions['sgstbal']['tot'] ?? 0)}}</td>
+                                            <td style="text-align:right">{{formatIndianNumber($transactions['cessbal']['tot'] ?? 0)}}</td>
+                                            <td style="text-align:right">{{formatIndianNumber(($transactions['igstbal']['tot'] ?? 0) + ($transactions['cgstbal']['tot'] ?? 0) + ($transactions['sgstbal']['tot'] ?? 0) + ($transactions['cessbal']['tot'] ?? 0) )}}</td>
                                         </tr>
                                     </tbody>
                                 </table>
