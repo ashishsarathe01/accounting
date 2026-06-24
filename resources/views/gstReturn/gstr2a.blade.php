@@ -249,6 +249,7 @@
             alert("Please Enter Otp");
             return;
          }
+         $("#cover-spin").show();
          $.ajax({
             url : "{{route('verify-gst-token-otp')}}",
             method : 'post',
@@ -264,15 +265,18 @@
                      getGstData(month,gstin)
                   }else{
                      alert(obj.message);
+                     $("#cover-spin").hide();
                   }
                }else{
                   alert("Something Went Wrong.Please Try Again.");
+                  $("#cover-spin").hide();
                }
             }
          });
       });
    });
    function getGstData(month,gstin){
+      $("#cover-spin").show(); 
       $.ajax({
          url : "{{route('gstr2a-detail')}}",
          method : 'post',
@@ -289,6 +293,7 @@
                   if(obj.message=="TOKEN-OTP"){
                      $("#fgstin").val(gstin);
                      $("#otpModal").modal('toggle');
+                     $("#cover-spin").hide();
                   }else if(obj.message=="SUCCESS"){
                      //alert("OTP Verified Successfully");
                      if(refresh==1){
@@ -436,13 +441,16 @@
 
                      $(".gst_table tbody").html(finalHtml);
                     $("#gst_div").show();
+                    $("#cover-spin").hide(); 
 
                   }
                }else{
                   alert(obj.message);
+                  $("#cover-spin").hide(); 
                }
             }else{
                alert("Something Went Wrong.Please Try Again.");
+               $("#cover-spin").hide();
             }
          }
       });

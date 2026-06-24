@@ -278,10 +278,10 @@ class GSTR2BController extends Controller
                                             $book_sgst_sum    = $jrn->sgst;
                                         }
                                     }
-                                    $taxableMatch = abs(round($book_taxable_val,2) - round($invoice->txval,2)) < 0.5;
-                                    $igstMatch    = abs(round($book_igst_sum,2)    - round($invoice->igst,2))  < 0.5;
-                                    $cgstMatch    = abs(round($book_cgst_sum,2)    - round($invoice->cgst,2))  < 0.5;
-                                    $sgstMatch    = abs(round($book_sgst_sum,2)    - round($invoice->sgst,2))  < 0.5;
+                                    $taxableMatch = round($book_taxable_val,2) == round($invoice->txval,2);
+                                    $igstMatch    = round($book_igst_sum,2)    == round($invoice->igst,2);
+                                    $cgstMatch    = round($book_cgst_sum,2)    == round($invoice->cgst,2);
+                                    $sgstMatch    = round($book_sgst_sum,2)    == round($invoice->sgst,2);
                                     $invoiceAllMatched = $taxableMatch && $igstMatch && $cgstMatch && $sgstMatch;
                                     if(!$invoiceAllMatched){
                                         $supplierFullyMatched[$record->ctin] = false;
@@ -1047,10 +1047,10 @@ class GSTR2BController extends Controller
                                         Edit
                                     </a>";
                     }
-                    $taxableMatch = abs(round($book_taxable,2) - round($invoice->txval,2)) < 0.5;
-                    $igstMatch    = abs(round($book_igst,2) - round($invoice->igst,2)) < 0.5;
-                    $cgstMatch    = abs(round($book_cgst,2) - round($invoice->cgst,2)) < 0.5;
-                    $sgstMatch    = abs(round($book_sgst,2) - round($invoice->sgst,2)) < 0.5;
+                    $taxableMatch = round($book_taxable,2) == round($invoice->txval,2);
+                    $igstMatch    = round($book_igst,2)    == round($invoice->igst,2);
+                    $cgstMatch    = round($book_cgst,2)    == round($invoice->cgst,2);
+                    $sgstMatch    = round($book_sgst,2)    == round($invoice->sgst,2);
                     $allMatched = $taxableMatch && $igstMatch && $cgstMatch && $sgstMatch;
                     if ($allMatched) {
                         $taxableStyle = "color:green;font-weight:bold;";
