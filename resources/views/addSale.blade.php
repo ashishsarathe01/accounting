@@ -2266,7 +2266,7 @@ $(document).on(
                return false;
             }
             if(configuration==1){
-               if($("#vehicle_no").val()=="" || $("#transport_name").val()==""){
+               if ($("#vehicle_no").val() == "") {
                   if(confirm("Are You Save Without Transport Detail")==false){
                      return false;
                   }

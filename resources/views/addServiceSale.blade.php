@@ -1976,7 +1976,7 @@ if(gstApplicable == "0")
             }
             if(configuration==1){
                if($("#vehicle_no").val()=="" || $("#transport_name").val()==""){
-                  if(confirm("Are You Save Without Transport Detail")==false){
+                  if ($("#vehicle_no").val() == "") {
                      return false;
                   }
                }
