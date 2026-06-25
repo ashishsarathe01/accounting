@@ -2030,13 +2030,13 @@ public function update(Request $request){
             $average_detail->created_at = Carbon::now();
             $average_detail->save();
             $lower_date = (strtotime($last_date) < strtotime($request->date)) ? $last_date : $request->date;
-            CommonHelper::RewriteItemAverageByItem($lower_date,$key,$request->input('series_no'));               
+            CommonHelper::RewriteItemAverageByItemApi($lower_date,$key,$request->input('series_no'), $request->input('company_id'));               
          }
          
          
          foreach ($desc_item_arr as $key => $value) {
             if(!array_key_exists($value, $sale_item_array)){
-               CommonHelper::RewriteItemAverageByItem($last_date,$value,$request->input('series_no'));
+               CommonHelper::RewriteItemAverageByItemApi($last_date,$value,$request->input('series_no'), $request->input('company_id'));
             }
          }
          //ADD DATA IN Customer ACCOUNT
@@ -2468,7 +2468,7 @@ public function update(Request $request){
         //     session(['previous_url_saleEdit' => URL::previous()]);
         //     return redirect('sale-invoice/'.$sale->id.'?source=sale')->withSuccess('Sale voucher updated successfully!');
         //  }
-         return response()->josn([
+         return response()->json([
             'code'=>200,
             'message'=>"Sale voucher updated Successfully"
          ]);
