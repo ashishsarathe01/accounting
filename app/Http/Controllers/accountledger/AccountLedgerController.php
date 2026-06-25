@@ -393,11 +393,12 @@ class AccountLedgerController extends Controller
                 }
         
             } else if ($value->entry_type == 4) {  // Purchase Return
-                $action = PurchaseReturn::select('invoice_no', 'series_no', 'financial_year')->where('id', $value->entry_type_id)->first();
-                if ($action) {
-                    $ledger[$key]->bill_no = $action->series_no . "/" . $action->financial_year . "/DR" . $action->invoice_no;
-                }
-        
+               $action = PurchaseReturn::select('sr_prefix')
+                  ->where('id', $value->entry_type_id)
+                  ->first();
+               if ($action) {
+                  $ledger[$key]->bill_no = $action->sr_prefix;
+               }
             } else if ($value->entry_type == 5) {  // Payment
                 $action = Payment::select('voucher_no', 'long_narration')->where('id', $value->entry_type_id)->first();
                 $narration = PaymentDetails::where('id', $value->entry_type_detail_id)->value('narration');

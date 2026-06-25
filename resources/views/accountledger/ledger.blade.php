@@ -144,7 +144,7 @@
                               }else if($entry->entry_type==3){
                                  echo "SRet./Cr Note";
                               }else if($entry->entry_type==4){
-                                 echo "Pur. Ret.";
+                                 echo "Debit Note";
                               }else if($entry->entry_type==5){
                                  echo "Payt.";
                               }else if($entry->entry_type==6){
