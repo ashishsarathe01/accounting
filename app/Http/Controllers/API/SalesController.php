@@ -1408,12 +1408,9 @@ public function GetSalesVoucherbyId(Request $request)
         ], 500);
     }
 }
-
-   public function update(Request $request){
+public function update(Request $request){
     //   Gate::authorize('action-module',61);
       $validated = $request->validate([
-        'company_id' => 'required',
-        'user_id' => 'required',
          'series_no' => 'required',
          'date' => 'required',
          'voucher_no' => 'required',
@@ -1422,9 +1419,11 @@ public function GetSalesVoucherbyId(Request $request)
          'total' => 'required',
          'goods_discription' => 'required|array|min:1',
       ]); 
-
-        $company_id = $request->input('company_id');
-      $userId = $request->input('user_id');
+    //   if(!validated)
+    //   return response()->json([
+    //     'code'=> 400,
+    //     'message'=> $error->message();
+    //   ])
       //Check Item Empty or not
       if($request->input('goods_discription')[0]==""){
          return $this->failedMessage('Plases Select Item','sale/create');
@@ -1442,11 +1441,14 @@ public function GetSalesVoucherbyId(Request $request)
          ||
          $request->input('date') > $fy_end_date
       ){
-        return response()->json([
-            'code' => 422,
-            'message' => 'Selected date is outside current financial year.'
-        ]);
-        
+         return back()
+
+            ->withInput()
+
+            ->withErrors([
+               'date' =>
+               'Selected date is outside current financial year.'
+            ]);
       }
       $financial_year = CommonHelper::getFinancialYear($request->input('date'));
 
@@ -1471,21 +1473,9 @@ public function GetSalesVoucherbyId(Request $request)
       //       print_r($grouped);
       //die;
 
-    $account = Accounts::where('id', $request->input('party'))->first();
-
-if (!$account) {
-    return response()->json([
-        'code' => 404,
-        'message' => 'Account not found'
-    ], 404);
-}
-
-if (empty($account->pin_code)) {
-    return response()->json([
-        'code' => 200,
-        'message' => 'Pincode is null or empty'
-    ]);
-}
+      $account = Accounts::where('id',$request->input('party'))->first();
+         
+     
       $oldSnapshot = [
          'sale' => $sale->toArray(),
 
@@ -1520,21 +1510,6 @@ if (empty($account->pin_code)) {
       }
       $billing_address = $account->address;
       $billing_pincode = $account->pin_code;
-      $account = Accounts::where('id', $request->input('party'))->first();
-
-if (!$billing_pincode) {
-    return response()->json([
-        'code' => 201,
-        'message' => 'Billing pincoed not found'
-    ],);
-}
-
-if (empty($billing_pincode)) {
-    return response()->json([
-        'code' => 201,
-        'message' => 'Pincode is null or empty'
-    ]);
-}
       if($request->input('address') && !empty($request->input('address'))){
          $add = AccountOtherAddress::find($request->input('address'));
          $billing_address = $add->address.",".$add->pincode;
@@ -1565,7 +1540,7 @@ if (empty($billing_pincode)) {
       $sale->shipping_gst = $request->input('shipping_gst');
       $sale->shipping_pan = $request->input('shipping_pan');
       $sale->financial_year = $financial_year;
-      $sale->updated_by = $userId;
+      $sale->updated_by = $request->input('user_id');
       $sale->narration = $request->input('narration');
       $sale->po_no = $request->input('po_no');
       $sale->po_date = $request->input('po_date');
@@ -1596,7 +1571,7 @@ if (empty($billing_pincode)) {
                      $boxSaleOrderId,
 
                   'company_id' =>
-                     $company_id,
+                     $request->input('company_id'),
 
                   'created_at' =>
                      now(),
@@ -1678,7 +1653,7 @@ if (empty($billing_pincode)) {
                ->count();
 
             CommonHelper::updateDailyReelStock(
-               $company_id,
+               $request->input('company_id'),
                $oldRow->goods_discription,
 
                $last_date,
@@ -1737,10 +1712,10 @@ if (empty($billing_pincode)) {
                      ($boxItem->qty - $consumedQty);
                   if($qtys[$key] > $allowedQty)
                   {
-                    return response()->json([
-                        'code' => 422,
-                        'message' => 'Qty cannot exceed pending '
-                    ]);
+                     return back()->withErrors([
+                        'qty' =>
+                        'Qty cannot exceed pending qty.'
+                     ])->withInput();
                   }
                }
             }
@@ -1791,7 +1766,7 @@ if (empty($billing_pincode)) {
             $desc->profit = $profit[$key] ?? 0;
             $desc->price = $prices[$key];
             $desc->amount = $amounts[$key];
-            $desc->company_id = $company_id;
+            $desc->company_id = $request->input('company_id');
             $desc->status = '1';
             $desc->save();
             if($boxSaleOrderItemId)
@@ -1803,7 +1778,7 @@ if (empty($billing_pincode)) {
                   )
                   ->where(
                         'company_id',
-                        $company_id
+                        $request->input('company_id')
                   )
                   ->where(
                         'delete',
@@ -1872,7 +1847,7 @@ if (empty($billing_pincode)) {
 
                         'weight' => $weight,
 
-                        'company_id' => $company_id,
+                        'company_id' => $request->input('company_id'),
 
                         'created_at' => now(),
 
@@ -1889,7 +1864,7 @@ if (empty($billing_pincode)) {
                         'sale_description_id' => $desc->id,
                         'line_text' => $lineText,
                         'sort_order' => $lineIndex + 1,
-                        'company_id' => $company_id,
+                        'company_id' => $request->input('company_id'),
                         'created_at' => now(),
                         'updated_at' => now(),
                      ]);
@@ -1910,10 +1885,10 @@ if (empty($billing_pincode)) {
             $item_ledger->txn_date = $request->input('date');
             $item_ledger->price = $prices[$key];
             $item_ledger->total_price = $amounts[$key];
-            $item_ledger->company_id = $company_id;
+            $item_ledger->company_id = $request->input('company_id');
             $item_ledger->source = 1;
             $item_ledger->source_id = $sale->id;
-            $item_ledger->created_by = $userId;
+            $item_ledger->created_by = $request->input('user_id');
             $item_ledger->created_at = date('d-m-Y H:i:s');
             $item_ledger->save();
             $sizes = [];
@@ -1937,7 +1912,7 @@ if (empty($billing_pincode)) {
             } 
             $reel_count = count($sizes);
             CommonHelper::updateDailyReelStock(
-               $company_id,
+               $request->input('company_id'),
                $good,
 
                $request->input('date'),
@@ -1986,7 +1961,6 @@ if (empty($billing_pincode)) {
          $bill_sundry_amounts = $request->input('bill_sundry_amount');
          SaleSundry::where('sale_id',$sale->id)->delete();
          AccountLedger::where('entry_type_id',$sale->id)->where('entry_type',1)->delete();
-     
          foreach($bill_sundrys as $key => $bill){
             if($bill_sundry_amounts[$key]=="" || $bill==""){
                continue;
@@ -1995,13 +1969,13 @@ if (empty($billing_pincode)) {
             $sundry->sale_id = $sale->id;
             $sundry->bill_sundry = $bill;
             $sundry->rate = $tax_amts[$key];
-            $sundry->company_id = $company_id;
+            $sundry->company_id = $request->input('company_id');
             $sundry->amount = $bill_sundry_amounts[$key];
             $sundry->status = '1';
             $sundry->save();
             //ADD DATA IN CGST ACCOUNT
             $billsundry = BillSundrys::where('id', $bill)->first();
-          
+            
             if($billsundry->adjust_sale_amt=='No'){
                $ledger = new AccountLedger();
                $ledger->account_id = $billsundry->sale_amt_account;
@@ -2012,18 +1986,17 @@ if (empty($billing_pincode)) {
             }   
                $ledger->txn_date = $request->input('date');
                $ledger->series_no = $request->input('series_no');
-               $ledger->company_id = $company_id;
+               $ledger->company_id = $request->input('company_id');
                $ledger->financial_year = $financial_year;
                $ledger->entry_type = 1;
                $ledger->entry_type_id = $sale->id;
                $ledger->map_account_id = $request->input('party');
-               $ledger->created_by = $userId;
+               $ledger->created_by = $request->input('user_id');
                $ledger->created_at = date('d-m-Y H:i:s');
                $ledger->save();
                
             }
          }
-            
          //Average Calculation
          $goods_discriptions = $request->input('goods_discription');
          $qtys = $request->input('qty');
@@ -2044,7 +2017,6 @@ if (empty($billing_pincode)) {
                $sale_item_array[$good] = $avg_qty;
             }    
          }
-           
          foreach ($sale_item_array as $key => $value) {
             //Add Data In Average Details table
             $average_detail = new ItemAverageDetail;
@@ -2054,14 +2026,14 @@ if (empty($billing_pincode)) {
             $average_detail->type = 'SALE';
             $average_detail->sale_id = $sale->id;
             $average_detail->sale_weight = $value;
-
-            $average_detail->company_id = $company_id;
+            $average_detail->company_id = $request->input('company_id');
             $average_detail->created_at = Carbon::now();
             $average_detail->save();
             $lower_date = (strtotime($last_date) < strtotime($request->date)) ? $last_date : $request->date;
             CommonHelper::RewriteItemAverageByItem($lower_date,$key,$request->input('series_no'));               
          }
-    
+         
+         
          foreach ($desc_item_arr as $key => $value) {
             if(!array_key_exists($value, $sale_item_array)){
                CommonHelper::RewriteItemAverageByItem($last_date,$value,$request->input('series_no'));
@@ -2073,12 +2045,12 @@ if (empty($billing_pincode)) {
          $ledger->debit = $request->input('total');
          $ledger->txn_date = $request->input('date');
          $ledger->series_no = $request->input('series_no');
-         $ledger->company_id = $company_id;
+         $ledger->company_id = $request->input('company_id');
          $ledger->financial_year = $financial_year;
          $ledger->entry_type = 1;
          $ledger->entry_type_id = $sale->id;
          $ledger->map_account_id = 35;//Sales Account
-         $ledger->created_by = $userId;
+         $ledger->created_by = $request->input('user_id');
          $ledger->created_at = date('d-m-Y H:i:s');
          $ledger->save();
          //ADD DATA IN Sale ACCOUNT
@@ -2087,15 +2059,14 @@ if (empty($billing_pincode)) {
          $ledger->credit = $request->input('taxable_amt');
          $ledger->txn_date = $request->input('date');
          $ledger->series_no = $request->input('series_no');
-         $ledger->company_id = $company_id;
+         $ledger->company_id = $request->input('company_id');
          $ledger->financial_year = $financial_year;
          $ledger->entry_type = 1;
          $ledger->entry_type_id = $sale->id;
          $ledger->map_account_id = $request->input('party');
-         $ledger->created_by = $userId;
+         $ledger->created_by = $request->input('user_id');
          $ledger->created_at = date('d-m-Y H:i:s');
          $ledger->save();
-     
          //Update Sale Order Id Code ...................
          if($request->sale_order_id!=""){
             SaleOrderItemWeight::where('sale_order_id',$request->sale_order_id)->delete();
@@ -2108,7 +2079,7 @@ if (empty($billing_pincode)) {
                                  ->first();
             if ($saleOrder) {
                // Update sale order
-               $saleOrder->update(['status' => 1,'updated_at'=>Carbon::now(),"updated_by"=>$userId]);
+               $saleOrder->update(['status' => 1,'updated_at'=>Carbon::now(),"updated_by"=>$request->input('user_id')]);
                // Update items
                foreach ($saleOrder->items as $item) {
                   $item->update(['status' => 1]);
@@ -2153,7 +2124,7 @@ if (empty($billing_pincode)) {
                         $sale_order_item_weight->sale_order_item_row_id = $val1['detail_row_id'];
                         $sale_order_item_weight->weight = $val2;
                         $sale_order_item_weight->weight_id = $val1['reel_weight_id'][$k3];
-                        $sale_order_item_weight->company_id = $company_id;
+                        $sale_order_item_weight->company_id = $request->input('company_id');
                         $sale_order_item_weight->created_at = Carbon::now();
                         $sale_order_item_weight->save();
                         // print_r($group_index);
@@ -2195,8 +2166,8 @@ if (empty($billing_pincode)) {
                   $new_sale_order->shipp_to = $sale_order->shipp_to;
                   $new_sale_order->freight = $sale_order->freight;
                   $new_sale_order->parent_order_no = $sale_order->sale_order_no;
-                  $new_sale_order->company_id = $company_id;
-                  $new_sale_order->created_by = $userId;
+                  $new_sale_order->company_id = $request->input('company_id');
+                  $new_sale_order->created_by = auth()->id();
                   $new_sale_order->created_at = Carbon::now();
                   if($new_sale_order->save()){
                      $item_check_arr = [];$gsm_check_arr = [];
@@ -2212,7 +2183,7 @@ if (empty($billing_pincode)) {
                            $new_sale_order_item->bill_price = $sale_order_item->bill_price;
                            $new_sale_order_item->unit = $sale_order_item->unit;
                            $new_sale_order_item->sub_unit = $sale_order_item->sub_unit;
-                           $new_sale_order_item->company_id = $company_id;
+                           $new_sale_order_item->company_id = $request->input('company_id');
                            $new_sale_order_item->created_at = Carbon::now();
                            $new_sale_order_item->save();
                            $item_check_arr[$nval['sale_order_item_id']] = $new_sale_order_item->id;
@@ -2227,7 +2198,7 @@ if (empty($billing_pincode)) {
                               $new_sale_order_item_gsm->sale_orders_id = $new_sale_order->id;
                               $new_sale_order_item_gsm->sale_order_item_id = $new_sale_order_item_id;
                               $new_sale_order_item_gsm->gsm = $sale_order_item_gsm->gsm;
-                              $new_sale_order_item_gsm->company_id = $company_id;
+                              $new_sale_order_item_gsm->company_id = $request->input('company_id');
                               $new_sale_order_item_gsm->created_at = Carbon::now();
                               $new_sale_order_item_gsm->save();
                               $gsm_check_arr[$nval['sale_order_item_gsm_id']] = $new_sale_order_item_gsm->id;
@@ -2241,7 +2212,7 @@ if (empty($billing_pincode)) {
                               $new_sale_order_item_gsm_size->sale_order_item_gsm_id = $new_sale_order_item_gsm_id;
                               $new_sale_order_item_gsm_size->size = $sale_order_item_gsm_size->size;
                               $new_sale_order_item_gsm_size->quantity = $nval['quantity'];
-                              $new_sale_order_item_gsm_size->company_id = $company_id;
+                              $new_sale_order_item_gsm_size->company_id = $request->input('company_id');
                               $new_sale_order_item_gsm_size->created_at = Carbon::now();
                               $new_sale_order_item_gsm_size->save();
                            }
@@ -2283,9 +2254,9 @@ if (empty($billing_pincode)) {
                $vehicle_info->vehicle_id = $request->input('vehicle_info');
                $vehicle_info->vehicle_freight_price = $request->input('vehicle_freight');
                $vehicle_info->vehicle_freight_amount = $item_quantity_total * $request->input('vehicle_freight');
-               $vehicle_info->company_id = $company_id;
+               $vehicle_info->company_id = $request->input('company_id');
                $vehicle_info->created_at = Carbon::now();
-               $vehicle_info->created_by = $userId;
+               $vehicle_info->created_by = $request->input('user_id');
                $vehicle_info->save();
             }
             if($request->input('vehicle_info_type')=="to_pay" && $request->sale_order_id!="" ){
@@ -2315,14 +2286,14 @@ if (empty($billing_pincode)) {
                }
                
                //Journal Entry For Transporter Voucher No
-               $series_configuration = VoucherSeriesConfiguration::where('company_id', $company_id)
+               $series_configuration = VoucherSeriesConfiguration::where('company_id', $request->input('company_id'))
                                                                   ->where('series', $request->input('series_no'))
                                                                   ->where('configuration_for', 'JOURNAL') 
                                                                   ->where('status', '1')
                                                                   ->first();
                $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
                $lastNumber = DB::table('journals')
-                                 ->where('company_id', $company_id)
+                                 ->where('company_id', $request->input('company_id'))
                                  ->where('financial_year', $financial_year)
                                  ->where('series_no', $request->input('series_no'))
                                  ->where('delete', '0')
@@ -2347,9 +2318,9 @@ if (empty($billing_pincode)) {
                   }
                   if ($series_configuration->year == "PREFIX TO NUMBER") {
                      if ($series_configuration->year_format == "YY-YY") {
-                        $journal_invoice_prefix .= $financial_year;
+                        $journal_invoice_prefix .= $request->input('default_fy');
                      } else {
-                        $fy = explode('-', $financial_year);
+                        $fy = explode('-', $request->input('default_fy'));
                         $journal_invoice_prefix .= '20' . $fy[0] . '-' . $fy[1];
                      }
                      if ($series_configuration->separator_2 != "") {
@@ -2362,9 +2333,9 @@ if (empty($billing_pincode)) {
                         $journal_invoice_prefix .= $series_configuration->separator_2;
                      }
                      if ($series_configuration->year_format == "YY-YY") {
-                        $journal_invoice_prefix .= $financial_year;
+                        $journal_invoice_prefix .= $request->input('default_fy');
                      } else {
-                        $fy = explode('-', $financial_year);
+                        $fy = explode('-', $request->input('default_fy'));
                         $journal_invoice_prefix .= '20' . $fy[0] . '-' . $fy[1];
                      }
                   }
@@ -2385,7 +2356,7 @@ if (empty($billing_pincode)) {
                $journal->voucher_no_prefix = $journal_invoice_prefix;
                $journal->series_no = $request->input('series_no');
                $journal->long_narration = "Bill No : ".$sale->voucher_no_prefix.", Vehicle No. : ".$request->input('vehicle_no').", Location : ".$location_name.", GR/PR No. : ".$request->input('gr_pr_no');
-               $journal->company_id = $company_id;
+               $journal->company_id = $request->input('company_id');
                $journal->financial_year = $financial_year;
                $journal->claim_gst_status = 'NO';
                $journal->merchant_gst = $request->input('merchant_gst');
@@ -2402,11 +2373,11 @@ if (empty($billing_pincode)) {
                   $expense = DB::table('sale-order-settings')
                                     ->where('setting_type','EXPENSE_ACCOUNT')
                                     ->where('setting_for','SALE ORDER')
-                                    ->where('company_id',$company_id)
+                                    ->where('company_id',$request->input('company_id'))
                                     ->first();
                   $joundetail = new JournalDetails;
                   $joundetail->journal_id = $journal->id;
-                  $joundetail->company_id = $company_id;
+                  $joundetail->company_id = $request->input('company_id');
                   $joundetail->type = "Credit";
                   $joundetail->account_name = $request->input('vehicle_info');
                   $joundetail->debit = '0';
@@ -2421,19 +2392,19 @@ if (empty($billing_pincode)) {
                   $ledger->map_account_id = $expense->expense_account_id;
                   $ledger->series_no = $request->input('series_no');
                   $ledger->txn_date = $request->input('date');
-                  $ledger->company_id = $company_id;
+                  $ledger->company_id = $request->input('company_id');
                   $ledger->financial_year = $financial_year;
                   $ledger->entry_type = 7;
                   $ledger->entry_type_id = $journal->id;
                   $ledger->entry_narration = "";               
-                  $ledger->created_by = $userId;
+                  $ledger->created_by = $request->input('user_id');
                   $ledger->created_at = date('d-m-Y H:i:s');
                   $ledger->save();
                   //Add Freight Account Debit
                   
                   $joundetail = new JournalDetails;
                   $joundetail->journal_id = $journal->id;
-                  $joundetail->company_id = $company_id;
+                  $joundetail->company_id = $request->input('company_id');;
                   $joundetail->type = "Debit";
                   $joundetail->account_name = $expense->expense_account_id;
                   $joundetail->debit = $transporter_total_amount;
@@ -2448,12 +2419,12 @@ if (empty($billing_pincode)) {
                   $ledger->map_account_id = $request->input('vehicle_info');
                   $ledger->series_no = $request->input('series_no');
                   $ledger->txn_date = $request->input('date');
-                  $ledger->company_id = $company_id;
+                  $ledger->company_id = $request->input('company_id');
                   $ledger->financial_year = $financial_year;
                   $ledger->entry_type = 7;
                   $ledger->entry_type_id = $journal->id;
                   $ledger->entry_narration = "";               
-                  $ledger->created_by = $userId;
+                  $ledger->created_by = $request->input('user_id');
                   $ledger->created_at = date('d-m-Y H:i:s');
                   $ledger->save();
                      
@@ -2486,958 +2457,1131 @@ if (empty($billing_pincode)) {
             'action'      => 'edit',
             'old_data'    => $oldSnapshot,
             'new_data'    => $newSnapshot,
-            'action_by'   => $userId,
-            'company_id'  => $company_id,
+            'action_by'   => $request->input('user_id'),
+            'company_id'  => $request->input('company_id'),
             'action_at'   => now(),
          ]);
         
-         return response()->json([
-            'code'  => 200,
-            'message' => 'Sale voucher updated successfully!',
-            'data'    => [
-                'sale_id'    => $sale->id,
-                'voucher_no' => $sale->voucher_no
-            ]
-        ]);
-         
-      }else{
-       return response()->json([
-            'code'  => 201,
-            'message' => 'Something went wrong processing your request'
-        ]);
+        //  if(!empty($request->input('redirect_url'))){
+        //     return redirect($request->input('redirect_url'));
+        //  }else{
+        //     session(['previous_url_saleEdit' => URL::previous()]);
+        //     return redirect('sale-invoice/'.$sale->id.'?source=sale')->withSuccess('Sale voucher updated successfully!');
+        //  }
+         return response()->josn([
+            'code'=>200,
+            'message'=>"Sale voucher updated Successfully"
+         ]);
       }
+    //   e
+    //   lse{
+    //      return $this->failedMessage('Something went wrong','sale/create');
+    //      exit();
+    //   }
       
    }
-// public function update(Request $request)
-// {
+//    public function update(Request $request){
+//     //   Gate::authorize('action-module',61);
+//       $validated = $request->validate([
+//         'company_id' => 'required',
+//         'user_id' => 'required',
+//          'series_no' => 'required',
+//          'date' => 'required',
+//          'voucher_no' => 'required',
+//          'party' => 'required',
+//          'material_center' => 'required',
+//          'total' => 'required',
+//          'goods_discription' => 'required|array|min:1',
+//       ]); 
 
-//     // Gate::authorize('action-module', 61);
+//         $company_id = $request->input('company_id');
+//       $userId = $request->input('user_id');
+//       //Check Item Empty or not
+//       if($request->input('goods_discription')[0]==""){
+//          return $this->failedMessage('Plases Select Item','sale/create');
+//       }
+//       $default_fy = $request->input('default_fy');
 
-//     // 2. Request Validation
-//       $validator = Validator::make($request->all(), [
-//             'user_id' => 'required',
-//             'company_id' => 'required',
-//             'default_fy'   => 'required',
-//             'sale_edit_id'    => 'required', 
-            
-//             'series_no' => 'required',
-//             'date' => 'required',
-//             'voucher_no' => 'required',
-//             'party' => 'required',
-//             'material_center' => 'required',
-//             'total' => 'required',
-//             'goods_discription' => 'required',
-//             'qty' => 'required',
-//             'units' => 'required',
-//             'price' => 'required',
-//             'amount' => 'required',
-//             'bill_sundry' => 'required',
-//             'bill_sundry_amount' => 'required',
-//             'self_vehicle' => 'required',
-//             'transport_name' => 'required',
-//         ], [
-//             'sale_edit_id.required' => 'Sale edit id is required.',
-//             'default_fy.required' => 'Default financial year is required.',
-//             'company_id.required' => 'Company id is required.',
-//             'series_no.required' => 'Series number is required.',
-//             'date.required' => 'Date is required.',
-//             'voucher_no.required' => 'Voucher number is required.',
-//             'party.required' => 'Party id is required.',
-//             'material_center.required' => 'Material center is required.',
-//             'tax_rate.required' => 'Tax rate is required.',
-//             'tax.required' => 'Tax is required.',
-//             'total.required' => 'Total is required.',
-//             'goods_discription.required' => 'Goods discription is required.',
-//             'qty.required' => 'Goods qty is required.',
-//             'units.required' => 'Goods unit is required.',
-//             'price.required' => 'Goods price is required.',
-//             'amount.required' => 'Goods amounts is required.',
-//             'bill_sundry.required' => 'Bill sundry is required.',
-//             // 'tax_amt.required' => 'Bill sundry tax amount is required.',
-//             'bill_sundry_amount.required' => 'Bill sundry amount is required.',
-//             'self_vehicle.required' => 'Self vehicle is required.',
-//             'transport_name.required' => 'Transport name is required.'
+//       [$startYY, $endYY] = explode('-', $default_fy);
+
+//       $fy_start_date = '20'.$startYY.'-04-01';
+
+//       $fy_end_date = '20'.$endYY.'-03-31';
+
+//       if(
+//          $request->input('date') < $fy_start_date
+//          ||
+//          $request->input('date') > $fy_end_date
+//       ){
+//         return response()->json([
+//             'code' => 422,
+//             'message' => 'Selected date is outside current financial year.'
 //         ]);
+        
+//       }
+//       $financial_year = CommonHelper::getFinancialYear($request->input('date'));
 
-//         if ($validator->fails()) {
-//             return response()->json($validator->errors(), 422);
-//         }
+//          $sale = Sales::find($request->input('sale_edit_id'));
+//          $oldBoxSaleOrderIds = DB::table('sale_box_sale_orders')
 
-//     // $validated = $request->validate([
-//     //     'user_id'           => 'required',
-//     //     'company_id'        => 'required',
-//     //     'default_fy'        => 'required',
-//     //     'sale_edit_id'      => 'required', 
-//     //     'series_no'         => 'required',
-//     //     'date'              => 'required|date',
-//     //     'voucher_no'        => 'required',
-//     //     'party'             => 'required',
-//     //     'material_center'   => 'required',
-//     //     'total'             => 'required',
-//     //     'goods_discription' => 'required|array|min:1',
-//     // ]);
+//             ->where('sale_id', $sale->id)
 
-//     // Check Item Empty or not
-//     if ($request->input('goods_discription')[0] == "") {
-//         return response()->json([
-//             'status'  => false,
-//             'message' => 'Plases Select Item' // Preserved original developer spelling
-//         ], 400);
-//     }
+//             ->pluck('box_sale_order_id')
 
-//     // Stateless Context: Resolve active company, user, and financial year details from request/user profile
-//     $userId     = $request->input('user_id');
-//     $companyId  = $request->input('company_id');
-//     $default_fy = $request->input('default_fy');
-//     if (!$default_fy) {
-//         return response()->json(['status' => false, 'message' => 'Financial year context is required.'], 400);
-//     }
-
-//     [$startYY, $endYY] = explode('-', $default_fy);
-//     $fy_start_date = '20' . $startYY . '-04-01';
-//     $fy_end_date   = '20' . $endYY . '-03-31';
-
-//     if ($request->input('date') < $fy_start_date || $request->input('date') > $fy_end_date) {
-//         return response()->json([
-//             'message' => 'The given data was invalid.',
-//             'errors'  => ['date' => ['Selected date is outside current financial year.']]
-//         ], 422);
-//     }
-
-//     $financial_year = CommonHelper::getFinancialYear($request->input('date'));
-//     $sale           = Sales::find($request->input('sale_edit_id'));
-
-//     if (!$sale) {
-//         return response()->json(['status' => false, 'message' => 'Sale record not found.'], 444);
-//     }
-
-//     $oldBoxSaleOrderIds = DB::table('sale_box_sale_orders')
-//         ->where('sale_id', $sale->id)
-//         ->pluck('box_sale_order_id')
-//         ->toArray();
+//             ->toArray();
+//       //Check Dulicate Invoice Number
+//      //dd($request->all());
+//       // echo "<pre>";
+//       // print_r($request->all());
+//       // $sale_enter_data = json_decode($request->sale_enter_data,true);
+//       //       $grouped = [];
+//       //       foreach ($sale_enter_data as $item) {
+//       //          $key = $item['detail_row_id'];
+//       //          $grouped[$key][] = $item;
+//       //       }
+//       //       print_r($grouped);
+//       //die;
 
 //     $account = Accounts::where('id', $request->input('party'))->first();
-//     if (!$account) {
-//         return response()->json(['status' => false, 'message' => 'Party account not found.'], 444);
-//     }
-        
-//     // 3. Generate Historical Data Snapshot
-//     $oldSnapshot = [
-//         'sale'                 => $sale->toArray(),
-//         'items'                => SaleDescription::where('sale_id', $sale->id)->get()->toArray(),
-//         'sundries'             => SaleSundry::where('sale_id', $sale->id)->get()->toArray(),
-//         'item_ledgers'         => ItemLedger::where('source', 1)->where('source_id', $sale->id)->get()->toArray(),
-//         'account_ledgers'      => AccountLedger::where('entry_type', 1)->where('entry_type_id', $sale->id)->get()->toArray(),
-//         'item_average_details' => ItemAverageDetail::where('sale_id', $sale->id)->where('type', 'SALE')->get()->toArray(),
-//     ];
 
-//     $last_date = $sale->date; 
-    
-//     // Update Master Sale Voucher Entry
-//     $sale->series_no = $request->input('series_no');
-//     $sale->date      = $request->input('date');
+// if (!$account) {
+//     return response()->json([
+//         'code' => 404,
+//         'message' => 'Account not found'
+//     ], 404);
+// }
 
-//     $voucher_prefix = "";
-//     if (!empty($request->input('voucher_prefix'))) {
-//         $voucher_prefix_arr = explode("/", $request->input('voucher_prefix'));
-//         if (count($voucher_prefix_arr) > 1) {
-//             $voucher_prefix = $voucher_prefix_arr[0] . "/" . $voucher_prefix_arr[1] . "/";
-//         } else if (count($voucher_prefix_arr) == 1) {
+// if (empty($account->pin_code)) {
+//     return response()->json([
+//         'code' => 200,
+//         'message' => 'Pincode is null or empty'
+//     ]);
+// }
+//       $oldSnapshot = [
+//          'sale' => $sale->toArray(),
+
+//          'items' => SaleDescription::where('sale_id', $sale->id)->get()->toArray(),
+
+//          'sundries' => SaleSundry::where('sale_id', $sale->id)->get()->toArray(),
+
+//          'item_ledgers' => ItemLedger::where('source', 1)
+//             ->where('source_id', $sale->id)
+//             ->get()->toArray(),
+
+//          'account_ledgers' => AccountLedger::where('entry_type', 1)
+//             ->where('entry_type_id', $sale->id)
+//             ->get()->toArray(),
+
+//          'item_average_details' => ItemAverageDetail::where('sale_id', $sale->id)
+//             ->where('type', 'SALE')
+//             ->get()->toArray(),
+//       ];
+//       $last_date = $sale->date; 
+//       //If Same Series Edit
+//       $sale->series_no = $request->input('series_no');
+//       $sale->date = $request->input('date');
+//       $voucher_prefix = "";
+//       if(!empty($request->input('voucher_prefix'))){
+//          $voucher_prefix_arr = explode("/",$request->input('voucher_prefix'));
+//          if(count($voucher_prefix_arr)>1){
+//             $voucher_prefix = $voucher_prefix_arr[0]."/".$voucher_prefix_arr[1]."/";
+//          }else if(count($voucher_prefix_arr)==1){
 //             $voucher_prefix = "";
-//         }
-//     }
+//          }
+//       }
+//       $billing_address = $account->address;
+//       $billing_pincode = $account->pin_code;
+//       $account = Accounts::where('id', $request->input('party'))->first();
 
-//  $billing_address = $account->address; // Default fallback 
-//     $billing_pincode = $account->pin_code; // Default fallback 
+// if (!$billing_pincode) {
+//     return response()->json([
+//         'code' => 201,
+//         'message' => 'Billing pincoed not found'
+//     ],);
+// }
 
-//     if ($request->input('address') && !empty($request->input('address'))) { // 
-//         $add = AccountOtherAddress::find($request->input('address')); // 
-        
-//         // Ensure the record actually exists in the database
-//         if ($add) {
-//             $billing_address = $add->address . "," . $add->pincode; // 
-//             $billing_pincode = $add->pincode; // 
-//         }
-//     }
+// if (empty($billing_pincode)) {
+//     return response()->json([
+//         'code' => 201,
+//         'message' => 'Pincode is null or empty'
+//     ]);
+// }
+//       if($request->input('address') && !empty($request->input('address'))){
+//          $add = AccountOtherAddress::find($request->input('address'));
+//          $billing_address = $add->address.",".$add->pincode;
+//          $billing_pincode = $add->pincode;
+//       } 
+//       $sale->party = $request->input('party');
+//       $sale->material_center = $request->input('material_center');
+//       $sale->taxable_amt = $request->input('taxable_amt');
+//       $sale->total = $request->input('total');
+//       $sale->self_vehicle = $request->input('self_vehicle');
+//       $sale->vehicle_no = $request->input('vehicle_no');
+//       $sale->address_id = $request->input('address');
+//       $sale->ewaybill_no = $request->input('ewaybill_no');
+//       $sale->transport_name = $request->input('transport_name');
+//       $sale->reverse_charge = $request->input('reverse_charge');
+//       $sale->gr_pr_no = $request->input('gr_pr_no');
+//       $sale->station = $request->input('station');
+//       $sale->billing_name = $account->print_name;
+//       $sale->billing_address = $billing_address;
+//       $sale->billing_pincode = $billing_pincode;
+//       $sale->billing_gst = $account->gstin;
+//       $sale->billing_pan = $account->pan;
+//       $sale->billing_state = $account->state;
+//       $sale->shipping_name = $request->input('shipping_name');
+//       $sale->shipping_state = $request->input('shipping_state');
+//       $sale->shipping_address = $request->input('shipping_address');
+//       $sale->shipping_pincode = $request->input('shipping_pincode');
+//       $sale->shipping_gst = $request->input('shipping_gst');
+//       $sale->shipping_pan = $request->input('shipping_pan');
+//       $sale->financial_year = $financial_year;
+//       $sale->updated_by = $userId;
+//       $sale->narration = $request->input('narration');
+//       $sale->po_no = $request->input('po_no');
+//       $sale->po_date = $request->input('po_date');
+//       $sale->save();
 
-//     $sale->party            = $request->input('party');
-//     $sale->material_center  = $request->input('material_center');
-//     $sale->taxable_amt      = $request->input('taxable_amt');
-//     $sale->total            = $request->input('total');
-//     $sale->self_vehicle     = $request->input('self_vehicle');
-//     $sale->vehicle_no       = $request->input('vehicle_no');
-//     $sale->address_id       = $request->input('address');
-//     $sale->ewaybill_no      = $request->input('ewaybill_no');
-//     $sale->transport_name   = $request->input('transport_name');
-//     $sale->reverse_charge   = $request->input('reverse_charge');
-//     $sale->gr_pr_no         = $request->input('gr_pr_no');
-//     $sale->station          = $request->input('station');
-//     $sale->billing_name     = $account->print_name;
-//     $sale->billing_address  = $billing_address;
-//     $sale->billing_pincode  = $billing_pincode;
-//     $sale->billing_gst      = $account->gstin;
-//     $sale->billing_pan      = $account->pan;
-//     $sale->billing_state    = $account->state;
-//     $sale->shipping_name    = $request->input('shipping_name');
-//     $sale->shipping_state   = $request->input('shipping_state');
-//     $sale->shipping_address = $request->input('shipping_address');
-//     $sale->shipping_pincode = $request->input('shipping_pincode');
-//     $sale->shipping_gst     = $request->input('shipping_gst');
-//     $sale->shipping_pan     = $request->input('shipping_pan');
-//     $sale->financial_year   = $financial_year;
-//     $sale->updated_by       = $userId;
-//     $sale->narration        = $request->input('narration');
-//     $sale->po_no            = $request->input('po_no');
-//     $sale->po_date          = $request->input('po_date');
-//     $sale->save();
+//       DB::table('sale_box_sale_orders')
+//          ->where('sale_id', $sale->id)
+//          ->delete();
 
-//     // 4. Update Box Sale Orders mappings
-//     DB::table('sale_box_sale_orders')->where('sale_id', $sale->id)->delete();
-//     if ($request->filled('box_sale_order_ids') && is_array($request->box_sale_order_ids)) {
-//         foreach (array_unique($request->box_sale_order_ids) as $boxSaleOrderId) {
-//             DB::table('sale_box_sale_orders')->insert([
-//                 'sale_id'           => $sale->id,
-//                 'box_sale_order_id' => $boxSaleOrderId,
-//                 'company_id'        => $companyId,
-//                 'created_at'        => now(),
-//                 'updated_at'        => now()
-//             ]);
-//         }
-//     }
+//       if(
+//          $request->filled('box_sale_order_ids')
+//          &&
+//          is_array($request->box_sale_order_ids)
+//       )
+//       {
+//          foreach(
+//             array_unique($request->box_sale_order_ids)
+//             as $boxSaleOrderId
+//          )
+//          {
+//             DB::table('sale_box_sale_orders')
+//                ->insert([
 
-//     if ($request->filled('goods_discription') && is_array($request->goods_discription) &&
-//         $request->filled('box_sale_order_ids') && is_array($request->box_sale_order_ids)) {
+//                   'sale_id' =>
+//                      $sale->id,
 
-//         $actualGoodsDescriptions = [];
-//         foreach ($request->goods_discription as $soItemId) {
-//             $soItem = DB::table('box_sale_order_items')->where('id', $soItemId)->select('item_id')->first();
-//             $actualGoodsDescriptions[] = $soItem ? $soItem->item_id : null;
-//         }
+//                   'box_sale_order_id' =>
+//                      $boxSaleOrderId,
 
-//         $request->merge([
-//             'box_sale_order_item_id' => $request->goods_discription,
-//             'goods_discription'      => $actualGoodsDescriptions
-//         ]);
-//     }
+//                   'company_id' =>
+//                      $company_id,
 
-//     if ($sale->id) {
-//         $goods_discriptions = $request->input('goods_discription');
-//         $item_descriptions  = $request->input('item_description');
-//         $description_lines  = $request->input('description_lines');
-//         $qtys               = $request->input('qty');
-//         $total_weights      = $request->input('total_weight');
-//         $units              = $request->input('units');
-//         $prices             = $request->input('price');
-//         $amounts            = $request->input('amount');
+//                   'created_at' =>
+//                      now(),
 
-//         DB::table('sale_description_lines')->where('sale_id', $sale->id)->delete();
-//         $desc_item_arr = SaleDescription::where('sale_id', $sale->id)->pluck('goods_discription')->toArray();
-//         $old_size_ids  = ItemSizeStock::where('sale_id', $sale->id)->pluck('id')->toArray();
-        
-//         // Revert inventory stock logs back to original levels prior to edit
-//         $oldDescriptions = SaleDescription::where('sale_id', $sale->id)->get();
-//         foreach ($oldDescriptions as $oldRow) {
-//             $old_reel_count = ItemSizeStock::where('sale_description_id', $oldRow->id)->count();
+//                   'updated_at' =>
+//                      now()
+
+//                ]);
+//          }
+//       }
+
+//       if(
+//          $request->filled('goods_discription')
+//          &&
+//          is_array($request->goods_discription)
+//          &&
+//          $request->filled('box_sale_order_ids')
+//          &&
+//          is_array($request->box_sale_order_ids)
+//       )
+//       {
+
+//          $actualGoodsDescriptions = [];
+
+//          foreach(
+//             $request->goods_discription
+//             as $soItemId
+//          )
+//          {
+
+//             $soItem = DB::table('box_sale_order_items')
+
+//                ->where('id',$soItemId)
+
+//                ->select('item_id')
+
+//                ->first();
+
+//             $actualGoodsDescriptions[] =
+//                $soItem
+//                ? $soItem->item_id
+//                : null;
+//          }
+
+//          $request->merge([
+
+//             'box_sale_order_item_id' =>
+//                $request->goods_discription,
+
+//             'goods_discription' =>
+//                $actualGoodsDescriptions
+
+//          ]);
+
+//       }
+
+//       if ($sale->id) {
+//          $goods_discriptions = $request->input('goods_discription');
+//          $item_descriptions = $request->input('item_description');
+//          $description_lines = $request->input('description_lines');
+//          $qtys   = $request->input('qty');
+//          $total_weights = $request->input('total_weight');
+//          $units  = $request->input('units');
+//          $prices = $request->input('price');
+//          $amounts = $request->input('amount');
+//          DB::table('sale_description_lines')
+//             ->where('sale_id', $sale->id)
+//             ->delete();
+//          $desc_item_arr = SaleDescription::where('sale_id',$sale->id)->pluck('goods_discription')->toArray();
+//          $old_size_ids = ItemSizeStock::where('sale_id', $sale->id)
+//                               ->pluck('id')
+//                               ->toArray();
+//          $oldDescriptions = SaleDescription::where('sale_id', $sale->id)
+//             ->get();
+
+//          foreach ($oldDescriptions as $oldRow) {
+
+//             $old_reel_count = ItemSizeStock::where('sale_description_id', $oldRow->id)
+//                ->count();
+
 //             CommonHelper::updateDailyReelStock(
-//                 $companyId,
-//                 $oldRow->goods_discription,
-//                 $last_date,
-//                 0,
-//                 0,
-//                 -$old_reel_count,
-//                 -($oldRow->dual_unit == 1 ? $oldRow->taarobaar_qty : $oldRow->qty)
+//                $company_id,
+//                $oldRow->goods_discription,
+
+//                $last_date,
+
+//                0,
+//                0,
+
+//                -$old_reel_count,
+//                -(
+//                   $oldRow->dual_unit == 1
+//                   ? $oldRow->taarobaar_qty
+//                   : $oldRow->qty
+//                )
 //             );
-//         }
-
-//         SaleDescription::where('sale_id', $sale->id)->delete();
-//         DB::table('taarobar_sale_description_piece_weights')->where('sale_id', $sale->id)->delete();
-//         ItemLedger::where('source_id', $sale->id)->where('source', 1)->delete();
-//         ItemAverageDetail::where('sale_id', $sale->id)->where('type', 'SALE')->delete();
-
-//         $new_size_ids        = [];
-//         $desc_id_arr         = [];
-//         $item_quantity_total = 0;
-//         $pricewithgst        = $request->input('pricewithgst');
-//         $profit              = $request->input('profit');
-
-//         // Loop over updated descriptions
-//         foreach ($goods_discriptions as $key => $good) {
-//             $boxSaleOrderItemId = $request->box_sale_order_item_id[$key] ?? null;
-//             if ($boxSaleOrderItemId) {
-//                 $boxItem = DB::table('box_sale_order_items')->where('id', $boxSaleOrderItemId)->first();
-//                 if ($boxItem) {
-//                     $oldQty = DB::table('sale_descriptions')
+//          }
+//          SaleDescription::where('sale_id', $sale->id)->delete();
+//          DB::table('taarobar_sale_description_piece_weights')
+//             ->where('sale_id', $sale->id)
+//             ->delete();
+//          ItemLedger::where('source_id', $sale->id)->where('source', 1)->delete();
+//          ItemAverageDetail::where('sale_id', $sale->id)
+//                            ->where('type', 'SALE')
+//                            ->delete();
+//          $new_size_ids = [];$desc_id_arr = [];$item_quantity_total = 0;
+//          $pricewithgst = $request->input('pricewithgst');
+//          $profit = $request->input('profit');
+//          foreach ($goods_discriptions as $key => $good) {
+//             $boxSaleOrderItemId =
+//                $request->box_sale_order_item_id[$key] ?? null;
+//             if($boxSaleOrderItemId)
+//             {
+//                $boxItem =
+//                   DB::table('box_sale_order_items')
+//                      ->where('id', $boxSaleOrderItemId)
+//                      ->first();
+//                if($boxItem)
+//                {
+//                   $oldQty =
+//                      DB::table('sale_descriptions')
 //                         ->where('sale_id', $sale->id)
-//                         ->where('box_sale_order_item_id', $boxSaleOrderItemId)
+//                         ->where(
+//                            'box_sale_order_item_id',
+//                            $boxSaleOrderItemId
+//                         )
 //                         ->sum('qty');
-//                     $consumedQty = DB::table('sale_descriptions')
-//                         ->where('box_sale_order_item_id', $boxSaleOrderItemId)
+//                   $consumedQty =
+//                      DB::table('sale_descriptions')
+//                         ->where(
+//                            'box_sale_order_item_id',
+//                            $boxSaleOrderItemId
+//                         )
 //                         ->where('sale_id', '!=', $sale->id)
 //                         ->where('delete', '0')
 //                         ->sum('qty');
-//                     $allowedQty = ($boxItem->qty - $consumedQty);
-                    
-//                     if ($qtys[$key] > $allowedQty) {
-//                         return response()->json([
-//                             'message' => 'The given data was invalid.',
-//                             'errors'  => ['qty' => ['Qty cannot exceed pending qty.']]
-//                         ], 422);
-//                     }
-//                 }
-//             }
-
-//             if ($good == "" || $qtys[$key] == "" || $units[$key] == "" || $prices[$key] == "" || $amounts[$key] == "") {
-//                 continue;
-//             }
-
-//             $item_quantity_total += $qtys[$key];
-//             $desc                = new SaleDescription;
-//             $desc->sale_id       = $sale->id;
-//             $desc->goods_discription = $good;
-//             $desc->box_sale_order_item_id = !empty($request->box_sale_order_ids) ? ($request->box_sale_order_item_id[$key] ?? null) : null;
-//             $desc->item_description = $item_descriptions[$key] ?? '';
-            
-//             $itemData = ManageItems::find($good);
-//             if ($itemData && $itemData->dual_unit == 1) {
-//                 $desc->qty           = rtrim(rtrim(number_format((float)($total_weights[$key] ?? 0), 2, '.', ''), '0'), '.');
-//                 $desc->taarobaar_qty = rtrim(rtrim(number_format((float)$qtys[$key], 2, '.', ''), '0'), '.');
-//             } else {
-//                 $desc->qty           = rtrim(rtrim(number_format((float)$qtys[$key], 2, '.', ''), '0'), '.');
-//                 $desc->taarobaar_qty = rtrim(rtrim(number_format((float)($total_weights[$key] ?? 0), 2, '.', ''), '0'), '.');
-//             }
-
-//             $desc->dual_unit    = ($itemData && $itemData->dual_unit == 1) ? 1 : 0;
-//             $desc->unit         = $units[$key];
-//             $desc->pricewithgst = $pricewithgst[$key] ?? 0;
-//             $desc->profit       = $profit[$key] ?? 0;
-//             $desc->price        = $prices[$key];
-//             $desc->amount       = $amounts[$key];
-//             $desc->company_id   = $companyId;
-//             $desc->status       = '1';
-//             $desc->save();
-
-//             if ($boxSaleOrderItemId) {
-//                 $dispatchedQty = DB::table('sale_descriptions')
-//                     ->where('box_sale_order_item_id', $boxSaleOrderItemId)
-//                     ->where('company_id', $companyId)
-//                     ->where('delete', '0')
-//                     ->sum('qty');
-//                 $orderItem = DB::table('box_sale_order_items')->where('id', $boxSaleOrderItemId)->first();
-//                 if ($orderItem) {
-//                     $statusValue = ((float)$dispatchedQty >= (float)$orderItem->qty) ? 2 : 1;
-//                     DB::table('box_sale_order_items')->where('id', $boxSaleOrderItemId)->update(['status' => $statusValue]);
-//                 }
-//             }
-
-//             array_push($desc_id_arr, $desc->id);
-//             $row_no        = $key + 1;
-//             $piece_weights = $request->input('piece_weight_' . $row_no);
-
-//             if (is_array($piece_weights)) {
-//                 foreach ($piece_weights as $piece_no => $weight) {
-//                     if ($weight == '' || $weight == 0) {
-//                         continue;
-//                     }
-//                     DB::table('taarobar_sale_description_piece_weights')->insert([
-//                         'sale_id'             => $sale->id,
-//                         'sale_description_id' => $desc->id,
-//                         'item_id'             => $good,
-//                         'piece_no'            => $piece_no + 1,
-//                         'weight'              => $weight,
-//                         'company_id'          => $companyId,
-//                         'created_at'          => now(),
-//                         'updated_at'          => now()
+//                   $allowedQty =
+//                      ($boxItem->qty - $consumedQty);
+//                   if($qtys[$key] > $allowedQty)
+//                   {
+//                     return response()->json([
+//                         'code' => 422,
+//                         'message' => 'Qty cannot exceed pending '
 //                     ]);
-//                 }
+//                   }
+//                }
+//             }
+//             if ($good=="" || $qtys[$key]=="" || $units[$key]=="" || 
+//                $prices[$key]=="" || $amounts[$key]=="") {
+//                continue;
+//             }
+//             $item_quantity_total = $item_quantity_total + $qtys[$key];
+//             $desc = new SaleDescription;
+//             $desc->sale_id = $sale->id;
+//             $desc->goods_discription = $good;
+//             if(!empty($request->box_sale_order_ids))
+//             {
+//                $desc->box_sale_order_item_id =
+//                   $request->box_sale_order_item_id[$key] ?? null;
+//             }
+//             else
+//             {
+//                $desc->box_sale_order_item_id = null;
+//             }
+//             $desc->item_description = $item_descriptions[$key] ?? '';
+//             $itemData = ManageItems::find($good);
+
+//             if($itemData && $itemData->dual_unit == 1){
+
+//                // Store Total Wt in qty
+//                $desc->qty = rtrim(rtrim(number_format((float)($total_weights[$key] ?? 0), 2, '.', ''), '0'), '.');
+
+//                // Store Qty in taarobaar_qty
+//                $desc->taarobaar_qty = rtrim(rtrim(number_format((float)$qtys[$key], 2, '.', ''), '0'), '.');
+
+//             }else{
+
+//                // Normal items
+//                $desc->qty = rtrim(rtrim(number_format((float)$qtys[$key], 2, '.', ''), '0'), '.');
+
+//                $desc->taarobaar_qty =
+//                   rtrim(rtrim(number_format((float)($total_weights[$key] ?? 0), 2, '.', ''), '0'), '.');
 //             }
 
-//             if (isset($description_lines[$key]) && is_array($description_lines[$key])) {
-//                 foreach ($description_lines[$key] as $lineIndex => $lineText) {
-//                     if (!empty($lineText)) {
-//                         DB::table('sale_description_lines')->insert([
-//                             'sale_id'             => $sale->id,
-//                             'sale_description_id' => $desc->id,
-//                             'line_text'           => $lineText,
-//                             'sort_order'          => $lineIndex + 1,
-//                             'company_id'          => $companyId,
-//                             'created_at'          => now(),
-//                             'updated_at'          => now(),
-//                         ]);
-//                     }
-//                 }
-//             }
+//             $desc->dual_unit =
+//                ($itemData && $itemData->dual_unit == 1)
+//                ? 1
+//                : 0;
 
-//             // Create Item Ledger entries
+//             $desc->unit = $units[$key];
+//             $desc->pricewithgst = $pricewithgst[$key] ?? 0;
+//             $desc->profit = $profit[$key] ?? 0;
+//             $desc->price = $prices[$key];
+//             $desc->amount = $amounts[$key];
+//             $desc->company_id = $company_id;
+//             $desc->status = '1';
+//             $desc->save();
+//             if($boxSaleOrderItemId)
+//             {
+//                $dispatchedQty = DB::table('sale_descriptions')
+//                   ->where(
+//                         'box_sale_order_item_id',
+//                         $boxSaleOrderItemId
+//                   )
+//                   ->where(
+//                         'company_id',
+//                         $company_id
+//                   )
+//                   ->where(
+//                         'delete',
+//                         '0'
+//                   )
+//                   ->sum('qty');
+//                $orderItem = DB::table('box_sale_order_items')
+//                   ->where(
+//                         'id',
+//                         $boxSaleOrderItemId
+//                   )
+//                   ->first();
+//                if($orderItem)
+//                {
+//                   if(
+//                         (float)$dispatchedQty
+//                         >=
+//                         (float)$orderItem->qty
+//                   )
+//                   {
+//                         DB::table('box_sale_order_items')
+//                            ->where(
+//                               'id',
+//                               $boxSaleOrderItemId
+//                            )
+//                            ->update([
+//                               'status' => 2
+//                            ]);
+//                   }
+//                   else
+//                   {
+//                         DB::table('box_sale_order_items')
+//                            ->where(
+//                               'id',
+//                               $boxSaleOrderItemId
+//                            )
+//                            ->update([
+//                               'status' => 1
+//                            ]);
+//                   }
+//                }
+//             }
+//             array_push($desc_id_arr,$desc->id);
+//             $row_no = $key + 1;
+//             $piece_weights =
+//                $request->input('piece_weight_'.$row_no);
+
+//             if(is_array($piece_weights)){
+
+//                foreach($piece_weights as $piece_no => $weight){
+
+//                   if($weight == '' || $weight == 0){
+//                      continue;
+//                   }
+
+//                   DB::table('taarobar_sale_description_piece_weights')
+//                      ->insert([
+
+//                         'sale_id' => $sale->id,
+
+//                         'sale_description_id' => $desc->id,
+
+//                         'item_id' => $good,
+
+//                         'piece_no' => $piece_no + 1,
+
+//                         'weight' => $weight,
+
+//                         'company_id' => $company_id,
+
+//                         'created_at' => now(),
+
+//                         'updated_at' => now()
+//                      ]);
+//                }
+//             }
+//             // Description lines
+//              if (isset($description_lines[$key]) && is_array($description_lines[$key])) {
+//                foreach ($description_lines[$key] as $lineIndex => $lineText) {
+//                   if (!empty($lineText)) {
+//                      DB::table('sale_description_lines')->insert([
+//                         'sale_id' => $sale->id,
+//                         'sale_description_id' => $desc->id,
+//                         'line_text' => $lineText,
+//                         'sort_order' => $lineIndex + 1,
+//                         'company_id' => $company_id,
+//                         'created_at' => now(),
+//                         'updated_at' => now(),
+//                      ]);
+//                   }
+//                }
+//             }
+//             // Item ledger
 //             $item_ledger = new ItemLedger();
 //             $item_ledger->item_id = $good;
-//             $item_ledger->out_weight = ($itemData && $itemData->dual_unit == 1) ? ($total_weights[$key] ?? 0) : $qtys[$key];
-//             $item_ledger->series_no   = $request->input('series_no');
-//             $item_ledger->txn_date    = $request->input('date');
-//             $item_ledger->price       = $prices[$key];
+//             if($itemData && $itemData->dual_unit == 1){
+//                $item_ledger->out_weight =
+//                   $total_weights[$key] ?? 0;
+//             }else{
+//                $item_ledger->out_weight =
+//                   $qtys[$key];
+//             }
+//             $item_ledger->series_no = $request->input('series_no');
+//             $item_ledger->txn_date = $request->input('date');
+//             $item_ledger->price = $prices[$key];
 //             $item_ledger->total_price = $amounts[$key];
-//             $item_ledger->company_id  = $companyId;
-//             $item_ledger->source      = 1;
-//             $item_ledger->source_id   = $sale->id;
-//             $item_ledger->created_by  = $userId;
-//             $item_ledger->created_at  = date('d-m-Y H:i:s');
+//             $item_ledger->company_id = $company_id;
+//             $item_ledger->source = 1;
+//             $item_ledger->source_id = $sale->id;
+//             $item_ledger->created_by = $userId;
+//             $item_ledger->created_at = date('d-m-Y H:i:s');
 //             $item_ledger->save();
-
 //             $sizes = [];
-//             if (isset($request->input('item_size_info')[$key])) {
-//                 $item_size_info_raw = $request->input('item_size_info')[$key] ?? "[]";
-//                 $sizes = json_decode($item_size_info_raw, true);
-//                 if (is_array($sizes)) {
-//                     foreach ($sizes as $row) {
-//                         if (!isset($row['id'])) continue;
-//                         $sid = (int)$row['id'];
-//                         $new_size_ids[] = $sid;
-//                         ItemSizeStock::where('id', $sid)->update([
-//                             'status'              => 0,
-//                             'sale_id'             => $sale->id,
-//                             'sale_description_id' => $desc->id
-//                         ]);
-//                     }
-//                 }
-//             } 
+//             if(isset($request->input('item_size_info')[$key])){
+//                $item_size_info_raw = $request->input('item_size_info')[$key] ?? "[]";
+//                $sizes = json_decode($item_size_info_raw, true);
+//                if (is_array($sizes)) {
+//                   foreach ($sizes as $row) {
+//                      if (!isset($row['id'])) continue;
 
+//                      $sid = (int)$row['id'];
+//                      $new_size_ids[] = $sid;
+
+//                      ItemSizeStock::where('id', $sid)->update([
+//                         'status' => 0,
+//                         'sale_id' => $sale->id,
+//                         'sale_description_id' => $desc->id
+//                      ]);
+//                   }
+//                }
+//             } 
 //             $reel_count = count($sizes);
 //             CommonHelper::updateDailyReelStock(
-//                 $companyId,
-//                 $good,
-//                 $request->input('date'),
-//                 0,
-//                 0,
-//                 $reel_count,
-//                 ($itemData && $itemData->dual_unit == 1 ? ($total_weights[$key] ?? 0) : $qtys[$key])
+//                $company_id,
+//                $good,
+
+//                $request->input('date'),
+
+//                0,
+//                0,
+
+//                $reel_count,
+//                (
+//                   $itemData && $itemData->dual_unit == 1
+//                   ? ($total_weights[$key] ?? 0)
+//                   : $qtys[$key]
+//                )
+//             );           
+//          }
+
+//          $allBoxSaleOrderIds = array_unique(
+
+//             array_merge(
+
+//                $oldBoxSaleOrderIds,
+
+//                $request->box_sale_order_ids ?? []
+
+//             )
+
+//          );
+
+//          foreach($allBoxSaleOrderIds as $boxSaleOrderId)
+//          {
+//             $this->updateBoxSaleOrderStatus(
+//                $boxSaleOrderId
 //             );
-//         }
+//          }
 
-//         $allBoxSaleOrderIds = array_unique(array_merge($oldBoxSaleOrderIds, $request->box_sale_order_ids ?? []));
-//         foreach ($allBoxSaleOrderIds as $boxSaleOrderId) {
-//             $this->updateBoxSaleOrderStatus($boxSaleOrderId);
-//         }
-
-//         $removed_size_ids = array_diff($old_size_ids, $new_size_ids);
-//         if (!empty($removed_size_ids)) {
+//          $removed_size_ids = array_diff($old_size_ids, $new_size_ids);
+//          if (!empty($removed_size_ids)) {
 //             ItemSizeStock::whereIn('id', $removed_size_ids)->update([
-//                 'status'              => 1,
-//                 'sale_id'             => null,
-//                 'sale_description_id' => null
+//                   'status' => 1,
+//                   'sale_id' => null,
+//                   'sale_description_id' => null
 //             ]);
-//         }
-
-//         // 5. Account Ledgers and Sundry Calculations
-//         $bill_sundrys         = $request->input('bill_sundry');
-//         $tax_amts             = $request->input('tax_rate');
-//         $bill_sundry_amounts  = $request->input('bill_sundry_amount');
-        
-//         SaleSundry::where('sale_id', $sale->id)->delete();
-//         AccountLedger::where('entry_type_id', $sale->id)->where('entry_type', 1)->delete();
-
-//         foreach ($bill_sundrys as $key => $bill) {
-//             if ($bill_sundry_amounts[$key] == "" || $bill == "") {
-//                 continue;
+//          }
+//          $bill_sundrys = $request->input('bill_sundry');
+//          $tax_amts = $request->input('tax_rate');
+//          $bill_sundry_amounts = $request->input('bill_sundry_amount');
+//          SaleSundry::where('sale_id',$sale->id)->delete();
+//          AccountLedger::where('entry_type_id',$sale->id)->where('entry_type',1)->delete();
+     
+//          foreach($bill_sundrys as $key => $bill){
+//             if($bill_sundry_amounts[$key]=="" || $bill==""){
+//                continue;
 //             }
-//             $sundry          = new SaleSundry;
+//             $sundry = new SaleSundry;
 //             $sundry->sale_id = $sale->id;
 //             $sundry->bill_sundry = $bill;
-//             $sundry->rate    = $tax_amts[$key];
-//             $sundry->company_id = $companyId;
-//             $sundry->amount  = $bill_sundry_amounts[$key];
-//             $sundry->status  = '1';
+//             $sundry->rate = $tax_amts[$key];
+//             $sundry->company_id = $company_id;
+//             $sundry->amount = $bill_sundry_amounts[$key];
+//             $sundry->status = '1';
 //             $sundry->save();
-
+//             //ADD DATA IN CGST ACCOUNT
 //             $billsundry = BillSundrys::where('id', $bill)->first();
-//             if ($billsundry->adjust_sale_amt == 'No') {
-//                 $ledger             = new AccountLedger();
-//                 $ledger->account_id = $billsundry->sale_amt_account;
-//                 $ledger->debit      = ($billsundry->bill_sundry_type == 'subtractive') ? $bill_sundry_amounts[$key] : 0;
-//                 $ledger->credit     = ($billsundry->bill_sundry_type != 'subtractive') ? $bill_sundry_amounts[$key] : 0;
-//                 $ledger->txn_date   = $request->input('date');
-//                 $ledger->series_no  = $request->input('series_no');
-//                 $ledger->company_id = $companyId;
-//                 $ledger->financial_year = $financial_year;
-//                 $ledger->entry_type     = 1;
-//                 $ledger->entry_type_id  = $sale->id;
-//                 $ledger->map_account_id = $request->input('party');
-//                 $ledger->created_by     = $userId;
-//                 $ledger->created_at     = date('d-m-Y H:i:s');
-//                 $ledger->save();
+          
+//             if($billsundry->adjust_sale_amt=='No'){
+//                $ledger = new AccountLedger();
+//                $ledger->account_id = $billsundry->sale_amt_account;
+//                if($billsundry->bill_sundry_type=='subtractive'){
+//                $ledger->debit = $bill_sundry_amounts[$key];
+//             }else{
+//                $ledger->credit = $bill_sundry_amounts[$key];
+//             }   
+//                $ledger->txn_date = $request->input('date');
+//                $ledger->series_no = $request->input('series_no');
+//                $ledger->company_id = $company_id;
+//                $ledger->financial_year = $financial_year;
+//                $ledger->entry_type = 1;
+//                $ledger->entry_type_id = $sale->id;
+//                $ledger->map_account_id = $request->input('party');
+//                $ledger->created_by = $userId;
+//                $ledger->created_at = date('d-m-Y H:i:s');
+//                $ledger->save();
+               
 //             }
-//         }
-
-//         // 6. Running Inventory Average Corrections
-//         $goods_discriptions = $request->input('goods_discription');
-//         $qtys               = $request->input('qty');
-//         $sale_item_array    = [];
-
-//         foreach ($goods_discriptions as $key => $good) {
-//             if ($good == "" || $qtys[$key] == "") {
-//                 continue;
+//          }
+            
+//          //Average Calculation
+//          $goods_discriptions = $request->input('goods_discription');
+//          $qtys = $request->input('qty');
+//          $sale_item_array = [];
+//          foreach($goods_discriptions as $key => $good){
+//             if($good=="" || $qtys[$key]==""){
+//                continue;
 //             }
 //             $itemData = ManageItems::find($good);
-//             $avg_qty  = ($itemData && $itemData->dual_unit == 1) ? ($total_weights[$key] ?? 0) : $qtys[$key];
-
-//             if (array_key_exists($good, $sale_item_array)) {
-//                 $sale_item_array[$good] += $avg_qty;
-//             } else {
-//                 $sale_item_array[$good] = $avg_qty;
+//             $avg_qty = $qtys[$key];
+//             if($itemData && $itemData->dual_unit == 1){
+//                $avg_qty =
+//                   $total_weights[$key] ?? 0;
+//             }
+//             if(array_key_exists($good,$sale_item_array)){
+//                $sale_item_array[$good] += $avg_qty;
+//             }else{
+//                $sale_item_array[$good] = $avg_qty;
 //             }    
-//         }
-
-//         foreach ($sale_item_array as $key => $value) {
+//          }
+           
+//          foreach ($sale_item_array as $key => $value) {
+//             //Add Data In Average Details table
 //             $average_detail = new ItemAverageDetail;
 //             $average_detail->entry_date = $request->date;
-//             $average_detail->series_no  = $request->input('series_no');
-//             $average_detail->item_id    = $key;
-//             $average_detail->type       = 'SALE';
-//             $average_detail->sale_id    = $sale->id;
+//             $average_detail->series_no = $request->input('series_no');
+//             $average_detail->item_id = $key;
+//             $average_detail->type = 'SALE';
+//             $average_detail->sale_id = $sale->id;
 //             $average_detail->sale_weight = $value;
-//             $average_detail->company_id = $companyId;
+
+//             $average_detail->company_id = $request->input('company_id');
 //             $average_detail->created_at = Carbon::now();
 //             $average_detail->save();
-
 //             $lower_date = (strtotime($last_date) < strtotime($request->date)) ? $last_date : $request->date;
-//             CommonHelper::RewriteItemAverageByItem($lower_date, $key, $request->input('series_no'));
-//         }
-         
-//         foreach ($desc_item_arr as $key => $value) {
-//             if (!array_key_exists($value, $sale_item_array)) {
-//                 CommonHelper::RewriteItemAverageByItem($last_date, $value, $request->input('series_no'));
+//             return response()->json([
+//             'id'=> $company_id
+//             ]);
+//             CommonHelper::RewriteItemAverageByItem($lower_date,$key,$request->input('series_no'), $request-> input('company_id'));               
+//          }
+    
+//          foreach ($desc_item_arr as $key => $value) {
+//             if(!array_key_exists($value, $sale_item_array)){
+//                CommonHelper::RewriteItemAverageByItem($last_date,$value,$request->input('series_no'),$request-> input('company_id'));
 //             }
-//         }
-
-//         // Customer Account Balancing Transaction (Debit Entry)
-//         $ledger                 = new AccountLedger();
-//         $ledger->account_id     = $request->input('party');
-//         $ledger->debit          = $request->input('total');
-//         $ledger->txn_date       = $request->input('date');
-//         $ledger->series_no      = $request->input('series_no');
-//         $ledger->company_id     = $companyId;
-//         $ledger->financial_year = $financial_year;
-//         $ledger->entry_type     = 1;
-//         $ledger->entry_type_id  = $sale->id;
-//         $ledger->map_account_id = 35; // Sales Account Identifier
-//         $ledger->created_by     = $userId;
-//         $ledger->created_at     = date('d-m-Y H:i:s');
-//         $ledger->save();
-
-//         // Main Sales Revenue Account Entry (Credit Entry)
-//         $ledger                 = new AccountLedger();
-//         $ledger->account_id     = 35; 
-//         $ledger->credit         = $request->input('taxable_amt');
-//         $ledger->txn_date       = $request->input('date');
-//         $ledger->series_no      = $request->input('series_no');
-//         $ledger->company_id     = $companyId;
-//         $ledger->financial_year = $financial_year;
-//         $ledger->entry_type     = 1;
-//         $ledger->entry_type_id  = $sale->id;
-//         $ledger->map_account_id = $request->input('party');
-//         $ledger->created_by     = $userId;
-//         $ledger->created_at     = date('d-m-Y H:i:s');
-//         $ledger->save();
-
-//         // 7. Advanced Sale Order Updates & Suffix Incrementation Engine
-//         if ($request->sale_order_id != "") {
-//             SaleOrderItemWeight::where('sale_order_id', $request->sale_order_id)->delete();
-//             ItemSizeStock::where('sale_order_id', $request->sale_order_id)
-//                 ->where('sale_id', $sale->id)
-//                 ->update(['status' => 1, 'sale_order_id' => null, 'sale_id' => null, 'sale_description_id' => null]);
-
-//             Sales::where('id', $sale->id)->update(['sale_order_id' => $request->sale_order_id]);
-//             $saleOrder = SaleOrder::with('items.gsms.details')->where('id', $request->sale_order_id)->first();
-            
+//          }
+//          //ADD DATA IN Customer ACCOUNT
+//          $ledger = new AccountLedger();
+//          $ledger->account_id = $request->input('party');
+//          $ledger->debit = $request->input('total');
+//          $ledger->txn_date = $request->input('date');
+//          $ledger->series_no = $request->input('series_no');
+//          $ledger->company_id = $company_id;
+//          $ledger->financial_year = $financial_year;
+//          $ledger->entry_type = 1;
+//          $ledger->entry_type_id = $sale->id;
+//          $ledger->map_account_id = 35;//Sales Account
+//          $ledger->created_by = $userId;
+//          $ledger->created_at = date('d-m-Y H:i:s');
+//          $ledger->save();
+//          //ADD DATA IN Sale ACCOUNT
+//          $ledger = new AccountLedger();
+//          $ledger->account_id = 35;//Sales Account
+//          $ledger->credit = $request->input('taxable_amt');
+//          $ledger->txn_date = $request->input('date');
+//          $ledger->series_no = $request->input('series_no');
+//          $ledger->company_id = $company_id;
+//          $ledger->financial_year = $financial_year;
+//          $ledger->entry_type = 1;
+//          $ledger->entry_type_id = $sale->id;
+//          $ledger->map_account_id = $request->input('party');
+//          $ledger->created_by = $userId;
+//          $ledger->created_at = date('d-m-Y H:i:s');
+//          $ledger->save();
+     
+//          //Update Sale Order Id Code ...................
+//          if($request->sale_order_id!=""){
+//             SaleOrderItemWeight::where('sale_order_id',$request->sale_order_id)->delete();
+//             ItemSizeStock::where('sale_order_id',$request->sale_order_id)
+//                            ->where('sale_id',$sale->id)
+//                            ->update(['status'=>1,'sale_order_id'=>null,'sale_id'=>null,'sale_description_id'=>null]);
+//             Sales::where('id',$sale->id)->update(['sale_order_id'=>$request->sale_order_id]);
+//             $saleOrder = SaleOrder::with('items.gsms.details')
+//                                  ->where('id', $request->sale_order_id)
+//                                  ->first();
 //             if ($saleOrder) {
-//                 $saleOrder->update(['status' => 1, 'updated_at' => Carbon::now(), "updated_by" => $userId]);
-//                 foreach ($saleOrder->items as $item) {
-//                     $item->update(['status' => 1]);
-//                     foreach ($item->gsms as $gsm) {
+//                // Update sale order
+//                $saleOrder->update(['status' => 1,'updated_at'=>Carbon::now(),"updated_by"=>$userId]);
+//                // Update items
+//                foreach ($saleOrder->items as $item) {
+//                   $item->update(['status' => 1]);
+//                   // Update GSMs
+//                   foreach ($item->gsms as $gsm) {
 //                         $gsm->update(['status' => 1]);
+//                         // Update GSM details
 //                         foreach ($gsm->details as $detail) {
-//                             $detail->update(['status' => 1]);
+//                            $detail->update(['status' => 1]);
 //                         }
-//                     }
-//                 }
+//                   }
+//                }
 //             }
-
-//             $sale_enter_data = json_decode($request->sale_enter_data, true) ?? [];
+//             $sale_enter_data = json_decode($request->sale_enter_data,true);
 //             $grouped = [];
 //             foreach ($sale_enter_data as $item) {
-//                 $key = $item['detail_row_id'];
-//                 $grouped[$key][] = $item;
+//                $key = $item['detail_row_id'];
+//                $grouped[$key][] = $item;
 //             }
             
-//             $new_order_arr = []; $group_index = 0; $group_index_arr = []; $max_groups = count($desc_id_arr);
-//             foreach ($grouped as $k => $val) {
-//                 $enter_qty = 0;
-//                 foreach ($val as $k1 => $val1) {
-//                     if (!isset($group_index_arr[$val1['index']])) {
+//             $new_order_arr = [];$group_index = 0;$group_index_arr = [];$max_groups = count($desc_id_arr);
+//             foreach($grouped as $k=>$val){
+//                $enter_qty = 0;
+//                foreach($val as $k1=>$val1){
+//                   // Assign group index only once per unique index
+//                      if (!isset($group_index_arr[$val1['index']])) {
 //                         $group_index_arr[$val1['index']] = $group_index;
 //                         $group_index++;
-//                     }
+//                         //$group_index = ($group_index + 1) % $max_groups;
+//                      }
 
-//                     $current_group_index = $group_index_arr[$val1['index']];
-//                     if (!empty($val1['enter_qty'])) {
-//                         if ($val1['unit_type'] == "REEL") {
-//                             $enter_qty += $val1['enter_qty'];
-//                         } else if ($val1['unit_type'] == "KG") {
-//                             $enter_qty += array_sum($val1['reel_weight_arr']);
-//                         }                        
-//                         foreach ($val1['reel_weight_arr'] as $k3 => $val2) {
-//                             $sale_order_item_weight = new SaleOrderItemWeight;
-//                             $sale_order_item_weight->sale_order_id = $request->sale_order_id;
-//                             $sale_order_item_weight->sale_order_item_row_id = $val1['detail_row_id'];
-//                             $sale_order_item_weight->weight     = $val2;
-//                             $sale_order_item_weight->weight_id   = $val1['reel_weight_id'][$k3];
-//                             $sale_order_item_weight->company_id  = $companyId;
-//                             $sale_order_item_weight->created_at  = Carbon::now();
-//                             $sale_order_item_weight->save();
-
-//                             if (isset($val1['reel_weight_id'][$k3])) {
-//                                 ItemSizeStock::where('id', $val1['reel_weight_id'][$k3])->update([
-//                                     'status' => 0, 
-//                                     'sale_order_id' => $request->sale_order_id, 
-//                                     'sale_id' => $sale->id, 
-//                                     "sale_description_id" => $desc_id_arr[$current_group_index]
-//                                 ]);
-//                             }
+//                      $current_group_index = $group_index_arr[$val1['index']];
+//                   if(!empty($val1['enter_qty'])){
+//                      if($val1['unit_type']=="REEL"){
+//                         $enter_qty = $enter_qty + $val1['enter_qty'];
+//                      }else if($val1['unit_type']=="KG"){
+//                         $enter_qty = $enter_qty + array_sum($val1['reel_weight_arr']);
+//                      }                        
+//                      foreach($val1['reel_weight_arr'] as $k3=>$val2){
+//                         $sale_order_item_weight = new SaleOrderItemWeight;
+//                         $sale_order_item_weight->sale_order_id = $request->sale_order_id;
+//                         $sale_order_item_weight->sale_order_item_row_id = $val1['detail_row_id'];
+//                         $sale_order_item_weight->weight = $val2;
+//                         $sale_order_item_weight->weight_id = $val1['reel_weight_id'][$k3];
+//                         $sale_order_item_weight->company_id = $company_id;
+//                         $sale_order_item_weight->created_at = Carbon::now();
+//                         $sale_order_item_weight->save();
+//                         // print_r($group_index);
+//                         if(isset($val1['reel_weight_id'][$k3])){
+//                         ItemSizeStock::where('id',$val1['reel_weight_id'][$k3])->update(['status'=>0,'sale_order_id'=>$request->sale_order_id,'sale_id'=>$sale->id,"sale_description_id"=>$desc_id_arr[$current_group_index]]);
 //                         }
-//                     }
-//                 }
-               
-//                 $sale_order_gsm_size = SaleOrderItemGsmSize::find($k);
-//                 if ($sale_order_gsm_size) {
-//                     $sale_order_gsm_size->sale_order_qty = $enter_qty;
-//                     $sale_order_gsm_size->update();
-//                     $remaining_qty = $sale_order_gsm_size->quantity - $enter_qty;
-//                     if ($remaining_qty > 0) {
-//                         array_push($new_order_arr, [
-//                             "id" => $k, 
-//                             "sale_order_item_id" => $sale_order_gsm_size->sale_order_item_id, 
-//                             "sale_order_item_gsm_id" => $sale_order_gsm_size->sale_order_item_gsm_id, 
-//                             "quantity" => $remaining_qty
-//                         ]);
-//                     }
-//                 }
-//             }
-
-//             if ($request->new_order == 1 && count($new_order_arr) > 0) {
-//                 $sale_order = SaleOrder::find($request->sale_order_id);
-//                 if ($sale_order) {
-//                     if (preg_match('/-(\d+)$/', $sale_order->sale_order_no, $matches)) {
-//                         $nextNumber = $matches[1] + 1;
-//                         $new_sale_order_no = preg_replace('/-\d+$/', '-' . $nextNumber, $sale_order->sale_order_no);
-//                     } else {
-//                         $new_sale_order_no = $sale_order->sale_order_no . '-1';
-//                     }
-                    
-//                     $new_sale_order = new SaleOrder;
-//                     $new_sale_order->sale_order_no        = $new_sale_order_no;
-//                     $new_sale_order->purchase_order_no    = $sale_order->purchase_order_no;
-//                     $new_sale_order->purchase_order_date  = $sale_order->purchase_order_date;
-//                     $new_sale_order->bill_to              = $sale_order->bill_to;
-//                     $new_sale_order->shipp_to             = $sale_order->shipp_to;
-//                     $new_sale_order->freight              = $sale_order->freight;
-//                     $new_sale_order->parent_order_no      = $sale_order->sale_order_no;
-//                     $new_sale_order->company_id           = $companyId;
-//                     $new_sale_order->created_by           = auth()->id() ?? $userId;
-//                     $new_sale_order->created_at           = Carbon::now();
-
-//                     if ($new_sale_order->save()) {
-//                         $item_check_arr = []; $gsm_check_arr = [];
-//                         foreach ($new_order_arr as $nk => $nval) {
-//                             if (isset($item_check_arr[$nval['sale_order_item_id']]) && $item_check_arr[$nval['sale_order_item_id']] != "") {
-//                                 $new_sale_order_item_id = $item_check_arr[$nval['sale_order_item_id']];
-//                             } else {
-//                                 $sale_order_item = SaleOrderItem::find($nval['sale_order_item_id']);
-//                                 $new_sale_order_item = new SaleOrderItem;
-//                                 $new_sale_order_item->sale_order_id = $new_sale_order->id;
-//                                 $new_sale_order_item->item_id       = $sale_order_item->item_id;
-//                                 $new_sale_order_item->price         = $sale_order_item->price;
-//                                 $new_sale_order_item->bill_price    = $sale_order_item->bill_price;
-//                                 $new_sale_order_item->unit          = $sale_order_item->unit;
-//                                 $new_sale_order_item->sub_unit       = $sale_order_item->sub_unit;
-//                                 $new_sale_order_item->company_id    = $companyId;
-//                                 $new_sale_order_item->created_at    = Carbon::now();
-//                                 $new_sale_order_item->save();
-//                                 $item_check_arr[$nval['sale_order_item_id']] = $new_sale_order_item->id;
-//                                 $new_sale_order_item_id = $new_sale_order_item->id;
-//                             }                  
-//                             if ($new_sale_order_item_id) {
-//                                 if (isset($gsm_check_arr[$nval['sale_order_item_gsm_id']]) && $gsm_check_arr[$nval['sale_order_item_gsm_id']] != "") {
-//                                     $new_sale_order_item_gsm_id = $gsm_check_arr[$nval['sale_order_item_gsm_id']];
-//                                 } else {
-//                                     $sale_order_item_gsm = SaleOrderItemGSM::find($nval['sale_order_item_gsm_id']);
-//                                     $new_sale_order_item_gsm = new SaleOrderItemGSM;
-//                                     $new_sale_order_item_gsm->sale_orders_id      = $new_sale_order->id;
-//                                     $new_sale_order_item_gsm->sale_order_item_id  = $new_sale_order_item_id;
-//                                     $new_sale_order_item_gsm->gsm                 = $sale_order_item_gsm->gsm;
-//                                     $new_sale_order_item_gsm->company_id          = $companyId;
-//                                     $new_sale_order_item_gsm->created_at          = Carbon::now();
-//                                     $new_sale_order_item_gsm->save();
-//                                     $gsm_check_arr[$nval['sale_order_item_gsm_id']] = $new_sale_order_item_gsm->id;
-//                                     $new_sale_order_item_gsm_id = $new_sale_order_item_gsm->id;
-//                                 }
-//                                 if ($new_sale_order_item_gsm_id) {                        
-//                                     $sale_order_item_gsm_size = SaleOrderItemGsmSize::find($nval['id']);
-//                                     $new_sale_order_item_gsm_size = new SaleOrderItemGsmSize;
-//                                     $new_sale_order_item_gsm_size->sale_orders_id      = $new_sale_order->id;
-//                                     $new_sale_order_item_gsm_size->sale_order_item_id  = $new_sale_order_item->id;
-//                                     $new_sale_order_item_gsm_size->sale_order_item_gsm_id = $new_sale_order_item_gsm_id;
-//                                     $new_sale_order_item_gsm_size->size                 = $sale_order_item_gsm_size->size;
-//                                     $new_sale_order_item_gsm_size->quantity             = $nval['quantity'];
-//                                     $new_sale_order_item_gsm_size->company_id           = $companyId;
-//                                     $new_sale_order_item_gsm_size->created_at           = Carbon::now();
-//                                     $new_sale_order_item_gsm_size->save();
-//                                 }
-//                             }
-//                         }
-//                     }
-//                 }
-//             }
-
-//             // 8. Vehicle & Logistics Management Logic
-//             SaleOrder::where('id', $request->sale_order_id)->update([
-//                 'freight_type'           => '',
-//                 'freight_price'          => '',
-//                 'freight_transporter_id' => '',
-//                 'other_freight_amount'   => '',
-//                 'freight_vehicle_id'     => '',
-//             ]);
-//             SaleVehicleTxn::where('sale_order_id', $request->sale_order_id)->delete();
-            
-//             if ($sale->transporter_journal_id) {
-//                 JournalDetails::where('journal_id', $sale->transporter_journal_id)->delete();
-//                 Journal::where('id', $sale->transporter_journal_id)->delete();
-//                 AccountLedger::where('entry_type', 7)->where('entry_type_id', $sale->transporter_journal_id)->delete();
-//             }
-//             Sales::where('id', $sale->id)->update(['transporter_journal_id' => null]);
-
-//             if ($request->input('vehicle_info_type') == "vehicle" && $request->sale_order_id != "" && $request->input('vehicle_info') != "") {
-//                 SaleOrder::where('id', $request->sale_order_id)->update([
-//                     'freight_type'       => $request->input('vehicle_info_type'),
-//                     'freight_price'      => $request->input('vehicle_freight'),
-//                     'freight_vehicle_id' => $request->input('vehicle_info'),
-//                     'other_freight_amount' => ''
-//                 ]);
-//                 $vehicle_info = new SaleVehicleTxn;
-//                 $vehicle_info->sale_id               = $sale->id;
-//                 $vehicle_info->sale_order_id         = $request->sale_order_id;
-//                 $vehicle_info->vehicle_id            = $request->input('vehicle_info');
-//                 $vehicle_info->vehicle_freight_price = $request->input('vehicle_freight');
-//                 $vehicle_info->vehicle_freight_amount = $item_quantity_total * $request->input('vehicle_freight');
-//                 $vehicle_info->company_id            = $companyId;
-//                 $vehicle_info->created_at            = Carbon::now();
-//                 $vehicle_info->created_by            = $userId;
-//                 $vehicle_info->save();
-//             }
-//             if ($request->input('vehicle_info_type') == "to_pay" && $request->sale_order_id != "") {
-//                 SaleOrder::where('id', $request->sale_order_id)->update([
-//                     'freight_type'         => $request->input('vehicle_info_type'),
-//                     'freight_price'        => $request->input('to_pay_freight'),
-//                     'other_freight_amount' => $request->input('to_pay_other_charges')
-//                 ]);
-//             }
-//             if ($request->input('vehicle_info_type') == "party_vehicle" && $request->sale_order_id != "") {
-//                 SaleOrder::where('id', $request->sale_order_id)->update([
-//                     'freight_type'         => $request->input('vehicle_info_type'),
-//                     'freight_price'        => "",
-//                     'other_freight_amount' => ""
-//                 ]);
-//             }
-            
-//             // Third Party Transporter Journal Invoicing
-//             if ($request->input('vehicle_info_type') == "transporter" && $request->sale_order_id != "" && $request->input('vehicle_info') != "") {
-//                 $transporter_total_amount = ($item_quantity_total * $request->input('transporter_freight')) + $request->input('transporter_other_charges');
-//                 $transporter_total_amount = round($transporter_total_amount);
-//                 $location_name = $account->location;
-//                 if (!empty($request->input('shipping_name'))) {
-//                     $shipp_account = Accounts::select('location')->find($request->input('shipping_name'));
-//                     if ($shipp_account) $location_name = $shipp_account->location;
-//                 }
-               
-//                 $series_configuration = VoucherSeriesConfiguration::where('company_id', $companyId)
-//                     ->where('series', $request->input('series_no'))
-//                     ->where('configuration_for', 'JOURNAL') 
-//                     ->where('status', '1')
-//                     ->first();
-
-//                 $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
-//                 $lastNumber = DB::table('journals')
-//                     ->where('company_id', $companyId)
-//                     ->where('financial_year', $financial_year)
-//                     ->where('series_no', $request->input('series_no'))
-//                     ->where('delete', '0')
-//                     ->max(DB::raw("cast(voucher_no as SIGNED)"));
-
-//                 if (!$lastNumber) {
-//                     $journal_voucher_no = ($series_configuration && $series_configuration->manual_numbering == "NO" && $series_configuration->invoice_start != "") ? (int)$series_configuration->invoice_start : 1;
-//                 } else {
-//                     $journal_voucher_no = ((int)$lastNumber) + 1;
-//                 }
-
-//                 $journal_invoice_prefix = "";
-//                 if ($series_configuration && $series_configuration->manual_numbering == "NO") {
-//                     if ($series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
-//                         $journal_invoice_prefix .= $series_configuration->prefix_value;
-//                     }
-//                     if ($series_configuration->prefix == "ENABLE" && $series_configuration->separator_1 != "") {
-//                         $journal_invoice_prefix .= $series_configuration->separator_1;
-//                     }
-//                     if ($series_configuration->year == "PREFIX TO NUMBER") {
-//                         if ($series_configuration->year_format == "YY-YY") {
-//                             $journal_invoice_prefix .= $default_fy;
-//                         } else {
-//                             $fy = explode('-', $default_fy);
-//                             $journal_invoice_prefix .= '20' . $fy[0] . '-' . $fy[1];
-//                         }
-//                         if ($series_configuration->separator_2 != "") {
-//                             $journal_invoice_prefix .= $series_configuration->separator_2;
-//                         }
-//                     }
-//                     $journal_invoice_prefix .= $journal_voucher_no;
-//                     if ($series_configuration->year == "SUFFIX TO NUMBER") {
-//                         if ($series_configuration->separator_2 != "") {
-//                             $journal_invoice_prefix .= $series_configuration->separator_2;
-//                         }
-//                         if ($series_configuration->year_format == "YY-YY") {
-//                             $journal_invoice_prefix .= $default_fy;
-//                         } else {
-//                             $fy = explode('-', $default_fy);
-//                             $journal_invoice_prefix .= '20' . $fy[0] . '-' . $fy[1];
-//                         }
-//                     }
-//                     if ($series_configuration->suffix == "ENABLE" && $series_configuration->separator_3 != "") {
-//                         $journal_invoice_prefix .= $series_configuration->separator_3;
-//                     }
-//                     if ($series_configuration->suffix == "ENABLE" && $series_configuration->suffix_value != "") {
-//                         $journal_invoice_prefix .= $series_configuration->suffix_value;
-//                     }
-//                 }
-//                 $journal_voucher_no = sprintf("%0" . $number_digit . "d", $journal_voucher_no);
-//                 if ($journal_invoice_prefix == "") {
-//                     $journal_invoice_prefix = $journal_voucher_no;
-//                 }
-
-//                 $journal = new Journal;
-//                 $journal->date               = $request->input('date');
-//                 $journal->voucher_no         = $journal_voucher_no;
-//                 $journal->voucher_no_prefix  = $journal_invoice_prefix;
-//                 $journal->series_no          = $request->input('series_no');
-//                 $journal->long_narration     = "Bill No : " . $sale->voucher_no_prefix . ", Vehicle No. : " . $request->input('vehicle_no') . ", Location : " . $location_name . ", GR/PR No. : " . $request->input('gr_pr_no');
-//                 $journal->company_id         = $companyId;
-//                 $journal->financial_year     = $financial_year;
-//                 $journal->claim_gst_status   = 'NO';
-//                 $journal->merchant_gst       = $request->input('merchant_gst');
-
-//                 if ($journal->save()) {
-//                     SaleOrder::where('id', $request->sale_order_id)->update([
-//                         'freight_type'           => $request->input('vehicle_info_type'),
-//                         'freight_price'          => $request->input('transporter_freight'),
-//                         'freight_transporter_id' => $request->input('vehicle_info'),
-//                         'other_freight_amount'   => $request->input('transporter_other_charges')
-//                     ]);
-//                     Sales::where('id', $sale->id)->update(['transporter_journal_id' => $journal->id]);
-                    
-//                     $expense = DB::table('sale-order-settings')
-//                         ->where('setting_type', 'EXPENSE_ACCOUNT')
-//                         ->where('setting_for', 'SALE ORDER')
-//                         ->where('company_id', $companyId)
-//                         ->first();
-
-//                     $joundetail = new JournalDetails;
-//                     $joundetail->journal_id   = $journal->id;
-//                     $joundetail->company_id   = $companyId;
-//                     $joundetail->type         = "Credit";
-//                     $joundetail->account_name = $request->input('vehicle_info');
-//                     $joundetail->debit        = '0';
-//                     $joundetail->credit       = $transporter_total_amount;            
-//                     $joundetail->narration    = "";
-//                     $joundetail->status       = '1';
-//                     $joundetail->save();
-
-//                     $ledger = new AccountLedger();
-//                     $ledger->account_id     = $request->input('vehicle_info');               
-//                     $ledger->credit         = $transporter_total_amount;
-//                     $ledger->map_account_id = $expense->expense_account_id;
-//                     $ledger->series_no      = $request->input('series_no');
-//                     $ledger->txn_date       = $request->input('date');
-//                     $ledger->company_id     = $companyId;
-//                     $ledger->financial_year = $financial_year;
-//                     $ledger->entry_type     = 7;
-//                     $ledger->entry_type_id  = $journal->id;
-//                     $ledger->entry_narration = "";               
-//                     $ledger->created_by     = $userId;
-//                     $ledger->created_at     = date('d-m-Y H:i:s');
-//                     $ledger->save();
+//                      }
+//                   }
                   
-//                     $joundetail = new JournalDetails;
-//                     $joundetail->journal_id   = $journal->id;
-//                     $joundetail->company_id   = $companyId;
-//                     $joundetail->type         = "Debit";
-//                     $joundetail->account_name = $expense->expense_account_id;
-//                     $joundetail->debit        = $transporter_total_amount;
-//                     $joundetail->credit       = '0';
-//                     $joundetail->narration    = "";
-//                     $joundetail->status       = '1';
-//                     $joundetail->save();
-
-//                     $ledger = new AccountLedger();
-//                     $ledger->account_id     = $expense->expense_account_id;
-//                     $ledger->debit          = $transporter_total_amount;
-//                     $ledger->map_account_id = $request->input('vehicle_info');
-//                     $ledger->series_no      = $request->input('series_no');
-//                     $ledger->txn_date       = $request->input('date');
-//                     $ledger->company_id     = $companyId;
-//                     $ledger->financial_year = $financial_year;
-//                     $ledger->entry_type     = 7;
-//                     $ledger->entry_type_id  = $journal->id;
-//                     $ledger->entry_narration = "";               
-//                     $ledger->created_by     = $userId;
-//                     $ledger->created_at     = date('d-m-Y H:i:s');
-//                     $ledger->save();
-//                 }
+//                }
+               
+//                $sale_order_gsm_size = SaleOrderItemGsmSize::find($k);
+//                $sale_order_gsm_size->sale_order_qty = $enter_qty;
+//                $sale_order_gsm_size->update();
+//                $remaining_qty = $sale_order_gsm_size->quantity - $enter_qty;
+//                if($remaining_qty>0){
+//                   array_push($new_order_arr,array("id"=>$k,"sale_order_item_id"=>$sale_order_gsm_size->sale_order_item_id,"sale_order_item_gsm_id"=>$sale_order_gsm_size->sale_order_item_gsm_id,"quantity"=>$remaining_qty));
+//                }
 //             }
-//         }
+//             if($request->new_order==1){
+//                if(count($new_order_arr)>0){
+//                   $sale_order = SaleOrder::find($request->sale_order_id);
+                  
+//                   if (preg_match('/-(\d+)$/', $sale_order->sale_order_no, $matches)) {
+//                      // If found, increment the number
+//                      $nextNumber = $matches[1] + 1;
+//                      // Replace the old suffix with the new one
+//                      $new_sale_order_no = preg_replace('/-\d+$/', '-' . $nextNumber, $sale_order->sale_order_no);
+//                   } else {
+//                      // If no suffix found, start with -1
+//                      $new_sale_order_no = $sale_order->sale_order_no . '-1';
+//                   }
+                  
+//                   $new_sale_order = new SaleOrder;
+//                   $new_sale_order->sale_order_no = $new_sale_order_no;
+//                   $new_sale_order->purchase_order_no = $sale_order->purchase_order_no;
+//                   $new_sale_order->purchase_order_date = $sale_order->purchase_order_date;
+//                   $new_sale_order->bill_to = $sale_order->bill_to;
+//                   $new_sale_order->shipp_to = $sale_order->shipp_to;
+//                   $new_sale_order->freight = $sale_order->freight;
+//                   $new_sale_order->parent_order_no = $sale_order->sale_order_no;
+//                   $new_sale_order->company_id = $company_id;
+//                   $new_sale_order->created_by = $userId;
+//                   $new_sale_order->created_at = Carbon::now();
+//                   if($new_sale_order->save()){
+//                      $item_check_arr = [];$gsm_check_arr = [];
+//                      foreach($new_order_arr as $nk=>$nval){
+//                         if(isset($item_check_arr[$nval['sale_order_item_id']]) && $item_check_arr[$nval['sale_order_item_id']]!=""){
+//                            $new_sale_order_item_id = $item_check_arr[$nval['sale_order_item_id']];
+//                         }else{
+//                            $sale_order_item = SaleOrderItem::find($nval['sale_order_item_id']);
+//                            $new_sale_order_item = new SaleOrderItem;
+//                            $new_sale_order_item->sale_order_id = $new_sale_order->id;
+//                            $new_sale_order_item->item_id = $sale_order_item->item_id;
+//                            $new_sale_order_item->price = $sale_order_item->price;
+//                            $new_sale_order_item->bill_price = $sale_order_item->bill_price;
+//                            $new_sale_order_item->unit = $sale_order_item->unit;
+//                            $new_sale_order_item->sub_unit = $sale_order_item->sub_unit;
+//                            $new_sale_order_item->company_id = $company_id;
+//                            $new_sale_order_item->created_at = Carbon::now();
+//                            $new_sale_order_item->save();
+//                            $item_check_arr[$nval['sale_order_item_id']] = $new_sale_order_item->id;
+//                            $new_sale_order_item_id = $new_sale_order_item->id;
+//                         }                  
+//                         if($new_sale_order_item_id){
+//                            if(isset($gsm_check_arr[$nval['sale_order_item_gsm_id']]) && $gsm_check_arr[$nval['sale_order_item_gsm_id']]!=""){
+//                               $new_sale_order_item_gsm_id = $gsm_check_arr[$nval['sale_order_item_gsm_id']];
+//                            }else{
+//                               $sale_order_item_gsm = SaleOrderItemGSM::find($nval['sale_order_item_gsm_id']);
+//                               $new_sale_order_item_gsm = new SaleOrderItemGSM;
+//                               $new_sale_order_item_gsm->sale_orders_id = $new_sale_order->id;
+//                               $new_sale_order_item_gsm->sale_order_item_id = $new_sale_order_item_id;
+//                               $new_sale_order_item_gsm->gsm = $sale_order_item_gsm->gsm;
+//                               $new_sale_order_item_gsm->company_id = $company_id;
+//                               $new_sale_order_item_gsm->created_at = Carbon::now();
+//                               $new_sale_order_item_gsm->save();
+//                               $gsm_check_arr[$nval['sale_order_item_gsm_id']] = $new_sale_order_item_gsm->id;
+//                               $new_sale_order_item_gsm_id = $new_sale_order_item_gsm->id;
+//                            }
+//                            if($new_sale_order_item_gsm_id){                        
+//                               $sale_order_item_gsm_size = SaleOrderItemGsmSize::find($nval['id']);
+//                               $new_sale_order_item_gsm_size = new SaleOrderItemGsmSize;
+//                               $new_sale_order_item_gsm_size->sale_orders_id = $new_sale_order->id;
+//                               $new_sale_order_item_gsm_size->sale_order_item_id = $new_sale_order_item->id;
+//                               $new_sale_order_item_gsm_size->sale_order_item_gsm_id = $new_sale_order_item_gsm_id;
+//                               $new_sale_order_item_gsm_size->size = $sale_order_item_gsm_size->size;
+//                               $new_sale_order_item_gsm_size->quantity = $nval['quantity'];
+//                               $new_sale_order_item_gsm_size->company_id = $company_id;
+//                               $new_sale_order_item_gsm_size->created_at = Carbon::now();
+//                               $new_sale_order_item_gsm_size->save();
+//                            }
+//                         }
+//                      }
+//                   }
+//                }
+//             }
+//             //Store Vehicle Details
+//             SaleOrder::where('id',$request->sale_order_id)
+//                         ->update([
+//                            'freight_type'=>'',
+//                            'freight_price'=>'',
+//                            'freight_transporter_id'=>'',
+//                            'other_freight_amount'=>'',
+//                            'freight_vehicle_id'=>'',
+//                         ]);
+//             SaleVehicleTxn::where('sale_order_id',$request->sale_order_id)->delete();
+//             if($sale->transporter_journal_id){
+//                JournalDetails::where('journal_id',$sale->transporter_journal_id)->delete();
+//                Journal::where('id',$sale->transporter_journal_id)->delete();
+//                AccountLedger::where('entry_type',7)->where('entry_type_id',$sale->transporter_journal_id)->delete();
 
-//         // 9. Take Updated Snapshot & Write Activity Log
-//         $newSnapshot = [
-//             'sale'                 => Sales::find($sale->id)->toArray(),
-//             'items'                => SaleDescription::where('sale_id', $sale->id)->get()->toArray(),
-//             'sundries'             => SaleSundry::where('sale_id', $sale->id)->get()->toArray(),
-//             'item_ledgers'         => ItemLedger::where('source', 1)->where('source_id', $sale->id)->get()->toArray(),
-//             'account_ledgers'      => AccountLedger::where('entry_type', 1)->where('entry_type_id', $sale->id)->get()->toArray(),
-//             'item_average_details' => ItemAverageDetail::where('sale_id', $sale->id)->where('type', 'SALE')->get()->toArray(),
-//         ];
+//             }
+//             Sales::where('id',$sale->id)->update(['transporter_journal_id'=>null]);
 
-//         ActivityLog::create([
+            
+//             if($request->input('vehicle_info_type')=="vehicle" && $request->sale_order_id!="" && $request->input('vehicle_info')!=""){
+//                SaleOrder::where('id',$request->sale_order_id)
+//                         ->update([
+//                            'freight_type'=>$request->input('vehicle_info_type'),
+//                            'freight_price'=>$request->input('vehicle_freight'),
+//                            'freight_vehicle_id'=>$request->input('vehicle_info'),
+//                            'other_freight_amount'=>''
+//                         ]);
+//                $vehicle_info = new SaleVehicleTxn;
+//                $vehicle_info->sale_id = $sale->id;
+//                $vehicle_info->sale_order_id = $request->sale_order_id;
+//                $vehicle_info->vehicle_id = $request->input('vehicle_info');
+//                $vehicle_info->vehicle_freight_price = $request->input('vehicle_freight');
+//                $vehicle_info->vehicle_freight_amount = $item_quantity_total * $request->input('vehicle_freight');
+//                $vehicle_info->company_id = $company_id;
+//                $vehicle_info->created_at = Carbon::now();
+//                $vehicle_info->created_by = $userId;
+//                $vehicle_info->save();
+//             }
+//             if($request->input('vehicle_info_type')=="to_pay" && $request->sale_order_id!="" ){
+//                SaleOrder::where('id',$request->sale_order_id)
+//                         ->update([
+//                            'freight_type'=>$request->input('vehicle_info_type'),
+//                            'freight_price'=>$request->input('to_pay_freight'),
+//                            'other_freight_amount'=>$request->input('to_pay_other_charges')
+//                         ]);
+//             }
+//             if($request->input('vehicle_info_type')=="party_vehicle" && $request->sale_order_id!="" ){
+//                SaleOrder::where('id',$request->sale_order_id)
+//                         ->update([
+//                            'freight_type'=>$request->input('vehicle_info_type'),
+//                            'freight_price'=>"",
+//                            'other_freight_amount'=>""
+//                         ]);
+//             }
+//             //Transporter Journal Entry
+//             if($request->input('vehicle_info_type')=="transporter" && $request->sale_order_id!="" && $request->input('vehicle_info')!=""){
+//                $transporter_total_amount = ($item_quantity_total * $request->input('transporter_freight'))+$request->input('transporter_other_charges');
+//                $transporter_total_amount = round($transporter_total_amount);
+//                $location_name = $account->location;
+//                if(!empty($request->input('shipping_name'))){
+//                   $shipp_account = Accounts::select('location')->find($request->input('shipping_name'));
+//                   $location_name = $shipp_account->location;
+//                }
+               
+//                //Journal Entry For Transporter Voucher No
+//                $series_configuration = VoucherSeriesConfiguration::where('company_id', $company_id)
+//                                                                   ->where('series', $request->input('series_no'))
+//                                                                   ->where('configuration_for', 'JOURNAL') 
+//                                                                   ->where('status', '1')
+//                                                                   ->first();
+//                $number_digit = (!empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
+//                $lastNumber = DB::table('journals')
+//                                  ->where('company_id', $company_id)
+//                                  ->where('financial_year', $financial_year)
+//                                  ->where('series_no', $request->input('series_no'))
+//                                  ->where('delete', '0')
+//                                  ->max(DB::raw("cast(voucher_no as SIGNED)"));
+//                if (!$lastNumber) {
+//                   if ($series_configuration && $series_configuration->manual_numbering == "NO" && $series_configuration->invoice_start != "") {
+//                      $journal_voucher_no = (int)$series_configuration->invoice_start;
+//                   } else {
+//                      $journal_voucher_no = 1;
+//                   }
+//                } else {
+//                   $journal_voucher_no = ((int)$lastNumber) + 1;
+//                }
+//                //Voucher Series With Prefix/Suffix
+//                $journal_invoice_prefix = "";
+//                if ($series_configuration && $series_configuration->manual_numbering == "NO") {
+//                   if ($series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
+//                      $journal_invoice_prefix .= $series_configuration->prefix_value;
+//                   }
+//                   if ($series_configuration->prefix == "ENABLE" && $series_configuration->separator_1 != "") {
+//                      $journal_invoice_prefix .= $series_configuration->separator_1;
+//                   }
+//                   if ($series_configuration->year == "PREFIX TO NUMBER") {
+//                      if ($series_configuration->year_format == "YY-YY") {
+//                         $journal_invoice_prefix .= $financial_year;
+//                      } else {
+//                         $fy = explode('-', $financial_year);
+//                         $journal_invoice_prefix .= '20' . $fy[0] . '-' . $fy[1];
+//                      }
+//                      if ($series_configuration->separator_2 != "") {
+//                         $journal_invoice_prefix .= $series_configuration->separator_2;
+//                      }
+//                   }
+//                   $journal_invoice_prefix .= $journal_voucher_no;
+//                   if ($series_configuration->year == "SUFFIX TO NUMBER") {
+//                      if ($series_configuration->separator_2 != "") {
+//                         $journal_invoice_prefix .= $series_configuration->separator_2;
+//                      }
+//                      if ($series_configuration->year_format == "YY-YY") {
+//                         $journal_invoice_prefix .= $financial_year;
+//                      } else {
+//                         $fy = explode('-', $financial_year);
+//                         $journal_invoice_prefix .= '20' . $fy[0] . '-' . $fy[1];
+//                      }
+//                   }
+//                   if ($series_configuration->suffix == "ENABLE" && $series_configuration->separator_3 != "") {
+//                      $journal_invoice_prefix .= $series_configuration->separator_3;
+//                   }
+//                   if ($series_configuration->suffix == "ENABLE" && $series_configuration->suffix_value != "") {
+//                      $journal_invoice_prefix .= $series_configuration->suffix_value;
+//                   }
+//                }
+//                $journal_voucher_no = sprintf("%0" . $number_digit . "d", $journal_voucher_no);
+//                if($journal_invoice_prefix==""){
+//                   $journal_invoice_prefix = $journal_voucher_no;
+//                }
+//                $journal = new Journal;
+//                $journal->date = $request->input('date');
+//                $journal->voucher_no = $journal_voucher_no;
+//                $journal->voucher_no_prefix = $journal_invoice_prefix;
+//                $journal->series_no = $request->input('series_no');
+//                $journal->long_narration = "Bill No : ".$sale->voucher_no_prefix.", Vehicle No. : ".$request->input('vehicle_no').", Location : ".$location_name.", GR/PR No. : ".$request->input('gr_pr_no');
+//                $journal->company_id = $company_id;
+//                $journal->financial_year = $financial_year;
+//                $journal->claim_gst_status = 'NO';
+//                $journal->merchant_gst = $request->input('merchant_gst');
+//                if($journal->save()){
+//                   SaleOrder::where('id',$request->sale_order_id)
+//                         ->update([
+//                            'freight_type'=>$request->input('vehicle_info_type'),
+//                            'freight_price'=>$request->input('transporter_freight'),
+//                            'freight_transporter_id'=>$request->input('vehicle_info'),
+//                            'other_freight_amount'=>$request->input('transporter_other_charges')
+//                         ]);
+//                   Sales::where('id',$sale->id)->update(['transporter_journal_id'=>$journal->id]);
+//                   //Add Transpoeter Account Credit
+//                   $expense = DB::table('sale-order-settings')
+//                                     ->where('setting_type','EXPENSE_ACCOUNT')
+//                                     ->where('setting_for','SALE ORDER')
+//                                     ->where('company_id',$company_id)
+//                                     ->first();
+//                   $joundetail = new JournalDetails;
+//                   $joundetail->journal_id = $journal->id;
+//                   $joundetail->company_id = $company_id;
+//                   $joundetail->type = "Credit";
+//                   $joundetail->account_name = $request->input('vehicle_info');
+//                   $joundetail->debit = '0';
+//                   $joundetail->credit = $transporter_total_amount;            
+//                   $joundetail->narration = "";
+//                   $joundetail->status = '1';
+//                   $joundetail->save();
+//                   //Account Ledger
+//                   $ledger = new AccountLedger();
+//                   $ledger->account_id = $request->input('vehicle_info');               
+//                   $ledger->credit = $transporter_total_amount;
+//                   $ledger->map_account_id = $expense->expense_account_id;
+//                   $ledger->series_no = $request->input('series_no');
+//                   $ledger->txn_date = $request->input('date');
+//                   $ledger->company_id = $company_id;
+//                   $ledger->financial_year = $financial_year;
+//                   $ledger->entry_type = 7;
+//                   $ledger->entry_type_id = $journal->id;
+//                   $ledger->entry_narration = "";               
+//                   $ledger->created_by = $userId;
+//                   $ledger->created_at = date('d-m-Y H:i:s');
+//                   $ledger->save();
+//                   //Add Freight Account Debit
+                  
+//                   $joundetail = new JournalDetails;
+//                   $joundetail->journal_id = $journal->id;
+//                   $joundetail->company_id = $company_id;
+//                   $joundetail->type = "Debit";
+//                   $joundetail->account_name = $expense->expense_account_id;
+//                   $joundetail->debit = $transporter_total_amount;
+//                   $joundetail->credit = '0';
+//                   $joundetail->narration = "";
+//                   $joundetail->status = '1';
+//                   $joundetail->save();
+//                   //Account Ledger
+//                   $ledger = new AccountLedger();
+//                   $ledger->account_id = $expense->expense_account_id;
+//                   $ledger->debit = $transporter_total_amount;
+//                   $ledger->map_account_id = $request->input('vehicle_info');
+//                   $ledger->series_no = $request->input('series_no');
+//                   $ledger->txn_date = $request->input('date');
+//                   $ledger->company_id = $company_id;
+//                   $ledger->financial_year = $financial_year;
+//                   $ledger->entry_type = 7;
+//                   $ledger->entry_type_id = $journal->id;
+//                   $ledger->entry_narration = "";               
+//                   $ledger->created_by = $userId;
+//                   $ledger->created_at = date('d-m-Y H:i:s');
+//                   $ledger->save();
+                     
+//                }
+//             }
+//             //
+//          }
+//          $newSnapshot = [
+//             'sale' => Sales::find($sale->id)->toArray(),
+
+//             'items' => SaleDescription::where('sale_id', $sale->id)->get()->toArray(),
+
+//             'sundries' => SaleSundry::where('sale_id', $sale->id)->get()->toArray(),
+
+//             'item_ledgers' => ItemLedger::where('source', 1)
+//                ->where('source_id', $sale->id)
+//                ->get()->toArray(),
+
+//             'account_ledgers' => AccountLedger::where('entry_type', 1)
+//                ->where('entry_type_id', $sale->id)
+//                ->get()->toArray(),
+
+//             'item_average_details' => ItemAverageDetail::where('sale_id', $sale->id)
+//                ->where('type', 'SALE')
+//                ->get()->toArray(),
+//          ];
+//          ActivityLog::create([
 //             'module_type' => 'sale',
 //             'module_id'   => $sale->id,
 //             'action'      => 'edit',
 //             'old_data'    => $oldSnapshot,
 //             'new_data'    => $newSnapshot,
 //             'action_by'   => $userId,
-//             'company_id'  => $companyId,
+//             'company_id'  => $company_id,
 //             'action_at'   => now(),
-//         ]);
-
-//         // 10. API Success Response Flow
-//         return response()->json([
-//             'status'  => true,
+//          ]);
+        
+//          return response()->json([
+//             'code'  => 200,
 //             'message' => 'Sale voucher updated successfully!',
 //             'data'    => [
 //                 'sale_id'    => $sale->id,
 //                 'voucher_no' => $sale->voucher_no
 //             ]
-//         ], 200);
+//         ]);
          
-//     } else {
-//         return response()->json([
-//             'status'  => false,
+//       }else{
+//        return response()->json([
+//             'code'  => 201,
 //             'message' => 'Something went wrong processing your request'
-//         ], 500);
-//     }
-// }
+//         ]);
+//       }
+      
+//    }
 
 public function saleInvoicePdfApi(Request $request)
 {   
