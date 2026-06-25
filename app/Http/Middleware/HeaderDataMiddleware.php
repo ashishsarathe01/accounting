@@ -46,6 +46,7 @@ class HeaderDataMiddleware
             $company_list = $company_list
                                     ->merge($company_list_emp)
                                     ->unique()
+                                    ->sortBy('company_name')
                                     ->values();
          }
          
@@ -80,6 +81,7 @@ class HeaderDataMiddleware
          $company_list = $company_list
                                     ->merge($company_list_owner)
                                     ->unique()
+                                    ->sortBy('company_name')
                                     ->values();
          
       }else{

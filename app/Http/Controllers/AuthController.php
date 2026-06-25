@@ -371,6 +371,7 @@ class AuthController extends Controller{
                     $company_list = $company_list
                                     ->merge($company_list_emp)
                                     ->unique()
+                                    ->sortBy('company_name')
                                     ->values();
                 }
             }else if(Session::get('user_type')=="EMPLOYEE" || Session::get('user_type')=="OTHER" || Session::get('user_type')=="ACCOUNTANT" || Session::get('user_type')=="CA"){
@@ -405,6 +406,7 @@ class AuthController extends Controller{
                 $company_list = $company_list
                                         ->merge($company_list_owner)
                                         ->unique()
+                                        ->sortBy('company_name')
                                         ->values();
                                         
                 

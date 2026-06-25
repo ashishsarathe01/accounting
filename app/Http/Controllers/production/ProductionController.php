@@ -2475,7 +2475,6 @@ if (!is_array($deletedReels)) {
                 ->get();
 
             foreach ($ledgerData as $ledger) {
-
                 $itemLedger = new ItemLedger();
                 $itemLedger->series_no = 'Main';
                 $itemLedger->item_id = $ledger->item_id;
@@ -2498,7 +2497,6 @@ if (!is_array($deletedReels)) {
                 ->delete();
 
             foreach ($ledgerData as $ledger) {
-
                 $averageDetail = new ItemAverageDetail();
                 $averageDetail->entry_date = date('Y-m-d', strtotime($deckle->end_time_stamp));
                 $averageDetail->item_id = $ledger->item_id;

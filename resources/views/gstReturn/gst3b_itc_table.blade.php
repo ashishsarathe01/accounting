@@ -57,168 +57,243 @@
     }
 
 </style>
-
 <div class="list-of-view-company">
     <section class="list-of-view-company-section container-fluid">
         <div class="min-vh-100 row">
-
             @include('layouts.leftnav')
-
             <div class="col-md-10 col-sm-12 px-0">
-
                 <div class="container-fluid">
-
+                    <ul class="nav nav-fill nav-tabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link active" id="fill-tab-0" data-bs-toggle="tab" href="#fill-tabpanel-0" role="tab" aria-controls="fill-tabpanel-0" aria-selected="true">
+                                GSTR-3B - Eligible ITC Details
+                            </a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link" id="fill-tab-1" data-bs-toggle="tab" href="#fill-tabpanel-1" role="tab" aria-controls="fill-tabpanel-1" aria-selected="false">
+                                GSTR-3B - Eligible ITC
+                            </a>
+                        </li>
+                    </ul>
                     <div class="w-100 px-4 bg-light py-4">
+                        <div class="tab-content mt-2">
+                            <div class="tab-pane active" id="fill-tabpanel-0" role="tabpanel" aria-labelledby="fill-tab-0">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered">
+                                        <thead>
+                                            <tr>
+                                                <th>S.No.</th>
+                                                <th>GSTIN</th>
+                                                <th>Party Name</th>
+                                                <th>Invoice No.</th>
+                                                <th>Invoice Date</th>
+                                                <th>Invoice Type</th>
+                                                <th>Invoice Value</th>
+                                                <th>Taxable Value</th>
+                                                <th>IGST</th>
+                                                <th>CGST</th>
+                                                <th>SGST</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @php
+                                                $invoiceTotal = 0;
+                                                $taxableTotal = 0;
+                                                $igstTotal = 0;
+                                                $cgstTotal = 0;
+                                                $sgstTotal = 0;
+                                                $sr = 1;
+                                            @endphp
+                                            @if(count($data))
+                                            @foreach(['Purchase','Purchase Debit Note','Purchase Credit Note','Journal'] as $type)
+                                                @foreach($data->where('invoice_type', $type) as $row)
+                                                    @php
+                                                        if($row->invoice_type == 'Purchase Debit Note')
+                                                        {
+                                                            $invoiceTotal -= (float)($row->invoice_value ?? 0);
+                                                            $taxableTotal -= (float)($row->taxable_value ?? 0);
+                                                            $igstTotal -= (float)($row->igst ?? 0);
+                                                            $cgstTotal -= (float)($row->cgst ?? 0);
+                                                            $sgstTotal -= (float)($row->sgst ?? 0);
+                                                        }
+                                                        else
+                                                        {
+                                                            $invoiceTotal += (float)($row->invoice_value ?? 0);
+                                                            $taxableTotal += (float)($row->taxable_value ?? 0);
+                                                            $igstTotal += (float)($row->igst ?? 0);
+                                                            $cgstTotal += (float)($row->cgst ?? 0);
+                                                            $sgstTotal += (float)($row->sgst ?? 0);
+                                                        }
+                                                    @endphp
+                                                    <tr>
+                                                        <td>{{ $sr++ }}</td>
+                                                        <td>{{ $row->gstin }}</td>
+                                                        <td>{{ $row->party_name }}</td>
+                                                        <td>
+                                                            @php
+                                                                $url = '#';
+                                                                if(($row->voucher_source ?? '') == 'purchase'){
+                                                                    $url = url('purchase-edit/'.$row->voucher_id);
+                                                                }
+                                                                elseif(($row->voucher_source ?? '') == 'purchase_return'){
+                                                                    $url = url('purchase-return-edit/'.$row->voucher_id);
+                                                                }
+                                                                elseif(($row->voucher_source ?? '') == 'sale_return'){
+                                                                    $url = url('sale-return-edit/'.$row->voucher_id);
+                                                                }
+                                                                elseif(($row->voucher_source ?? '') == 'journal'){
+                                                                    $url = url('journal/'.$row->voucher_id.'/edit');
+                                                                }
+                                                            @endphp
+                                                            <a href="{{ $url }}" target="_blank">
+                                                                {{ $row->invoice_no }}
+                                                            </a>
+                                                        </td>
+                                                        <td>
+                                                            {{ !empty($row->invoice_date) ? date('d-m-Y', strtotime($row->invoice_date)) : '' }}
+                                                        </td>
+                                                        <td>{{ $row->invoice_type }}</td>
+                                                        <td class="text-right">
+                                                            {{ number_format((float)($row->invoice_value ?? 0), 2) }}
+                                                        </td>
+                                                        <td class="text-right">
+                                                            {{ number_format((float)($row->taxable_value ?? 0), 2) }}
+                                                        </td>
+                                                        <td class="text-right">
+                                                            {{ number_format((float)($row->igst ?? 0), 2) }}
+                                                        </td>
+                                                        <td class="text-right">
+                                                            {{ number_format((float)($row->cgst ?? 0), 2) }}
+                                                        </td>
+                                                        <td class="text-right">
+                                                            {{ number_format((float)($row->sgst ?? 0), 2) }}
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                            @endforeach
+                                            @else
+                                            <tr>
+                                                <td colspan="11" class="text-center">
+                                                    No Records Found
+                                                </td>
+                                            </tr>
+                                            @endif
+                                        </tbody>
+                                        <tfoot>
+                                            <tr style="font-weight:bold;background:#f8f9fa;">
+                                                <td colspan="6" style="text-align:right;font-weight:bold;">
+                                                    Total
+                                                </td>
+                                                <td class="text-right">
+                                                    {{ number_format($invoiceTotal,2) }}
+                                                </td>
+                                                <td class="text-right">
+                                                    {{ number_format($taxableTotal,2) }}
+                                                </td>
+                                                <td class="text-right">
+                                                    {{ number_format($igstTotal,2) }}
+                                                </td>
+                                                <td class="text-right">
+                                                    {{ number_format($cgstTotal,2) }}
+                                                </td>
+                                                <td class="text-right">
+                                                    {{ number_format($sgstTotal,2) }}
+                                                </td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="tab-pane" id="fill-tabpanel-1" role="tabpanel" aria-labelledby="fill-tab-1">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered align-middle">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Description</th>
+                                                <th>IGST</th>
+                                                <th>CGST</th>
+                                                <th>SGST</th>
+                                                <th>CESS</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr class="section-title">
+                                                <th>(A) ITC Available (whether in full or part)</th>
+                                                <th colspan="4"></th>
+                                            </tr>
 
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h2>GSTR-3B - Eligible ITC Details</h2>
+                                            <tr>
+                                                <td>(1) Import of goods</td>
+                                                <td><input type="text" class="form-control" value="0.00"></td>
+                                                <td><input type="text" class="form-control" value="0.00"></td>
+                                                <td><input type="text" class="form-control" value="0.00"></td>
+                                                <td><input type="text" class="form-control" value="0.00"></td>
+                                            </tr>
 
-                        </div>
+                                            <tr>
+                                                <td>(2) Import of services</td>
+                                                <td><input type="text" class="form-control" value="0.00"></td>
+                                                <td><input type="text" class="form-control" value="0.00"></td>
+                                                <td><input type="text" class="form-control" value="0.00"></td>
+                                                <td><input type="text" class="form-control" value="0.00"></td>
+                                            </tr>
 
-                        <div class="table-responsive">
-                        <table class="table table-bordered">
+                                            <tr>
+                                                <td>(3) Inward supplies liable to reverse charge</td>
+                                                <td><input type="text" class="form-control" value="0.00"></td>
+                                                <td><input type="text" class="form-control" value="0.00"></td>
+                                                <td><input type="text" class="form-control" value="0.00"></td>
+                                                <td><input type="text" class="form-control" value="0.00"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>(4) Inward supplies from ISD</td>
+                                                <td><input type="text" class="form-control" value="0.00"></td>
+                                                <td><input type="text" class="form-control" value="0.00"></td>
+                                                <td><input type="text" class="form-control" value="0.00"></td>
+                                                <td><input type="text" class="form-control" value="0.00"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>(5) All other ITC</td>
+                                                <td><input type="text" class="form-control" value="12734716.41"></td>
+                                                <td><input type="text" class="form-control" value="517.35"></td>
+                                                <td><input type="text" class="form-control" value="517.35"></td>
+                                                <td><input type="text" class="form-control" value="0.00"></td>
+                                            </tr>
 
-                            <thead>
-                                <tr>
-                                    <th>S.No.</th>
-                                    <th>GSTIN</th>
-                                    <th>Party Name</th>
-                                    <th>Invoice No.</th>
-                                    <th>Invoice Date</th>
-                                    <th>Invoice Type</th>
-                                    <th>Invoice Value</th>
-                                    <th>Taxable Value</th>
-                                    <th>IGST</th>
-                                    <th>CGST</th>
-                                    <th>SGST</th>
-                                </tr>
-                            </thead>
+                                            <tr class="section-title">
+                                                <th>(B) ITC Reversed</th>
+                                                <th colspan="4"></th>
+                                            </tr>
 
-                            <tbody>
-                                @php
-                                    $invoiceTotal = 0;
-                                    $taxableTotal = 0;
-                                    $igstTotal = 0;
-                                    $cgstTotal = 0;
-                                    $sgstTotal = 0;
-                                    $sr = 1;
-                                @endphp
-                                @if(count($data))
-                                @foreach(['Purchase','Purchase Debit Note','Purchase Credit Note','Journal'] as $type)
-                                    @foreach($data->where('invoice_type', $type) as $row)
-                                        @php
-                                            if($row->invoice_type == 'Purchase Debit Note')
-                                            {
-                                                $invoiceTotal -= (float)($row->invoice_value ?? 0);
-                                                $taxableTotal -= (float)($row->taxable_value ?? 0);
-                                                $igstTotal -= (float)($row->igst ?? 0);
-                                                $cgstTotal -= (float)($row->cgst ?? 0);
-                                                $sgstTotal -= (float)($row->sgst ?? 0);
-                                            }
-                                            else
-                                            {
-                                                $invoiceTotal += (float)($row->invoice_value ?? 0);
-                                                $taxableTotal += (float)($row->taxable_value ?? 0);
-                                                $igstTotal += (float)($row->igst ?? 0);
-                                                $cgstTotal += (float)($row->cgst ?? 0);
-                                                $sgstTotal += (float)($row->sgst ?? 0);
-                                            }
-                                        @endphp
-                                        <tr>
-                                            <td>{{ $sr++ }}</td>
-                                            <td>{{ $row->gstin }}</td>
-                                            <td>{{ $row->party_name }}</td>
-                                            <td>
-                                                @php
-                                                    $url = '#';
-                                                    if(($row->voucher_source ?? '') == 'purchase'){
-                                                        $url = url('purchase-edit/'.$row->voucher_id);
-                                                    }
-                                                    elseif(($row->voucher_source ?? '') == 'purchase_return'){
-                                                        $url = url('purchase-return-edit/'.$row->voucher_id);
-                                                    }
-                                                    elseif(($row->voucher_source ?? '') == 'sale_return'){
-                                                        $url = url('sale-return-edit/'.$row->voucher_id);
-                                                    }
-                                                    elseif(($row->voucher_source ?? '') == 'journal'){
-                                                        $url = url('journal/'.$row->voucher_id.'/edit');
-                                                    }
-                                                @endphp
-                                                <a href="{{ $url }}" target="_blank">
-                                                    {{ $row->invoice_no }}
-                                                </a>
-                                            </td>
-                                            <td>
-                                                {{ !empty($row->invoice_date) ? date('d-m-Y', strtotime($row->invoice_date)) : '' }}
-                                            </td>
-                                            <td>{{ $row->invoice_type }}</td>
-                                            <td class="text-right">
-                                                {{ number_format((float)($row->invoice_value ?? 0), 2) }}
-                                            </td>
-                                            <td class="text-right">
-                                                {{ number_format((float)($row->taxable_value ?? 0), 2) }}
-                                            </td>
-                                            <td class="text-right">
-                                                {{ number_format((float)($row->igst ?? 0), 2) }}
-                                            </td>
-                                            <td class="text-right">
-                                                {{ number_format((float)($row->cgst ?? 0), 2) }}
-                                            </td>
-                                            <td class="text-right">
-                                                {{ number_format((float)($row->sgst ?? 0), 2) }}
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                @endforeach
-                                @else
-                                <tr>
-                                    <td colspan="11" class="text-center">
-                                        No Records Found
-                                    </td>
-                                </tr>
-                                @endif
-                            </tbody>
-
-                            <tfoot>
-
-                                <tr style="font-weight:bold;background:#f8f9fa;">
-
-                                    <td colspan="6" style="text-align:right;font-weight:bold;">
-                                        Total
-                                    </td>
-
-                                    <td class="text-right">
-                                        {{ number_format($invoiceTotal,2) }}
-                                    </td>
-
-                                    <td class="text-right">
-                                        {{ number_format($taxableTotal,2) }}
-                                    </td>
-
-                                    <td class="text-right">
-                                        {{ number_format($igstTotal,2) }}
-                                    </td>
-
-                                    <td class="text-right">
-                                        {{ number_format($cgstTotal,2) }}
-                                    </td>
-
-                                    <td class="text-right">
-                                        {{ number_format($sgstTotal,2) }}
-                                    </td>
-
-                                </tr>
-
-                            </tfoot>
-
-                        </table>
+                                            <tr>
+                                                <td>(1) As per rules 38,42 & 43</td>
+                                                <td><input type="text" class="form-control" value="0.00"></td>
+                                                <td><input type="text" class="form-control" value="0.00"></td>
+                                                <td><input type="text" class="form-control" value="0.00"></td>
+                                                <td><input type="text" class="form-control" value="0.00"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>(2) Others</td>
+                                                <td><input type="text" class="form-control" value="0.00"></td>
+                                                <td><input type="text" class="form-control" value="0.00"></td>
+                                                <td><input type="text" class="form-control" value="0.00"></td>
+                                                <td><input type="text" class="form-control" value="0.00"></td>
+                                            </tr>
+                                            <tr class="section-title">
+                                                <th>(C) Net ITC Available (A - B)</th>
+                                                <td><input type="text" class="form-control" value="12734716.41"></td>
+                                                <td><input type="text" class="form-control" value="517.35"></td>
+                                                <td><input type="text" class="form-control" value="517.35"></td>
+                                                <td><input type="text" class="form-control" value="0.00"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                     </div>
-
                 </div>
-
             </div>
-
         </div>
     </section>
 </div>

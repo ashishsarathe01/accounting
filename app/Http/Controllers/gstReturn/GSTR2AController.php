@@ -603,6 +603,7 @@ class GSTR2AController extends Controller
                 ->where('merchant_gst', $request->gstin)
                 ->where('status', '1')
                 ->where('delete', '0')
+                ->where('billing_gst','!=','')
                 ->where('date', 'like', $request->month.'%')
                 ->groupBy('billing_gst')
                 ->get();

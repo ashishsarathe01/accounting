@@ -1328,6 +1328,8 @@ class GSTR3BController extends Controller
         if(isset($request->source) && $request->source=="GSTR2B"){
             return json_encode(array('data'=>$data));
         }
+
+        
         return view(
             'gstReturn.gst3b_itc_table',
             compact(
