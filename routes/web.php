@@ -1601,6 +1601,10 @@ Route::get('profit-loss-group-mapping',[ProfitLossController::class,'profitLossG
 Route::post('profit-loss-group-mapping-save',[ProfitLossController::class,'saveProfitLossGroupMapping'])->name('profitloss.group.mapping.save');
 Route::get('balance-sheet-group-mapping',[BalanceSheetController::class,'balanceSheetGroupMapping'])->name('balancesheet.group.mapping');
 Route::post('balance-sheet-group-mapping-save',[BalanceSheetController::class,'saveBalanceSheetGroupMapping'])->name('balancesheet.group.mapping.save');
+Route::get('trade-payable-account-mapping',[BalanceSheetController::class, 'tradePayableAccountMapping'])->name('trade.payable.account.mapping');
+Route::post('trade-payable-account-mapping-save',[BalanceSheetController::class, 'saveTradePayableAccountMapping'])->name('trade.payable.account.mapping.save');
+Route::get('/vertical-bs-drilldown', [BalanceSheetController::class, 'verticalDrillDown'])->name('vertical.bs.drilldown');
+Route::get('/vertical-pl-drilldown', [ProfitLossController::class, 'verticalPLDrillDown'])->name('vertical.pl.drilldown');
 Route::post('verify-gst2b', [GSTR2BController::class, 'verifyGst2b'])->name('verify-gst2b'); 
 Route::get(
     '/gst-return-compliance',

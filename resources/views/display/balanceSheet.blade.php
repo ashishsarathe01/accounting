@@ -274,303 +274,427 @@
                     </div>
                 </div>
                 </div>
-                <div id="vertical_balance_sheet" style="display:none;">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-body p-0">
-                            <table class="table table-bordered mb-0 vertical-bs-table">
+<div id="vertical_balance_sheet" style="display:none;">
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-bordered mb-0 vertical-bs-table">
+                @php
+                    [$startYear, $endYear] = explode('-', Session::get('default_fy'));
+                    $currentFyEndYear  = '20' . $endYear;
+                    $previousFyEndYear = $currentFyEndYear - 1;
+
+                    // helper: format or show dash
+                    function vbsAmt($val)
+                    {
+                        if (round($val,2) == 0) {
+                            return '—';
+                        }
+
+                        $formatted = function_exists('formatIndianNumber')
+                            ? formatIndianNumber(abs($val))
+                            : number_format(abs($val), 2);
+
+                        return $val < 0 ? '-' . $formatted : $formatted;
+                    }
+
+                    $vb  = $verticalBalances; // shorthand - current year
+                    $vb2 = $verticalBalancesPrevious; // shorthand - previous year
+                    $drillUrl = url('vertical-bs-drilldown');
+
+                    $totalLiabilities  = 0;
+                    $totalAssets       = 0;
+                    $totalLiabilities2 = 0;
+                    $totalAssets2      = 0;
+                @endphp
+
+                <thead>
+                    <tr>
+                        <th width="60%">Particulars</th>
+                        <th width="20%" class="text-end">As at 31st March {{ $currentFyEndYear }}</th>
+                        <th width="20%" class="text-end">As at 31st March {{ $previousFyEndYear }}</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {{-- ===================== EQUITY & LIABILITIES ===================== --}}
+                    <tr class="level-0">
+                        <td><strong>EQUITY AND LIABILITIES</strong></td>
+                        <td></td><td></td>
+                    </tr>
+
+                    @if($company_info->business_type == 3)
+                        <tr class="level-1">
+                            <td><strong>Shareholder's funds</strong></td>
+                            <td class="text-end">
                                 @php
-                                [$startYear, $endYear] = explode('-', Session::get('default_fy'));
-                                $currentFyEndYear = '20' . $endYear;
-                                $previousFyEndYear = $currentFyEndYear - 1;
+                                    $shFunds = ($vb['Share capital'] ?? 0) + ($vb['Reserves and surplus'] ?? 0);
+                                    $totalLiabilities += $shFunds;
+
+                                    $shFunds2 = ($vb2['Share capital'] ?? 0) + ($vb2['Reserves and surplus'] ?? 0);
+                                    $totalLiabilities2 += $shFunds2;
                                 @endphp
-                                <thead>
-                                    <tr>
-                                        <th width="60%">Particulars</th>
-                                        <th width="20%" class="text-end">
-                                            As at 31st March {{$currentFyEndYear}}
-                                        </th>
+                                {{ vbsAmt($shFunds) }}
+                            </td>
+                            <td class="text-end">{{ vbsAmt($shFunds2) }}</td>
+                        </tr>
+                        <tr class="level-2">
+                            <td>
+                                <a href="{{ $drillUrl }}?mapping_name=Share capital" class="text-primary text-decoration-none vbs-drill">
+                                    Share capital
+                                </a>
+                            </td>
+                            <td class="text-end">{{ vbsAmt($vb['Share capital'] ?? 0) }}</td>
+                            <td class="text-end">{{ vbsAmt($vb2['Share capital'] ?? 0) }}</td>
+                        </tr>
+                        <tr class="level-2">
+                            <td>
+                                <a href="{{ $drillUrl }}?mapping_name=Reserves and surplus" class="text-primary text-decoration-none vbs-drill">
+                                    Reserves and surplus
+                                </a>
+                            </td>
+                            <td class="text-end">{{ vbsAmt($vb['Reserves and surplus'] ?? 0) }}</td>
+                            <td class="text-end">{{ vbsAmt($vb2['Reserves and surplus'] ?? 0) }}</td>
+                        </tr>
 
-                                        <th width="20%" class="text-end">
-                                            As at 31st March {{$previousFyEndYear}}
-                                        </th>
-                                    </tr>
-                                </thead>
+                    @elseif($company_info->business_type == 2)
+                        <tr class="level-1">
+                            <td><strong>Partner's funds</strong></td>
+                            <td class="text-end">
+                                @php
+                                    $shFunds = ($vb["Partner's capital account"] ?? 0) + ($vb['Profit and loss account'] ?? 0);
+                                    $totalLiabilities += $shFunds;
 
-                                <tbody>
+                                    $shFunds2 = ($vb2["Partner's capital account"] ?? 0) + ($vb2['Profit and loss account'] ?? 0);
+                                    $totalLiabilities2 += $shFunds2;
+                                @endphp
+                                {{ vbsAmt($shFunds) }}
+                            </td>
+                            <td class="text-end">{{ vbsAmt($shFunds2) }}</td>
+                        </tr>
+                        <tr class="level-2">
+                            <td>
+                                <a href="{{ $drillUrl }}?mapping_name=Partner's capital account" class="text-primary text-decoration-none vbs-drill">
+                                    Partner's capital account
+                                </a>
+                            </td>
+                            <td class="text-end">{{ vbsAmt($vb["Partner's capital account"] ?? 0) }}</td>
+                            <td class="text-end">{{ vbsAmt($vb2["Partner's capital account"] ?? 0) }}</td>
+                        </tr>
+                        <tr class="level-2">
+                            <td>
+                                <a href="{{ $drillUrl }}?mapping_name=Profit and loss account" class="text-primary text-decoration-none vbs-drill">
+                                    Profit and loss account
+                                </a>
+                            </td>
+                            <td class="text-end">{{ vbsAmt($vb['Profit and loss account'] ?? 0) }}</td>
+                            <td class="text-end">{{ vbsAmt($vb2['Profit and loss account'] ?? 0) }}</td>
+                        </tr>
 
-                                    <tr class="level-0">
-                                        <td><strong>EQUITY AND LIABILITIES</strong></td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
+                    @elseif($company_info->business_type == 1)
+                        <tr class="level-1">
+                            <td><strong>Proprietor's funds</strong></td>
+                            <td class="text-end">
+                                @php
+                                    $shFunds = ($vb["Proprietor's capital account"] ?? 0) + ($vb['Profit and loss account'] ?? 0);
+                                    $totalLiabilities += $shFunds;
 
-                                    @if($company_info->business_type == 3)
+                                    $shFunds2 = ($vb2["Proprietor's capital account"] ?? 0) + ($vb2['Profit and loss account'] ?? 0);
+                                    $totalLiabilities2 += $shFunds2;
+                                @endphp
+                                {{ vbsAmt($shFunds) }}
+                            </td>
+                            <td class="text-end">{{ vbsAmt($shFunds2) }}</td>
+                        </tr>
+                        <tr class="level-2">
+                            <td>
+                                <a href="{{ $drillUrl }}?mapping_name=Proprietor's capital account" class="text-primary text-decoration-none vbs-drill">
+                                    Proprietor's capital account
+                                </a>
+                            </td>
+                            <td class="text-end">{{ vbsAmt($vb["Proprietor's capital account"] ?? 0) }}</td>
+                            <td class="text-end">{{ vbsAmt($vb2["Proprietor's capital account"] ?? 0) }}</td>
+                        </tr>
+                        <tr class="level-2">
+                            <td>
+                                <a href="{{ $drillUrl }}?mapping_name=Profit and loss account" class="text-primary text-decoration-none vbs-drill">
+                                    Profit and loss account
+                                </a>
+                            </td>
+                            <td class="text-end">{{ vbsAmt($vb['Profit and loss account'] ?? 0) }}</td>
+                            <td class="text-end">{{ vbsAmt($vb2['Profit and loss account'] ?? 0) }}</td>
+                        </tr>
+                    @endif
 
-                                        <tr class="level-1">
-                                            <td><strong>Shareholder's funds</strong></td>
-                                            <td></td>
-                                            <td></td>
-                                        </tr>
+                    {{-- Non-current liabilities --}}
+                    @php
+                        $nonCurrLiab = ($vb['Long-term borrowings'] ?? 0)
+                                     + ($vb['Deferred tax liabilities (Net)'] ?? 0)
+                                     + ($vb['Other long term liabilities'] ?? 0)
+                                     + ($vb['Long-term provisions'] ?? 0);
+                        $totalLiabilities += $nonCurrLiab;
 
-                                        <tr class="level-2">
-                                            <td>Share capital</td>
-                                            <td></td>
-                                            <td></td>
-                                        </tr>
+                        $nonCurrLiab2 = ($vb2['Long-term borrowings'] ?? 0)
+                                      + ($vb2['Deferred tax liabilities (Net)'] ?? 0)
+                                      + ($vb2['Other long term liabilities'] ?? 0)
+                                      + ($vb2['Long-term provisions'] ?? 0);
+                        $totalLiabilities2 += $nonCurrLiab2;
+                    @endphp
+                    <tr class="level-1">
+                        <td><strong>Non-current liabilities</strong></td>
+                        <td class="text-end">{{ vbsAmt($nonCurrLiab) }}</td>
+                        <td class="text-end">{{ vbsAmt($nonCurrLiab2) }}</td>
+                    </tr>
+                    @foreach([
+                        'Long-term borrowings',
+                        'Deferred tax liabilities (Net)',
+                        'Other long term liabilities',
+                        'Long-term provisions'
+                    ] as $line)
+                        <tr class="level-2">
+                            <td>
+                                <a href="{{ $drillUrl }}?mapping_name={{ urlencode($line) }}" class="text-primary text-decoration-none vbs-drill">
+                                    {{ $line }}
+                                </a>
+                            </td>
+                            <td class="text-end">{{ vbsAmt($vb[$line] ?? 0) }}</td>
+                            <td class="text-end">{{ vbsAmt($vb2[$line] ?? 0) }}</td>
+                        </tr>
+                    @endforeach
 
-                                        <tr class="level-2">
-                                            <td>Reserves and surplus</td>
-                                            <td></td>
-                                            <td></td>
-                                        </tr>
+                    {{-- Current liabilities --}}
+                    @php
+                        $currLiab = ($vb['Short-term borrowings'] ?? 0)
+                                  + ($vb['Trade payables'] ?? 0)
+                                  + ($vb['Other current liabilities'] ?? 0)
+                                  + ($vb['Short-term provisions'] ?? 0);
+                        $totalLiabilities += $currLiab;
 
-                                    @elseif($company_info->business_type == 2)
+                        $currLiab2 = ($vb2['Short-term borrowings'] ?? 0)
+                                   + ($vb2['Trade payables'] ?? 0)
+                                   + ($vb2['Other current liabilities'] ?? 0)
+                                   + ($vb2['Short-term provisions'] ?? 0);
+                        $totalLiabilities2 += $currLiab2;
+                    @endphp
+                    <tr class="level-1">
+                        <td><strong>Current liabilities</strong></td>
+                        <td class="text-end">{{ vbsAmt($currLiab) }}</td>
+                        <td class="text-end">{{ vbsAmt($currLiab2) }}</td>
+                    </tr>
+                    <tr class="level-2">
+                        <td>
+                            <a href="{{ $drillUrl }}?mapping_name=Short-term+borrowings" class="text-primary text-decoration-none vbs-drill">
+                                Short-term borrowings
+                            </a>
+                        </td>
+                        <td class="text-end">{{ vbsAmt($vb['Short-term borrowings'] ?? 0) }}</td>
+                        <td class="text-end">{{ vbsAmt($vb2['Short-term borrowings'] ?? 0) }}</td>
+                    </tr>
+                    <tr class="level-2">
+    <td>
+        <a href="{{ $drillUrl }}?mapping_name=Trade+payables"
+           class="text-primary text-decoration-none vbs-drill">
+            Trade payables
+        </a>
+    </td>
+    <td class="text-end">{{ vbsAmt($vb['Trade payables'] ?? 0) }}</td>
+    <td class="text-end">{{ vbsAmt($vb2['Trade payables'] ?? 0) }}</td>
+</tr>
 
-                                        <tr class="level-1">
-                                            <td><strong>Partner's funds</strong></td>
-                                            <td></td>
-                                            <td></td>
-                                        </tr>
+<tr class="level-3">
+    <td>
+        <a href="{{ $drillUrl }}?mapping_name=Trade+payables+(A)+Micro+enterprises+and+small+enterprises"
+           class="text-primary text-decoration-none vbs-drill">
+            (A) Micro enterprises and small enterprises
+        </a>
+    </td>
+    <td class="text-end">
+        {{ vbsAmt($vb['Trade payables (A)'] ?? 0) }}
+    </td>
+    <td class="text-end">
+        {{ vbsAmt($vb2['Trade payables (A)'] ?? 0) }}
+    </td>
+</tr>
 
-                                        <tr class="level-2">
-                                            <td>Partner's capital account</td>
-                                            <td></td>
-                                            <td></td>
-                                        </tr>
+<tr class="level-3">
+    <td>
+        <a href="{{ $drillUrl }}?mapping_name=Trade+payables+(B)+Others"
+           class="text-primary text-decoration-none vbs-drill">
+            (B) Others
+        </a>
+    </td>
+    <td class="text-end">
+        {{ vbsAmt($vb['Trade payables (B)'] ?? 0) }}
+    </td>
+    <td class="text-end">
+        {{ vbsAmt($vb2['Trade payables (B)'] ?? 0) }}
+    </td>
+</tr>
+                    <tr class="level-2">
+                        <td>
+                            <a href="{{ $drillUrl }}?mapping_name=Other+current+liabilities" class="text-primary text-decoration-none vbs-drill">
+                                Other current liabilities
+                            </a>
+                        </td>
+                        <td class="text-end">{{ vbsAmt($vb['Other current liabilities'] ?? 0) }}</td>
+                        <td class="text-end">{{ vbsAmt($vb2['Other current liabilities'] ?? 0) }}</td>
+                    </tr>
+                    <tr class="level-2">
+                        <td>
+                            <a href="{{ $drillUrl }}?mapping_name=Short-term+provisions" class="text-primary text-decoration-none vbs-drill">
+                                Short-term provisions
+                            </a>
+                        </td>
+                        <td class="text-end">{{ vbsAmt($vb['Short-term provisions'] ?? 0) }}</td>
+                        <td class="text-end">{{ vbsAmt($vb2['Short-term provisions'] ?? 0) }}</td>
+                    </tr>
 
-                                        <tr class="level-2">
-                                            <td>Profit and loss account</td>
-                                            <td></td>
-                                            <td></td>
-                                        </tr>
+                    <tr class="total-row">
+                        <td><strong>TOTAL</strong></td>
+                        <td class="text-end"><strong>{{ vbsAmt($totalLiabilities) }}</strong></td>
+                        <td class="text-end"><strong>{{ vbsAmt($totalLiabilities2) }}</strong></td>
+                    </tr>
 
-                                    @elseif($company_info->business_type == 1)
+                    {{-- ===================== ASSETS ===================== --}}
+                    <tr class="level-0">
+                        <td><strong>ASSETS</strong></td>
+                        <td></td><td></td>
+                    </tr>
 
-                                        <tr class="level-1">
-                                            <td><strong>Proprietor's funds</strong></td>
-                                            <td></td>
-                                            <td></td>
-                                        </tr>
+                    {{-- Non-current assets --}}
+                    @php
+                        $ppe = ($vb['Property, Plant and Equipment'] ?? 0)
+                             + ($vb['Intangible assets'] ?? 0)
+                             + ($vb['Capital work-in-progress'] ?? 0)
+                             + ($vb['Intangible assets under development'] ?? 0);
 
-                                        <tr class="level-2">
-                                            <td>Proprietor's capital account</td>
-                                            <td></td>
-                                            <td></td>
-                                        </tr>
+                        $nonCurrAssets = $ppe
+                                       + ($vb['Non-current investments'] ?? 0)
+                                       + ($vb['Deferred tax assets (Net)'] ?? 0)
+                                       + ($vb['Long-term loans and advances'] ?? 0)
+                                       + ($vb['Other non-current assets'] ?? 0);
 
-                                        <tr class="level-2">
-                                            <td>Profit and loss account</td>
-                                            <td></td>
-                                            <td></td>
-                                        </tr>
+                        $totalAssets += $nonCurrAssets;
 
-                                    @endif
+                        $ppe2 = ($vb2['Property, Plant and Equipment'] ?? 0)
+                              + ($vb2['Intangible assets'] ?? 0)
+                              + ($vb2['Capital work-in-progress'] ?? 0)
+                              + ($vb2['Intangible assets under development'] ?? 0);
 
-                                    <tr class="level-1">
-                                        <td><strong>Non-current liabilities</strong></td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
+                        $nonCurrAssets2 = $ppe2
+                                        + ($vb2['Non-current investments'] ?? 0)
+                                        + ($vb2['Deferred tax assets (Net)'] ?? 0)
+                                        + ($vb2['Long-term loans and advances'] ?? 0)
+                                        + ($vb2['Other non-current assets'] ?? 0);
 
-                                    <tr class="level-2">
-                                        <td>Long-term borrowings</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
+                        $totalAssets2 += $nonCurrAssets2;
+                    @endphp
+                    <tr class="level-1">
+                        <td><strong>Non-current assets</strong></td>
+                        <td class="text-end">{{ vbsAmt($nonCurrAssets) }}</td>
+                        <td class="text-end">{{ vbsAmt($nonCurrAssets2) }}</td>
+                    </tr>
+                    <tr class="level-2">
+                        <td><strong>Property, Plant and Equipment and Intangible assets</strong></td>
+                        <td class="text-end">{{ vbsAmt($ppe) }}</td>
+                        <td class="text-end">{{ vbsAmt($ppe2) }}</td>
+                    </tr>
+                    @foreach([
+                        'Property, Plant and Equipment',
+                        'Intangible assets',
+                        'Capital work-in-progress',
+                        'Intangible assets under development'
+                    ] as $line)
+                        <tr class="level-3">
+                            <td>
+                                <a href="{{ $drillUrl }}?mapping_name={{ urlencode($line) }}" class="text-primary text-decoration-none vbs-drill">
+                                    {{ $line }}
+                                </a>
+                            </td>
+                            <td class="text-end">{{ vbsAmt($vb[$line] ?? 0) }}</td>
+                            <td class="text-end">{{ vbsAmt($vb2[$line] ?? 0) }}</td>
+                        </tr>
+                    @endforeach
+                    @foreach([
+                        'Non-current investments',
+                        'Deferred tax assets (Net)',
+                        'Long-term loans and advances',
+                        'Other non-current assets'
+                    ] as $line)
+                        <tr class="level-2">
+                            <td>
+                                <a href="{{ $drillUrl }}?mapping_name={{ urlencode($line) }}" class="text-primary text-decoration-none vbs-drill">
+                                    {{ $line }}
+                                </a>
+                            </td>
+                            <td class="text-end">{{ vbsAmt($vb[$line] ?? 0) }}</td>
+                            <td class="text-end">{{ vbsAmt($vb2[$line] ?? 0) }}</td>
+                        </tr>
+                    @endforeach
 
-                                    <tr class="level-2">
-                                        <td>Deferred tax liabilities (Net)</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
+                    {{-- Current assets --}}
+                    @php
+                        $currAssets = ($vb['Current investments'] ?? 0)
+                                    + ($vb['Inventories'] ?? 0)
+                                    + ($vb['Trade receivables'] ?? 0)
+                                    + ($vb['Cash and cash equivalents'] ?? 0)
+                                    + ($vb['Short-term loans and advances'] ?? 0)
+                                    + ($vb['Other current assets'] ?? 0);
+                        $totalAssets += $currAssets;
 
-                                    <tr class="level-2">
-                                        <td>Other long term liabilities</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
+                        $currAssets2 = ($vb2['Current investments'] ?? 0)
+                                     + ($vb2['Inventories'] ?? 0)
+                                     + ($vb2['Trade receivables'] ?? 0)
+                                     + ($vb2['Cash and cash equivalents'] ?? 0)
+                                     + ($vb2['Short-term loans and advances'] ?? 0)
+                                     + ($vb2['Other current assets'] ?? 0);
+                        $totalAssets2 += $currAssets2;
+                    @endphp
+                    <tr class="level-1">
+                        <td><strong>Current assets</strong></td>
+                        <td class="text-end">{{ vbsAmt($currAssets) }}</td>
+                        <td class="text-end">{{ vbsAmt($currAssets2) }}</td>
+                    </tr>
+                    @foreach([
+                        'Current investments',
+                        'Inventories',
+                        'Trade receivables',
+                        'Cash and cash equivalents',
+                        'Short-term loans and advances',
+                        'Other current assets'
+                    ] as $line)
+                        <tr class="level-2">
+                            <td>
+                                <a href="{{ $drillUrl }}?mapping_name={{ urlencode($line) }}" class="text-primary text-decoration-none vbs-drill">
+                                    {{ $line }}
+                                </a>
+                            </td>
+                            <td class="text-end">{{ vbsAmt($vb[$line] ?? 0) }}</td>
+                            <td class="text-end">{{ vbsAmt($vb2[$line] ?? 0) }}</td>
+                        </tr>
+                    @endforeach
 
-                                    <tr class="level-2">
-                                        <td>Long-term provisions</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
+                    <tr class="total-row">
+                        <td><strong>TOTAL</strong></td>
+                        <td class="text-end"><strong>{{ vbsAmt($totalAssets) }}</strong></td>
+                        <td class="text-end"><strong>{{ vbsAmt($totalAssets2) }}</strong></td>
+                    </tr>
 
-                                    <tr class="level-1">
-                                        <td><strong>Current liabilities</strong></td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
+                    @php
+                        $difference  = round($totalLiabilities - $totalAssets, 2);
+                        $difference2 = round($totalLiabilities2 - $totalAssets2, 2);
+                    @endphp
+                    <tr class="difference-row">
+                        <td>Difference</td>
+                        <td class="text-end">{{ $difference != 0 ? vbsAmt($difference) : '—' }}</td>
+                        <td class="text-end">{{ $difference2 != 0 ? vbsAmt($difference2) : '—' }}</td>
+                    </tr>
 
-                                    <tr class="level-2">
-                                        <td>Short-term borrowings</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-
-                                    <tr class="level-2">
-                                        <td>Trade payables</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-
-                                    <tr class="level-3">
-                                        <td>(A) Micro enterprises and small enterprises</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-
-                                    <tr class="level-3">
-                                        <td>(B) Others</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-
-                                    <tr class="level-2">
-                                        <td>Other current liabilities</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-
-                                    <tr class="level-2">
-                                        <td>Short-term provisions</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-
-                                    <tr class="total-row">
-                                        <td>TOTAL</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-
-                                    <tr class="level-0">
-                                        <td><strong>ASSETS</strong></td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-
-                                    <tr class="level-1">
-                                        <td><strong>Non-current assets</strong></td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-
-                                    <tr class="level-2">
-                                        <td>Property, Plant and Equipment and Intangible assets</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-
-                                    <tr class="level-3">
-                                        <td>Property, Plant and Equipment</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-
-                                    <tr class="level-3">
-                                        <td>Intangible assets</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-
-                                    <tr class="level-3">
-                                        <td>Capital work-in-progress</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-
-                                    <tr class="level-3">
-                                        <td>Intangible assets under development</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-
-                                    <tr class="level-2">
-                                        <td>Non-current investments</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-
-                                    <tr class="level-2">
-                                        <td>Deferred tax assets (Net)</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-
-                                    <tr class="level-2">
-                                        <td>Long-term loans and advances</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-
-                                    <tr class="level-2">
-                                        <td>Other non-current assets</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-
-                                    <tr class="level-1">
-                                        <td><strong>Current assets</strong></td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-
-                                    <tr class="level-2">
-                                        <td>Current investments</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-
-                                    <tr class="level-2">
-                                        <td>Inventories</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-
-                                    <tr class="level-2">
-                                        <td>Trade receivables</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-
-                                    <tr class="level-2">
-                                        <td>Cash and cash equivalents</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-
-                                    <tr class="level-2">
-                                        <td>Short-term loans and advances</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-
-                                    <tr class="level-2">
-                                        <td>Other current assets</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-
-                                    <tr class="total-row">
-                                        <td>TOTAL</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-
-                                    <tr class="difference-row">
-                                        <td>Difference</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-
-                                </tbody>
-                            </table>
-
-                        </div>
-                    </div>
-
-                </div>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
             </div>
         </div>
     </section>

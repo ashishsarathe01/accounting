@@ -3,7 +3,17 @@
 @section('content')
 
 @include('layouts.header')
+<style>
+    .tree-toggle{
+    font-size:12px;
+    font-weight:bold;
+    color:#444;
+}
 
+.tree-toggle:hover{
+    color:#000;
+}
+</style>
 <div class="list-of-view-company">
 <section class="list-of-view-company-section container-fluid">
 
@@ -20,11 +30,7 @@ Balance Sheet Group Mapping
 </h5>
 
 </div>
-@if ($errors->has('trade_payable_type'))
-<div class="alert alert-danger">
-    {{ $errors->first('trade_payable_type') }}
-</div>
-@endif
+
 <form method="POST"
 action="{{ route('balancesheet.group.mapping.save') }}">
 
@@ -39,9 +45,8 @@ action="{{ route('balancesheet.group.mapping.save') }}">
 <thead>
 
 <tr>
-    <th width="35%">Account Group</th>
-    <th width="45%">Balance Sheet Mapping</th>
-    <th width="20%">Trade Payable Type</th>
+    <th width="40%">Account Group</th>
+    <th width="60%">Balance Sheet Mapping</th>
 </tr>
 
 </thead>
@@ -50,16 +55,38 @@ action="{{ route('balancesheet.group.mapping.save') }}">
 
 @foreach($groups as $group)
 
-<tr>
+<tr
+    class="tree-row"
+    data-id="{{ $group->id }}"
+    data-type="{{ $group->record_type }}"
+    data-level="{{ $group->level ?? 0 }}"
+>
 
 <td>
-    {{$group->name}}
+
+    {!! str_repeat('&nbsp;&nbsp;&nbsp;&nbsp;', $group->level) !!}
+
+    <span class="tree-toggle"
+          data-open="0"
+          style="display:inline-block;width:18px;cursor:pointer;">
+        ▼
+    </span>
+
+    @if($group->record_type=='heading')
+        <strong>{{$group->name}}</strong>
+    @else
+        {{$group->name}}
+    @endif
+
 </td>
 
 <td>
 
 <select
-class="form-select balance-mapping"
+class="form-select balance-mapping select2-single"
+data-id="{{ $group->id }}"
+data-type="{{ $group->record_type }}"
+data-level="{{ $group->level ?? 0 }}"
 name="mapping[{{$group->unique_key}}]"
 >
 
@@ -83,47 +110,6 @@ selected
 </option>
 
 @endforeach
-
-</select>
-
-</td>
-
-<td>
-
-<select
-class="form-select trade-payable-type"
-name="trade_payable_type[{{$group->unique_key}}]"
->
-
-<option value="">
-    Select
-</option>
-
-<option
-value="A"
-@if(
-    isset($mappings[$group->unique_key])
-    &&
-    ($mappings[$group->unique_key]['trade_payable_type'] ?? '') == 'A'
-)
-selected
-@endif
->
-(A) Micro enterprises and small enterprises
-</option>
-
-<option
-value="B"
-@if(
-    isset($mappings[$group->unique_key])
-    &&
-    ($mappings[$group->unique_key]['trade_payable_type'] ?? '') == 'B'
-)
-selected
-@endif
->
-(B) Others
-</option>
 
 </select>
 
@@ -164,84 +150,171 @@ Save Mapping
 @include('layouts.footer')
 
 <script>
-
 $(document).ready(function(){
 
-    function toggleTradePayable()
-    {
-        $('.balance-mapping').each(function(){
+    $('.select2-single').select2({
+        width: '100%',
+        placeholder: 'Select',
+        allowClear: true
+    });
+// Initially hide everything except headings
+$('.tree-row').each(function () {
 
-            let value = $(this).val();
+    let row = $(this);
+    let level = parseInt(row.data('level'));
 
-            let tradeDropdown = $(this)
-                .closest('tr')
-                .find('.trade-payable-type');
-
-            if(value === 'Trade payables')
-            {
-                tradeDropdown.prop('disabled', false);
-                tradeDropdown.prop('required', true);
-            }
-            else
-            {
-                tradeDropdown.val('');
-                tradeDropdown.prop('disabled', true);
-                tradeDropdown.prop('required', false);
-            }
-        });
+    if(level > 0){
+        row.hide();
     }
 
-    toggleTradePayable();
+});
 
-    $(document).on(
-        'change',
-        '.balance-mapping',
-        function(){
-            toggleTradePayable();
+// Check which rows have children
+$('.tree-row').each(function(){
+
+    let row = $(this);
+
+    let level = parseInt(row.data('level'));
+
+    let next = row.next();
+
+    let hasChild = false;
+
+    while(next.length){
+
+        let nextLevel = parseInt(next.data('level'));
+
+        if(nextLevel <= level){
+            break;
         }
-    );
 
-    $('form').on('submit', function(e){
+        if(nextLevel == level + 1){
+            hasChild = true;
+            break;
+        }
 
-        let isValid = true;
+        next = next.next();
+    }
 
-        $('.balance-mapping').each(function(){
+    if(hasChild){
 
-            let value = $(this).val();
+        row.find('.tree-toggle')
+            .text('▶')
+            .attr('data-open','0');
 
-            let tradeDropdown = $(this)
-                .closest('tr')
-                .find('.trade-payable-type');
+    }else{
 
-            if(
-                value === 'Trade payables'
-                &&
-                !tradeDropdown.val()
-            )
-            {
-                alert(
-                    'Please select Trade Payable Type (A or B) for all Trade Payables mappings.'
-                );
+        row.find('.tree-toggle')
+            .html('&nbsp;')
+            .addClass('no-child')
+            .css('cursor','default');
 
-                tradeDropdown.focus();
+    }
 
-                isValid = false;
+});
 
-                return false;
-            }
+});
 
-        });
+$(document).on('change', '.balance-mapping', function () {
 
-        if(!isValid)
-        {
-            e.preventDefault();
+    let selectedValue = $(this).val();
+
+    let currentRow   = $(this).closest('tr');
+    let currentLevel = parseInt(currentRow.data('level'));
+
+    currentRow.nextAll().each(function () {
+
+        let rowLevel = parseInt($(this).data('level'));
+
+        if (rowLevel <= currentLevel) {
             return false;
+        }
+
+        let childSelect = $(this).find('.balance-mapping');
+
+        // update only blank OR same value descendants
+        if(
+            childSelect.val() == '' ||
+            childSelect.val() == selectedValue
+        ){
+            childSelect.val(selectedValue)
+                       .trigger('change.select2');
         }
 
     });
 
 });
+$(document).on('click','.tree-toggle',function(){
 
+    if($(this).hasClass('no-child')){
+        return;
+    }
+
+    let icon = $(this);
+
+    let row = icon.closest('tr');
+
+    let currentLevel = parseInt(row.data('level'));
+
+    let isOpen = icon.attr('data-open') == "1";
+
+    if(!isOpen){
+
+        if(!icon.hasClass('no-child')){
+    icon.text('▼');
+}
+        icon.attr('data-open','1');
+
+        let next = row.next();
+
+        while(next.length){
+
+            let nextLevel = parseInt(next.data('level'));
+
+            if(nextLevel <= currentLevel){
+                break;
+            }
+
+            if(nextLevel == currentLevel + 1){
+                next.show();
+            }
+
+            next = next.next();
+        }
+
+    }else{
+
+        if(!icon.hasClass('no-child')){
+    icon.text('▶');
+}
+        icon.attr('data-open','0');
+
+        let next = row.next();
+
+        while(next.length){
+
+            let nextLevel = parseInt(next.data('level'));
+
+            if(nextLevel <= currentLevel){
+                break;
+            }
+
+            next.hide();
+
+            let childToggle = next.find('.tree-toggle');
+
+if (!childToggle.hasClass('no-child')) {
+    childToggle
+        .text('▶')
+        .attr('data-open','0');
+}
+
+            next = next.next();
+        }
+
+    }
+
+});
 </script>
 
 @endsection

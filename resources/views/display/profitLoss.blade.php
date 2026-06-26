@@ -588,6 +588,29 @@ input[type=number]::-webkit-outer-spin-button {
                <div class="card border-0 shadow-sm">
                   <div class="card-body p-0">
                         <table class="table table-bordered mb-0 vertical-pl-table">
+                           @php
+   [$startYear, $endYear] = explode('-', $data['financial_year']);
+   $currentFyEndYear = '20'.$endYear;
+   $previousFyEndYear = $currentFyEndYear - 1;
+
+   if (!function_exists('vplAmt')) {
+       function vplAmt($val)
+       {
+           if (round($val,2) == 0) {
+               return '—';
+           }
+           $formatted = function_exists('formatIndianNumber')
+               ? formatIndianNumber(abs($val))
+               : number_format(abs($val), 2);
+
+           return $val < 0 ? '-' . $formatted : $formatted;
+       }
+   }
+
+   $vpl  = $verticalPLBalances ?? [];
+   $vpl2 = $verticalPLBalancesPrevious ?? [];
+   $plDrillUrl = url('vertical-pl-drilldown');
+@endphp
                            <thead>
                               <tr>
                                     @php
@@ -615,16 +638,24 @@ input[type=number]::-webkit-outer-spin-button {
                               </tr>
 
                               <tr class="level-1">
-                                 <td>Revenue from operations</td>
-                                 <td></td>
-                                 <td></td>
-                              </tr>
+   <td>
+      <a href="{{ $plDrillUrl }}?mapping_name=Revenue+from+operations" class="text-primary text-decoration-none vpl-drill">
+         Revenue from operations
+      </a>
+   </td>
+   <td class="text-end">{{ vplAmt($vpl['Revenue from operations'] ?? 0) }}</td>
+   <td class="text-end">{{ vplAmt($vpl2['Revenue from operations'] ?? 0) }}</td>
+</tr>
 
                               <tr class="level-1">
-                                 <td>Other income</td>
-                                 <td></td>
-                                 <td></td>
-                              </tr>
+   <td>
+      <a href="{{ $plDrillUrl }}?mapping_name=Other+income" class="text-primary text-decoration-none vpl-drill">
+         Other income
+      </a>
+   </td>
+   <td class="text-end">{{ vplAmt($vpl['Other income'] ?? 0) }}</td>
+   <td class="text-end">{{ vplAmt($vpl2['Other income'] ?? 0) }}</td>
+</tr>
 
                               <tr class="total-row">
                                  <td>Total Income</td>
@@ -645,10 +676,14 @@ input[type=number]::-webkit-outer-spin-button {
                               </tr>
 
                               <tr class="level-1">
-                                 <td>Purchase of stock-in-trade</td>
-                                 <td></td>
-                                 <td></td>
-                              </tr>
+   <td>
+      <a href="{{ $plDrillUrl }}?mapping_name=Purchase+of+stock-in-trade" class="text-primary text-decoration-none vpl-drill">
+         Purchase of stock-in-trade
+      </a>
+   </td>
+   <td class="text-end">{{ vplAmt($vpl['Purchase of stock-in-trade'] ?? 0) }}</td>
+   <td class="text-end">{{ vplAmt($vpl2['Purchase of stock-in-trade'] ?? 0) }}</td>
+</tr>
 
                               <tr class="level-1">
                                  <td>Changes in inventories</td>
@@ -657,28 +692,44 @@ input[type=number]::-webkit-outer-spin-button {
                               </tr>
 
                               <tr class="level-1">
-                                 <td>Employee benefit expenses</td>
-                                 <td></td>
-                                 <td></td>
-                              </tr>
+   <td>
+      <a href="{{ $plDrillUrl }}?mapping_name=Employee+benefit+expenses" class="text-primary text-decoration-none vpl-drill">
+         Employee benefit expenses
+      </a>
+   </td>
+   <td class="text-end">{{ vplAmt($vpl['Employee benefit expenses'] ?? 0) }}</td>
+   <td class="text-end">{{ vplAmt($vpl2['Employee benefit expenses'] ?? 0) }}</td>
+</tr>
 
                               <tr class="level-1">
-                                 <td>Finance costs</td>
-                                 <td></td>
-                                 <td></td>
-                              </tr>
+   <td>
+      <a href="{{ $plDrillUrl }}?mapping_name=Finance+costs" class="text-primary text-decoration-none vpl-drill">
+         Finance costs
+      </a>
+   </td>
+   <td class="text-end">{{ vplAmt($vpl['Finance costs'] ?? 0) }}</td>
+   <td class="text-end">{{ vplAmt($vpl2['Finance costs'] ?? 0) }}</td>
+</tr>
 
                               <tr class="level-1">
-                                 <td>Depreciation and amortization expenses</td>
-                                 <td></td>
-                                 <td></td>
-                              </tr>
+   <td>
+      <a href="{{ $plDrillUrl }}?mapping_name=Depreciation+and+amortization+expenses" class="text-primary text-decoration-none vpl-drill">
+         Depreciation and amortization expenses
+      </a>
+   </td>
+   <td class="text-end">{{ vplAmt($vpl['Depreciation and amortization expenses'] ?? 0) }}</td>
+   <td class="text-end">{{ vplAmt($vpl2['Depreciation and amortization expenses'] ?? 0) }}</td>
+</tr>
 
                               <tr class="level-1">
-                                 <td>Other expenses</td>
-                                 <td></td>
-                                 <td></td>
-                              </tr>
+   <td>
+      <a href="{{ $plDrillUrl }}?mapping_name=Other+expenses" class="text-primary text-decoration-none vpl-drill">
+         Other expenses
+      </a>
+   </td>
+   <td class="text-end">{{ vplAmt($vpl['Other expenses'] ?? 0) }}</td>
+   <td class="text-end">{{ vplAmt($vpl2['Other expenses'] ?? 0) }}</td>
+</tr>
 
                               <tr class="total-row">
                                  <td>Total expenses</td>
@@ -693,10 +744,14 @@ input[type=number]::-webkit-outer-spin-button {
                               </tr>
 
                               <tr class="level-1">
-                                 <td>Exceptional items</td>
-                                 <td></td>
-                                 <td></td>
-                              </tr>
+   <td>
+      <a href="{{ $plDrillUrl }}?mapping_name=Exceptional+items" class="text-primary text-decoration-none vpl-drill">
+         Exceptional items
+      </a>
+   </td>
+   <td class="text-end">{{ vplAmt($vpl['Exceptional items'] ?? 0) }}</td>
+   <td class="text-end">{{ vplAmt($vpl2['Exceptional items'] ?? 0) }}</td>
+</tr>
 
                               <tr class="level-0">
                                  <td><strong>Profit before extraordinary and prior period items and tax</strong></td>
@@ -705,16 +760,23 @@ input[type=number]::-webkit-outer-spin-button {
                               </tr>
 
                               <tr class="level-1">
-                                 <td>Extraordinary items</td>
-                                 <td></td>
-                                 <td></td>
-                              </tr>
-
+   <td>
+      <a href="{{ $plDrillUrl }}?mapping_name=Extraordinary+items" class="text-primary text-decoration-none vpl-drill">
+         Extraordinary items
+      </a>
+   </td>
+   <td class="text-end">{{ vplAmt($vpl['Extraordinary items'] ?? 0) }}</td>
+   <td class="text-end">{{ vplAmt($vpl2['Extraordinary items'] ?? 0) }}</td>
+</tr>
                               <tr class="level-1">
-                                 <td>Prior period item</td>
-                                 <td></td>
-                                 <td></td>
-                              </tr>
+   <td>
+      <a href="{{ $plDrillUrl }}?mapping_name=Prior+period+item" class="text-primary text-decoration-none vpl-drill">
+         Prior period item
+      </a>
+   </td>
+   <td class="text-end">{{ vplAmt($vpl['Prior period item'] ?? 0) }}</td>
+   <td class="text-end">{{ vplAmt($vpl2['Prior period item'] ?? 0) }}</td>
+</tr>
 
                               <tr class="level-0">
                                  <td><strong>Profit before tax</strong></td>
@@ -729,22 +791,34 @@ input[type=number]::-webkit-outer-spin-button {
                               </tr>
 
                               <tr class="level-1">
-                                 <td>Current tax</td>
-                                 <td></td>
-                                 <td></td>
-                              </tr>
+   <td>
+      <a href="{{ $plDrillUrl }}?mapping_name=Current+tax" class="text-primary text-decoration-none vpl-drill">
+         Current tax
+      </a>
+   </td>
+   <td class="text-end">{{ vplAmt($vpl['Current tax'] ?? 0) }}</td>
+   <td class="text-end">{{ vplAmt($vpl2['Current tax'] ?? 0) }}</td>
+</tr>
 
                               <tr class="level-1">
-                                 <td>Deferred tax</td>
-                                 <td></td>
-                                 <td></td>
-                              </tr>
+   <td>
+      <a href="{{ $plDrillUrl }}?mapping_name=Deferred+tax" class="text-primary text-decoration-none vpl-drill">
+         Deferred tax
+      </a>
+   </td>
+   <td class="text-end">{{ vplAmt($vpl['Deferred tax'] ?? 0) }}</td>
+   <td class="text-end">{{ vplAmt($vpl2['Deferred tax'] ?? 0) }}</td>
+</tr>
 
                               <tr class="level-1">
-                                 <td>Excess/short provision relating earlier year tax</td>
-                                 <td></td>
-                                 <td></td>
-                              </tr>
+   <td>
+      <a href="{{ $plDrillUrl }}?mapping_name=Excess/short+provision+relating+earlier+year+tax" class="text-primary text-decoration-none vpl-drill">
+         Excess/short provision relating earlier year tax
+      </a>
+   </td>
+   <td class="text-end">{{ vplAmt($vpl['Excess/short provision relating earlier year tax'] ?? 0) }}</td>
+   <td class="text-end">{{ vplAmt($vpl2['Excess/short provision relating earlier year tax'] ?? 0) }}</td>
+</tr>
 
                               <tr class="total-row">
                                  <td>Profit(Loss) for the period</td>

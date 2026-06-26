@@ -10,6 +10,7 @@ use App\Models\AccountLedger;
 use App\Models\ItemLedger;
 use App\Models\ClosingStock;
 use App\Models\Companies;
+use App\Models\TradePayableAccountMapping;
 use App\Models\BalanceSheetGroupMapping;
 use App\Models\Journal;
 use App\Helpers\CommonHelper;
@@ -157,6 +158,37 @@ class BalanceSheetController extends Controller{
             ->groupBy('account_id')
             ->get()
             ->keyBy('account_id');
+/*
+|--------------------------------------------------------------------------
+| Vertical Balance Sheet — Current Year
+|--------------------------------------------------------------------------
+*/
+[$verticalBalances, $verticalMappedKeys, ] = $this->getVerticalBalances(
+    $fromDate,
+    $toDate,
+    $companyId,
+    $allAccounts,
+    $heads,
+    $stockInHandGroups
+);
+
+/*
+|--------------------------------------------------------------------------
+| Vertical Balance Sheet — Previous Year (exact same logic, shifted dates)
+|--------------------------------------------------------------------------
+*/
+// Always use full previous FY: 01-Apr-(startYear-1) to 31-Mar-(startYear)
+$prevFromDate = Carbon::createFromDate((int)('20'.$startYear) - 1, 4, 1)->format('Y-m-d');
+$prevToDate   = Carbon::createFromDate((int)('20'.$startYear), 3, 31)->format('Y-m-d');
+
+[$verticalBalancesPrevious, $verticalMappedKeysPrevious, ] = $this->getVerticalBalances(
+    $prevFromDate,
+    $prevToDate,
+    $companyId,
+    $allAccounts,
+    $heads,
+    $stockInHandGroups
+);
         /*
         |--------------------------------------------------------------------------
         | Stock In hand
@@ -248,6 +280,7 @@ class BalanceSheetController extends Controller{
             $head->balance = $balance;
         }
         $grouped = $heads->groupBy('bs_profile');
+
         // echo "<pre>";
         // print_r($grouped->toArray());
         // die;
@@ -302,7 +335,13 @@ class BalanceSheetController extends Controller{
             'company_info'=>$company_info,
             'prev_year_profit_status'=>$prev_year_profit_status,
             'prevFy'=>$prevFy,
-            'stock_in_hand'=>$stock_in_hand
+            'stock_in_hand'=>$stock_in_hand,
+            'verticalBalances'     => $verticalBalances,
+    'verticalMappedKeys'   => $verticalMappedKeys,
+    'verticalBalancesPrevious'   => $verticalBalancesPrevious,
+'verticalMappedKeysPrevious' => $verticalMappedKeysPrevious,
+'prevFromDate' => $prevFromDate,
+'prevToDate'   => $prevToDate,
         ]);
     }
    public function index1(){
@@ -1256,29 +1295,48 @@ class BalanceSheetController extends Controller{
                      return $item;
                   });
 
-      $groups = $groups->concat($headings)
-                     ->sortBy(function ($item) {
-                           return strtoupper(trim($item->name));
-                     })
-                     ->values();
+      $allGroups = AccountGroups::whereIn(
+            'company_id',
+            [$com_id,0]
+         )
+         ->where('delete','0')
+         ->get();
+
+      $groups = collect();
+
+      foreach($headings->sortBy('name') as $heading)
+      {
+         $heading->record_type = 'heading';
+         $heading->unique_key  = 'heading_'.$heading->id;
+         $heading->level       = 0;
+
+         $groups->push($heading);
+
+         $this->buildGroupTree(
+            $heading->id,
+            'head',
+            $allGroups,
+            $groups,
+            1
+         );
+      }
 
       $mappings = BalanceSheetGroupMapping::where(
-                     'company_id',
-                     $com_id
-                  )
-                  ->get()
-                  ->mapWithKeys(function($row){
+         'company_id',
+         $com_id
+      )
+      ->get()
+      ->mapWithKeys(function($row){
 
-                     return [
-                           $row->record_type.'_'.$row->group_id
-                           => [
-                              'mapping_name' => $row->mapping_name,
-                              'trade_payable_type' => $row->trade_payable_type
-                           ]
-                     ];
+         return [
+            $row->record_type.'_'.$row->group_id
+            => [
+                  'mapping_name' => $row->mapping_name
+            ]
+         ];
 
-                  })
-                  ->toArray();
+      })
+      ->toArray();
 
       $balanceSheetOptions = [];
 
@@ -1344,23 +1402,7 @@ class BalanceSheetController extends Controller{
    public function saveBalanceSheetGroupMapping(Request $request)
    {
       $companyId = Session::get('user_company_id');
-      foreach($request->mapping ?? [] as $key => $mappingName)
-      {
-         if(
-               $mappingName == 'Trade payables'
-               &&
-               empty($request->trade_payable_type[$key])
-         )
-         {
-               return redirect()
-                  ->back()
-                  ->withInput()
-                  ->withErrors([
-                     'trade_payable_type' =>
-                     'Please select Trade Payable Type for all Trade Payables mappings.'
-                  ]);
-         }
-      }
+      
       foreach($request->mapping ?? [] as $key => $mappingName)
       {
          $parts = explode('_', $key, 2);
@@ -1368,7 +1410,6 @@ class BalanceSheetController extends Controller{
          $recordType = $parts[0];
          $recordId   = $parts[1];
 
-         $tradeType = $request->trade_payable_type[$key] ?? null;
 
          if(empty($mappingName))
          {
@@ -1382,20 +1423,527 @@ class BalanceSheetController extends Controller{
 
          BalanceSheetGroupMapping::updateOrCreate(
 
-               [
-                  'company_id'  => $companyId,
-                  'record_type' => $recordType,
-                  'group_id'    => $recordId
-               ],
+         [
+            'company_id'  => $companyId,
+            'record_type' => $recordType,
+            'group_id'    => $recordId
+         ],
 
-               [
-                  'mapping_name'       => $mappingName,
-                  'trade_payable_type' => $tradeType
-               ]
+         [
+            'mapping_name' => $mappingName
+         ]
          );
       }
 
       return redirect()->back()
                ->withSuccess('Mapping Saved Successfully');
    }
+public function tradePayableAccountMapping()
+{
+    $companyId = Session::get('user_company_id');
+
+    // Get Trade Payables Heading ID
+    $tradeHeadingId = BalanceSheetGroupMapping::where('company_id', $companyId)
+        ->where('record_type', 'heading')
+        ->where('mapping_name', 'Trade payables')
+        ->value('group_id');
+
+    // Get Groups mapped under Trade Payables
+    $tradePayableGroupIds = BalanceSheetGroupMapping::where('company_id', $companyId)
+        ->where('record_type', 'group')
+        ->where('mapping_name', 'Trade payables')
+        ->pluck('group_id')
+        ->toArray();
+
+    $accounts = Accounts::select(
+            'accounts.id',
+            'accounts.account_name',
+            'accounts.under_group',
+            'accounts.under_group_type',
+            'account_groups.name as group_name'
+        )
+        ->leftJoin(
+            'account_groups',
+            'account_groups.id',
+            '=',
+            'accounts.under_group'
+        )
+        ->where('accounts.company_id', $companyId)
+        ->where('accounts.delete', '0')
+        ->where(function ($query) use ($tradeHeadingId, $tradePayableGroupIds) {
+
+            // Accounts directly under Trade Payables Heading
+            if ($tradeHeadingId) {
+                $query->where(function ($q) use ($tradeHeadingId) {
+                    $q->where('accounts.under_group_type', 'head')
+                      ->where('accounts.under_group', $tradeHeadingId);
+                });
+            }
+
+            // Accounts under Groups mapped to Trade Payables
+            if (!empty($tradePayableGroupIds)) {
+                $query->orWhere(function ($q) use ($tradePayableGroupIds) {
+                    $q->where('accounts.under_group_type', 'group')
+                      ->whereIn('accounts.under_group', $tradePayableGroupIds);
+                });
+            }
+        })
+        ->orderBy('accounts.account_name')
+        ->get();
+$accounts->transform(function ($account) {
+
+    if ($account->under_group_type == 'head') {
+        $account->group_name = 'Trade Payables';
+    }
+
+    return $account;
+});
+    $existingMappings = TradePayableAccountMapping::where('company_id', $companyId)
+        ->pluck('trade_payable_type', 'account_id')
+        ->toArray();
+
+    return view(
+        'display.trade_payable_account_mapping',
+        compact(
+            'accounts',
+            'existingMappings'
+        )
+    );
+}
+   public function saveTradePayableAccountMapping(Request $request)
+   {
+      $companyId = Session::get('user_company_id');
+
+      foreach($request->trade_type ?? [] as $accountId => $type)
+      {
+         if(empty($type))
+         {
+               continue;
+         }
+
+         TradePayableAccountMapping::updateOrCreate(
+
+               [
+                  'company_id' => $companyId,
+                  'account_id' => $accountId
+               ],
+
+               [
+                  'trade_payable_type' => $type
+               ]
+         );
+      }
+
+      return redirect()
+         ->back()
+         ->withSuccess(
+               'Trade Payable Mapping Saved Successfully'
+         );
+   }
+   private function buildGroupTree($parentId, $parentType, $allGroups, &$rows, $level = 0)
+   {
+      $children = $allGroups
+         ->where('heading', $parentId)
+         ->where('heading_type', $parentType)
+         ->sortBy('name');
+
+      foreach ($children as $child)
+      {
+         $child->record_type = 'group';
+         $child->unique_key  = 'group_'.$child->id;
+         $child->level       = $level;
+
+         $rows->push($child);
+
+         $this->buildGroupTree(
+               $child->id,
+               'group',
+               $allGroups,
+               $rows,
+               $level + 1
+         );
+      }
+   }
+/**
+ * Vertical Balance Sheet — Drill Down Page
+ * URL: /vertical-bs-drilldown?mapping_name=Inventories&from_date=...&to_date=...
+ */
+public function verticalDrillDown(Request $request)
+{
+    $companyId    = Session::get('user_company_id');
+    $mappingName  = $request->mapping_name;
+    $liabilityMappings = [
+    'Share capital',
+    'Reserves and surplus',
+    "Partner's capital account",
+    'Profit and loss account',
+    "Proprietor's capital account",
+    'Long-term borrowings',
+    'Deferred tax liabilities (Net)',
+    'Other long term liabilities',
+    'Long-term provisions',
+    'Short-term borrowings',
+    'Trade payables',
+    'Other current liabilities',
+    'Short-term provisions',
+];
+
+$isLiabilitySection = in_array($mappingName, $liabilityMappings)
+    || $mappingName == 'Trade payables (A) Micro enterprises and small enterprises'
+    || $mappingName == 'Trade payables (B) Others';
+$financialYear = Session::get('default_fy');
+
+[$startYY, $endYY] = explode('-', $financialYear);
+
+$fromDate = '20' . $startYY . '-04-01';
+$toDate   = '20' . $endYY . '-03-31';
+    // Load mapping rows for this specific mapping_name
+// Handle Trade Payables (A) & (B) separately
+if (
+    $mappingName == 'Trade payables (A) Micro enterprises and small enterprises' ||
+    $mappingName == 'Trade payables (B) Others'
+) {
+
+    $tradeType = str_contains($mappingName, '(A)') ? 'A' : 'B';
+
+    $tradeAccountIds = TradePayableAccountMapping::where('company_id', $companyId)
+        ->where('trade_payable_type', $tradeType)
+        ->pluck('account_id');
+
+    $mappingRows = collect();
+
+} else {
+
+    $mappingRows = BalanceSheetGroupMapping::where('company_id', $companyId)
+        ->where('mapping_name', $mappingName)
+        ->get();
+}
+    // Preload accounts
+    $allAccounts = Accounts::select('id', 'account_name', 'under_group', 'under_group_type')
+        ->whereIn('company_id', [$companyId, 0])
+        ->where('status', '1')
+        ->where('delete', '0')
+        ->get();
+
+    // Preload ledger sums
+    $verticalLedgerSums = DB::table('account_ledger')
+    ->selectRaw('account_id, SUM(debit) as debit, SUM(credit) as credit')
+    ->where('company_id', $companyId)
+    ->where('status', '1')
+    ->where('delete_status', '0')
+    ->where(function ($q) use ($fromDate, $toDate) {
+
+        $q->where(function ($q1) use ($fromDate, $toDate) {
+
+            $q1->whereBetween('txn_date', [
+                $fromDate,
+                $toDate
+            ]);
+
+        })
+        ->orWhere('entry_type', '-1');
+
+    })
+    ->groupBy('account_id')
+    ->get()
+    ->keyBy('account_id');
+
+    // Stock in hand group
+    $stockInHandGroup = AccountGroups::select('id')
+        ->where('stock_in_hand', '1')
+        ->whereIn('company_id', [$companyId, 0])
+        ->where('status', '1')
+        ->where('delete', '0')
+        ->first();
+
+    $stock_in_hand = \App\Helpers\CommonHelper::ClosingStock($toDate);
+    $stock_in_hand = round($stock_in_hand, 2);
+
+    // In-transit stock
+    $stockInTransit = DB::table('purchases')
+        ->whereRaw("STR_TO_DATE(date, '%Y-%m-%d') <= ?", [$toDate])
+        ->whereDate('stock_entry_date', '>', $toDate)
+        ->where('company_id', $companyId)
+        ->where('status', '1')
+        ->where('delete', '0')
+        ->selectRaw("SUM(CAST(taxable_amt AS DECIMAL(15,2))) as total")
+        ->value('total');
+
+    $stock_in_hand += round($stockInTransit ?? 0, 2);
+
+    // Build drill-down sections
+    $sections = [];
+if (
+    $mappingName == 'Trade payables (A) Micro enterprises and small enterprises' ||
+    $mappingName == 'Trade payables (B) Others'
+) {
+
+    $accounts = $allAccounts->whereIn('id', $tradeAccountIds);
+
+    $accountDetails = [];
+    $sectionDebit = 0;
+    $sectionCredit = 0;
+
+    foreach ($accounts as $acc) {
+
+        $d = $verticalLedgerSums[$acc->id]->debit ?? 0;
+        $c = $verticalLedgerSums[$acc->id]->credit ?? 0;
+
+        $sectionDebit += $d;
+        $sectionCredit += $c;
+
+        $accountDetails[] = [
+            'id' => $acc->id,
+            'account_name' => $acc->account_name,
+            'debit' => round($d, 2),
+            'credit' => round($c, 2),
+            'balance' => round($c - $d, 2),
+        ];
+    }
+
+    $sections[] = [
+        'record_type' => 'Trade Payable',
+        'group_id' => 0,
+        'label' => $mappingName,
+        'accounts' => $accountDetails,
+        'stock_adj' => 0,
+        'total_debit' => round($sectionDebit, 2),
+        'total_credit' => round($sectionCredit, 2),
+        'balance' => round($sectionCredit - $sectionDebit, 2),
+    ];
+}
+    foreach ($mappingRows as $mapRow) {
+
+        $recordType = $mapRow->record_type;
+        $recordId   = (int) $mapRow->group_id;
+
+        if ($recordType === 'heading') {
+            $parentLabel = AccountHeading::where('id', $recordId)->value('name');
+$parentLabel = $parentLabel ? $parentLabel : 'Heading '.$recordId;
+            $accounts = $allAccounts->filter(function($acc) use ($recordId) {
+    return $acc->under_group_type === 'head' &&
+           (int)$acc->under_group === $recordId;
+});
+        } else {
+            $parentLabel = AccountGroups::where('id', $recordId)->value('name');
+$parentLabel = $parentLabel ? $parentLabel : 'Group '.$recordId;
+            $accounts = $allAccounts->filter(function($acc) use ($recordId) {
+    return $acc->under_group_type === 'group' &&
+           (int)$acc->under_group === $recordId;
+});
+        }
+
+        $accountDetails = [];
+        $sectionDebit   = 0;
+        $sectionCredit  = 0;
+
+        foreach ($accounts as $acc) {
+            $d = $verticalLedgerSums[$acc->id]->debit ?? 0;
+$c = $verticalLedgerSums[$acc->id]->credit ?? 0;
+            $sectionDebit  += $d;
+            $sectionCredit += $c;
+            $accountDetails[] = [
+                'id'           => $acc->id,
+                'account_name' => $acc->account_name,
+                'debit'        => round($d, 2),
+                'credit'       => round($c, 2),
+                'balance'      => round($isLiabilitySection ? ($c - $d) : ($d - $c), 2),
+            ];
+        }
+
+        // stock adjustment
+        $stockAdj = 0;
+        if ($recordType === 'group' && $stockInHandGroup && $recordId === (int)$stockInHandGroup->id) {
+            $stockAdj       = $stock_in_hand;
+            $sectionDebit  += $stock_in_hand;
+        }
+
+        $sections[] = [
+            'record_type'  => $recordType,
+            'group_id'     => $recordId,
+            'label'        => $parentLabel,
+            'accounts'     => $accountDetails,
+            'stock_adj'    => $stockAdj,
+            'total_debit'  => round($sectionDebit, 2),
+            'total_credit' => round($sectionCredit, 2),
+            'balance'      => round($isLiabilitySection ? ($sectionCredit - $sectionDebit) : ($sectionDebit - $sectionCredit), 2),
+        ];
+    }
+
+    $grandTotal = round(array_sum(array_column($sections, 'balance')), 2);
+
+    return view('display.vertical_bs_drilldown', compact(
+        'mappingName',
+        'sections',
+        'grandTotal',
+        'fromDate',
+        'toDate'
+    ));
+}
+private function getVerticalBalances($fromDate, $toDate, $companyId, $allAccounts, $heads, $stockInHandGroups)
+{
+    // Stock in hand for THIS specific date range (uses your existing helper, unchanged)
+    $stock_in_hand = CommonHelper::ClosingStock($toDate);
+    $stock_in_hand = round($stock_in_hand, 2);
+
+    $baseQuery = DB::table('purchases')
+        ->whereRaw("STR_TO_DATE(date, '%Y-%m-%d') <= ?", [$toDate])
+        ->whereDate('stock_entry_date', '>', $toDate)
+        ->where('company_id', $companyId)
+        ->where('status', '1')
+        ->where('delete', '0');
+
+    $stock_in_transit_value = (clone $baseQuery)
+        ->selectRaw("SUM(CAST(taxable_amt AS DECIMAL(15,2))) as total")
+        ->value('total');
+
+    $stock_in_transit_value = round($stock_in_transit_value ?? 0, 2);
+    $stock_in_hand = $stock_in_hand + $stock_in_transit_value;
+
+    // Ledger sums for this date range
+    $verticalLedgerSums = DB::table('account_ledger')
+        ->selectRaw('account_id, SUM(debit) as debit, SUM(credit) as credit')
+        ->where('company_id', $companyId)
+        ->where('status', '1')
+        ->where('delete_status', '0')
+        ->where(function ($q) use ($fromDate, $toDate) {
+            $q->whereBetween('txn_date', [$fromDate, $toDate])
+              ->orWhere('entry_type', '-1');
+        })
+        ->groupBy('account_id')
+        ->get()
+        ->keyBy('account_id');
+
+    $allMappingRows = BalanceSheetGroupMapping::where('company_id', $companyId)->get();
+
+    $verticalBalances   = [];
+    $verticalMappedKeys = [];
+// These mapping names belong to EQUITY AND LIABILITIES.
+// For these, the correct accounting sign is Credit - Debit.
+// Everything else (ASSETS side) keeps Debit - Credit.
+$liabilityMappings = [
+    'Share capital',
+    'Reserves and surplus',
+    "Partner's capital account",
+    'Profit and loss account',
+    "Proprietor's capital account",
+    'Long-term borrowings',
+    'Deferred tax liabilities (Net)',
+    'Other long term liabilities',
+    'Long-term provisions',
+    'Short-term borrowings',
+    'Trade payables',
+    'Other current liabilities',
+    'Short-term provisions',
+];
+    foreach ($allMappingRows as $mapRow) {
+
+        $mappingName = $mapRow->mapping_name;
+        $recordType  = $mapRow->record_type;
+        $recordId    = (int) $mapRow->group_id;
+
+        if ($recordType === 'heading') {
+            $accountIds = $allAccounts
+                ->filter(function ($acc) use ($recordId) {
+                    return $acc->under_group_type === 'head' &&
+                           (int)$acc->under_group === $recordId;
+                })
+                ->pluck('id')
+                ->toArray();
+
+            $headRecord = $heads->firstWhere('id', $recordId);
+            $label = $headRecord ? $headRecord->name : 'Heading '.$recordId;
+
+        } else { // 'group'
+            $accountIds = $allAccounts
+                ->filter(function ($acc) use ($recordId) {
+                    return $acc->under_group_type === 'group' &&
+                           (int)$acc->under_group === $recordId;
+                })
+                ->pluck('id')
+                ->toArray();
+
+            $grp = AccountGroups::select('name')->where('id', $recordId)->first();
+            $label = $grp ? $grp->name : 'Group '.$recordId;
+        }
+
+        $debit  = 0;
+        $credit = 0;
+
+        foreach ($accountIds as $accId) {
+            if (isset($verticalLedgerSums[$accId])) {
+                $debit  += $verticalLedgerSums[$accId]->debit;
+                $credit += $verticalLedgerSums[$accId]->credit;
+            }
+        }
+
+        if (
+            $recordType === 'group' &&
+            $stockInHandGroups &&
+            $recordId === (int)$stockInHandGroups->id
+        ) {
+            $debit += $stock_in_hand;
+        }
+
+        if (in_array($mappingName, $liabilityMappings)) {
+    // Liabilities & Equity: Credit - Debit
+    $rowBalance = round($credit - $debit, 2);
+} else {
+    // Assets: Debit - Credit
+    $rowBalance = round($debit - $credit, 2);
+}
+
+        if (!isset($verticalBalances[$mappingName])) {
+            $verticalBalances[$mappingName]   = 0;
+            $verticalMappedKeys[$mappingName] = [];
+        }
+
+        $verticalBalances[$mappingName] += $rowBalance;
+
+        $verticalMappedKeys[$mappingName][] = [
+            'record_type' => $recordType,
+            'group_id'    => $recordId,
+            'name'        => $label,
+            'balance'     => $rowBalance,
+            'account_ids' => $accountIds,
+        ];
+    }
+
+    foreach ($verticalBalances as $k => $v) {
+        $verticalBalances[$k] = round($v, 2);
+    }
+
+    /*
+    |--------------------------------------------------------------
+    | Trade Payables (A) Micro/Small enterprises  &  (B) Others
+    | Split is based on TradePayableAccountMapping.trade_payable_type
+    |--------------------------------------------------------------
+    */
+    $tradeTypeByAccount = TradePayableAccountMapping::where('company_id', $companyId)
+        ->pluck('trade_payable_type', 'account_id');
+
+    $tradeA = 0;
+    $tradeB = 0;
+
+    foreach (($verticalMappedKeys['Trade payables'] ?? []) as $detail) {
+        foreach ($detail['account_ids'] as $accId) {
+            $d = $verticalLedgerSums[$accId]->debit  ?? 0;
+            $c = $verticalLedgerSums[$accId]->credit ?? 0;
+            $bal = $c - $d;
+
+            $type = $tradeTypeByAccount[$accId] ?? null;
+
+            if ($type === 'A') {
+                $tradeA += $bal;
+            } elseif ($type === 'B') {
+                $tradeB += $bal;
+            }
+        }
+    }
+
+    $verticalBalances['Trade payables (A)'] = round($tradeA, 2);
+    $verticalBalances['Trade payables (B)'] = round($tradeB, 2);
+
+    return [$verticalBalances, $verticalMappedKeys, $stock_in_hand];
+}
 }

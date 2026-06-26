@@ -90,7 +90,22 @@ class ProfitLossController extends Controller{
                                 ->get();
      $tot_purchase_amt = 0;$tot_purchase_sundry_amt = 0;$tot_sale_amt = 0;$tot_sale_sundry_amt = 0;$tot_sale_return_amt_purchase = 0;$tot_sale_return_amt = 0;$tot_purchase_return_amt_sale = 0;$direct_expenses = 0;$direct_income = 0;$opening_stock = 0;$closing_stock = 0;$indirect_expenses = 0;$indirect_income = 0;$indirect_expenses_credit = 0;$debit_indirect_income = 0;$debit_direct_income = 0;$tot_purchase_return_amt = 0;$direct_expenses_credit = 0;$journal = 0;$from_date = "";$to_date = "";
       //echo $tot_purchase_amt."+".$tot_purchase_sundry_amt;die;
-      return  view('display/profitLoss')->with('data', ['tot_purchase_amt' => $tot_purchase_amt+$tot_purchase_sundry_amt, 'tot_sale_amt' => $tot_sale_amt+$tot_sale_sundry_amt, 'tot_purchase_return_amt' => $tot_purchase_return_amt,'tot_sale_return_amt_purchase'=>$tot_sale_return_amt_purchase, 'tot_sale_return_amt' => $tot_sale_return_amt,'tot_purchase_return_amt_sale'=>$tot_purchase_return_amt_sale,'financial_year' => $financial_year,'direct_expenses' => $direct_expenses,'direct_income' => $direct_income,'opening_stock' => $opening_stock,'closing_stock' => $closing_stock,'indirect_expenses' => $indirect_expenses,'indirect_income' => $indirect_income,'series'=>''])->with('from_date',$from_date)->with('to_date',$to_date)->with('opening_stock',$opening_stock)->with('indirect_expenses_credit',$indirect_expenses_credit)->with('direct_expenses_credit',$direct_expenses_credit)->with('debit_indirect_income',$debit_indirect_income)->with('debit_direct_income',$debit_direct_income)->with('current_year',$current_year)->with('mat_series',$mat_series)->with('party_list',$party_list)->with('journal',$journal);
+      $companyId = Session::get('user_company_id');
+
+$verticalFromDate     = Carbon::createFromDate((int)('20'.$y[0]), 4, 1)->format('Y-m-d');
+$verticalToDate       = Carbon::createFromDate((int)('20'.$y[1]), 3, 31)->format('Y-m-d');
+$prevVerticalFromDate = Carbon::createFromDate((int)('20'.$y[0]) - 1, 4, 1)->format('Y-m-d');
+$prevVerticalToDate   = Carbon::createFromDate((int)('20'.$y[0]), 3, 31)->format('Y-m-d');
+
+$allAccountsForPL = Accounts::select('id', 'under_group', 'under_group_type')
+    ->whereIn('company_id', [$companyId, 0])
+    ->where('status', '1')
+    ->where('delete', '0')
+    ->get();
+
+$verticalPLBalances         = $this->getVerticalPLBalances($verticalFromDate, $verticalToDate, $companyId, $allAccountsForPL);
+$verticalPLBalancesPrevious = $this->getVerticalPLBalances($prevVerticalFromDate, $prevVerticalToDate, $companyId, $allAccountsForPL);
+      return  view('display/profitLoss')->with('data', ['tot_purchase_amt' => $tot_purchase_amt+$tot_purchase_sundry_amt, 'tot_sale_amt' => $tot_sale_amt+$tot_sale_sundry_amt, 'tot_purchase_return_amt' => $tot_purchase_return_amt,'tot_sale_return_amt_purchase'=>$tot_sale_return_amt_purchase, 'tot_sale_return_amt' => $tot_sale_return_amt,'tot_purchase_return_amt_sale'=>$tot_purchase_return_amt_sale,'financial_year' => $financial_year,'direct_expenses' => $direct_expenses,'direct_income' => $direct_income,'opening_stock' => $opening_stock,'closing_stock' => $closing_stock,'indirect_expenses' => $indirect_expenses,'indirect_income' => $indirect_income,'series'=>''])->with('from_date',$from_date)->with('to_date',$to_date)->with('opening_stock',$opening_stock)->with('indirect_expenses_credit',$indirect_expenses_credit)->with('direct_expenses_credit',$direct_expenses_credit)->with('debit_indirect_income',$debit_indirect_income)->with('debit_direct_income',$debit_direct_income)->with('current_year',$current_year)->with('mat_series',$mat_series)->with('party_list',$party_list)->with('journal',$journal)->with('verticalPLBalances',$verticalPLBalances)->with('verticalPLBalancesPrevious',$verticalPLBalancesPrevious);
    }
    public function filter(Request $request){
       $financial_year = $request->financial_year;
@@ -161,6 +176,21 @@ class ProfitLossController extends Controller{
                   ->where('form_source','profitloss')
                   ->select('journals.id','series_no','voucher_no','long_narration')
                   ->get();
+$companyId = Session::get('user_company_id');
+
+$verticalFromDate     = Carbon::createFromDate((int)('20'.$y[0]), 4, 1)->format('Y-m-d');
+$verticalToDate       = Carbon::createFromDate((int)('20'.$y[1]), 3, 31)->format('Y-m-d');
+$prevVerticalFromDate = Carbon::createFromDate((int)('20'.$y[0]) - 1, 4, 1)->format('Y-m-d');
+$prevVerticalToDate   = Carbon::createFromDate((int)('20'.$y[0]), 3, 31)->format('Y-m-d');
+
+$allAccountsForPL = Accounts::select('id', 'under_group', 'under_group_type')
+    ->whereIn('company_id', [$companyId, 0])
+    ->where('status', '1')
+    ->where('delete', '0')
+    ->get();
+
+$verticalPLBalances         = $this->getVerticalPLBalances($verticalFromDate, $verticalToDate, $companyId, $allAccountsForPL);
+$verticalPLBalancesPrevious = $this->getVerticalPLBalances($prevVerticalFromDate, $prevVerticalToDate, $companyId, $allAccountsForPL);
       $plData = CommonHelper::profitLoss($financial_year, $from_date, $to_date, true);
 
       return  view('display/profitLoss')->with('data', [
@@ -195,7 +225,9 @@ class ProfitLossController extends Controller{
          ->with('current_year',$current_year)
          ->with('mat_series',$mat_series)
          ->with('party_list',$party_list)
-         ->with('journal',$journal);
+         ->with('journal',$journal)
+         ->with('verticalPLBalances',$verticalPLBalances)
+->with('verticalPLBalancesPrevious',$verticalPLBalancesPrevious);
    }
    public function saleByMonth(Request $request,$financial_year,$from_date,$to_date){
       $companyId = Session::get('user_company_id');
@@ -865,55 +897,73 @@ class ProfitLossController extends Controller{
    {
       $com_id = Session::get('user_company_id');
 
-      $groups = AccountGroups::whereIn(
-                     'company_id',
-                     [$com_id,0]
-                  )
-                  ->where('delete','0')
-                  ->get()
-                  ->map(function($item){
+      $headings = AccountHeading::whereIn('company_id', [$com_id,0])
+    ->where('delete','0')
+    ->where('id',4)           // Only Profit & Loss
+    ->get()
+    ->map(function ($item) {
 
-                     $item->record_type = 'group';
-                     $item->unique_key = 'group_'.$item->id;
+        $item->record_type = 'heading';
+        $item->unique_key  = 'heading_'.$item->id;
 
-                     return $item;
-                  });
+        return $item;
+    });
 
-      $headings = AccountHeading::whereIn(
-                     'company_id',
-                     [$com_id,0]
-                  )
-                  ->where('delete','0')
-                  ->get()
-                  ->map(function($item){
+$allGroups = AccountGroups::whereIn(
+                'company_id',
+                [$com_id,0]
+            )
+            ->where('delete','0')
+            ->get();
+$allAccounts = Accounts::whereIn('company_id', [$com_id,0])
+    ->where('delete','0')
+    ->get();
+$groups = collect();
 
-                     $item->record_type = 'heading';
-                     $item->unique_key = 'heading_'.$item->id;
+foreach($headings->sortBy('name') as $heading)
+{
+    $heading->record_type = 'heading';
+    $heading->unique_key  = 'heading_'.$heading->id;
+    $heading->level       = 0;
 
-                     return $item;
-                  });
+    $groups->push($heading);
+$headingAccounts = $allAccounts
+    ->where('under_group', $heading->id)
+    ->where('under_group_type', 'head')
+    ->sortBy('account_name');
 
-      $groups = $groups->concat($headings)
-                     ->sortBy(function ($item) {
-                           return strtoupper(trim($item->name));
-                     })
-                     ->values();
+foreach ($headingAccounts as $account)
+{
+    $account->name        = $account->account_name;
+    $account->record_type = 'account';
+    $account->unique_key  = 'account_'.$account->id;
+    $account->level       = 1;
 
-      $mappings = ProfitLossGroupMapping::where(
-                     'company_id',
-                     $com_id
-                  )
-                  ->get()
-                  ->mapWithKeys(function($row){
+    $groups->push($account);
+}
+   $this->buildGroupTree(
+    $heading->id,
+    'head',
+    $allGroups,
+    $allAccounts,
+    $groups,
+    1
+);
+}
 
-                     return [
-                           $row->record_type.'_'.$row->group_id
-                           => $row->mapping_name
-                     ];
+$mappings = ProfitLossGroupMapping::where('company_id', $com_id)
+    ->where('record_type', 'account')
+    ->get()
+    ->mapWithKeys(function ($row) {
 
-                  })
-                  ->toArray();
+        return [
+            'account_'.$row->group_id => [
+                'mapping_name' => $row->mapping_name
+            ]
+        ];
 
+    })
+    ->toArray();
       $mappingOptions = [
 
          'Revenue from operations',
@@ -944,42 +994,346 @@ class ProfitLossController extends Controller{
          )
       );
    }
-   public function saveProfitLossGroupMapping(Request $request)
-   {
-      $companyId = Session::get('user_company_id');
+public function saveProfitLossGroupMapping(Request $request)
+{
+    $companyId = Session::get('user_company_id');
 
-      foreach($request->mapping ?? [] as $key => $mappingName)
-      {
-         $parts = explode('_', $key, 2);
+    foreach ($request->mapping ?? [] as $key => $mappingName)
+    {
+        $parts = explode('_', $key, 2);
 
-         $recordType = $parts[0];
-         $recordId   = $parts[1];
+        if (count($parts) != 2) {
+            continue;
+        }
 
-         if(empty($mappingName))
-         {
-               ProfitLossGroupMapping::where('company_id',$companyId)
-                  ->where('record_type',$recordType)
-                  ->where('group_id',$recordId)
-                  ->delete();
+        $recordType = $parts[0];
+        $recordId   = $parts[1];
 
-               continue;
-         }
+        /*
+        |--------------------------------------------------------------------------
+        | Save only Account mappings
+        |--------------------------------------------------------------------------
+        */
+        if ($recordType != 'account') {
+            continue;
+        }
 
-         ProfitLossGroupMapping::updateOrCreate(
+        if (empty($mappingName))
+        {
+            ProfitLossGroupMapping::where('company_id', $companyId)
+                ->where('record_type', 'account')
+                ->where('group_id', $recordId)
+                ->delete();
 
-               [
-                  'company_id'  => $companyId,
-                  'record_type' => $recordType,
-                  'group_id'    => $recordId
-               ],
+            continue;
+        }
 
-               [
-                  'mapping_name' => $mappingName
-               ]
-         );
-      }
+        ProfitLossGroupMapping::updateOrCreate(
 
-      return redirect()->back()
-               ->withSuccess('Mapping Saved Successfully');
-   }
+            [
+                'company_id'  => $companyId,
+                'record_type' => 'account',
+                'group_id'    => $recordId,
+            ],
+
+            [
+                'mapping_name' => $mappingName,
+            ]
+        );
+    }
+
+    return redirect()->back()
+        ->withSuccess('Mapping Saved Successfully');
+}
+
+private function buildGroupTree(
+    $parentId,
+    $parentType,
+    $allGroups,
+    $allAccounts,
+    &$rows,
+    $level = 0
+)
+{
+    $children = $allGroups
+        ->where('heading', $parentId)
+        ->where('heading_type', $parentType)
+        ->sortBy('name');
+
+    foreach ($children as $child)
+    {
+        $child->record_type = 'group';
+        $child->unique_key  = 'group_'.$child->id;
+        $child->level       = $level;
+
+        $rows->push($child);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Child Groups First
+        |--------------------------------------------------------------------------
+        */
+
+        $this->buildGroupTree(
+            $child->id,
+            'group',
+            $allGroups,
+            $allAccounts,
+            $rows,
+            $level + 1
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Accounts under this group
+        |--------------------------------------------------------------------------
+        */
+
+        $accounts = $allAccounts
+            ->where('under_group', $child->id)
+            ->where('under_group_type', 'group')
+            ->sortBy('account_name');
+
+        foreach ($accounts as $account)
+        {
+            $account->name        = $account->account_name;
+            $account->record_type = 'account';
+            $account->unique_key  = 'account_'.$account->id;
+            $account->level       = $level + 1;
+
+            $rows->push($account);
+        }
+    }
+}
+
+/**
+ * Vertical P&L Balances — mirrors BalanceSheetController::getVerticalBalances()
+ */
+private function getVerticalPLBalances($fromDate, $toDate, $companyId)
+{
+    // Ledger sums for this date range (same pattern as Balance Sheet)
+    $verticalLedgerSums = DB::table('account_ledger')
+        ->selectRaw('account_id, SUM(debit) as debit, SUM(credit) as credit')
+        ->where('company_id', $companyId)
+        ->where('status', '1')
+        ->where('delete_status', '0')
+        ->where('entry_type', '!=', '-1')   // exclude opening balance entries
+        ->whereBetween('txn_date', [$fromDate, $toDate])
+        ->groupBy('account_id')
+        ->get()
+        ->keyBy('account_id');
+
+    $allMappingRows = ProfitLossGroupMapping::where('company_id', $companyId)->get();
+
+    // Revenue side: Credit - Debit. Everything else (expenses) is Debit - Credit.
+    $revenueMappings = [
+        'Revenue from operations',
+        'Other income',
+    ];
+
+    $verticalPLBalances = [];
+
+foreach ($allMappingRows as $mapRow)
+{
+    // We now save only account mappings
+    if ($mapRow->record_type != 'account') {
+        continue;
+    }
+
+    $mappingName = $mapRow->mapping_name;
+    $accountId   = (int) $mapRow->group_id;
+
+    $debit  = 0;
+    $credit = 0;
+
+    if (isset($verticalLedgerSums[$accountId])) {
+
+        $debit  = $verticalLedgerSums[$accountId]->debit;
+        $credit = $verticalLedgerSums[$accountId]->credit;
+
+    }
+
+    if (in_array($mappingName, $revenueMappings)) {
+
+        $rowBalance = round($credit - $debit, 2);
+
+    } else {
+
+        $rowBalance = round($debit - $credit, 2);
+
+    }
+
+    if (!isset($verticalPLBalances[$mappingName])) {
+        $verticalPLBalances[$mappingName] = 0;
+    }
+
+    $verticalPLBalances[$mappingName] += $rowBalance;
+}
+
+    foreach ($verticalPLBalances as $k => $v) {
+        $verticalPLBalances[$k] = round($v, 2);
+    }
+
+    return $verticalPLBalances;
+}
+
+/**
+ * Vertical P&L — Drill Down Page (mirrors BalanceSheetController::verticalDrillDown())
+ * URL: /vertical-pl-drilldown?mapping_name=Revenue+from+operations
+ *
+ * NOTE: Unlike Balance Sheet drill-down, this does NOT include opening
+ * balance entries (entry_type = -1) and does NOT apply any stock-in-hand
+ * adjustment — P&L is a strict period movement report for the full FY.
+ */
+public function verticalPLDrillDown(Request $request)
+{
+    $companyId   = Session::get('user_company_id');
+    $mappingName = $request->mapping_name;
+
+    $revenueMappings = [
+        'Revenue from operations',
+        'Other income',
+    ];
+
+    $isRevenueSection = in_array($mappingName, $revenueMappings);
+
+    $financialYear = Session::get('default_fy');
+    [$startYY, $endYY] = explode('-', $financialYear);
+
+    // Always full FY — ignore any from_date/to_date in the request
+    $fromDate = '20' . $startYY . '-04-01';
+    $toDate   = '20' . $endYY . '-03-31';
+
+    // Load mapping rows for this specific mapping_name
+    $mappingRows = ProfitLossGroupMapping::where('company_id', $companyId)
+        ->where('mapping_name', $mappingName)
+        ->get();
+
+    // Preload accounts
+    $allAccounts = Accounts::select('id', 'account_name', 'under_group', 'under_group_type')
+        ->whereIn('company_id', [$companyId, 0])
+        ->where('status', '1')
+        ->where('delete', '0')
+        ->get();
+
+    // Ledger sums — strict period only, NO opening balance (entry_type = -1) included
+    $verticalLedgerSums = DB::table('account_ledger')
+        ->selectRaw('account_id, SUM(debit) as debit, SUM(credit) as credit')
+        ->where('company_id', $companyId)
+        ->where('status', '1')
+        ->where('delete_status', '0')
+        ->where('entry_type', '!=', '-1')   // exclude opening balance entries
+        ->whereBetween('txn_date', [$fromDate, $toDate])
+        ->groupBy('account_id')
+        ->get()
+        ->keyBy('account_id');
+
+    // Build drill-down sections
+   // Build drill-down sections
+$sections = [];
+
+foreach ($mappingRows as $mapRow)
+{
+    // We only save account mappings
+    if ($mapRow->record_type != 'account') {
+        continue;
+    }
+
+    $account = $allAccounts->firstWhere('id', (int)$mapRow->group_id);
+
+    if (!$account) {
+        continue;
+    }
+
+    // Determine the parent group/heading label
+    if ($account->under_group_type == 'group') {
+
+        $parentId = $account->under_group;
+
+        $parentLabel = AccountGroups::where('id', $parentId)->value('name') ?? 'Group '.$parentId;
+
+    } else {
+
+        $parentId = $account->under_group;
+
+        $parentLabel = AccountHeading::where('id', $parentId)->value('name') ?? 'Heading '.$parentId;
+
+    }
+
+    if (!isset($sections[$parentLabel])) {
+
+        $sections[$parentLabel] = [
+
+            'record_type'  => $account->under_group_type,
+
+            'group_id'     => $parentId,
+
+            'label'        => $parentLabel,
+
+            'accounts'     => [],
+
+            'stock_adj'    => 0,
+
+            'total_debit'  => 0,
+
+            'total_credit' => 0,
+
+            'balance'      => 0,
+
+        ];
+
+    }
+
+    $debit  = $verticalLedgerSums[$account->id]->debit  ?? 0;
+    $credit = $verticalLedgerSums[$account->id]->credit ?? 0;
+
+    $balance = round(
+        $isRevenueSection
+            ? ($credit - $debit)
+            : ($debit - $credit),
+        2
+    );
+
+    $sections[$parentLabel]['accounts'][] = [
+
+        'id'           => $account->id,
+
+        'account_name' => $account->account_name,
+
+        'debit'        => round($debit,2),
+
+        'credit'       => round($credit,2),
+
+        'balance'      => $balance,
+
+    ];
+
+    $sections[$parentLabel]['total_debit'] += $debit;
+    $sections[$parentLabel]['total_credit'] += $credit;
+    $sections[$parentLabel]['balance'] += $balance;
+}
+
+$sections = array_values($sections);
+
+foreach ($sections as &$section) {
+
+    $section['total_debit']  = round($section['total_debit'],2);
+    $section['total_credit'] = round($section['total_credit'],2);
+    $section['balance']      = round($section['balance'],2);
+
+}
+
+unset($section);
+
+$grandTotal = round(array_sum(array_column($sections, 'balance')), 2);
+
+
+    return view('display.vertical_pl_drilldown', compact(
+        'mappingName',
+        'sections',
+        'grandTotal',
+        'fromDate',
+        'toDate'
+    ));
+}
 }
