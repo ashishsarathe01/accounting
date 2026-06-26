@@ -442,13 +442,18 @@
                     $printQrContent = $printEinvoiceData->SignedQRCode;
                     @endphp
                     <tr>
-                    <td colspan="8">
-                        <span style="float:right; width:90px; height:90px; position:relative;">
-                            {!! QrCode::size(90)->generate($printQrContent) !!}
+                    <td colspan="8" style="min-height:190px; vertical-align:top;">
+                        <span style="float:right; width:70px; height:70px; position:relative;">
+                            @if($qrBase64)
+                                <img src="data:image/svg+xml;base64,{{ $qrBase64 }}" style="width:70px; height:70px; display:block;">
+                            @endif
+                           
                         </span>
                         <p>IRN NO. : {{ $printEinvoiceData->Irn }}</p>
                         <p>ACK.NO. : {{ $printEinvoiceData->AckNo }}</p>
                         <p>ACK.DATE : {{ $printEinvoiceData->AckDt }}</p>
+                        <p>&nbsp;</p>
+                        <p>&nbsp;</p>
                     </td>
                     </tr>
                 @endif
