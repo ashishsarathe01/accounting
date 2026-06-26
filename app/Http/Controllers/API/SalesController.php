@@ -1441,14 +1441,12 @@ public function update(Request $request){
          ||
          $request->input('date') > $fy_end_date
       ){
-         return back()
 
-            ->withInput()
-
-            ->withErrors([
-               'date' =>
-               'Selected date is outside current financial year.'
-            ]);
+      return response()->json([
+        "code"=> 201,
+        "message"=>"selected date outside current financial year"
+      ]);
+         
       }
       $financial_year = CommonHelper::getFinancialYear($request->input('date'));
 
