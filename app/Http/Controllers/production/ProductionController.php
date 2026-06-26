@@ -2335,10 +2335,16 @@ if (!is_array($deletedReels)) {
             /* -----------------------------
             | 1. Update Deckle End Time
             ----------------------------- */            
-            $end_time_stamp_previous = $deckle->end_time_stamp;
-            $end_time_stamp_previous = date('H:i:s', strtotime($end_time_stamp_previous));
-            $end_time_stamp = Carbon::parse($request->end_time_stamp." ".$end_time_stamp_previous);
-            $end_time_stamp = $end_time_stamp->format('Y-m-d H:i:s');
+            $start_time_stamp = Carbon::parse($request->start_time_stamp)->format('Y-m-d H:i:s');
+            $end_time_stamp = Carbon::parse($request->end_time_stamp)->format('Y-m-d H:i:s');
+            if (strtotime($end_time_stamp) < strtotime($start_time_stamp)) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'End Time cannot be before Start Time.'
+                ]);
+            }
+            $deckle->start_time_stamp = $start_time_stamp;
             $deckle->end_time_stamp = $end_time_stamp;
             $deckle->updated_at = now();
             if (!$deckle->save()) {

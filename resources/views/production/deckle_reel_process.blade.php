@@ -290,7 +290,8 @@
                                     <td>{{ $deckle->deckle_no }}</td>
                                     <td>{{ date('d-m-Y H:i:s',strtotime($deckle->end_time_stamp)) }} 
                                         @php if($deckle->ledger_id==""){ @endphp
-                                        <img src="{{ asset('public/assets/imgs/edit-icon.svg') }}" class="px-1 edit_end_time" data-id="{{$deckle->id}}" alt="" title="Edit End Time" data-deckle_no="{{ $deckle->deckle_no }}" data-start_time_stamp="{{ $deckle->start_time_stamp }}" data-end_time_stamp="{{date('Y-m-d',strtotime($deckle->end_time_stamp))}}" style="cursor: pointer">
+                                        <img src="{{ asset('public/assets/imgs/edit-icon.svg') }}" class="px-1 edit_end_time" data-id="{{$deckle->id}}" alt="" title="Edit End Time" data-deckle_no="{{ $deckle->deckle_no }}" data-start_time_stamp="{{ date('Y-m-d\TH:i',strtotime($deckle->start_time_stamp)) }}"
+data-end_time_stamp="{{ date('Y-m-d\TH:i',strtotime($deckle->end_time_stamp)) }}" style="cursor: pointer">
                                         @php } @endphp
                                         <table class="mt-2 table table-borderd">
                                             <thead>
@@ -489,10 +490,16 @@
 
                 <input type="hidden" id="edit_deckle_id">
 
-                <!-- END TIME -->
-                <div class="mb-3">
-                    <label class="form-label fw-bold">End Time</label>
-                    <input type="date" class="form-control" id="edit_end_time_stamp">
+                <!-- TIME -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Start Time</label>
+                        <input type="datetime-local" class="form-control" id="edit_start_time_stamp">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">End Time</label>
+                        <input type="datetime-local" class="form-control" id="edit_end_time_stamp">
+                    </div>
                 </div>
 
                 <hr>
@@ -863,6 +870,7 @@
         window.lastValidEndDate = endTime;
         $("#missingModalLabel").text("Edit Deckle No. " + deckleNo);
         $("#edit_deckle_id").val(deckleId);
+        $("#edit_start_time_stamp").val(startTime);
         $("#edit_end_time_stamp").val(endTime);
         $("#qualityProductionContainer").html(
             '<p class="text-muted">Loading...</p>'
@@ -940,6 +948,7 @@
     $(document).on("click", ".update_endtime", function () {
         let modal = $(this).closest(".modal");   // ✅ VERY IMPORTANT
         let deckle_id = modal.find("#edit_deckle_id").val();
+        let start_time_stamp = modal.find("#edit_start_time_stamp").val();
         let end_time_stamp = modal.find("#edit_end_time_stamp").val();
         let token = "{{ csrf_token() }}";
         if (!deckle_id) {
@@ -991,6 +1000,7 @@
             method: "POST",
             data: {
                 deckle_id: deckle_id,   // ✅ NOW GUARANTEED
+                start_time_stamp: start_time_stamp,
                 end_time_stamp: end_time_stamp,
                 quality_data: quality_data,
                 new_quality: new_quality,
@@ -1064,24 +1074,15 @@
             });
         }
     }); 
-    $(document).on('blur', '#edit_end_time_stamp', function () {
-
-        let selectedDate = $(this).val();
-
-        if (!selectedDate || !window.deckleStartDate) {
-            return;
+    $(document).on("change", "#edit_start_time_stamp, #edit_end_time_stamp", function () {
+        let startTime = $("#edit_start_time_stamp").val();
+        let endTime = $("#edit_end_time_stamp").val();
+        if (startTime && endTime) {
+            if (new Date(endTime) < new Date(startTime)) {
+                alert("End Time cannot be before Start Time.");
+                $("#edit_end_time_stamp").val("");
+            }
         }
-
-        if (selectedDate < window.deckleStartDate) {
-
-            alert('Deckle end date cannot be less than start date.');
-
-            $(this).val(window.lastValidEndDate);
-
-            return false;
-        }
-
-        window.lastValidEndDate = selectedDate;
     });
 </script>
 
