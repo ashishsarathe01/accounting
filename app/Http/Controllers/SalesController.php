@@ -7407,8 +7407,12 @@ public function exportSaleBill(Request $request)
       $configuration = SaleInvoiceConfiguration::with(['terms','banks'])
                                  ->where('company_id',Session::get('user_company_id'))
                                  ->first();
-   
-      return view('Sale/sale_invoice_preview')->with([ 'company_data' => $company_data, 'bank_detail' => $bank_detail,'configuration'=>$configuration,'seller_info'=>$seller_info]);
+      $einvoice_status = 0;
+
+      if (isset($GstSettings) && $GstSettings) {
+         $einvoice_status = $GstSettings->einvoice;
+      }
+      return view('Sale/sale_invoice_preview')->with([ 'company_data' => $company_data, 'bank_detail' => $bank_detail,'configuration'=>$configuration,'seller_info'=>$seller_info, 'einvoice_status'  => $einvoice_status,]);
    }    
    public function getLatestCost(Request $request)
    {
