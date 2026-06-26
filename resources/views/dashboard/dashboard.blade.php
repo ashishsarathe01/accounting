@@ -27,7 +27,7 @@
             <div class="row vh-100">
             @include('layouts.leftnav')
                 <!-- view-table-Content -->
-                <div class="col-md-12 ml-sm-auto  col-lg-10 px-md-4 bg-mint">
+                <div class="col-md-10 ml-sm-auto  col-lg-9 px-md-4 bg-mint">
                 @if (session('success'))
                         <div class="alert alert-success" role="alert">
                             {{ session('success') }}
@@ -632,8 +632,130 @@
                         @endif
                     </div>                    
                 </div>
+                 <div class="col-lg-1 d-flex justify-content-center">
+            <div class="shortcut-key ">
+               <p class="font-14 fw-500 font-heading m-0">Shortcut Keys</p>
+               <!-- <button class="p-2 transaction-shortcut-btn my-2 ">
+                  F1
+                  <span class="ps-1 fw-normal text-body">Help</span>
+               </button> -->
+               @can('view-module', 73)
+               <button class="p-2 transaction-shortcut-btn mb-2 " onclick="window.location='{{ url('add-account') }}'">
+                
+                  <span class="">Add Account</span>
+               </button>
+               @endcan
+
+               @can('action-module',83)
+               <button class="p-2 transaction-shortcut-btn mb-2 " onclick="window.location='{{ route('account-manage-item.create') }}'">
+                  <span class="">Add Item</span>
+               </button>
+               @endcan
+                @can('action-module',85)
+               <button class="p-2 transaction-shortcut-btn mb-2 "onclick="window.location='{{ route('sale.create') }}'">
+                
+                  <span class="">Add Sales</span>
+               </button>
+               <!-- <a href="{{ route('sale.create') }}"
+   class="btn p-2 transaction-shortcut-btn mb-2">
+    <span class="border-bottom-black">F8</span>
+    <span class="ps-1 fw-normal text-body">Add Sales</span>
+</a> -->
+               @endcan
+
+                @can('action-module',83)
+               <button class="p-2 transaction-shortcut-btn mb-2 " onclick="window.location='{{ route('purchase.create') }}'">
+                  <span class="">Add Purchase</span>
+               </button>
+               @endcan
+               
+                @can('action-module',76)
+               <button class="p-2 transaction-shortcut-btn mb-2 " onclick="window.location='{{ route('credit-note-without-item.create') }}'">
+                  <span class="">Add Credit Note</span>
+               </button>
+               @endcan
+               
+                @can('action-module',77)
+               <button class="p-2 transaction-shortcut-btn mb-2 " onclick="window.location='{{ route('debit-note-without-item.create') }}'">
+                  <span class="">Add Debit Note</span>
+               </button>
+               @endcan
+               
+                @can('action-module',82)
+               <button class="p-2 transaction-shortcut-btn mb-2 " onclick="window.location='{{ route('payment.create') }}'">
+                  <span class="">Add Payment</span>
+               </button>
+               @endcan
+               
+                @can('action-module',84)
+               <button class="p-2 transaction-shortcut-btn mb-2 " onclick="window.location='{{ route('receipt.create') }}'">
+                  <span class="">Add Receipt</span>
+               </button>
+               @endcan
+               
+                @can('action-module',80)
+               <button class="p-2 transaction-shortcut-btn mb-2 " onclick="window.location='{{ route('journal.create') }}'">
+                  <span class="">Add Journal</span>
+               </button>
+               @endcan
+               
+                @can('action-module',75)
+               <button class="p-2 transaction-shortcut-btn mb-2 " onclick="window.location='{{ route('contra.create') }}'">
+                  <span class="">Add Contra</span>
+               </button>
+               @endcan
+               
+                @can('action-module',86)
+               <button class="p-2 transaction-shortcut-btn mb-2 " onclick="window.location='{{ route('add-stock-journal') }}'">
+                  <span class="">Add Stock journal</span>
+               </button>
+               @endcan
+               
+                @can('action-module',87)
+               <button class="p-2 transaction-shortcut-btn mb-2 " onclick="window.location='{{ route('stock-transfer.create') }}'">
+                  <span class="">Add Stock transfer</span>
+               </button>
+               @endcan
+
+               
+                @can('action-module',26)
+               <button class="p-2 transaction-shortcut-btn mb-2 " onclick="window.location='{{ route('accountledger.index') }}'">
+                  <span class="">Account Ledger</span>
+               </button>
+               @endcan
+
+               
+                @can('action-module',27)
+               <button class="p-2 transaction-shortcut-btn mb-2 " onclick="window.location='{{ route('itemledger.index') }}'">
+                  <span class="">Item Ledger</span>
+               </button>
+               @endcan
+
+               
+                @can('action-module',24)
+               <button class="p-2 transaction-shortcut-btn mb-2 " onclick="window.location='{{ route('balancesheet.index') }}'">
+                  <span class="">Balance Sheet</span>
+               </button>
+               @endcan
+
+               
+                @can('action-module',25)
+               <button class="p-2 transaction-shortcut-btn mb-2 " onclick="window.location='{{ route('profitloss.index') }}'">
+                  <span class="">Profit & Loss</span>
+               </button>
+               @endcan
+
+               
+                @can('action-module',32)
+               <button class="p-2 transaction-shortcut-btn mb-2 " onclick="window.location='{{ route('trialbalance.index') }}'">
+                  <span class="">Trial balance</span>
+               </button>
+               @endcan
+            </div>
+         </div>
             </div>
         </section>
+        
     </div>
 </body>
 @include('layouts.footer')
