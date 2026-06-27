@@ -855,6 +855,7 @@ Route::post('/payroll/register/store',[PayrollRegisterController::class, 'store'
     Route::post('sale-order.ready-to-dispatch', [SaleOrderController::class, 'readyToDispatch'])->name('sale-order.ready-to-dispatch');
     Route::post('sale-order-start-process', [SaleOrderController::class, 'startOrder'])->name('sale-order-start-process');
     Route::post('check.credit.note.no', [SalesReturnController::class, 'checkCreditNoteNo'])->name('check.credit.note.no');
+    Route::post('check.debit.note.no', [PurchaseReturnController::class, 'checkDebitNoteNo'])->name('check.debit.note.no');
     Route::post('save_sale_order_deckle_range', [SaleOrderController::class, 'saveDeckleRange'])->name('save_sale_order_deckle_range');
     Route::get('/production/item-consumption-rate', [ProductionController::class, 'ConsumptionRateIndex'])->name('ConsumptionRate');
    Route::get('/production/item-consumption-rate/add', [ProductionController::class, 'AddConsumptionRate'])->name('ConsumptionRate.add');

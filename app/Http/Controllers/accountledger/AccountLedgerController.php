@@ -387,7 +387,7 @@ class AccountLedgerController extends Controller
                 $ledger[$key]->bill_no = $action->voucher_no ?? '';
         
             } else if ($value->entry_type == 3) {  // Sales Return
-                $action = SalesReturn::select('sale_return_no', 'sr_prefix')->where('id', $value->entry_type_id)->first();
+                $action = SalesReturn::select('sr_prefix')->where('id', $value->entry_type_id)->first();
                 if ($action) {
                     $ledger[$key]->bill_no = $action->sr_prefix . $action->sale_return_no;
                 }

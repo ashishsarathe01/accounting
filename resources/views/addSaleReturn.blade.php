@@ -1847,6 +1847,14 @@ $('#gst_breakup_body').html(gstBreakupHtml);
                alert("Please Enter Item Required Fields.");
                return false;
             }
+            if($("#manual_enter_invoice_no").val() == '1'){
+               validateManualVoucherBeforeSubmit(function(canSubmit){
+                  if(canSubmit){
+                     $("#saleReturnForm")[0].submit();
+                  }
+               });
+               return false;
+            }
             
          }else{
             return false;
@@ -2435,6 +2443,119 @@ $('#gst_breakup_body').html(gstBreakupHtml);
    $("#nature").change(function(){
       $("#series_no").change();
    });
+
+   $("#voucher_prefix").keyup(function(){
+      if($("#manual_enter_invoice_no").val()=='1'){
+         $("#sale_return_no").val($(this).val());
+      }
+   });
+
+   function getCreditNoteVoucherConfig() {
+      let nature = $("#nature").val();
+      let selected = $('#series_no option:selected');
+      if (nature == "WITHOUT GST") {
+         return {
+            duplicate_voucher: selected.attr('data-duplicate_voucher_without_gst') || '',
+            blank_voucher: selected.attr('data-blank_voucher_without_gst') || ''
+         };
+      }
+      return {
+         duplicate_voucher: selected.attr('data-duplicate_voucher_with_gst') || '',
+         blank_voucher: selected.attr('data-blank_voucher_with_gst') || ''
+      };
+   }
+
+   function validateManualVoucherBeforeSubmit(callback, excludeId) {
+      if ($("#manual_enter_invoice_no").val() != '1') {
+         callback(true);
+         return;
+      }
+      let voucherNo = $('#voucher_prefix').val().trim();
+      let config = getCreditNoteVoucherConfig();
+
+      if (voucherNo === '') {
+         if (config.blank_voucher === "DON'T ALLOW") {
+            alert('Voucher number cannot be blank.');
+            callback(false);
+            return;
+         }
+         if (config.blank_voucher === "WARNING ONLY") {
+            if (!confirm('Voucher number is blank. Do you want to continue?')) {
+               callback(false);
+               return;
+            }
+         }
+         callback(true);
+         return;
+      }
+
+      if (config.duplicate_voucher === "ALLOW") {
+         callback(true);
+         return;
+      }
+
+      let postData = {
+         _token: '{{ csrf_token() }}',
+         sr_prefix: voucherNo
+      };
+      if (excludeId) {
+         postData.exclude_id = excludeId;
+      }
+
+      $.ajax({
+         url: '{{ route("check.credit.note.no") }}',
+         method: 'POST',
+         data: postData,
+         success: function(response) {
+            if (!response.exists) {
+               callback(true);
+               return;
+            }
+            if (config.duplicate_voucher === "DON'T ALLOW") {
+               alert('This Credit Note No. already exists!');
+               callback(false);
+               return;
+            }
+            if (config.duplicate_voucher === "WARNING ONLY") {
+               callback(confirm('This Credit Note No. already exists. Do you want to continue?'));
+               return;
+            }
+            callback(true);
+         },
+         error: function() {
+            alert('Error checking Credit Note No.');
+            callback(false);
+         }
+      });
+   }
+
+   function checkCreditNoteDuplicateOnInput() {
+      if ($("#manual_enter_invoice_no").val() != '1') {
+         return;
+      }
+      let creditNoteNo = $('#voucher_prefix').val().trim();
+      let config = getCreditNoteVoucherConfig();
+      if (creditNoteNo === '' || config.duplicate_voucher !== "DON'T ALLOW") {
+         return;
+      }
+      $.ajax({
+         url: '{{ route("check.credit.note.no") }}',
+         method: 'POST',
+         data: {
+            _token: '{{ csrf_token() }}',
+            sr_prefix: creditNoteNo
+         },
+         success: function(response) {
+            if (response.exists) {
+               alert('This Credit Note No. already exists!');
+               $('#voucher_prefix').val('');
+               $('#sale_return_no').val('');
+            }
+         }
+      });
+   }
+
+   $('#voucher_prefix').on('change blur', checkCreditNoteDuplicateOnInput);
    
    function sectionHideShow(){
       $(".with_gst_with_item_section").hide();
@@ -2816,45 +2937,6 @@ $('#gst_breakup_body').html(gstBreakupHtml);
       }
       
    });
-
-   function checkCreditNoteDuplicate() {
-         let creditNoteNo = $('#voucher_prefix').val().trim();
-         if (creditNoteNo === '') return;
-
-         $.ajax({
-               url: '{{ route("check.credit.note.no") }}', // route to be defined
-               method: 'POST',
-               data: {
-                  _token: '{{ csrf_token() }}',
-                  sr_prefix: creditNoteNo
-               },
-               success: function(response) {
-                  if (response.exists) {
-                     alert('This Credit Note No. already exists!');
-                     $('#voucher_prefix').val('');
-                     $('#sale_return_no').val('');
-                  }
-               },
-               error: function() {
-                  alert('Error checking Credit Note No.');
-               }
-         });
-      }
-
-      // Automatically trigger when value is set (auto-filled)
-      let observer = new MutationObserver(function(mutations) {
-         mutations.forEach(function(mutation) {
-               if (mutation.type === "attributes" && mutation.attributeName === "value") {
-                  checkCreditNoteDuplicate();
-               }
-         });
-      });
-
-      observer.observe(document.getElementById('voucher_prefix'), { attributes: true });
-
-      // Also check on manual change
-      $('#voucher_prefix').on('change', checkCreditNoteDuplicate);
-
    // ------------ openProductionModal  -------------
    function openProductionModal(rowId) {
       

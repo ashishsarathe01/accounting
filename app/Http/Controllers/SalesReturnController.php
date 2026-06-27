@@ -546,47 +546,97 @@ class SalesReturnController extends Controller
       // echo "<pre>";
       // print_r($request->all());die;
       $financial_year = CommonHelper::getFinancialYear($request->input('date'));
-      $configuration_for = ($request->input('nature') == "WITHOUT GST")
-         ? 'CREDIT NOTE'
-         : 'CREDIT NOTE WITHOUT';
       $isWithoutGstNature = $request->input('nature') == "WITHOUT GST";
-      if($request->input('manual_enter_invoice_no')=='0'){         
-         $lastVoucherQuery = SalesReturn::select('sale_return_no')                   
-                        ->where('company_id',Session::get('user_company_id'))
-                        ->where('financial_year','=',$financial_year)
-                        ->where('sr_nature','!=',"WITHOUT GST")
-                        ->where('delete','=','0')
-                        ->where('series_no',$request->input('series_no'));
+      $configuration_for = $isWithoutGstNature ? 'CREDIT NOTE WITHOUT' : 'CREDIT NOTE';
+      $series_configuration = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
+         ->where('series', $request->input('series_no'))
+         ->where('configuration_for', $configuration_for)
+         ->where('status', '1')
+         ->first();
+      $isManualNumbering = $request->input('manual_enter_invoice_no') == '1';
+
+      if ($isManualNumbering) {
+         $voucher_input = trim((string)$request->input('voucher_prefix'));
+         if ($voucher_input === '') {
+            $blank_voucher = $series_configuration ? $series_configuration->blank_voucher : "DON'T ALLOW";
+            if ($blank_voucher == "DON'T ALLOW") {
+               return redirect()->back()->withInput()->withErrors(['voucher_prefix' => 'Voucher number cannot be blank.']);
+            }
+         } elseif ($series_configuration && $series_configuration->duplicate_voucher == "DON'T ALLOW") {
+            $duplicate_exists = SalesReturn::where('company_id', Session::get('user_company_id'))
+               ->where('sr_prefix', $voucher_input)
+               ->where('financial_year', $financial_year)
+               ->where('delete', '0')
+               ->exists();
+            if ($duplicate_exists) {
+               return redirect()->back()->withInput()->withErrors(['voucher_prefix' => 'Duplicate voucher number is not allowed.']);
+            }
+         }
+         $sale_return_no = $voucher_input;
+         $voucher_prefix = $voucher_input;
+      } else {
+         $lastVoucherQuery = SalesReturn::select('sale_return_no')
+            ->where('company_id', Session::get('user_company_id'))
+            ->where('financial_year', '=', $financial_year)
+            ->where('delete', '=', '0')
+            ->where('series_no', $request->input('series_no'));
          if ($isWithoutGstNature) {
             $lastVoucherQuery->where('sr_nature', '=', "WITHOUT GST");
          } else {
             $lastVoucherQuery->where('sr_nature', '!=', "WITHOUT GST");
          }
-         $sale_return_no = $lastVoucherQuery->max(\DB::raw("cast(sale_return_no as SIGNED)"));            
-         $series_configuration = VoucherSeriesConfiguration::where('company_id',Session::get('user_company_id'))
-                                                            ->where('series',$request->input('series_no'))
-                                                            ->where('configuration_for',$configuration_for)
-                                                            ->where('status','1')
-                                                            ->first();
-         if(!$sale_return_no){
-            if($series_configuration && $series_configuration->manual_numbering=="NO" && $series_configuration->invoice_start!=""){
-               if ($series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
-                  $sale_return_no =  sprintf("%'03d",$series_configuration->invoice_start);
-               }else{
-                  $sale_return_no =  $series_configuration->invoice_start;
-               }
-            }else{
-               $sale_return_no = "1";
-            }
-         }else{
-            $sale_return_no++;
-            if ($series_configuration && $series_configuration->manual_numbering=="NO" && $series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
-               $sale_return_no = sprintf("%'03d", $sale_return_no);
-            }
+         $last_sale_return_no = $lastVoucherQuery->max(\DB::raw("cast(sale_return_no as SIGNED)"));
+         $number_digit = ($series_configuration && !empty($series_configuration->number_digit)) ? (int)$series_configuration->number_digit : 3;
+         if (!$last_sale_return_no) {
+            $next_no = ($series_configuration && $series_configuration->invoice_start != "") ? (int)$series_configuration->invoice_start : 1;
+         } else {
+            $next_no = (int)$last_sale_return_no + 1;
          }
-      }else{
-         $sale_return_no = $request->input('voucher_prefix');
-      } 
+         $sale_return_no = $next_no;
+         $padded_no = str_pad($next_no, $number_digit, '0', STR_PAD_LEFT);
+         $voucher_prefix = "";
+         if ($series_configuration && $series_configuration->manual_numbering == "NO") {
+            if ($series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
+               $voucher_prefix .= $series_configuration->prefix_value;
+            }
+            if ($series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "" && $series_configuration->separator_1 != "") {
+               $voucher_prefix .= $series_configuration->separator_1;
+            }
+            if ($series_configuration->year == "PREFIX TO NUMBER" && $series_configuration->year_format != "") {
+               if ($series_configuration->year_format == "YY-YY") {
+                  $voucher_prefix .= Session::get('default_fy');
+               } elseif ($series_configuration->year_format == "YYYY-YY") {
+                  $default_fy = Session::get('default_fy');
+                  $fy_parts = explode('-', $default_fy);
+                  $voucher_prefix .= '20' . $fy_parts[0] . '-20' . $fy_parts[1];
+               }
+            }
+            if ($series_configuration->year == "PREFIX TO NUMBER" && $series_configuration->year_format != "" && $series_configuration->separator_2 != "") {
+               $voucher_prefix .= $series_configuration->separator_2;
+            }
+            $voucher_prefix .= $padded_no;
+            if ($series_configuration->year == "SUFFIX TO NUMBER" && $series_configuration->year_format != "" && $series_configuration->separator_2 != "") {
+               $voucher_prefix .= $series_configuration->separator_2;
+            }
+            if ($series_configuration->year == "SUFFIX TO NUMBER" && $series_configuration->year_format != "") {
+               if ($series_configuration->year_format == "YY-YY") {
+                  $voucher_prefix .= Session::get('default_fy');
+               } elseif ($series_configuration->year_format == "YYYY-YY") {
+                  $default_fy = Session::get('default_fy');
+                  $fy_parts = explode('-', $default_fy);
+                  $voucher_prefix .= '20' . $fy_parts[0] . '-20' . $fy_parts[1];
+               }
+            }
+            if ($series_configuration->suffix == "ENABLE" && $series_configuration->suffix_value != "" && $series_configuration->separator_3 != "") {
+               $voucher_prefix .= $series_configuration->separator_3;
+            }
+            if ($series_configuration->suffix == "ENABLE" && $series_configuration->suffix_value != "") {
+               $voucher_prefix .= $series_configuration->suffix_value;
+            }
+         } else {
+            $voucher_prefix = $padded_no;
+         }
+      }
       $account = Accounts::where('id',$request->input('party_id'))->first();
       $sale = new SalesReturn;
       if ($request->input('sale_bill_id')!=null && $request->input('voucher_type') == 'SALE' && $request->input('nature') != "WITHOUT GST") {
@@ -627,7 +677,6 @@ class SalesReturnController extends Controller
       //$sale->voucher_type = $request->input('voucher_type');
       $sale->sr_nature = $request->input('nature');
       $sale->sr_type = $request->input('type');
-      $voucher_prefix = $request->input('voucher_prefix');
       $sale->sr_prefix = $voucher_prefix;
       $sale->series_no = $request->input('series_no');
       $sale->material_center = $request->input('material_center');
@@ -1894,48 +1943,134 @@ class SalesReturnController extends Controller
       $fy_start_date = '20' . $startYY . '-04-01'; 
       $fy_end_date   = '20' . $endYY   . '-03-31';   
       foreach ($mat_series as $key => $value) {
-         if($sale_return->series_no==$value->series){
-            $mat_series[$key]->invoice_start_from =  $sale_return->sale_return_no;
-            $mat_series[$key]->without_invoice_start_from =  $sale_return->sale_return_no;
-            $mat_series[$key]->invoice_prefix =  $sale_return->sr_prefix;
-         }else{
-            $series_configuration = VoucherSeriesConfiguration::where('company_id',Session::get('user_company_id'))
-               ->where('series',$value->series)
-               ->where('configuration_for','CREDIT NOTE')
-               ->where('status','1')
+         $series_configuration_with_gst = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
+               ->where('series', $value->series)
+               ->where('configuration_for', 'CREDIT NOTE')
+               ->where('status', '1')
                ->first();
-            $voucher_no = SalesReturn::select('sale_return_no')                   
-                        ->where('company_id',Session::get('user_company_id'))
-                        ->where('financial_year','=',$financial_year)
-                        ->where('sr_nature','!=',"WITHOUT GST")
-                        ->where('delete','=','0')
-                        ->where('series_no',$value->series)
-                        ->max(\DB::raw("cast(sale_return_no as SIGNED)"));
-            
-            if(!$voucher_no){
-               $mat_series[$key]->invoice_start_from =  "001";
-            }else{
-               $invc = $voucher_no + 1;
-               $invc = sprintf("%'03d", $invc);
-               $mat_series[$key]->invoice_start_from =  $invc;
+
+         $series_configuration_without_gst = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
+               ->where('series', $value->series)
+               ->where('configuration_for', 'CREDIT NOTE WITHOUT')
+               ->where('status', '1')
+               ->first();
+
+         $sale_return_no = SalesReturn::select('sale_return_no')
+                       ->where('company_id', Session::get('user_company_id'))
+                       ->where('financial_year', '=', $financial_year)
+                       ->where('sr_nature', '!=', "WITHOUT GST")
+                       ->where('series_no', '=', $value->series)
+                       ->where('delete', '=', '0')
+                       ->max(\DB::raw("cast(sale_return_no as SIGNED)"));
+         if (!$sale_return_no) {
+            if ($series_configuration_with_gst && $series_configuration_with_gst->manual_numbering == "NO" && $series_configuration_with_gst->invoice_start != "") {
+               $start = $series_configuration_with_gst->invoice_start;
+               $hasPrefix = ($series_configuration_with_gst->prefix == "ENABLE" && !empty($series_configuration_with_gst->prefix_value));
+               $hasYearPrefix = ($series_configuration_with_gst->year == "PREFIX TO NUMBER" && !empty($series_configuration_with_gst->year_format));
+               if (!$hasPrefix && !$hasYearPrefix) {
+                  $mat_series[$key]->invoice_start_from = (int)$start;
+               } else {
+                  $mat_series[$key]->invoice_start_from = str_pad($start, $series_configuration_with_gst->number_digit ?? 3, '0', STR_PAD_LEFT);
+               }
+            } else {
+               $mat_series[$key]->invoice_start_from = "1";
             }
-            //Without GST
-            $sale_return_no_without = SalesReturn::select('sale_return_no')                     
-                                                ->where('company_id',Session::get('user_company_id'))
-                                                ->where('financial_year','=',$financial_year)
-                                                ->where('sr_nature','=',"WITHOUT GST")
-                                                ->where('series_no','=',$value->series)
-                                                ->where('delete','=','0')
-                                                ->max(\DB::raw("cast(sale_return_no as SIGNED)"));
-            if(!$sale_return_no_without){
-               $mat_series[$key]->without_invoice_start_from =  "001";
-            }else{
-               $invc = $sale_return_no_without + 1;
-               $invc = sprintf("%'03d", $invc);
-               $mat_series[$key]->without_invoice_start_from =  $invc;
+         } else {
+            $invc = ((int)$sale_return_no) + 1;
+            $hasPrefix = ($series_configuration_with_gst && $series_configuration_with_gst->prefix == "ENABLE" && !empty($series_configuration_with_gst->prefix_value));
+            $hasYearPrefix = ($series_configuration_with_gst && $series_configuration_with_gst->year == "PREFIX TO NUMBER" && !empty($series_configuration_with_gst->year_format));
+            if (!$hasPrefix && !$hasYearPrefix) {
+               $mat_series[$key]->invoice_start_from = (int)$invc;
+            } else {
+               $mat_series[$key]->invoice_start_from = str_pad($invc, $series_configuration_with_gst->number_digit ?? 3, '0', STR_PAD_LEFT);
             }
          }
-         
+
+         $sale_return_no_without = SalesReturn::select('sale_return_no')
+                       ->where('company_id', Session::get('user_company_id'))
+                       ->where('financial_year', '=', $financial_year)
+                       ->where('sr_nature', '=', "WITHOUT GST")
+                       ->where('series_no', '=', $value->series)
+                       ->where('delete', '=', '0')
+                       ->max(\DB::raw("cast(sale_return_no as SIGNED)"));
+         if (!$sale_return_no_without) {
+            if ($series_configuration_without_gst && $series_configuration_without_gst->manual_numbering == "NO" && $series_configuration_without_gst->invoice_start != "") {
+               $start = $series_configuration_without_gst->invoice_start;
+               $hasPrefix = ($series_configuration_without_gst->prefix == "ENABLE" && !empty($series_configuration_without_gst->prefix_value));
+               $hasYearPrefix = ($series_configuration_without_gst->year == "PREFIX TO NUMBER" && !empty($series_configuration_without_gst->year_format));
+               if (!$hasPrefix && !$hasYearPrefix) {
+                  $mat_series[$key]->without_invoice_start_from = (int)$start;
+               } else {
+                  $mat_series[$key]->without_invoice_start_from = str_pad($start, $series_configuration_without_gst->number_digit ?? 3, '0', STR_PAD_LEFT);
+               }
+            } else {
+               $mat_series[$key]->without_invoice_start_from = "1";
+            }
+         } else {
+            $invc = ((int)$sale_return_no_without) + 1;
+            $hasPrefix = ($series_configuration_without_gst && $series_configuration_without_gst->prefix == "ENABLE" && !empty($series_configuration_without_gst->prefix_value));
+            $hasYearPrefix = ($series_configuration_without_gst && $series_configuration_without_gst->year == "PREFIX TO NUMBER" && !empty($series_configuration_without_gst->year_format));
+            if (!$hasPrefix && !$hasYearPrefix) {
+               $mat_series[$key]->without_invoice_start_from = (int)$invc;
+            } else {
+               $mat_series[$key]->without_invoice_start_from = str_pad($invc, $series_configuration_without_gst->number_digit ?? 3, '0', STR_PAD_LEFT);
+            }
+         }
+
+         $buildVoucherPrefix = function ($series_configuration, $voucher_number) {
+            $prefix = "";
+            if (!$series_configuration || $series_configuration->manual_numbering != "NO") {
+               return $prefix;
+            }
+            if ($series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "") {
+               $prefix .= $series_configuration->prefix_value;
+            }
+            if ($series_configuration->prefix == "ENABLE" && $series_configuration->prefix_value != "" && $series_configuration->separator_1 != "") {
+               $prefix .= $series_configuration->separator_1;
+            }
+            if ($series_configuration->year == "PREFIX TO NUMBER" && $series_configuration->year_format != "") {
+               if ($series_configuration->year_format == "YY-YY") {
+                  $prefix .= Session::get('default_fy');
+               } elseif ($series_configuration->year_format == "YYYY-YY") {
+                  $default_fy = Session::get('default_fy');
+                  $fy_parts = explode('-', $default_fy);
+                  $prefix .= '20' . $fy_parts[0] . '-20' . $fy_parts[1];
+               }
+            }
+            if ($series_configuration->year == "PREFIX TO NUMBER" && $series_configuration->year_format != "" && $series_configuration->separator_2 != "") {
+               $prefix .= $series_configuration->separator_2;
+            }
+            $prefix .= $voucher_number;
+            if ($series_configuration->year == "SUFFIX TO NUMBER" && $series_configuration->year_format != "" && $series_configuration->separator_2 != "") {
+               $prefix .= $series_configuration->separator_2;
+            }
+            if ($series_configuration->year == "SUFFIX TO NUMBER" && $series_configuration->year_format != "") {
+               if ($series_configuration->year_format == "YY-YY") {
+                  $prefix .= Session::get('default_fy');
+               } elseif ($series_configuration->year_format == "YYYY-YY") {
+                  $default_fy = Session::get('default_fy');
+                  $fy_parts = explode('-', $default_fy);
+                  $prefix .= '20' . $fy_parts[0] . '-20' . $fy_parts[1];
+               }
+            }
+            if ($series_configuration->suffix == "ENABLE" && $series_configuration->suffix_value != "" && $series_configuration->separator_3 != "") {
+               $prefix .= $series_configuration->separator_3;
+            }
+            if ($series_configuration->suffix == "ENABLE" && $series_configuration->suffix_value != "") {
+               $prefix .= $series_configuration->suffix_value;
+            }
+            return $prefix;
+         };
+
+         $mat_series[$key]->manual_enter_invoice_no_with_gst = ($series_configuration_with_gst && $series_configuration_with_gst->manual_numbering == "YES") ? "1" : "0";
+         $mat_series[$key]->duplicate_voucher_with_gst = ($series_configuration_with_gst && $series_configuration_with_gst->manual_numbering == "YES") ? $series_configuration_with_gst->duplicate_voucher : "";
+         $mat_series[$key]->blank_voucher_with_gst = ($series_configuration_with_gst && $series_configuration_with_gst->manual_numbering == "YES") ? $series_configuration_with_gst->blank_voucher : "";
+         $mat_series[$key]->invoice_prefix = $buildVoucherPrefix($series_configuration_with_gst, $mat_series[$key]->invoice_start_from);
+
+         $mat_series[$key]->manual_enter_invoice_no_without_gst = ($series_configuration_without_gst && $series_configuration_without_gst->manual_numbering == "YES") ? "1" : "0";
+         $mat_series[$key]->duplicate_voucher_without_gst = ($series_configuration_without_gst && $series_configuration_without_gst->manual_numbering == "YES") ? $series_configuration_without_gst->duplicate_voucher : "";
+         $mat_series[$key]->blank_voucher_without_gst = ($series_configuration_without_gst && $series_configuration_without_gst->manual_numbering == "YES") ? $series_configuration_without_gst->blank_voucher : "";
+         $mat_series[$key]->without_invoice_prefix = $buildVoucherPrefix($series_configuration_without_gst, $mat_series[$key]->without_invoice_start_from);
       }
       $billsundry = BillSundrys::where('delete', '=', '0')
                                  ->where('status', '=', '1')
@@ -1995,8 +2130,15 @@ class SalesReturnController extends Controller
                       ->pluck('item_id')
                       ->toArray();
       $production_module_status = 1; // or 0 depending on your logic
-        
-      return view('editSaleReturn')->with('fy_start_date', $fy_start_date)->with('fy_end_date', $fy_end_date)->with('production_items', $production_items)->with('party_list', $party_list)->with('billsundry', $billsundry)->with('mat_series', $mat_series)->with('sale_return', $sale_return)->with('sale_return_description', $sale_return_description)->with('sale_return_sundry', $sale_return_sundry)->with('vendors', $vendors)->with('items', $items)->with('all_account_list', $all_account_list)->with('without_gst', $without_gst)->with('merchant_gst', $sale_return->merchant_gst)->with('manageitems', $manageitems)->with('production_module_status', $production_module_status);
+      $edit_configuration_for = ($sale_return->sr_nature == "WITHOUT GST") ? 'CREDIT NOTE WITHOUT' : 'CREDIT NOTE';
+      $edit_series_configuration = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
+         ->where('series', $sale_return->series_no)
+         ->where('configuration_for', $edit_configuration_for)
+         ->where('status', '1')
+         ->first();
+      $manual_voucher_no = ($edit_series_configuration && $edit_series_configuration->manual_numbering == "NO") ? 0 : 1;
+
+      return view('editSaleReturn')->with('fy_start_date', $fy_start_date)->with('fy_end_date', $fy_end_date)->with('production_items', $production_items)->with('party_list', $party_list)->with('billsundry', $billsundry)->with('mat_series', $mat_series)->with('sale_return', $sale_return)->with('sale_return_description', $sale_return_description)->with('sale_return_sundry', $sale_return_sundry)->with('vendors', $vendors)->with('items', $items)->with('all_account_list', $all_account_list)->with('without_gst', $without_gst)->with('merchant_gst', $sale_return->merchant_gst)->with('manageitems', $manageitems)->with('production_module_status', $production_module_status)->with('manual_voucher_no', $manual_voucher_no);
    }
    public function update(Request $request){
       Gate::authorize('action-module',69);
@@ -2103,7 +2245,39 @@ class SalesReturnController extends Controller
          $sale->remark = $request->input('remark');
       }
       //$sale->voucher_type = $request->input('voucher_type');
-      $voucher_prefix = $request->input('voucher_prefix');  
+      $isWithoutGstNature = $request->input('nature') == "WITHOUT GST";
+      $configuration_for = $isWithoutGstNature ? 'CREDIT NOTE WITHOUT' : 'CREDIT NOTE';
+      $series_configuration = VoucherSeriesConfiguration::where('company_id', Session::get('user_company_id'))
+         ->where('series', $request->input('series_no'))
+         ->where('configuration_for', $configuration_for)
+         ->where('status', '1')
+         ->first();
+      $isManualNumbering = $request->input('manual_enter_invoice_no') == '1';
+
+      if ($isManualNumbering) {
+         $voucher_input = trim((string)$request->input('voucher_prefix'));
+         if ($voucher_input === '') {
+            $blank_voucher = $series_configuration ? $series_configuration->blank_voucher : "DON'T ALLOW";
+            if ($blank_voucher == "DON'T ALLOW") {
+               return redirect()->back()->withInput()->withErrors(['voucher_prefix' => 'Voucher number cannot be blank.']);
+            }
+         } elseif ($series_configuration && $series_configuration->duplicate_voucher == "DON'T ALLOW") {
+            $duplicate_exists = SalesReturn::where('company_id', Session::get('user_company_id'))
+               ->where('sr_prefix', $voucher_input)
+               ->where('financial_year', $financial_year)
+               ->where('delete', '0')
+               ->where('id', '!=', $sale->id)
+               ->exists();
+            if ($duplicate_exists) {
+               return redirect()->back()->withInput()->withErrors(['voucher_prefix' => 'Duplicate voucher number is not allowed.']);
+            }
+         }
+         $voucher_prefix = $voucher_input;
+         $sale_return_no = $voucher_input;
+      } else {
+         $voucher_prefix = $request->input('voucher_prefix');
+         $sale_return_no = $request->input('sale_return_no');
+      }
       $old_sr_type = $sale->sr_type;    
       $sale->sr_nature = $request->input('nature');
       $sale->sr_type = $request->input('type');
@@ -2114,7 +2288,7 @@ class SalesReturnController extends Controller
       $sale->gr_pr_no = $request->input('gr_pr_no');
       $sale->transport_name = $request->input('transport_name');
       $sale->station = $request->input('station');
-      $sale->sale_return_no = $request->input('sale_return_no');
+      $sale->sale_return_no = $sale_return_no;
       $sale->tax_cgst = $request->input('cgst');
       $sale->tax_sgst = $request->input('sgst');
       $sale->tax_igst = $request->input('igst');
@@ -4760,14 +4934,17 @@ class SalesReturnController extends Controller
    public function checkCreditNoteNo(Request $request)
    {
       $financial_year = Session::get('default_fy');
-      $company_id = Session::get('user_company_id');        
-      $exists = \DB::table('sales_returns')
+      $company_id = Session::get('user_company_id');
+      $query = \DB::table('sales_returns')
             ->where('sr_prefix', $request->sr_prefix)
-            ->where('financial_year',$financial_year)
-            ->where('company_id',$company_id)
-            ->where('status','1')
-            ->where('delete','0')
-            ->exists();
+            ->where('financial_year', $financial_year)
+            ->where('company_id', $company_id)
+            ->where('status', '1')
+            ->where('delete', '0');
+      if ($request->filled('exclude_id')) {
+         $query->where('id', '!=', $request->exclude_id);
+      }
+      $exists = $query->exists();
       return response()->json(['exists' => $exists]);
    }
     

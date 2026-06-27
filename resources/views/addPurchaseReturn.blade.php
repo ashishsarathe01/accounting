@@ -897,7 +897,7 @@
       $("#material_center").val($('option:selected', this).attr('data-material_center'));
       $("#series_no").css('pointer-events', 'none');
       $("#material_center").css('pointer-events', 'none');
-      $("#voucher_prefix").val($('option:selected', this).attr('data-series_no')+"/{{Session::get('default_fy')}}/DR");
+      $("#series_no").change();
       var invoice_id = $(this).val();
       let series_no = $('option:selected', this).attr('data-series_no');
       
@@ -1692,6 +1692,14 @@
                      }
                   });
                } 
+               if($("#manual_enter_invoice_no").val() == '1'){
+                  validateManualVoucherBeforeSubmit(function(canSubmit){
+                     if(canSubmit){
+                        $("#purchaseReturnForm")[0].submit();
+                     }
+                  });
+                  return false;
+               }
             }else{
                return false;
             }           
@@ -2367,7 +2375,6 @@
       merchant_gstin = $('option:selected', this).attr('data-gst_no');
       $("#merchant_gst").val(merchant_gstin);
       let vou_no = "";
-      $("#voucher_prefix").attr('type','text');
       if(nature=="WITHOUT GST"){
          if(manual_enter_invoice_no==0){
             if(without_invoice_prefix!=""){
@@ -2379,7 +2386,6 @@
             }
             $("#purchase_return_no").val($('option:selected', this).attr('data-without_invoice_start_from'));
          }else{
-            $("#voucher_prefix").attr('type','number');
             $("#purchase_return_no").attr('required',false);
             $("#voucher_prefix").val("");
             $("#voucher_prefix").prop('readonly',false);
@@ -2395,7 +2401,6 @@
             }         
             $("#purchase_return_no").val(invoice_start_from);
          }else{
-            $("#voucher_prefix").attr('type','number');
             $("#purchase_return_no").attr('required',false);
             $("#voucher_prefix").val("");
             $("#voucher_prefix").prop('readonly',false);
@@ -2407,6 +2412,118 @@
    $("#nature").change(function(){
       $("#series_no").change();
    });
+
+   $("#voucher_prefix").keyup(function(){
+      if($("#manual_enter_invoice_no").val()=='1'){
+         $("#purchase_return_no").val($(this).val());
+      }
+   });
+
+   function getDebitNoteVoucherConfig() {
+      let nature = $("#nature").val();
+      let selected = $('#series_no option:selected');
+      if (nature == "WITHOUT GST") {
+         return {
+            duplicate_voucher: selected.attr('data-duplicate_voucher_without_gst') || '',
+            blank_voucher: selected.attr('data-blank_voucher_without_gst') || ''
+         };
+      }
+      return {
+         duplicate_voucher: selected.attr('data-duplicate_voucher_with_gst') || '',
+         blank_voucher: selected.attr('data-blank_voucher_with_gst') || ''
+      };
+   }
+
+   function validateManualVoucherBeforeSubmit(callback, excludeId) {
+      if ($("#manual_enter_invoice_no").val() != '1') {
+         callback(true);
+         return;
+      }
+      let voucherNo = $('#voucher_prefix').val().trim();
+      let config = getDebitNoteVoucherConfig();
+
+      if (voucherNo === '') {
+         if (config.blank_voucher === "DON'T ALLOW") {
+            alert('Voucher number cannot be blank.');
+            callback(false);
+            return;
+         }
+         if (config.blank_voucher === "WARNING ONLY") {
+            if (!confirm('Voucher number is blank. Do you want to continue?')) {
+               callback(false);
+               return;
+            }
+         }
+         callback(true);
+         return;
+      }
+
+      if (config.duplicate_voucher === "ALLOW") {
+         callback(true);
+         return;
+      }
+
+      let postData = {
+         _token: '{{ csrf_token() }}',
+         sr_prefix: voucherNo
+      };
+      if (excludeId) {
+         postData.exclude_id = excludeId;
+      }
+
+      $.ajax({
+         url: '{{ route("check.debit.note.no") }}',
+         method: 'POST',
+         data: postData,
+         success: function(response) {
+            if (!response.exists) {
+               callback(true);
+               return;
+            }
+            if (config.duplicate_voucher === "DON'T ALLOW") {
+               alert('This Debit Note No. already exists!');
+               callback(false);
+               return;
+            }
+            if (config.duplicate_voucher === "WARNING ONLY") {
+               callback(confirm('This Debit Note No. already exists. Do you want to continue?'));
+               return;
+            }
+            callback(true);
+         },
+         error: function() {
+            alert('Error checking Debit Note No.');
+            callback(false);
+         }
+      });
+   }
+
+   $('#voucher_prefix').on('change blur', function() {
+      if ($("#manual_enter_invoice_no").val() != '1') {
+         return;
+      }
+      let debitNoteNo = $('#voucher_prefix').val().trim();
+      let config = getDebitNoteVoucherConfig();
+      if (debitNoteNo === '' || config.duplicate_voucher !== "DON'T ALLOW") {
+         return;
+      }
+      $.ajax({
+         url: '{{ route("check.debit.note.no") }}',
+         method: 'POST',
+         data: {
+            _token: '{{ csrf_token() }}',
+            sr_prefix: debitNoteNo
+         },
+         success: function(response) {
+            if (response.exists) {
+               alert('This Debit Note No. already exists!');
+               $('#voucher_prefix').val('');
+               $('#purchase_return_no').val('');
+            }
+         }
+      });
+   });
+
    function sectionHideShow(){
       $(".with_gst_with_item_section").hide();
       $(".with_gst_without_item_section").hide();

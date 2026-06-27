@@ -177,7 +177,18 @@
 
                         @foreach($mat_series as $value)
                               <option value="{{ $value->series }}"
+                                 data-mat_center="{{ $value->mat_center }}"
                                  data-gst_no="{{ $value->gst_no }}"
+                                 data-invoice_prefix="{{ $value->invoice_prefix ?? '' }}"
+                                 data-without_invoice_prefix="{{ $value->without_invoice_prefix ?? '' }}"
+                                 data-invoice_start_from="{{ $value->invoice_start_from ?? '' }}"
+                                 data-without_invoice_start_from="{{ $value->without_invoice_start_from ?? '' }}"
+                                 data-manual_enter_invoice_no_with_gst="{{ $value->manual_enter_invoice_no_with_gst ?? '0' }}"
+                                 data-manual_enter_invoice_no_without_gst="{{ $value->manual_enter_invoice_no_without_gst ?? '0' }}"
+                                 data-duplicate_voucher_with_gst="{{ $value->duplicate_voucher_with_gst ?? '' }}"
+                                 data-duplicate_voucher_without_gst="{{ $value->duplicate_voucher_without_gst ?? '' }}"
+                                 data-blank_voucher_with_gst="{{ $value->blank_voucher_with_gst ?? '' }}"
+                                 data-blank_voucher_without_gst="{{ $value->blank_voucher_without_gst ?? '' }}"
                                  {{ $sale_return->series_no == $value->series ? 'selected' : '' }}
                               >
                                  {{ $value->series }}
@@ -212,8 +223,9 @@
 
                   <div class="mb-4 col-md-4">
                      <label for="sale_return_no" class="form-label font-14 font-heading">Credit Note No.</label>
-                     <input type="text" class="form-control" id="voucher_prefix" name="voucher_prefix" placeholder="" value="{{$sale_return->sr_prefix}}"  readonly style="text-align: right;">
-                     <input type="hidden" id="sale_return_no" class="form-control" name="sale_return_no" value="{{$sale_return->sale_return_no}}">
+                     <input type="text" class="form-control" id="voucher_prefix" name="voucher_prefix" placeholder="" value="{{ $sale_return->sr_prefix }}" {{ $manual_voucher_no == 0 ? 'readonly' : '' }} style="text-align: right;">
+                     <input type="hidden" id="sale_return_no" class="form-control" name="sale_return_no" value="{{ $sale_return->sale_return_no }}">
+                     <input type="hidden" class="form-control" id="manual_enter_invoice_no" name="manual_enter_invoice_no" value="{{ $manual_voucher_no }}">
                   </div>
                   <div class="clearfix"></div>
                   <div class="mb-4 col-md-4">
@@ -2059,6 +2071,14 @@ if(
                   other_invoice_against: "Please select Invoice Against"              
                }
             });
+            if($("#manual_enter_invoice_no").val() == '1'){
+               validateManualVoucherBeforeSubmit(function(canSubmit){
+                  if(canSubmit){
+                     $("#saleReturnForm")[0].submit();
+                  }
+               }, '{{ $sale_return->id }}');
+               return false;
+            }
          }else{
             return false;
          }
@@ -2715,7 +2735,6 @@ if(
       $("#series_no").change();
    });
    $("#series_no").change(function(){
-       alert()
       let nature = $("#nature").val();
       if(nature==""){
          alert("Please Select Nature");
@@ -2728,29 +2747,160 @@ if(
          $("#sale_return_no").val("");
          return;
       }
-      let series = $(this).val();
+      $("#voucher_prefix").prop('readonly',true);
       let invoice_prefix = $('option:selected', this).attr('data-invoice_prefix');
+      let without_invoice_prefix = $('option:selected', this).attr('data-without_invoice_prefix');
+      let manual_enter_invoice_no = nature=="WITHOUT GST"
+         ? $('option:selected', this).attr('data-manual_enter_invoice_no_without_gst')
+         : $('option:selected', this).attr('data-manual_enter_invoice_no_with_gst');
+      $("#manual_enter_invoice_no").val(manual_enter_invoice_no);
       let invoice_start_from = $('option:selected', this).attr('data-invoice_start_from');
-      $("#material_center").val($('option:selected', this).attr('data-mat_center'));
-     // merchant_gstin = $('option:selected', this).attr('data-gst_no');
       if(nature=="WITHOUT GST"){
-         if(invoice_prefix!=""){
-            $("#voucher_prefix").val(invoice_prefix+"CRWT/{{Session::get('default_fy')}}/"+$('option:selected', this).attr('data-without_invoice_start_from'));
+         if(manual_enter_invoice_no==0){
+            if(without_invoice_prefix!=""){
+               $("#voucher_prefix").val(without_invoice_prefix);
+            }else{
+               $("#voucher_prefix").val($('option:selected', this).attr('data-without_invoice_start_from'));
+            }
+            $("#sale_return_no").val($('option:selected', this).attr('data-without_invoice_start_from'));
          }else{
-            $("#voucher_prefix").val($('option:selected', this).attr('data-without_invoice_start_from'));
+            $("#voucher_prefix").val("{{ $sale_return->sr_prefix }}");
+            $("#voucher_prefix").prop('readonly',false);
+            $("#sale_return_no").val("{{ $sale_return->sale_return_no }}");
          }
-         $("#sale_return_no").val($('option:selected', this).attr('data-without_invoice_start_from'));
       }else{
-         if(invoice_prefix!=""){
-            $("#voucher_prefix").val(invoice_prefix);
+         if(manual_enter_invoice_no==0){
+            if(invoice_prefix!=""){
+               $("#voucher_prefix").val(invoice_prefix);
+            }else{
+               $("#voucher_prefix").val(invoice_start_from);
+            }
+            $("#sale_return_no").val(invoice_start_from);
          }else{
-            $("#voucher_prefix").val(invoice_start_from);
-         }         
-         $("#sale_return_no").val(invoice_start_from);
+            $("#voucher_prefix").val("{{ $sale_return->sr_prefix }}");
+            $("#voucher_prefix").prop('readonly',false);
+            $("#sale_return_no").val("{{ $sale_return->sale_return_no }}");
+         }
       }
-      
       calculateAmount();
-          
+   });
+
+   $("#voucher_prefix").keyup(function(){
+      if($("#manual_enter_invoice_no").val()=='1'){
+         $("#sale_return_no").val($(this).val());
+      }
+   });
+
+   function getCreditNoteVoucherConfig() {
+      let nature = $("#nature").val();
+      let selected = $('#series_no option:selected');
+      if (nature == "WITHOUT GST") {
+         return {
+            duplicate_voucher: selected.attr('data-duplicate_voucher_without_gst') || '',
+            blank_voucher: selected.attr('data-blank_voucher_without_gst') || ''
+         };
+      }
+      return {
+         duplicate_voucher: selected.attr('data-duplicate_voucher_with_gst') || '',
+         blank_voucher: selected.attr('data-blank_voucher_with_gst') || ''
+      };
+   }
+
+   function validateManualVoucherBeforeSubmit(callback, excludeId) {
+      if ($("#manual_enter_invoice_no").val() != '1') {
+         callback(true);
+         return;
+      }
+      let voucherNo = $('#voucher_prefix').val().trim();
+      let config = getCreditNoteVoucherConfig();
+
+      if (voucherNo === '') {
+         if (config.blank_voucher === "DON'T ALLOW") {
+            alert('Voucher number cannot be blank.');
+            callback(false);
+            return;
+         }
+         if (config.blank_voucher === "WARNING ONLY") {
+            if (!confirm('Voucher number is blank. Do you want to continue?')) {
+               callback(false);
+               return;
+            }
+         }
+         callback(true);
+         return;
+      }
+
+      if (config.duplicate_voucher === "ALLOW") {
+         callback(true);
+         return;
+      }
+
+      let postData = {
+         _token: '{{ csrf_token() }}',
+         sr_prefix: voucherNo
+      };
+      if (excludeId) {
+         postData.exclude_id = excludeId;
+      }
+
+      $.ajax({
+         url: '{{ route("check.credit.note.no") }}',
+         method: 'POST',
+         data: postData,
+         success: function(response) {
+            if (!response.exists) {
+               callback(true);
+               return;
+            }
+            if (config.duplicate_voucher === "DON'T ALLOW") {
+               alert('This Credit Note No. already exists!');
+               callback(false);
+               return;
+            }
+            if (config.duplicate_voucher === "WARNING ONLY") {
+               callback(confirm('This Credit Note No. already exists. Do you want to continue?'));
+               return;
+            }
+            callback(true);
+         },
+         error: function() {
+            alert('Error checking Credit Note No.');
+            callback(false);
+         }
+      });
+   }
+
+   $('#voucher_prefix').on('change blur', function() {
+      if ($("#manual_enter_invoice_no").val() != '1') {
+         return;
+      }
+      let creditNoteNo = $('#voucher_prefix').val().trim();
+      let config = getCreditNoteVoucherConfig();
+      if (creditNoteNo === '' || config.duplicate_voucher !== "DON'T ALLOW") {
+         return;
+      }
+      $.ajax({
+         url: '{{ route("check.credit.note.no") }}',
+         method: 'POST',
+         data: {
+            _token: '{{ csrf_token() }}',
+            sr_prefix: creditNoteNo,
+            exclude_id: '{{ $sale_return->id }}'
+         },
+         success: function(response) {
+            if (response.exists) {
+               alert('This Credit Note No. already exists!');
+               $('#voucher_prefix').val('');
+               $('#sale_return_no').val('');
+            }
+         }
+      });
+   });
+
+   $(document).ready(function(){
+      if($("#manual_enter_invoice_no").val() == '1'){
+         $("#voucher_prefix").prop('readonly', false);
+      }
    });
 
       function updateNarration() {
