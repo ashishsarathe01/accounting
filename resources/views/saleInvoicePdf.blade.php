@@ -1348,287 +1348,369 @@
                 $ewaybill_no  = $ewaybill_data->ewayBillNo  ?? '';
                 $ewayBillDate = $ewaybill_data->ewayBillDate ?? '';
                 $validUpto    = $ewaybill_data->validUpto    ?? '';
+
+                $qrContent = $way_raw;
             }
-            $item_total = 0;
+            try {
+                $formattedDate = \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', $ewayBillDate)
+                    ->format('d/m/Y h:i A');
+            } catch (\Exception $e) {
+                try {
+                    $formattedDate = \Carbon\Carbon::createFromFormat('d/m/Y h:i:s A', $ewayBillDate)
+                        ->format('d/m/Y h:i A');
+                } catch (\Exception $e) {
+                    $formattedDate = $ewayBillDate;
+                }
+            }
+            $hsnCodes = collect($items_detail)
+                ->pluck('hsn_code')
+                ->filter()
+                ->unique()
+                ->values();
+
+            $displayHSN = '';
+
+            if ($hsnCodes->count() == 1) {
+                $displayHSN = $hsnCodes->first();
+            } elseif ($hsnCodes->count() > 1) {
+                $firstItem = $items_detail->first();
+
+                $displayHSN = $hsnCodes->first();
+
+                if (!empty($firstItem->p_name)) {
+                    $displayHSN .= ' - ' . $firstItem->p_name;
+                }
+
+                $displayHSN .= ' (+' . ($hsnCodes->count() - 1) . ')';
+            }
         @endphp
         <div class="page-break"></div>
         <style>
-            .eway-pdf-wrapper {
-                font-family: Arial, sans-serif;
-                font-size: 13px;
-                line-height: 1.4;
-                color: #000;
-                padding: 10px;
-                border: 1px solid #000;
-            }
-            .eway-section {
-                border-bottom: 1px solid #000;
-                padding-bottom: 8px;
-                margin-bottom: 8px;
-            }
-            .eway-section:last-child {
-                border-bottom: none;
-            }
-            .eway-label {
-                font-weight: 600;
-            }
-            .eway-title {
-                text-align: center;
-                font-size: 16px;
-                font-weight: 600;
-                margin-bottom: 8px;
-            }
-            .eway-header-grid {
-                display: table;
-                width: 100%;
-            }
-            .eway-header-left {
-                display: table-cell;
-                width: 70%;
-                vertical-align: top;
-            }
-            .eway-header-right {
-                display: table-cell;
-                width: 30%;
-                text-align: right;
-                vertical-align: top;
-            }
-            .eway-grid-3 {
-                display: table;
-                width: 100%;
-                margin-bottom: 2px;
-            }
-            .eway-col-3 {
-                display: table-cell;
-                width: 33.33%;
-            }
-            .eway-grid-2 {
-                display: table;
-                width: 100%;
-                margin-bottom: 6px;
-            }
-            .eway-col-2 {
-                display: table-cell;
-                width: 50%;
-                vertical-align: top;
-            }
-            .eway-table {
+            .eway-simple-wrap table {
                 width: 100%;
                 border-collapse: collapse;
-                border: 1px solid #000;
-                margin: 4px 0;
+                font-family: Arial, sans-serif;
+                font-size: 12px;
             }
-            .eway-table th,
-            .eway-table td {
-                border: 1px solid #000;
-                padding: 4px;
-                text-align: left;
-            }
-            .eway-table th {
-                background-color: #f0f0f0;
-                font-weight: 600;
-            }
-            .eway-table .text-right {
-                text-align: right;
-            }
-            .eway-table .text-center {
+            .eway-simple-wrap .gov-center {
                 text-align: center;
             }
+            .eway-simple-wrap .gov-title {
+                font-size: 16px;
+                font-weight: 700;
+                margin-bottom: 4px;
+            }
+            .eway-simple-wrap .gov-label {
+                width: 35%;
+                font-weight: 600;
+                border: 1px solid #000;
+                padding: 4px 6px;
+                vertical-align: top;
+            }
+            .eway-simple-wrap .gov-value {
+                border: 1px solid #000;
+                padding: 4px 6px;
+                vertical-align: top;
+            }
+            .eway-simple-wrap .gov-part {
+                background: #f0f0f0;
+                font-weight: 700;
+                text-align: center;
+                border: 1px solid #000;
+                padding: 4px 6px;
+            }
+            .eway-simple-wrap table > tr > td,
+            .eway-simple-wrap table > tbody > tr > td {
+                border: 1px solid #000;
+            }
         </style>
-        <div class="eway-pdf-wrapper">        
-            <div class="eway-section">
-                <div class="eway-title">e-Way Bill</div>            
-                <div class="eway-header-grid">
-                    <div class="eway-header-left">
-                        <div><span class="eway-label">Doc No : </span>Tax Invoice - {{ $sale_detail->voucher_no_prefix }}</div>
-                        <div><span class="eway-label">Date : </span>{{ date('d-m-Y', strtotime($sale_detail->date)) }}</div>
-                        <div><span class="eway-label">IRN : </span>{{ $Irn }}</div>
-                        <div><span class="eway-label">Ack No : </span>{{ $AckNo }}</div>
-                        <div><span class="eway-label">Ack Date : </span>{{ $AckDt }}</div>
-                    </div>
-                    <div class="eway-header-right">
+        <div class="eway-simple-wrap">
+            <table style="width:100%;border-collapse:collapse;">
+                <tr>
+                    <td colspan="2" class="gov-center" style="border:1px solid #000;border-bottom:none;">
+                        <div class="gov-title">
+                            e-Way Bill
+                        </div>
+
                         @if(!empty($qrBase64))
-                            <img src="data:image/svg+xml;base64,{{ $qrBase64 }}" style="width:90px; height:90px;">
+                            <img src="data:image/svg+xml;base64,{{ $qrBase64 }}" style="width:150px;height:150px;">
                         @endif
-                    </div>
-                </div>
-            </div>
-            <div class="eway-section">
-                <div class="eway-label" style="margin-bottom: 4px;">1. e-Way Bill Details</div>            
-                <div class="eway-grid-3">
-                    <div class="eway-col-3"><span class="eway-label">e-Way Bill No : </span>{{ $ewaybill_no }}</div>
-                    <div class="eway-col-3"><span class="eway-label">Mode:</span> Road</div>
-                    <div class="eway-col-3"><span class="eway-label">Generated Date : </span>{{ date('d-m-Y h:i a', strtotime($ewayBillDate)) }}</div>
-                </div>            
-                <div class="eway-grid-3">
-                    <div class="eway-col-3"><span class="eway-label">Generated By : </span>{{ $sale_detail->merchant_gst }}</div>
-                    <div class="eway-col-3"><span class="eway-label">Approx Distance : </span>{{ $sale_detail->e_waybill_distance }} KM</div>
-                    <div class="eway-col-3"><span class="eway-label">Valid Upto : </span>{{ date('d-m-Y h:i a', strtotime($validUpto)) }}</div>
-                </div>            
-                <div class="eway-grid-3">
-                    <div class="eway-col-3"><span class="eway-label">Supply Type : </span>Outward Supply</div>
-                    <div class="eway-col-3"><span class="eway-label">Transaction Type : </span>Regular</div>
-                    <div class="eway-col-3"></div>
-                </div>
-            </div>
-            <div class="eway-section">
-                <div class="eway-label" style="margin-bottom: 4px;">2. Address Details</div>            
-                <div class="eway-grid-2">
-                    <div class="eway-col-2">
-                        <div class="eway-label">From</div>
-                        {{ $company_data->company_name }}<br>
-                        GSTIN: {{ $seller_info->gst_no }}<br>
-                        {{ $seller_info->sname }}
-                    </div>
-                    <div class="eway-col-2">
-                        <div class="eway-label">To</div>
-                        {{ $sale_detail->billing_name }}<br>
-                        GSTIN: {{ $sale_detail->billing_gst }}<br>
-                        {{ $sale_detail->billing_address }}
-                    </div>
-                </div>
-                <div class="eway-grid-2" style="margin-top: 6px;">
-                    <div class="eway-col-2">
-                        <div class="eway-label">Dispatch From</div>
-                        {{ $seller_info->address }}<br>
-                    </div>
-                    <div class="eway-col-2">
-                        <div class="eway-label">Ship To</div>
-                        {{ $sale_detail->shipping_address ?? $sale_detail->billing_address }}
-                    </div>
-                </div>
-            </div>
-            <div class="eway-section">
-                <div class="eway-label" style="margin-bottom: 4px;">3. Goods Details</div>            
-                <table class="eway-table">
-                    <thead>
-                        <tr>
-                            <th>HSN Code</th>
-                            <th>Product Name & Description</th>
-                            <th class="text-right">Quantity</th>
-                            <th class="text-right">Taxable Amt</th>
-                            <th class="text-center">
-                                Tax Rate (
-                                @foreach($sale_sundry as $sundry)
-                                    @if($sundry->nature_of_sundry === 'CGST')
-                                        C+S
-                                    @elseif($sundry->nature_of_sundry === 'IGST')
-                                        I
-                                    @endif
-                                @endforeach
-                                )
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($items_detail as $item)
+                    </td>
+                </tr>
+                <tr>
+                    <td class="gov-label">
+                        E-Way Bill No:
+                    </td>
+                    <td class="gov-value">
+                        {{ $ewaybill_no }}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="gov-label">
+                        E-Way Bill Date:
+                    </td>
+                    <td class="gov-value">
+                        {{ $formattedDate }}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="gov-label">
+                        Generated By:
+                    </td>
+                    <td class="gov-value">
+                        {{ $sale_detail->merchant_gst }}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="gov-label">
+                        Valid From:
+                    </td>
+                    <td class="gov-value">
+                        {{ $formattedDate }}
+                        @if(!empty($sale_detail->e_waybill_distance))
+                            [{{ $sale_detail->e_waybill_distance }} Kms]
+                        @endif
+                    </td>
+                </tr>
+                <tr>
+                    <td class="gov-label">
+                        Valid Until:
+                    </td>
+                    <td class="gov-value">
+                        @if(!empty($validUpto))
+                            {{ \Carbon\Carbon::parse($validUpto)->format('d/m/Y') }}
+                        @endif
+                    </td>
+                </tr>
+                @if(!empty($Irn))
+                    <tr>
+                        <td class="gov-label">
+                            IRN:
+                        </td>
+                        <td class="gov-value" style="font-size:10px;word-break:break-all;">
+                            {{ $Irn }}
+                        </td>
+                    </tr>
+                @endif
+                <tr>
+                    <td class="gov-label">
+                        Portal:
+                    </td>
+                    <td class="gov-value">
+                        1
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" class="gov-part">
+                        Part - A
+                    </td>
+                </tr>
+                <tr>
+                    <td class="gov-label">
+                        GSTIN of Supplier
+                    </td>
+                    <td class="gov-value">
+                        {{ $seller_info->gst_no }}
+                        -
+                        {{ $company_data->company_name }}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="gov-label">
+                        Place of Dispatch
+                    </td>
+                    <td class="gov-value">
+                        {{ $seller_info->sname }},
+                        {{ $seller_info->sname }}-{{ $company_data->pin_code }}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="gov-label">
+                        GSTIN of Recipient
+                    </td>
+                    <td class="gov-value">
+                        {{ $sale_detail->billing_gst }}
+                        -
+                        {{ $sale_detail->billing_name }}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="gov-label">
+                        Place of Delivery
+                    </td>
+                    <td class="gov-value">
+                        @if($sale_detail->shipping_name)
+                            {{ $sale_detail->shipping_state_name }},
+                            {{ $sale_detail->shipping_state_name }}-{{ $sale_detail->shipping_pincode }}
+                        @else
+                            {{ $sale_detail->billing_state_name }},
+                            {{ $sale_detail->billing_state_name }}-{{ $sale_detail->billing_pincode }}
+                        @endif
+                    </td>
+                </tr>
+                <tr>
+                    <td class="gov-label">
+                        Document No.
+                    </td>
+                    <td class="gov-value">
+                        {{ $sale_detail->voucher_no_prefix }}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="gov-label">
+                        Document Date
+                    </td>
+                    <td class="gov-value">
+                        {{ date('d/m/Y', strtotime($sale_detail->date)) }}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="gov-label">
+                        Transaction Type
+                    </td>
+                    <td class="gov-value">
+                        -
+                    </td>
+                </tr>
+                <tr>
+                    <td class="gov-label">
+                        Value of Goods
+                    </td>
+                    <td class="gov-value">
+                        {{ formatIndianNumber($sale_detail->total) }}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="gov-label">
+                        HSN Code
+                    </td>
+                    <td class="gov-value">
+                        {{ $displayHSN }}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="gov-label">
+                        Reason for Transportation
+                    </td>
+                    <td class="gov-value">
+                        Outward - Supply
+                    </td>
+                </tr>
+                <tr>
+                    <td class="gov-label">
+                        Transporter
+                    </td>
+                    <td class="gov-value">
+                        -
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" style="padding:6px;border:1px solid #000;">
+                        <table style="width:100%;border-collapse:collapse;border:1px solid #000;font-size:12px;">
                             <tr>
-                                {{-- 1. HSN --}}
-                                <td>{{ $item->hsn_code }}</td>
-                                {{-- 2. Product Name & Description --}}
-                                <td>
-                                    <strong>{{ $item->p_name }}</strong>
-                                    <span style="font-size:10px; color:#555;">
-                                        ({{ $item->name }})
-                                    </span>
-                                </td>
-                                {{-- 3. Quantity --}}
-                                <td class="text-right">
-                                    {{ $item->qty }} {{ $item->unit }}
-                                </td>
-                                {{-- 4. Taxable Amount --}}
-                                <td class="text-right">
-                                    {{ formatIndianNumber($item->amount) }}
-                                </td>
-                                {{-- 5. Tax Rate --}}
-                                <td class="text-center">
-                                    @php
-                                        $rates = $sale_sundry->where('rate', '!=', 0)
-                                                            ->pluck('rate')
-                                                            ->toArray();
-                                    @endphp
-                                    {{ implode(' + ', $rates) }}
+                                <td colspan="8" class="gov-part">
+                                    Part - B
                                 </td>
                             </tr>
-                            @php
-                                $item_total += $item->amount;
-                            @endphp
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-            <div class="eway-section">
-                {{-- Row 1 --}}
-                <div class="eway-grid-3">
-                    {{-- Total Taxable --}}
-                    <div class="eway-col-3">
-                        <span class="eway-label">Total Taxable Amt :</span><br>
-                        {{ formatIndianNumber($item_total) }}
-                    </div>
-                    {{-- Tax Amounts (Stacked Properly) --}}
-                    <div class="eway-col-3">
-                        @foreach($sale_sundry as $sundry)
-                            @if($sundry->nature_of_sundry === 'CGST')
-                                <div>
-                                    <span class="eway-label">CGST Amt :</span>
-                                    {{ formatIndianNumber($sundry->amount) }}
-                                </div>
-                                <div>
-                                    <span class="eway-label">SGST Amt :</span>
-                                    {{ formatIndianNumber($sundry->amount) }}
-                                </div>
-                            @endif
-                            @if($sundry->nature_of_sundry === 'IGST')
-                                <div>
-                                    <span class="eway-label">IGST Amt :</span>
-                                    {{ formatIndianNumber($sundry->amount) }}
-                                </div>
-                            @endif
-                        @endforeach
-                    </div>
-                    {{-- Empty Column For Balance --}}
-                    <div class="eway-col-3"></div>
-                </div>
-                {{-- Row 2 --}}
-                <div class="eway-grid-3" style="margin-top:6px;">
-                    <div class="eway-col-3">
-                        <span class="eway-label">Other Amt :</span>
-                        @foreach($sale_sundry as $sundry)
-                            @if($sundry->nature_of_sundry === 'ROUNDED OFF (+)' || $sundry->nature_of_sundry === 'ROUNDED OFF (-)')
-                                @if($sundry->bill_sundry_type === 'additive')
-                                    (+){{ formatIndianNumber($sundry->amount) }}
-                                @elseif($sundry->bill_sundry_type === 'subtractive')
-                                    (-){{ formatIndianNumber($sundry->amount) }}
-                                @endif
-                            @endif
-                        @endforeach
-                    </div>
-                    <div class="eway-col-3"></div>
-                    <div class="eway-col-3" style="text-align:right;">
-                        <span class="eway-label">Total Inv Amt :</span>
-                        <strong>{{ formatIndianNumber($sale_detail->total) }}</strong>
-                    </div>
-                </div>
-            </div>
-            <div class="eway-section">
-                <div class="eway-label" style="margin-bottom: 4px;">4. Transportation Details</div>            
-                <div class="eway-grid-2">
-                    <div class="eway-col-2"><span class="eway-label">Transporter ID:</span></div>
-                    <div class="eway-col-2"><span class="eway-label">Doc No : </span>{{ $sale_detail->gr_pr_no }}</div>
-                </div>            
-                <div class="eway-grid-2">
-                    <div class="eway-col-2"><span class="eway-label">Name : </span>{{ $sale_detail->transport_name }}</div>
-                    <div class="eway-col-2"><span class="eway-label">Date : </span>{{ date('d-m-Y', strtotime($sale_detail->date)) }}</div>
-                </div>
-            </div>
-            <div>
-                <div class="eway-label" style="margin-bottom: 4px;">5. Vehicle Details</div>            
-                <div class="eway-grid-3">
-                    <div class="eway-col-3"><span class="eway-label">Vehicle No : </span>{{ $sale_detail->vehicle_no }}</div>
-                    <div class="eway-col-3"><span class="eway-label">From : </span>UNA BATHRI</div>
-                    <div class="eway-col-3"><span class="eway-label">CEWB No : </span></div>
-                </div>
-            </div>
+                            <tr style="font-weight:600;text-align:center;">
+                                <td style="width:7%;border:1px solid #000;">
+                                    Mode
+                                </td>
+
+                                <td style="width:28%;border:1px solid #000;">
+                                    Vehicle / Trans<br>
+                                    Doc No & Dt.
+                                </td>
+
+                                <td style="width:10%;border:1px solid #000;">
+                                    From
+                                </td>
+
+                                <td style="width:18%;border:1px solid #000;">
+                                    Entered Date
+                                </td>
+
+                                <td style="width:17%;border:1px solid #000;">
+                                    Entered By
+                                </td>
+
+                                <td style="width:10%;border:1px solid #000;">
+                                    CEWB No.<br>(if any)
+                                </td>
+
+                                <td style="width:10%;border:1px solid #000;">
+                                    Multi Veh.Info<br>(if any)
+                                </td>
+
+                                <td style="width:5%;border:1px solid #000;">
+                                    Portal
+                                </td>
+                            </tr>
+
+                            <tr style="text-align:center;font-weight:bold;">
+                                <td style="border:1px solid #000;padding:3px;">
+                                    -
+                                </td>
+
+                                <td style="border:1px solid #000;text-align:center;">
+                                    {{ $sale_detail->vehicle_no }}
+
+                                    @if(!empty($sale_detail->gr_pr_no))
+                                        &nbsp;&amp;&nbsp;{{ $sale_detail->gr_pr_no }}&nbsp;&amp;&nbsp;
+                                    @endif
+
+                                    <br>
+                                    {{ date('d/m/Y', strtotime($sale_detail->date)) }}
+                                </td>
+
+                                <td style="border:1px solid #000;padding:3px;">
+                                    {{ $seller_info->sname }}
+                                </td>
+
+                                <td style="border:1px solid #000;padding:3px;">
+                                    @if(!empty($ewayBillDate))
+                                        {{ $ewayBillDate }}
+                                    @endif
+                                </td>
+
+                                <td style="border:1px solid #000;padding:3px;">
+                                    {{ $sale_detail->merchant_gst }}
+                                </td>
+
+                                <td style="border:1px solid #000;padding:3px;">
+                                    -
+                                </td>
+
+                                <td style="border:1px solid #000;padding:3px;">
+                                    -
+                                </td>
+
+                                <td style="border:1px solid #000;padding:3px;">
+                                    1
+                                </td>
+                            </tr>
+
+                        </table>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td colspan="2" style="padding:12px 0;text-align:center;border:1px solid #000;">
+                        <div style="margin-top:4px;font-size:10px;font-weight:bold;letter-spacing:1px;">
+                            {{ $ewaybill_no }}
+                        </div>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td colspan="2" style="font-size:10px;border-top:1px solid #000;border-left:1px solid #000;border-right:1px solid #000;border-bottom:1px solid #000;padding:6px;">
+                        <strong>Note:</strong>
+                        Any discrepancy in the e-Way Bill should be reported to the
+                        concerned tax authority within 24 hours.
+                    </td>
+                </tr>
+
+            </table>
         </div>
     @endif
 </body>

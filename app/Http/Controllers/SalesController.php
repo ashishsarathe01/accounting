@@ -6798,11 +6798,16 @@ public function saleInvoicePdf($id)
             ->orderBy('sort_order')
             ->get();
       }
-    $sale_detail = Sales::leftjoin('states','sales.billing_state','=','states.id')
-        ->leftjoin('accounts','sales.shipping_name','=','accounts.id')
-        ->where('sales.id', $id)
-        ->select(['sales.*','states.name as sname','accounts.print_name as shipp_name'])
-        ->first();
+   $sale_detail = Sales::leftJoin('states as billing_state', 'sales.billing_state', '=', 'billing_state.id')
+             ->leftJoin('states as shipping_state', 'sales.shipping_state', '=', 'shipping_state.id')
+             ->leftJoin('accounts', 'sales.shipping_name', '=', 'accounts.id')
+             ->select([
+                 'sales.*',
+                 'billing_state.name as billing_state_name',
+                 'shipping_state.name as shipping_state_name',
+                 'accounts.print_name as shipp_name'
+             ])
+             ->find($id);
         
      $einvoice_data = null;
     $qrBase64 = null;
