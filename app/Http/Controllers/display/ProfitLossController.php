@@ -1174,6 +1174,19 @@ foreach ($allMappingRows as $mapRow)
         $verticalPLBalances[$k] = round($v, 2);
     }
 
+    $financialYear = date('y', strtotime($fromDate)) . '-' . date('y', strtotime($toDate));
+
+    $plData = CommonHelper::profitLoss(
+        $financialYear,
+        $fromDate,
+        $toDate,
+        true
+    );
+
+    $verticalPLBalances['Changes in inventories'] =
+        ($plData['total_opening_stock'] ?? 0)
+        -
+        ($plData['total_closing_stock'] ?? 0);
     return $verticalPLBalances;
 }
 
@@ -1189,7 +1202,36 @@ public function verticalPLDrillDown(Request $request)
 {
     $companyId   = Session::get('user_company_id');
     $mappingName = $request->mapping_name;
+    if ($mappingName == 'Changes in inventories') {
 
+        $financialYear = Session::get('default_fy');
+        [$startYY, $endYY] = explode('-', $financialYear);
+
+        $fromDate = '20'.$startYY.'-04-01';
+        $toDate   = '20'.$endYY.'-03-31';
+
+        $plData = CommonHelper::profitLoss(
+            $financialYear,
+            $fromDate,
+            $toDate,
+            true
+        );
+
+        return view('display.vertical_pl_drilldown', [
+
+            'mappingName' => $mappingName,
+
+            'fromDate' => $fromDate,
+            'toDate'   => $toDate,
+
+            'openingStock' => $plData['total_opening_stock'] ?? 0,
+            'closingStock' => $plData['total_closing_stock'] ?? 0,
+
+            'sections' => [],
+            'grandTotal' => 0,
+
+        ]);
+    }
     $revenueMappings = [
         'Revenue from operations',
         'Other income',

@@ -33,6 +33,86 @@
                 </div>
 
                 <div class="mt-3">
+                    @if($mappingName == 'Changes in inventories')
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-body p-0">
+
+                            <table class="table table-bordered mb-0">
+                                <thead>
+                                    <tr>
+                                        <th width="70%">Particulars</th>
+                                        <th class="text-end">
+                                            31st March {{ \Carbon\Carbon::parse($toDate)->format('Y') }}
+                                        </th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+
+                                    <tr class="table-secondary fw-bold">
+                                        <td>Inventory at the end of the year</td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr>
+                                        <td>Traded Goods</td>
+                                        <td class="text-end">
+                                            {{ formatIndianNumber($closingStock ?? 0,2) }}
+                                        </td>
+                                    </tr>
+
+                                    <tr class="fw-bold">
+                                        <td></td>
+                                        <td class="text-end">
+                                            {{ formatIndianNumber($closingStock ?? 0,2) }}
+                                        </td>
+                                    </tr>
+
+                                    <tr class="table-secondary fw-bold">
+                                        <td>Inventory at the beginning of the year</td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr>
+                                        <td>Traded Goods</td>
+                                        <td class="text-end">
+                                            {{ formatIndianNumber($openingStock ?? 0,2) }}
+                                        </td>
+                                    </tr>
+
+                                    <tr class="fw-bold">
+                                        <td></td>
+                                        <td class="text-end">
+                                            {{ formatIndianNumber($openingStock ?? 0,2) }}
+                                        </td>
+                                    </tr>
+
+                                    <tr class="table-secondary fw-bold">
+                                        <td>(Increase)/Decrease in inventories</td>
+                                        <td></td>
+                                    </tr>
+
+                                    <tr>
+                                        <td>Traded Goods</td>
+                                        <td class="text-end">
+                                            {{ formatIndianNumber(($openingStock ?? 0)-($closingStock ?? 0),2) }}
+                                        </td>
+                                    </tr>
+
+                                    <tr class="fw-bold">
+                                        <td></td>
+                                        <td class="text-end">
+                                            {{ formatIndianNumber(($openingStock ?? 0)-($closingStock ?? 0),2) }}
+                                        </td>
+                                    </tr>
+
+                                </tbody>
+                            </table>
+
+                        </div>
+                    </div>
+
+                    @else
                     @foreach($sections as $section)
                         <div class="card border-0 shadow-sm mb-4">
                             <div class="card-header bg-light fw-bold font-14 d-flex justify-content-between">
@@ -116,7 +196,7 @@
                             </span>
                         </div>
                     </div>
-
+                    @endif
                     <div class="mb-4">
                         <a href="{{ url()->previous() }}" class="btn btn-secondary btn-sm">
                             ← Back to Profit &amp; Loss
