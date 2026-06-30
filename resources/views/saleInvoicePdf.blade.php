@@ -1348,6 +1348,28 @@
                 $ewaybill_no  = $ewaybill_data->ewayBillNo  ?? '';
                 $ewayBillDate = $ewaybill_data->ewayBillDate ?? '';
                 $validUpto    = $ewaybill_data->validUpto    ?? '';
+                if (!empty($validUpto)) {
+                    try {
+                        // Format: 2026-07-01 23:59:00
+                        $formattedValidUpto = \Carbon\Carbon::createFromFormat(
+                            'Y-m-d H:i:s',
+                            $validUpto
+                        )->format('d/m/Y h:i A');
+                
+                    } catch (\Exception $e) {
+                
+                        try {
+                            // Format: 29/06/2026 11:59:00 PM
+                            $formattedValidUpto = \Carbon\Carbon::createFromFormat(
+                                'd/m/Y h:i:s A',
+                                $validUpto
+                            )->format('d/m/Y h:i A');
+                
+                        } catch (\Exception $e) {
+                            $formattedValidUpto = $validUpto;
+                        }
+                    }
+                }
 
                 $qrContent = $way_raw;
             }
@@ -1478,7 +1500,7 @@
                     </td>
                     <td class="gov-value">
                         @if(!empty($validUpto))
-                            {{ \Carbon\Carbon::parse($validUpto)->format('d/m/Y') }}
+                            {{ $formattedValidUpto }}
                         @endif
                     </td>
                 </tr>

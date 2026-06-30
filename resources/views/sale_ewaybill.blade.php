@@ -241,8 +241,31 @@
                                 $ewaybill_no = $ewaybill_data->ewayBillNo ?? "";
                                 $ewayBillDate = $ewaybill_data->ewayBillDate ?? "";
                                 $validUpto = $ewaybill_data->validUpto ?? "";
+                                
+                                if (!empty($validUpto)) {
+                                    try {
+                                        // Format: 2026-07-01 23:59:00
+                                        $formattedValidUpto = \Carbon\Carbon::createFromFormat(
+                                            'Y-m-d H:i:s',
+                                            $validUpto
+                                        )->format('d/m/Y h:i A');
+                                
+                                    } catch (\Exception $e) {
+                                
+                                        try {
+                                            // Format: 29/06/2026 11:59:00 PM
+                                            $formattedValidUpto = \Carbon\Carbon::createFromFormat(
+                                                'd/m/Y h:i:s A',
+                                                $validUpto
+                                            )->format('d/m/Y h:i A');
+                                
+                                        } catch (\Exception $e) {
+                                            $formattedValidUpto = $validUpto;
+                                        }
+                                    }
+                                }
                             }
-
+                            
                             $hsnCodes = collect($items_detail)
                                 ->pluck('hsn_code')
                                 ->filter()
@@ -339,7 +362,7 @@
                                     </td>
                                     <td class="gov-value">
                                         @if(!empty($validUpto))
-                                            {{ \Carbon\Carbon::parse($validUpto)->format('d/m/Y') }}
+                                            {{ $formattedValidUpto }}
                                         @endif
                                     </td>
                                 </tr>
@@ -572,7 +595,7 @@
                                                     padding:3px;
                                                 ">
                                                     @if(!empty($ewayBillDate))
-                                                        {{ $ewayBillDate }}
+                                                        {{ $formattedDate }}
                                                     @endif
                                                 </td>
 
@@ -701,7 +724,7 @@
                                         Generated Date:
                                         <strong>
                                             @if(!empty($ewayBillDate))
-                                                {{ \Carbon\Carbon::parse($ewayBillDate)->format('d/m/Y h:i A') }}
+                                                {{ $formattedDate }}
                                             @endif
                                         </strong>
                                     </td>
@@ -726,7 +749,9 @@
                                     <td style="padding:4px;">
                                         Valid Upto:
                                         <strong>
-                                            {{ \Carbon\Carbon::parse($validUpto)->format('d/m/Y') }}
+                                             @if(!empty($validUpto))
+                                            {{ $formattedValidUpto }}
+                                            @endif
                                         </strong>
                                     </td>
                                 </tr>
@@ -1148,7 +1173,7 @@
 
                                             <td style="border:1px solid #999;padding:6px;">
                                                 @if(!empty($ewayBillDate))
-                                                    {{ \Carbon\Carbon::parse($ewayBillDate)->format('d/m/Y h:i A') }}
+                                                    {{ $formattedDate }}
                                                 @else
                                                     {{ date('d/m/Y h:i A', strtotime($sale->date)) }}
                                                 @endif
