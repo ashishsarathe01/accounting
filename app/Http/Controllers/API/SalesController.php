@@ -3833,8 +3833,7 @@ public function saleInvoicePdfApi(Request $request)
     return $pdf->download('SaleInvoice-' . $sale_detail->voucher_no . '.pdf');
 }
 
-    
-    public function partyWiseSummary(Request $request)
+public function partyWiseSummary(Request $request)
 {
     $request->validate([
         'from_date' => 'required',
@@ -3842,85 +3841,156 @@ public function saleInvoicePdfApi(Request $request)
         'view_by'   => 'required'
     ]);
 
-    if ($request->view_by == 'party') {
+    $companyId = $request->company_id;
+    $fromDate  = $request->from_date;
+    $toDate    = $request->to_date;
 
-            
-          
-    $data = DB::table('sales')
-    ->join('accounts', 'accounts.id', '=', 'sales.party')
-    ->where('sales.company_id', $request->company_id)
-    ->whereBetween('sales.date', [$request->from_date, $request->to_date])
-    ->where('sales.delete', '0')
-    ->where('sales.status','1')
-    ->groupBy('sales.party')
-    ->select(
-        'sales.party',
-        'accounts.account_name as party_name',
-        DB::raw('(SELECT SUM(qty) FROM sale_descriptions WHERE sale_descriptions.sale_id = sales.id) as total_quantity'),
-        DB::raw('SUM(sales.total) as total_sale_amount')
-    )
-    ->get();
-    
-    
-                foreach ($data as $row) {
-            
-                $details = DB::table('sales')
-                    ->select(
-                        'sales.id as sales_id',
-                        'sales.date',
-                        'sales.voucher_no_prefix',
-                        'sales.total',
-                        'sales.sale_order_id',
-                        DB::raw('(SELECT SUM(qty) FROM sale_descriptions WHERE sale_descriptions.sale_id = sales.id) as total_quantity')
-                    )
-                    ->where('sales.party', $row->party)
-                    ->where('sales.company_id', $request->company_id)
-                    ->whereBetween('sales.date', [$request->from_date, $request->to_date])
-                    ->get();
-            
-                $row->details = $details; // attach to object
-            }
+    if ($request->view_by === 'party') {
 
-
-
-    } elseif ($request->view_by == 'item') {
-
-        // ITEM WISE SUMMARY
-        $data = DB::table('item_size_stocks')
-            ->join('manage_items','item_size_stocks.item_id','manage_items.id')
-            ->leftJoin('sales','item_size_stocks.sale_id','sales.id')
-            ->whereNotNull('sale_id')
-            ->where('item_size_stocks.status','0')
-            ->where('item_size_stocks.company_id', $request->company_id)
-            ->whereBetween(
-                DB::raw("STR_TO_DATE(sales.date, '%Y-%m-%d')"),
-                [$request->from_date, $request->to_date]
-            )
-            ->groupBy('item_size_stocks.item_id','manage_items.name')
+        /*
+        |--------------------------------------------------------------------------
+        | Party Total Qty
+        |--------------------------------------------------------------------------
+        */
+        $partyQtySubquery = DB::table('sale_descriptions as sd')
+            ->join('sales as s', 's.id', '=', 'sd.sale_id')
+            ->where('s.company_id', $companyId)
+            ->whereBetween('s.date', [$fromDate, $toDate])
+            ->where('s.delete', '0')
+            ->where('s.status', '1')
+            ->groupBy('s.party')
             ->select(
-                'item_size_stocks.item_id',
-                'manage_items.name',
-                DB::raw('COUNT(item_size_stocks.id) as total_reels'),
-                DB::raw('SUM(item_size_stocks.weight) as total_quantity')
+                's.party',
+                DB::raw('SUM(sd.qty) as total_qty')
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Party Summary
+        |--------------------------------------------------------------------------
+        */
+        $data = DB::table('sales as s')
+            ->join('accounts as a', 'a.id', '=', 's.party')
+            ->leftJoinSub(
+                $partyQtySubquery,
+                'pq',
+                function ($join) {
+                    $join->on('pq.party', '=', 's.party');
+                }
+            )
+            ->where('s.company_id', $companyId)
+            ->whereBetween('s.date', [$fromDate, $toDate])
+            ->where('s.delete', '0')
+            ->where('s.status', '1')
+            ->groupBy(
+                's.party',
+                'a.account_name',
+                'pq.total_qty'
+            )
+            ->select(
+                's.party',
+                'a.account_name as party_name',
+                DB::raw('COALESCE(pq.total_qty,0) as total_quantity'),
+                DB::raw('SUM(s.total) as total_sale_amount')
             )
             ->get();
 
-    } else {
+        /*
+        |--------------------------------------------------------------------------
+        | Party Details
+        |--------------------------------------------------------------------------
+        */
+        if ($data->isNotEmpty()) {
+
+            $partyIds = $data->pluck('party');
+
+            $invoiceQtySubquery = DB::table('sale_descriptions')
+                ->groupBy('sale_id')
+                ->select(
+                    'sale_id',
+                    DB::raw('SUM(qty) as total_qty')
+                );
+
+            $allDetails = DB::table('sales as s')
+                ->leftJoinSub(
+                    $invoiceQtySubquery,
+                    'iq',
+                    function ($join) {
+                        $join->on('iq.sale_id', '=', 's.id');
+                    }
+                )
+                ->where('s.company_id', $companyId)
+                ->whereBetween('s.date', [$fromDate, $toDate])
+                ->where('s.delete', '0')
+                ->where('s.status', '1')
+                ->whereIn('s.party', $partyIds)
+                ->select(
+                    's.id as sales_id',
+                    's.party',
+                    's.date',
+                    's.voucher_no_prefix',
+                    's.total',
+                    's.sale_order_id',
+                    DB::raw('COALESCE(iq.total_qty,0) as total_quantity')
+                )
+                ->orderBy('s.date')
+                ->get()
+                ->groupBy('party');
+
+            foreach ($data as $row) {
+                $row->details = $allDetails[$row->party] ?? [];
+            }
+        }
+    }
+
+    elseif ($request->view_by === 'item') {
+
+        $data = DB::table('item_size_stocks as iss')
+            ->join(
+                'manage_items as mi',
+                'iss.item_id',
+                '=',
+                'mi.id'
+            )
+            ->join(
+                'sales as s',
+                'iss.sale_id',
+                '=',
+                's.id'
+            )
+            ->where('iss.company_id', $companyId)
+            ->where('iss.status', '0')
+            ->where('s.delete', '0')
+            ->where('s.status', '1')
+            ->whereBetween('s.date', [$fromDate, $toDate])
+            ->groupBy(
+                'iss.item_id',
+                'mi.name'
+            )
+            ->select(
+                'iss.item_id',
+                'mi.name',
+                DB::raw('COUNT(*) as total_reels'),
+                DB::raw('SUM(iss.weight) as total_quantity')
+            )
+            ->get();
+    }
+
+    else {
         return response()->json([
             'status' => false,
-            'message' => 'Invalid view_by value (allowed: party, item)'
+            'message' => 'Invalid view_by value'
         ], 400);
     }
 
     return response()->json([
-        'code' => 200,
-        'view_by' => $request->view_by,
-        'from_date' => $request->from_date,
-        'to_date' => $request->to_date,
-        'data' => $data
+        'code'      => 200,
+        'view_by'   => $request->view_by,
+        'from_date' => $fromDate,
+        'to_date'   => $toDate,
+        'data'      => $data
     ]);
 }
-
 
 
     public function failedMessage()
