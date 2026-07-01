@@ -558,7 +558,7 @@
 <body>
 
 {{-- ============================================================
-     MASTER FORM — wraps everything so both buttons can submit
+     MASTER FORM â€” wraps everything so both buttons can submit
      ============================================================ --}}
 
 <form
@@ -609,7 +609,7 @@
                 type="button"
                 class="btn-print"
                 onclick="printReport()">
-                🖨 Print
+                ðŸ–¨ Print
             </button>
         </div>
 
@@ -634,35 +634,35 @@
             type="button"
             class="tab-btn active"
             onclick="showTab('sheet1', this)">
-            Sheet 1 — Stock Report
+            Sheet 1 â€” Stock Report
         </button>
 
         <button
             type="button"
             class="tab-btn"
             onclick="showTab('sheet2', this)">
-            Sheet 2 — Creditors
+            Sheet 2 â€” Creditors
         </button>
 
         <button
             type="button"
             class="tab-btn"
             onclick="showTab('sheet3', this)">
-            Sheet 3 — Debtors
+            Sheet 3 â€” Debtors
         </button>
 
         <button
             type="button"
             class="tab-btn"
             onclick="showTab('sheet4', this)">
-            Sheet 4 — Calculation
+            Sheet 4 â€” Calculation
         </button>
 
     </div>
 @endif
 
     {{-- ============================================================
-         SHEET 1 — STOCK REPORT
+         SHEET 1 â€” STOCK REPORT
          ============================================================ --}}
 
     <div id="sheet1" class="sheet-panel active">
@@ -836,7 +836,7 @@
 
             <hr class="divider">
 
-            {{-- ===== PART B — DEBTORS ===== --}}
+            {{-- ===== PART B â€” DEBTORS ===== --}}
 
             <div class="section-title-lg">PART-B</div>
 
@@ -1005,7 +1005,7 @@
 
             <hr class="divider">
 
-            {{-- ===== PART C — CREDITORS ===== --}}
+            {{-- ===== PART C â€” CREDITORS ===== --}}
 
             <div class="section-title-lg">PART - C</div>
 
@@ -1170,7 +1170,7 @@
 
 
     {{-- ============================================================
-         SHEET 2 — CREDITORS
+         SHEET 2 â€” CREDITORS
          ============================================================ --}}
 
     <div id="sheet2" class="sheet-panel">
@@ -1251,7 +1251,7 @@
 
 
     {{-- ============================================================
-         SHEET 3 — DEBTORS
+         SHEET 3 â€” DEBTORS
          ============================================================ --}}
 
     <div id="sheet3" class="sheet-panel">
@@ -1353,7 +1353,7 @@
 
 
     {{-- ============================================================
-         SHEET 4 — CALCULATION
+         SHEET 4 â€” CALCULATION
          ============================================================ --}}
 
     <div id="sheet4" class="sheet-panel">
@@ -1422,7 +1422,7 @@
                                 class="editable right"
                                 name="stock_total"
                                 id="stockTotal"
-                                value="{{ FormatIndianNumber($stockTotal, 2) }}">
+                                value="{{ FormatIndianNumber($grandTotal, 2) }}">
                         </td>
 
                         <td class="right">
@@ -1462,9 +1462,9 @@
     style="margin-top:14px; color:#555;">
                 D.P = Debtors Availability + Stock Availability
                 <br>
-                Debtors Availability = (Debtors upto 90 − Creditors) × 70%
+                Debtors Availability = (Debtors upto 90 âˆ’ Creditors) Ã— 70%
                 <br>
-                Stock Availability = Stock Total × 75%
+                Stock Availability = Stock Total Ã— 75%
             </div>
             @endif
 

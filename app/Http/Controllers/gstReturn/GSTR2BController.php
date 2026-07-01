@@ -443,7 +443,10 @@ class GSTR2BController extends Controller
                 ->groupBy('billing_gst')
                 ->get();
             foreach($bookParties as $party){
-                if(!in_array(strtoupper(trim($party->ctin)), $existingCtins)){            
+                if(!in_array(strtoupper(trim($party->ctin)), $existingCtins)){   
+                    if($party->ctin==""){
+                        continue;
+                    }
                     $account = Accounts::where('gstin', $party->ctin)
                                 ->where('company_id', Session::get('user_company_id'))
                                 ->first();
@@ -475,6 +478,9 @@ class GSTR2BController extends Controller
                 ->get();
             foreach($bookJournals as $party){
                 if(!in_array(strtoupper(trim($party->ctin)), $existingCtins)){
+                    if($party->ctin==""){
+                        continue;
+                    }
                     $account = Accounts::where('gstin', $party->ctin)
                                 ->where('company_id', Session::get('user_company_id'))
                                 ->first();

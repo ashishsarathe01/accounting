@@ -250,6 +250,9 @@
                     Cost Per KG
                 </th>
                 <th style="text-align:right;">
+                    Overall Cost
+                </th>
+                <th style="text-align:right;">
                     Consumed Per Ton
                 </th>
 
@@ -266,7 +269,7 @@
                 $totalGeneratedQty = 0;
                 $totalPerKg = 0;
                 $totalConsumedPerTon = 0;
-
+                $totalOverAllCost = 0;
             @endphp
 
             @php $sr = 1; @endphp
@@ -279,13 +282,16 @@
                         ? ($group['amount'] / $group['qty'])
                         : 0;
 
-                    $groupPerKg = 0;
+                    $groupPerKg = 0; $groupOverAllCost = 0;
                     $groupConsumedPerTon = 0;
 
                     foreach($group['items'] as $tmpItem){
 
                         $groupPerKg += $tmpItem['per_kg'];
-
+                        if($tmpItem['amount']!=""){
+                            $groupOverAllCost +=$tmpItem['amount']/$totalProduction;
+                        }
+                        
                         $groupConsumedPerTon += (
                             $tmpItem['generated_qty'] > 0
                                 ? (($tmpItem['qty'] / $tmpItem['generated_qty']) * 1000)
@@ -298,6 +304,7 @@
                     $totalGeneratedQty += $group['generated_qty'];
                     $totalPerKg += $groupPerKg;
                     $totalConsumedPerTon += $groupConsumedPerTon;
+                    $totalOverAllCost += $groupOverAllCost;
                 @endphp
 
                 {{-- GROUP ROW --}}
@@ -331,7 +338,9 @@
                     <td style="text-align:right;">
                         {{ number_format($groupPerKg, 2) }}
                     </td>
-
+                    <td style="text-align:right;">
+                        {{ number_format($groupOverAllCost, 2) }}
+                    </td>
                     <td style="text-align:right;">
                         {{ number_format($groupConsumedPerTon, 2) }}
                     </td>
@@ -377,7 +386,11 @@
                         <td style="text-align:right;">
                             {{ number_format($item['per_kg'], 2) }}
                         </td>
-
+                        <td style="text-align:right;">
+                            @if($item['amount']!="")
+                                {{ number_format($item['amount']/$totalProduction, 2) }}
+                            @endif
+                        </td>
                         <td style="text-align:right;">
                             {{ number_format($consumedPerTon, 2) }}
                         </td>
@@ -424,6 +437,9 @@
 
                 <td style="text-align:right;">
                     {{ number_format($totalPerKg, 2) }}
+                </td>
+                <td style="text-align:right;">
+                    {{ number_format($totalOverAllCost, 2) }}
                 </td>
                 <td style="text-align:right;">
                     {{ number_format($totalConsumedPerTon, 2) }}

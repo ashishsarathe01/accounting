@@ -8470,6 +8470,7 @@ else
                 ->whereIn('item_averages.id', $sub)
                 ->select(
                     'manage_items.name as item_name',
+                    'manage_items.g_name as group_id',
                     'item_averages.average_weight as qty',
                     'item_averages.amount as value'
                 )
@@ -8490,15 +8491,78 @@ else
                 ->whereIn('item_averages.id', $sub)
                 ->select(
                     'item_groups.group_name as item_name',
+                    'item_groups.id as group_id',
                     DB::raw('SUM(item_averages.average_weight) as qty'),
                     DB::raw('SUM(item_averages.amount) as value')
+                    
                 )
                 ->groupBy('item_groups.group_name')
                 ->orderBy('item_groups.group_name')
                 ->get();
         }
-
+        $opening_item = DB::table('item_ledger')
+            ->select(
+                'item_ledger.in_weight',
+                'item_ledger.total_price',
+                'manage_items.name',
+                'manage_items.g_name'
+            )
+            ->join('manage_items', 'item_ledger.item_id', '=', 'manage_items.id')
+            ->whereIn('item_id', function ($query) use ($company_id) {
+                $query->select('item_id')
+                    ->from('item_ledger')
+                    ->where('status', '1')
+                    ->where('delete_status', '0')
+                    ->where('company_id', $company_id)
+                    ->groupBy('item_id')
+                    ->havingRaw('COUNT(*) = 1');
+            })
+            ->where('item_ledger.status', '1')
+            ->where('item_ledger.delete_status', '0')
+            ->where('item_ledger.source', '-1')
+            ->where('item_ledger.company_id', $company_id)
+            ->get()
+            ->groupBy('g_name');
+        
+        // echo "<pre>";
+        // print_r($opening_item);die;
+        $assign_opening_stock_group_arr = [];
         foreach ($items as $item) {
+            if ($stockType == 'item') {
+                if(!in_array($item->group_id,$assign_opening_stock_group_arr)){
+                    if (isset($opening_item[$item->group_id])) {
+                        array_push($assign_opening_stock_group_arr,$item->group_id);
+                        $opening = $opening_item[$item->group_id];
+                        foreach($opening as $v){
+                            $rate = (float)$v->in_weight > 0
+                                ? round((float)$v->total_price / (float)$v->in_weight, 2)
+                                : 0;
+                            $grandTotal += $v->total_price;
+                            
+                            $reportData[] = [
+                                'sr_no' => $sr++,
+                                'name'  => $v->name,
+                                'qty'   => $v->in_weight,
+                                'rate'  => $rate,
+                                'value' => $v->total_price,
+                            ];
+                            
+                        }
+                    }
+                }
+                
+            }else{
+                if (isset($opening_item[$item->group_id])) {
+                    $opening = $opening_item[$item->group_id];
+            
+                    foreach($opening as $v){
+                        $item->qty = $item->qty + $v->in_weight;
+                        $item->value = $item->value + $v->total_price;
+                        
+                    }
+                    
+                }
+            }
 
             if (round($item->qty, 2) == 0 && round($item->value, 2) == 0) {
                 continue;
@@ -8509,7 +8573,7 @@ else
                 : 0;
 
             $grandTotal += $item->value;
-
+            
             $reportData[] = [
                 'sr_no' => $sr++,
                 'name'  => $item->item_name,
@@ -8518,7 +8582,7 @@ else
                 'value' => $item->value,
             ];
         }
-
+        
 
         // =========================================
         // DEBTORS AGING (shared helper)
@@ -8590,7 +8654,7 @@ else
         $stockTotal = DB::table('item_averages')
             ->whereIn('id', $sub)
             ->sum('amount');
-
+        $stockTotal = $grandTotal;
         $debtorsAvailability = round((($upto90Total - $creditorsTotal) * 70) / 100, 0);
         $stockAvailability   = round(($stockTotal * 75) / 100, 0);
         $dp                  = $debtorsAvailability + $stockAvailability;
@@ -9095,7 +9159,8 @@ else
             $request->stock_type,
             (int)$request->bank_id
         );
-
+        // echo "<pre>";
+        // print_r($data);die;
         return view('ExportMonthlyReportPreview', $data);
     }
 

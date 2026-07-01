@@ -309,15 +309,15 @@
                         data-to_date="{{ request('to_date') }}"
                         style="cursor:pointer;">
                                     <td class="ps-4 text-muted" style="{{ !empty($item['has_negative_stock']) ? 'color:#dc3545 !important;font-weight:bold;' : '' }}"> ↳ {{ $item['item_name'] }}</td>
-                                    <td>Item</td>
-                                    <td class="text-end">{{ formatIndianNumber($item['average_weight']) }}</td>
-                                    <td>{{ $item['unit_name'] }}</td>
-                                    <td class="text-end">
+                                    <td style="{{ !empty($item['has_negative_stock']) ? 'color:#dc3545 !important;font-weight:bold;' : '' }}">Item</td>
+                                    <td class="text-end" style="{{ !empty($item['has_negative_stock']) ? 'color:#dc3545 !important;font-weight:bold;' : '' }}">{{ formatIndianNumber($item['average_weight']) }}</td>
+                                    <td style="{{ !empty($item['has_negative_stock']) ? 'color:#dc3545 !important;font-weight:bold;' : '' }}">{{ $item['unit_name'] }}</td>
+                                    <td class="text-end" style="{{ !empty($item['has_negative_stock']) ? 'color:#dc3545 !important;font-weight:bold;' : '' }}">
                                        {{ ($item['average_weight'] ?? 0) != 0
                                           ? number_format($item['amount'] / $item['average_weight'], 2)
                                           : '0.00' }}
                                     </td>
-                                    <td class="text-end">{{ formatIndianNumber($item['amount']) }}</td>
+                                    <td class="text-end" style="{{ !empty($item['has_negative_stock']) ? 'color:#dc3545 !important;font-weight:bold;' : '' }}">{{ formatIndianNumber($item['amount']) }}</td>
                                  </tr>
                            @endforeach
 
@@ -333,15 +333,15 @@
                                  data-to_date="{{ request('to_date') }}"
                                  style="cursor:pointer;">
                                  <td style="{{ !empty($value['has_negative_stock']) ? 'color:#dc3545 !important;font-weight:bold;' : '' }}">{{ $value['item_name'] }}</td>
-                                 <td>Item</td>
-                                 <td class="text-end">{{ formatIndianNumber($value['average_weight']) }}</td>
-                                 <td>{{ $value['unit_name'] }}</td>
-                                 <td class="text-end">
+                                 <td style="{{ !empty($value['has_negative_stock']) ? 'color:#dc3545 !important;font-weight:bold;' : '' }}">Item</td>
+                                 <td class="text-end" style="{{ !empty($value['has_negative_stock']) ? 'color:#dc3545 !important;font-weight:bold;' : '' }}">{{ formatIndianNumber($value['average_weight']) }}</td>
+                                 <td style="{{ !empty($value['has_negative_stock']) ? 'color:#dc3545 !important;font-weight:bold;' : '' }}">{{ $value['unit_name'] }}</td>
+                                 <td class="text-end" style="{{ !empty($value['has_negative_stock']) ? 'color:#dc3545 !important;font-weight:bold;' : '' }}">
                                     {{ ($value['average_weight'] ?? 0) != 0
                                        ? number_format($value['amount'] / $value['average_weight'], 2)
                                        : '0.00' }}
                                  </td>
-                                 <td class="text-end">{{ formatIndianNumber($value['amount']) }}</td>
+                                 <td class="text-end" style="{{ !empty($value['has_negative_stock']) ? 'color:#dc3545 !important;font-weight:bold;' : '' }}">{{ formatIndianNumber($value['amount']) }}</td>
                            </tr>
 
                            @php
