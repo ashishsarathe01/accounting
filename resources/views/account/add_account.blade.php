@@ -47,14 +47,14 @@
                      <label for="print_name" class="form-label font-14 font-heading">PRINT NAME</label>
                      <input type="text" class="form-control" id="print_name" name="print_name" placeholder="ENTER PRINT NAME" required value="@if(isset($id)){{$account->print_name}}@endif" @if(isset($account) && $account->company_id==0) readonly @endif>
                   </div>
-        
+                    
                   <div class="clearfix"></div>
                   <div class="mb-4 col-md-6" @if(isset($account) && $account->company_id==0) style="display:none" @endif>
                      <label for="under_group" class="form-label font-14 font-heading">UNDER GROUP</label>
                      <select class="form-select select2-single" name="under_group" id="under_group" aria-label="form-select example" required>
                         <option value="">SELECT GROUP</option>
                         @foreach($accountgroup as $value)
-                           @php $under_debtor_status = 0;$under_creditors_status = 0; $under_dutytaxes_status = 0;$bank_account_status = 0;$capital_account_status = 0;$loan_status = 0; $under_expense_status=0;@endphp
+                           @php $partb_status = 0; $under_debtor_status = 0;$under_creditors_status = 0; $under_dutytaxes_status = 0;$bank_account_status = 0;$capital_account_status = 0;$loan_status = 0; $under_expense_status=0; $fixed_assets_status = 0;@endphp
                            @if($value->super_parent_id==11 && $value->heading_type=='group')
                               @php  $under_debtor_status = 1; @endphp
                            @endif
@@ -82,11 +82,16 @@
                            @if(($value->super_parent_id==5 || $value->super_parent_id==6) && $value->heading_type=='group')
                               @php  $loan_status = 1; @endphp
                            @endif
-                           
-                           <option value="{{$value->id}}" data-type="group" data-under_expense_status="{{$under_expense_status}}" data-under_debtor_status="{{$under_debtor_status}}" data-under_creditors_status="{{$under_creditors_status}}" data-under_dutytaxes_status="{{$under_dutytaxes_status}}" data-bank_account_status="{{$bank_account_status}}" data-capital_account_status="{{$capital_account_status}}" data-loan_status="{{$loan_status}}"  @if(isset($id) && $account->under_group==$value->id && $account->under_group_type=='group') selected  @endif>{{$value->name}}</option>
+                           @if($value->super_parent_id==6 && $value->heading_type=='head')
+                              @php  $fixed_assets_status = 1;@endphp
+                           @endif
+                           @if(($value->super_parent_id==12 || $value->super_parent_id==13 || $value->super_parent_id==14 || $value->super_parent_id==15 || $value->super_parent_id==23) && $value->heading_type=='group')
+                              @php  $partb_status = 1;@endphp
+                           @endif
+                           <option value="{{$value->id}}" data-type="group" data-under_expense_status="{{$under_expense_status}}" data-under_debtor_status="{{$under_debtor_status}}" data-under_creditors_status="{{$under_creditors_status}}" data-under_dutytaxes_status="{{$under_dutytaxes_status}}" data-bank_account_status="{{$bank_account_status}}" data-capital_account_status="{{$capital_account_status}}" data-loan_status="{{$loan_status}}" data-fixed_assets_status="{{$fixed_assets_status}}" data-partb_status="{{$partb_status}}"  @if(isset($id) && $account->under_group==$value->id && $account->under_group_type=='group') selected  @endif>{{$value->name}}</option>
                         @endforeach
                         @foreach($accountheading as $value)
-                           <option value="{{$value->id}}" data-type="head" data-under_debtor_status="0" data-under_creditors_status="0" data-under_dutytaxes_status="0" data-bank_account_status="0" data-capital_account_status="0" data-loan_status="0" @if(isset($id) && $account->under_group==$value->id && $account->under_group_type=='head') selected  @endif>{{$value->name}}</option>
+                           <option value="{{$value->id}}" data-type="head" data-under_debtor_status="0" data-under_creditors_status="0" data-under_dutytaxes_status="0" data-bank_account_status="0" data-capital_account_status="0" data-loan_status="0" data-fixed_assets_status="0" data-partb_status="0" @if(isset($id) && $account->under_group==$value->id && $account->under_group_type=='head') selected  @endif>{{$value->name}}</option>
                         @endforeach                      
                      </select>
                      <input type="hidden" value="@if(isset($id)){{ $account->under_group_type }}@endif" id="under_group_type" name="under_group_type" /> 
@@ -951,7 +956,7 @@ function checkGSTIN(inputvalues){
          $(".ifsc_code_div").show();
          $(".mobile_no_div").show();
          $(".email_div").show();
-      }else if($(this).val()==6 && $('option:selected', this).attr('data-type')=='head'){
+      }else if(($(this).val()==6 && $('option:selected', this).attr('data-type')=='head') || ($('option:selected', this).attr('data-fixed_assets_status')=='1')){
          $(".income_tax_class_div").show();
          $(".income_tax_dep_method_div").show();
          $(".income_tax_dep_rate_div").show();
@@ -966,14 +971,15 @@ function checkGSTIN(inputvalues){
          
         $("#under_group_type").val($('option:selected', this).attr('data-type'));
        if (
-    $(this).val() == 12 ||
-    $(this).val() == 13 ||
-    $(this).val() == 14 ||
-    $(this).val() == 15 ||
-    $(this).val() == 23
-) {
-    $("#tds_part_b").show();
-}else{
+            $(this).val() == 12 ||
+            $(this).val() == 13 ||
+            $(this).val() == 14 ||
+            $(this).val() == 15 ||
+            $(this).val() == 23 ||
+            $('option:selected', this).data('partb_status') == 1
+            ) {
+            $("#tds_part_b").show();
+        }else{
             $("#tds_part_b").hide();
         }
       

@@ -1613,7 +1613,8 @@ $(".goods_items").each(function (index) {
       dataId !== "sgst" &&
       dataId !== "igst" &&
       dataId !== "round_plus" &&
-      dataId !== "round_minus"
+      dataId !== "round_minus" && 
+      dataId !== "tcs"
     ) {
       if (
         $(this).val() === "" ||

@@ -941,9 +941,12 @@ public function datatable(Request $request)
                   ->get();
          foreach($accountgroup as $key => $val){
             if($val->primary=='No' && $val->heading_type=='group'){
-              $super_parent_id = $this->getSuperParentGroupId($val->heading);
-              $accountgroup[$key]->super_parent_id = $super_parent_id;
-           }
+               $super_parent_id = $this->getSuperParentGroupId($val->heading);
+               $accountgroup[$key]->super_parent_id = $super_parent_id;
+            }else if($val->primary=='No' && $val->heading_type=='head'){
+               $super_parent_id = $this->getSuperParentHeadId($val->heading);
+               $accountgroup[$key]->super_parent_id = $val->heading;
+            }
          }
                      
       
@@ -1349,7 +1352,7 @@ public function datatable(Request $request)
       }
       return view('account/account_import')->with('upload_log',1)->with('total_count',$total_invoice_count)->with('success_count',$success_invoice_count)->with('failed_count',$failed_invoice_count)->with('error_message',$return)->with('incomplete_status_count',$incomplete_status_count);
    }
-   function getSuperParentGroupId($group_id) {      
+   function getSuperParentGroupId($group_id) {
       $group = AccountGroups::where('id', $group_id)->where('delete', '0')->first();
       
       if (!$group) {
@@ -1363,6 +1366,14 @@ public function datatable(Request $request)
          return null;
       }
       return $this->getSuperParentGroupId($group->heading);
+   }
+   function getSuperParentHeadId($group_id) {
+      $group = AccountHeading::where('id', $group_id)->where('delete', '0')->first();
+      
+      if (!$group) {
+         return null; // group not found
+      }
+      return $group->id;
    }
      public function updateGst(Request $request)
     {
