@@ -73,6 +73,97 @@ $return_url = request()->get('return_url');
 .print-layout{
     display:none;
 }
+.print-layout.is-building{
+    display:block !important;
+    position:absolute;
+    left:-100000px;
+    top:0;
+    width:200mm;
+    visibility:hidden;
+    pointer-events:none;
+}
+.print-source-wrapper{
+    display:none !important;
+}
+.print-runtime-page{
+    display:flex;
+    flex-direction:column;
+    box-sizing:border-box;
+    width:200mm;
+    height:287mm;
+    overflow:hidden;
+}
+.print-page-header,
+.print-page-items,
+.print-page-financial,
+.print-page-footer-table{
+    width:100%;
+    border-collapse:collapse;
+    table-layout:fixed;
+    flex:0 0 auto;
+    font-family:'Source Sans Pro', sans-serif;
+    letter-spacing:.05em;
+    color:#404040;
+    font-size:12px;
+    font-weight:500;
+
+    border:none !important;
+}
+.print-page-header{
+    margin-bottom:-1px;
+}
+
+.print-page-items{
+    margin-top:0;
+}
+
+.print-page-financial{
+    margin-top:-1px;
+}
+
+.print-page-footer-table{
+    margin-top:-1px;
+}
+/* Remove the top border of the first row in the footer */
+.print-page-footer-table tr:first-child td,
+.print-page-footer-table tr:first-child th{
+    border-top:0 !important;
+}
+.print-page-footer tr:first-child td,
+.print-page-footer tr:first-child th{
+    border-top:0 !important;
+}
+/* Remove bottom border of the last row of financial table */
+.print-page-financial tr:last-child td,
+.print-page-financial tr:last-child th{
+    border-bottom:0 !important;
+}
+.print-page-footer-table tr:first-child td{
+    border-top:1px solid #000 !important;
+}
+.print-page-footer-holder{
+    flex:0 0 auto;
+    min-height:42mm;
+}
+.print-page-footer-table{
+    min-height:42mm;
+}
+.print-runtime-page .invoice-company-header{
+    height:auto;
+    min-height:0;
+    max-height:none;
+    overflow:visible;
+}
+.print-runtime-page .print-compact-row td,
+.print-runtime-page .print-compact-row th{
+    padding-top:1px !important;
+    padding-bottom:1px !important;
+    line-height:1.15 !important;
+}
+.print-runtime-page .print-compact-row p{
+    margin:0 !important;
+    line-height:1.15 !important;
+}
 @media print{
       .noprint{
          display:none;
@@ -84,6 +175,10 @@ $return_url = request()->get('return_url');
 
       .print-layout{
          display:block !important;
+      }
+
+      .print-source-wrapper{
+         display:none !important;
       }
 }
    @media print {
@@ -162,12 +257,14 @@ body {
     }
 
    .print-wrapper {
-      display: block;
+      display: flex;
+      flex-direction: column;
+      width: 200mm;
+      height: 287mm;
       page-break-after: always;
       break-after: page;
       box-sizing: border-box;
-      min-height: 1084px;   /* was height */
-      overflow: visible;    /* was hidden */
+      overflow: hidden;
       position: relative;
    }
 
@@ -176,25 +273,29 @@ body {
       break-after: auto;
    }
 
-    .print-wrapper:last-child {
-        page-break-after: auto;
-        break-after: auto;
-    }
-
-   .print-wrapper > table.invoice-copy {
-      width: 100%;
-      table-layout: auto;
+   .print-page-header,
+   .print-page-items,
+   .print-page-financial,
+   .print-page-footer-table {
+      width:100%;
+      border-collapse:collapse;
+      table-layout:fixed;
+      flex:0 0 auto;
    }
 
-   .print-content-spacer td{
-      border-top:none !important;
-      border-bottom:none !important;
-      padding:0 !important;
+   .print-page-spacer {
+      flex:1 1 auto;
+      min-height:0;
    }
-
-    .invoice-copy {
-        width: 100%;
-    }
+.print-page-spacer td{
+    border-top:0 !important;
+}
+   .print-page-footer-table {
+      height:38mm;
+      min-height:38mm;
+      max-height:38mm;
+      overflow:hidden;
+   }
 
     .print-financial-block {
         page-break-inside: avoid !important;
@@ -217,6 +318,7 @@ body {
    .print-page-footer {
       page-break-inside: avoid !important;
       break-inside: avoid !important;
+      height:38mm !important;
    }
 
     .print-compact-row td,
@@ -231,11 +333,6 @@ body {
         line-height: 1.15 !important;
     }
 
-    .print-summary-page .invoice-company-header {
-        height: 110px !important;
-        min-height: 110px !important;
-        max-height: 110px !important;
-    }
 }
    @page {
       size: A4 portrait;
@@ -749,55 +846,83 @@ body {
                      <tr>
                         <td style="border:none;padding:1px;font-weight:bold;">Tax Rate</td>
                         <td style="border:none;padding:1px;text-align:right;font-weight:bold;">Taxable Amt.</td>
-                        <td style="border:none;padding:1px;text-align:right;font-weight:bold;">CGST</td>
-                        <td style="border:none;padding:1px;text-align:right;font-weight:bold;">SGST</td>
+
+                        @if($totalIGST > 0)
+                           <td style="border:none;padding:1px;text-align:right;font-weight:bold;">IGST</td>
+                        @else
+                           <td style="border:none;padding:1px;text-align:right;font-weight:bold;">CGST</td>
+                           <td style="border:none;padding:1px;text-align:right;font-weight:bold;">SGST</td>
+                        @endif
+
                         <td style="border:none;padding:1px;text-align:right;font-weight:bold;">Total Tax</td>
                      </tr>
 
                      @php
-                        $totalTaxable = 0;
-                        $totalCGST = 0;
-                        $totalSGST = 0;
+                     $totalTaxable = 0;
+                     $totalCGSTAmt = 0;
+                     $totalSGSTAmt = 0;
+                     $totalIGSTAmt = 0;
                      @endphp
 
                      @foreach($gst_detail as $printVal)
 
-                        @php
-                           $totalTaxable += $printVal->taxable_amount;
-                           $totalCGST += $printVal->amount;
-                           $totalSGST += $printVal->amount;
-                        @endphp
+                     @php
+                        $totalTaxable += $printVal->taxable_amount;
 
-                        <tr>
-                           <td style="border:none;padding:1px;">
-                              {{$printVal->rate}}%
+                        if($totalIGST > 0){
+                           $totalIGSTAmt += $printVal->amount;
+                        }else{
+                           $totalCGSTAmt += $printVal->amount;
+                           $totalSGSTAmt += $printVal->amount;
+                        }
+                     @endphp
+
+                     <tr>
+
+                        <td style="border:none;padding:1px;">
+                           {{$printVal->rate}}%
+                        </td>
+
+                        <td style="border:none;padding:1px;text-align:right;">
+                           {{ formatIndianNumber($printVal->taxable_amount) }}
+                        </td>
+
+                        @if($totalIGST > 0)
+
+                           <td style="border:none;padding:1px;text-align:right;">
+                                 {{ formatIndianNumber($printVal->amount) }}
+                           </td>
+
+                        @else
+
+                           <td style="border:none;padding:1px;text-align:right;">
+                                 {{ formatIndianNumber($printVal->amount) }}
                            </td>
 
                            <td style="border:none;padding:1px;text-align:right;">
-                              {{formatIndianNumber($printVal->taxable_amount)}}
+                                 {{ formatIndianNumber($printVal->amount) }}
                            </td>
 
-                           <td style="border:none;padding:1px;text-align:right;">
-                              {{formatIndianNumber($printVal->amount)}}
-                           </td>
+                        @endif
 
-                           <td style="border:none;padding:1px;text-align:right;">
-                              {{formatIndianNumber($printVal->amount)}}
-                           </td>
+                        <td style="border:none;padding:1px;text-align:right;">
 
-                           <td style="border:none;padding:1px;text-align:right;">
-                              {{formatIndianNumber($printVal->amount * 2)}}
-                           </td>
-                        </tr>
+                           @if($totalIGST > 0)
+                                 {{ formatIndianNumber($printVal->amount) }}
+                           @else
+                                 {{ formatIndianNumber($printVal->amount * 2) }}
+                           @endif
+
+                        </td>
+
+                     </tr>
 
                      @endforeach
-
                      <tr>
                         <td colspan="5" style="padding:0;border:none;">
                            <hr style="margin:2px 0;border:none;border-top:1px solid #000;">
                         </td>
                      </tr>
-
                      <tr>
 
                         <td style="border:none;padding:1px;font-weight:bold;">
@@ -805,19 +930,35 @@ body {
                         </td>
 
                         <td style="border:none;padding:1px;text-align:right;font-weight:bold;">
-                           {{formatIndianNumber($totalTaxable)}}
+                           {{ formatIndianNumber($totalTaxable) }}
                         </td>
 
-                        <td style="border:none;padding:1px;text-align:right;font-weight:bold;">
-                           {{formatIndianNumber($totalCGST)}}
-                        </td>
+                        @if($totalIGST > 0)
+
+                           <td style="border:none;padding:1px;text-align:right;font-weight:bold;">
+                                 {{ formatIndianNumber($totalIGSTAmt) }}
+                           </td>
+
+                        @else
+
+                           <td style="border:none;padding:1px;text-align:right;font-weight:bold;">
+                                 {{ formatIndianNumber($totalCGSTAmt) }}
+                           </td>
+
+                           <td style="border:none;padding:1px;text-align:right;font-weight:bold;">
+                                 {{ formatIndianNumber($totalSGSTAmt) }}
+                           </td>
+
+                        @endif
 
                         <td style="border:none;padding:1px;text-align:right;font-weight:bold;">
-                           {{formatIndianNumber($totalSGST)}}
-                        </td>
 
-                        <td style="border:none;padding:1px;text-align:right;font-weight:bold;">
-                           {{formatIndianNumber($totalCGST + $totalSGST)}}
+                           @if($totalIGST > 0)
+                                 {{ formatIndianNumber($totalIGSTAmt) }}
+                           @else
+                                 {{ formatIndianNumber($totalCGSTAmt + $totalSGSTAmt) }}
+                           @endif
+
                         </td>
 
                      </tr>
@@ -958,28 +1099,7 @@ body {
 </div>
 </div>
    @php
-      $PX_LINE            = 21;
-      $PX_PAGE            = 1084;
-      $PX_HEADER_NO_IRN   = 420;
-      $PX_HEADER_IRN      = 504;
-      $PX_BF_ROW          = 21;
-      $PX_CF_ROW          = 21;
-
-      $printHasIrn      = ($sale_detail->e_invoice_status == 1 && !empty($sale_detail->einvoice_response));
-      $px_header_actual = $printHasIrn ? $PX_HEADER_IRN : $PX_HEADER_NO_IRN;
-
-      $PX_TERM_LINE     = 12;
-      $PX_TERM_HEADER    = 24;
-      $PX_SIGNATURE_MIN  = 80;
-      $PX_FOOTER_PAD    = 8;
-
-      $termCount = 0;
-      if ($configuration && $configuration->term_status == 1 && $configuration->terms) {
-         $termCount = count($configuration->terms);
-      }
-      $effectiveTerms = max(9, $termCount);
-      $px_terms_content = $PX_TERM_HEADER + ($effectiveTerms * $PX_TERM_LINE);
-      $PX_FOOTER = max($px_terms_content, $PX_SIGNATURE_MIN) + $PX_FOOTER_PAD;
+      $PX_FOOTER = 159; 
 
       $printTotalCGST = 0;
       $printTotalSGST = 0;
@@ -999,180 +1119,23 @@ body {
          }
       }
 
-      $sundryRows = count($printDisplaySundries);
-      if ($printTotalCGST > 0) $sundryRows++;
-      if ($printTotalSGST > 0) $sundryRows++;
-      if ($printTotalIGST > 0) $sundryRows++;
-      $sundryRows = max(1, $sundryRows);
-
-      $bankRow = ($configuration && $configuration->bank_detail_status == 1 && $bank_detail) ? 1 : 0;
-      $gstRows = count($gst_detail);
-
-      $PX_FINANCIAL =
-            $PX_LINE
-         + ($sundryRows * $PX_LINE)
-         + $PX_LINE
-         + ((2 + $gstRows + 1) * 14)
-         + $PX_LINE
-         + ($bankRow * $PX_LINE);
-
-      $fnItemPx = function ($item) use ($PX_LINE) {
-         $sub = 0;
-         if (isset($item->lines) && (is_array($item->lines) || is_countable($item->lines))) {
-            $sub = count($item->lines);
-         }
-         return (1 + $sub) * $PX_LINE;
-      };
-
       $items = $items_detail->values()->all();
-      $totalItems = count($items);
+      $printItemQty = collect($items)->sum(function ($item) {
+         return (float) ($item->qty ?? 0);
+      });
+      $printItemAmount = collect($items)->sum(function ($item) {
+         return (float) ($item->amount ?? 0);
+      });
 
-      $printPages = [];
-      $idx = 0;
-      $runningQty = 0;
-      $runningAmt = 0;
-
-      $middleArea = $PX_PAGE - $px_header_actual - $PX_CF_ROW - $PX_FOOTER;
-      $finalAreaFirst = $PX_PAGE - $px_header_actual - $PX_FINANCIAL - $PX_FOOTER;
-      $finalAreaOther = $PX_PAGE - $px_header_actual - $PX_BF_ROW - $PX_FINANCIAL - $PX_FOOTER;
-
-      while ($idx < $totalItems) {
-         $isFirst = count($printPages) === 0;
-         $remaining = array_slice($items, $idx);
-
-         $remainPx = 0;
-         foreach ($remaining as $r) {
-            $remainPx += $fnItemPx($r);
-         }
-
-         $finalArea = $isFirst ? $finalAreaFirst : $finalAreaOther;
-
-         /* If all remaining items fit with final block, place them and finish */
-         if ($remainPx <= $finalArea) {
-            $sumQty = 0;
-            $sumAmt = 0;
-            foreach ($remaining as $r) {
-                  $sumQty += $r->qty ?? 0;
-                  $sumAmt += $r->amount ?? 0;
-            }
-
-            $printPages[] = [
-                  'items' => $remaining,
-                  'bf_qty' => $isFirst ? 0 : $runningQty,
-                  'bf_amount' => $isFirst ? 0 : $runningAmt,
-                  'cf_qty' => $runningQty + $sumQty,
-                  'cf_amount' => $runningAmt + $sumAmt,
-                  'show_final_block' => true,
-                  'is_first' => $isFirst,
-            ];
-            break;
-         }
-
-         $packItems = [];
-         $packPx = 0;
-
-         foreach ($remaining as $r) {
-            $rPx = $fnItemPx($r);
-
-            if (!empty($packItems) && ($packPx + $rPx) > $middleArea) {
-                  break;
-            }
-
-            $packItems[] = $r;
-            $packPx += $rPx;
-         }
-
-         if (empty($packItems) && !empty($remaining)) {
-            $packItems[] = $remaining[0];
-            $packPx = $fnItemPx($remaining[0]);
-         }
-
-         $packQty = 0;
-         $packAmt = 0;
-         foreach ($packItems as $pi) {
-            $packQty += $pi->qty ?? 0;
-            $packAmt += $pi->amount ?? 0;
-         }
-
-         $printPages[] = [
-            'items' => $packItems,
-            'bf_qty' => $isFirst ? 0 : $runningQty,
-            'bf_amount' => $isFirst ? 0 : $runningAmt,
-            'cf_qty' => $runningQty + $packQty,
-            'cf_amount' => $runningAmt + $packAmt,
-            'show_final_block' => false,
-            'is_first' => $isFirst,
-         ];
-
-         $runningQty += $packQty;
-         $runningAmt += $packAmt;
-         $idx += count($packItems);
-      }
-
-      if ($totalItems === 0) {
-         $printPages[] = [
-            'items' => [],
-            'bf_qty' => 0,
-            'bf_amount' => 0,
-            'cf_qty' => 0,
-            'cf_amount' => 0,
-            'show_final_block' => true,
-            'is_first' => true,
-         ];
-      }
-
-      $lastIdx = count($printPages) - 1;
-      if ($lastIdx >= 0 && empty($printPages[$lastIdx]['show_final_block'])) {
-         $lp = $printPages[$lastIdx];
-         $printPages[] = [
-            'items' => [],
-            'bf_qty' => $lp['cf_qty'],
-            'bf_amount' => $lp['cf_amount'],
-            'cf_qty' => $lp['cf_qty'],
-            'cf_amount' => $lp['cf_amount'],
-            'show_final_block' => true,
-            'is_first' => false,
-         ];
-      }
-
-      for ($i = 0; $i < count($printPages) - 1; $i++) {
-         while (!empty($printPages[$i + 1]['items'])) {
-            $moved = $printPages[$i + 1]['items'][0];
-            $movedPx = $fnItemPx($moved);
-
-            $currentUsed = 0;
-            foreach ($printPages[$i]['items'] as $it) {
-                  $currentUsed += $fnItemPx($it);
-            }
-
-            if (!$printPages[$i]['is_first']) {
-                  $currentUsed += $PX_BF_ROW;
-            }
-
-            $currentLimit = $printPages[$i]['show_final_block']
-                  ? ($printPages[$i]['is_first'] ? $finalAreaFirst : $finalAreaOther)
-                  : $middleArea;
-
-            if (($currentUsed + $movedPx) > $currentLimit) {
-                  break;
-            }
-
-            array_shift($printPages[$i + 1]['items']);
-            $printPages[$i]['items'][] = $moved;
-
-            $mQty = $moved->qty ?? 0;
-            $mAmt = $moved->amount ?? 0;
-
-            $printPages[$i]['cf_qty'] += $mQty;
-            $printPages[$i]['cf_amount'] += $mAmt;
-
-            $printPages[$i + 1]['bf_qty'] = $printPages[$i]['cf_qty'];
-            $printPages[$i + 1]['bf_amount'] = $printPages[$i]['cf_amount'];
-
-            $printPages[$i + 1]['cf_qty'] -= $mQty;
-            $printPages[$i + 1]['cf_amount'] -= $mAmt;
-         }
-      }
+      $printPages = [[
+         'items' => $items,
+         'bf_qty' => 0,
+         'bf_amount' => 0,
+         'cf_qty' => $printItemQty,
+         'cf_amount' => $printItemAmount,
+         'show_final_block' => true,
+         'is_first' => true,
+      ]];
    @endphp
    <div class="print-layout">
    @php
@@ -1184,19 +1147,11 @@ body {
       $printShowFinalBlock = !empty($printPage['show_final_block']);
       $printHasItems       = count($printPage['items']) > 0;
       $printShowBfRow      = (!$printIsFirstPage); // show B/F on every non-first page
-
-      $usedPx = $px_header_actual;
-      if ($printShowBfRow)      $usedPx += $PX_BF_ROW;
-      foreach ($printPage['items'] as $pi) $usedPx += $fnItemPx($pi);
-      if ($printShowFinalBlock) $usedPx += $PX_FINANCIAL;
-      else                      $usedPx += $PX_CF_ROW;
-      $usedPx += $PX_FOOTER;
-
-      $printSpacerPx = max(0, $PX_PAGE - $usedPx);
+      $printSpacerPx = 0;
    @endphp
-   <div class="print-wrapper{{ ($printShowFinalBlock && !$printHasItems) ? ' print-summary-page' : '' }}">
+   <div class="print-wrapper print-source-wrapper">
    <table style="font-family: 'Source Sans Pro', sans-serif;letter-spacing: 0.05em;color: #404040;font-size: 12px;font-weight: 500;padding: 10px;width:100%;height:100%;border-collapse:collapse;" class="invoice-copy">
-      <tbody>
+      <tbody class="print-source-header">
           <tr>
             <th colspan="8" style="padding: 0;">
                <div class="invoice-company-header">
@@ -1299,12 +1254,17 @@ body {
                </span> </p>
                <p>&nbsp;</p>
                @if($configuration && $configuration->purchase_order_status == 1)
-                  <p><span class="width25">PO No. </span>: <span class="lft_mar15">{{ $sale_detail->po_no }}</span></p>
-                  <p><span class="width25">PO Date </span>: <span class="lft_mar15">{{ $sale_detail->po_date ? date('d-m-Y', strtotime($sale_detail->po_date)) : '' }}</span></p>
-               @endif
-               @if($company_sale_type=="BOX")
-                  <p><span class="width25">PO No. </span>: <span class="lft_mar15">{{ $box_po_numbers ?? '' }}</span></p>
-                  <p><span class="width25">PO Date </span>: <span class="lft_mar15">{{ $box_po_dates ?? '' }}</span></p>
+                  <p>
+                     <span class="width25">PO No. </span>:
+                     <span class="lft_mar15">{{ $sale_detail->po_no }}</span>
+                  </p>
+
+                  <p>
+                     <span class="width25">PO Date </span>:
+                     <span class="lft_mar15">
+                        {{ $sale_detail->po_date ? date('d-m-Y', strtotime($sale_detail->po_date)) : '' }}
+                     </span>
+                  </p>
                @endif
             </td>
          </tr>
@@ -1371,8 +1331,14 @@ body {
                <td style="text-align:right; padding:1px 5px;">{{formatIndianNumber($printPage['bf_amount'])}}</td>
             </tr>
          @endif
+      </tbody>
+      <tbody class="print-source-items">
           @foreach($printPage['items'] as $printItem)
-            <tr class="print-item-row {{ ($configuration && $configuration->lines_in_item_status == 0) ? 'no-border' : '' }}">
+            <tr
+               class="print-item-row {{ ($configuration && $configuration->lines_in_item_status == 0) ? 'no-border' : '' }}"
+               data-qty="{{ (float) ($printItem->qty ?? 0) }}"
+               data-amount="{{ (float) ($printItem->amount ?? 0) }}"
+            >
                <td style="text-align:center;">{{$printSerial}}</td>
                <td colspan="2" style="text-align:left;">
                   <strong>{{ $printItem->p_name }}</strong>
@@ -1548,68 +1514,133 @@ body {
                </td>
             </tr>
             <tr class="print-compact-row">
-            <td colspan="8" style="border-top:0;border-bottom:0;padding:1px 4px;">
-               <table class="gst-summary-table" style="width:45% !important;border:none;border-collapse:collapse;font-size:10px;display:inline-table;">
-                  <tr>
-                     <td style="border:none;padding:1px;font-weight:bold;">Tax Rate</td>
-                     <td style="border:none;padding:1px;text-align:right;font-weight:bold;">Taxable Amt.</td>
-                     <td style="border:none;padding:1px;text-align:right;font-weight:bold;">CGST</td>
-                     <td style="border:none;padding:1px;text-align:right;font-weight:bold;">SGST</td>
-                     <td style="border:none;padding:1px;text-align:right;font-weight:bold;">Total Tax</td>
-                  </tr>
-                  @php
+            <td colspan="8" style="border-top:0;border-bottom:0;padding:2px 4px;">
+
+                  <table class="gst-summary-table" style="width:45% !important;border:none;border-collapse:collapse;font-size:10px;display:inline-table;">
+
+                     <tr>
+                        <td style="border:none;padding:1px;font-weight:bold;">Tax Rate</td>
+                        <td style="border:none;padding:1px;text-align:right;font-weight:bold;">Taxable Amt.</td>
+
+                        @if($totalIGST > 0)
+                           <td style="border:none;padding:1px;text-align:right;font-weight:bold;">IGST</td>
+                        @else
+                           <td style="border:none;padding:1px;text-align:right;font-weight:bold;">CGST</td>
+                           <td style="border:none;padding:1px;text-align:right;font-weight:bold;">SGST</td>
+                        @endif
+
+                        <td style="border:none;padding:1px;text-align:right;font-weight:bold;">Total Tax</td>
+                     </tr>
+
+                     @php
                      $totalTaxable = 0;
-                     $totalCGST = 0;
-                     $totalSGST = 0;
-                  @endphp
-                  @foreach($gst_detail as $printVal)
+                     $totalCGSTAmt = 0;
+                     $totalSGSTAmt = 0;
+                     $totalIGSTAmt = 0;
+                     @endphp
+
+                     @foreach($gst_detail as $printVal)
+
                      @php
                         $totalTaxable += $printVal->taxable_amount;
-                        $totalCGST += $printVal->amount;
-                        $totalSGST += $printVal->amount;
+
+                        if($totalIGST > 0){
+                           $totalIGSTAmt += $printVal->amount;
+                        }else{
+                           $totalCGSTAmt += $printVal->amount;
+                           $totalSGSTAmt += $printVal->amount;
+                        }
                      @endphp
+
                      <tr>
+
                         <td style="border:none;padding:1px;">
                            {{$printVal->rate}}%
                         </td>
+
                         <td style="border:none;padding:1px;text-align:right;">
-                           {{formatIndianNumber($printVal->taxable_amount)}}
+                           {{ formatIndianNumber($printVal->taxable_amount) }}
                         </td>
+
+                        @if($totalIGST > 0)
+
+                           <td style="border:none;padding:1px;text-align:right;">
+                                 {{ formatIndianNumber($printVal->amount) }}
+                           </td>
+
+                        @else
+
+                           <td style="border:none;padding:1px;text-align:right;">
+                                 {{ formatIndianNumber($printVal->amount) }}
+                           </td>
+
+                           <td style="border:none;padding:1px;text-align:right;">
+                                 {{ formatIndianNumber($printVal->amount) }}
+                           </td>
+
+                        @endif
+
                         <td style="border:none;padding:1px;text-align:right;">
-                           {{formatIndianNumber($printVal->amount)}}
+
+                           @if($totalIGST > 0)
+                                 {{ formatIndianNumber($printVal->amount) }}
+                           @else
+                                 {{ formatIndianNumber($printVal->amount * 2) }}
+                           @endif
+
                         </td>
-                        <td style="border:none;padding:1px;text-align:right;">
-                           {{formatIndianNumber($printVal->amount)}}
-                        </td>
-                        <td style="border:none;padding:1px;text-align:right;">
-                           {{formatIndianNumber($printVal->amount * 2)}}
+
+                     </tr>
+
+                     @endforeach
+                     <tr>
+                        <td colspan="5" style="padding:0;border:none;">
+                           <hr style="margin:2px 0;border:none;border-top:1px solid #000;">
                         </td>
                      </tr>
-                  @endforeach
-                  <tr>
-                     <td colspan="5" style="padding:0;border:none;">
-                        <hr style="margin:2px 0;border:none;border-top:1px solid #000;">
-                     </td>
-                  </tr>
-                  <tr>
-                     <td style="border:none;padding:1px;font-weight:bold;">
-                        Total
-                     </td>
-                     <td style="border:none;padding:1px;text-align:right;font-weight:bold;">
-                        {{formatIndianNumber($totalTaxable)}}
-                     </td>
-                     <td style="border:none;padding:1px;text-align:right;font-weight:bold;">
-                        {{formatIndianNumber($totalCGST)}}
-                     </td>
-                     <td style="border:none;padding:1px;text-align:right;font-weight:bold;">
-                        {{formatIndianNumber($totalSGST)}}
-                     </td>
-                     <td style="border:none;padding:1px;text-align:right;font-weight:bold;">
-                        {{formatIndianNumber($totalCGST + $totalSGST)}}
-                     </td>
-                  </tr>
-               </table>
-            </td>
+                     <tr>
+
+                        <td style="border:none;padding:1px;font-weight:bold;">
+                           Total
+                        </td>
+
+                        <td style="border:none;padding:1px;text-align:right;font-weight:bold;">
+                           {{ formatIndianNumber($totalTaxable) }}
+                        </td>
+
+                        @if($totalIGST > 0)
+
+                           <td style="border:none;padding:1px;text-align:right;font-weight:bold;">
+                                 {{ formatIndianNumber($totalIGSTAmt) }}
+                           </td>
+
+                        @else
+
+                           <td style="border:none;padding:1px;text-align:right;font-weight:bold;">
+                                 {{ formatIndianNumber($totalCGSTAmt) }}
+                           </td>
+
+                           <td style="border:none;padding:1px;text-align:right;font-weight:bold;">
+                                 {{ formatIndianNumber($totalSGSTAmt) }}
+                           </td>
+
+                        @endif
+
+                        <td style="border:none;padding:1px;text-align:right;font-weight:bold;">
+
+                           @if($totalIGST > 0)
+                                 {{ formatIndianNumber($totalIGSTAmt) }}
+                           @else
+                                 {{ formatIndianNumber($totalCGSTAmt + $totalSGSTAmt) }}
+                           @endif
+
+                        </td>
+
+                     </tr>
+
+                  </table>
+
+               </td>
          </tr>
             <tr class="print-compact-row">
                <td colspan="8" style="border-top:0; padding:1px 5px;">
@@ -2443,32 +2474,199 @@ if(configuration==null || configuration==undefined || configuration==""){
          }
       });
    });
-  function printpage() {
-    const billCopies = Math.max(1, parseInt(configuration, 10) || 1);
-    const $printLayout = $('.print-layout');
+   function invoiceNumber(value) {
+      return new Intl.NumberFormat('en-IN', {
+         minimumFractionDigits: 0,
+         maximumFractionDigits: 2
+      }).format(Number(value) || 0);
+   }
 
-    if (!$printLayout.length) {
-        window.print();
-        return;
+   function invoiceForwardRow(label, qty, amount) {
+      const row = document.createElement('tr');
+      row.className = 'print-compact-row print-forward-row';
+      row.style.fontWeight = '700';
+      row.innerHTML = `
+         <td colspan="4" style="text-align:right;padding:1px 5px;">${label}</td>
+         <td style="text-align:right;padding:1px 5px;">${invoiceNumber(qty)}</td>
+         <td></td>
+         <td></td>
+         <td style="text-align:right;padding:1px 5px;">${invoiceNumber(amount)}</td>
+      `;
+      return row;
+   }
+
+   function buildInvoicePrintPages(copyCount = 1) {
+      const layout = document.querySelector('.print-layout');
+      const source = layout ? layout.querySelector('.print-source-wrapper') : null;
+      if (!layout || !source) return false;
+
+      const sourceHeader = source.querySelector('.print-source-header');
+      const sourceItems = Array.from(source.querySelectorAll('.print-source-items > .print-item-row'));
+      const sourceFinancial = source.querySelector('.print-financial-block');
+      const sourceFooter = source.querySelector('.print-page-footer');
+      if (!sourceHeader || !sourceFinancial || !sourceFooter) return false;
+
+      layout.querySelectorAll('.print-runtime-page').forEach(page => page.remove());
+      layout.classList.add('is-building');
+
+      const COLGROUP_HTML =
+      '<colgroup>' +
+      '<col style="width:4%">'  +   // S.No
+      '<col style="width:21%">' +   // Description 
+      '<col style="width:19%">' +   // Description 
+      '<col style="width:9%">'  +   // HSN/SAC
+      '<col style="width:11%">' +   // Qty
+      '<col style="width:7%">'  +   // Unit
+      '<col style="width:11%">' +   // Price
+      '<col style="width:18%">' +   // Amount
+      '</colgroup>';
+
+   const makeTable = (className, tbody) => {
+      const table = document.createElement('table');
+      table.className = className;
+      table.insertAdjacentHTML('afterbegin', COLGROUP_HTML);
+      table.appendChild(tbody);
+      return table;
+   };
+    const makePage = (isFirst, broughtQty, broughtAmount) => {
+        const page = document.createElement('div');
+        page.className = 'print-wrapper print-runtime-page';
+
+        const headerTable = makeTable('invoice-copy print-page-header', sourceHeader.cloneNode(true));
+        const itemBody = document.createElement('tbody');
+        const itemTable = makeTable('invoice-copy print-page-items', itemBody);
+        if (!isFirst) {
+            itemBody.appendChild(invoiceForwardRow('B/F (Brought Forward)', broughtQty, broughtAmount));
+        }
+
+        const spacerBody = document.createElement('tbody');
+        const spacerRow = document.createElement('tr');
+        for (let c = 0; c < 7; c++) {
+            const td = document.createElement('td');
+            td.innerHTML = '&nbsp;';
+            if (c === 1) td.colSpan = 2;
+            spacerRow.appendChild(td);
+        }
+        spacerBody.appendChild(spacerRow);
+        const spacer = makeTable('invoice-copy print-page-items print-page-spacer', spacerBody);
+
+        const footerHolder = document.createElement('div');
+        footerHolder.className = 'print-page-footer-holder';
+        footerHolder.appendChild(makeTable(
+            'invoice-copy print-page-footer-table',
+            sourceFooter.cloneNode(true)
+        ));
+
+        page.append(headerTable, itemTable, spacer, footerHolder);
+        layout.appendChild(page);
+        return { page, itemBody, itemTable, spacer, footerHolder, itemCount: 0 };
+    };
+
+    const usedHeight = pageState => {
+        const financial = pageState.page.querySelector('.print-page-financial');
+        return pageState.page.querySelector('.print-page-header').offsetHeight
+            + pageState.itemTable.offsetHeight
+            + (financial ? financial.offsetHeight : 0)
+            + pageState.footerHolder.offsetHeight;
+    };
+
+    const fits = pageState => usedHeight(pageState) <= pageState.page.clientHeight + 1;
+
+    const addFinancial = pageState => {
+        const financialTable = makeTable(
+            'invoice-copy print-page-financial',
+            sourceFinancial.cloneNode(true)
+        );
+        pageState.page.insertBefore(financialTable, pageState.footerHolder);
+        return financialTable;
+    };
+
+    let current = makePage(true, 0, 0);
+    let runningQty = 0;
+    let runningAmount = 0;
+
+    sourceItems.forEach(sourceRow => {
+        let placed = false;
+
+        while (!placed) {
+            const itemRow = sourceRow.cloneNode(true);
+            const qty = Number(sourceRow.dataset.qty) || 0;
+            const amount = Number(sourceRow.dataset.amount) || 0;
+            current.itemBody.appendChild(itemRow);
+
+            // Reserve the small C/F row on every candidate page. If the
+            // financial block later fits, this reservation simply becomes
+            // blank space and no item was displaced for the financial block.
+            const testForward = invoiceForwardRow(
+                'Carry Forward',
+                runningQty + qty,
+                runningAmount + amount
+            );
+            current.itemBody.appendChild(testForward);
+            const candidateFits = fits(current);
+            testForward.remove();
+
+            if (candidateFits || current.itemCount === 0) {
+                runningQty += qty;
+                runningAmount += amount;
+                current.itemCount++;
+                placed = true;
+                return;
+            }
+
+            itemRow.remove();
+            current.itemBody.appendChild(
+                invoiceForwardRow('Carry Forward', runningQty, runningAmount)
+            );
+            current = makePage(false, runningQty, runningAmount);
+        }
+    });
+
+    const financialTable = addFinancial(current);
+    if (!fits(current) && sourceItems.length > 0) {
+        financialTable.remove();
+        current.itemBody.appendChild(
+            invoiceForwardRow('Carry Forward', runningQty, runningAmount)
+        );
+
+        current = makePage(false, runningQty, runningAmount);
+        addFinancial(current);
+        current.page.classList.add('print-summary-page');
     }
 
-    const $originalWrappers = $printLayout.children('.print-wrapper').detach();
-
-    for (let copy = 0; copy < billCopies; copy++) {
-        $originalWrappers.each(function () {
-            $printLayout.append($(this).clone());
-        });
+    const originalPages = Array.from(layout.querySelectorAll('.print-runtime-page'));
+    for (let copy = 1; copy < Math.max(1, copyCount); copy++) {
+        originalPages.forEach(page => layout.appendChild(page.cloneNode(true)));
     }
 
-    setTimeout(function () {
-        window.print();
-
-        setTimeout(function () {
-            $printLayout.empty();
-            $printLayout.append($originalWrappers);
-        }, 500);
-    }, 200);
+    layout.classList.remove('is-building');
+    return true;
 }
+
+   async function printpage() {
+      const billCopies = Math.max(1, parseInt(configuration, 10) || 1);
+
+      if (document.fonts && document.fonts.ready) {
+         await document.fonts.ready;
+      }
+
+      const pendingImages = Array.from(document.querySelectorAll('.print-source-wrapper img'))
+         .filter(image => !image.complete)
+         .map(image => new Promise(resolve => {
+               image.addEventListener('load', resolve, { once: true });
+               image.addEventListener('error', resolve, { once: true });
+         }));
+      await Promise.all(pendingImages);
+
+      buildInvoicePrintPages(billCopies);
+      window.print();
+   }
+
+   window.addEventListener('beforeprint', function () {
+      if (!document.querySelector('.print-runtime-page')) {
+         buildInvoicePrintPages(1);
+      }
+});
 
    $(document).on('click', '#printChallanBtn', function () {
       let companyId = "{{ Session::get('user_company_id') }}";
