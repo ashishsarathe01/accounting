@@ -2924,5 +2924,6 @@ $(document).on('click','#approveSale',function(){
     }
 
 });
+
 </script>
 @endsection
