@@ -5,6 +5,7 @@ if (!function_exists('formatIndianNumber')) {
         //$number = 45.2;
         $number = (string)$number;
         $number = str_replace(',', '', $number);
+        $number = number_format((float)$number, 2, '.', '');
         $decimal = '';
 
         if (strpos($number, '.') !== false) {

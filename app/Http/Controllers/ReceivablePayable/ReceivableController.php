@@ -1063,7 +1063,7 @@ public function updateAging(Request $request)
 
         $total = ($ledger->dr - $ledger->cr) + ($open->dr - $open->cr);
 
-        if ($total <= 0) continue;
+        if ($total == 0) continue;
 
         /* -----------------------------------
             BUILD FIFO AGING ROWS

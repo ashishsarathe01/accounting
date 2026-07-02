@@ -125,6 +125,19 @@
 .arrow.rotate {
     transform:rotate(90deg);
 }
+@media print {
+    table {
+        width: 100% !important;
+    }
+
+    .header-section {
+        display: none !important; /* hide buttons only */
+    }
+    .sidebar {
+        display: none !important; /* hide buttons only */
+    }
+}
+@page { size: auto;  margin: 0mm; }
 </style>
 <div class="list-of-view-company" style="background:#f8fafc;">
 <section class="list-of-view-company-section container-fluid">
@@ -150,6 +163,7 @@
                 <!-- LEFT TITLE -->
                 <span style="font-size:20px; font-weight:700; color:#2b2b2b;">
                     Aging Report
+                    <!--<button class="btn btn-info header-section" onclick="printpage();">Print</button>-->
                 </span>
 
                 <!-- FORM -->
@@ -419,5 +433,8 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
 });
+function printpage(){
+       window.print();
+    }
 </script>
 @endsection

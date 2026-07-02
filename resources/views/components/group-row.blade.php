@@ -16,7 +16,7 @@
 
 {{-- DIRECT ACCOUNTS --}}
 @foreach($grp['accounts'] as $acc)
-@if((float)$acc['receivable'] <= 0)
+@if((float)$acc['receivable'] == 0)
     @continue
 @endif
 <tr class="child-row child-of-{{ $grp['group_id'] }} hidden">
@@ -28,7 +28,7 @@
         cursor:pointer;
     "
     onmouseover="this.style.color='#0000FF';"
-    onmouseout="this.style.textDecoration='none'; this.style.color='#000000';" onclick="window.location='{{ route($overdueRoute,$acc['id']) }}?date={{ $today }}'" >{{ formatIndianNumber($acc['overdue'],2) }}</td>
+    onmouseout="this.style.textDecoration='none'; this.style.color='#000000';" onclick="window.location='{{ route($overdueRoute,$acc['id']) }}?date={{ $today }}'" >@if((float)$acc['receivable'] < 0) 0.00 @else {{ formatIndianNumber($acc['overdue'],2) }} @endif</td>
     <td class="latest-response"
                     data-account-id="{{ $acc['id'] }}"
                     style="text-align:center; padding-left:0; padding-right:0; font-size:16px!important;">
